@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.sensors"
 type: docs
+linkTitle: "sensors"
+manualLinkTitle: "sensors"
 ---
 
 Request a ten-second optical mode change for a running unit's conscious pilot.

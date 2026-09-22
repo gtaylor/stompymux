@@ -1,6 +1,8 @@
 ---
 title: "btech.inventory.forms"
 type: docs
+linkTitle: "forms"
+manualLinkTitle: "forms"
 ---
 
 Return all part/manufacturer forms in short-name order, without requiring live stock.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.evacuate"
 type: docs
+linkTitle: "evacuate"
+manualLinkTitle: "evacuate"
 ---
 
 Evacuate non-wizard contents of an in-character unit to the configured afterlife.

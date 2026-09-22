@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.hotload"
 type: docs
+linkTitle: "hotload"
+manualLinkTitle: "hotload"
 ---
 
 Toggle hotloading on a supported recycled indirect-fire launcher; stages cockpit feedback.

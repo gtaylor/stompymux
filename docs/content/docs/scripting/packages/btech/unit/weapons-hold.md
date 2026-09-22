@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.weapons_hold"
 type: docs
+linkTitle: "weapons_hold"
+manualLinkTitle: "weapons_hold"
 ---
 
 Read or change operator weapons hold inside a trusted callback transaction.

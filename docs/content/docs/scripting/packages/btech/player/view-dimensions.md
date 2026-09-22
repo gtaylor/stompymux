@@ -1,6 +1,8 @@
 ---
 title: "btech.player.view_dimensions"
 type: docs
+linkTitle: "view_dimensions"
+manualLinkTitle: "view_dimensions"
 ---
 
 Read saved map dimensions or replace them; omitted fields in a replacement use standard defaults.

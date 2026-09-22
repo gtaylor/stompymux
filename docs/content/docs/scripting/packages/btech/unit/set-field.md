@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.set_field"
 type: docs
+linkTitle: "set_field"
+manualLinkTitle: "set_field"
 ---
 
 Wizard named edits; accepts identity, team, xpmod, VTOL fuel, sensor/radio hardware and Mech thermal fields.

@@ -1,13 +1,15 @@
 ---
 title: "btech.weapon"
+linkTitle: "btech.weapon"
 type: docs
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("btech")` provides this Lua API.
+`btech.weapon`: Runtime weapon settings.
 
 ## Functions
 
-- [`btech.weapon.set_battle_value`](set-battle-value/)
-- [`btech.weapon.set_recycle`](set-recycle/)
-- [`btech.weapon.settings`](settings/)
+- [`set_battle_value`](set-battle-value/)
+- [`set_recycle`](set-recycle/)
+- [`settings`](settings/)

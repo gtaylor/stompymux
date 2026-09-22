@@ -1,6 +1,8 @@
 ---
 title: "State:set"
 type: docs
+linkTitle: "set"
+manualLinkTitle: "set"
 ---
 
 Sets a supported value, or deletes the key when `value` is nil.

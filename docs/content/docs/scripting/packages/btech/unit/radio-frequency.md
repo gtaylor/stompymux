@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.radio_frequency"
 type: docs
+linkTitle: "radio_frequency"
+manualLinkTitle: "radio_frequency"
 ---
 
 Set a channel frequency without transmitting. Transactional; assigned conscious pilot required.

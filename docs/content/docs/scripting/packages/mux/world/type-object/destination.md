@@ -1,6 +1,8 @@
 ---
 title: "Object:destination"
 type: docs
+linkTitle: "destination"
+manualLinkTitle: "destination"
 ---
 
 Returns this exit's destination, or nil when it is unlinked or the

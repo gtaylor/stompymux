@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.angelecm"
 type: docs
+linkTitle: "angelecm"
+manualLinkTitle: "angelecm"
 ---
 
 Toggle the corresponding suite mode inside the callback transaction.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.scan_terrain"
 type: docs
+linkTitle: "scan_terrain"
+manualLinkTitle: "scan_terrain"
 ---
 
 Scan buildings then mines in one transaction and publish both phases.

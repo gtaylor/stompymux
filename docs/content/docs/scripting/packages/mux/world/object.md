@@ -1,6 +1,8 @@
 ---
 title: "mux.world.object"
 type: docs
+linkTitle: "object"
+manualLinkTitle: "object"
 ---
 
 Creates a validated object handle from a dbref or existing handle.

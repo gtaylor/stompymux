@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.clear_technologies"
 type: docs
+linkTitle: "clear_technologies"
+manualLinkTitle: "clear_technologies"
 ---
 
 Remove every technology in one group.

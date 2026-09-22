@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.scan_selected"
 type: docs
+linkTitle: "scan_selected"
+manualLinkTitle: "scan_selected"
 ---
 
 Scan the station selection without altering either lock or its settling countdown.

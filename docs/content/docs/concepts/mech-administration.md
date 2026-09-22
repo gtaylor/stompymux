@@ -1,22 +1,27 @@
 ---
 title: BattleTech unit administration
 weight: 29
-description: Input and target guarantees for wizard-only BattleTech unit commands
+description: How Rust and Lua administer BattleTech units
 ---
 
-The wizard-only `@mech` command administers the BattleTech unit containing the
-wizard. Its switches validate their complete input before changing that unit.
+BattleTech unit state is owned by the Rust `World` and `BtechState`. The
+`src/btech/` administrative operations validate target objects, sections,
+values, and the resulting unit state. Lua bindings in
+`src/lua/packages/btech/` expose those operations to trusted game code.
 
-`@mech/setarmor` accepts a location and zero to three supplied values. Each
-value must be an integer from 0 through 255, and rear armor is restricted to
-locations that support it. A rejected command leaves every armor field
-unchanged.
+For example, `btech.unit.set_armor(unit, section, patch)` accepts a section
+constant and a table containing one or more of `armor`, `internal`, and
+`rear_armor`. Supplied values must be integers from 0 through 255; the
+section must exist on the unit, and rear armor is limited to sections that
+support it. The binding checks the complete patch before applying it.
 
-`@mech/repair` validates the exact argument count for its selected repair type
-and rejects unknown types before applying a repair. `@mech/restock` only
-accepts a live ammunition critical slot. `@mech/delinftech` applies only to
-battle armor.
+`btech.unit.restock_ammunition(unit, section, slot)` validates a live
+ammunition critical slot. Other administrative operations, including repair
+and movement settings, use typed arguments and reject unsupported targets or
+out-of-range values. Failed validation leaves the candidate world unchanged;
+a persistence failure rolls the operation back before its effects are sent.
 
-Speed switches reject negative and non-finite values. Integer switches validate
-their ranges rather than accepting out-of-range input. These rules require no
-server configuration.
+Wizard-facing native management is provided through `@btech` commands for
+registration, asset loading, placement, map conditions, and inspection. The
+Rust command registry supplies admission and dispatch. The Lua package
+reference lists each available unit operation and its arguments.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.friendly_fire_safety"
 type: docs
+linkTitle: "friendly_fire_safety"
+manualLinkTitle: "friendly_fire_safety"
 ---
 
 Set the assigned pilot's friendly-fire safety. Coolant guns are exempt.

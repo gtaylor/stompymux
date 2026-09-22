@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.masc"
 type: docs
+linkTitle: "masc"
+manualLinkTitle: "masc"
 ---
 
 Toggle MASC and adjust the desired throttle proportionally.

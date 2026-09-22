@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.bearing"
 type: docs
+linkTitle: "bearing"
+manualLinkTitle: "bearing"
 ---
 
 Read compass bearing using the station selection and parent geometry.

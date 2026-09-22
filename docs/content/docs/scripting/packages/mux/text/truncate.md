@@ -1,6 +1,8 @@
 ---
 title: "mux.text.truncate"
 type: docs
+linkTitle: "truncate"
+manualLinkTitle: "truncate"
 ---
 
 Safely truncates styled text to a non-negative visible byte width.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.set_movement_type"
 type: docs
+linkTitle: "set_movement_type"
+manualLinkTitle: "set_movement_type"
 ---
 
 Replace the movement class.

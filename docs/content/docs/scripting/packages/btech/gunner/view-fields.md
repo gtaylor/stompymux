@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.view_fields"
 type: docs
+linkTitle: "view_fields"
+manualLinkTitle: "view_fields"
 ---
 
 Wizard-only field report; also publishes lines privately to the actor.

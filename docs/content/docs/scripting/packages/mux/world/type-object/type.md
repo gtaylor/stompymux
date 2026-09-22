@@ -1,6 +1,8 @@
 ---
 title: "Object:type"
 type: docs
+linkTitle: "type"
+manualLinkTitle: "type"
 ---
 
 Returns this object's native object type.

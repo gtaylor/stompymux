@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.jump"
 type: docs
+linkTitle: "jump"
+manualLinkTitle: "jump"
 ---
 
 Attempt a jump; a failed stagger check falls instead of launching, within the callback transaction.

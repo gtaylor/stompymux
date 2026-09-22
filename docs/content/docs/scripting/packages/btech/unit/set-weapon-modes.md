@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.set_weapon_modes"
 type: docs
+linkTitle: "set_weapon_modes"
+manualLinkTitle: "set_weapon_modes"
 ---
 
 Replace the selected fire and ammunition modes of one mounted weapon.

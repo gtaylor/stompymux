@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.contacts"
 type: docs
+linkTitle: "contacts"
+manualLinkTitle: "contacts"
 ---
 
 Render contacts using parent visibility, gunner preferences and independent selection.

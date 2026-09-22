@@ -1,6 +1,8 @@
 ---
 title: "btech.map.update_links_as"
 type: docs
+linkTitle: "update_links_as"
+manualLinkTitle: "update_links_as"
 ---
 
 Rebuild reachable map routes with cycle/depth protection and atomic publication.

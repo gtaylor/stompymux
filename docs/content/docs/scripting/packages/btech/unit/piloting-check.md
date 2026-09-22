@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.piloting_check"
 type: docs
+linkTitle: "piloting_check"
+manualLinkTitle: "piloting_check"
 ---
 
 Run one shared piloting check; returns whether it succeeded.

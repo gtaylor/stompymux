@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.install_special"
 type: docs
+linkTitle: "install_special"
+manualLinkTitle: "install_special"
 ---
 
 Install or clear non-weapon equipment in one critical slot.

@@ -1,10 +1,13 @@
 ---
 title: "btech.error"
+linkTitle: "btech.error"
 type: docs
+weight: -50
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("btech")` provides this Lua API.
+`btech.error`: Checked BattleTech error-code symbols.
 
 
 ## Constants

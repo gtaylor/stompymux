@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.sight"
 type: docs
+linkTitle: "sight"
+manualLinkTitle: "sight"
 ---
 
 Sight a parent weapon using the registered station gunner's selection, skill and arcs.

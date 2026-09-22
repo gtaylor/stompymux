@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.install_weapon"
 type: docs
+linkTitle: "install_weapon"
+manualLinkTitle: "install_weapon"
 ---
 
 Install a weapon into explicit critical slots.

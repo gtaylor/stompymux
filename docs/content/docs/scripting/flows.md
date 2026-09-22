@@ -42,7 +42,7 @@ descriptor and immediately shows its first prompt. `descriptor` is
 `ctx.descriptor` from the command or event that is starting the flow -
 flows are always driven from a live connection, never from a queued or
 scheduled context, so `ctx.descriptor` is only present when one exists (see
-[Commands](commands/)). `module` is resolved the same way `require` resolves
+[Commands](/docs/scripting/commands/)). `module` is resolved the same way `require` resolves
 a name: relative to the calling module's own root, without repeating the root
 name. Raises a Lua error if the descriptor doesn't exist, already has a flow
 running, or the module has no such flow step.
@@ -111,18 +111,16 @@ flows = {
 }
 ```
 
-Only string and number values round-trip; anything else assigned to
-`ctx.flow` (a table, a function, a boolean) is dropped with a logged warning.
-This is a deliberate trade-off: `ctx.flow` is backed by a small store of plain
-values on the descriptor, not a reference into the Lua state, specifically so
-a flow survives `@lua/reload` rebuilding the entire state out from under it. A
-step that no longer exists after a reload still fails the same way any other
-removed API would.
+Only strings and finite numbers are accepted; numbers are stored as strings
+between steps. Unsupported values, non-string keys, embedded NUL bytes, and
+values over the scratch limits fail the step. The scratch values are stored
+outside the Lua state, so a flow can survive `@lua/reload`. A step removed by
+the reload fails when the flow tries to invoke it.
 
 ## Context
 
 A flow step receives the same kind of context table as a command handler
-(see [Commands](commands/)), with two differences: `ctx.scope` is `"flow"`,
+(see [Commands](/docs/scripting/commands/)), with two differences: `ctx.scope` is `"flow"`,
 and two extra fields are always present:
 
 | Field | Description |

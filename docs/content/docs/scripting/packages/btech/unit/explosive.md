@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.explosive"
 type: docs
+linkTitle: "explosive"
+manualLinkTitle: "explosive"
 ---
 
 Toggle explosive ammunition on a Narc launcher.

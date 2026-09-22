@@ -3,48 +3,34 @@ title = "Line-of-sight testing"
 weight = 35
 +++
 
-The line-of-sight (LOS) regression suite is split into seven CTest targets so a
-failure identifies the affected layer:
+BattleTech line-of-sight (LOS) behavior is tested with Rust unit and
+integration tests. `src/btech/los.rs` traces terrain at unit eye heights and
+reports blocking terrain, woods, water, smoke, fire, and partial cover. Sensor
+rules then use that trace with range, lighting, signatures, and other contact
+conditions to decide what a unit can detect.
 
-* `btech_los_trace` checks hex traversal, tie-breaking, and bounded exhaustive
-  path invariants.
-* `btech_los_geometry` checks unit eye heights, interpolated elevation,
-  partial cover, terrain flags, range, altitude, and the water/air interface.
-* `btech_los_terrain` checks water, ice, terrain-count, and cached-LOS wrapper
-  behavior on a synthetic map.
-* `btech_los_hexmap` checks terrain-aware LOS-map tracing, lighting, and
-  map-hex bounds handling.
-* `btech_los_sensors` checks sensor range and contact rules, ECM and signature
-  systems, seismic movement, radar clearance, and sensor to-hit modifiers.
-* `btech_los_maps` traces representative corridors on flat, mountainous, and
-  water-heavy production maps.
-* `btech_los_cache` checks directional observer/target cache entries, flag
-  decoding, and observer invalidation without disturbing reverse visibility.
-
-Run only this suite with:
+Run the full suite or a focused integration target from `stompymux-rs/`:
 
 ```sh
-cmake --build .build --target btech_los_trace_test btech_los_geometry_test \
-  btech_los_terrain_test btech_los_hexmap_test btech_los_sensors_test \
-  btech_los_maps_test btech_los_cache_test
-ctest --test-dir .build -L los --output-on-failure
+cargo test
+cargo test --test btech_los_range
+cargo test --test btech_visibility
+cargo test --test btech_vehicle_los
 ```
+
+Related scenarios live in `tests/btech_*sensor*.rs`,
+`tests/btech_*contact*.rs`, and `tests/btech_scan.rs`. Use `cargo test <name>`
+to select a specific test by name.
 
 ## Adding scenarios
 
 Prefer a small synthetic map that contains only terrain relevant to the rule.
-Assert the LOS flags and sensor result separately when possible. Production-map
-tests should enforce traversal invariants or a few intentional corridors rather
-than snapshotting every hex pair.
+Assert terrain LOS and the resulting sensor/contact decision separately when
+possible. Use production maps for a few intentional corridors or traversal
+invariants, rather than snapshots of every hex pair.
 
-Detection tests must use deterministic inputs. Do not make a test depend on a
-random roll, elapsed time, a running game, or the live SQLite database.
-
-## Known divergences
-
-Use `los_expect_divergence_int` only when repository documentation or an
-explicit rule establishes an intended value but the current implementation has
-a known legacy result. The helper accepts the legacy result while failing an
-XPASS. When an XPASS occurs, review the behavior, replace the divergence with a
-normal expectation, and update any related help or game documentation. Do not
-use a divergence merely to make an unexplained failure pass.
+Detection tests should use deterministic inputs. Avoid depending on an
+uncontrolled random roll, elapsed time, a running game, or a shared SQLite
+database. When expected behavior differs from the existing implementation,
+record the intended rule in a focused test and document the discrepancy until
+it is resolved.

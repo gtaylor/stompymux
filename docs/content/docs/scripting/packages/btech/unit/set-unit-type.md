@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.set_unit_type"
 type: docs
+linkTitle: "set_unit_type"
+manualLinkTitle: "set_unit_type"
 ---
 
 Replace the unit class.

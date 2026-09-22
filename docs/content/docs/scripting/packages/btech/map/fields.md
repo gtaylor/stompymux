@@ -1,6 +1,8 @@
 ---
 title: "btech.map.fields"
 type: docs
+linkTitle: "fields"
+manualLinkTitle: "fields"
 ---
 
 Publish and return a wizard's map field report in catalogue order.

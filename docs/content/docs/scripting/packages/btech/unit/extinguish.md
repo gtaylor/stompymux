@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.extinguish"
 type: docs
+linkTitle: "extinguish"
+manualLinkTitle: "extinguish"
 ---
 
 Begin a two-minute attempt to put out vehicle section fires while shut down.

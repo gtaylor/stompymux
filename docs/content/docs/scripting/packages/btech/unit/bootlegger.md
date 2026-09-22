@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.bootlegger"
 type: docs
+linkTitle: "bootlegger"
+manualLinkTitle: "bootlegger"
 ---
 
 Pivot left/right on a piloting check; a failed attempt falls.

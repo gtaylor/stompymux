@@ -1,6 +1,8 @@
 ---
 title: "mux.error.raise"
 type: docs
+linkTitle: "raise"
+manualLinkTitle: "raise"
 ---
 
 Raises a structured error with the requested code.

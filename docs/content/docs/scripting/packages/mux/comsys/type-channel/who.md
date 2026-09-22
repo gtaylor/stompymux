@@ -1,6 +1,8 @@
 ---
 title: "Channel:who"
 type: docs
+linkTitle: "who"
+manualLinkTitle: "who"
 ---
 
 Returns channel membership records. By default the native active-member

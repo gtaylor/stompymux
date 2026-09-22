@@ -1,10 +1,13 @@
 ---
 title: "btech.autopilot"
+linkTitle: "btech.autopilot"
 type: docs
+weight: 5
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("btech")` provides this Lua API.
+`btech.autopilot`: Typed autopilot constants; queue and control calls are not implemented.
 
 
 ## Constants

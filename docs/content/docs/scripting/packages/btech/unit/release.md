@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.release"
 type: docs
+linkTitle: "release"
+manualLinkTitle: "release"
 ---
 
 Release this player's cockpit assignment without moving the player.

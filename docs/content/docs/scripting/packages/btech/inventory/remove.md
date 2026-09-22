@@ -1,6 +1,8 @@
 ---
 title: "btech.inventory.remove"
 type: docs
+linkTitle: "remove"
+manualLinkTitle: "remove"
 ---
 
 Wizard removal floors stock at zero; reports and diagnostics retain the capped requested amount.

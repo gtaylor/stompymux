@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.lbx"
 type: docs
+linkTitle: "lbx"
+manualLinkTitle: "lbx"
 ---
 
 Toggle an intact, recycled LB-X autocannon between slug and cluster ammunition; stages cockpit notices.

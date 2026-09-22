@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.restock_ammunition"
 type: docs
+linkTitle: "restock_ammunition"
+manualLinkTitle: "restock_ammunition"
 ---
 
 Refill one ammunition bin to its installed capacity.

@@ -1,26 +1,29 @@
 ---
 title: "btech.template"
+linkTitle: "btech.template"
 type: docs
+weight: 15
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("btech")` provides this Lua API.
+`btech.template`: Unit-template inspection and displays.
 
 ## Functions
 
-- [`btech.template.armor`](armor/)
-- [`btech.template.base_cost`](base-cost/)
-- [`btech.template.battle_value`](battle-value/)
-- [`btech.template.check`](check/)
-- [`btech.template.critical_slots`](critical-slots/)
-- [`btech.template.engine`](engine/)
-- [`btech.template.exists`](exists/)
-- [`btech.template.inspect`](inspect/)
-- [`btech.template.installed_parts`](installed-parts/)
-- [`btech.template.loadout`](loadout/)
-- [`btech.template.payload`](payload/)
-- [`btech.template.show_critical_status`](show-critical-status/)
-- [`btech.template.show_status`](show-status/)
-- [`btech.template.show_weapon_specs`](show-weapon-specs/)
-- [`btech.template.technologies`](technologies/)
-- [`btech.template.weapons`](weapons/)
+- [`armor`](armor/)
+- [`base_cost`](base-cost/)
+- [`battle_value`](battle-value/)
+- [`check`](check/)
+- [`critical_slots`](critical-slots/)
+- [`engine`](engine/)
+- [`exists`](exists/)
+- [`inspect`](inspect/)
+- [`installed_parts`](installed-parts/)
+- [`loadout`](loadout/)
+- [`payload`](payload/)
+- [`show_critical_status`](show-critical-status/)
+- [`show_status`](show-status/)
+- [`show_weapon_specs`](show-weapon-specs/)
+- [`technologies`](technologies/)
+- [`weapons`](weapons/)

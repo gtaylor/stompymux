@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.navigate"
 type: docs
+linkTitle: "navigate"
+manualLinkTitle: "navigate"
 ---
 
 Render local parent navigation, retaining the own-hex exception for failed scanner hardware.

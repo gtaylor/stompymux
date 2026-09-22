@@ -1,6 +1,8 @@
 ---
 title: "btech.map.view"
 type: docs
+linkTitle: "view"
+manualLinkTitle: "view"
 ---
 
 Publish a labelled terrain-only map using the wizard's saved display preferences.

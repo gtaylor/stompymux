@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.set_preferred_id_as"
 type: docs
+linkTitle: "set_preferred_id_as"
+manualLinkTitle: "set_preferred_id_as"
 ---
 
 Wizard-only saved ID preference; does not change the current label or consume dice.

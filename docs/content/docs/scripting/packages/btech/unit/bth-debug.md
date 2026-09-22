@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.bth_debug"
 type: docs
+linkTitle: "bth_debug"
+manualLinkTitle: "bth_debug"
 ---
 
 Set the retained BTHDebug preference; requires the assigned pilot in the cockpit.

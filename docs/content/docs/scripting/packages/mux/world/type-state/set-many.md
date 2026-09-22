@@ -1,6 +1,8 @@
 ---
 title: "State:set_many"
 type: docs
+linkTitle: "set_many"
+manualLinkTitle: "set_many"
 ---
 
 Applies several persistent state updates. Use `State:set` or `State:delete` for removals.

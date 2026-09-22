@@ -1,6 +1,8 @@
 ---
 title: "btech.template.loadout"
 type: docs
+linkTitle: "loadout"
+manualLinkTitle: "loadout"
 ---
 
 Resolve supported equipment; does not validate chassis construction or enable simulation.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.mml"
 type: docs
+linkTitle: "mml"
+manualLinkTitle: "mml"
 ---
 
 Toggle an MML between SRM and LRM ammunition; requires dedicated matching bins.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.add_technology"
 type: docs
+linkTitle: "add_technology"
+manualLinkTitle: "add_technology"
 ---
 
 Install one technology code on the unit.

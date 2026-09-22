@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.scan"
 type: docs
+linkTitle: "scan"
+manualLinkTitle: "scan"
 ---
 
 Inspect an acquired visible target without changing contacts or consuming dice.

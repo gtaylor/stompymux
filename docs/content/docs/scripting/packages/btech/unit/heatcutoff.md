@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.heatcutoff"
 type: docs
+linkTitle: "heatcutoff"
+manualLinkTitle: "heatcutoff"
 ---
 
 Begin a four-second Mech heat cutoff toggle; requires the assigned conscious pilot.

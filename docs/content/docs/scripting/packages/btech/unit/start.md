@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.start"
 type: docs
+linkTitle: "start"
+manualLinkTitle: "start"
 ---
 
 Start the assigned pilot's unit. Trusted scripts authorize the optional fast override.

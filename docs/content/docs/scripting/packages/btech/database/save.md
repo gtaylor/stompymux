@@ -1,6 +1,8 @@
 ---
 title: "btech.database.save"
 type: docs
+linkTitle: "save"
+manualLinkTitle: "save"
 ---
 
 Request persistence of the current world at transaction commit, even if unchanged.

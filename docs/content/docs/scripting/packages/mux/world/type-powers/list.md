@@ -1,6 +1,8 @@
 ---
 title: "Powers:list"
 type: docs
+linkTitle: "list"
+manualLinkTitle: "list"
 ---
 
 Lists granted powers in native registry order.

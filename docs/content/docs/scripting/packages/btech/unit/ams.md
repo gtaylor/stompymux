@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.ams"
 type: docs
+linkTitle: "ams"
+manualLinkTitle: "ams"
 ---
 
 Toggle automatic anti-missile defense, or set an explicit enabled state.

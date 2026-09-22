@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.stinger"
 type: docs
+linkTitle: "stinger"
+manualLinkTitle: "stinger"
 ---
 
 Toggle Stinger ammunition on a supported recycled missile launcher.

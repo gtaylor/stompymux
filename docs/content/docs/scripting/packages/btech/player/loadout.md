@@ -1,6 +1,8 @@
 ---
 title: "btech.player.loadout"
 type: docs
+linkTitle: "loadout"
+manualLinkTitle: "loadout"
 ---
 
 Read the saved personal-combat loadout, or nil when none is configured.

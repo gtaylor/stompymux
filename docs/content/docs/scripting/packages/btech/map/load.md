@@ -1,6 +1,8 @@
 ---
 title: "btech.map.load"
 type: docs
+linkTitle: "load"
+manualLinkTitle: "load"
 ---
 
 Replace map terrain from a saved asset using the strict C contract.

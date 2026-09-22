@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.removepod"
 type: docs
+linkTitle: "removepod"
+manualLinkTitle: "removepod"
 ---
 
 Swat one iNarc pod; a failed attempt deals self-damage. H selects homing, Y haywire, E ECM.

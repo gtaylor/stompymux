@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.prone"
 type: docs
+linkTitle: "prone"
+manualLinkTitle: "prone"
 ---
 
 Drop prone; fast travel can require a control roll and cause ordinary fall damage.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.combat_safe"
 type: docs
+linkTitle: "combat_safe"
+manualLinkTitle: "combat_safe"
 ---
 
 Read or change scenario combat immunity in a trusted callback transaction.

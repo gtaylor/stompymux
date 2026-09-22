@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.weight"
 type: docs
+linkTitle: "weight"
+manualLinkTitle: "weight"
 ---
 
 Wizard-only construction allocation using original components and installed ammunition bins.

@@ -1,6 +1,8 @@
 ---
 title: "Channel:max_user_count"
 type: docs
+linkTitle: "max_user_count"
+manualLinkTitle: "max_user_count"
 ---
 
 Returns the channel's currently allocated membership capacity.

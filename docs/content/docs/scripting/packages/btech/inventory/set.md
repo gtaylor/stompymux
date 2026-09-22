@@ -1,6 +1,8 @@
 ---
 title: "btech.inventory.set"
 type: docs
+linkTitle: "set"
+manualLinkTitle: "set"
 ---
 
 Wizard stock correction using stored identifiers; zero quantity removes the entry.

@@ -1,6 +1,8 @@
 ---
 title: "btech.repair.is_fixable"
 type: docs
+linkTitle: "is_fixable"
+manualLinkTitle: "is_fixable"
 ---
 
 Report whether no original nonexempt section is destroyed; Mechs exempt all but the

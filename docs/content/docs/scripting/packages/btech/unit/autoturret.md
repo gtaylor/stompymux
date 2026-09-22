@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.autoturret"
 type: docs
+linkTitle: "autoturret"
+manualLinkTitle: "autoturret"
 ---
 
 Toggle automatic turret tracking; requires a surviving turret, map and conscious assigned pilot.

@@ -1,6 +1,8 @@
 ---
 title: "Channel:emit"
 type: docs
+linkTitle: "emit"
+manualLinkTitle: "emit"
 ---
 
 Emits an administrative channel message through native delivery, history,

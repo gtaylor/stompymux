@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.turnmode"
 type: docs
+linkTitle: "turnmode"
+manualLinkTitle: "turnmode"
 ---
 
 Set tight/normal turning, or query the mode with any other argument. Requires Maneuvering Ace.

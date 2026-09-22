@@ -1,13 +1,16 @@
 ---
 title: "mux.session"
+linkTitle: "mux.session"
 type: docs
+weight: -35
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("mux")` provides this Lua API.
+`mux.session`: Interactive flows and active player-session information.
 
 ## Functions
 
-- [`mux.session.connected_players`](connected-players/)
-- [`mux.session.flow_start`](flow-start/)
-- [`mux.session.who_summary`](who-summary/)
+- [`connected_players`](connected-players/)
+- [`flow_start`](flow-start/)
+- [`who_summary`](who-summary/)

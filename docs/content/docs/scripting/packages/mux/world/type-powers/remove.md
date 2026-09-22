@@ -1,6 +1,8 @@
 ---
 title: "Powers:remove"
 type: docs
+linkTitle: "remove"
+manualLinkTitle: "remove"
 ---
 
 Removes a power and reports whether the object changed.

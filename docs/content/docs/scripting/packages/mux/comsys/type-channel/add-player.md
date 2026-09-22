@@ -1,6 +1,8 @@
 ---
 title: "Channel:add_player"
 type: docs
+linkTitle: "add_player"
+manualLinkTitle: "add_player"
 ---
 
 Adds a player to this channel with a player-local command alias. The trusted

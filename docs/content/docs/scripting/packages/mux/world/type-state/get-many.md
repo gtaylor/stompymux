@@ -1,6 +1,8 @@
 ---
 title: "State:get_many"
 type: docs
+linkTitle: "get_many"
+manualLinkTitle: "get_many"
 ---
 
 Returns only the requested keys that are present.

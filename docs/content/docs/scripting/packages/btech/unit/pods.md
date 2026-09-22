@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.pods"
 type: docs
+linkTitle: "pods"
+manualLinkTitle: "pods"
 ---
 
 Inspect pod effects on all sections, or return an empty list when none are attached.

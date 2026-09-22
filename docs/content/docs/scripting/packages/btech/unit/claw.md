@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.claw"
 type: docs
+linkTitle: "claw"
+manualLinkTitle: "claw"
 ---
 
 Attempt claw attacks, left then right by default; each accepted arm starts its own recovery.

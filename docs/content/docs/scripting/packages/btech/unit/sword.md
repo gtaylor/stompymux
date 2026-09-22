@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.sword"
 type: docs
+linkTitle: "sword"
+manualLinkTitle: "sword"
 ---
 
 Attempt a sword swing with the same selection and transaction rules as axe.

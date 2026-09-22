@@ -1,6 +1,8 @@
 ---
 title: "State:has"
 type: docs
+linkTitle: "has"
+manualLinkTitle: "has"
 ---
 
 Tests whether a state key is present.

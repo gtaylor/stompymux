@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.set_field"
 type: docs
+linkTitle: "set_field"
+manualLinkTitle: "set_field"
 ---
 
 Wizard-only atomic station field edit; references use decimal numbers, coordinates clamp to signed shorts.

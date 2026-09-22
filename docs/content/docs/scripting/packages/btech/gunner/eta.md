@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.eta"
 type: docs
+linkTitle: "eta"
+manualLinkTitle: "eta"
 ---
 
 Estimate travel using parent speed and the station hex selection; notify station occupants.

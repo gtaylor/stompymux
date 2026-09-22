@@ -1,6 +1,8 @@
 ---
 title: "Flags:list"
 type: docs
+linkTitle: "list"
+manualLinkTitle: "list"
 ---
 
 Lists set flags in native registry order.

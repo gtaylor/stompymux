@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.view"
 type: docs
+linkTitle: "view"
+manualLinkTitle: "view"
 ---
 
 View escaped markings through running cockpit/gunner contact and unblocked-LOS admission.

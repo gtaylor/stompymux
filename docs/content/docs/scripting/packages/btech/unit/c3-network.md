@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.c3_network"
 type: docs
+linkTitle: "c3_network"
+manualLinkTitle: "c3_network"
 ---
 
 Inspect classic C3 peers using active master capacity; emits no messages.

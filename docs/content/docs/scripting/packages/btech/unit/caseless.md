@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.caseless"
 type: docs
+linkTitle: "caseless"
+manualLinkTitle: "caseless"
 ---
 
 Toggle caseless autocannon ammunition with cockpit feedback.

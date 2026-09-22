@@ -1,12 +1,14 @@
 ---
 title: "mux.error.type-error"
+linkTitle: "mux.error.type-error"
 type: docs
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("mux")` provides this Lua API.
+`mux.error.type-error` is part of the Lua API.
 
 ## Functions
 
-- [`Error:is`](is/)
-- [`Error:root`](root/)
+- [`is`](is/)
+- [`root`](root/)

@@ -1,10 +1,13 @@
 ---
 title: "mux.world"
+linkTitle: "mux.world"
 type: docs
+weight: -20
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("mux")` provides this Lua API.
+`mux.world`: Database objects and their persistent state.
 
 ## Namespaces and types
 
@@ -15,13 +18,13 @@ no_list: true
 
 ## Functions
 
-- [`mux.world.create_object`](create-object/)
-- [`mux.world.destroy_object`](destroy-object/)
-- [`mux.world.list_objects`](list-objects/)
-- [`mux.world.lock_passes`](lock-passes/)
-- [`mux.world.object`](object/)
-- [`mux.world.pemit`](pemit/)
-- [`mux.world.teleport_object`](teleport-object/)
+- [`create_object`](create-object/)
+- [`destroy_object`](destroy-object/)
+- [`list_objects`](list-objects/)
+- [`lock_passes`](lock-passes/)
+- [`object`](object/)
+- [`pemit`](pemit/)
+- [`teleport_object`](teleport-object/)
 
 ## Constants
 

@@ -1,6 +1,8 @@
 ---
 title: "btech.map.link"
 type: docs
+linkTitle: "link"
+manualLinkTitle: "link"
 ---
 
 Read the strict C-contract link configuration of a child map, or nil when none is authored.

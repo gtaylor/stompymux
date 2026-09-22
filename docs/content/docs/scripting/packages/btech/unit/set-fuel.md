@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.set_fuel"
 type: docs
+linkTitle: "set_fuel"
+manualLinkTitle: "set_fuel"
 ---
 
 Wizard fuel correction bounded by current capacity and 4294967295.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.payload"
 type: docs
+linkTitle: "payload"
+manualLinkTitle: "payload"
 ---
 
 List carried ammunition stock in catalogue order.

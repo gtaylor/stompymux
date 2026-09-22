@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.set_tonnage"
 type: docs
+linkTitle: "set_tonnage"
+manualLinkTitle: "set_tonnage"
 ---
 
 Set the unit tonnage.

@@ -1,6 +1,8 @@
 ---
 title: "Object:name"
 type: docs
+linkTitle: "name"
+manualLinkTitle: "name"
 ---
 
 Returns this object's current stored name.

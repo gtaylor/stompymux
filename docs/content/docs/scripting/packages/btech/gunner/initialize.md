@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.initialize"
 type: docs
+linkTitle: "initialize"
+manualLinkTitle: "initialize"
 ---
 
 Claim an available station while physically inside it.

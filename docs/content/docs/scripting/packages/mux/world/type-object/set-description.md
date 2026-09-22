@@ -1,6 +1,8 @@
 ---
 title: "Object:set_description"
 type: docs
+linkTitle: "set_description"
+manualLinkTitle: "set_description"
 ---
 
 Sets this object's styled description. Nil or an empty string clears it.

@@ -1,6 +1,8 @@
 ---
 title: "mux.world.create_object"
 type: docs
+linkTitle: "create_object"
+manualLinkTitle: "create_object"
 ---
 
 Creates a room, thing, or exit selected by a typed object-kind constant.

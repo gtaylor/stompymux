@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.gunnery"
 type: docs
+linkTitle: "gunnery"
+manualLinkTitle: "gunnery"
 ---
 
 Read current connected pilot gunnery under configured weapon-family rules; default six without one.

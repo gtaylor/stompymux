@@ -1,6 +1,8 @@
 ---
 title: "mux.session.flow_start"
 type: docs
+linkTitle: "flow_start"
+manualLinkTitle: "flow_start"
 ---
 
 Attaches an interactive flow to a descriptor and displays its first prompt.

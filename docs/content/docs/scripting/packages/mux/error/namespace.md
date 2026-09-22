@@ -1,6 +1,8 @@
 ---
 title: "mux.error.namespace"
 type: docs
+linkTitle: "namespace"
+manualLinkTitle: "namespace"
 ---
 
 Builds a checked code-symbol tree for an author-defined namespace.

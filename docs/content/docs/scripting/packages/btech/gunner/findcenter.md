@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.findcenter"
 type: docs
+linkTitle: "findcenter"
+manualLinkTitle: "findcenter"
 ---
 
 Measure the parent position relative to its current hex center.

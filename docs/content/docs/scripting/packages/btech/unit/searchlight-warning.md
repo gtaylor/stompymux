@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.searchlight_warning"
 type: docs
+linkTitle: "searchlight_warning"
+manualLinkTitle: "searchlight_warning"
 ---
 
 Set the assigned pilot's unit illumination-warning preference.

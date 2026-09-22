@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.mace"
 type: docs
+linkTitle: "mace"
+manualLinkTitle: "mace"
 ---
 
 Attempt a mace swing. A missed swing requires an attacker piloting check with a +2 modifier.

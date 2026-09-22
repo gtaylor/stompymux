@@ -1,6 +1,8 @@
 ---
 title: "btech.inventory.clear"
 type: docs
+linkTitle: "clear"
+manualLinkTitle: "clear"
 ---
 
 Wizard reset removes every stock row and emits one reset record, including for an empty holder.

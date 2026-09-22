@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.load_template"
 type: docs
+linkTitle: "load_template"
+manualLinkTitle: "load_template"
 ---
 
 Replace the unit definition from a saved template reference.

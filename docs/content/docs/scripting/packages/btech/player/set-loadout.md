@@ -1,6 +1,8 @@
 ---
 title: "btech.player.set_loadout"
 type: docs
+linkTitle: "set_loadout"
+manualLinkTitle: "set_loadout"
 ---
 
 Replace the saved personal-combat loadout; nil clears it.

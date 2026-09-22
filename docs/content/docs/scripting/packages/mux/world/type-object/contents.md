@@ -1,6 +1,8 @@
 ---
 title: "Object:contents"
 type: docs
+linkTitle: "contents"
+manualLinkTitle: "contents"
 ---
 
 Returns matching objects directly contained by or attached to this object.

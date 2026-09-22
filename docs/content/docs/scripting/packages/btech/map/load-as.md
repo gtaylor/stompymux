@@ -1,6 +1,8 @@
 ---
 title: "btech.map.load_as"
 type: docs
+linkTitle: "load_as"
+manualLinkTitle: "load_as"
 ---
 
 Load an asset; GOD keeps membership, while other wizards shut down and clear units.

@@ -6,9 +6,9 @@ type: docs
 weight: 12
 ---
 
-Object flags are independent boolean properties on database objects. Native
-code stores each flag in a `has_<name>_flag` field and in a matching SQLite
-column. There is no packed flag word and no reserved legacy bits.
+Rust `Object` values hold flags in a typed `FlagSet`. SQLite persists the
+known flags in `has_<name>_flag` columns. There is no packed flag word in
+the Rust model.
 
 Flags are displayed after the object type as compact letters. A script or
 administrator should use the full flag name when issuing a command:
@@ -19,14 +19,14 @@ administrator should use the full flag name when issuing a command:
 ```
 
 Lua logic uses typed constants such as `mux.world.flags.SAFE` with an
-[`Object:flags`](../packages/mux/world/type-object/flags/) collection. Raw flag
+[`Object:flags`](/docs/scripting/packages/mux/world/type-object/flags/) collection. Raw flag
 name strings and command aliases are intentionally not accepted by that API.
-Lua changes run immediately as God and are not rolled back when a callback
-later fails.
+Lua changes use God authority and participate in the callback's world
+transaction. A failed callback or save rolls them back.
 
 ## Flag summary
 
-| Flag | Letter | Stored field and column | Native purpose |
+| Flag | Letter | SQLite column | Native purpose |
 | --- | --- | --- | --- |
 | `ANSI` | `X` | `has_ansi_flag` | Enables ANSI color and formatting, including BattleTech map displays, for a player. |
 | `AUDIBLE` | `a` | `has_audible_flag` | Allows sound to propagate through the object or an audible exit. |
@@ -92,17 +92,10 @@ handlers add these restrictions:
 
 | Flag | Additional restriction |
 | --- | --- |
-| `CONNECTED` | Only God may change it through the flag command. |
-| `DARK` | Only Wizards or God may change it. |
-| `GAGGED` | Only Wizards or God may change it. |
-| `GOING` | God may set or clear it. An already-GOING non-player object may also have it cleared without this extra restriction. |
-| `IN_CHARACTER` | Only Wizards or God may change it. |
-| `MONITOR` | Only Wizards or God may change it. |
-| `SUSPECT` | Only Wizards or God may change it. |
+| `CONNECTED` | Session-owned; the flag command cannot change it. |
+| `GOING` | God may set or clear it. An already-GOING non-player object may also have it cleared. |
 | `WIZARD` | Only God may change it, and God cannot remove it from themself. |
-| `ZOMBIE` | Only Wizards or God may change it. |
 
-Flags not listed in this table have no additional flag-specific restriction.
-Native control is still role-only: God controls everyone and everything, while
-Wizards control themselves and non-Wizards but cannot control God or another
-Wizard.
+Other flag changes require Wizard or God authority and control of the target.
+God controls everyone and everything; Wizards control themselves and
+non-Wizards but cannot control God or another Wizard.

@@ -1,6 +1,8 @@
 ---
 title: "btech.map.add_ice"
 type: docs
+linkTitle: "add_ice"
+manualLinkTitle: "add_ice"
 ---
 
 Wizard seasonal growth. Only water can freeze; new ice does not extend this pass's shoreline.

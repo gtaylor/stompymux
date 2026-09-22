@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.unjam"
 type: docs
+linkTitle: "unjam"
+manualLinkTitle: "unjam"
 ---
 
 Begin timed feed recovery; stages cockpit feedback and participates in callback rollback.

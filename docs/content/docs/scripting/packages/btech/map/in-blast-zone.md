@@ -1,6 +1,8 @@
 ---
 title: "btech.map.in_blast_zone"
 type: docs
+linkTitle: "in_blast_zone"
+manualLinkTitle: "in_blast_zone"
 ---
 
 Report whether a coordinate lies inside a saved blast zone.

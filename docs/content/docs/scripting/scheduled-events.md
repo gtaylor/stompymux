@@ -109,7 +109,7 @@ initiated the job.
 ## Errors, validation, and inspection
 
 A handler error is logged with the module path and schedule name; it does not
-stop other scheduled jobs. Use the wizard-only [`@lua/check`](validating-and-reloading/)
+stop other scheduled jobs. Use the wizard-only [`@lua/check`](/docs/scripting/validating-and-reloading/)
 command to catch invalid entries, cron expressions, and duplicate names before
 reloading.
 

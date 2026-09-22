@@ -1,6 +1,8 @@
 ---
 title: "btech.cargo.manifest"
 type: docs
+linkTitle: "manifest"
+manualLinkTitle: "manifest"
 ---
 
 Read detached stock in the actor's current location. Requires cargo commands enabled.

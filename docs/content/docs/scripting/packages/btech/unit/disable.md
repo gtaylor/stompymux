@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.disable"
 type: docs
+linkTitle: "disable"
+manualLinkTitle: "disable"
 ---
 
 Power down a Gauss mount after recharge. Requires a running, mapped unit and conscious pilot.

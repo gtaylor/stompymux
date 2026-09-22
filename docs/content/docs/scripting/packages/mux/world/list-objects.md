@@ -1,6 +1,8 @@
 ---
 title: "mux.world.list_objects"
 type: docs
+linkTitle: "list_objects"
+manualLinkTitle: "list_objects"
 ---
 
 Lists database objects matching optional type and direct-zone filters.

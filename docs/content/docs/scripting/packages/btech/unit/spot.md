@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.spot"
 type: docs
+linkTitle: "spot"
+manualLinkTitle: "spot"
 ---
 
 Select an acquired friendly spotter; use own dbref to declare spotting, or nil to stop.

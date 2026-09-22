@@ -1,6 +1,8 @@
 ---
 title: "Object:set_internal_description"
 type: docs
+linkTitle: "set_internal_description"
+manualLinkTitle: "set_internal_description"
 ---
 
 Sets this object's styled internal description. Nil or an empty string clears it.

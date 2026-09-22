@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.vector"
 type: docs
+linkTitle: "vector"
+manualLinkTitle: "vector"
 ---
 
 Read range, bearing and vertical angle using station targeting.

@@ -1,19 +1,22 @@
 ---
 title: "btech.player"
+linkTitle: "btech.player"
 type: docs
+weight: -5
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("btech")` provides this Lua API.
+`btech.player`: Saved player configuration and preferences.
 
 ## Functions
 
-- [`btech.player.contact_options`](contact-options/)
-- [`btech.player.contact_preferences`](contact-preferences/)
-- [`btech.player.loadout`](loadout/)
-- [`btech.player.mechwarrior_template`](mechwarrior-template/)
-- [`btech.player.set_loadout`](set-loadout/)
-- [`btech.player.set_mechwarrior_template`](set-mechwarrior-template/)
-- [`btech.player.set_ui_preferences`](set-ui-preferences/)
-- [`btech.player.ui_preferences`](ui-preferences/)
-- [`btech.player.view_dimensions`](view-dimensions/)
+- [`contact_options`](contact-options/)
+- [`contact_preferences`](contact-preferences/)
+- [`loadout`](loadout/)
+- [`mechwarrior_template`](mechwarrior-template/)
+- [`set_loadout`](set-loadout/)
+- [`set_mechwarrior_template`](set-mechwarrior-template/)
+- [`set_ui_preferences`](set-ui-preferences/)
+- [`ui_preferences`](ui-preferences/)
+- [`view_dimensions`](view-dimensions/)

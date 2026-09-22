@@ -1,6 +1,8 @@
 ---
 title: "btech.player.set_ui_preferences"
 type: docs
+linkTitle: "set_ui_preferences"
+manualLinkTitle: "set_ui_preferences"
 ---
 
 Replace the saved tactical contact and display preferences; nil clears them.

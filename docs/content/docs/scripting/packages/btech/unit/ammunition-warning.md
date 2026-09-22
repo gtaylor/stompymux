@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.ammunition_warning"
 type: docs
+linkTitle: "ammunition_warning"
+manualLinkTitle: "ammunition_warning"
 ---
 
 Set the assigned pilot's ammunition warning preference.

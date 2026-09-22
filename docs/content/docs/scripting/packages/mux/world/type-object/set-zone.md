@@ -1,6 +1,8 @@
 ---
 title: "Object:set_zone"
 type: docs
+linkTitle: "set_zone"
+manualLinkTitle: "set_zone"
 ---
 
 Assigns this object's zone, or clears it when `zone` is nil.

@@ -1,6 +1,8 @@
 ---
 title: "btech.character.progress"
 type: docs
+linkTitle: "progress"
+manualLinkTitle: "progress"
 ---
 
 Inspect progress without changing XP. Requires a callback and existing character attributes.

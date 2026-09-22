@@ -1,6 +1,8 @@
 ---
 title: "btech.character.set_value"
 type: docs
+linkTitle: "set_value"
+manualLinkTitle: "set_value"
 ---
 
 Set one character value by name or code, preserving the C unsigned-byte storage.

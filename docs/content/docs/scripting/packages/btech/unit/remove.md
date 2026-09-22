@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.remove"
 type: docs
+linkTitle: "remove"
+manualLinkTitle: "remove"
 ---
 
 Clear placement and move a unit into an ordinary container. Transactional.

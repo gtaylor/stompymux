@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.explode"
 type: docs
+linkTitle: "explode"
+manualLinkTitle: "explode"
 ---
 
 Start or stop cockpit self-destruction. Engagement releases the pilot assignment.

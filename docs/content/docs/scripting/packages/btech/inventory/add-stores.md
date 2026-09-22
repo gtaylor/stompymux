@@ -1,6 +1,8 @@
 ---
 title: "btech.inventory.add_stores"
 type: docs
+linkTitle: "add_stores"
+manualLinkTitle: "add_stores"
 ---
 
 Wizard signed adjustment of one catalogue match, ordered by long name after exact matching.

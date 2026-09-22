@@ -1,6 +1,8 @@
 ---
 title: "btech.map.unit_by_id"
 type: docs
+linkTitle: "unit_by_id"
+manualLinkTitle: "unit_by_id"
 ---
 
 Resolve the first unit matching a two-character battlefield ID from a unit or map origin.

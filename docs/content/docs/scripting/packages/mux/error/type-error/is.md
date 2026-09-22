@@ -1,6 +1,8 @@
 ---
 title: "Error:is"
 type: docs
+linkTitle: "is"
+manualLinkTitle: "is"
 ---
 
 Tests this error's code using dotted-prefix matching.

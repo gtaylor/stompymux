@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.aimed_section"
 type: docs
+linkTitle: "aimed_section"
+manualLinkTitle: "aimed_section"
 ---
 
 Read the saved anatomical preference without requiring a running unit or a current target.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.dig"
 type: docs
+linkTitle: "dig"
+manualLinkTitle: "dig"
 ---
 
 Begin twenty seconds of digging in a stopped tracked or wheeled vehicle.

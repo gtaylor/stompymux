@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.observer"
 type: docs
+linkTitle: "observer"
+manualLinkTitle: "observer"
 ---
 
 Inspect or set observer role. Trusted scripts own authorization; cockpit pilots cannot grant this role.

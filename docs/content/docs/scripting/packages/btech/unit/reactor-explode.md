@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.reactor_explode"
 type: docs
+linkTitle: "reactor_explode"
+manualLinkTitle: "reactor_explode"
 ---
 
 Detonate a Mech reactor in a trusted callback; damage, sensor flashes and casualties commit together.

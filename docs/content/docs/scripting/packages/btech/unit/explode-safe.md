@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.explode_safe"
 type: docs
+linkTitle: "explode_safe"
+manualLinkTitle: "explode_safe"
 ---
 
 Set scenario protection from new ammunition self-destruct requests; admitted timers continue.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.atmexplosive"
 type: docs
+linkTitle: "atmexplosive"
+manualLinkTitle: "atmexplosive"
 ---
 
 Toggle High Explosive ammunition using the same eligibility and saved selection rules.

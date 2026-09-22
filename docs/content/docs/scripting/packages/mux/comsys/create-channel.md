@@ -1,6 +1,8 @@
 ---
 title: "mux.comsys.create_channel"
 type: docs
+linkTitle: "create_channel"
+manualLinkTitle: "create_channel"
 ---
 
 Creates a private communication channel using the native channel-name

@@ -1,11 +1,14 @@
 ---
 title: "mux.config"
+linkTitle: "mux.config"
 type: docs
+weight: 15
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("mux")` provides this Lua API.
+`mux.config`: Read-only access to scalar server configuration.
 
 ## Functions
 
-- [`mux.config.get`](get/)
+- [`get`](get/)

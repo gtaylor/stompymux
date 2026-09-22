@@ -1,6 +1,8 @@
 ---
 title: "btech.cargo.stores"
 type: docs
+linkTitle: "stores"
+manualLinkTitle: "stores"
 ---
 
 Read hangar stock from a running unit at the configured loading point.

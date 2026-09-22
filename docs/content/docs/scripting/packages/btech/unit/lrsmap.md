@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.lrsmap"
 type: docs
+linkTitle: "lrsmap"
+manualLinkTitle: "lrsmap"
 ---
 
 Render long-range terrain, elevation or currently visible acquired units.

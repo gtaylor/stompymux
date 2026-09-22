@@ -1,6 +1,8 @@
 ---
 title: "mux.check_db"
 type: docs
+linkTitle: "check_db"
+manualLinkTitle: "check_db"
 ---
 
 Checks the database for inconsistencies and repairs damage found by the

@@ -29,15 +29,13 @@ its lack of one) rather than receiving the type default.
 An object uses only the `Luaparent` attached directly to it. Lua modules are
 not inherited through other objects. Reload all attached modules and their dependencies atomically
 with `@lua/reload`; a failed reload leaves the current Lua state running.
-Use [`@lua/check`](validating-and-reloading/) to validate every Lua module
+Use [`@lua/check`](/docs/scripting/validating-and-reloading/) to validate every Lua module
 before reloading.
 
-If an attached file is deleted or otherwise cannot load, startup logs the
-object, configured path, and load error but continues. The attachment remains
-in place; command matching and native events for that object log the load error
-and are treated as handled.
-Restore the file or update `Luaparent`, then use `@lua/reload` to activate the
-repair. `@lua/reload` itself remains atomic and rejects a missing attachment.
+If an attached file is missing or cannot load, startup fails with an error
+identifying the attachment. Restore the file or update the object's Lua parent
+before starting again. `@lua/reload` validates candidate modules and rejects
+a missing attachment while keeping the active Lua state.
 
 `@examine` is Wizard-only, and Wizards may examine any object. Its output
 identifies the object's direct Lua parent, then lists its appearance functions,
@@ -71,7 +69,7 @@ object. Wipe removes either one namespace or all state on the object.
 
 An object module returns a table with optional `commands`, `events`, `locks`,
 `messages`, and `schedules` tables, plus optional `internal_appearance` and
-`external_appearance` functions. See [Scheduled events](scheduled-events/) for
+`external_appearance` functions. See [Scheduled events](/docs/scripting/scheduled-events/) for
 the schedule entry format and object-attached execution behavior.
 Command entries use native Lua patterns and a handler:
 
@@ -166,7 +164,7 @@ that message. On failure, messages are delivered first and the corresponding
 
 The context includes the normal `object`, `enactor`, `cause`, and `descriptor`
 fields, plus `subject` (the object being tested), `lock`, and `silent`. Lock
-handlers have access to the full [`mux`](packages/mux/) API. One function may
+handlers have access to the full [`mux`](/docs/scripting/packages/mux/) API. One function may
 be assigned to several keys and can use `ctx.lock` to distinguish them.
 
 Lock keys are exact and no compatibility aliases are provided. BattleTech
@@ -288,13 +286,13 @@ handlers receive `ctx.descriptor`. `on_player_connect` also receives boolean
 `ctx.reconnect`; `on_player_disconnect` receives string `ctx.reason` and runs
 only for the final active descriptor.
 
-`on_server_first_startup` runs only after a missing database has been fully
-bootstrapped and its initial SQLite snapshot committed. Its global and object
-handlers all run before any `on_server_startup` handlers. `on_server_startup`
+`on_server_first_startup` runs while a missing database is being initialized,
+before its first SQLite snapshot is committed. Its global and object handlers
+all run before any `on_server_startup` handlers. `on_server_startup`
 still runs on that first startup and every later startup. Neither startup event
 runs after `@lua/reload`.
 
-See [Commands](commands/) for Lua-pattern syntax, capture arguments, and the
+See [Commands](/docs/scripting/commands/) for Lua-pattern syntax, capture arguments, and the
 handler context table.
 
 ## Imports and examples
@@ -303,5 +301,5 @@ Object modules resolve `require("name")` in `object_logic` before looking in
 the shared `packages` root. See `game/lua/object_logic/` for the `hello`,
 `counter`, and `events/enter_notice` examples.
 
-The [`mux` package](packages/mux/) documents the server API available to
+The [`mux` package](/docs/scripting/packages/mux/) documents the server API available to
 object modules.

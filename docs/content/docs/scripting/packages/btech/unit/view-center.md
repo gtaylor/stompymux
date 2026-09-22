@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.view_center"
 type: docs
+linkTitle: "view_center"
+manualLinkTitle: "view_center"
 ---
 
 Resolve display centering only; this does not render or disclose terrain or occupants.

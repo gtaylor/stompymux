@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.firemine"
 type: docs
+linkTitle: "firemine"
+manualLinkTitle: "firemine"
 ---
 
 Select missile Mine rounds, which bypass AMS and retain ordinary missile damage.

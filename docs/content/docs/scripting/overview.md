@@ -6,7 +6,8 @@ type: docs
 weight: 1
 ---
 
-LuaJIT modules live under `game/lua` in three separate roots:
+The Rust server embeds LuaJIT through `mlua`. Game modules live under the
+configured game directory's `lua/` folder in three separate roots:
 
 ```text
 lua/
@@ -20,7 +21,7 @@ lua/
 Attach a module to an object with the wizard-only `@lua/parent
 <object>=<path>.lua`; the path is relative to `object_logic`, and omitting it
 clears the attachment. Each object uses only its own direct attachment. See
-[Object scripting](scripting-objects/) for the
+[Object scripting](/docs/scripting/scripting-objects/) for the
 full module contract, the native event catalog, and how load errors are
 handled.
 
@@ -28,7 +29,7 @@ Global logic files are discovered recursively below `global_logic` and
 loaded in lexical relative-path order; use domain-oriented paths such as
 `player/help.lua` and `world/travel.lua`. Global command handlers run only
 after every local or zone Lua command has declined the command. See
-[Global logic](global-commands/) for details.
+[Global logic](/docs/scripting/global-logic/) for details.
 
 ## Module contract
 
@@ -36,23 +37,23 @@ Each module returns a table with optional `commands`, `schedules`, and `flows`
 entries; object modules may also provide `events`, `locks`, successful action
 `messages`, and appearance functions. A command entry pairs a native Lua
 `pattern` with a `handler(ctx, ...)` and may set `access` to a typed
-[`mux.world.access`](packages/mux/world/access/) constant; omitted access is
+[`mux.world.access`](/docs/scripting/packages/mux/world/access/) constant; omitted access is
 public. Returning `true` handles the command, while `false` or `nil` lets other
-matching continue. See [Commands](commands/) for pattern syntax, access
+matching continue. See [Commands](/docs/scripting/commands/) for pattern syntax, access
 behavior, and the handler context table.
 
 A module's `flows` table holds named step functions that
-[`mux.session.flow_start`](packages/mux/session/flow-start/)
+[`mux.session.flow_start`](/docs/scripting/packages/mux/session/flow-start/)
 can drive as a multi-step conversation on a connected player's own
 descriptor - the interactive counterpart to `commands` for menus, prompts,
-and confirmations. See [Interactive flows](flows/).
+and confirmations. See [Interactive flows](/docs/scripting/flows/).
 
 Object and global modules can also declare `schedules`: named entries with
 five-field UTC cron expressions. Object schedules run once for every directly
 attached object; global schedules run once per
 matching module entry. Scheduled jobs receive deterministic jitter and do not
 replay missed minutes. Inspect active schedules with the wizard-only
-`@lua/schedule` command. See [Scheduled events](scheduled-events/) for the
+`@lua/schedule` command. See [Scheduled events](/docs/scripting/scheduled-events/) for the
 complete schedule contract.
 
 ## Imports
@@ -67,24 +68,25 @@ exposed.
 
 ## The `mux` API
 
-The `mux` table is the server interface exposed to Lua modules. Use
-`mux.world.object(dbref)` for object properties, containment, locks, and typed
-persistent state. Styled text, notifications, queued commands, connection
-summaries, and interactive flows remain top-level `mux` operations. Queued
-commands execute as `#1` after the current handler completes. See the
-[`mux` package reference](packages/mux/) for the full API.
-See [Lua errors](errors/) and the [`mux.error` package reference](packages/mux/error/)
+The `mux` and `btech` tables are Rust-backed interfaces exposed to Lua
+modules. Use `mux.world.object(dbref)` for object properties, containment, locks, and typed
+persistent state. Styled text, notifications, connection summaries, and
+interactive flows are available through `mux`. See the
+[`mux` package reference](/docs/scripting/packages/mux/) and
+[`btech` package reference](/docs/scripting/packages/btech/) for the full APIs.
+See [Lua errors](/docs/scripting/errors/) and the [`mux.error` package reference](/docs/scripting/packages/mux/error/)
 for the structured error convention used by native bindings and script authors.
 
-Lua has no filesystem, process, debug, FFI, coroutine, or dynamic-loading
-APIs. The configured memory cap applies to the complete Lua state. Persistent
-object state has separate per-value and per-object limits.
+The game sandbox restricts filesystem, process, debug, FFI, coroutine, and
+dynamic-loading APIs. JIT tracing is disabled so the configured instruction
+budget applies to callbacks and module loading. The configured memory cap
+applies to the Lua state. Persistent object state has separate per-value and
+per-object limits.
 
 Native control is role-only: God controls everything; Wizards control themselves
 and every non-Wizard object and player but cannot control God or another Wizard;
 mortals control nothing, including themselves. Zones do not affect control. Lua
-is trusted and uses the `mux` API, including commands queued as
-`#1`, to manipulate any object.
+is trusted and uses the `mux` API to manipulate game objects.
 
 ## Validating and reloading
 
@@ -92,7 +94,7 @@ Use the wizard-only `@lua/check` to verify every module before putting
 changes into service, then `@lua/reload` to atomically rebuild the Lua state
 from every attached module, every global logic module, and their
 dependencies. If a file or dependency fails to load, the current state
-remains active. See [Validating and reloading](validating-and-reloading/).
+remains active. See [Validating and reloading](/docs/scripting/validating-and-reloading/).
 
 ## Starter examples
 
@@ -128,5 +130,5 @@ details, `@session` for per-client queue and traffic counters, and `@telnet`
 for negotiated Telnet state and NEW-ENVIRON values.
 
 `game/lua/global_logic/flow_examples.lua` demonstrates
-[interactive flows](flows/): `flow-demo confirm`, `flow-demo menu`, and
+[interactive flows](/docs/scripting/flows/): `flow-demo confirm`, `flow-demo menu`, and
 `flow-demo signup`.

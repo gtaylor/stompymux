@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.set_scan_range"
 type: docs
+linkTitle: "set_scan_range"
+manualLinkTitle: "set_scan_range"
 ---
 
 Set the scan range in hexes.

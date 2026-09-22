@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.precision"
 type: docs
+linkTitle: "precision"
+manualLinkTitle: "precision"
 ---
 
 Toggle Precision autocannon ammunition with cockpit feedback.

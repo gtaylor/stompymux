@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.dfa"
 type: docs
+linkTitle: "dfa"
+manualLinkTitle: "dfa"
 ---
 
 Attempt a DFA jump using the shared pre-launch stagger check. Nil uses the current target lock.

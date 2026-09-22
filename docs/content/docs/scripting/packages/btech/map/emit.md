@@ -1,6 +1,8 @@
 ---
 title: "btech.map.emit"
 type: docs
+linkTitle: "emit"
+manualLinkTitle: "emit"
 ---
 
 Deliver a cockpit message to occupants of running units using the shared transactional emitter.

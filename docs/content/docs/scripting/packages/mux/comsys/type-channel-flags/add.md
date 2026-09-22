@@ -1,6 +1,8 @@
 ---
 title: "ChannelFlags:add"
 type: docs
+linkTitle: "add"
+manualLinkTitle: "add"
 ---
 
 Sets a typed channel flag.

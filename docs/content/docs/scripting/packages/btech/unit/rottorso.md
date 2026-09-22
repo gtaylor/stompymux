@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.rottorso"
 type: docs
+linkTitle: "rottorso"
+manualLinkTitle: "rottorso"
 ---
 
 Rotate one step left/right or center the torso; stages the native cockpit message.

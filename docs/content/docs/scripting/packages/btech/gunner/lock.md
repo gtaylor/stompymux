@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.lock"
 type: docs
+linkTitle: "lock"
+manualLinkTitle: "lock"
 ---
 
 Select an acquired parent contact, or clear with nil. Requires the present registered gunner.

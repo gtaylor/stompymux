@@ -1,6 +1,8 @@
 ---
 title: "btech.map.save"
 type: docs
+linkTitle: "save"
+manualLinkTitle: "save"
 ---
 
 Stage an atomic asset replacement after world commit; true means queued, not written.

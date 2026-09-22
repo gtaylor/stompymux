@@ -1,6 +1,8 @@
 ---
 title: "Powers:has"
 type: docs
+linkTitle: "has"
+manualLinkTitle: "has"
 ---
 
 Tests whether this object has a power.

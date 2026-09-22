@@ -1,6 +1,8 @@
 ---
 title: "btech.map.reload"
 type: docs
+linkTitle: "reload"
+manualLinkTitle: "reload"
 ---
 
 Explicitly replace terrain on an unoccupied map of the same dimensions.

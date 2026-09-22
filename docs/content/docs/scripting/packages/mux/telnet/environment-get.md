@@ -1,6 +1,8 @@
 ---
 title: "mux.telnet.environment_get"
 type: docs
+linkTitle: "environment_get"
+manualLinkTitle: "environment_get"
 ---
 
 Gets a binary-safe RFC 1572 NEW-ENVIRON value.

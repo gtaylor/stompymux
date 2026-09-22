@@ -1,6 +1,8 @@
 ---
 title: "btech.map.authored_link"
 type: docs
+linkTitle: "authored_link"
+manualLinkTitle: "authored_link"
 ---
 
 Read the authored link configuration saved by the wizard editor. Rust extension retained

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.markings"
 type: docs
+linkTitle: "markings"
+manualLinkTitle: "markings"
 ---
 
 Read the saved markings string, or nil when no markings are configured.

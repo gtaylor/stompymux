@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.set_long_range_sensor_range"
 type: docs
+linkTitle: "set_long_range_sensor_range"
+manualLinkTitle: "set_long_range_sensor_range"
 ---
 
 Set the long-range sensor ceiling in hexes.

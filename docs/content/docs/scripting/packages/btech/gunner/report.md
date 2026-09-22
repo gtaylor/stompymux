@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.report"
 type: docs
+linkTitle: "report"
+manualLinkTitle: "report"
 ---
 
 Return a silent brief unit report with the parent sensor admission and ordinary disclosure.

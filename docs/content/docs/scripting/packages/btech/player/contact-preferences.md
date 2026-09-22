@@ -1,6 +1,8 @@
 ---
 title: "btech.player.contact_preferences"
 type: docs
+linkTitle: "contact_preferences"
+manualLinkTitle: "contact_preferences"
 ---
 
 Read or replace saved contact-list inclusion policy for a live player.

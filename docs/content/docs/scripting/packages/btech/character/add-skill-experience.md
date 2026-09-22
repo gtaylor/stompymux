@@ -1,6 +1,8 @@
 ---
 title: "btech.character.add_skill_experience"
 type: docs
+linkTitle: "add_skill_experience"
+manualLinkTitle: "add_skill_experience"
 ---
 
 Add signed skill experience using the shared C range semantics.

@@ -1,6 +1,8 @@
 ---
 title: "btech.template.inspect"
 type: docs
+linkTitle: "inspect"
+manualLinkTitle: "inspect"
 ---
 
 Read a biped asset without instantiating or activating a unit.

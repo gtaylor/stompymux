@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.status"
 type: docs
+linkTitle: "status"
+manualLinkTitle: "status"
 ---
 
 Inspect parent state with the registered gunner's independent target selection.

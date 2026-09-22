@@ -1,6 +1,8 @@
 ---
 title: "mux.error.code_tree"
 type: docs
+linkTitle: "code_tree"
+manualLinkTitle: "code_tree"
 ---
 
 Returns the cached checked native code tree for a root.

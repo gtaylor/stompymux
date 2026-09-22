@@ -1,6 +1,8 @@
 ---
 title: "Object:set_name"
 type: docs
+linkTitle: "set_name"
+manualLinkTitle: "set_name"
 ---
 
 Changes this object's name using native object-name validation.

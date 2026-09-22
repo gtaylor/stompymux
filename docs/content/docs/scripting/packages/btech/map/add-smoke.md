@@ -1,6 +1,8 @@
 ---
 title: "btech.map.add_smoke"
 type: docs
+linkTitle: "add_smoke"
+manualLinkTitle: "add_smoke"
 ---
 
 Install wizard smoke; zero duration is permanent. Off-map coordinates leave the map unchanged.

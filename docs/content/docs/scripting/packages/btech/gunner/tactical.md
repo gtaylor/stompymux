@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.tactical"
 type: docs
+linkTitle: "tactical"
+manualLinkTitle: "tactical"
 ---
 
 Render the parent's tactical map using the registered gunner's display preferences.

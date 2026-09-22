@@ -1,6 +1,8 @@
 ---
 title: "mux.world.destroy_object"
 type: docs
+linkTitle: "destroy_object"
+manualLinkTitle: "destroy_object"
 ---
 
 Silently schedules a live object for destruction by the normal maintenance purge.

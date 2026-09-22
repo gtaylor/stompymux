@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.effective_max_speed"
 type: docs
+linkTitle: "effective_max_speed"
+manualLinkTitle: "effective_max_speed"
 ---
 
 Read the damage-adjusted maximum speed in movement points.

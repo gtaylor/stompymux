@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.set_tactical_range"
 type: docs
+linkTitle: "set_tactical_range"
+manualLinkTitle: "set_tactical_range"
 ---
 
 Set the tactical sensor range in hexes.

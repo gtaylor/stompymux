@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.vertical"
 type: docs
+linkTitle: "vertical"
+manualLinkTitle: "vertical"
 ---
 
 Read or set VTOL vertical speed using configured fuel rules and the shared velocity budget.

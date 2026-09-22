@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.viewport"
 type: docs
+linkTitle: "viewport"
+manualLinkTitle: "viewport"
 ---
 
 Resolve display bounds only, without rendering or disclosing terrain/occupants.

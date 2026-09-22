@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.losemit"
 type: docs
+linkTitle: "losemit"
+manualLinkTitle: "losemit"
 ---
 
 Wizard-only literal emote to running units currently seeing the source; source cockpit excluded.

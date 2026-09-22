@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.armor"
 type: docs
+linkTitle: "armor"
+manualLinkTitle: "armor"
 ---
 
 Read current, original and rear armor values; an omitted section reports the totals.

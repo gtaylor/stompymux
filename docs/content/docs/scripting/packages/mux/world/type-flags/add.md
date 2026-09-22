@@ -1,6 +1,8 @@
 ---
 title: "Flags:add"
 type: docs
+linkTitle: "add"
+manualLinkTitle: "add"
 ---
 
 Adds a flag and reports whether the object changed.

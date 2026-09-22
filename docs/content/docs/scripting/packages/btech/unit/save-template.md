@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.save_template"
 type: docs
+linkTitle: "save_template"
+manualLinkTitle: "save_template"
 ---
 
 Save the unit definition under a template reference in the mech database.

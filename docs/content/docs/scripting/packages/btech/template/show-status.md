@@ -1,6 +1,8 @@
 ---
 title: "btech.template.show_status"
 type: docs
+linkTitle: "show_status"
+manualLinkTitle: "show_status"
 ---
 
 Publish the full template status report to a player.

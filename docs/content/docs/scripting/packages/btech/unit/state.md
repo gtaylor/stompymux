@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.state"
 type: docs
+linkTitle: "state"
+manualLinkTitle: "state"
 ---
 
 Inspect detached construction state; deferred saved units raise an error.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.section_condition"
 type: docs
+linkTitle: "section_condition"
+manualLinkTitle: "section_condition"
 ---
 
 Read a section's damage condition.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.setxy"
 type: docs
+linkTitle: "setxy"
+manualLinkTitle: "setxy"
 ---
 
 Wizard repositioning within the current battlefield, preserving controls and tow attachment.

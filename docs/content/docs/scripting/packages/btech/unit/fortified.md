@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.fortified"
 type: docs
+linkTitle: "fortified"
+manualLinkTitle: "fortified"
 ---
 
 Inspect or set scenario fortification. Trusted scripts own authorization.

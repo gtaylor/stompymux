@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.flechette"
 type: docs
+linkTitle: "flechette"
+manualLinkTitle: "flechette"
 ---
 
 Toggle Flechette autocannon ammunition with cockpit feedback.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.restore"
 type: docs
+linkTitle: "restore"
+manualLinkTitle: "restore"
 ---
 
 Restore armor, internal structure, critical slots and ammunition to template values.

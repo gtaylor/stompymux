@@ -1,6 +1,8 @@
 ---
 title: "btech.map.set_hex"
 type: docs
+linkTitle: "set_hex"
+manualLinkTitle: "set_hex"
 ---
 
 Wizard live base-terrain edit. Retains unit altitude and overlays; does not cause combat falls.

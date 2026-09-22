@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.towable"
 type: docs
+linkTitle: "towable"
+manualLinkTitle: "towable"
 ---
 
 Inspect or set scenario permission to tow this unit out of character.

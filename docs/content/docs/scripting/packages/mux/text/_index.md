@@ -1,17 +1,20 @@
 ---
 title: "mux.text"
+linkTitle: "mux.text"
 type: docs
+weight: -30
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("mux")` provides this Lua API.
+`mux.text`: Styled-text validation, formatting, and measurement helpers.
 
 ## Functions
 
-- [`mux.text.is_printable_ascii`](is-printable-ascii/)
-- [`mux.text.markdown`](markdown/)
-- [`mux.text.markup`](markup/)
-- [`mux.text.strip_style`](strip-style/)
-- [`mux.text.style`](style/)
-- [`mux.text.truncate`](truncate/)
-- [`mux.text.width`](width/)
+- [`is_printable_ascii`](is-printable-ascii/)
+- [`markdown`](markdown/)
+- [`markup`](markup/)
+- [`strip_style`](strip-style/)
+- [`style`](style/)
+- [`truncate`](truncate/)
+- [`width`](width/)

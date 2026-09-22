@@ -1,6 +1,8 @@
 ---
 title: "mux.text.markup"
 type: docs
+linkTitle: "markup"
+manualLinkTitle: "markup"
 ---
 
 Validates styled-text markup and returns it unchanged.

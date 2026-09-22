@@ -1,6 +1,8 @@
 ---
 title: "btech.inventory.read"
 type: docs
+linkTitle: "read"
+manualLinkTitle: "read"
 ---
 
 Read an object's detached, ordered loose-parts stock in a callback.

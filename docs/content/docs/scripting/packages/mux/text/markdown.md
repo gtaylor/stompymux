@@ -1,6 +1,8 @@
 ---
 title: "mux.text.markdown"
 type: docs
+linkTitle: "markdown"
+manualLinkTitle: "markdown"
 ---
 
 Parses Markdown into an immutable document for text output.

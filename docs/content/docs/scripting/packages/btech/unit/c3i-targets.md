@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.c3i_targets"
 type: docs
+linkTitle: "c3i_targets"
+manualLinkTitle: "c3i_targets"
 ---
 
 Inspect direct and network sightings without acquiring contacts or publishing output.

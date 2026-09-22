@@ -1,6 +1,8 @@
 ---
 title: "btech.cargo.load"
 type: docs
+linkTitle: "load"
+manualLinkTitle: "load"
 ---
 
 Load matching hangar stock into a stationary, running CargoTech unit.

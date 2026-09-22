@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.criticals"
 type: docs
+linkTitle: "criticals"
+manualLinkTitle: "criticals"
 ---
 
 Inspect equipment by cockpit section alias. The trusted query requires a callback transaction.

@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.scan_building"
 type: docs
+linkTitle: "scan_building"
+manualLinkTitle: "scan_building"
 ---
 
 Inspect a building using cached parent perception; publish to the station and award gunner experience.

@@ -1,6 +1,8 @@
 ---
 title: "mux.error.wrap"
 type: docs
+linkTitle: "wrap"
+manualLinkTitle: "wrap"
 ---
 
 Wraps a failure as the cause of a new structured error.

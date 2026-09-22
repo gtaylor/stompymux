@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.radio_title"
 type: docs
+linkTitle: "radio_title"
+manualLinkTitle: "radio_title"
 ---
 
 Save a title, truncated to fifteen bytes at a UTF-8 boundary. Transactional.

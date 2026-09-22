@@ -1,6 +1,8 @@
 ---
 title: "Object:set_lua_parent"
 type: docs
+linkTitle: "set_lua_parent"
+manualLinkTitle: "set_lua_parent"
 ---
 
 Assigns this object's direct Lua parent path, or clears it when `parent` is nil.

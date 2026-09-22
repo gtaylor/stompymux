@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.technologies"
 type: docs
+linkTitle: "technologies"
+manualLinkTitle: "technologies"
 ---
 
 List configured and inferred unit technologies.

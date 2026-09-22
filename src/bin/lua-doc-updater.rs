@@ -83,19 +83,27 @@ fn slug(name: &str) -> String {
     name.replace('_', "-")
 }
 
-/// Locate the output path of a callable's page.
-fn function_page(function: &ApiFunction) -> String {
-    let short = function
+/// Extract the callable name without its package or receiver.
+fn function_name(function: &ApiFunction) -> &str {
+    function
         .name
         .rsplit([':', '.'])
         .next()
-        .expect("nonempty callable name");
-    format!("{}/{}.md", function.path, slug(short))
+        .expect("nonempty callable name")
+}
+
+/// Locate the output path of a callable's page.
+fn function_page(function: &ApiFunction) -> String {
+    format!("{}/{}.md", function.path, slug(function_name(function)))
 }
 
 /// Wrap generated Markdown in the site's page front matter.
-fn page(title: &str, body: &str, index: bool) -> String {
+fn page(title: &str, link_title: Option<&str>, body: &str, index: bool) -> String {
     let mut output = format!("---\ntitle: \"{title}\"\ntype: docs\n");
+    if let Some(link_title) = link_title {
+        output.push_str(&format!("linkTitle: \"{link_title}\"\n"));
+        output.push_str(&format!("manualLinkTitle: \"{link_title}\"\n"));
+    }
     if index {
         output.push_str("no_list: true\n");
     }
@@ -103,6 +111,110 @@ fn page(title: &str, body: &str, index: bool) -> String {
     output.push_str(body.trim_end());
     output.push('\n');
     output
+}
+
+/// Keep section navigation local to the package, following the source site's layout.
+fn index_page(path: &str, body: &str) -> String {
+    let (title, link_title, weight) = match path {
+        "" => ("Package Reference".to_owned(), None, Some(1000)),
+        "mux" => ("mux package".to_owned(), Some("mux".to_owned()), Some(10)),
+        "btech" => (
+            "btech package".to_owned(),
+            Some("btech".to_owned()),
+            Some(20),
+        ),
+        _ => {
+            let title = path.replace('/', ".");
+            let link_title = match path {
+                "mux/comsys/type-channel" => "Channel".to_owned(),
+                "mux/comsys/type-channel-flags" => "ChannelFlags".to_owned(),
+                "mux/world/type-flags" => "Flags".to_owned(),
+                "mux/world/type-object" => "Object".to_owned(),
+                "mux/world/type-powers" => "Powers".to_owned(),
+                "mux/world/type-state" => "State".to_owned(),
+                _ => title.clone(),
+            };
+            let title = if path.contains("/type-") {
+                link_title.clone()
+            } else {
+                title
+            };
+            (title, Some(link_title), index_weight(path))
+        }
+    };
+    let mut output = format!("---\ntitle: \"{title}\"\n");
+    if let Some(link_title) = link_title {
+        output.push_str(&format!("linkTitle: \"{link_title}\"\n"));
+    }
+    if path.is_empty() {
+        output.push_str("description: A reference for the Lua scripting APIs\n");
+    }
+    output.push_str("type: docs\n");
+    if let Some(weight) = weight {
+        output.push_str(&format!("weight: {weight}\n"));
+    }
+    if !path.is_empty() {
+        output.push_str("sidebar_root_for: self\n");
+    }
+    output.push_str("no_list: true\n---\n\n");
+    output.push_str(body.trim_end());
+    output.push('\n');
+    output
+}
+
+/// Preserve the familiar ordering of sections that existed in the source site.
+fn index_weight(path: &str) -> Option<i32> {
+    match path {
+        "btech/autopilot" => Some(5),
+        "btech/character" => Some(10),
+        "btech/error" | "mux/error" => Some(-50),
+        "btech/map" => Some(-10),
+        "btech/parts" => Some(0),
+        "btech/player" => Some(-5),
+        "btech/repair" | "mux/comsys/type-channel" | "mux/world/type-flags" => Some(20),
+        "btech/system" | "mux/comsys/type-channel-flags" | "mux/world/type-object" => Some(30),
+        "btech/template" | "mux/config" => Some(15),
+        "btech/unit" | "mux/world" => Some(-20),
+        "mux/comsys" => Some(14),
+        "mux/session" => Some(-35),
+        "mux/telnet" => Some(-40),
+        "mux/text" => Some(-30),
+        "mux/world/type-powers" => Some(40),
+        "mux/world/type-state" => Some(50),
+        _ => None,
+    }
+}
+
+/// One-line descriptions for the package tables and subpackage introductions.
+fn subpackage_description(path: &str) -> Option<&'static str> {
+    match path {
+        "mux/comsys" => Some("Trusted communication-channel management."),
+        "mux/config" => Some("Read-only access to scalar server configuration."),
+        "mux/error" => Some("Structured errors, checked error codes, and error-handling helpers."),
+        "mux/session" => Some("Interactive flows and active player-session information."),
+        "mux/telnet" => Some("Telnet protocol state and capabilities."),
+        "mux/text" => Some("Styled-text validation, formatting, and measurement helpers."),
+        "mux/world" => Some("Database objects and their persistent state."),
+        "btech/autopilot" => {
+            Some("Typed autopilot constants; queue and control calls are not implemented.")
+        }
+        "btech/cargo" => Some("Cockpit stock reports and cargo transfers."),
+        "btech/character" => Some("Character values, skills, and experience."),
+        "btech/database" => Some("Explicit BattleTech world checkpoints."),
+        "btech/error" => Some("Checked BattleTech error-code symbols."),
+        "btech/gunner" => Some("Gunner station registration, ownership, and inspection."),
+        "btech/inventory" => Some("Loose-parts inventory and stock changes."),
+        "btech/map" => Some("Maps, geometry, line of sight, placement, and messaging."),
+        "btech/parts" => Some("Part catalogue and stores."),
+        "btech/player" => Some("Saved player configuration and preferences."),
+        "btech/repair" => Some("Immediate repairs and technician scheduling."),
+        "btech/runtime" => Some("Wizard runtime diagnostics."),
+        "btech/system" => Some("Server-wide BattleTech queries."),
+        "btech/template" => Some("Unit-template inspection and displays."),
+        "btech/unit" => Some("Live-unit state, combat queries, and mutations."),
+        "btech/weapon" => Some("Runtime weapon settings."),
+        _ => None,
+    }
 }
 
 /// Map a LuaLS method receiver to its existing reference section.
@@ -445,6 +557,7 @@ fn render(root: &Path) -> Result<BTreeMap<String, String>> {
                 path.clone(),
                 page(
                     &function.name,
+                    Some(function_name(function)),
                     &function_body(function, examples.get(&path).map(String::as_str)),
                     false,
                 ),
@@ -473,7 +586,7 @@ fn render(root: &Path) -> Result<BTreeMap<String, String>> {
         }
         pages.insert(
             format!("{path}.md"),
-            page(&path.replace('/', "."), &body, false),
+            page(&path.replace('/', "."), None, &body, false),
         );
     }
 
@@ -482,6 +595,7 @@ fn render(root: &Path) -> Result<BTreeMap<String, String>> {
             format!("{package}/types.md"),
             page(
                 &format!("{package} value types"),
+                None,
                 &type_body(&types.join(format!("{package}.d.lua")))?,
                 false,
             ),
@@ -506,17 +620,36 @@ fn render(root: &Path) -> Result<BTreeMap<String, String>> {
     }
     for path in &paths {
         let title = path.replace('/', ".");
-        let root = path.split('/').next().expect("nonempty package path");
-        let mut body = format!("`require(\"{root}\")` provides this Lua API.\n\n");
+        let mut body = match path.as_str() {
+            "mux" => "`mux` is the built-in server API available to every Lua module. It is supplied by the game server rather than loaded with `require`.\n\n".to_owned(),
+            "btech" => "`require(\"btech\")` returns the native, typed BattleTech API. Gameplay calls are unavailable during `@lua/check`.\n\n".to_owned(),
+            _ => match subpackage_description(path) {
+                Some(description) => format!("`{title}`: {description}\n\n"),
+                None => format!("`{title}` is part of the Lua API.\n\n"),
+            },
+        };
         let children: Vec<_> = paths
             .iter()
             .filter(|child| direct_child(path, child))
             .collect();
         if !children.is_empty() {
-            body.push_str("## Namespaces and types\n\n");
-            for child in children {
-                let short = child.rsplit('/').next().expect("child segment");
-                body.push_str(&format!("- [`{}`]({short}/)\n", child.replace('/', ".")));
+            if path == "mux" || path == "btech" {
+                body.push_str("## Subpackages\n\n| Package | Description |\n| --- | --- |\n");
+                for child in children {
+                    let description = subpackage_description(child)
+                        .with_context(|| format!("missing subpackage description for {child}"))?;
+                    let short = child.rsplit('/').next().expect("child segment");
+                    body.push_str(&format!(
+                        "| [`{}`]({short}/) | {description} |\n",
+                        child.replace('/', ".")
+                    ));
+                }
+            } else {
+                body.push_str("## Namespaces and types\n\n");
+                for child in children {
+                    let short = child.rsplit('/').next().expect("child segment");
+                    body.push_str(&format!("- [`{}`]({short}/)\n", child.replace('/', ".")));
+                }
             }
             body.push('\n');
         }
@@ -525,12 +658,8 @@ fn render(root: &Path) -> Result<BTreeMap<String, String>> {
             let mut symbols = symbols.clone();
             symbols.sort_by(|a, b| a.name.cmp(&b.name));
             for function in symbols {
-                let short = function
-                    .name
-                    .rsplit([':', '.'])
-                    .next()
-                    .expect("callable name");
-                body.push_str(&format!("- [`{}`]({}/)\n", function.name, slug(short)));
+                let short = function_name(function);
+                body.push_str(&format!("- [`{short}`]({}/)\n", slug(short)));
             }
         }
         let constant_children: Vec<_> = constants
@@ -555,16 +684,13 @@ fn render(root: &Path) -> Result<BTreeMap<String, String>> {
                 "\nSee the [value types](types/) used in signatures and returned records.\n",
             );
         }
-        pages.insert(format!("{path}/_index.md"), page(&title, &body, true));
+        pages.insert(format!("{path}/_index.md"), index_page(path, &body));
     }
 
     let root = "| Package | Description |\n| --- | --- |\n\
 | [`mux`](mux/) | World objects, communication, text, sessions, and errors. |\n\
 | [`btech`](btech/) | BattleTech maps, units, equipment, and operations. |\n";
-    pages.insert(
-        "_index.md".to_owned(),
-        page("Lua package reference", root, true),
-    );
+    pages.insert("_index.md".to_owned(), index_page("", root));
     println!(
         "Rendered {} function pages and {} constant pages",
         functions.len(),
@@ -693,5 +819,51 @@ mod tests {
         let body = function_body(&function, Some("local name = object:name()\n"));
         assert!(body.contains("## Example\n\n```lua\nlocal name = object:name()\n```"));
         assert!(body.find("## Returns").unwrap() < body.find("## Example").unwrap());
+    }
+
+    #[test]
+    fn callable_pages_use_the_short_name_in_navigation() {
+        let function = ApiFunction {
+            name: "btech.unit.set_max_speed".to_owned(),
+            path: "btech/unit".to_owned(),
+            parameters: "unit, speed".to_owned(),
+            comments: Vec::new(),
+        };
+        let rendered = page(
+            &function.name,
+            Some(function_name(&function)),
+            &function_body(&function, None),
+            false,
+        );
+        assert!(rendered.starts_with(
+            "---\ntitle: \"btech.unit.set_max_speed\"\ntype: docs\nlinkTitle: \"set_max_speed\"\nmanualLinkTitle: \"set_max_speed\"\n"
+        ));
+    }
+
+    #[test]
+    fn section_lists_use_short_callable_names() -> Result<()> {
+        let pages = render(Path::new(env!("CARGO_MANIFEST_DIR")))?;
+        let unit_index = &pages["btech/unit/_index.md"];
+        assert!(unit_index.contains("- [`armor`](armor/)"));
+        assert!(!unit_index.contains("- [`btech.unit.armor`](armor/)"));
+        assert!(unit_index.contains("sidebar_root_for: self\nno_list: true"));
+        assert!(unit_index.contains("weight: -20"));
+        let mux = &pages["mux/_index.md"];
+        assert!(
+            mux.contains(
+                "| [`mux.world`](world/) | Database objects and their persistent state. |"
+            )
+        );
+        assert!(mux.contains("weight: 10\nsidebar_root_for: self\nno_list: true"));
+        let btech = &pages["btech/_index.md"];
+        assert!(btech.contains("| [`btech.autopilot`](autopilot/) | Typed autopilot constants; queue and control calls are not implemented. |"));
+        assert!(
+            btech.contains(
+                "| [`btech.cargo`](cargo/) | Cockpit stock reports and cargo transfers. |"
+            )
+        );
+        let package_root = &pages["_index.md"];
+        assert!(package_root.contains("weight: 1000\nno_list: true"));
+        Ok(())
     }
 }

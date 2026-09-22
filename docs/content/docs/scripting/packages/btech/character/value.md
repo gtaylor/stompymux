@@ -1,6 +1,8 @@
 ---
 title: "btech.character.value"
 type: docs
+linkTitle: "value"
+manualLinkTitle: "value"
 ---
 
 Read one character value; skills additionally report target and experience progress.

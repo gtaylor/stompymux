@@ -1,11 +1,13 @@
 ---
 title: "btech.runtime"
+linkTitle: "btech.runtime"
 type: docs
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("btech")` provides this Lua API.
+`btech.runtime`: Wizard runtime diagnostics.
 
 ## Functions
 
-- [`btech.runtime.stats`](stats/)
+- [`stats`](stats/)

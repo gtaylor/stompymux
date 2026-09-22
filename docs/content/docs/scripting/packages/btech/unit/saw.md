@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.saw"
 type: docs
+linkTitle: "saw"
+manualLinkTitle: "saw"
 ---
 
 Attempt a dual-saw attack; seven operational parts required, fixed seven base damage without TSM boost.

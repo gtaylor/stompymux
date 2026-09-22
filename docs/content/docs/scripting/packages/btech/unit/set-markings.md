@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.set_markings"
 type: docs
+linkTitle: "set_markings"
+manualLinkTitle: "set_markings"
 ---
 
 Replace the saved markings, at most 16383 bytes; nil or an empty string clears them.

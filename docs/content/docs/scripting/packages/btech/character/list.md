@@ -1,6 +1,8 @@
 ---
 title: "btech.character.list"
 type: docs
+linkTitle: "list"
+manualLinkTitle: "list"
 ---
 
 List canonical names in catalog order. An optional player filters skills with nonzero value or XP.

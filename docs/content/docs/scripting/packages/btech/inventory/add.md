@@ -1,6 +1,8 @@
 ---
 title: "btech.inventory.add"
 type: docs
+linkTitle: "add"
+manualLinkTitle: "add"
 ---
 
 Wizard catalogue-based addition; amount is capped at 50000 per match.

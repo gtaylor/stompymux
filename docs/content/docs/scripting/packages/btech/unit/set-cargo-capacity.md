@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.set_cargo_capacity"
 type: docs
+linkTitle: "set_cargo_capacity"
+manualLinkTitle: "set_cargo_capacity"
 ---
 
 Set cargo space and the maximum carried tonnage.

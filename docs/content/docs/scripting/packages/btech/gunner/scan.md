@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.scan"
 type: docs
+linkTitle: "scan"
+manualLinkTitle: "scan"
 ---
 
 Inspect a visible unit with parent sensors; scan warnings identify the physical parent.

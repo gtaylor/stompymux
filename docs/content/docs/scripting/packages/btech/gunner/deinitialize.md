@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.deinitialize"
 type: docs
+linkTitle: "deinitialize"
+manualLinkTitle: "deinitialize"
 ---
 
 Release the current actor's station assignment.

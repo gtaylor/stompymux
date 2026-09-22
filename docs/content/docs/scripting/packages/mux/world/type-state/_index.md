@@ -1,18 +1,21 @@
 ---
-title: "mux.world.type-state"
+title: "State"
+linkTitle: "State"
 type: docs
+weight: 50
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("mux")` provides this Lua API.
+`mux.world.type-state` is part of the Lua API.
 
 ## Functions
 
-- [`State:delete`](delete/)
-- [`State:entries`](entries/)
-- [`State:get`](get/)
-- [`State:get_many`](get-many/)
-- [`State:has`](has/)
-- [`State:keys`](keys/)
-- [`State:set`](set/)
-- [`State:set_many`](set-many/)
+- [`delete`](delete/)
+- [`entries`](entries/)
+- [`get`](get/)
+- [`get_many`](get-many/)
+- [`has`](has/)
+- [`keys`](keys/)
+- [`set`](set/)
+- [`set_many`](set-many/)

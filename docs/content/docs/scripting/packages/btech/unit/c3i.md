@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.c3i"
 type: docs
+linkTitle: "c3i"
+manualLinkTitle: "c3i"
 ---
 
 Join a visible friendly unit's C3i network by battlefield ID, or leave with "-".

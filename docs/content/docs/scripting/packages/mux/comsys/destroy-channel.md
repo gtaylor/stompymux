@@ -1,6 +1,8 @@
 ---
 title: "mux.comsys.destroy_channel"
 type: docs
+linkTitle: "destroy_channel"
+manualLinkTitle: "destroy_channel"
 ---
 
 Permanently removes a live channel and its membership storage. The supplied

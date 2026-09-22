@@ -7,9 +7,9 @@ weight: 30
 ---
 
 Object names, descriptions, and inside descriptions support a small,
-declarative markup language. It replaces the old dependency on softcode color
-escapes without restoring softcode evaluation; OSC link actions occur only
-when a user activates a rendered link.
+declarative markup language. The Rust text parser in `src/text/` turns it into
+styled documents; OSC link actions occur only when a user activates a
+rendered link.
 
 ```text
 @name drone=[fg=bright-cyan]Aegis[/]

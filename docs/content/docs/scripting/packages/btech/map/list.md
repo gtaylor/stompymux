@@ -1,6 +1,8 @@
 ---
 title: "btech.map.list"
 type: docs
+linkTitle: "list"
+manualLinkTitle: "list"
 ---
 
 Publish a wizard map listing without advancing simulation or changing contacts.

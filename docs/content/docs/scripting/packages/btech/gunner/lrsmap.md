@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.lrsmap"
 type: docs
+linkTitle: "lrsmap"
+manualLinkTitle: "lrsmap"
 ---
 
 Render the parent's long-range map using the registered gunner's display preferences.

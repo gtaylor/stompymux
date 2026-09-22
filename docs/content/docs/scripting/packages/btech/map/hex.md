@@ -1,6 +1,8 @@
 ---
 title: "btech.map.hex"
 type: docs
+linkTitle: "hex"
+manualLinkTitle: "hex"
 ---
 
 Read a decoded tile; ambiguous maps and invalid coordinates raise an error.

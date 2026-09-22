@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.brief"
 type: docs
+linkTitle: "brief"
+manualLinkTitle: "brief"
 ---
 
 Query unit display settings or edit A/C independently. Edits notify occupants.

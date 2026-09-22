@@ -1,6 +1,8 @@
 ---
 title: "mux.comsys.channel"
 type: docs
+linkTitle: "channel"
+manualLinkTitle: "channel"
 ---
 
 Retrieves an existing communication channel by case-insensitive name.

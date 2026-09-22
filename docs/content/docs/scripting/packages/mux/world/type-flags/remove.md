@@ -1,6 +1,8 @@
 ---
 title: "Flags:remove"
 type: docs
+linkTitle: "remove"
+manualLinkTitle: "remove"
 ---
 
 Removes a flag and reports whether the object changed.

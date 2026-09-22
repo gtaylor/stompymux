@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.set_assigned_pilot"
 type: docs
+linkTitle: "set_assigned_pilot"
+manualLinkTitle: "set_assigned_pilot"
 ---
 
 Assign or clear the saved pilot; the player need not enter the cockpit.

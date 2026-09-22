@@ -12,10 +12,10 @@ Global Lua logic modules live under `game/lua/global_logic`. Every
 domain-oriented paths such as `player/help.lua`, `world/travel.lua`, and
 `wizard/maintenance.lua`. Use numeric prefixes only when deliberate
 cross-domain priority is necessary.
-Use [`@lua/check`](validating-and-reloading/) to validate every Lua module before reloading.
+Use [`@lua/check`](/docs/scripting/validating-and-reloading/) to validate every Lua module before reloading.
 
-Each global module returns a table containing one or more of `commands`,
-`events`, `schedules`, or `flows`:
+Each global module returns a table and can declare `commands`, `events`,
+`schedules`, or `flows`:
 
 ```lua
 return {
@@ -60,12 +60,12 @@ use the player for both fields and provide `ctx.descriptor`;
 `on_player_connect` also provides boolean `ctx.reconnect`, while
 `on_player_disconnect` provides string `ctx.reason` and runs only when the
 player's final descriptor disconnects. `on_server_first_startup` runs only when
-the configured database file was missing, after the server has populated and
-committed the initial database. All of its global and object handlers finish
+the configured database file was missing, while the initial world is being
+prepared and before its first SQLite snapshot is committed. Its handlers finish
 before `on_server_startup`, which runs on the first and every later startup.
 Neither startup event runs after `@lua/reload`.
 
-See [Commands](commands/) for Lua-pattern syntax, capture arguments, and the
+See [Commands](/docs/scripting/commands/) for Lua-pattern syntax, capture arguments, and the
 handler context table.
 
 Global modules resolve `require("name")` in `global_logic` before the
@@ -74,5 +74,5 @@ shared `packages` root. Put shared parsing, formatting, and policy helpers in
 defines the `global-hello` command.
 
 Global logic modules may also define `schedules`. See
-[Scheduled events](scheduled-events/) for the shared schedule format and the
+[Scheduled events](/docs/scripting/scheduled-events/) for the shared schedule format and the
 differences between global and object-attached execution.

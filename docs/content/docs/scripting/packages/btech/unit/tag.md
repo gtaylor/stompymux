@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.tag"
 type: docs
+linkTitle: "tag"
+manualLinkTitle: "tag"
 ---
 
 Illuminate an enemy within fifteen hexes, or stop with nil; requires working TAG and a ready timer.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.tic_edit"
 type: docs
+linkTitle: "tic_edit"
+manualLinkTitle: "tic_edit"
 ---
 
 Edit persistent membership; add/remove require weapon numbers, clear omits them.

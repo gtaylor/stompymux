@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.scan_hex"
 type: docs
+linkTitle: "scan_hex"
+manualLinkTitle: "scan_hex"
 ---
 
 Inspect the first acquired occupant at a coordinate using parent map order.

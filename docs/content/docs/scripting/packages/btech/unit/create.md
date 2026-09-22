@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.create"
 type: docs
+linkTitle: "create"
+manualLinkTitle: "create"
 ---
 
 Construct a persistent Mech or ground vehicle on an unused live thing. Transactional.

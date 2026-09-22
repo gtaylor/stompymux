@@ -1,6 +1,8 @@
 ---
 title: "Channel:name"
 type: docs
+linkTitle: "name"
+manualLinkTitle: "name"
 ---
 
 Returns the channel's exact name.

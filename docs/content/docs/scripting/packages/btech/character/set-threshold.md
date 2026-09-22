@@ -1,6 +1,8 @@
 ---
 title: "btech.character.set_threshold"
 type: docs
+linkTitle: "set_threshold"
+manualLinkTitle: "set_threshold"
 ---
 
 Set a runtime XP threshold as a wizard. Defaults return after database reload.

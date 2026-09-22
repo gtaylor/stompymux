@@ -1,6 +1,8 @@
 ---
 title: "Channel:object"
 type: docs
+linkTitle: "object"
+manualLinkTitle: "object"
 ---
 
 Returns the object that supplies the channel description and locks.

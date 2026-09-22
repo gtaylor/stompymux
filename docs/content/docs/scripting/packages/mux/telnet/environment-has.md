@@ -1,6 +1,8 @@
 ---
 title: "mux.telnet.environment_has"
 type: docs
+linkTitle: "environment_has"
+manualLinkTitle: "environment_has"
 ---
 
 Tests whether a binary-safe RFC 1572 NEW-ENVIRON variable is defined.

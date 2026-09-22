@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.unregister"
 type: docs
+linkTitle: "unregister"
+manualLinkTitle: "unregister"
 ---
 
 Remove the object's BattleTech registration and forget its configuration

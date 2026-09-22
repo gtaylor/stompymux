@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.atmrange"
 type: docs
+linkTitle: "atmrange"
+manualLinkTitle: "atmrange"
 ---
 
 Toggle Extended Range ammunition on an eligible indirect launcher; requires matching bins.

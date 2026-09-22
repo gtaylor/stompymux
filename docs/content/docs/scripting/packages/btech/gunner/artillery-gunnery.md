@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.artillery_gunnery"
 type: docs
+linkTitle: "artillery_gunnery"
+manualLinkTitle: "artillery_gunnery"
 ---
 
 Read the registered gunner's dedicated artillery skill target without firing.

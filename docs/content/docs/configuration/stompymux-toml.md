@@ -5,23 +5,24 @@ description: Run-time configuration
 weight: 20
 ---
 
-`game/stompymux.toml` controls the running game server. It is TOML, organized
-into sections (`[server]`, `[battletech]`, `[security]`, and so on).
-Configuration changes can be made through the appropriate wizard
-configuration commands (`@admin`) or by editing the file before starting the
-server. `stompymux.toml` includes `game/aliases.toml` (the stock command and
-flag abbreviations) via a top-level `include` array; add
-local aliases to `stompymux.toml`'s own `[aliases.*]` tables rather than editing
-`aliases.toml` directly, since an including file's keys always win over
-anything pulled in through `include`.
+`stompymux.toml` in the selected game directory controls the Rust server. It
+is TOML, organized into sections (`[server]`, `[battletech]`, `[security]`,
+and so on). Edit the file before starting the server; supported live settings
+can also be changed with Wizard `@admin` commands for the current process.
+Those commands do not write the file. The shipped `game/stompymux.toml`
+includes `game/aliases.toml` (the stock command and
+flag abbreviations) via a top-level `include` array. Add local aliases to
+`stompymux.toml`'s own `[aliases.*]` tables; the including file's keys take
+precedence over included values.
 
 ## Sections
 
 | Section | Contents |
 | --- | --- |
-| `[database]` | SQLite game database path, first-run bootstrap objects, checkpoint behavior, and mech/map database paths. |
-| `[lua]` | Lua module directory, VM memory limit, and persistent object-state limits. LuaJIT compilation is enabled. |
-| `[server]` | Port and MUD name. |
+| `[database]` / `[database.bootstrap]` | SQLite game database path, first-run objects and credentials file, and mech/map asset paths. |
+| `[lua]` | Lua module directory, VM memory and instruction limits, and persistent object-state limits. |
+| `[server]` | Listen address, port, and MUD name. |
+| `[runtime]` | Connection, queue, input, output, and timeout limits for the Rust server. |
 | `[colors]` | Case-insensitive named RGB colors used by styled-text markup. |
 | `[osc8.presets]` | Case-sensitive session-scoped Mudlet OSC 8 presets. |
 | `[battletech]` / `[battletech.xp]` | BattleTech gameplay tuning and the XP system. |
@@ -33,15 +34,16 @@ anything pulled in through `include`.
 | `[names]` | Player-name length limit and `bad`/`good` player-name lists. |
 | `[logging]` | The `log_options` formatting array and a `[logging.topics]` table of event-category booleans. |
 
-Lua callbacks run with LuaJIT compilation enabled. Consequently, `[lua]` has no
-per-callback instruction limit: use bounded loops in trusted Lua modules.
+The server uses vendored LuaJIT with JIT tracing disabled so the configured
+`lua.instruction_limit` can bound callback and module execution. The
+`lua.memory_limit` setting bounds VM memory.
 `state_value_limit` caps one persistent string, `state_entry_limit` caps the
 number of state entries on an object, and `state_object_limit` caps the total
 bytes of keys and values on an object. Their defaults are 65536, 1024, and
 1048576 respectively.
 
 Most directives are plain scalars (`port = 5555`, or, under `[database]`,
-`fork_dump = true`). A few
+`busy_timeout_ms = 5000`). A few
 directives take other shapes:
 
 - **Flag/bitmask directives** (`mux.default_player_flags`,
@@ -91,26 +93,13 @@ set to `false`, the commands remain listed in BTech help but return
 `Permission denied.` without reading or changing cargo. Wizards may change the
 live value with `@admin btech_allow_cargo_commands=<boolean>`.
 
-## BattleTech repair timing
-
-`battletech.techtime_multiplier` scales the duration of newly scheduled repair
-work. It accepts finite values from `0.0` through `10.0`: `1.0` is the baseline,
-`0.5` halves repair time, and `1.5` uses 150% of baseline. A value of `0.0`
-adds no player tech-time debt and completes each newly scheduled repair on the
-event scheduler's one-second minimum delay, regardless of older debt.
-
-Wizards may change the live value with
-`@admin btech_techtime_multiplier=<value>`. Existing tech-time debt and event
-deadlines are not rescaled. New work uses the new value; follow-up units in an
-armor or internal-repair batch use the value current when each unit is
-scheduled.
-
 ## New database bootstrap
 
 When `database.game_database` does not exist, startup creates the configured
-bootstrap objects, writes a complete SQLite snapshot atomically, and then
-opens the listener. Existing files are always loaded and are never replaced by
-bootstrap, including empty or corrupt files.
+bootstrap objects, writes a schema-32 SQLite database atomically, and then
+opens the listener. Existing files are loaded and never replaced by
+bootstrap, including empty or corrupt files; incompatible files cause startup
+to fail.
 
 ```toml
 [database.bootstrap.objects]
@@ -128,8 +117,10 @@ writing if the required dbrefs are missing or have incompatible types. Seeded
 objects receive the configured default flags and Lua parents for their types.
 Player entries accept an optional `wizard` Boolean that defaults to `false` and
 cannot be enabled for rooms. The stock `#1` and `#2` entries enable it and
-receive distinct generated passwords, printed to stderr once after the database
-is safely published. When this table is present, it replaces the compiled
+receive distinct generated passwords. Startup writes them to the file named
+by `database.bootstrap.credentials_file` (default
+`bootstrap-credentials.txt` in the game directory) with mode 0600. The file
+must not already exist. When this table is present, it replaces the compiled
 bootstrap object defaults rather than extending them. Startup fails if `#1` is
 not a player with `wizard = true`, even when the database already exists. The
 startup log records when bootstrap begins and lists each created object's name,
@@ -193,7 +184,8 @@ object type:
 | `default_exit_lua_parent` | `default_exit.lua` | Exits |
 | `default_player_lua_parent` | `default_player.lua` | Players |
 
-Paths are relative to `game/lua/object_logic`. Empty values disable automatic
+Paths are relative to the selected game directory's `lua/object_logic`.
+Empty values disable automatic
 assignment for that type. Configuration changes apply only to objects created
 afterward and never backfill the database. `@clone` preserves the source
 object's Lua parent, including an empty one, instead of using the configured
@@ -201,28 +193,29 @@ type default.
 
 ## Password and login security
 
-Passwords are stored as Argon2id hashes through the vendored libsodium library.
+Passwords are stored as Argon2id hashes using the Rust `argon2` crate.
 Each stored hash includes its salt, algorithm, and work factors. Password hashes
 are never recoverable, and legacy `crypt(3)` password hashes are not accepted.
 
 | Parameter | Default | Description |
 | --- | ---: | --- |
 | `player_password_length_limit` | `64` | Maximum password length in UTF-8 bytes. Password creation and password changes reject longer values; login attempts longer than this limit are rejected before password hashing. |
-| `password_hash_opslimit` | `3` | Argon2id CPU work factor. Increase only after measuring login latency on the game host. Values below `1` disable password hashing and prevent password changes and new player creation. |
+| `password_hash_opslimit` | `3` | Argon2id CPU work factor, accepted from `1` through `100`. Measure login latency before increasing it. |
 | `password_hash_memlimit` | `12582912` | Argon2id memory work factor in bytes (12 MiB). Values below 1 MiB are rejected. A higher value makes offline password guessing harder but consumes more memory per password operation. |
 | `login_attempt_burst` | `3` | Number of password operations a source address may make immediately. |
 | `login_attempt_refill` | `10` | Seconds required to restore one attempt for a source address. |
-| `login_hash_limit` | `5` | Global maximum number of password operations admitted per second. This protects the single game event loop from a distributed login flood. |
+| `login_hash_limit` | `5` | Global maximum number of password operations admitted per second. |
+| `login_hash_concurrency` | `5` | Maximum in-flight password operations. |
+| `login_address_limit` | `4096` | Maximum source addresses retained by the login rate tracker. |
 
 These live under `[security]` in `stompymux.toml`.
 
-The per-source tracker has room for 1,024 recent addresses and evicts the least
-recently refilled entry when full. A throttled connection receives the same
+The per-source tracker is bounded by `login_address_limit`. A throttled
+connection receives the same
 generic failure response as an invalid login and is disconnected. Keep the
 global rate low enough that password verification cannot consume all event-loop
 time, and tune the Argon2id settings on the production host rather than aiming
 for a one-second hash.
 
-The defaults intentionally favor a responsive telnet game server. They are
-lighter than libsodium's interactive preset, so the firewall or host should
-also rate-limit new TCP connections to the game port.
+The defaults favor a responsive Telnet game server. Tune the Argon2id cost and
+rate limits together for the deployment host.

@@ -1,6 +1,8 @@
 ---
 title: "btech.character.threshold"
 type: docs
+linkTitle: "threshold"
+manualLinkTitle: "threshold"
 ---
 
 Current runtime XP threshold; fails for unknown skills. Requires a callback.

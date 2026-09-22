@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.dump"
 type: docs
+linkTitle: "dump"
+manualLinkTitle: "dump"
 ---
 
 Start or stop ammunition dumping; weapon numbers are zero based and slots one based.

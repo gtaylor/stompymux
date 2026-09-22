@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.scan_building"
 type: docs
+linkTitle: "scan_building"
+manualLinkTitle: "scan_building"
 ---
 
 Scan a structure entrance and publish its integrity report to cockpit occupants.

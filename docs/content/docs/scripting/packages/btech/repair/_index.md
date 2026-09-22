@@ -1,16 +1,19 @@
 ---
 title: "btech.repair"
+linkTitle: "btech.repair"
 type: docs
+weight: 20
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("btech")` provides this Lua API.
+`btech.repair`: Immediate repairs and technician scheduling.
 
 ## Functions
 
-- [`btech.repair.apply`](apply/)
-- [`btech.repair.is_fixable`](is-fixable/)
-- [`btech.repair.technician_available_in`](technician-available-in/)
+- [`apply`](apply/)
+- [`is_fixable`](is-fixable/)
+- [`technician_available_in`](technician-available-in/)
 
 ## Constants
 

@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.gunnery"
 type: docs
+linkTitle: "gunnery"
+manualLinkTitle: "gunnery"
 ---
 
 Read the current registered gunner's conventional skill target for a parent weapon.

@@ -1,0 +1,10 @@
+{
+	"name": "stompymux-rs",
+	"build": {
+		"dockerfile": "Dockerfile",
+		"context": "."
+	},
+	"remoteUser": "vscode",
+	"forwardPorts": [5555, 1313],
+	"postCreateCommand": ".devcontainer/setup-devenv.sh"
+}

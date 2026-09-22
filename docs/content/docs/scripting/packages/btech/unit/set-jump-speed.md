@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.set_jump_speed"
 type: docs
+linkTitle: "set_jump_speed"
+manualLinkTitle: "set_jump_speed"
 ---
 
 Set the jump speed in movement points.

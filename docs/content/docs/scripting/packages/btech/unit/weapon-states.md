@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.weapon_states"
 type: docs
+linkTitle: "weapon_states"
+manualLinkTitle: "weapon_states"
 ---
 
 Inspect mounted weapons without acquiring targets or consuming dice; calling scripts own access policy.

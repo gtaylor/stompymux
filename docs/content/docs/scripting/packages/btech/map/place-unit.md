@@ -1,6 +1,8 @@
 ---
 title: "btech.map.place_unit"
 type: docs
+linkTitle: "place_unit"
+manualLinkTitle: "place_unit"
 ---
 
 Place a unit on decoded terrain using the shared placement rules.

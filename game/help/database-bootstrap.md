@@ -16,6 +16,8 @@ process.
 The stock seed creates `#1` GOD and `#2` Wizard in `#4` Starter Room. Both
 player entries explicitly set `wizard = true`; an omitted setting defaults to
 false. The server refuses to start unless `#1` is a player with Wizard
-privileges. Their distinct generated passwords are printed to the server
-console once. Only the password hashes are stored, so change or securely retain
-the printed passwords.
+privileges. Their distinct generated passwords are written to the configured
+`database.bootstrap.credentials_file` (default
+`bootstrap-credentials.txt` in the game directory) with owner-only permissions.
+The server logs the path. Only password hashes are stored in SQLite, so keep
+the credentials file private and change the passwords after logging in.

@@ -1,6 +1,8 @@
 ---
 title: "btech.template.critical_slots"
 type: docs
+linkTitle: "critical_slots"
+manualLinkTitle: "critical_slots"
 ---
 
 List one section's critical slots with resolved parts, modes and ammunition state.

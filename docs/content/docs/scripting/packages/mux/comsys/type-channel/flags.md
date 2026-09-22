@@ -1,6 +1,8 @@
 ---
 title: "Channel:flags"
 type: docs
+linkTitle: "flags"
+manualLinkTitle: "flags"
 ---
 
 Opens the live administrative flag collection for this channel.

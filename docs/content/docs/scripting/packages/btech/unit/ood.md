@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.ood"
 type: docs
+linkTitle: "ood"
+manualLinkTitle: "ood"
 ---
 
 Wizard orbital insertion. Detach towing first; reject prone units and active digging.

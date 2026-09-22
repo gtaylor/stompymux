@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.navigate"
 type: docs
+linkTitle: "navigate"
+manualLinkTitle: "navigate"
 ---
 
 Show the radius-two local map and units within the selected center hex.

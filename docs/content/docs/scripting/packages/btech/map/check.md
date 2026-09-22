@@ -1,6 +1,8 @@
 ---
 title: "btech.map.check"
 type: docs
+linkTitle: "check"
+manualLinkTitle: "check"
 ---
 
 Check map membership and world invariants without changing placements or unit state.

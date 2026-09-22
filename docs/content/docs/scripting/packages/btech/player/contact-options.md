@@ -1,6 +1,8 @@
 ---
 title: "btech.player.contact_options"
 type: docs
+linkTitle: "contact_options"
+manualLinkTitle: "contact_options"
 ---
 
 Decode transient unit-list options d/s/e/a/t and persistent exclusion prefix !.

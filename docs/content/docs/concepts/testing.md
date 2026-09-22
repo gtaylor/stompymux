@@ -1,47 +1,34 @@
 +++
 title = "Testing"
-description = "Run unit and integration tests and inspect failed integration fixtures."
+description = "Run Rust unit and integration tests and inspect failed fixtures."
 weight = 30
 +++
 
-The test suite is divided into unit and integration groups:
+The Rust test suite contains unit tests beside their implementations and
+integration tests in `tests/`. Run the complete suite from `stompymux-rs/`:
 
 ```sh
-just test-unit
-just test-integration
-just test
+cargo test
 ```
 
-`just test` runs both groups and remains part of `just agent-checks`. The same
-groups can be selected directly with CTest's `unit` and `integration` labels.
-
-Unit tests also have topical labels. Run all BattleTech tests or a narrower
-topic with, for example:
+`just test` runs the same command. `just checks` also runs Rust formatting,
+Lua formatting, generated Lua type and API documentation checks, and the test
+suite. To run a narrower test, use a test-name filter or select an integration
+test target:
 
 ```sh
-just test-unit-topic btech
-just test-unit-topic btech-sensors
-just test-unit-topic mux-content
+cargo test btech_los
+cargo test --test btech_los_range
+cargo test --test btech_visibility
 ```
 
-The available topics are `btech-autopilot`, `btech-combat`,
-`btech-contracts`, `btech-sensors`, `btech-systems`, `mux-content`,
-`mux-network`, `mux-server`, `mux-state`, and `mux-support`. The `btech` and
-`mux` umbrella labels select all topics in their respective subsystem.
+The BattleTech LOS scenarios are Rust tests, including `btech_los_range`,
+`btech_visibility`, `btech_vehicle_los`, and sensor and contact tests. Focused
+unit tests cover rules close to their implementations. Prefer small synthetic
+maps and deterministic inputs when adding a LOS case; assert terrain tracing
+and sensor acquisition separately where the rule distinguishes them.
 
-Integration tests that need game content run against a private copy of the
-stripped game tree in `tests/fixtures/game`. Suite-specific files from
-`tests/fixtures/integration` are applied as overlays. Each server test starts
-without a database so the normal server bootstrap creates one using the
-configuration defaults.
-
-Successful temporary game directories are removed automatically. If a suite
-fails, its output includes an absolute path such as:
-
-```text
-Integration test artifacts retained at: /tmp/btmux-libuv-tcp.ABC123
-```
-
-That directory contains the generated configuration, database, logs, and
-fixture content from the failed run. Set `BTECH_KEEP_TEST_DIRS=1` to preserve
-directories from successful integration runs as well.
+Integration tests use isolated game fixtures under `tests/fixtures/game` and
+helpers under `tests/support/`. They exercise the Rust server, Lua APIs,
+SQLite persistence, and network behavior. A failing test reports its assertion
+and any fixture or temporary directory it retains for inspection.

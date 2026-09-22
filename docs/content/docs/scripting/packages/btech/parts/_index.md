@@ -1,18 +1,21 @@
 ---
 title: "btech.parts"
+linkTitle: "btech.parts"
 type: docs
+weight: 0
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("btech")` provides this Lua API.
+`btech.parts`: Part catalogue and stores.
 
 ## Functions
 
-- [`btech.parts.adjust_stores`](adjust-stores/)
-- [`btech.parts.categories`](categories/)
-- [`btech.parts.list`](list/)
-- [`btech.parts.resolve`](resolve/)
-- [`btech.parts.search`](search/)
-- [`btech.parts.set_cost`](set-cost/)
-- [`btech.parts.store_quantity`](store-quantity/)
-- [`btech.parts.stores`](stores/)
+- [`adjust_stores`](adjust-stores/)
+- [`categories`](categories/)
+- [`list`](list/)
+- [`resolve`](resolve/)
+- [`search`](search/)
+- [`set_cost`](set-cost/)
+- [`store_quantity`](store-quantity/)
+- [`stores`](stores/)

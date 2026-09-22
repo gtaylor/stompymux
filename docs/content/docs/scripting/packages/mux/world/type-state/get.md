@@ -1,6 +1,8 @@
 ---
 title: "State:get"
 type: docs
+linkTitle: "get"
+manualLinkTitle: "get"
 ---
 
 Gets a stored value, an optional default, or nil.

@@ -1,6 +1,8 @@
 ---
 title: "Object:internal_description"
 type: docs
+linkTitle: "internal_description"
+manualLinkTitle: "internal_description"
 ---
 
 Returns this object's styled internal description, or nil when it is unset.

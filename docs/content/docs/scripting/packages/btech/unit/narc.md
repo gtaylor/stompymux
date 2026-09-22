@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.narc"
 type: docs
+linkTitle: "narc"
+manualLinkTitle: "narc"
 ---
 
 Toggle Narc-compatible ammunition on a missile weapon.

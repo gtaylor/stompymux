@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.dropoff"
 type: docs
+linkTitle: "dropoff"
+manualLinkTitle: "dropoff"
 ---
 
 Release the carrier's tow; elevated targets begin forced descent.

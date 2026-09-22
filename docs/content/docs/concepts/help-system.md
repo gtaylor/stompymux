@@ -6,11 +6,10 @@ type: docs
 weight: 20
 ---
 
-The `help` command serves markdown articles with TOML frontmatter, indexed
-and rendered entirely inside `stompymux` (see `src/mux/help`). There is no
-separate indexing binary and no distinction between `help` and `wizhelp` -
-per-article visibility is controlled by the `wizard_only` frontmatter key
-instead.
+The `help` command serves Markdown articles with TOML front matter. Rust code
+in `src/help.rs` builds the index, and `src/help/render.rs` renders replies
+through the shared text system. Per-article visibility is controlled by the
+`wizard_only` front matter key.
 
 This page documents the engine side of the system, for contributors to the
 StompyMUX codebase itself. It is not the place to document any particular
@@ -19,18 +18,19 @@ game's admins to write and maintain.
 
 ## Article format
 
-Articles are markdown files under the directory named by the `help_directory`
-mudconf directive (default `help`, i.e. `game/help/`), recursively. Each file
-starts with a TOML frontmatter block delimited by `+++` lines, followed by
+Articles are Markdown files under the directory configured by
+`mux.help_directory` (default `help`, relative to the game root),
+recursively. Each file starts with a TOML front matter block delimited by
+`+++` lines, followed by
 the markdown body:
 
 ```markdown
----
-title: About this game
-description: All about this game
-keywords: [about]
-article_tags: [show_in_index]
----
++++
+title = "About this game"
+description = "All about this game"
+keywords = ["about"]
+article_tags = ["show_in_index"]
++++
 
 # About this game
 
@@ -63,22 +63,22 @@ else reports `Unable to render default help article`.
 
 ## Rendering
 
-Article bodies are parsed with a vendored `cmark` (CommonMark) and walked as
-an AST, not passed through any of cmark's built-in renderers - headers are
-emitted as literal `#`/`##` lines, external `http:`, `https:`, and `ftp:` links
-become capability-aware OSC 8 styled-text links, images and other link schemes
-are reduced to visible text, and emphasis/strong markers are stripped. Clients
-without OSC 8 support receive the same visible text without escape sequences.
+Article bodies use the Rust Markdown renderer in `src/text/markdown.rs`.
+External `http:`, `https:`, and `ftp:` links can become capability-aware
+OSC 8 links. Clients without OSC 8 support still receive the visible text.
+Index entries are rendered as actions that send `help <topic>` when the client
+supports them.
 
 ## Reindexing
 
-`@help/reload` (Wizard-only) rebuilds the entire index from scratch - this is
-also what happens once at server startup. Both paths log errors and a
-summary to the server log; `@help/reload` also reports them to the invoking
-player. Frontmatter is parsed with a vendored `tomlc17`.
+`@help/reload` (Wizard-only) rebuilds the index, as startup does. Index
+construction runs on a blocking worker; a failed rebuild leaves the previous
+index installed. Individual invalid articles are skipped and reported. Both
+paths log errors and a summary; reload also reports them to the invoking
+player. Rust's TOML parser reads the front matter.
 
 ## Configuration
 
-The `help_directory` mudconf directive (God-settable) points at the article
-root, relative to the server's working directory. Changing it does not
-reindex automatically - run `@help/reload` afterward.
+The `mux.help_directory` configuration value (also accepted as
+`help_directory`) points at the article root, relative to the game root.
+Changing it does not reindex automatically; run `@help/reload` afterward.

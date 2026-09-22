@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.damage_section"
 type: docs
+linkTitle: "damage_section"
+manualLinkTitle: "damage_section"
 ---
 
 Wizard-only located damage through shared critical, crew and evacuation rules.

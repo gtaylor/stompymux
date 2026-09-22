@@ -1,6 +1,8 @@
 ---
 title: "btech.map.remove_ice"
 type: docs
+linkTitle: "remove_ice"
+manualLinkTitle: "remove_ice"
 ---
 
 Wizard seasonal melting. Falls, flooding, casualties and notices commit with the terrain.

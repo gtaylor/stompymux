@@ -1,6 +1,8 @@
 ---
 title: "btech.parts.categories"
 type: docs
+linkTitle: "categories"
+manualLinkTitle: "categories"
 ---
 
 Return the six detached part categories in canonical order.

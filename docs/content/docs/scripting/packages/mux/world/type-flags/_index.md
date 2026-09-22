@@ -1,14 +1,17 @@
 ---
-title: "mux.world.type-flags"
+title: "Flags"
+linkTitle: "Flags"
 type: docs
+weight: 20
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("mux")` provides this Lua API.
+`mux.world.type-flags` is part of the Lua API.
 
 ## Functions
 
-- [`Flags:add`](add/)
-- [`Flags:has`](has/)
-- [`Flags:list`](list/)
-- [`Flags:remove`](remove/)
+- [`add`](add/)
+- [`has`](has/)
+- [`list`](list/)
+- [`remove`](remove/)

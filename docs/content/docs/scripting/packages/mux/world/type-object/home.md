@@ -1,6 +1,8 @@
 ---
 title: "Object:home"
 type: docs
+linkTitle: "home"
+manualLinkTitle: "home"
 ---
 
 Returns this thing or player's home, or nil when no home is assigned or the

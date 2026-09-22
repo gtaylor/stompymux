@@ -1,6 +1,8 @@
 ---
 title: "Object:flags"
 type: docs
+linkTitle: "flags"
+manualLinkTitle: "flags"
 ---
 
 Creates a handle for this object's flags.

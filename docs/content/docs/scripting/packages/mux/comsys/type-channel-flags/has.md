@@ -1,6 +1,8 @@
 ---
 title: "ChannelFlags:has"
 type: docs
+linkTitle: "has"
+manualLinkTitle: "has"
 ---
 
 Tests whether the channel has a typed flag.

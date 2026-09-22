@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.removepods"
 type: docs
+linkTitle: "removepods"
+manualLinkTitle: "removepods"
 ---
 
 Begin the vehicle crew's saved 60-second action; ordinary Narc pods remain attached.

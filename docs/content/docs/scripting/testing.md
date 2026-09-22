@@ -8,9 +8,10 @@ weight: 35
 ## Important safety warning
 
 Lua tests are fully mutable and run against the database currently loaded by
-the server. They do not use a transaction or a write barrier. Use a scratch
-database, never production, and restore all object and attribute changes in
-teardown hooks.
+the server. Each hook and test invocation validates and persists its world
+changes before publishing output; an assertion failure can still leave valid
+changes committed. Invalid changes or a failed save are rolled back. Use a
+scratch database and restore changes in teardown hooks.
 
 ## Suites and commands
 
@@ -59,7 +60,7 @@ still permits `after_all` to run.
 `is_error`. `raises` returns the structured error so tests can inspect its
 code and detail. Assertion errors keep expected and actual values structured,
 so the runner can report them differently from Lua runtime errors. See the
-[`mux.error` reference](packages/mux/error/) for error fields and matching.
+[`mux.error` reference](/docs/scripting/packages/mux/error/) for error fields and matching.
 
 ## Testing error codes
 

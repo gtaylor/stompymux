@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.supercharger"
 type: docs
+linkTitle: "supercharger"
+manualLinkTitle: "supercharger"
 ---
 
 Toggle the supercharger and adjust the desired throttle proportionally.

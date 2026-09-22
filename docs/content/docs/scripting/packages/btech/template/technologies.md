@@ -1,6 +1,8 @@
 ---
 title: "btech.template.technologies"
 type: docs
+linkTitle: "technologies"
+manualLinkTitle: "technologies"
 ---
 
 List configured and inferred technologies.

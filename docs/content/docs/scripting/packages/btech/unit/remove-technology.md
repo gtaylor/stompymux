@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.remove_technology"
 type: docs
+linkTitle: "remove_technology"
+manualLinkTitle: "remove_technology"
 ---
 
 Remove one installed technology code.

@@ -15,11 +15,10 @@ To check your Lua scripts for validity, run the following from in-game with a Wi
 @lua/check
 ```
 
-`@lua/check` recursively verifies every `.lua` file below
-`game/lua/object_logic`, `game/lua/global_logic`, and
-`game/lua/packages`, and `game/lua/tests`. It checks module syntax, top-level imports, and the
-module return contract, including cron schedules. Global logic modules must
-export a nonempty `commands` or `schedules` table. It also checks every
+`@lua/check` verifies Lua sources below the selected game directory's
+`lua/object_logic`, `lua/global_logic`, `lua/packages`, and `lua/tests`
+roots. It checks module syntax, top-level imports, and declaration shapes,
+including cron schedules. It also checks every
 configured `Luaparent` path. Missing or unreadable paths
 are reported once per path with the number of objects that use that value, so a
 single deleted file does not produce one error for every affected object.

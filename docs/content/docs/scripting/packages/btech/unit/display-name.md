@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.display_name"
 type: docs
+linkTitle: "display_name"
+manualLinkTitle: "display_name"
 ---
 
 Read the saved display-name override, or nil when the template name is in use.

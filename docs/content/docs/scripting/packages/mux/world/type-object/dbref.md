@@ -1,6 +1,8 @@
 ---
 title: "Object:dbref"
 type: docs
+linkTitle: "dbref"
+manualLinkTitle: "dbref"
 ---
 
 Returns this object's native database reference.

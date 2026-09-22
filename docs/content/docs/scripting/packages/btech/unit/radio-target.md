@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.radio_target"
 type: docs
+linkTitle: "radio_target"
+manualLinkTitle: "radio_target"
 ---
 
 Send to an acquired visible target; the source must be running and not an observer.

@@ -5,8 +5,12 @@ type: docs
 weight: 100
 ---
 
-This codebase is the result of over 30 years of development in one form or
-another. It started hosted on a TinyMUSE server, around 1992 or 1993. Its primary
+The Rust server is a new implementation in a lineage with over 30 years of
+gameplay and community history. The account below describes the earlier MUSE,
+MUSH, and MUX codebases; the archival credits and copyright notices that follow
+are preserved as historical source material.
+
+The lineage started hosted on a TinyMUSE server, around 1992 or 1993. Its primary
 instance powered the most popular Battletech MU* to date, 3056 MUSE. 
 
 There after, the code was ported to/reimplemented for TinyMUSH by the Animudiacs crew,

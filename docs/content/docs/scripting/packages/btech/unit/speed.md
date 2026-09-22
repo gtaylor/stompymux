@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.speed"
 type: docs
+linkTitle: "speed"
+manualLinkTitle: "speed"
 ---
 
 Set desired speed within the running unit's forward/reverse limits and stage a cockpit confirmation.

@@ -1,6 +1,8 @@
 ---
 title: "btech.parts.search"
 type: docs
+linkTitle: "search"
+manualLinkTitle: "search"
 ---
 
 Search names with *, ? and backslash-escaped quick-wild matching.

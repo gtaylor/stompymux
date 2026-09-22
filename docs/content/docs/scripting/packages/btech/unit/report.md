@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.report"
 type: docs
+linkTitle: "report"
+manualLinkTitle: "report"
 ---
 
 Return a silent brief report of an acquired visible unit, with no armor or weapon details.

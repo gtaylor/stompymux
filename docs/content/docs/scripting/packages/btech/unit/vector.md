@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.vector"
 type: docs
+linkTitle: "vector"
+manualLinkTitle: "vector"
 ---
 
 Measure a default target, destination x/y[/z], or origin and destination x/y[/z].

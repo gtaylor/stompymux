@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.fireswarm1"
 type: docs
+linkTitle: "fireswarm1"
+manualLinkTitle: "fireswarm1"
 ---
 
 Select Swarm-1 missiles; secondary targets must belong to another team.

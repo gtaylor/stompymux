@@ -1,6 +1,8 @@
 ---
 title: "Channel:boot_player"
 type: docs
+linkTitle: "boot_player"
+manualLinkTitle: "boot_player"
 ---
 
 Announces a God-administered boot and removes a current member's channel

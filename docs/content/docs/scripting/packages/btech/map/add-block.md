@@ -1,6 +1,8 @@
 ---
 title: "btech.map.add_block"
 type: docs
+linkTitle: "add_block"
+manualLinkTitle: "add_block"
 ---
 
 Add a wizard-owned circular landing restriction; negative radii block nothing.

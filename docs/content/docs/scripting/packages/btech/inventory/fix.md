@@ -1,6 +1,8 @@
 ---
 title: "btech.inventory.fix"
 type: docs
+linkTitle: "fix"
+manualLinkTitle: "fix"
 ---
 
 Wizard cleanup of loose stock, removing structural placeholders and unknown identifiers.

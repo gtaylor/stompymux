@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.lock_hex"
 type: docs
+linkTitle: "lock_hex"
+manualLinkTitle: "lock_hex"
 ---
 
 Select coordinates using shared sensor-lock rules and H/B/I/C purpose modes.

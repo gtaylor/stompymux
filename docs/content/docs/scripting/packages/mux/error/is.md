@@ -1,6 +1,8 @@
 ---
 title: "mux.error.is"
 type: docs
+linkTitle: "is"
+manualLinkTitle: "is"
 ---
 
 Tests a table's code using exact or dotted-prefix matching.

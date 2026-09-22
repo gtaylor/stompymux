@@ -1,6 +1,8 @@
 ---
 title: "State:entries"
 type: docs
+linkTitle: "entries"
+manualLinkTitle: "entries"
 ---
 
 Lists key/value records sorted by key.

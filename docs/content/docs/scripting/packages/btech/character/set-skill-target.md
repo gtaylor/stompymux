@@ -1,6 +1,8 @@
 ---
 title: "btech.character.set_skill_target"
 type: docs
+linkTitle: "set_skill_target"
+manualLinkTitle: "set_skill_target"
 ---
 
 Set the raw skill amount needed for the requested target; rejects non-skills and

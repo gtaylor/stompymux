@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.flamerheat"
 type: docs
+linkTitle: "flamerheat"
+manualLinkTitle: "flamerheat"
 ---
 
 Toggle an intact, recycled flamer between damage and heat-transfer modes; stages cockpit notices.

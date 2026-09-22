@@ -1,6 +1,8 @@
 ---
 title: "btech.template.check"
 type: docs
+linkTitle: "check"
+manualLinkTitle: "check"
 ---
 
 Preview construction without registering a unit or modifying the source asset.

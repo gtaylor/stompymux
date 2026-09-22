@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.fire"
 type: docs
+linkTitle: "fire"
+manualLinkTitle: "fire"
 ---
 
 Fire a parent weapon at a unit or coordinate using the registered station operator and independent selection.

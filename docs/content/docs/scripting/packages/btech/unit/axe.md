@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.axe"
 type: docs
+linkTitle: "axe"
+manualLinkTitle: "axe"
 ---
 
 Attempt an axe swing. Default selection tries equipped arms left first; an accepted swing blocks the other arm through recovery.

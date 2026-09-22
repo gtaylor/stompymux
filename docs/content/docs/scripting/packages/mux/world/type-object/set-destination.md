@@ -1,6 +1,8 @@
 ---
 title: "Object:set_destination"
 type: docs
+linkTitle: "set_destination"
+manualLinkTitle: "set_destination"
 ---
 
 Sets this exit's destination, or clears it when `destination` is nil.

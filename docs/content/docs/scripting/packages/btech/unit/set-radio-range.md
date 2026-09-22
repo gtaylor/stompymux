@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.set_radio_range"
 type: docs
+linkTitle: "set_radio_range"
+manualLinkTitle: "set_radio_range"
 ---
 
 Set the radio range in hexes.

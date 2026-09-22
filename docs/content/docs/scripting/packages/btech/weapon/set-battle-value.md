@@ -1,6 +1,8 @@
 ---
 title: "btech.weapon.set_battle_value"
 type: docs
+linkTitle: "set_battle_value"
+manualLinkTitle: "set_battle_value"
 ---
 
 Wizard-only runtime override used by valuation and Battle Value XP. Restart restores catalogue defaults.

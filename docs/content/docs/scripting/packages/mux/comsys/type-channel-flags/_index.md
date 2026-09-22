@@ -1,14 +1,17 @@
 ---
-title: "mux.comsys.type-channel-flags"
+title: "ChannelFlags"
+linkTitle: "ChannelFlags"
 type: docs
+weight: 30
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("mux")` provides this Lua API.
+`mux.comsys.type-channel-flags` is part of the Lua API.
 
 ## Functions
 
-- [`ChannelFlags:add`](add/)
-- [`ChannelFlags:has`](has/)
-- [`ChannelFlags:list`](list/)
-- [`ChannelFlags:remove`](remove/)
+- [`add`](add/)
+- [`has`](has/)
+- [`list`](list/)
+- [`remove`](remove/)

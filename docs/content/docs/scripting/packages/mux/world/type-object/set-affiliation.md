@@ -1,6 +1,8 @@
 ---
 title: "Object:set_affiliation"
 type: docs
+linkTitle: "set_affiliation"
+manualLinkTitle: "set_affiliation"
 ---
 
 Assigns this object's affiliation, or clears it when `affiliation` is nil.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.set_markings_as"
 type: docs
+linkTitle: "set_markings_as"
+manualLinkTitle: "set_markings_as"
 ---
 
 Wizard-only literal markings, at most 16383 bytes; empty clears. Callback failures roll back.

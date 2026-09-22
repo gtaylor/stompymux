@@ -1,6 +1,8 @@
 ---
 title: "Object:zone"
 type: docs
+linkTitle: "zone"
+manualLinkTitle: "zone"
 ---
 
 Returns this object's assigned zone, or nil when no zone is assigned or the zone is being destroyed.

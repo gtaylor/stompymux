@@ -1,6 +1,8 @@
 ---
 title: "btech.character.xptop"
 type: docs
+linkTitle: "xptop"
+manualLinkTitle: "xptop"
 ---
 
 Publish a wizard-only skill leaderboard without changing XP.

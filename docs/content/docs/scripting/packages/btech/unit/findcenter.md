@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.findcenter"
 type: docs
+linkTitle: "findcenter"
+manualLinkTitle: "findcenter"
 ---
 
 Measure from continuous motion to the current hex center without scanner hardware.

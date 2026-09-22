@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.inarc"
 type: docs
+linkTitle: "inarc"
+manualLinkTitle: "inarc"
 ---
 
 Select iNarc homing (-), explosive (X), haywire (Y), ECM (E), or Nemesis (Z) ammunition.

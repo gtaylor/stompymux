@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.sguided"
 type: docs
+linkTitle: "sguided"
+manualLinkTitle: "sguided"
 ---
 
 Toggle semi-guided ammunition on a supported recycled missile launcher.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.building_contacts"
 type: docs
+linkTitle: "building_contacts"
+manualLinkTitle: "building_contacts"
 ---
 
 List visible structures using silent identify_building locks. Failed evaluations roll back side effects.

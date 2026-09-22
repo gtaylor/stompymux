@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.weapon_diagnostics"
 type: docs
+linkTitle: "weapon_diagnostics"
+manualLinkTitle: "weapon_diagnostics"
 ---
 
 Inspect durable equipment condition; empty ammunition, shutdown and recycle do not imply damage.

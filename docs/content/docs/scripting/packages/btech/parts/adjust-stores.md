@@ -1,6 +1,8 @@
 ---
 title: "btech.parts.adjust_stores"
 type: docs
+linkTitle: "adjust_stores"
+manualLinkTitle: "adjust_stores"
 ---
 
 Apply one signed atomic stock edit; a nonzero integral delta is required.

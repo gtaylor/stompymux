@@ -1,6 +1,8 @@
 ---
 title: "mux.error.new"
 type: docs
+linkTitle: "new"
+manualLinkTitle: "new"
 ---
 
 Creates a structured error without raising it.

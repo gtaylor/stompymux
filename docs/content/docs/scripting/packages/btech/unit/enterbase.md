@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.enterbase"
 type: docs
+linkTitle: "enterbase"
+manualLinkTitle: "enterbase"
 ---
 
 Begin an eighteen-second hangar entry; current route, eligibility and locks are rechecked at expiry.

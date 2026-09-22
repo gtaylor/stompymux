@@ -1,10 +1,13 @@
 ---
 title: "mux.comsys"
+linkTitle: "mux.comsys"
 type: docs
+weight: 14
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("mux")` provides this Lua API.
+`mux.comsys`: Trusted communication-channel management.
 
 ## Namespaces and types
 
@@ -13,10 +16,10 @@ no_list: true
 
 ## Functions
 
-- [`mux.comsys.channel`](channel/)
-- [`mux.comsys.create_channel`](create-channel/)
-- [`mux.comsys.destroy_channel`](destroy-channel/)
-- [`mux.comsys.list_channels`](list-channels/)
+- [`channel`](channel/)
+- [`create_channel`](create-channel/)
+- [`destroy_channel`](destroy-channel/)
+- [`list_channels`](list-channels/)
 
 ## Constants
 

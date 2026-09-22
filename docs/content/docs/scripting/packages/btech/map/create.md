@@ -1,6 +1,8 @@
 ---
 title: "btech.map.create"
 type: docs
+linkTitle: "create"
+manualLinkTitle: "create"
 ---
 
 Register an existing room or thing using a source asset. Transactional.

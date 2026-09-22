@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.stop"
 type: docs
+linkTitle: "stop"
+manualLinkTitle: "stop"
 ---
 
 Abort startup or shut down the assigned pilot's unit, releasing the cockpit.

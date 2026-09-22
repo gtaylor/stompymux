@@ -1,6 +1,8 @@
 ---
 title: "mux.world.lock_passes"
 type: docs
+linkTitle: "lock_passes"
+manualLinkTitle: "lock_passes"
 ---
 
 Tests a native object lock without emitting lock messages or performing the

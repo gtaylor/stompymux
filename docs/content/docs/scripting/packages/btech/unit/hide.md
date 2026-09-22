@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.hide"
 type: docs
+linkTitle: "hide"
+manualLinkTitle: "hide"
 ---
 
 Begin hiding in forest, mountains or rough terrain; requires camouflage equipment or a wizard pilot.

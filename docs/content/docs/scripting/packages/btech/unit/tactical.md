@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.tactical"
 type: docs
+linkTitle: "tactical"
+manualLinkTitle: "tactical"
 ---
 
 Render standard, C/T (mech/tank cliffs), B (landing zones), M (mines), L (visible), or U (underlying) tactical maps.

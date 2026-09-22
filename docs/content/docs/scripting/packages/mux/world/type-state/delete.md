@@ -1,6 +1,8 @@
 ---
 title: "State:delete"
 type: docs
+linkTitle: "delete"
+manualLinkTitle: "delete"
 ---
 
 Deletes a state key and reports whether it existed.

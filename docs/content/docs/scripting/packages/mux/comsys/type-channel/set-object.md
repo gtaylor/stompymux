@@ -1,6 +1,8 @@
 ---
 title: "Channel:set_object"
 type: docs
+linkTitle: "set_object"
+manualLinkTitle: "set_object"
 ---
 
 Attaches an object that supplies channel locks and description, or detaches

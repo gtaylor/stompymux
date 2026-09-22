@@ -1,33 +1,36 @@
 ---
-title: "mux.world.type-object"
+title: "Object"
+linkTitle: "Object"
 type: docs
+weight: 30
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("mux")` provides this Lua API.
+`mux.world.type-object` is part of the Lua API.
 
 ## Functions
 
-- [`Object:affiliation`](affiliation/)
-- [`Object:contents`](contents/)
-- [`Object:dbref`](dbref/)
-- [`Object:description`](description/)
-- [`Object:destination`](destination/)
-- [`Object:flags`](flags/)
-- [`Object:home`](home/)
-- [`Object:internal_description`](internal-description/)
-- [`Object:location`](location/)
-- [`Object:lua_parent`](lua-parent/)
-- [`Object:name`](name/)
-- [`Object:powers`](powers/)
-- [`Object:set_affiliation`](set-affiliation/)
-- [`Object:set_description`](set-description/)
-- [`Object:set_destination`](set-destination/)
-- [`Object:set_home`](set-home/)
-- [`Object:set_internal_description`](set-internal-description/)
-- [`Object:set_lua_parent`](set-lua-parent/)
-- [`Object:set_name`](set-name/)
-- [`Object:set_zone`](set-zone/)
-- [`Object:state`](state/)
-- [`Object:type`](type/)
-- [`Object:zone`](zone/)
+- [`affiliation`](affiliation/)
+- [`contents`](contents/)
+- [`dbref`](dbref/)
+- [`description`](description/)
+- [`destination`](destination/)
+- [`flags`](flags/)
+- [`home`](home/)
+- [`internal_description`](internal-description/)
+- [`location`](location/)
+- [`lua_parent`](lua-parent/)
+- [`name`](name/)
+- [`powers`](powers/)
+- [`set_affiliation`](set-affiliation/)
+- [`set_description`](set-description/)
+- [`set_destination`](set-destination/)
+- [`set_home`](set-home/)
+- [`set_internal_description`](set-internal-description/)
+- [`set_lua_parent`](set-lua-parent/)
+- [`set_name`](set-name/)
+- [`set_zone`](set-zone/)
+- [`state`](state/)
+- [`type`](type/)
+- [`zone`](zone/)

@@ -1,6 +1,8 @@
 ---
 title: "mux.error.check"
 type: docs
+linkTitle: "check"
+manualLinkTitle: "check"
 ---
 
 Returns a truthy value unchanged or raises `err` unchanged.

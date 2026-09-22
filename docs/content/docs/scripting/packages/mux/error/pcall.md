@@ -1,6 +1,8 @@
 ---
 title: "mux.error.pcall"
 type: docs
+linkTitle: "pcall"
+manualLinkTitle: "pcall"
 ---
 
 Calls a function, returning all results on success or a normalized traced error.

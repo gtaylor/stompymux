@@ -6,18 +6,17 @@ type: docs
 weight: 13
 ---
 
-Object powers are independent boolean privileges stored on database objects.
-They are separate from [object flags](../flags/): flags describe object state
-and presentation, while powers grant an exception to normal server behavior.
-Native code stores each power in a `has_<name>_power` field and in a matching
-SQLite column.
+Rust `Object` values hold powers in a typed `PowerSet`. They are separate
+from [object flags](/docs/scripting/flags/): flags describe object state and presentation,
+while powers grant an exception to normal server behavior. SQLite stores the
+current power in a `has_idle_power` column.
 
 `IDLE` is the complete set of powers currently registered by the MUX server.
 Historical MUX and BattleTech power names are not accepted.
 
 ## Power summary
 
-| Power | Stored field and column | Native purpose |
+| Power | SQLite column | Native purpose |
 | --- | --- | --- |
 | `IDLE` | `has_idle_power` | Exempts a connected player from the inactivity timeout. |
 
@@ -63,6 +62,7 @@ Wizards can use the following native commands to discover and inspect powers:
 stored `IDLE` power; its power name is case-insensitive, just like `@power`.
 
 Lua logic uses typed constants such as `mux.world.powers.IDLE` with an
-[`Object:powers`](../packages/mux/world/type-object/powers/) collection. Raw
-power-name strings are intentionally not accepted. Lua changes run immediately
-as God and are not rolled back when a callback later fails.
+[`Object:powers`](/docs/scripting/packages/mux/world/type-object/powers/) collection. Raw
+power-name strings are intentionally not accepted. Lua changes use God
+authority and participate in the callback's world transaction. A failed
+callback or save rolls them back.

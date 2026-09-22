@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.ultra"
 type: docs
+linkTitle: "ultra"
+manualLinkTitle: "ultra"
 ---
 
 Toggle one- or two-round Ultra autocannon firing; stages cockpit feedback.

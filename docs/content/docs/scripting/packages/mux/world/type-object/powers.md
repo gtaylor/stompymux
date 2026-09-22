@@ -1,6 +1,8 @@
 ---
 title: "Object:powers"
 type: docs
+linkTitle: "powers"
+manualLinkTitle: "powers"
 ---
 
 Creates a handle for this object's powers.

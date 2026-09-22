@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.damage"
 type: docs
+linkTitle: "damage"
+manualLinkTitle: "damage"
 ---
 
 Wizard-only random damage packets through shared combat and casualty rules.

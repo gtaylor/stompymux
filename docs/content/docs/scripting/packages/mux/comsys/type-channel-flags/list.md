@@ -1,6 +1,8 @@
 ---
 title: "ChannelFlags:list"
 type: docs
+linkTitle: "list"
+manualLinkTitle: "list"
 ---
 
 Lists set flags in `PUBLIC`, `LOUD`, `TRANSPARENT` order.

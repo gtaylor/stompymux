@@ -1,6 +1,8 @@
 ---
 title: "btech.player.ui_preferences"
 type: docs
+linkTitle: "ui_preferences"
+manualLinkTitle: "ui_preferences"
 ---
 
 Read the saved tactical contact and display preferences.

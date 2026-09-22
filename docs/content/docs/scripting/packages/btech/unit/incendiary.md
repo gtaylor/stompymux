@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.incendiary"
 type: docs
+linkTitle: "incendiary"
+manualLinkTitle: "incendiary"
 ---
 
 Toggle incendiary autocannon ammunition with cockpit feedback.

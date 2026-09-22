@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.place"
 type: docs
+linkTitle: "place"
+manualLinkTitle: "place"
 ---
 
 Place a unit on decoded terrain and update world containment. Transactional.

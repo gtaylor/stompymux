@@ -1,6 +1,8 @@
 ---
 title: "btech.parts.set_cost"
 type: docs
+linkTitle: "set_cost"
+manualLinkTitle: "set_cost"
 ---
 
 Set the cost shared by every brand of one registered part.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.usebin"
 type: docs
+linkTitle: "usebin"
+manualLinkTitle: "usebin"
 ---
 
 Select an ammunition section, or clear with nil or '-'. Requires a conscious assigned

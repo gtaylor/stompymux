@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.sight"
 type: docs
+linkTitle: "sight"
+manualLinkTitle: "sight"
 ---
 
 Sight a weapon using ordinary target selection and aim, without firing or revealing cover.

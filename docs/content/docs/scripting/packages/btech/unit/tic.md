@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.tic"
 type: docs
+linkTitle: "tic"
+manualLinkTitle: "tic"
 ---
 
 Read a TIC's ordered weapon numbers; requires the conscious assigned pilot.

@@ -1,6 +1,8 @@
 ---
 title: "btech.template.show_critical_status"
 type: docs
+linkTitle: "show_critical_status"
+manualLinkTitle: "show_critical_status"
 ---
 
 Publish one section's critical status report to a player.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.sensor_report"
 type: docs
+linkTitle: "sensor_report"
+manualLinkTitle: "sensor_report"
 ---
 
 Read-only reference sensor layout; verbose expands active descriptions while Wanted stays compact.

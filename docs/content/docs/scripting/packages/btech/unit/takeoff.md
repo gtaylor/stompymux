@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.takeoff"
 type: docs
+linkTitle: "takeoff"
+manualLinkTitle: "takeoff"
 ---
 
 Queue VTOL takeoff using configured fuel rules and stage a cockpit confirmation.

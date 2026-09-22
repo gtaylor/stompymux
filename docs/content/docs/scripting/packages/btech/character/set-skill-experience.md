@@ -1,6 +1,8 @@
 ---
 title: "btech.character.set_skill_experience"
 type: docs
+linkTitle: "set_skill_experience"
+manualLinkTitle: "set_skill_experience"
 ---
 
 Replace the stored unsigned 32-bit skill experience.

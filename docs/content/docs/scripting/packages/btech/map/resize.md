@@ -1,6 +1,8 @@
 ---
 title: "btech.map.resize"
 type: docs
+linkTitle: "resize"
+manualLinkTitle: "resize"
 ---
 
 Wizard-only resize; copies overlapping visible tiles, clears map objects and rejects clipped units.

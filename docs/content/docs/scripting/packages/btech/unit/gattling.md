@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.gattling"
 type: docs
+linkTitle: "gattling"
+manualLinkTitle: "gattling"
 ---
 
 Toggle gatling machine-gun fire, with cockpit feedback.

@@ -1,6 +1,8 @@
 ---
 title: "mux.config.get"
 type: docs
+linkTitle: "get"
+manualLinkTitle: "get"
 ---
 
 Returns the live scalar value of an exact, case-sensitive configuration directive.

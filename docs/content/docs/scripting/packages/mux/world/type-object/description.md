@@ -1,6 +1,8 @@
 ---
 title: "Object:description"
 type: docs
+linkTitle: "description"
+manualLinkTitle: "description"
 ---
 
 Returns this object's styled description, or nil when it is unset.

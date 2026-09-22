@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.nss"
 type: docs
+linkTitle: "nss"
+manualLinkTitle: "nss"
 ---
 
 Request a thirty-second null signature system switch inside the callback transaction.

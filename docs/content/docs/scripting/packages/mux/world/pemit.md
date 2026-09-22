@@ -1,6 +1,8 @@
 ---
 title: "mux.world.pemit"
 type: docs
+linkTitle: "pemit"
+manualLinkTitle: "pemit"
 ---
 
 Sends valid UTF-8 text to an object.

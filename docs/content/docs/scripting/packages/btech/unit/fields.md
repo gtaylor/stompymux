@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.fields"
 type: docs
+linkTitle: "fields"
+manualLinkTitle: "fields"
 ---
 
 Wizard field inspection using optional 1/4 column selector and case-insensitive prefix.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.fire"
 type: docs
+linkTitle: "fire"
+manualLinkTitle: "fire"
 ---
 
 Fire under configured tactical rules and stage cockpit notices in the current callback transaction.

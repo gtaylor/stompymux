@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.weapons"
 type: docs
+linkTitle: "weapons"
+manualLinkTitle: "weapons"
 ---
 
 List mounted weapons in mounting order; an optional section restricts the result.

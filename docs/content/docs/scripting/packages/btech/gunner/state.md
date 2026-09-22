@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.state"
 type: docs
+linkTitle: "state"
+manualLinkTitle: "state"
 ---
 
 Return detached saved station fields, or nil when absent. Does not grant combat access.

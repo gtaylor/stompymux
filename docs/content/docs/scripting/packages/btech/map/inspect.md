@@ -1,6 +1,8 @@
 ---
 title: "btech.map.inspect"
 type: docs
+linkTitle: "inspect"
+manualLinkTitle: "inspect"
 ---
 
 Inspect a saved map identity without activating simulation.

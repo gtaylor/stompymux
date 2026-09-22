@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.radio_send"
 type: docs
+linkTitle: "radio_send"
+manualLinkTitle: "radio_send"
 ---
 
 Transmit using the selected channel; delivery and command mines commit together.

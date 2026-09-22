@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.inferno"
 type: docs
+linkTitle: "inferno"
+manualLinkTitle: "inferno"
 ---
 
 Toggle inferno missile ammunition with cockpit feedback.

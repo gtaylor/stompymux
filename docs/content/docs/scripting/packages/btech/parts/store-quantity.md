@@ -1,6 +1,8 @@
 ---
 title: "btech.parts.store_quantity"
 type: docs
+linkTitle: "store_quantity"
+manualLinkTitle: "store_quantity"
 ---
 
 Read one part's stored quantity; absent stock reports zero.

@@ -1,6 +1,8 @@
 ---
 title: "Object:affiliation"
 type: docs
+linkTitle: "affiliation"
+manualLinkTitle: "affiliation"
 ---
 
 Returns this object's assigned affiliation, or nil when none is assigned or the affiliate is being destroyed.

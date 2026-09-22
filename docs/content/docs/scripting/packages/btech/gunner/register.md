@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.register"
 type: docs
+linkTitle: "register"
+manualLinkTitle: "register"
 ---
 
 Register a new station for a supported constructed parent. Wizard only.

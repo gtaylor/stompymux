@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.trip"
 type: docs
+linkTitle: "trip"
+manualLinkTitle: "trip"
 ---
 
 Attempt a leg trip. A hit forces target balance; a miss has no balance check. No direct impact damage.

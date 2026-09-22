@@ -1,6 +1,8 @@
 ---
 title: "Object:set_home"
 type: docs
+linkTitle: "set_home"
+manualLinkTitle: "set_home"
 ---
 
 Sets this thing or player's home to a live object capable of containing

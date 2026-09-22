@@ -1,6 +1,8 @@
 ---
 title: "Object:state"
 type: docs
+linkTitle: "state"
+manualLinkTitle: "state"
 ---
 
 Creates a persistent-state handle for an exact, case-sensitive namespace.

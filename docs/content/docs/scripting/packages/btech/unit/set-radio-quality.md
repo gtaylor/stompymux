@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.set_radio_quality"
 type: docs
+linkTitle: "set_radio_quality"
+manualLinkTitle: "set_radio_quality"
 ---
 
 Set the radio quality grade.

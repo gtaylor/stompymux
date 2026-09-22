@@ -1,6 +1,8 @@
 ---
 title: "btech.map.wrapping"
 type: docs
+linkTitle: "wrapping"
+manualLinkTitle: "wrapping"
 ---
 
 Enable or disable saved opposite-edge wrapping.

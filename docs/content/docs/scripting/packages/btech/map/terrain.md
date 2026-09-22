@@ -1,6 +1,8 @@
 ---
 title: "btech.map.terrain"
 type: docs
+linkTitle: "terrain"
+manualLinkTitle: "terrain"
 ---
 
 Read one decoded terrain kind.

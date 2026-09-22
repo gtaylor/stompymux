@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.weapon_specifications"
 type: docs
+linkTitle: "weapon_specifications"
+manualLinkTitle: "weapon_specifications"
 ---
 
 Inspect distinct installed weapon types in first-installation order, including destroyed mounts.

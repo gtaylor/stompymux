@@ -1,6 +1,8 @@
 ---
 title: "btech.character.state"
 type: docs
+linkTitle: "state"
+manualLinkTitle: "state"
 ---
 
 Detached saved character attributes and health; fails when no profile exists.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.hulldown"
 type: docs
+linkTitle: "hulldown"
+manualLinkTitle: "hulldown"
 ---
 
 Lower a quad, raise it with "-", or cancel its pending change with "stop".

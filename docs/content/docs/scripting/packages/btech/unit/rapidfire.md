@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.rapidfire"
 type: docs
+linkTitle: "rapidfire"
+manualLinkTitle: "rapidfire"
 ---
 
 Toggle rapid two-round conventional or light autocannon firing.

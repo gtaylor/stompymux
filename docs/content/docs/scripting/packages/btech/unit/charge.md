@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.charge"
 type: docs
+linkTitle: "charge"
+manualLinkTitle: "charge"
 ---
 
 Select a charge target without starting movement. Nil uses the current target; '-' cancels.

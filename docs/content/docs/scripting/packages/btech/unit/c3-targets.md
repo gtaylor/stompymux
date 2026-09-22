@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.c3_targets"
 type: docs
+linkTitle: "c3_targets"
+manualLinkTitle: "c3_targets"
 ---
 
 Inspect direct and classic C3 target sightings without acquiring contacts.

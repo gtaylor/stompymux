@@ -1,21 +1,24 @@
 ---
-title: "mux.comsys.type-channel"
+title: "Channel"
+linkTitle: "Channel"
 type: docs
+weight: 20
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("mux")` provides this Lua API.
+`mux.comsys.type-channel` is part of the Lua API.
 
 ## Functions
 
-- [`Channel:add_player`](add-player/)
-- [`Channel:boot_player`](boot-player/)
-- [`Channel:emit`](emit/)
-- [`Channel:flags`](flags/)
-- [`Channel:max_user_count`](max-user-count/)
-- [`Channel:message_count`](message-count/)
-- [`Channel:name`](name/)
-- [`Channel:object`](object/)
-- [`Channel:set_object`](set-object/)
-- [`Channel:user_count`](user-count/)
-- [`Channel:who`](who/)
+- [`add_player`](add-player/)
+- [`boot_player`](boot-player/)
+- [`emit`](emit/)
+- [`flags`](flags/)
+- [`max_user_count`](max-user-count/)
+- [`message_count`](message-count/)
+- [`name`](name/)
+- [`object`](object/)
+- [`set_object`](set-object/)
+- [`user_count`](user-count/)
+- [`who`](who/)

@@ -1,6 +1,8 @@
 ---
 title: "mux.comsys.list_channels"
 type: docs
+linkTitle: "list_channels"
+manualLinkTitle: "list_channels"
 ---
 
 Lists every live communication channel in case-insensitive name order, with

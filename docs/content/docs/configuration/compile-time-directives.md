@@ -1,16 +1,26 @@
 ---
-title: Compile-time directives
-linkTitle: Compile-time directives
-description: Changing rules and behaviors with compile-time directives
+title: Build options
+linkTitle: Build options
+description: Cargo build profiles and optional developer tools
 weight: 30
 ---
 
-There are a number of compile-time options exposed in `CMakeLists.txt` in the repo root.
-See these for a canonical list. Due to how much history has built up over time, your
-best bet is to review the sources to see what these do.
+StompyMUX is built with Cargo. Use the default development profile while
+iterating, or build an optimized binary with the release profile:
 
-`BTECH_ENABLE_HARDENING` defaults to `ON`. It applies Clang's equivalents of the
-C-relevant GCC `-fhardened` protections to first-party MUX and BTech code, and
-builds executables with PIE, RELRO, and immediate symbol binding. Set the environment
-variable to `OFF` when invoking `just` or pass `-DBTECH_ENABLE_HARDENING=OFF` to CMake
-to disable this baseline for a specialized build.
+```sh
+cargo build
+cargo build --release
+```
+
+Game rules and server settings are configured in `stompymux.toml`; they do not
+require a special Cargo build. `Cargo.toml` defines two opt-in features for
+developer tools:
+
+| Feature | Binary | Purpose |
+| --- | --- | --- |
+| `lua-type-updater` | `lua-type-updater` | Regenerate LuaLS type declarations |
+| `lua-doc-updater` | `lua-doc-updater` | Regenerate Lua API reference pages |
+
+Run them through `just update-lua-types` and `just update-lua-docs`, or with
+`cargo run --features <feature> --bin <binary> -- --write`.

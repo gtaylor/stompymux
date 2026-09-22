@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.set_display_name_as"
 type: docs
+linkTitle: "set_display_name_as"
+manualLinkTitle: "set_display_name_as"
 ---
 
 Set a display override of at most 120 bytes; an empty string clears it. Wizard only.

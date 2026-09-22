@@ -1,6 +1,8 @@
 ---
 title: "btech.map.set_authored_link"
 type: docs
+linkTitle: "set_authored_link"
+manualLinkTitle: "set_authored_link"
 ---
 
 Configure an authored link without rebuilding live routes; nil removes the configuration.

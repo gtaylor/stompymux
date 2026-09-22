@@ -1,6 +1,8 @@
 ---
 title: "btech.template.base_cost"
 type: docs
+linkTitle: "base_cost"
+manualLinkTitle: "base_cost"
 ---
 
 Read the constructed base cost in C-bills.

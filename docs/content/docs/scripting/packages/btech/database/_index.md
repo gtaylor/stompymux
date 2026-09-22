@@ -1,11 +1,13 @@
 ---
 title: "btech.database"
+linkTitle: "btech.database"
 type: docs
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("btech")` provides this Lua API.
+`btech.database`: Explicit BattleTech world checkpoints.
 
 ## Functions
 
-- [`btech.database.save`](save/)
+- [`save`](save/)

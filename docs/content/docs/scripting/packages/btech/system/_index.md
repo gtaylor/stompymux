@@ -1,12 +1,15 @@
 ---
 title: "btech.system"
+linkTitle: "btech.system"
 type: docs
+weight: 30
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("btech")` provides this Lua API.
+`btech.system`: Server-wide BattleTech queries.
 
 ## Functions
 
-- [`btech.system.event_lag`](event-lag/)
-- [`btech.system.units_in_zone`](units-in-zone/)
+- [`event_lag`](event-lag/)
+- [`units_in_zone`](units-in-zone/)

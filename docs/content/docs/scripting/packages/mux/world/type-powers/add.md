@@ -1,6 +1,8 @@
 ---
 title: "Powers:add"
 type: docs
+linkTitle: "add"
+manualLinkTitle: "add"
 ---
 
 Grants a power and reports whether the object changed.

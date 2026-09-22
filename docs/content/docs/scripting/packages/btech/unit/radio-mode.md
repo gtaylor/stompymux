@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.radio_mode"
 type: docs
+linkTitle: "radio_mode"
+manualLinkTitle: "radio_mode"
 ---
 
 Replace channel mode: D digital, U muted, E relay; optional color letter. Transactional.

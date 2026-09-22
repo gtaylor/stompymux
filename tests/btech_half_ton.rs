@@ -84,7 +84,7 @@ fn half_ton_capacity_modes_mass_and_hazards() {
 #[test]
 fn half_ton_osiris_and_razorback_construct_unchanged() {
     for name in ["OSR-3D", "RZK-9S"] {
-        let source = std::fs::read_to_string(format!("../btmux-khi/game/mechs/{name}")).unwrap();
+        let source = std::fs::read_to_string(format!("game/mechs/{name}")).unwrap();
         let unit = BattleUnit::from_template(BattleTemplate::parse(&source).unwrap()).unwrap();
         assert!(
             unit.loadout()

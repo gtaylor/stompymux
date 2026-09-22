@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.set_armor"
 type: docs
+linkTitle: "set_armor"
+manualLinkTitle: "set_armor"
 ---
 
 Patch armor values on one section.

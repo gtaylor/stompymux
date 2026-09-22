@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.setmapindex"
 type: docs
+linkTitle: "setmapindex"
+manualLinkTitle: "setmapindex"
 ---
 
 Wizard map assignment; -1 removes membership and retains the pose for re-entry.

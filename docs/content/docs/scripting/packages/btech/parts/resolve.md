@@ -1,6 +1,8 @@
 ---
 title: "btech.parts.resolve"
 type: docs
+linkTitle: "resolve"
+manualLinkTitle: "resolve"
 ---
 
 Resolve one registered part by packed ID, case-insensitive name or {id, brand} record.

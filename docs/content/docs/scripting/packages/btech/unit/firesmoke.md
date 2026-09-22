@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.firesmoke"
 type: docs
+linkTitle: "firesmoke"
+manualLinkTitle: "firesmoke"
 ---
 
 Select missile Smoke rounds. This cockpit control does not select artillery payloads.

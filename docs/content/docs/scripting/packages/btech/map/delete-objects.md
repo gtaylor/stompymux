@@ -1,6 +1,8 @@
 ---
 title: "btech.map.delete_objects"
 type: docs
+linkTitle: "delete_objects"
+manualLinkTitle: "delete_objects"
 ---
 
 Delete map objects by type, coordinate, or both. At least one selector is required.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.scan_selected"
 type: docs
+linkTitle: "scan_selected"
+manualLinkTitle: "scan_selected"
 ---
 
 Scan the saved unit or coordinate target without advancing its lock countdown.

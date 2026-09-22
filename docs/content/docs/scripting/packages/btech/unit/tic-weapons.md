@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.tic_weapons"
 type: docs
+linkTitle: "tic_weapons"
+manualLinkTitle: "tic_weapons"
 ---
 
 List the weapons of one trigger group in mounting order.

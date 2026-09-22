@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.artemis"
 type: docs
+linkTitle: "artemis"
+manualLinkTitle: "artemis"
 ---
 
 Toggle Artemis-compatible ammunition; requires a live linked controller and a recycled missile launcher.

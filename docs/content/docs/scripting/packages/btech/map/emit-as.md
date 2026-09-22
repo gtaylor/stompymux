@@ -1,6 +1,8 @@
 ---
 title: "btech.map.emit_as"
 type: docs
+linkTitle: "emit_as"
+manualLinkTitle: "emit_as"
 ---
 
 Wizard broadcast to occupants of running, conscious, unblinded units in map-slot order.

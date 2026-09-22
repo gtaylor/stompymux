@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.c3i_network"
 type: docs
+linkTitle: "c3i_network"
+manualLinkTitle: "c3i_network"
 ---
 
 Inspect running, unjammed peers without requiring visual contact or publishing output.

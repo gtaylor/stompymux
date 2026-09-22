@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.fliparms"
 type: docs
+linkTitle: "fliparms"
+manualLinkTitle: "fliparms"
 ---
 
 Toggle forward/backward arms on a capable standing, running chassis.

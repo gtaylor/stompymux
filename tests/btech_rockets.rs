@@ -105,7 +105,7 @@ fn rocket_catalog_clusters_and_one_shot_templates() {
 /// The existing Commando supplies six independent rocket salvos without external bins.
 #[test]
 fn rocket_commando_constructs_unchanged() {
-    let source = std::fs::read_to_string("../btmux-khi/game/mechs/COM-4H").unwrap();
+    let source = std::fs::read_to_string("game/mechs/COM-4H").unwrap();
     let unit = BattleUnit::from_template(BattleTemplate::parse(&source).unwrap()).unwrap();
     let loadout = unit.loadout().unwrap();
     assert!(loadout.ammunition.is_empty());

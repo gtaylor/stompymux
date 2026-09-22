@@ -1,6 +1,8 @@
 ---
 title: "btech.character.catalog"
 type: docs
+linkTitle: "catalog"
+manualLinkTitle: "catalog"
 ---
 
 Return ordered value definitions of one kind; a supplied player filters unsaved

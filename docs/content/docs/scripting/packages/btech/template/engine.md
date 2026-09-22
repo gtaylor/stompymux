@@ -1,6 +1,8 @@
 ---
 title: "btech.template.engine"
 type: docs
+linkTitle: "engine"
+manualLinkTitle: "engine"
 ---
 
 Read the engine rating and suspension factor.

@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.range_report"
 type: docs
+linkTitle: "range_report"
+manualLinkTitle: "range_report"
 ---
 
 Read spatial range using the station selection, parent altitude and map darkness.

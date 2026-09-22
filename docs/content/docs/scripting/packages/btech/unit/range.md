@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.range"
 type: docs
+linkTitle: "range"
+manualLinkTitle: "range"
 ---
 
 Measure placed units on the same map. Does not check visibility or weapon eligibility.

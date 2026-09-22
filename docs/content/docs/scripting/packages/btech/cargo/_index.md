@@ -1,14 +1,16 @@
 ---
 title: "btech.cargo"
+linkTitle: "btech.cargo"
 type: docs
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("btech")` provides this Lua API.
+`btech.cargo`: Cockpit stock reports and cargo transfers.
 
 ## Functions
 
-- [`btech.cargo.load`](load/)
-- [`btech.cargo.manifest`](manifest/)
-- [`btech.cargo.stores`](stores/)
-- [`btech.cargo.unload`](unload/)
+- [`load`](load/)
+- [`manifest`](manifest/)
+- [`stores`](stores/)
+- [`unload`](unload/)

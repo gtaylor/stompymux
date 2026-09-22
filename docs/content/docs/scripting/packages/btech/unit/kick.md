@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.kick"
 type: docs
+linkTitle: "kick"
+manualLinkTitle: "kick"
 ---
 
 Attempt a biped kick; rolls back damage, falls, recovery and notices with the callback.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.lock"
 type: docs
+linkTitle: "lock"
+manualLinkTitle: "lock"
 ---
 
 Select a current acquired target or clear selection with nil; requires the conscious assigned pilot.

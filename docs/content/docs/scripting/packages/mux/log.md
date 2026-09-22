@@ -1,6 +1,8 @@
 ---
 title: "mux.log"
 type: docs
+linkTitle: "log"
+manualLinkTitle: "log"
 ---
 
 Appends a newline-terminated message to a permitted file under `game/logs`.

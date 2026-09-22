@@ -1,6 +1,8 @@
 ---
 title: "ChannelFlags:remove"
 type: docs
+linkTitle: "remove"
+manualLinkTitle: "remove"
 ---
 
 Clears a typed channel flag.

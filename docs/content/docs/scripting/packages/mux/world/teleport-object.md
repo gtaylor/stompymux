@@ -1,6 +1,8 @@
 ---
 title: "mux.world.teleport_object"
 type: docs
+linkTitle: "teleport_object"
+manualLinkTitle: "teleport_object"
 ---
 
 Teleports a thing or player through the native movement path.

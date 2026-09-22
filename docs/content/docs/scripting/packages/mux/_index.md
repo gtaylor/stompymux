@@ -1,24 +1,29 @@
 ---
-title: "mux"
+title: "mux package"
+linkTitle: "mux"
 type: docs
+weight: 10
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("mux")` provides this Lua API.
+`mux` is the built-in server API available to every Lua module. It is supplied by the game server rather than loaded with `require`.
 
-## Namespaces and types
+## Subpackages
 
-- [`mux.comsys`](comsys/)
-- [`mux.config`](config/)
-- [`mux.error`](error/)
-- [`mux.session`](session/)
-- [`mux.telnet`](telnet/)
-- [`mux.text`](text/)
-- [`mux.world`](world/)
+| Package | Description |
+| --- | --- |
+| [`mux.comsys`](comsys/) | Trusted communication-channel management. |
+| [`mux.config`](config/) | Read-only access to scalar server configuration. |
+| [`mux.error`](error/) | Structured errors, checked error codes, and error-handling helpers. |
+| [`mux.session`](session/) | Interactive flows and active player-session information. |
+| [`mux.telnet`](telnet/) | Telnet protocol state and capabilities. |
+| [`mux.text`](text/) | Styled-text validation, formatting, and measurement helpers. |
+| [`mux.world`](world/) | Database objects and their persistent state. |
 
 ## Functions
 
-- [`mux.check_db`](check-db/)
-- [`mux.log`](log/)
+- [`check_db`](check-db/)
+- [`log`](log/)
 
 See the [value types](types/) used in signatures and returned records.

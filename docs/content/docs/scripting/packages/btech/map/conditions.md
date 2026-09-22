@@ -1,6 +1,8 @@
 ---
 title: "btech.map.conditions"
 type: docs
+linkTitle: "conditions"
+manualLinkTitle: "conditions"
 ---
 
 Change saved light/weather conditions without reloading occupied terrain.

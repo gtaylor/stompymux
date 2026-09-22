@@ -1,6 +1,8 @@
 ---
 title: "btech.weapon.settings"
 type: docs
+linkTitle: "settings"
+manualLinkTitle: "settings"
 ---
 
 Read detached effective values using a canonical or manufacturer-qualified weapon name.

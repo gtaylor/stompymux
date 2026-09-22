@@ -1,14 +1,17 @@
 ---
-title: "mux.world.type-powers"
+title: "Powers"
+linkTitle: "Powers"
 type: docs
+weight: 40
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("mux")` provides this Lua API.
+`mux.world.type-powers` is part of the Lua API.
 
 ## Functions
 
-- [`Powers:add`](add/)
-- [`Powers:has`](has/)
-- [`Powers:list`](list/)
-- [`Powers:remove`](remove/)
+- [`add`](add/)
+- [`has`](has/)
+- [`list`](list/)
+- [`remove`](remove/)

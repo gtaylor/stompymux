@@ -1,6 +1,8 @@
 ---
 title: "btech.map.add_mine"
 type: docs
+linkTitle: "add_mine"
+manualLinkTitle: "add_mine"
 ---
 
 Add a newest-first mine owned by the wizard; return its persistent record slot.

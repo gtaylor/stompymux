@@ -5,8 +5,8 @@ type: docs
 weight: 37
 ---
 
-The game uses libtelnet for Telnet command framing and option negotiation. A
-new connection negotiates terminal type (TTYPE), window size (NAWS), UTF-8
+The Rust decoder in `src/telnet.rs` handles Telnet command framing and option
+negotiation. A new connection negotiates terminal type (TTYPE), window size (NAWS), UTF-8
 character set, server status (MSSP), output compression (MCCP2), GMCP, and the
 RFC 1572 NEW-ENVIRON option.
 
@@ -94,14 +94,14 @@ absent value. Storage is limited to 64 entries, 256 bytes per name, 4096 bytes
 per value, and 65536 bytes total per connection. Malformed or oversized
 messages are rejected atomically.
 
-C code can query a descriptor with
-`descriptor_telnet_environment_has()` and
-`descriptor_telnet_environment_get()` from
-`mux/network/telnet_environment.h`. Names and values are length-delimited so
-escaped protocol bytes and empty values are preserved. Lua code has equivalent
-functions in the built-in `mux` package. Wizards can inspect all negotiated
-state with `@telnet <player>`; non-printable bytes are escaped in its output.
-The diagnostic groups each value beneath the Telnet option that supplied it.
+The per-connection `Environment` in `src/telnet/environment.rs` stores
+length-delimited names and values, preserving escaped protocol bytes and empty
+values. Lua code can query the live descriptor through
+`mux.telnet.environment_has(descriptor, kind, name)` and
+`mux.telnet.environment_get(descriptor, kind, name)`. Wizards can inspect
+negotiated state with `@telnet <player>`; non-printable bytes are escaped in
+its output. The diagnostic groups each value beneath the Telnet option that
+supplied it.
 
 ## ECHO
 

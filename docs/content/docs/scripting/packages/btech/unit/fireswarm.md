@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.fireswarm"
 type: docs
+linkTitle: "fireswarm"
+manualLinkTitle: "fireswarm"
 ---
 
 Select Swarm missiles; unused missiles can retarget friendly units, including the launcher.

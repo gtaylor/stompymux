@@ -1,6 +1,8 @@
 ---
 title: "Channel:message_count"
 type: docs
+linkTitle: "message_count"
+manualLinkTitle: "message_count"
 ---
 
 Returns the channel's lifetime delivered-message count.

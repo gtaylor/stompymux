@@ -1,12 +1,15 @@
 ---
 title: "mux.telnet"
+linkTitle: "mux.telnet"
 type: docs
+weight: -40
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("mux")` provides this Lua API.
+`mux.telnet`: Telnet protocol state and capabilities.
 
 ## Functions
 
-- [`mux.telnet.environment_get`](environment-get/)
-- [`mux.telnet.environment_has`](environment-has/)
+- [`environment_get`](environment-get/)
+- [`environment_has`](environment-has/)

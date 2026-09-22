@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.lateral"
 type: docs
+linkTitle: "lateral"
+manualLinkTitle: "lateral"
 ---
 
 Request a six-second lateral change; requires the assigned Maneuvering Ace pilot.

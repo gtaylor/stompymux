@@ -1,6 +1,8 @@
 ---
 title: "btech.map.line_of_sight"
 type: docs
+linkTitle: "line_of_sight"
+manualLinkTitle: "line_of_sight"
 ---
 
 Report line of sight from one placed unit toward a unit or hex.

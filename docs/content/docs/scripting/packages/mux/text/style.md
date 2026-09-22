@@ -1,6 +1,8 @@
 ---
 title: "mux.text.style"
 type: docs
+linkTitle: "style"
+manualLinkTitle: "style"
 ---
 
 Wraps text in markup described by the supplied style options.

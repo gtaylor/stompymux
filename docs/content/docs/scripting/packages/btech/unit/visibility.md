@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.visibility"
 type: docs
+linkTitle: "visibility"
+manualLinkTitle: "visibility"
 ---
 
 Read or replace trusted scenario visibility. Both fields are required when replacing it.

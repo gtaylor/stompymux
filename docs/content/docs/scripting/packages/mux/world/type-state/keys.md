@@ -1,6 +1,8 @@
 ---
 title: "State:keys"
 type: docs
+linkTitle: "keys"
+manualLinkTitle: "keys"
 ---
 
 Lists keys sorted in native key order.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.punch"
 type: docs
+linkTitle: "punch"
+manualLinkTitle: "punch"
 ---
 
 Attempt one or both arms in left-to-right order. Default selection is both.

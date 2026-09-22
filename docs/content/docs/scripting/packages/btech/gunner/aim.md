@@ -1,6 +1,8 @@
 ---
 title: "btech.gunner.aim"
 type: docs
+linkTitle: "aim"
+manualLinkTitle: "aim"
 ---
 
 Preview conventional aim using independent station targeting and the registered gunner's skill.

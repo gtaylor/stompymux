@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.stand"
 type: docs
+linkTitle: "stand"
+manualLinkTitle: "stand"
 ---
 
 Attempt to stand, staging fall and terrain-break notices in the callback transaction.

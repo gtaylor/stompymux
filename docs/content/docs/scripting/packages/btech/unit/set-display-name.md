@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.set_display_name"
 type: docs
+linkTitle: "set_display_name"
+manualLinkTitle: "set_display_name"
 ---
 
 Replace the saved display-name override; nil or an empty string clears it.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.set_preferred_id"
 type: docs
+linkTitle: "set_preferred_id"
+manualLinkTitle: "set_preferred_id"
 ---
 
 Set the saved two-letter battlefield ID preference; nil clears it without consuming dice.

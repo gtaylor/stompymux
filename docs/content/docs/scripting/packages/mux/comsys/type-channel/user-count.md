@@ -1,6 +1,8 @@
 ---
 title: "Channel:user_count"
 type: docs
+linkTitle: "user_count"
+manualLinkTitle: "user_count"
 ---
 
 Returns the number of channel membership records.

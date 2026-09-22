@@ -1,6 +1,8 @@
 ---
 title: "Object:location"
 type: docs
+linkTitle: "location"
+manualLinkTitle: "location"
 ---
 
 Returns this thing or player's current location, or nil when no location is

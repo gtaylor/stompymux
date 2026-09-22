@@ -1,6 +1,8 @@
 ---
 title: "mux.text.width"
 type: docs
+linkTitle: "width"
+manualLinkTitle: "width"
 ---
 
 Measures visible byte width, excluding markup and ANSI styling.

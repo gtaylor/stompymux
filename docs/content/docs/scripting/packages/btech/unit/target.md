@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.target"
 type: docs
+linkTitle: "target"
+manualLinkTitle: "target"
 ---
 
 Select a section of the current unit target using its anatomical aliases.

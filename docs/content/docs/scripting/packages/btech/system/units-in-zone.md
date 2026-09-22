@@ -1,6 +1,8 @@
 ---
 title: "btech.system.units_in_zone"
 type: docs
+linkTitle: "units_in_zone"
+manualLinkTitle: "units_in_zone"
 ---
 
 List registered BattleTech units contained in a zone.

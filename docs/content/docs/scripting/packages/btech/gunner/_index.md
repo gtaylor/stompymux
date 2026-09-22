@@ -1,39 +1,41 @@
 ---
 title: "btech.gunner"
+linkTitle: "btech.gunner"
 type: docs
+sidebar_root_for: self
 no_list: true
 ---
 
-`require("btech")` provides this Lua API.
+`btech.gunner`: Gunner station registration, ownership, and inspection.
 
 ## Functions
 
-- [`btech.gunner.aim`](aim/)
-- [`btech.gunner.artillery_gunnery`](artillery-gunnery/)
-- [`btech.gunner.bearing`](bearing/)
-- [`btech.gunner.contacts`](contacts/)
-- [`btech.gunner.deinitialize`](deinitialize/)
-- [`btech.gunner.eta`](eta/)
-- [`btech.gunner.findcenter`](findcenter/)
-- [`btech.gunner.fire`](fire/)
-- [`btech.gunner.gunnery`](gunnery/)
-- [`btech.gunner.initialize`](initialize/)
-- [`btech.gunner.lock`](lock/)
-- [`btech.gunner.lock_hex`](lock-hex/)
-- [`btech.gunner.lrsmap`](lrsmap/)
-- [`btech.gunner.navigate`](navigate/)
-- [`btech.gunner.range_report`](range-report/)
-- [`btech.gunner.register`](register/)
-- [`btech.gunner.report`](report/)
-- [`btech.gunner.scan`](scan/)
-- [`btech.gunner.scan_building`](scan-building/)
-- [`btech.gunner.scan_hex`](scan-hex/)
-- [`btech.gunner.scan_selected`](scan-selected/)
-- [`btech.gunner.scan_terrain`](scan-terrain/)
-- [`btech.gunner.set_field`](set-field/)
-- [`btech.gunner.sight`](sight/)
-- [`btech.gunner.state`](state/)
-- [`btech.gunner.status`](status/)
-- [`btech.gunner.tactical`](tactical/)
-- [`btech.gunner.vector`](vector/)
-- [`btech.gunner.view_fields`](view-fields/)
+- [`aim`](aim/)
+- [`artillery_gunnery`](artillery-gunnery/)
+- [`bearing`](bearing/)
+- [`contacts`](contacts/)
+- [`deinitialize`](deinitialize/)
+- [`eta`](eta/)
+- [`findcenter`](findcenter/)
+- [`fire`](fire/)
+- [`gunnery`](gunnery/)
+- [`initialize`](initialize/)
+- [`lock`](lock/)
+- [`lock_hex`](lock-hex/)
+- [`lrsmap`](lrsmap/)
+- [`navigate`](navigate/)
+- [`range_report`](range-report/)
+- [`register`](register/)
+- [`report`](report/)
+- [`scan`](scan/)
+- [`scan_building`](scan-building/)
+- [`scan_hex`](scan-hex/)
+- [`scan_selected`](scan-selected/)
+- [`scan_terrain`](scan-terrain/)
+- [`set_field`](set-field/)
+- [`sight`](sight/)
+- [`state`](state/)
+- [`status`](status/)
+- [`tactical`](tactical/)
+- [`vector`](vector/)
+- [`view_fields`](view-fields/)

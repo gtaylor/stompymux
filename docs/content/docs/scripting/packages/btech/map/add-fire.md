@@ -1,6 +1,8 @@
 ---
 title: "btech.map.add_fire"
 type: docs
+linkTitle: "add_fire"
+manualLinkTitle: "add_fire"
 ---
 
 Install wizard fire; zero duration is permanent. Off-map coordinates leave the map unchanged.

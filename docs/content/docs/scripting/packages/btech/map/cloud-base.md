@@ -1,6 +1,8 @@
 ---
 title: "btech.map.cloud_base"
 type: docs
+linkTitle: "cloud_base"
+manualLinkTitle: "cloud_base"
 ---
 
 Wizard-only persisted cloud boundary. Zero disables it; accepts signed 16-bit elevation levels.

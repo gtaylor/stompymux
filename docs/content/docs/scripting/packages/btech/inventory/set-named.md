@@ -1,6 +1,8 @@
 ---
 title: "btech.inventory.set_named"
 type: docs
+linkTitle: "set_named"
+manualLinkTitle: "set_named"
 ---
 
 Wizard stock correction by exact part name, sharing validation and callback rollback with set.

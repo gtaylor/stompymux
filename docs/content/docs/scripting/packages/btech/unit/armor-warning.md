@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.armor_warning"
 type: docs
+linkTitle: "armor_warning"
+manualLinkTitle: "armor_warning"
 ---
 
 Set the assigned pilot's armor warning preference.

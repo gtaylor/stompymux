@@ -1,6 +1,8 @@
 ---
 title: "btech.map.elevation"
 type: docs
+linkTitle: "elevation"
+manualLinkTitle: "elevation"
 ---
 
 Read one tile elevation; water and ice report depth.

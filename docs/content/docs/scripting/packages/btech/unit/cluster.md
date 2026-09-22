@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.cluster"
 type: docs
+linkTitle: "cluster"
+manualLinkTitle: "cluster"
 ---
 
 Toggle an intact recycled artillery launcher between normal and cluster rounds; rejects smoke/mine selection.

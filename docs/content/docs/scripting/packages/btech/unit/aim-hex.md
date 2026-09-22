@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.aim_hex"
 type: docs
+linkTitle: "aim_hex"
+manualLinkTitle: "aim_hex"
 ---
 
 Inspect empty-terrain aim without dice, expenditure, or a fictitious target unit.

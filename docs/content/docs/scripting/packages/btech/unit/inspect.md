@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.inspect"
 type: docs
+linkTitle: "inspect"
+manualLinkTitle: "inspect"
 ---
 
 Inspect a saved unit identity without activating simulation.

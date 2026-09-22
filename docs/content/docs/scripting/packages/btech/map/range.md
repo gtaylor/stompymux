@@ -1,6 +1,8 @@
 ---
 title: "btech.map.range"
 type: docs
+linkTitle: "range"
+manualLinkTitle: "range"
 ---
 
 Measure the spatial range between two units or positions on one map.

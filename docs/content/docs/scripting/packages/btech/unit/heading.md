@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.heading"
 type: docs
+linkTitle: "heading"
+manualLinkTitle: "heading"
 ---
 
 Set desired heading on the current pilot's running unit and stage a cockpit confirmation.

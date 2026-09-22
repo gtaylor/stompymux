@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.tic_fire"
 type: docs
+linkTitle: "tic_fire"
+manualLinkTitle: "tic_fire"
 ---
 
 Fire groups in ascending order using ordinary firing rules. Shot rejection continues;

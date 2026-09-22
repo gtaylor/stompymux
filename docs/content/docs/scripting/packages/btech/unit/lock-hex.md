@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.lock_hex"
 type: docs
+linkTitle: "lock_hex"
+manualLinkTitle: "lock_hex"
 ---
 
 Select valid map coordinates without requiring visibility. Unit-at-hex fire uses its current occupant; empty-hex and terrain attacks remain unimplemented.

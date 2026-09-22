@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.battle_value"
 type: docs
+linkTitle: "battle_value"
+manualLinkTitle: "battle_value"
 ---
 
 Read offensive, defensive and total Battle Value.

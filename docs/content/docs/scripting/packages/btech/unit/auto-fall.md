@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.auto_fall"
 type: docs
+linkTitle: "auto_fall"
+manualLinkTitle: "auto_fall"
 ---
 
 Set the unit's downhill cliff preference; requires its present pilot.

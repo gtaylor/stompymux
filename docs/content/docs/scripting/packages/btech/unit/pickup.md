@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.pickup"
 type: docs
+linkTitle: "pickup"
+manualLinkTitle: "pickup"
 ---
 
 Pick up a visible unit using shared towing, shutdown and terrain rules.

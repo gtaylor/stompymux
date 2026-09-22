@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.contacts"
 type: docs
+linkTitle: "contacts"
+manualLinkTitle: "contacts"
 ---
 
 Read acquired contacts still eligible under current sensor conditions; no acquisition rolls.

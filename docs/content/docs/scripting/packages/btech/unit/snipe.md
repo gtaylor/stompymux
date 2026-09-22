@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.snipe"
 type: docs
+linkTitle: "snipe"
+manualLinkTitle: "snipe"
 ---
 
 Wizard-only predictive firing using fixed horizontal target orders and normal weapon launches.

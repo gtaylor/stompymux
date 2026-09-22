@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.scan_hex"
 type: docs
+linkTitle: "scan_hex"
+manualLinkTitle: "scan_hex"
 ---
 
 Scan the first acquired visible occupant at a coordinate in saved map order.

@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.grabclub"
 type: docs
+linkTitle: "grabclub"
+manualLinkTitle: "grabclub"
 ---
 
 Grab a tree in a selected arm (left first by default), or drop it with '-'.

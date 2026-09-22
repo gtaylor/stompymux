@@ -1,6 +1,8 @@
 ---
 title: "btech.cargo.unload"
 type: docs
+linkTitle: "unload"
+manualLinkTitle: "unload"
 ---
 
 Unload matching CargoTech stock onto the current map; startup and loading-point checks do not apply.

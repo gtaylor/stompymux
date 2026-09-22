@@ -1,6 +1,8 @@
 ---
 title: "btech.unit.rac"
 type: docs
+linkTitle: "rac"
+manualLinkTitle: "rac"
 ---
 
 Set rotary burst length; repeated selection stays enabled and returns false.
