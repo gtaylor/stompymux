@@ -377,6 +377,40 @@ mod tests {
         assert_eq!(request.message.len(), MESSAGE_BYTES + 1);
         assert_eq!(request.message.last(), Some(&b'\n'));
     }
+    /// Missing creation-time macro defaults produce a contextual warning without blocking allocation.
+    #[test]
+    fn default_player_macros_warn_only_when_missing_at_creation() {
+        let d = tempfile::tempdir().unwrap();
+        std::fs::write(d.path().join("stompymux.toml"), "").unwrap();
+        let c = Config::load(d.path()).unwrap();
+        let (tx, mut rx) = mpsc::channel(8);
+        c.logger.0.sender.set(tx).unwrap();
+        let mut world = crate::World::default();
+        let early = world.create(&c, "Early player".into(), crate::Kind::Player);
+        let Request::Record(warning) = rx.try_recv().unwrap() else {
+            panic!("expected warning");
+        };
+        assert!(warning.text.contains("MAC/WARN"));
+        assert!(
+            warning
+                .text
+                .contains(&format!("Player #{} (Early player)", early.0))
+        );
+        assert!(warning.text.contains("default macro set 0: set not found"));
+        assert!(world.objects.contains_key(&early));
+        world.macros.sets.push(crate::MacroSet {
+            id: Default::default(),
+            origin: Default::default(),
+            owner: early,
+            modes: Default::default(),
+            description: "created by bootstrap".into(),
+            entries: vec![],
+        });
+        let later = world.create(&c, "Later player".into(), crate::Kind::Player);
+        assert_eq!(world.macros.players[&later].slots[0], Some(0));
+        assert!(rx.try_recv().is_err());
+    }
+
     #[tokio::test]
     async fn saturation_and_shutdown_deadline_are_bounded() {
         let d = tempfile::tempdir().unwrap();

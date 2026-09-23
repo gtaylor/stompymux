@@ -1,0 +1,3 @@
+Reference uses identical current source and fixtures, with just one disabled branch:
+if false && plan.congestion_seen && plan.congestion_retries < MAX_RECOVERY_ATTEMPTS {
+Candidate enables the branch. All other movement and combat policy is identical.

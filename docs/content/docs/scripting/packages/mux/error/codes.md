@@ -8,6 +8,10 @@ Immutable typed constants available in the Stompymux-rs Lua runtime.
 | Constant | Type or native code | Description |
 | --- | --- | --- |
 | `mux.error.codes.arg.invalid` | `mux.arg.invalid` |  |
+| `mux.error.codes.macro.invalid` | `mux.macro.invalid` |  |
+| `mux.error.codes.macro.not_found` | `mux.macro.not_found` |  |
+| `mux.error.codes.macro.exists` | `mux.macro.exists` |  |
+| `mux.error.codes.macro.slots_full` | `mux.macro.slots_full` |  |
 | `mux.error.codes.unavailable.checking` | `mux.unavailable.checking` |  |
 | `mux.error.codes.runtime` | `mux.runtime` |  |
 | `mux.error.codes.state.invalid` | `mux.state.invalid` |  |

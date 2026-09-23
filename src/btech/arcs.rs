@@ -160,11 +160,41 @@ pub fn rotate_torso(
     pilot: ObjectId,
     direction: BattleTorso,
 ) -> Result<BattleNotice> {
+    let notice = rotate_torso_by_actor(
+        world,
+        id,
+        super::combat_operator::ControlActor::Player(pilot),
+        direction,
+    )?;
+    let _ = super::autopilot::manual_takeover(world, id);
+    Ok(notice)
+}
+
+/// Autonomous torso movement retains every mechanical and crew-health guard.
+pub(crate) fn rotate_torso_autopilot(
+    world: &mut World,
+    id: ObjectId,
+    direction: BattleTorso,
+) -> Result<BattleNotice> {
+    rotate_torso_by_actor(
+        world,
+        id,
+        super::combat_operator::ControlActor::Autopilot,
+        direction,
+    )
+}
+
+fn rotate_torso_by_actor(
+    world: &mut World,
+    id: ObjectId,
+    actor: super::combat_operator::ControlActor,
+    direction: BattleTorso,
+) -> Result<BattleNotice> {
     ensure!(
         direction != BattleTorso::Both,
         "Choose left, right or center"
     );
-    super::power::controlled_unit(world, id, pilot)?;
+    super::power::controlled_unit_by_actor(world, id, actor)?;
     let unit = &world.btech.constructed_units()[&id];
     ensure!(unit.power() == BattlePower::Running, "Start the unit first");
     ensure!(
@@ -190,7 +220,6 @@ pub fn rotate_torso(
         .unwrap()
         .facing
         .torso = torso;
-    let _ = super::autopilot::manual_takeover(world, id);
     Ok(BattleNotice {
         unit: id,
         text: (match direction {

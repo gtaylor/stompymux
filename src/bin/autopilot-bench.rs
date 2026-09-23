@@ -31,7 +31,7 @@ struct Args {
     #[arg(long)]
     trace: Option<std::path::PathBuf>,
     /// Select a battlefield geometry; all retains the acceptance protocol.
-    #[arg(long, default_value = "all", value_parser = ["all", "open", "obstacles", "moving_congestion"])]
+    #[arg(long, default_value = "all", value_parser = ["all", "open", "obstacles", "moving_congestion", "moving_pursuit"])]
     scenario: String,
     /// Select a firing policy; all retains the acceptance protocol.
     #[arg(long, default_value = "all", value_parser = ["all", "hold", "opportunistic"])]
@@ -53,6 +53,7 @@ async fn main() -> anyhow::Result<()> {
             "open" => Some(Scenario::Open),
             "obstacles" => Some(Scenario::Obstacles),
             "moving_congestion" => Some(Scenario::MovingCongestion),
+            "moving_pursuit" => Some(Scenario::MovingPursuit),
             _ => None,
         },
         fire: match args.fire.as_str() {

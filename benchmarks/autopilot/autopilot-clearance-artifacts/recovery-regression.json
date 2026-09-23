@@ -1,0 +1,25 @@
+{
+  "scenario": "alternating_clearance",
+  "chassis": "mech",
+  "seed": 2,
+  "role": "blocker_2",
+  "rejected_tick": 102,
+  "before": {
+    "outcome": "blocked",
+    "reason": "UnitUnavailable",
+    "power": "Running",
+    "posture": "Standing",
+    "stand_timer": {
+      "Rising": {
+        "remaining": 4
+      }
+    },
+    "damage_taken": 31
+  },
+  "after": {
+    "outcome": "window_end",
+    "reason": null,
+    "ticks": 240
+  },
+  "explanation": "Movement was attempted during the successful stand rising timer. Waiting for timer readiness removes the false permanent failure. Traffic helper completion is not claimed."
+}

@@ -68,14 +68,14 @@ The wider behavior matrix is covered by existing isolated fixtures:
 
 | Behavior | Regression surface |
 | --- | --- |
-| Queue IDs, replacement, cancellation, retry | [`tests/btech_autopilot_orders.rs`](../tests/btech_autopilot_orders.rs) |
-| Follow, patrol, attack-move, lifecycle and restart | [`tests/btech_autopilot_runtime.rs`](../tests/btech_autopilot_runtime.rs) |
-| A* cost, invalidation, expansion and record budgets | [`src/btech/autopilot/navigation.rs`](../src/btech/autopilot/navigation.rs), [`src/btech/autopilot/scheduler_tests.rs`](../src/btech/autopilot/scheduler_tests.rs) |
-| Assigned crew health and recovery | [`tests/btech_crew.rs`](../tests/btech_crew.rs), [`tests/btech_recovery.rs`](../tests/btech_recovery.rs), power admission tests in [`src/btech/power.rs`](../src/btech/power.rs) |
-| Weapon arcs, readiness and recycle | [`tests/btech_arcs.rs`](../tests/btech_arcs.rs), [`tests/btech_vehicle_arcs.rs`](../tests/btech_vehicle_arcs.rs), [`tests/btech_vehicle_aim.rs`](../tests/btech_vehicle_aim.rs) |
-| Ammunition and feed exhaustion | [`tests/btech_vehicle_ammunition_cascade.rs`](../tests/btech_vehicle_ammunition_cascade.rs), [`tests/btech_weapon_failure.rs`](../tests/btech_weapon_failure.rs), [`tests/btech_vehicle_unjam.rs`](../tests/btech_vehicle_unjam.rs) |
-| Unit and vehicle destruction cleanup | [`tests/btech_vehicle_explosion.rs`](../tests/btech_vehicle_explosion.rs), [`tests/btech_vehicle_flood_state.rs`](../tests/btech_vehicle_flood_state.rs), [`tests/btech_vehicle_internal_damage.rs`](../tests/btech_vehicle_internal_damage.rs) |
-| Lua API contract and observation boundary | [`tests/lua_autopilot.rs`](../tests/lua_autopilot.rs), [`tests/lua_tactical.rs`](../tests/lua_tactical.rs), this audit |
+| Queue IDs, replacement, cancellation, retry | [`tests/btech_autopilot_orders.rs`](../../tests/btech_autopilot_orders.rs) |
+| Follow, patrol, attack-move, lifecycle and restart | [`tests/btech_autopilot_runtime.rs`](../../tests/btech_autopilot_runtime.rs) |
+| A* cost, invalidation, expansion and record budgets | [`src/btech/autopilot/navigation.rs`](../../src/btech/autopilot/navigation.rs), [`src/btech/autopilot/scheduler_tests.rs`](../../src/btech/autopilot/scheduler_tests.rs) |
+| Assigned crew health and recovery | [`tests/btech_crew.rs`](../../tests/btech_crew.rs), [`tests/btech_recovery.rs`](../../tests/btech_recovery.rs), power admission tests in [`src/btech/power.rs`](../../src/btech/power.rs) |
+| Weapon arcs, readiness and recycle | [`tests/btech_arcs.rs`](../../tests/btech_arcs.rs), [`tests/btech_vehicle_arcs.rs`](../../tests/btech_vehicle_arcs.rs), [`tests/btech_vehicle_aim.rs`](../../tests/btech_vehicle_aim.rs) |
+| Ammunition and feed exhaustion | [`tests/btech_vehicle_ammunition_cascade.rs`](../../tests/btech_vehicle_ammunition_cascade.rs), [`tests/btech_weapon_failure.rs`](../../tests/btech_weapon_failure.rs), [`tests/btech_vehicle_unjam.rs`](../../tests/btech_vehicle_unjam.rs) |
+| Unit and vehicle destruction cleanup | [`tests/btech_vehicle_explosion.rs`](../../tests/btech_vehicle_explosion.rs), [`tests/btech_vehicle_flood_state.rs`](../../tests/btech_vehicle_flood_state.rs), [`tests/btech_vehicle_internal_damage.rs`](../../tests/btech_vehicle_internal_damage.rs) |
+| Lua API contract and observation boundary | [`tests/lua_autopilot.rs`](../../tests/lua_autopilot.rs), [`tests/lua_tactical.rs`](../../tests/lua_tactical.rs), this audit |
 
 The matrix records where each concern is exercised without duplicating the
 larger combat suites in this focused audit.
@@ -98,7 +98,7 @@ Lua type/documentation freshness checks and the full `cargo test` suite:
 3,010 tests passed, zero failed, and one existing pinned-C differential probe
 was ignored because it requires separately built C and Rust server binaries.
 The long production-heartbeat measurements are recorded separately in
-[`autopilot-benchmark.md`](autopilot-benchmark.md).
+[`autopilot-benchmark.md`](../../benchmarks/autopilot/autopilot-benchmark.md).
 
 ## Fast behavior-test execution
 

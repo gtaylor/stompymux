@@ -4,12 +4,17 @@
 //! observations, and combat execution consume this state from later heartbeat
 //! work; no path or world mutation is stored here.
 
+pub(crate) mod alignment;
 pub mod benchmark;
 pub mod combat_policy;
+mod congestion;
 pub mod diagnostics;
+pub mod encounters;
+mod interception;
 pub mod navigation;
 pub mod observations;
 pub mod orders;
+pub mod pursuit_encounters;
 pub mod runtime;
 pub(crate) mod traversal;
 
@@ -965,3 +970,9 @@ mod tests {
         );
     }
 }
+
+pub(crate) mod engagement;
+pub(crate) mod steering;
+
+/// Multi-participant deterministic adversarial movement diagnostics.
+pub mod adversarial;

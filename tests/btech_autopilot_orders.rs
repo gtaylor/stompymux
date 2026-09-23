@@ -301,7 +301,7 @@ async fn patrol_order_cycles_through_waypoints() {
 async fn attack_move_pursues_a_visible_contact_then_resumes_destination() {
     tokio::task::LocalSet::new()
         .run_until(async {
-            let mut fixture = ground_fixture(&[(0, 11), (2, 10)], true).await;
+            let mut fixture = ground_fixture(&[(0, 11), (2, 6)], true).await;
             let shooter = fixture.units[0];
             let target = fixture.units[1];
             set_battle_sensor_signature(
@@ -336,11 +336,18 @@ async fn attack_move_pursues_a_visible_contact_then_resumes_destination() {
                 ))
                 .unwrap();
             let world = scripts.world().clone();
-            let snapshots = heartbeat_snapshots_until(&fixture.config, &world, 400, |world| {
-                world.btech.controllers()[&shooter].feedback_records().iter().any(|feedback| {
-                    feedback.event == stompymux_rs::btech::AutopilotFeedbackEvent::OrderSucceeded
-                })
+            // Approach the weapon-derived band, then force a material leash change.
+            let mut snapshots = heartbeat_snapshots_until(&fixture.config, &world, 200, |world| {
+                let own=world.btech.constructed_units()[&shooter].position().unwrap();
+                let enemy=world.btech.constructed_units()[&target].position().unwrap();
+                (2..=3).contains(&hex_distance(own,enemy))
             }).await;
+            let mut resumed_world=snapshots.last().unwrap().clone();
+            stompymux_rs::transfer_battle_unit(&mut resumed_world,target,stompymux_rs::BattlePosition{map:fixture.map,x:2,y:0}).unwrap();
+            refresh_optical_scanners(&mut resumed_world,&[shooter]).unwrap();
+            snapshots.extend(heartbeat_snapshots_until(&fixture.config,&resumed_world,200,|world| {
+                world.btech.controllers()[&shooter].feedback_records().iter().any(|feedback|feedback.event==stompymux_rs::btech::AutopilotFeedbackEvent::OrderSucceeded)
+            }).await);
             let destination = stompymux_rs::BattlePosition {
                 map: fixture.map,
                 x: 0,
@@ -351,7 +358,7 @@ async fn attack_move_pursues_a_visible_contact_then_resumes_destination() {
                 let target_position = world.btech.constructed_units()[&target].position();
                 shooter_position
                     .zip(target_position)
-                    .is_some_and(|(shooter, target)| hex_distance(shooter, target) <= 1)
+                    .is_some_and(|(shooter, target)| (2..=3).contains(&hex_distance(shooter, target)))
             });
             let resumed = pursued_at.is_some_and(|index| {
                 snapshots[index..].iter().any(|world| {

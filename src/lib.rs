@@ -180,7 +180,7 @@ pub use server::run_with_schedule_clock;
 
 /// Player-defined command templates and shared macro sets.
 pub mod macros;
-pub use macros::{MacroEntry, MacroModes, MacroSet, MacroSlots, PlayerMacros};
+pub use macros::{MacroEntry, MacroModes, MacroSet, MacroSetId, MacroSlots, PlayerMacros};
 
 /// Shared object and channel lock catalog.
 mod locks;
@@ -1275,4 +1275,19 @@ pub use btech::autopilot::runtime::AutopilotRuntimeMetrics;
 
 pub use btech::autopilot::diagnostics::{
     AutopilotDiagnostics, CombatSample as AutopilotCombatSample,
+};
+
+// Deterministic combat movement measurement surface.
+pub use btech::autopilot::encounters::{
+    EncounterResult as AutopilotEncounterResult, run as run_autopilot_encounters,
+};
+
+pub use btech::autopilot::adversarial::{
+    ParticipantResult as AutopilotAdversarialParticipantResult,
+    SCENARIOS as AUTOPILOT_ADVERSARIAL_SCENARIOS, run as run_autopilot_adversarial,
+};
+
+pub use btech::autopilot::pursuit_encounters::{
+    Episode as AutopilotPursuitEpisode, PursuitResult as AutopilotPursuitResult,
+    SCENARIOS as AUTOPILOT_PURSUIT_SCENARIOS, run as run_autopilot_pursuit,
 };

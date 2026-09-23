@@ -104,6 +104,30 @@ impl World {
                 state: BTreeMap::new(),
             },
         );
+        if kind == Kind::Player {
+            for &number in &config.mux.default_player_macros {
+                let Some(set) = self.macros.sets.get(number) else {
+                    config.log(
+                        &[crate::logging::Category::Problems], "MAC", "WARN",
+                        format!("Player #{} ({}) created without default macro set {number}: set not found (default_player_macros)", id.0, self.objects[&id].name),
+                    );
+                    continue;
+                };
+                let identity = set.id;
+                // Default attachments are trusted creation policy, independent of set sharing modes.
+                if let Err(error) = crate::macros::service::attach(self, id, identity) {
+                    config.log(
+                        &[crate::logging::Category::Problems],
+                        "MAC",
+                        "WARN",
+                        format!(
+                            "Player #{}: could not attach default macro set {number}: {}",
+                            id.0, error.1
+                        ),
+                    );
+                }
+            }
+        }
         id
     }
 }

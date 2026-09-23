@@ -1,0 +1,67 @@
+{
+  "revision": "ded65165bf1e80c02a8357eeeee0241e6d3e373e",
+  "dirty_workspace": true,
+  "source_sha256": {
+    "src/btech/autopilot/congestion.rs": "bf9f50c65fc3e066b9abd282ba9bb2775ba8c40c567341043b0455973bd0cdfe",
+    "src/btech/autopilot/runtime.rs": "f87ff6c7fc63afa4207843e3fa2a25bc246dc052fe94d4bb05125f0b84d4b2ea",
+    "src/btech/autopilot/traversal.rs": "9d2ed40a7bd1721424df242ac7afb54ca5586479e4ed93533d7570b817900835",
+    "src/btech/autopilot/adversarial.rs": "4f367e48fe8e06f5438861da60337679a0ff368bce38d5dcfffc7a629d8c2abc",
+    "src/btech/autopilot/scheduler_tests.rs": "02c6a9c5054020442a7bb1de8fecdb722a60086801a34ea719f63b2b0749b7f3",
+    "tests/fixtures/game/data/stompymux.db": "987841f6acab923a96a04d71d1e25f721f57184107396f8bff8bb37dff22cddf",
+    "src/btech/map_slots.rs": "292b6f68593141b8847db1b9c924f097673ea9600b2c0a3c4e2005a4c447869c",
+    "tools/compare_autopilot_adversarial.py": "c1811fa3c36f99c3161f7a8316bcfeb942829aa3cc7c488ef38974c762676b27",
+    "tools/test_compare_autopilot_adversarial.py": "bcc1fd96efb8f1b05e3ef7029ac6958f06121b6af78077856b83ec8f0052e803"
+  },
+  "original_executables": {
+    "reference-encounters": "732bcc4000c245e7d1633244aa6ec7a81c445823827e2bf16ea9e30a6729c077",
+    "reference-bench": "9525d1e429a361e2f04a8acfcae1bac115008451ddb8c32b4bb75bdca0f13174"
+  },
+  "instrumented_reference_change": "Both self.early < RETRIES conditions in congestion.rs become false; timing uses original frozen benchmark instead.",
+  "accepted_executables": {
+    "accepted-encounters": "31ce862d1e883996bcf2a6f406511cdfc6bc05ccae0c2f8f2be659aede2f3f2b",
+    "accepted-bench": "8d9ae7e6e7aa9559089d0b3db1a13bfa21dbb526877c8fe4b78fe963aac3d8a9",
+    "recovery-reference": "ecf1a9d33e3dc0fcb9988f118a5634c6336d02b0804555709e5db1b3abe8d63f"
+  },
+  "correctness_storage": "RAM-backed temporary SQLite for accepted final matrices; normal temporary filesystem for initial traces and all CPU guard runs.",
+  "replays": {
+    "existing": {
+      "records": 28800,
+      "byte_identical": true,
+      "sha256": "84f4187a40d86d1bdc15c62f3113d3cd9de5bbf6657ecfed93ded4eb08e04e47"
+    },
+    "adversarial": {
+      "records": 25920,
+      "byte_identical": true,
+      "sha256": "1a5196bc8c4e66a92f2507a33f691427b87a66c59894e8586de9bb31047cad43"
+    },
+    "late_clearance": {
+      "records": 2880,
+      "byte_identical": true,
+      "sha256": "af71f0d510ee934ef42711855842fe6ad1d0fab62808a3d979c958b2872adfd2"
+    },
+    "alternating_clearance": {
+      "records": 2880,
+      "byte_identical": true,
+      "sha256": "2edd0f42cbc1e4592abb2602a321389376383b0815319d2b6ed51ef145f01cae"
+    },
+    "waiting_controllers": {
+      "records": 2880,
+      "byte_identical": true,
+      "sha256": "9ec1064a6d88040be6800f38d1fdc7d163c616e35c3b41fde509a6e0918c1b79"
+    }
+  },
+  "checks": {
+    "just_checks_passed": 3053,
+    "ignored": 2,
+    "test_groups": 21,
+    "focused_autopilot_passed": 42,
+    "python_comparator_passed": 10,
+    "polling_benchmark_passed": true
+  },
+  "build": "cargo build --release --bin autopilot-encounters --bin autopilot-bench; default release profile, no RUSTFLAGS overrides",
+  "log_sha256": {
+    "checks-final.log": "2ee44f379b3a0b87446e8975e8a0cfde298e373cee4f0fede1ab3e674aedd64d",
+    "tests-recovery-final.log": "14e8cf7809596a49501fe561919f3ecbab4766f6754bac38c0fab958b5feda87",
+    "waiting-benchmark.log": "fd6ba5d11c5edc910e5b212763d8df5137653bf5fe7417049ca827fb8d042dfa"
+  }
+}

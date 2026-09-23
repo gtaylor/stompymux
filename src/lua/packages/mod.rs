@@ -4,6 +4,7 @@ mod comsys;
 mod config;
 pub(crate) mod error;
 mod logging;
+mod macros;
 mod session;
 mod telnet;
 mod text;
@@ -43,6 +44,7 @@ pub(super) fn register_native(
         .map_err(|e| anyhow::anyhow!(e.to_string()))?;
     world::register(lua, &api, config, world, outbox, palette)?;
     config::register(lua, &api, config)?;
+    macros::register(lua, &api, world).map_err(|e| anyhow::anyhow!("{e}"))?;
     comsys::register(lua, &api, config, world, outbox, effects)?;
     text::register(lua, &api, config, palette)?;
     logging::register(lua, &api).map_err(|e| anyhow::anyhow!("{e}"))?;
@@ -60,6 +62,7 @@ pub(super) fn install_facades(lua: &Lua, api: Table) -> Result<()> {
             .call(api.clone())?;
         lua.globals().set("mux", mux.clone())?;
         error::install(lua, &mux)?;
+        mux.set("macro", api.get::<Table>("macro")?)?;
         btech::install(lua, &api, &mux)?;
         for pair in api.clone().pairs::<String, mlua::Value>() {
             let (name, value) = pair?;
@@ -114,9 +117,8 @@ pub(super) fn restrict_checking(lua: &Lua, api: &Table) -> Result<()> {
             "pemit",
             "pemit_accepts",
         ];
-        // These closures reject checking-mode themselves with the C per-function
-        // message after validating argument types (C comsys/session bindings).
-        let self_guarding = ["comsys", "log", "check_db"];
+        // These packages enforce checking-mode availability at their own API boundaries.
+        let self_guarding = ["comsys", "macro", "log", "check_db"];
         // C btech entries raise per-entry "btech.<qualified_name> is unavailable
         // during @lua/check" (btech_package.c btech_lua_invoke_native); qualified
         // spellings come from the facade table and contract bindings.

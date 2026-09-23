@@ -13,7 +13,7 @@ use crate::{
     BattleMapAsset, BattlePosition, BattleUnitTemplate, Config, HeartbeatHarness, Kind, World,
     persistence,
 };
-use anyhow::{Result, bail, ensure};
+use anyhow::{Context, Result, bail, ensure};
 use std::path::Path;
 use std::time::Duration;
 
@@ -28,6 +28,7 @@ pub enum BenchmarkScenario {
     Open,
     Obstacles,
     MovingCongestion,
+    MovingPursuit,
 }
 
 impl BenchmarkScenario {
@@ -38,6 +39,7 @@ impl BenchmarkScenario {
             Self::Open => "open",
             Self::Obstacles => "obstacles",
             Self::MovingCongestion => "moving_congestion",
+            Self::MovingPursuit => "moving_pursuit",
         }
     }
 }
@@ -138,7 +140,11 @@ pub async fn run(options: &BenchmarkOptions) -> Result<BenchmarkReport> {
         .transpose()?
         .map(std::io::BufWriter::new);
     let mut results = Vec::new();
-    for scenario in BenchmarkScenario::ALL {
+    for scenario in BenchmarkScenario::ALL.into_iter().chain(
+        options
+            .scenario
+            .filter(|s| *s == BenchmarkScenario::MovingPursuit),
+    ) {
         if options
             .scenario
             .is_some_and(|selected| selected != scenario)
@@ -372,7 +378,7 @@ async fn run_case(
     })
 }
 
-fn copy_game_root() -> Result<tempfile::TempDir> {
+pub(super) fn copy_game_root() -> Result<tempfile::TempDir> {
     let directory = tempfile::tempdir()?;
     let repository = Path::new(env!("CARGO_MANIFEST_DIR"));
     copy_tree(&repository.join("tests/fixtures/game"), directory.path())?;
@@ -461,8 +467,16 @@ fn fixture_world(
         }
         let row = (index / 10) as i64;
         let col = (index % 10) as i64;
-        let x = 2 + col * 2;
-        let y = 2 + row * 3;
+        let x = if scenario == BenchmarkScenario::MovingPursuit {
+            2 + (col / 2) * 18 + (col % 2) * 4
+        } else {
+            2 + col * 2
+        };
+        let y = if scenario == BenchmarkScenario::MovingPursuit {
+            5 + row * 7
+        } else {
+            2 + row * 3
+        };
         crate::btech::place_unit(&mut world, unit_id, map_id, x, y)?;
         let fire_mode = if opportunistic_fire {
             AutopilotFireMode::Opportunistic
@@ -505,6 +519,68 @@ fn fixture_world(
         controller.submit(orders, AutopilotSubmissionMode::Replace, None)?;
         controller.resume(None)?;
         std::sync::Arc::make_mut(&mut world.btech.controllers).insert(unit_id, controller);
+    }
+    if scenario == BenchmarkScenario::MovingPursuit {
+        let ids = world
+            .btech
+            .controllers()
+            .keys()
+            .copied()
+            .collect::<Vec<_>>();
+        for (index, &id) in ids.iter().enumerate() {
+            if let Some(u) = std::sync::Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+                u.power = crate::BattlePower::Running;
+                if let Some(m) = u.motion.as_mut() {
+                    m.heading = 90.0;
+                    m.desired_heading = 90.0;
+                }
+                u.sensor_signal =
+                    crate::BattleSensorSignal::seeded(100, seed_bytes(seed, index as u64 + 1000))?;
+            }
+            if let Some(u) = std::sync::Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+                u.power = crate::BattlePower::Running;
+                if let Some(m) = u.motion.as_mut() {
+                    m.heading = 90.0;
+                    m.desired_heading = 90.0;
+                }
+                u.sensor_signal =
+                    crate::BattleSensorSignal::seeded(100, seed_bytes(seed, index as u64 + 1000))?;
+            }
+        }
+        // Setup-only, bounded ordinary acquisition. Even strong seeded signals may
+        // reject an initial scan; never inject a contact to admit an attack.
+        for _ in 0..16 {
+            crate::btech::refresh_optical_scanners(&mut world, &ids)?;
+            if ids.chunks_exact(2).all(|pair| {
+                super::orders::validate_for_unit(
+                    &world,
+                    pair[0],
+                    &AutopilotOrder::Attack {
+                        target: pair[1],
+                        range: None,
+                    },
+                )
+                .is_ok()
+            }) {
+                break;
+            }
+        }
+        for pair in ids.chunks_exact(2) {
+            let order = AutopilotOrder::Attack {
+                target: pair[1],
+                range: Some(super::AutopilotRangeBand {
+                    minimum: 2,
+                    maximum: 3,
+                }),
+            };
+            super::orders::validate_for_unit(&world, pair[0], &order).with_context(|| {
+                format!("moving pursuit acquisition {:?} -> {:?}", pair[0], pair[1])
+            })?;
+            std::sync::Arc::make_mut(&mut world.btech.controllers)
+                .get_mut(&pair[0])
+                .unwrap()
+                .submit(vec![order], AutopilotSubmissionMode::Replace, None)?;
+        }
     }
     Ok((world, map_id))
 }
@@ -564,7 +640,7 @@ fn map_source(scenario: BenchmarkScenario, seed: u64) -> String {
     for y in 0..MAP_HEIGHT {
         for x in 0..MAP_WIDTH {
             let obstacle = match scenario {
-                BenchmarkScenario::Open => false,
+                BenchmarkScenario::Open | BenchmarkScenario::MovingPursuit => false,
                 BenchmarkScenario::Obstacles => {
                     x % 11 == 0 && (y + (next_random(&mut rng) % 5) as u16) % 17 != 0
                 }

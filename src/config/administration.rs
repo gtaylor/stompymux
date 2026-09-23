@@ -64,6 +64,7 @@ pub fn support(d: &Directive) -> Support {
             | "full_message"
             | "default_exit_flags"
             | "default_player_flags"
+            | "default_player_macros"
             | "default_room_flags"
             | "default_thing_flags"
             | "help_directory"
@@ -208,6 +209,19 @@ impl Config {
         let mut diagnostics = Vec::new();
         let value = request.value.as_str();
         match d.name {
+            "default_player_macros" => {
+                let parsed: toml::Table = format!("value = {value}")
+                    .parse()
+                    .context("Expected an integer list, for example [0, 1]")?;
+                ensure!(parsed.len() == 1, "Expected a single integer list");
+                let list = parsed.get("value").context("Expected an integer list")?;
+                let spec = catalog::KEYS
+                    .iter()
+                    .find(|k| k.path == "mux.default_player_macros")
+                    .expect("macro defaults catalog entry");
+                super::loader::validate(spec, list)?;
+                c.settings.mux.default_player_macros = list.clone().try_into()?;
+            }
             "log_options" => {
                 let mut success = false;
                 for word in value.split_whitespace() {

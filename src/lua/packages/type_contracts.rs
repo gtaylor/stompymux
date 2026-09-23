@@ -546,6 +546,7 @@
 // lua-types-begin mux 00051
 //|---The native MUX host API.
 //|---@class MuxPackage
+//|---@field macro MuxMacroPackage Trusted macro administration.
 //|---@field comsys MuxComsysPackage Trusted live communication-channel administration.
 //|---@field config MuxConfigPackage Read-only scalar server configuration.
 //|---@field error MuxErrorPackage Structured errors and checked code nodes.
@@ -637,11 +638,11 @@
 //|mux.world = mux_world
 // lua-types-end
 
-// lua-types-begin mux 00150
+// lua-types-begin mux 00173
 //|return mux
 // lua-types-end
 
-// lua-types-begin mux 00151
+// lua-types-begin mux 00172
 //|---A command declaration registered when a game module loads.
 //|---@class MuxCommandDefinition
 //|---@field name string Canonical command token, without whitespace or slash.

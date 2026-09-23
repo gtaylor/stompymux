@@ -82,16 +82,39 @@ pub struct Goal {
     pub center: Hex,
     /// Inclusive radius in hex transitions.
     pub radius: u32,
+    /// Inclusive inner engagement radius; zero for ordinary destinations.
+    pub minimum: u32,
 }
 
 impl Goal {
     /// Construct a goal region around one map hex.
     pub const fn new(center: Hex, radius: u32) -> Self {
-        Self { center, radius }
+        Self {
+            center,
+            radius,
+            minimum: 0,
+        }
     }
 
-    fn contains(self, position: Hex) -> bool {
-        position.distance(self.center) <= self.radius
+    /// An engagement annulus. Empty intervals are rejected by search construction.
+    pub const fn annulus(center: Hex, minimum: u32, maximum: u32) -> Self {
+        Self {
+            center,
+            minimum,
+            radius: maximum,
+        }
+    }
+
+    pub(crate) fn contains(self, position: Hex) -> bool {
+        let distance = position.distance(self.center);
+        distance >= self.minimum && distance <= self.radius
+    }
+
+    fn heuristic(self, position: Hex) -> u32 {
+        let distance = position.distance(self.center);
+        self.minimum
+            .saturating_sub(distance)
+            .max(distance.saturating_sub(self.radius))
     }
 }
 
@@ -197,6 +220,8 @@ impl Traversal for HexGrid {
 pub enum NavigationError {
     /// A map dimension was zero.
     EmptyMap,
+    /// The inner radius exceeded the outer radius.
+    EmptyGoal,
     /// A start or goal coordinate was outside the supplied dimensions.
     OutOfBounds(Hex),
     /// A search cannot run without at least one record slot.
@@ -210,6 +235,7 @@ pub enum NavigationError {
 impl fmt::Display for NavigationError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::EmptyGoal => formatter.write_str("navigation goal interval is empty"),
             Self::EmptyMap => formatter.write_str("navigation map dimensions must be non-zero"),
             Self::OutOfBounds(position) => {
                 write!(
@@ -335,6 +361,9 @@ impl AStarSearch {
         if width == 0 || height == 0 {
             return Err(NavigationError::EmptyMap);
         }
+        if goal.minimum > goal.radius {
+            return Err(NavigationError::EmptyGoal);
+        }
         if max_records == 0 {
             return Err(NavigationError::ZeroRecordLimit);
         }
@@ -345,7 +374,7 @@ impl AStarSearch {
             return Err(NavigationError::OutOfBounds(goal.center));
         }
 
-        let heuristic = start.distance(goal.center).saturating_sub(goal.radius);
+        let heuristic = goal.heuristic(start);
         let mut records = HashMap::with_capacity(1.min(max_records));
         records.insert(
             start,
@@ -433,21 +462,19 @@ impl AStarSearch {
         expansion_budget: usize,
         traversal: &T,
     ) -> SearchStatus {
+        self.step_filtered(expansion_budget, traversal, &mut |_| Some(true))
+    }
+
+    /// Resume with a bounded, read-only goal predicate. None yields without losing a node.
+    pub fn step_filtered<T: Traversal + ?Sized>(
+        &mut self,
+        expansion_budget: usize,
+        traversal: &T,
+        accept: &mut impl FnMut(Hex) -> Option<bool>,
+    ) -> SearchStatus {
         if let Some(status) = &self.terminal {
             return status.clone();
         }
-
-        if self.goal.contains(self.start) {
-            let status = SearchStatus::Found {
-                path: NavigationPath {
-                    cells: vec![self.start],
-                    cost: 0,
-                },
-            };
-            self.terminal = Some(status.clone());
-            return status;
-        }
-
         if expansion_budget == 0 {
             return self.pending(0);
         }
@@ -468,11 +495,20 @@ impl AStarSearch {
             }
 
             if self.goal.contains(entry.position) {
-                let status = SearchStatus::Found {
-                    path: self.path_to(entry.position),
-                };
-                self.terminal = Some(status.clone());
-                return status;
+                match accept(entry.position) {
+                    None => {
+                        self.open.push(entry);
+                        return self.pending(expanded);
+                    }
+                    Some(false) => {}
+                    Some(true) => {
+                        let status = SearchStatus::Found {
+                            path: self.path_to(entry.position),
+                        };
+                        self.terminal = Some(status.clone());
+                        return status;
+                    }
+                }
             }
 
             expanded += 1;
@@ -519,9 +555,7 @@ impl AStarSearch {
                         parent: Some(entry.position),
                     },
                 );
-                let heuristic = neighbor
-                    .distance(self.goal.center)
-                    .saturating_sub(self.goal.radius);
+                let heuristic = self.goal.heuristic(neighbor);
                 let Some(estimated_total) = candidate_cost.checked_add(u64::from(heuristic)) else {
                     let status = SearchStatus::ResourceLimit {
                         records: self.records.len(),
@@ -586,6 +620,46 @@ mod tests {
     }
 
     #[test]
+    fn annulus_costs_match_dijkstra_inside_and_outside() {
+        for start in [Hex::new(4, 4), Hex::new(0, 0), Hex::new(3, 4)] {
+            let mut grid = all_open(9, 9);
+            for y in 0..8 {
+                grid.set_cost(Hex::new(5, y), Some(4)).unwrap();
+            }
+            let goal = Goal::annulus(Hex::new(4, 4), 2, 3);
+            let mut search = AStarSearch::new(9, 9, start, goal).unwrap();
+            let SearchStatus::Found { path } = search.step(1000, &grid) else {
+                panic!("missing route")
+            };
+            assert_eq!(Some(path.cost), dijkstra(&grid, start, goal));
+            assert!(goal.contains(*path.cells.last().unwrap()));
+        }
+    }
+
+    #[test]
+    fn deferred_geometry_retains_node_and_rejected_goals_expand() {
+        let grid = all_open(5, 5);
+        let mut search =
+            AStarSearch::new(5, 5, Hex::new(2, 2), Goal::annulus(Hex::new(2, 2), 0, 2)).unwrap();
+        assert!(matches!(
+            search.step_filtered(256, &grid, &mut |_| None),
+            SearchStatus::Pending { .. }
+        ));
+        assert_eq!(search.total_expanded(), 0);
+        let SearchStatus::Found { path } =
+            search.step_filtered(256, &grid, &mut |hex| Some(hex == Hex::new(2, 0)))
+        else {
+            panic!("missing filtered route")
+        };
+        assert_eq!(path.cells.last(), Some(&Hex::new(2, 0)));
+        assert_eq!(path.cost, 2);
+        assert!(matches!(
+            AStarSearch::new(5, 5, Hex::new(0, 0), Goal::annulus(Hex::new(2, 2), 3, 2)),
+            Err(NavigationError::EmptyGoal)
+        ));
+    }
+
+    #[test]
     fn shared_record_limit_cannot_drop_below_discovered_usage() {
         let mut search =
             AStarSearch::new(5, 5, Hex::new(0, 0), Goal::new(Hex::new(4, 4), 0)).unwrap();
@@ -608,7 +682,7 @@ mod tests {
             if distances.get(&position) != Some(&cost) {
                 continue;
             }
-            if position.distance(goal.center) <= goal.radius {
+            if goal.contains(position) {
                 return Some(cost);
             }
             for neighbor in position.neighbors() {

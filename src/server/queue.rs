@@ -161,11 +161,27 @@ mod tests {
         );
         std::fs::write(
             d.path().join("lua/global_logic/queued_test.lua"),
-            r#"return {commands={
+            r#"local pending_macro
+        return {commands={
           {name='queue-write',permission='everyone',pattern='^queue%-write$',handler=function(ctx)
             assert(ctx.enactor==2 and ctx.cause==1 and ctx.descriptor==nil)
             mux.world.object(2):state('queue'):set('saved',true)
             mux.world.pemit(2,'SAVED-OUTPUT')
+            return true
+          end},
+          {name='queue-macro',permission='everyone',pattern='^queue%-macro$',handler=function(ctx)
+            pending_macro=mux.macro.create_set(2,'pending')
+            pending_macro:add_macro('hi','say pending')
+            mux.macro.attach(2,pending_macro)
+            mux.world.pemit(2,'MACRO-SAVED')
+            return true
+          end},
+          {name='queue-macro-check',permission='everyone',pattern='^queue%-macro%-check$',handler=function(ctx)
+            local ok,e=mux.error.pcall(function() pending_macro:number() end)
+            assert(not ok and e.code=='mux.macro.invalid')
+            assert(#mux.macro.list_sets()==0 and #mux.macro.list_player_sets(2)==0)
+            assert(mux.macro.create_set(2,'replacement')~=pending_macro)
+            mux.world.pemit(2,'MACRO-ROLLBACK-OK')
             return true
           end},
           {name='queue-error',permission='everyone',pattern='^queue%-error$',handler=function(ctx)
@@ -260,6 +276,31 @@ mod tests {
             }
         }
         text
+    }
+
+    /// A rejected macro save restores player slots and invalidates escaped provisional handles.
+    #[tokio::test(flavor = "current_thread")]
+    async fn macro_save_failure_restores_world_and_handles() {
+        let (_d, mut s) = fixture().await;
+        let mut receiver = attach(&mut s);
+        sql(&s, "CREATE TRIGGER reject_macro BEFORE INSERT ON macro_sets BEGIN SELECT RAISE(FAIL,'macro write failure'); END").await;
+        s.queued(work("queue-macro")).await;
+        let output = drain(&mut receiver);
+        assert!(output.contains("Unable to save") && !output.contains("MACRO-SAVED"));
+        assert!(s.scripts.world.borrow().macros.sets.is_empty());
+        assert!(
+            persistence::load(&s.config.database())
+                .await
+                .unwrap()
+                .macros
+                .sets
+                .is_empty()
+        );
+        sql(&s, "DROP TRIGGER reject_macro").await;
+        s.queued(work("queue-macro-check")).await;
+        assert!(drain(&mut receiver).contains("MACRO-ROLLBACK-OK"));
+        let saved = persistence::load(&s.config.database()).await.unwrap();
+        assert_eq!(saved.macros.sets[0].description, "replacement");
     }
 
     /// Semantic diagnostics survive successful persistence and disappear on a rejected write.

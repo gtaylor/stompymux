@@ -390,6 +390,7 @@ Alias: `CreateRoomOptions|CreateThingOptions|CreateExitOptions`
 
 ## MuxPackage
 
+- `macro`: `MuxMacroPackage` — Trusted macro administration.
 - `comsys`: `MuxComsysPackage` — Trusted live communication-channel administration.
 - `config`: `MuxConfigPackage` — Read-only scalar server configuration.
 - `error`: `MuxErrorPackage` — Structured errors and checked code nodes.
@@ -413,6 +414,27 @@ Alias: `CreateRoomOptions|CreateThingOptions|CreateExitOptions`
 - `locks`: `LockNamespace` — Immutable namespace of native lock constants.
 - `powers`: `PowerNamespace` — Immutable namespace of registered power constants.
 - `types`: `ObjectTypeNamespace` — Immutable namespace of native object-kind constants.
+
+## MacroFlagConstants
+
+- `LOCKED`: `MacroFlag` — Blocks player definition edits and renaming, including by the owner.
+- `READ`: `MacroFlag` — Allows other players to discover, inspect, and attach the set.
+- `WRITE`: `MacroFlag` — Allows other players to edit the unlocked set.
+
+## MacroEntry
+
+- `alias`: `string`
+- `expansion`: `string`
+
+## MacroAttachment
+
+- `slot`: `integer` — Zero-based slot, 0 through 4.
+- `set`: `MacroSet`
+- `selected`: `boolean`
+
+## MuxMacroPackage
+
+- `flags`: `MacroFlagConstants`
 
 ## MuxCommandDefinition
 

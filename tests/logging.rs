@@ -67,6 +67,7 @@ async fn categories_live_controls_formatting_and_redaction() {
         use stompymux_rs::macros::{MacroEntry, MacroSet, MacroSlots};
         let mut w = s.world_mut();
         w.macros.sets.push(MacroSet {
+            id: Default::default(),
             origin: Default::default(),
             owner: ObjectId(1),
             modes: Default::default(),

@@ -706,6 +706,12 @@ pub const KEYS: &[KeySpec] = &[
         bounds: None,
     },
     KeySpec {
+        path: "mux.default_player_macros",
+        legacy: "default_player_macros",
+        kind: "Vec<usize>",
+        bounds: None,
+    },
+    KeySpec {
         path: "mux.default_player_flags",
         legacy: "default_player_flags",
         kind: "Vec<Flag>",

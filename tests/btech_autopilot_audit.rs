@@ -597,6 +597,11 @@ async fn failed_firing_heartbeat_discards_shots_and_retries_identically() {
         let metrics = control.step_diagnostic(tick, true, true).await;
         assert!(metrics.committed);
         if metrics.autopilot.autonomous_shots > 0 {
+            assert_eq!(metrics.autopilot.shots_by_unit.len(), 1);
+            assert_eq!(
+                metrics.autopilot.shots_by_unit[&shooter],
+                metrics.autopilot.autonomous_shots
+            );
             firing_tick = Some((
                 tick,
                 before,
@@ -623,6 +628,10 @@ async fn failed_firing_heartbeat_discards_shots_and_retries_identically() {
     let rejected = harness.step_diagnostic(tick, true, true).await;
     assert!(!rejected.committed);
     assert!(rejected.autopilot.notice_trace.is_empty());
+    assert!(rejected.autopilot.shots_by_unit.is_empty());
+    assert!(rejected.autopilot.congestion_by_unit.is_empty());
+    assert!(rejected.autopilot.replans_by_unit.is_empty());
+    assert_eq!(rejected.autopilot.autonomous_shots, 0);
     assert_eq!(
         serde_json::to_value(harness.world()).unwrap(),
         serde_json::to_value(&before).unwrap()

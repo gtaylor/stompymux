@@ -1,0 +1,49 @@
+arc_fraction,blocking_reason,chassis,clearance_tick,congestion,distance,excess_distance,first_geometry,first_shot,geometric_ticks,longest_contact_gap,longest_no_progress,outcome,preferred_band_ticks,range_error_sum,range_samples,reacquisitions,recovery_ticks,replans,reversals,role,sampled_ticks,scenario,schema,script_rejections,seed,settled_distance,shots,ticks,visible_ticks
+1.0,,mech,94,"{""checks"": 6, ""clearance_to_movement"": 5, ""clearance_to_search"": 3, ""deferrals"": 0, ""early_starts"": 1, ""first_watched_clearance"": 33, ""timed_starts"": 1}",6.288333333333333,,1,,105,0,36,completed,21,45.78787672711819,105,0,1,5,0,focal,105,late_clearance,1,0,1,0.02749999999999988,0,240,105
+0.2778270509977827,,mech,94,,3.6999999999999975,,1,,37,0,6,completed,21,50.67877835749794,110,0,1,1,0,opponent,110,late_clearance,1,0,1,0.00416666666666659,0,240,110
+0.0,,mech,,,3.556666666666666,,,,0,0,24,completed,16,73.44579283436279,67,0,,1,0,blocker_1,67,late_clearance,1,0,1,0.0,0,240,67
+0.0,,mech,,,3.556666666666666,,,,0,0,24,completed,16,73.44579283436279,67,0,,1,0,blocker_2,67,late_clearance,1,0,1,0.0,0,240,67
+1.0,,mech,94,"{""checks"": 6, ""clearance_to_movement"": 5, ""clearance_to_search"": 3, ""deferrals"": 0, ""early_starts"": 1, ""first_watched_clearance"": 33, ""timed_starts"": 1}",6.288333333333333,,1,,105,0,36,completed,21,45.78787672711819,105,0,1,5,0,focal,105,late_clearance,1,0,2,0.02749999999999988,0,240,105
+0.2778270509977827,,mech,94,,3.6999999999999975,,1,,37,0,6,completed,21,50.67877835749794,110,0,1,1,0,opponent,110,late_clearance,1,0,2,0.00416666666666659,0,240,110
+0.0,,mech,,,3.556666666666666,,,,0,0,24,completed,16,73.44579283436279,67,0,,1,0,blocker_1,67,late_clearance,1,0,2,0.0,0,240,67
+0.0,,mech,,,3.556666666666666,,,,0,0,24,completed,16,73.44579283436279,67,0,,1,0,blocker_2,67,late_clearance,1,0,2,0.0,0,240,67
+1.0,,mech,94,"{""checks"": 6, ""clearance_to_movement"": 5, ""clearance_to_search"": 3, ""deferrals"": 0, ""early_starts"": 1, ""first_watched_clearance"": 33, ""timed_starts"": 1}",6.288333333333333,,1,,105,0,36,completed,21,45.78787672711819,105,0,1,5,0,focal,105,late_clearance,1,0,3,0.02749999999999988,0,240,105
+0.2778270509977827,,mech,94,,3.6999999999999975,,1,,37,0,6,completed,21,50.67877835749794,110,0,1,1,0,opponent,110,late_clearance,1,0,3,0.00416666666666659,0,240,110
+0.0,,mech,,,3.556666666666666,,,,0,0,24,completed,16,73.44579283436279,67,0,,1,0,blocker_1,67,late_clearance,1,0,3,0.0,0,240,67
+0.0,,mech,,,3.556666666666666,,,,0,0,24,completed,16,73.44579283436279,67,0,,1,0,blocker_2,67,late_clearance,1,0,3,0.0,0,240,67
+0.86,,tracked,86,"{""checks"": 6, ""clearance_to_movement"": 7, ""clearance_to_search"": 3, ""deferrals"": 0, ""early_starts"": 1, ""first_watched_clearance"": 33, ""timed_starts"": 1}",6.379166666666663,,1,,129,0,39,completed,16,88.84651332007672,150,0,1,5,0,focal,150,late_clearance,1,0,1,0.02500000000000034,0,240,150
+0.21927307508369204,,tracked,86,,3.6999999999999975,,1,,28,0,6,completed,0,68.8991825360149,102,0,1,1,0,opponent,102,late_clearance,1,0,1,0.0,0,240,102
+0.17777777777777778,,tracked,86,,3.6999999999999975,,1,,16,0,6,completed,0,137.03745243561718,90,0,,1,0,blocker_1,90,late_clearance,1,0,1,0.0,0,240,90
+0.17777777777777778,,tracked,86,,3.6999999999999975,,1,,16,0,6,completed,0,137.03745243561718,90,0,,1,0,blocker_2,90,late_clearance,1,0,1,0.0,0,240,90
+0.86,,tracked,86,"{""checks"": 6, ""clearance_to_movement"": 7, ""clearance_to_search"": 3, ""deferrals"": 0, ""early_starts"": 1, ""first_watched_clearance"": 33, ""timed_starts"": 1}",6.379166666666663,,1,,129,0,39,completed,16,88.84651332007672,150,0,1,5,0,focal,150,late_clearance,1,0,2,0.02500000000000034,0,240,150
+0.21927307508369204,,tracked,86,,3.6999999999999975,,1,,28,0,6,completed,0,68.8991825360149,102,0,1,1,0,opponent,102,late_clearance,1,0,2,0.0,0,240,102
+0.17777777777777778,,tracked,86,,3.6999999999999975,,1,,16,0,6,completed,0,137.03745243561718,90,0,,1,0,blocker_1,90,late_clearance,1,0,2,0.0,0,240,90
+0.17777777777777778,,tracked,86,,3.6999999999999975,,1,,16,0,6,completed,0,137.03745243561718,90,0,,1,0,blocker_2,90,late_clearance,1,0,2,0.0,0,240,90
+0.86,,tracked,86,"{""checks"": 6, ""clearance_to_movement"": 7, ""clearance_to_search"": 3, ""deferrals"": 0, ""early_starts"": 1, ""first_watched_clearance"": 33, ""timed_starts"": 1}",6.379166666666663,,1,,129,0,39,completed,16,88.84651332007672,150,0,1,5,0,focal,150,late_clearance,1,0,3,0.02500000000000034,0,240,150
+0.21927307508369204,,tracked,86,,3.6999999999999975,,1,,28,0,6,completed,0,68.8991825360149,102,0,1,1,0,opponent,102,late_clearance,1,0,3,0.0,0,240,102
+0.17777777777777778,,tracked,86,,3.6999999999999975,,1,,16,0,6,completed,0,137.03745243561718,90,0,,1,0,blocker_1,90,late_clearance,1,0,3,0.0,0,240,90
+0.17777777777777778,,tracked,86,,3.6999999999999975,,1,,16,0,6,completed,0,137.03745243561718,90,0,,1,0,blocker_2,90,late_clearance,1,0,3,0.0,0,240,90
+0.86,,wheeled,86,"{""checks"": 6, ""clearance_to_movement"": 7, ""clearance_to_search"": 3, ""deferrals"": 0, ""early_starts"": 1, ""first_watched_clearance"": 33, ""timed_starts"": 1}",6.379166666666663,,1,,129,0,39,completed,16,88.84651332007672,150,0,1,5,0,focal,150,late_clearance,1,0,1,0.02500000000000034,0,240,150
+0.21927307508369204,,wheeled,86,,3.6999999999999975,,1,,28,0,6,completed,0,68.8991825360149,102,0,1,1,0,opponent,102,late_clearance,1,0,1,0.0,0,240,102
+0.17777777777777778,,wheeled,86,,3.6999999999999975,,1,,16,0,6,completed,0,137.03745243561718,90,0,,1,0,blocker_1,90,late_clearance,1,0,1,0.0,0,240,90
+0.17777777777777778,,wheeled,86,,3.6999999999999975,,1,,16,0,6,completed,0,137.03745243561718,90,0,,1,0,blocker_2,90,late_clearance,1,0,1,0.0,0,240,90
+0.86,,wheeled,86,"{""checks"": 6, ""clearance_to_movement"": 7, ""clearance_to_search"": 3, ""deferrals"": 0, ""early_starts"": 1, ""first_watched_clearance"": 33, ""timed_starts"": 1}",6.379166666666663,,1,,129,0,39,completed,16,88.84651332007672,150,0,1,5,0,focal,150,late_clearance,1,0,2,0.02500000000000034,0,240,150
+0.21927307508369204,,wheeled,86,,3.6999999999999975,,1,,28,0,6,completed,0,68.8991825360149,102,0,1,1,0,opponent,102,late_clearance,1,0,2,0.0,0,240,102
+0.17777777777777778,,wheeled,86,,3.6999999999999975,,1,,16,0,6,completed,0,137.03745243561718,90,0,,1,0,blocker_1,90,late_clearance,1,0,2,0.0,0,240,90
+0.17777777777777778,,wheeled,86,,3.6999999999999975,,1,,16,0,6,completed,0,137.03745243561718,90,0,,1,0,blocker_2,90,late_clearance,1,0,2,0.0,0,240,90
+0.86,,wheeled,86,"{""checks"": 6, ""clearance_to_movement"": 7, ""clearance_to_search"": 3, ""deferrals"": 0, ""early_starts"": 1, ""first_watched_clearance"": 33, ""timed_starts"": 1}",6.379166666666663,,1,,129,0,39,completed,16,88.84651332007672,150,0,1,5,0,focal,150,late_clearance,1,0,3,0.02500000000000034,0,240,150
+0.21927307508369204,,wheeled,86,,3.6999999999999975,,1,,28,0,6,completed,0,68.8991825360149,102,0,1,1,0,opponent,102,late_clearance,1,0,3,0.0,0,240,102
+0.17777777777777778,,wheeled,86,,3.6999999999999975,,1,,16,0,6,completed,0,137.03745243561718,90,0,,1,0,blocker_1,90,late_clearance,1,0,3,0.0,0,240,90
+0.17777777777777778,,wheeled,86,,3.6999999999999975,,1,,16,0,6,completed,0,137.03745243561718,90,0,,1,0,blocker_2,90,late_clearance,1,0,3,0.0,0,240,90
+0.86,,hover,86,"{""checks"": 6, ""clearance_to_movement"": 7, ""clearance_to_search"": 3, ""deferrals"": 0, ""early_starts"": 1, ""first_watched_clearance"": 33, ""timed_starts"": 1}",6.379166666666663,,1,,129,0,39,completed,16,88.84651332007672,150,0,1,5,0,focal,150,late_clearance,1,0,1,0.02500000000000034,0,240,150
+0.21927307508369204,,hover,86,,3.6999999999999975,,1,,28,0,6,completed,0,68.8991825360149,102,0,1,1,0,opponent,102,late_clearance,1,0,1,0.0,0,240,102
+0.17777777777777778,,hover,86,,3.6999999999999975,,1,,16,0,6,completed,0,137.03745243561718,90,0,,1,0,blocker_1,90,late_clearance,1,0,1,0.0,0,240,90
+0.17777777777777778,,hover,86,,3.6999999999999975,,1,,16,0,6,completed,0,137.03745243561718,90,0,,1,0,blocker_2,90,late_clearance,1,0,1,0.0,0,240,90
+0.86,,hover,86,"{""checks"": 6, ""clearance_to_movement"": 7, ""clearance_to_search"": 3, ""deferrals"": 0, ""early_starts"": 1, ""first_watched_clearance"": 33, ""timed_starts"": 1}",6.379166666666663,,1,,129,0,39,completed,16,88.84651332007672,150,0,1,5,0,focal,150,late_clearance,1,0,2,0.02500000000000034,0,240,150
+0.21927307508369204,,hover,86,,3.6999999999999975,,1,,28,0,6,completed,0,68.8991825360149,102,0,1,1,0,opponent,102,late_clearance,1,0,2,0.0,0,240,102
+0.17777777777777778,,hover,86,,3.6999999999999975,,1,,16,0,6,completed,0,137.03745243561718,90,0,,1,0,blocker_1,90,late_clearance,1,0,2,0.0,0,240,90
+0.17777777777777778,,hover,86,,3.6999999999999975,,1,,16,0,6,completed,0,137.03745243561718,90,0,,1,0,blocker_2,90,late_clearance,1,0,2,0.0,0,240,90
+0.86,,hover,86,"{""checks"": 6, ""clearance_to_movement"": 7, ""clearance_to_search"": 3, ""deferrals"": 0, ""early_starts"": 1, ""first_watched_clearance"": 33, ""timed_starts"": 1}",6.379166666666663,,1,,129,0,39,completed,16,88.84651332007672,150,0,1,5,0,focal,150,late_clearance,1,0,3,0.02500000000000034,0,240,150
+0.21927307508369204,,hover,86,,3.6999999999999975,,1,,28,0,6,completed,0,68.8991825360149,102,0,1,1,0,opponent,102,late_clearance,1,0,3,0.0,0,240,102
+0.17777777777777778,,hover,86,,3.6999999999999975,,1,,16,0,6,completed,0,137.03745243561718,90,0,,1,0,blocker_1,90,late_clearance,1,0,3,0.0,0,240,90
+0.17777777777777778,,hover,86,,3.6999999999999975,,1,,16,0,6,completed,0,137.03745243561718,90,0,,1,0,blocker_2,90,late_clearance,1,0,3,0.0,0,240,90

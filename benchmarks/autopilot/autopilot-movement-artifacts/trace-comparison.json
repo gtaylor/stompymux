@@ -1,0 +1,8 @@
+{
+  "records": 28800,
+  "byte_identical": true,
+  "sha256": "84f4187a40d86d1bdc15c62f3113d3cd9de5bbf6657ecfed93ded4eb08e04e47",
+  "replay": "20,160 complete records retained from the first replay; remaining moving, attack_move and jammed fixtures rerun after fixing relocation of destroyed targets. Compared against one complete fresh 28,800-tick candidate run.",
+  "reference_sha256": "068332085a19e03aed1ad519b6ff9c63eff8b8586b5b4bf3ecbd51005accd560",
+  "final_build_verification": "Complete fresh 28,800-tick run after turret-offset normalization; byte-identical to the accepted candidate trace and summary."
+}

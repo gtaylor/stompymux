@@ -6,8 +6,20 @@ use std::sync::Arc;
 
 /// Read a controllable turret for a conscious, assigned operator in a running vehicle.
 pub fn turret_readout(world: &World, id: ObjectId, pilot: ObjectId) -> Result<f64> {
-    super::vehicle_power::controlled(world, id, pilot)?;
-    super::vehicle_driving::readout(world, id, pilot)?;
+    turret_readout_by_actor(
+        world,
+        id,
+        super::combat_operator::ControlActor::Player(pilot),
+    )
+}
+
+fn turret_readout_by_actor(
+    world: &World,
+    id: ObjectId,
+    actor: super::combat_operator::ControlActor,
+) -> Result<f64> {
+    super::vehicle_power::controlled_by_actor(world, id, actor)?;
+    super::vehicle_driving::readout_by_actor(world, id, actor)?;
     let vehicle = &world.btech.vehicles()[&id];
     let heading = vehicle
         .turret_heading()
@@ -30,7 +42,37 @@ pub fn set_turret(
     pilot: ObjectId,
     heading: f64,
 ) -> Result<BattleNotice> {
-    turret_readout(world, id, pilot)?;
+    let notice = set_turret_by_actor(
+        world,
+        id,
+        super::combat_operator::ControlActor::Player(pilot),
+        heading,
+    )?;
+    let _ = super::autopilot::manual_takeover(world, id);
+    Ok(notice)
+}
+
+/// Autonomous rotation shares ordinary turret lock, jam and crew restrictions.
+pub(crate) fn set_turret_autopilot(
+    world: &mut World,
+    id: ObjectId,
+    heading: f64,
+) -> Result<BattleNotice> {
+    set_turret_by_actor(
+        world,
+        id,
+        super::combat_operator::ControlActor::Autopilot,
+        heading,
+    )
+}
+
+fn set_turret_by_actor(
+    world: &mut World,
+    id: ObjectId,
+    actor: super::combat_operator::ControlActor,
+    heading: f64,
+) -> Result<BattleNotice> {
+    turret_readout_by_actor(world, id, actor)?;
     ensure!(
         heading.is_finite()
             && heading.fract() == 0.0
@@ -42,8 +84,9 @@ pub fn set_turret(
         .get_mut(&id)
         .unwrap();
     let heading = heading.rem_euclid(360.0);
-    vehicle.turret_offset = (heading - vehicle.motion().unwrap().heading).rem_euclid(360.0);
-    let _ = super::autopilot::manual_takeover(world, id);
+    // Floating-point rem_euclid can round a tiny negative offset up to 360.
+    // Canonicalize that endpoint before the ordinary strict facing validator.
+    vehicle.turret_offset = (heading - vehicle.motion().unwrap().heading).rem_euclid(360.0) % 360.0;
     Ok(BattleNotice {
         unit: id,
         text: format!("Turret facing changed to {}.", heading as u16),

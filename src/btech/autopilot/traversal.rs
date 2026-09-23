@@ -161,7 +161,7 @@ fn assess_with_occupancy(
     // Native stacking resolves crowded hexes rather than treating every unit as
     // an immutable wall.  Admit light congestion with a penalty, but do not
     // ask an autonomous unit to create a known collision crowd.
-    if occupants > 6 || friendly > 2 {
+    if crowded((occupants, friendly)) {
         return TraversalAssessment::blocked(TraversalReason::Congested);
     }
     if occupants > 0 {
@@ -188,9 +188,15 @@ pub struct GroundTraversal<'a> {
     pub unit_id: ObjectId,
     pub map: ObjectId,
     occupancy: BTreeMap<(u16, u16), (usize, usize)>,
+    congested: std::cell::RefCell<super::congestion::Cells>,
 }
 
 impl<'a> GroundTraversal<'a> {
+    /// Whether this search step actually encountered a temporarily crowded edge.
+    pub(crate) fn congested_cells(&self) -> super::congestion::Cells {
+        self.congested.borrow().clone()
+    }
+
     /// Build a traversal provider with one stable occupancy snapshot.  A* calls
     /// this provider once per edge, so rebuilding map membership or sorting all
     /// battlefield slots in that hot path would violate the heartbeat budget.
@@ -200,6 +206,7 @@ impl<'a> GroundTraversal<'a> {
             unit_id,
             map,
             occupancy: known_occupancy(world, unit_id, map),
+            congested: Default::default(),
         }
     }
 }
@@ -225,6 +232,9 @@ impl super::navigation::Traversal for GroundTraversal<'_> {
             },
             Some(&self.occupancy),
         );
+        if assessment.reason == TraversalReason::Congested {
+            super::congestion::remember(&mut self.congested.borrow_mut(), (to.x, to.y));
+        }
         assessment.eligible.then_some(assessment.cost)
     }
 }
@@ -379,6 +389,24 @@ fn occupancy(
     Ok((count, friendly))
 }
 
+/// The exact occupancy predicate shared by planning and clearance polling.
+pub(crate) fn crowded((occupants, friendly): (usize, usize)) -> bool {
+    occupants > 6 || friendly > 2
+}
+
+/// Check only relevant cells with the same observation boundary as navigation.
+pub(crate) fn watched_clearance(
+    world: &World,
+    moving: ObjectId,
+    map: ObjectId,
+    cells: &super::congestion::Cells,
+) -> bool {
+    let occupancy = filtered_occupancy(world, moving, map, Some(cells));
+    cells
+        .iter()
+        .any(|cell| !crowded(occupancy.get(cell).copied().unwrap_or_default()))
+}
+
 /// Snapshot only occupancy that the moving unit is allowed to know.  Friendly
 /// units are known from their team membership; enemy placement affects routing
 /// only after the moving unit has an acquired sensor contact for that unit.
@@ -386,6 +414,15 @@ fn known_occupancy(
     world: &World,
     moving: ObjectId,
     map: ObjectId,
+) -> BTreeMap<(u16, u16), (usize, usize)> {
+    filtered_occupancy(world, moving, map, None)
+}
+
+fn filtered_occupancy(
+    world: &World,
+    moving: ObjectId,
+    map: ObjectId,
+    cells: Option<&super::congestion::Cells>,
 ) -> BTreeMap<(u16, u16), (usize, usize)> {
     let Some(moving_team) = team(world, moving) else {
         return BTreeMap::new();
@@ -406,6 +443,7 @@ fn known_occupancy(
     {
         if id == moving
             || position.map != map
+            || cells.is_some_and(|cells| !cells.contains(&(position.x, position.y)))
             || !known_occupant_with_team(world, moving, moving_team, id)
         {
             continue;
@@ -587,6 +625,9 @@ mod tests {
             .visibility
             .invisible = true;
         assert!(known_occupancy(&world, observer, map).is_empty());
+        let watched = [(0, 2), (0, 3)].into_iter().collect();
+        assert!(watched_clearance(&world, observer, map, &watched));
+        assert!(filtered_occupancy(&world, observer, map, Some(&watched)).is_empty());
         assert!(!known_occupant(&world, observer, target));
         Arc::make_mut(&mut world.btech.constructed)
             .get_mut(&target)
@@ -598,6 +639,9 @@ mod tests {
             .unwrap()
             .power = BattlePower::Running;
         assert!(known_occupancy(&world, observer, map).is_empty());
+        let watched = [(0, 2), (0, 3)].into_iter().collect();
+        assert!(watched_clearance(&world, observer, map, &watched));
+        assert!(filtered_occupancy(&world, observer, map, Some(&watched)).is_empty());
         Arc::make_mut(&mut world.btech.constructed)
             .get_mut(&target)
             .unwrap()
@@ -606,6 +650,9 @@ mod tests {
             .unwrap()
             .internal = 0;
         assert!(known_occupancy(&world, observer, map).is_empty());
+        let watched = [(0, 2), (0, 3)].into_iter().collect();
+        assert!(watched_clearance(&world, observer, map, &watched));
+        assert!(filtered_occupancy(&world, observer, map, Some(&watched)).is_empty());
         assert!(!known_occupant(&world, observer, target));
     }
 

@@ -1,5 +1,6 @@
 //! Player-owned macro sets, attachment slots and bounded single-pass expansion.
 pub mod commands;
+pub(crate) mod service;
 use crate::world::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -67,9 +68,23 @@ pub struct MacroEntry {
     pub expansion: String,
 }
 
+/// Never-reused runtime identity, independent of mutable catalog numbers.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct MacroSetId(u64);
+
+impl Default for MacroSetId {
+    fn default() -> Self {
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+        Self(NEXT.fetch_add(1, Ordering::Relaxed))
+    }
+}
+
 /// Shared set, indexed by its position in the catalog.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MacroSet {
+    /// Runtime identity survives snapshots but is never serialized.
+    #[serde(skip)]
+    pub id: MacroSetId,
     #[serde(skip)]
     pub origin: RowOrigin,
     pub owner: ObjectId,
@@ -267,6 +282,7 @@ mod tests {
     #[test]
     fn access_modes_keep_wizard_write_restrictions() {
         let mut s = MacroSet {
+            id: Default::default(),
             origin: Default::default(),
             owner: ObjectId(2),
             modes: Default::default(),

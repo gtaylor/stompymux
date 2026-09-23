@@ -669,6 +669,12 @@ Pages are online-only, obey in-character/GAGGED restrictions with Wizard endpoin
 exceptions, and persist the ordered successful recipients for repeat paging.
 ## Player macros
 
+Lua scripts can manage sets through the trusted `mux.macro` package. See
+[Managing player macros](docs/content/docs/scripting/macros.md) for handles,
+permissions, attachments, and transaction behavior.
+`mux.default_player_macros = [0]` attaches existing defaults to new players;
+missing sets warn at creation time so Lua bootstrapping can create them later.
+
 `help macros` documents the complete dot-command system: `.create`, `.add`,
 `.del`, `.chslot`, `.list`, `.glist`, `.ex`, `.gex`, `.name`, `.chmod`, `.chown`,
 `.clear`, `.def` and `.undef`. For example, `.create Shortcuts`, then

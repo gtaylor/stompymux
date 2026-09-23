@@ -219,3 +219,16 @@ for a one-second hash.
 
 The defaults favor a responsive Telnet game server. Tune the Argon2id cost and
 rate limits together for the deployment host.
+
+## Default player macros
+
+`mux.default_player_macros` is an ordered list of zero-based macro set numbers,
+defaulting to `[0]`. Use `[]` to disable defaults. It accepts up to five
+nonnegative integers; duplicates are allowed. Configuration parsing does not
+check whether the sets exist, so Lua bootstrapping can create them later.
+
+Every new player attaches the sets that exist at creation time in list order,
+without changing the selected editing slot. Missing sets generate a `MAC/WARN`
+server message and are skipped without failing creation. Existing players are
+unchanged. The list can also be changed live by GOD using
+`@admin default_player_macros=[0, 2]`.

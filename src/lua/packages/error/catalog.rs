@@ -1,6 +1,10 @@
 //! Stable native error symbols from the C Lua error catalog.
 pub const CODES: &[&str] = &[
     "mux.arg.invalid",
+    "mux.macro.invalid",
+    "mux.macro.not_found",
+    "mux.macro.exists",
+    "mux.macro.slots_full",
     "mux.unavailable.checking",
     "mux.runtime",
     "mux.state.invalid",

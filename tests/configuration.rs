@@ -48,7 +48,7 @@ async fn complete_legacy_catalog_and_compiled_defaults() {
         .collect();
     let actual: BTreeSet<_> = KEYS
         .iter()
-        .filter(|s| !s.legacy.is_empty())
+        .filter(|s| !s.legacy.is_empty() && s.path != "mux.default_player_macros")
         .map(|s| s.path)
         .collect();
     assert_eq!(expected, actual);
@@ -523,7 +523,7 @@ async fn supplied_configuration_parses_without_unknown_keys() {
     )
     .unwrap();
     let c = Config::load(d.path()).unwrap();
-    assert_eq!(KEYS.len(), 202);
+    assert_eq!(KEYS.len(), 203);
     assert_eq!(c.server.port, 5555);
     assert!(
         !c.warnings.iter().any(|w| w.contains("unknown")),
@@ -707,4 +707,40 @@ async fn ipv4_site_readiness_and_ipv6_rejection_precede_side_effects() {
     }
     let (_d, c) = config("server.listen_address='::1'");
     c.validate_for_serve().unwrap();
+}
+
+/// Macro defaults are typed lists; unresolved set numbers are valid configuration.
+#[test]
+fn default_player_macros_format_and_defaults() {
+    let (_d, c) = config("");
+    assert_eq!(c.mux.default_player_macros, vec![0]);
+    let (_d, c) = config("mux.default_player_macros=[2,999,0,2]");
+    assert_eq!(c.mux.default_player_macros, vec![2, 999, 0, 2]);
+    assert_eq!(
+        c.effective_value("default_player_macros"),
+        c.effective_value("mux.default_player_macros")
+    );
+    let (_d, c) = config("mux.default_player_macros=[]");
+    assert!(c.mux.default_player_macros.is_empty());
+    for value in [
+        "0",
+        "'0'",
+        "[-1]",
+        "[0.0]",
+        "['0']",
+        "[false]",
+        "[0,1,2,3,4,5]",
+    ] {
+        let d = tempfile::tempdir().unwrap();
+        std::fs::write(
+            d.path().join("stompymux.toml"),
+            format!("mux.default_player_macros={value}"),
+        )
+        .unwrap();
+        let error = format!("{:#}", Config::load(d.path()).unwrap_err());
+        assert!(
+            error.contains("mux.default_player_macros"),
+            "{value}: {error}"
+        );
+    }
 }

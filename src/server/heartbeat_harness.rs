@@ -64,9 +64,21 @@ impl HeartbeatHarness {
         detailed: bool,
         outcomes: bool,
     ) -> HeartbeatMetrics {
+        self.step_pursuit(now, detailed, outcomes, false).await
+    }
+
+    /// Compare pursuit policies in an isolated harness without a production setting.
+    pub async fn step_pursuit(
+        &mut self,
+        now: i64,
+        detailed: bool,
+        outcomes: bool,
+        direct: bool,
+    ) -> HeartbeatMetrics {
         let started = Instant::now();
         let mut metrics = HeartbeatMetrics::default();
         metrics.autopilot.diagnostics_enabled = detailed;
+        metrics.autopilot.direct_pursuit = direct;
         metrics.autopilot.capture_outcomes = outcomes;
         self.server
             .btech_tick_measured(now, Some(&mut metrics))
@@ -74,6 +86,12 @@ impl HeartbeatHarness {
         metrics.heartbeat = started.elapsed();
         if !metrics.committed {
             metrics.autopilot.notice_trace.clear();
+            metrics.autopilot.shots_by_unit.clear();
+            metrics.autopilot.replans_by_unit.clear();
+            metrics.autopilot.congestion_by_unit.clear();
+            metrics.autopilot.autonomous_shots = 0;
+            metrics.autopilot.prediction_ticks = 0;
+            metrics.autopilot.prediction_fallbacks = 0;
             // Decisions from a rejected candidate cannot become the next tick's cached work.
             std::sync::Arc::make_mut(
                 &mut self.server.scripts.world.borrow_mut().btech.autopilot_plans,

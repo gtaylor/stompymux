@@ -217,6 +217,7 @@ async fn tcp_private_reports_counts_idle_and_queue() {
                 .insert(Flag::Dark);
             use stompymux_rs::macros::{MacroEntry, MacroSet, MacroSlots};
             world.macros.sets.push(MacroSet {
+                id: Default::default(),
                 origin: Default::default(),
                 owner: ObjectId(1),
                 modes: Default::default(),

@@ -249,6 +249,7 @@ pub fn validate(spec: &KeySpec, value: &Value) -> Result<()> {
         "Vec<Flag>" => typed::<Vec<String>>(value)?,
         "Vec<LogOption>" => typed::<Vec<LogOption>>(value)?,
         "Vec<String>" => typed::<Vec<String>>(value)?,
+        "Vec<usize>" => typed::<Vec<usize>>(value)?,
         "BTreeMap<String, String>" => {
             for (k, v) in table(value)? {
                 typed::<String>(v).with_context(|| k.clone())?;
@@ -301,6 +302,15 @@ pub fn validate(spec: &KeySpec, value: &Value) -> Result<()> {
         ensure!(
             number.is_finite() && number >= min && number <= max,
             "expected a finite value in {min}..={max}"
+        );
+    }
+    if spec.path == "mux.default_player_macros" {
+        ensure!(
+            value
+                .as_array()
+                .is_some_and(|v| v.len() <= crate::macros::SLOT_COUNT),
+            "expected at most {} macro set numbers",
+            crate::macros::SLOT_COUNT
         );
     }
     if spec.path == "osc8.presets" {

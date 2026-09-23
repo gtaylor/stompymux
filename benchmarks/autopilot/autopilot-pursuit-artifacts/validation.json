@@ -1,0 +1,27 @@
+{
+  "accepted": false,
+  "rust_checks": {
+    "command": "just checks",
+    "exit_code": 0,
+    "groups": 21,
+    "passed": 3061,
+    "failed": 0,
+    "ignored": 2
+  },
+  "format_check": "cargo fmt --check: passed",
+  "python_tests": 19,
+  "pursuit_runs_per_policy": 192,
+  "episodes_per_policy": 640,
+  "candidate_replay_records": 199580,
+  "candidate_replay_byte_identical": true,
+  "episode_replay_byte_identical": true,
+  "behavioral_failures": 10,
+  "initial_cpu_guard_failures": 3,
+  "repeatable_hold_regression": "open",
+  "logs": {
+    "checks": "/tmp/autopilot-pursuit/accepted-checks.log",
+    "matrices": "/tmp/autopilot-pursuit/matrix.log",
+    "cpu": "/tmp/autopilot-pursuit/cpu-run.log",
+    "repeats": "/tmp/autopilot-pursuit/cpu-repeats.log"
+  }
+}

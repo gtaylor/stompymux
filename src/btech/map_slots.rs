@@ -145,6 +145,8 @@ pub(super) fn extent(state: &BtechState, map: ObjectId) -> u32 {
 
 /// Removing the last allocated slot shortens the span once, leaving earlier holes allocated.
 pub(super) fn depart(state: &mut BtechState, id: ObjectId) {
+    // Searches and clearance watches belong to the battlefield being left.
+    std::sync::Arc::make_mut(&mut state.autopilot_plans).remove(&id);
     let membership = state
         .constructed_units()
         .get(&id)

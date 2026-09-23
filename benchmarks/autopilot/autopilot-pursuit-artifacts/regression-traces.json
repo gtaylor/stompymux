@@ -1,0 +1,2941 @@
+[
+  {
+    "suite": "existing",
+    "identical": 120,
+    "total": 120,
+    "cases": [
+      {
+        "case": [
+          "approach",
+          "mech",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "approach",
+          "mech",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "approach",
+          "mech",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "approach",
+          "tracked",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "approach",
+          "tracked",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "approach",
+          "tracked",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "approach",
+          "wheeled",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "approach",
+          "wheeled",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "approach",
+          "wheeled",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "approach",
+          "hover",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "approach",
+          "hover",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "approach",
+          "hover",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "long_approach",
+          "mech",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "long_approach",
+          "mech",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "long_approach",
+          "mech",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "long_approach",
+          "tracked",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "long_approach",
+          "tracked",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "long_approach",
+          "tracked",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "long_approach",
+          "wheeled",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "long_approach",
+          "wheeled",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "long_approach",
+          "wheeled",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "long_approach",
+          "hover",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "long_approach",
+          "hover",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "long_approach",
+          "hover",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "close",
+          "mech",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "close",
+          "mech",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "close",
+          "mech",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "close",
+          "tracked",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "close",
+          "tracked",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "close",
+          "tracked",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "close",
+          "wheeled",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "close",
+          "wheeled",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "close",
+          "wheeled",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "close",
+          "hover",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "close",
+          "hover",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "close",
+          "hover",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "behind",
+          "mech",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "behind",
+          "mech",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "behind",
+          "mech",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "behind",
+          "tracked",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "behind",
+          "tracked",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "behind",
+          "tracked",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "behind",
+          "wheeled",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "behind",
+          "wheeled",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "behind",
+          "wheeled",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "behind",
+          "hover",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "behind",
+          "hover",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "behind",
+          "hover",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "corner",
+          "mech",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "corner",
+          "mech",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "corner",
+          "mech",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "corner",
+          "tracked",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "corner",
+          "tracked",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "corner",
+          "tracked",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "corner",
+          "wheeled",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "corner",
+          "wheeled",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "corner",
+          "wheeled",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "corner",
+          "hover",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "corner",
+          "hover",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "corner",
+          "hover",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "obstacle_pursuit",
+          "mech",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "obstacle_pursuit",
+          "mech",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "obstacle_pursuit",
+          "mech",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "obstacle_pursuit",
+          "tracked",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "obstacle_pursuit",
+          "tracked",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "obstacle_pursuit",
+          "tracked",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "obstacle_pursuit",
+          "wheeled",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "obstacle_pursuit",
+          "wheeled",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "obstacle_pursuit",
+          "wheeled",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "obstacle_pursuit",
+          "hover",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "obstacle_pursuit",
+          "hover",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "obstacle_pursuit",
+          "hover",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "fallback",
+          "mech",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "fallback",
+          "mech",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "fallback",
+          "mech",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "fallback",
+          "tracked",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "fallback",
+          "tracked",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "fallback",
+          "tracked",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "fallback",
+          "wheeled",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "fallback",
+          "wheeled",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "fallback",
+          "wheeled",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "fallback",
+          "hover",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "fallback",
+          "hover",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "fallback",
+          "hover",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "moving",
+          "mech",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "moving",
+          "mech",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "moving",
+          "mech",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "moving",
+          "tracked",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "moving",
+          "tracked",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "moving",
+          "tracked",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "moving",
+          "wheeled",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "moving",
+          "wheeled",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "moving",
+          "wheeled",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "moving",
+          "hover",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "moving",
+          "hover",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "moving",
+          "hover",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "attack_move",
+          "mech",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "attack_move",
+          "mech",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "attack_move",
+          "mech",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "attack_move",
+          "tracked",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "attack_move",
+          "tracked",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "attack_move",
+          "tracked",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "attack_move",
+          "wheeled",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "attack_move",
+          "wheeled",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "attack_move",
+          "wheeled",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "attack_move",
+          "hover",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "attack_move",
+          "hover",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "attack_move",
+          "hover",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "jammed",
+          "mech",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "jammed",
+          "mech",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "jammed",
+          "mech",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "jammed",
+          "tracked",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "jammed",
+          "tracked",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "jammed",
+          "tracked",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "jammed",
+          "wheeled",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "jammed",
+          "wheeled",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "jammed",
+          "wheeled",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "jammed",
+          "hover",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "jammed",
+          "hover",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "jammed",
+          "hover",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      }
+    ]
+  },
+  {
+    "suite": "adversarial",
+    "identical": 72,
+    "total": 108,
+    "cases": [
+      {
+        "case": [
+          "crossing",
+          "mech",
+          1
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 40
+      },
+      {
+        "case": [
+          "crossing",
+          "mech",
+          2
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 40
+      },
+      {
+        "case": [
+          "crossing",
+          "mech",
+          3
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 40
+      },
+      {
+        "case": [
+          "crossing",
+          "tracked",
+          1
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 34
+      },
+      {
+        "case": [
+          "crossing",
+          "tracked",
+          2
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 34
+      },
+      {
+        "case": [
+          "crossing",
+          "tracked",
+          3
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 34
+      },
+      {
+        "case": [
+          "crossing",
+          "wheeled",
+          1
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 34
+      },
+      {
+        "case": [
+          "crossing",
+          "wheeled",
+          2
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 34
+      },
+      {
+        "case": [
+          "crossing",
+          "wheeled",
+          3
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 34
+      },
+      {
+        "case": [
+          "crossing",
+          "hover",
+          1
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 34
+      },
+      {
+        "case": [
+          "crossing",
+          "hover",
+          2
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 34
+      },
+      {
+        "case": [
+          "crossing",
+          "hover",
+          3
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 34
+      },
+      {
+        "case": [
+          "duel",
+          "mech",
+          1
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 20
+      },
+      {
+        "case": [
+          "duel",
+          "mech",
+          2
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 13
+      },
+      {
+        "case": [
+          "duel",
+          "mech",
+          3
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 13
+      },
+      {
+        "case": [
+          "duel",
+          "tracked",
+          1
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 20
+      },
+      {
+        "case": [
+          "duel",
+          "tracked",
+          2
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 19
+      },
+      {
+        "case": [
+          "duel",
+          "tracked",
+          3
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 19
+      },
+      {
+        "case": [
+          "duel",
+          "wheeled",
+          1
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 20
+      },
+      {
+        "case": [
+          "duel",
+          "wheeled",
+          2
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 19
+      },
+      {
+        "case": [
+          "duel",
+          "wheeled",
+          3
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 19
+      },
+      {
+        "case": [
+          "duel",
+          "hover",
+          1
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 20
+      },
+      {
+        "case": [
+          "duel",
+          "hover",
+          2
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 19
+      },
+      {
+        "case": [
+          "duel",
+          "hover",
+          3
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 19
+      },
+      {
+        "case": [
+          "occluded",
+          "mech",
+          1
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 34
+      },
+      {
+        "case": [
+          "occluded",
+          "mech",
+          2
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 34
+      },
+      {
+        "case": [
+          "occluded",
+          "mech",
+          3
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 34
+      },
+      {
+        "case": [
+          "occluded",
+          "tracked",
+          1
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 34
+      },
+      {
+        "case": [
+          "occluded",
+          "tracked",
+          2
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 34
+      },
+      {
+        "case": [
+          "occluded",
+          "tracked",
+          3
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 34
+      },
+      {
+        "case": [
+          "occluded",
+          "wheeled",
+          1
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 34
+      },
+      {
+        "case": [
+          "occluded",
+          "wheeled",
+          2
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 34
+      },
+      {
+        "case": [
+          "occluded",
+          "wheeled",
+          3
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 34
+      },
+      {
+        "case": [
+          "occluded",
+          "hover",
+          1
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 34
+      },
+      {
+        "case": [
+          "occluded",
+          "hover",
+          2
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 34
+      },
+      {
+        "case": [
+          "occluded",
+          "hover",
+          3
+        ],
+        "identical": false,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": 34
+      },
+      {
+        "case": [
+          "bottleneck",
+          "mech",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "bottleneck",
+          "mech",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "bottleneck",
+          "mech",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "bottleneck",
+          "tracked",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "bottleneck",
+          "tracked",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "bottleneck",
+          "tracked",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "bottleneck",
+          "wheeled",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "bottleneck",
+          "wheeled",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "bottleneck",
+          "wheeled",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "bottleneck",
+          "hover",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "bottleneck",
+          "hover",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "bottleneck",
+          "hover",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "pursuers",
+          "mech",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "pursuers",
+          "mech",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "pursuers",
+          "mech",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "pursuers",
+          "tracked",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "pursuers",
+          "tracked",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "pursuers",
+          "tracked",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "pursuers",
+          "wheeled",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "pursuers",
+          "wheeled",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "pursuers",
+          "wheeled",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "pursuers",
+          "hover",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "pursuers",
+          "hover",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "pursuers",
+          "hover",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "passage",
+          "mech",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "passage",
+          "mech",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "passage",
+          "mech",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "passage",
+          "tracked",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "passage",
+          "tracked",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "passage",
+          "tracked",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "passage",
+          "wheeled",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "passage",
+          "wheeled",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "passage",
+          "wheeled",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "passage",
+          "hover",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "passage",
+          "hover",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "passage",
+          "hover",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "no_passing_space",
+          "mech",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "no_passing_space",
+          "mech",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "no_passing_space",
+          "mech",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "no_passing_space",
+          "tracked",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "no_passing_space",
+          "tracked",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "no_passing_space",
+          "tracked",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "no_passing_space",
+          "wheeled",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "no_passing_space",
+          "wheeled",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "no_passing_space",
+          "wheeled",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "no_passing_space",
+          "hover",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "no_passing_space",
+          "hover",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "no_passing_space",
+          "hover",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "mobility_damage",
+          "mech",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "mobility_damage",
+          "mech",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "mobility_damage",
+          "mech",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "mobility_damage",
+          "tracked",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "mobility_damage",
+          "tracked",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "mobility_damage",
+          "tracked",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "mobility_damage",
+          "wheeled",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "mobility_damage",
+          "wheeled",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "mobility_damage",
+          "wheeled",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "mobility_damage",
+          "hover",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "mobility_damage",
+          "hover",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "mobility_damage",
+          "hover",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "mixed_arcs",
+          "mech",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "mixed_arcs",
+          "mech",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "mixed_arcs",
+          "mech",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "mixed_arcs",
+          "tracked",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "mixed_arcs",
+          "tracked",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "mixed_arcs",
+          "tracked",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "mixed_arcs",
+          "wheeled",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "mixed_arcs",
+          "wheeled",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "mixed_arcs",
+          "wheeled",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "mixed_arcs",
+          "hover",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "mixed_arcs",
+          "hover",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "mixed_arcs",
+          "hover",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      }
+    ]
+  },
+  {
+    "suite": "late_clearance",
+    "identical": 12,
+    "total": 12,
+    "cases": [
+      {
+        "case": [
+          "late_clearance",
+          "mech",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "late_clearance",
+          "mech",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "late_clearance",
+          "mech",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "late_clearance",
+          "tracked",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "late_clearance",
+          "tracked",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "late_clearance",
+          "tracked",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "late_clearance",
+          "wheeled",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "late_clearance",
+          "wheeled",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "late_clearance",
+          "wheeled",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "late_clearance",
+          "hover",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "late_clearance",
+          "hover",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "late_clearance",
+          "hover",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      }
+    ]
+  },
+  {
+    "suite": "alternating_clearance",
+    "identical": 12,
+    "total": 12,
+    "cases": [
+      {
+        "case": [
+          "alternating_clearance",
+          "mech",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "alternating_clearance",
+          "mech",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "alternating_clearance",
+          "mech",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "alternating_clearance",
+          "tracked",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "alternating_clearance",
+          "tracked",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "alternating_clearance",
+          "tracked",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "alternating_clearance",
+          "wheeled",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "alternating_clearance",
+          "wheeled",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "alternating_clearance",
+          "wheeled",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "alternating_clearance",
+          "hover",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "alternating_clearance",
+          "hover",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "alternating_clearance",
+          "hover",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      }
+    ]
+  },
+  {
+    "suite": "waiting_controllers",
+    "identical": 12,
+    "total": 12,
+    "cases": [
+      {
+        "case": [
+          "waiting_controllers",
+          "mech",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "waiting_controllers",
+          "mech",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "waiting_controllers",
+          "mech",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "waiting_controllers",
+          "tracked",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "waiting_controllers",
+          "tracked",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "waiting_controllers",
+          "tracked",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "waiting_controllers",
+          "wheeled",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "waiting_controllers",
+          "wheeled",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "waiting_controllers",
+          "wheeled",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "waiting_controllers",
+          "hover",
+          1
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "waiting_controllers",
+          "hover",
+          2
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      },
+      {
+        "case": [
+          "waiting_controllers",
+          "hover",
+          3
+        ],
+        "identical": true,
+        "records_before": 240,
+        "records_after": 240,
+        "first_difference": null
+      }
+    ]
+  }
+]

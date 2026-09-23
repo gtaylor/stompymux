@@ -188,6 +188,7 @@ fn index_weight(path: &str) -> Option<i32> {
 /// One-line descriptions for the package tables and subpackage introductions.
 fn subpackage_description(path: &str) -> Option<&'static str> {
     match path {
+        "mux/macro" => Some("Trusted macro-set management, permissions, and player attachments."),
         "mux/comsys" => Some("Trusted communication-channel management."),
         "mux/config" => Some("Read-only access to scalar server configuration."),
         "mux/error" => Some("Structured errors, checked error codes, and error-handling helpers."),
@@ -219,6 +220,8 @@ fn subpackage_description(path: &str) -> Option<&'static str> {
 /// Map a LuaLS method receiver to its existing reference section.
 fn class_path(owner: &str) -> Option<&'static str> {
     match owner {
+        "MacroSet" => Some("mux/macro/type-set"),
+        "MacroFlags" => Some("mux/macro/type-flags"),
         "Channel" => Some("mux/comsys/type-channel"),
         "ChannelFlags" => Some("mux/comsys/type-channel-flags"),
         "Error" => Some("mux/error/type-error"),
@@ -238,6 +241,7 @@ fn mux_namespace(class: &str) -> Option<&'static str> {
         "LockNamespace" => Some("mux/world/locks"),
         "PowerNamespace" => Some("mux/world/powers"),
         "ObjectTypeNamespace" => Some("mux/world/types"),
+        "MacroFlagConstants" => Some("mux/macro/flags"),
         "ChannelFlagNamespace" => Some("mux/comsys/flags"),
         _ => None,
     }

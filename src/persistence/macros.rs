@@ -22,6 +22,7 @@ pub(super) async fn load(c: &mut SqliteConnection, w: &mut World) -> Result<()> 
             w.macros.sets.len()
         );
         w.macros.sets.push(MacroSet {
+            id: Default::default(),
             origin: RowOrigin::stored(index),
             owner: ObjectId(r.try_get("owner")?),
             modes: MacroModes(r.try_get("status")?),

@@ -131,6 +131,7 @@ fn create(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
             let slot = empty_slot(w, ctx.player)?;
             let index = w.macros.sets.len();
             w.macros.sets.push(MacroSet {
+                id: Default::default(),
                 origin: Default::default(),
                 owner: ctx.player,
                 modes: Default::default(),

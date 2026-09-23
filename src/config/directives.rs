@@ -795,6 +795,11 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
+        name: "default_player_macros",
+        parser: "integer_list",
+        permission: P::GOD,
+    },
+    Directive {
         name: "default_player_flags",
         parser: "cf_set_flags",
         permission: P::GOD,

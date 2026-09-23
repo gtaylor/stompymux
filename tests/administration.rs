@@ -211,8 +211,13 @@ async fn sites_prepend_and_live_destinations() {
 fn compiled_directive_catalog_and_file_access() {
     let rows: Vec<serde_json::Value> =
         serde_json::from_str(include_str!("fixtures/config-directives.json")).unwrap();
-    assert_eq!(rows.len(), DIRECTIVES.len());
-    for (row, d) in rows.iter().zip(DIRECTIVES) {
+    // Compare imported directive metadata separately from the Rust macro-default setting.
+    let imported: Vec<_> = DIRECTIVES
+        .iter()
+        .filter(|d| d.name != "default_player_macros")
+        .collect();
+    assert_eq!(rows.len(), imported.len());
+    for (row, d) in rows.iter().zip(imported) {
         assert_eq!(row["name"], d.name);
         assert_eq!(row["parser"], d.parser);
         assert_eq!(
@@ -239,4 +244,30 @@ fn compiled_directive_catalog_and_file_access() {
         e.contains("stompymux.toml") && e.contains("access.config.nothing"),
         "{e}"
     );
+}
+
+/// List edits validate structure without resolving future bootstrap macro sets.
+#[tokio::test(flavor = "current_thread")]
+async fn default_player_macros_live_list_updates() {
+    let (_d, mut c, mut s) = fixture().await;
+    assert_eq!(c.mux.default_player_macros, vec![0]);
+    edit(&mut c, &mut s, 1, "default_player_macros", "[0, 999, 0]").unwrap();
+    assert_eq!(c.mux.default_player_macros, vec![0, 999, 0]);
+    for value in [
+        "0",
+        "[-1]",
+        "[1.5]",
+        "['0']",
+        "[true]",
+        "[0,1,2,3,4,5]",
+        "[0]\nother=1",
+    ] {
+        assert!(
+            edit(&mut c, &mut s, 1, "default_player_macros", value).is_err(),
+            "{value}"
+        );
+        assert_eq!(c.mux.default_player_macros, vec![0, 999, 0]);
+    }
+    edit(&mut c, &mut s, 1, "default_player_macros", "[]").unwrap();
+    assert!(c.mux.default_player_macros.is_empty());
 }

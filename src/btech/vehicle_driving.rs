@@ -27,7 +27,7 @@ pub(super) fn readout(world: &World, id: ObjectId, viewer: ObjectId) -> Result<B
     )
 }
 
-fn readout_by_actor(
+pub(super) fn readout_by_actor(
     world: &World,
     id: ObjectId,
     actor: super::combat_operator::ControlActor,

@@ -430,6 +430,8 @@ pub struct MuxConfig {
     pub default_exit_flags: Vec<Flag>,
     /// Configuration value for `default_player_flags`; defaults are centralized below.
     pub default_player_flags: Vec<Flag>,
+    /// Ordered macro set numbers attached to new players, resolved at creation time.
+    pub default_player_macros: Vec<usize>,
     /// Configuration value for `default_room_flags`; defaults are centralized below.
     pub default_room_flags: Vec<Flag>,
     /// Configuration value for `default_thing_flags`; defaults are centralized below.
@@ -510,6 +512,7 @@ impl Default for MuxConfig {
             default_player_lua_parent: "default_player.lua".into(),
             default_exit_flags: vec![Flag::NoCommand],
             default_player_flags: vec![Flag::Ansi, Flag::InCharacter],
+            default_player_macros: vec![0],
             default_room_flags: vec![Flag::NoCommand],
             default_thing_flags: vec![],
             down_file: PathBuf::from("text/down.txt"),
