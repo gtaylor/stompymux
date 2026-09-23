@@ -555,3 +555,92 @@ async fn failed_heartbeat_commit_restores_motion_intent_and_feedback() {
         .unwrap();
     sqlx::Connection::close(db).await.unwrap();
 }
+
+/// A shot may commit inside the heartbeat candidate, but a failed database
+/// publication must discard its dice, inventory, reports and controller feedback.
+#[tokio::test(flavor = "current_thread")]
+async fn failed_firing_heartbeat_discards_shots_and_retries_identically() {
+    let (_directory, config, mut world, shooter, target, _) = firing::fixture_with_target(
+        include_str!("../game/mechs/JR7-D"),
+        None,
+        include_str!("../game/mechs/JR7-D"),
+    )
+    .await;
+    set_battle_sensor_signature(
+        &mut world,
+        target,
+        BattleSensorSignature {
+            team: 1,
+            hidden: false,
+            illuminated: false,
+        },
+    )
+    .unwrap();
+    refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+    let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+    scripts
+        .eval_callback::<()>(&format!(
+            r#"
+        local a = btech.autopilot
+        local u = mux.world.object({})
+        a.attach(u, {{ fire_mode = a.fire_modes.OPPORTUNISTIC, heat_ceiling = 1000 }})
+        a.submit(u, {{ {{ kind = a.orders.HOLD }} }}, a.submission_modes.APPEND)
+        a.resume(u)
+    "#,
+            shooter.0
+        ))
+        .unwrap();
+    let mut control = HeartbeatHarness::new(config.clone(), scripts.world().clone()).unwrap();
+    let mut firing_tick = None;
+    for tick in 1..=4 {
+        let before = control.world();
+        let metrics = control.step_diagnostic(tick, true, true).await;
+        assert!(metrics.committed);
+        if metrics.autopilot.autonomous_shots > 0 {
+            firing_tick = Some((
+                tick,
+                before,
+                control.world(),
+                metrics.autopilot.notice_trace,
+            ));
+            break;
+        }
+    }
+    let (tick, before, expected, notices) = firing_tick.expect("fixture must fire");
+    persistence::save(&config.database(), &before)
+        .await
+        .unwrap();
+    let mut db = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(config.database())
+            .foreign_keys(false),
+    )
+    .await
+    .unwrap();
+    sqlx::raw_sql("CREATE TRIGGER autopilot_shot_fail BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(FAIL,'shot rollback audit'); END;")
+        .execute(&mut db).await.unwrap();
+    let mut harness = HeartbeatHarness::new(config.clone(), before.clone()).unwrap();
+    let rejected = harness.step_diagnostic(tick, true, true).await;
+    assert!(!rejected.committed);
+    assert!(rejected.autopilot.notice_trace.is_empty());
+    assert_eq!(
+        serde_json::to_value(harness.world()).unwrap(),
+        serde_json::to_value(&before).unwrap()
+    );
+    assert_eq!(
+        harness.world().battle_roll_statistics().unwrap(),
+        before.battle_roll_statistics().unwrap()
+    );
+    sqlx::query("DROP TRIGGER autopilot_shot_fail")
+        .execute(&mut db)
+        .await
+        .unwrap();
+    let retry = harness.step_diagnostic(tick, true, true).await;
+    assert!(retry.committed && retry.autopilot.autonomous_shots > 0);
+    assert_eq!(retry.autopilot.notice_trace, notices);
+    assert_eq!(
+        serde_json::to_value(harness.world()).unwrap(),
+        serde_json::to_value(expected).unwrap()
+    );
+    sqlx::Connection::close(db).await.unwrap();
+}

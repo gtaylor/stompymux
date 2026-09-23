@@ -992,17 +992,14 @@ impl BattleUnit {
         if let Some(projection) = super::loadout_context::mech(self) {
             return Ok(projection);
         }
-        let projection = (if self.contract_loadout {
-            BattleLoadout::resolve_contract(&self.definition)
-        } else {
-            BattleLoadout::resolve(&self.definition)
-        })?;
+        let projection = super::equipment_context::mech(&self.definition, self.contract_loadout)?;
         super::loadout_context::remember_mech(self, &projection);
         Ok(projection)
     }
 
     /// Reject corrupt or unsupported persisted construction state.
     pub(crate) fn validate(&self) -> Result<()> {
+        let _measurement = super::autopilot::diagnostics::combat("validation_unit");
         let _loadouts = super::loadout_context::LoadoutScope::unit(self);
         self.last_jump.validate()?;
         self.propulsion.validate()?;

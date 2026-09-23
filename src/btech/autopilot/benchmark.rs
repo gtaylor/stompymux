@@ -55,6 +55,10 @@ pub struct BenchmarkOptions {
     pub detailed: bool,
     /// Optional JSONL gameplay checksums; serialization occurs outside measured phases.
     pub trace: Option<std::path::PathBuf>,
+    /// None selects all battlefield geometries.
+    pub scenario: Option<BenchmarkScenario>,
+    /// None selects both weapons-hold and opportunistic fire.
+    pub fire: Option<bool>,
 }
 
 impl Default for BenchmarkOptions {
@@ -67,6 +71,8 @@ impl Default for BenchmarkOptions {
             controllers: DEFAULT_CONTROLLERS,
             detailed: false,
             trace: None,
+            scenario: None,
+            fire: None,
         }
     }
 }
@@ -133,7 +139,19 @@ pub async fn run(options: &BenchmarkOptions) -> Result<BenchmarkReport> {
         .map(std::io::BufWriter::new);
     let mut results = Vec::new();
     for scenario in BenchmarkScenario::ALL {
+        if options
+            .scenario
+            .is_some_and(|selected| selected != scenario)
+        {
+            continue;
+        }
         for opportunistic_fire in [false, true] {
+            if options
+                .fire
+                .is_some_and(|selected| selected != opportunistic_fire)
+            {
+                continue;
+            }
             results.push(run_case(options, scenario, opportunistic_fire, &mut trace).await?);
         }
     }
@@ -303,10 +321,7 @@ async fn run_case(
             combat_samples.push(duration_from_nanos(
                 heartbeat.autopilot.combat_service_time_ns,
             ));
-            for i in 0..7 {
-                diagnostics.calls[i] += heartbeat.autopilot.diagnostics.calls[i];
-                diagnostics.nanoseconds[i] += heartbeat.autopilot.diagnostics.nanoseconds[i];
-            }
+            diagnostics.merge(&heartbeat.autopilot.diagnostics);
             expansions = expansions.saturating_add(heartbeat.autopilot.expansions);
             max_controller_expansions =
                 max_controller_expansions.max(heartbeat.autopilot.max_controller_expansions);

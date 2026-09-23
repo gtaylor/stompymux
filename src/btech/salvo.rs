@@ -3,7 +3,6 @@ use super::{BattleHit, BattleHitArc, BattleHitRules, BattleImpactReport, BattleW
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, bail, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 impl BattleWeapon {
     /// Resolve an unmodified 2d6 cluster roll for a supported conventional launcher.
@@ -272,6 +271,7 @@ pub(super) fn resolve_salvo_in_action(
             experience: None,
         },
         false,
+        super::shot_transaction::EffectMode::Atomic,
     )
 }
 
@@ -294,6 +294,7 @@ pub fn resolve_salvo(
         rules,
         SalvoEffects::Material,
         false,
+        super::shot_transaction::EffectMode::Atomic,
     )
 }
 
@@ -314,6 +315,7 @@ pub fn resolve_tactical_salvo(
         rules.hit,
         SalvoEffects::Tactical(rules),
         false,
+        super::shot_transaction::EffectMode::Atomic,
     )
 }
 
@@ -339,6 +341,36 @@ pub(super) fn resolve_salvo_from_shot(
     target: ObjectId,
     weapon: impl Into<SalvoWeapon>,
     damage: ShotDamage<'_>,
+) -> Result<BattleSalvoReport> {
+    resolve_salvo_from_shot_mode(
+        world,
+        shooter,
+        target,
+        weapon,
+        damage,
+        super::shot_transaction::EffectMode::Atomic,
+    )
+}
+
+/// Apply directly to an enclosing shot; every failure aborts that shot.
+pub(super) fn resolve_salvo_in_candidate(
+    world: &mut super::shot_transaction::ShotCandidate,
+    shooter: ObjectId,
+    target: ObjectId,
+    weapon: impl Into<SalvoWeapon>,
+    damage: ShotDamage<'_>,
+) -> Result<BattleSalvoReport> {
+    let mode = world.mode();
+    resolve_salvo_from_shot_mode(world, shooter, target, weapon, damage, mode)
+}
+
+fn resolve_salvo_from_shot_mode(
+    world: &mut World,
+    shooter: ObjectId,
+    target: ObjectId,
+    weapon: impl Into<SalvoWeapon>,
+    damage: ShotDamage<'_>,
+    mode: super::shot_transaction::EffectMode,
 ) -> Result<BattleSalvoReport> {
     let weapon = weapon.into();
     let effects = if damage.character {
@@ -369,6 +401,7 @@ pub(super) fn resolve_salvo_from_shot(
         damage.rules.hit,
         effects,
         damage.glancing,
+        mode,
     )
 }
 
@@ -457,7 +490,9 @@ fn resolve_salvo_with_effects(
     rules: BattleHitRules,
     effects: SalvoEffects<'_>,
     glancing: bool,
+    mode: super::shot_transaction::EffectMode,
 ) -> Result<BattleSalvoReport> {
+    let transaction_mode = mode;
     let (weapon, mode) = weapon;
     let character = matches!(effects, SalvoEffects::Character { .. });
     let tactical_rules = match effects {
@@ -485,7 +520,7 @@ fn resolve_salvo_with_effects(
         .constructed_units()
         .get(&target)
         .context("Unit construction state is unavailable")?;
-    unit.validate()?;
+    super::validation_context::unit(target, unit)?;
     ensure!(
         !unit.is_destroyed()
             || matches!(
@@ -514,7 +549,7 @@ fn resolve_salvo_with_effects(
             )
         }
     };
-    let mut candidate = world.clone();
+    let mut candidate = super::shot_transaction::EffectCandidate::new(world, transaction_mode);
     let initial_woods = if let HitGeometry::Direct {
         shooter,
         woods_damage: true,
@@ -525,7 +560,7 @@ fn resolve_salvo_with_effects(
     } else {
         None
     };
-    let unit = Arc::make_mut(&mut candidate.btech.constructed)
+    let unit = super::autopilot::diagnostics::make_mut(&mut candidate.btech.constructed)
         .get_mut(&target)
         .unwrap();
     let fire_mode = match geometry {
@@ -602,7 +637,7 @@ fn resolve_salvo_with_effects(
                     surviving,
                 )?);
             }
-            *world = candidate;
+            candidate.commit();
             return Ok(report);
         }
     }
@@ -686,7 +721,7 @@ fn resolve_salvo_with_effects(
             let roll = dice.generic_roll();
             rules.resolve(unit, arc, roll, &mut dice)?
         };
-        Arc::make_mut(&mut candidate.btech.constructed)
+        super::autopilot::diagnostics::make_mut(&mut candidate.btech.constructed)
             .get_mut(&target)
             .unwrap()
             .dice = dice;
@@ -767,7 +802,7 @@ fn resolve_salvo_with_effects(
             flooding,
         });
     }
-    *world = candidate;
+    candidate.commit();
     Ok(report)
 }
 

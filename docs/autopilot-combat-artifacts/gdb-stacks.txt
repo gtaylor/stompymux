@@ -1,0 +1,1867 @@
+benchmark: obstacles fire=true repetition 1/1
+20260922.162435 Big Stompy Robot Game INI/INFO : Help reindexed: 0 article(s), 0 keyword(s), 0 error(s), 0 warning(s).
+benchmark: obstacles fire=true repetition 1 tick 36/135; autopilot 70.8 ms, enabled 100, renewed 0
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+__memcmp_avx2_movbe () at ../sysdeps/x86_64/multiarch/memcmp-avx2-movbe.S:166
+SAMPLE 0
+#0  __memcmp_avx2_movbe () at ../sysdeps/x86_64/multiarch/memcmp-avx2-movbe.S:166
+#1  0x0000555556341dcd in <stompymux_rs::btech::vehicle_template::BattleVehicleTemplate>::has_special ()
+#2  0x0000555555da2c83 in stompymux_rs::btech::scanner::scanner_unit ()
+#3  0x0000555556382815 in stompymux_rs::btech::contacts::contact_facts_with_unit ()
+#4  0x0000555556571cc4 in <alloc::vec::Vec<stompymux_rs::btech::contacts::BattleContactFacts> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<stompymux_rs::btech::contacts::BattleContactFacts, core::iter::adapters::filter_map::FilterMap<alloc::collections::btree::map::Keys<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::contacts::BattleContact>, stompymux_rs::btech::contacts::acquired_contact_facts::{closure#0}>>>::from_iter ()
+#5  0x0000555556381c11 in stompymux_rs::btech::contacts::acquired_contact_facts ()
+#6  0x0000555556243d37 in stompymux_rs::btech::autopilot::observations::observe_with_memory ()
+#7  0x000055555675c883 in stompymux_rs::btech::autopilot::runtime::advance_combat_inner ()
+#8  0x000055555675f829 in stompymux_rs::btech::autopilot::runtime::advance_combat_with_metrics ()
+#9  0x0000555555abd9d8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#10 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#11 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#12 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#13 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#14 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#15 0x0000555555cc5cff in autopilot_bench::main ()
+#16 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#17 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#18 0x0000555556c00697 in std::rt::lang_start_internal ()
+#19 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00007ffff7cab3ed in _int_free (av=0x7ffff7e04ac0 <main_arena>, p=<optimized out>, have_lock=0) at ./malloc/malloc.c:4622
+SAMPLE 1
+#0  0x00007ffff7cab3ed in _int_free (av=0x7ffff7e04ac0 <main_arena>, p=<optimized out>, have_lock=0) at ./malloc/malloc.c:4622
+#1  0x00007ffff7cadeae in __GI___libc_free (mem=0x5555571c3b10) at ./malloc/malloc.c:3398
+#2  0x0000555556245c3b in <alloc::collections::btree::map::BTreeMap<std::path::PathBuf, alloc::string::String> as core::ops::drop::Drop>::drop ()
+#3  0x00005555564882ef in core::ptr::drop_glue::<stompymux_rs::config::Config> ()
+#4  0x00005555564e49d7 in stompymux_rs::btech::notify_message ()
+#5  0x0000555555abcba8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#6  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#7  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#8  0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#9  0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#10 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#11 0x0000555555cc5cff in autopilot_bench::main ()
+#12 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#13 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#14 0x0000555556c00697 in std::rt::lang_start_internal ()
+#15 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555555b5f65c in <serde_json::ser::Compound<&mut alloc::vec::Vec<u8>, serde_json::ser::CompactFormatter> as serde_core::ser::SerializeMap>::serialize_entry::<str, bool> ()
+SAMPLE 2
+#0  0x0000555555b5f65c in <serde_json::ser::Compound<&mut alloc::vec::Vec<u8>, serde_json::ser::CompactFormatter> as serde_core::ser::SerializeMap>::serialize_entry::<str, bool> ()
+#1  0x0000555555ce3268 in <stompymux_rs::btech::scanner::BattleSensorSignature as serde_core::ser::Serialize>::serialize::<&mut serde_json::ser::Serializer<&mut alloc::vec::Vec<u8>>> ()
+#2  0x0000555555ce416b in <stompymux_rs::btech::vehicle::BattleVehicle as serde_core::ser::Serialize>::serialize::<&mut serde_json::ser::Serializer<&mut alloc::vec::Vec<u8>>> ()
+#3  0x0000555555b4301a in <serde_json::ser::Compound<&mut alloc::vec::Vec<u8>, serde_json::ser::CompactFormatter> as serde_core::ser::SerializeMap>::serialize_entry::<str, alloc::sync::Arc<alloc::collections::btree::map::BTreeMap<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::vehicle::BattleVehicle>>> ()
+#4  0x0000555555c7bf74 in <stompymux_rs::btech::state::BtechState as serde_core::ser::Serialize>::serialize::<&mut serde_json::ser::Serializer<&mut alloc::vec::Vec<u8>>> ()
+#5  0x0000555555ca16cc in <stompymux_rs::world::model::World as serde_core::ser::Serialize>::serialize::<&mut serde_json::ser::Serializer<&mut alloc::vec::Vec<u8>>> ()
+#6  0x0000555555ab72b5 in <stompymux_rs::server::Server>::commit_heartbeat::{closure#0} ()
+#7  0x0000555555abecf6 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#8  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#9  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#10 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#11 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#12 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#13 0x0000555555cc5cff in autopilot_bench::main ()
+#14 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#15 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#16 0x0000555556c00697 in std::rt::lang_start_internal ()
+#17 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555556595b90 in <[indexmap::Bucket<alloc::string::String, toml::value::Value>] as alloc::slice::SpecCloneIntoVec<indexmap::Bucket<alloc::string::String, toml::value::Value>, alloc::alloc::Global>>::clone_into ()
+SAMPLE 3
+#0  0x0000555556595b90 in <[indexmap::Bucket<alloc::string::String, toml::value::Value>] as alloc::slice::SpecCloneIntoVec<indexmap::Bucket<alloc::string::String, toml::value::Value>, alloc::alloc::Global>>::clone_into ()
+#1  0x00005555562f54fc in <indexmap::inner::Core<alloc::string::String, toml::value::Value> as core::clone::Clone>::clone ()
+#2  0x0000555556595fc4 in <indexmap::Bucket<alloc::string::String, toml::value::Value> as core::clone::Clone>::clone ()
+#3  0x0000555556595b9b in <[indexmap::Bucket<alloc::string::String, toml::value::Value>] as alloc::slice::SpecCloneIntoVec<indexmap::Bucket<alloc::string::String, toml::value::Value>, alloc::alloc::Global>>::clone_into ()
+#4  0x00005555562f54fc in <indexmap::inner::Core<alloc::string::String, toml::value::Value> as core::clone::Clone>::clone ()
+#5  0x0000555556595fc4 in <indexmap::Bucket<alloc::string::String, toml::value::Value> as core::clone::Clone>::clone ()
+#6  0x0000555556595b9b in <[indexmap::Bucket<alloc::string::String, toml::value::Value>] as alloc::slice::SpecCloneIntoVec<indexmap::Bucket<alloc::string::String, toml::value::Value>, alloc::alloc::Global>>::clone_into ()
+#7  0x00005555562f54fc in <indexmap::inner::Core<alloc::string::String, toml::value::Value> as core::clone::Clone>::clone ()
+#8  0x0000555556480138 in <stompymux_rs::config::Config as core::clone::Clone>::clone ()
+#9  0x0000555556432ee5 in stompymux_rs::lua::configuration ()
+#10 0x00005555564e4915 in stompymux_rs::btech::notify_message ()
+#11 0x0000555555abcba8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#12 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#13 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#14 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#15 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#16 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#17 0x0000555555cc5cff in autopilot_bench::main ()
+#18 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#19 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#20 0x0000555556c00697 in std::rt::lang_start_internal ()
+#21 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555555b5ef0f in <serde_json::ser::Compound<&mut alloc::vec::Vec<u8>, serde_json::ser::CompactFormatter> as serde_core::ser::SerializeMap>::serialize_entry::<str, stompymux_rs::world::model::ObjectId> ()
+SAMPLE 4
+#0  0x0000555555b5ef0f in <serde_json::ser::Compound<&mut alloc::vec::Vec<u8>, serde_json::ser::CompactFormatter> as serde_core::ser::SerializeMap>::serialize_entry::<str, stompymux_rs::world::model::ObjectId> ()
+#1  0x0000555555c4b90b in <stompymux_rs::btech::unit::BattlePosition as serde_core::ser::Serialize>::serialize::<&mut serde_json::ser::Serializer<&mut alloc::vec::Vec<u8>>> ()
+#2  0x0000555555c06c9b in <stompymux_rs::btech::autopilot::LastSighting as serde_core::ser::Serialize>::serialize::<&mut serde_json::ser::Serializer<&mut alloc::vec::Vec<u8>>> ()
+#3  0x0000555555b53b92 in <serde_json::ser::Compound<&mut alloc::vec::Vec<u8>, serde_json::ser::CompactFormatter> as serde_core::ser::SerializeMap>::serialize_entry::<str, alloc::collections::btree::map::BTreeMap<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::autopilot::LastSighting>> ()
+#4  0x0000555555c06fe4 in <stompymux_rs::btech::autopilot::AutopilotController as serde_core::ser::Serialize>::serialize::<&mut serde_json::ser::Serializer<&mut alloc::vec::Vec<u8>>> ()
+#5  0x0000555555b43b8a in <serde_json::ser::Compound<&mut alloc::vec::Vec<u8>, serde_json::ser::CompactFormatter> as serde_core::ser::SerializeMap>::serialize_entry::<str, alloc::sync::Arc<alloc::collections::btree::map::BTreeMap<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::autopilot::AutopilotController>>> ()
+#6  0x0000555555c7bd40 in <stompymux_rs::btech::state::BtechState as serde_core::ser::Serialize>::serialize::<&mut serde_json::ser::Serializer<&mut alloc::vec::Vec<u8>>> ()
+#7  0x0000555555ca16cc in <stompymux_rs::world::model::World as serde_core::ser::Serialize>::serialize::<&mut serde_json::ser::Serializer<&mut alloc::vec::Vec<u8>>> ()
+#8  0x0000555555ab72b5 in <stompymux_rs::server::Server>::commit_heartbeat::{closure#0} ()
+#9  0x0000555555abecf6 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#10 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#11 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#12 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#13 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#14 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#15 0x0000555555cc5cff in autopilot_bench::main ()
+#16 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#17 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#18 0x0000555556c00697 in std::rt::lang_start_internal ()
+#19 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00007ffff7cabafb in _int_malloc (av=av@entry=0x7ffff7e04ac0 <main_arena>, bytes=bytes@entry=9) at ./malloc/malloc.c:3954
+3954	in ./malloc/malloc.c
+SAMPLE 5
+#0  0x00007ffff7cabafb in _int_malloc (av=av@entry=0x7ffff7e04ac0 <main_arena>, bytes=bytes@entry=9) at ./malloc/malloc.c:3954
+#1  0x00007ffff7cad7f4 in __GI___libc_malloc (bytes=9) at ./malloc/malloc.c:3336
+#2  0x0000555556c1df3f in <alloc::string::String as core::clone::Clone>::clone ()
+#3  0x000055555659da04 in <alloc::vec::Vec<alloc::string::String> as core::clone::Clone>::clone ()
+#4  0x000055555647f324 in <stompymux_rs::config::Config as core::clone::Clone>::clone ()
+#5  0x0000555556432ee5 in stompymux_rs::lua::configuration ()
+#6  0x00005555564e4915 in stompymux_rs::btech::notify_message ()
+#7  0x0000555555abcba8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#8  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#9  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#10 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#11 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#12 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#13 0x0000555555cc5cff in autopilot_bench::main ()
+#14 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#15 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#16 0x0000555556c00697 in std::rt::lang_start_internal ()
+#17 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+syscall () at ../sysdeps/unix/sysv/linux/x86_64/syscall.S:38
+SAMPLE 6
+#0  syscall () at ../sysdeps/unix/sysv/linux/x86_64/syscall.S:38
+#1  0x0000555556b80849 in <parking_lot::condvar::Condvar>::wait_until_internal ()
+#2  0x0000555556b675be in <tokio::runtime::park::Inner>::park ()
+#3  0x0000555555b272a8 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#4  0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#5  0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#6  0x0000555555cc5cff in autopilot_bench::main ()
+#7  0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#8  0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#9  0x0000555556c00697 in std::rt::lang_start_internal ()
+#10 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00007ffff7ca9be3 in unlink_chunk (p=p@entry=0x555557690a00, av=0x7ffff7e04ac0 <main_arena>) at ./malloc/malloc.c:1613
+SAMPLE 7
+#0  0x00007ffff7ca9be3 in unlink_chunk (p=p@entry=0x555557690a00, av=0x7ffff7e04ac0 <main_arena>) at ./malloc/malloc.c:1613
+#1  0x00007ffff7cac2b5 in _int_malloc (av=av@entry=0x7ffff7e04ac0 <main_arena>, bytes=bytes@entry=30) at ./malloc/malloc.c:4381
+#2  0x00007ffff7cad7f4 in __GI___libc_malloc (bytes=30) at ./malloc/malloc.c:3336
+#3  0x00005555561e2df2 in <alloc::collections::btree::map::BTreeMap<_, _, _> as core::clone::Clone>::clone::clone_subtree::<alloc::string::String, std::path::PathBuf, alloc::alloc::Global> ()
+#4  0x00005555561e2bff in <alloc::collections::btree::map::BTreeMap<_, _, _> as core::clone::Clone>::clone::clone_subtree::<alloc::string::String, std::path::PathBuf, alloc::alloc::Global> ()
+#5  0x00005555561e2bff in <alloc::collections::btree::map::BTreeMap<_, _, _> as core::clone::Clone>::clone::clone_subtree::<alloc::string::String, std::path::PathBuf, alloc::alloc::Global> ()
+#6  0x000055555647ff3c in <stompymux_rs::config::Config as core::clone::Clone>::clone ()
+#7  0x0000555556432ee5 in stompymux_rs::lua::configuration ()
+#8  0x00005555564e4915 in stompymux_rs::btech::notify_message ()
+#9  0x0000555555abcba8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#10 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#11 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#12 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#13 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#14 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#15 0x0000555555cc5cff in autopilot_bench::main ()
+#16 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#17 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#18 0x0000555556c00697 in std::rt::lang_start_internal ()
+#19 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+__GI___lll_lock_wake (futex=futex@entry=0x555556cdef10 <staticMutexes.112+48>, private=<optimized out>) at ./nptl/lowlevellock.c:64
+SAMPLE 8
+#0  __GI___lll_lock_wake (futex=futex@entry=0x555556cdef10 <staticMutexes.112+48>, private=<optimized out>) at ./nptl/lowlevellock.c:64
+#1  0x00007ffff7ca1bb2 in lll_mutex_unlock_optimized (mutex=0x555556cdef10 <staticMutexes.112+48>) at ./nptl/pthread_mutex_unlock.c:43
+#2  __GI___pthread_mutex_unlock_usercnt (decr=1, mutex=0x555556cdef10 <staticMutexes.112+48>) at ./nptl/pthread_mutex_unlock.c:68
+#3  ___pthread_mutex_unlock (mutex=0x555556cdef10 <staticMutexes.112+48>) at ./nptl/pthread_mutex_unlock.c:368
+#4  0x0000555555aaf200 in core::ptr::drop_glue::<sqlx_sqlite::row::SqliteRow> ()
+#5  0x0000555555adde40 in stompymux_rs::persistence::btech::load::{closure#0} ()
+#6  0x0000555555ad19b8 in stompymux_rs::persistence::load::read::{closure#0} ()
+#7  0x0000555555ac0c4d in stompymux_rs::persistence::save_with_timeout::{closure#0} ()
+#8  0x0000555555ab7c21 in <stompymux_rs::server::Server>::commit_heartbeat::{closure#0} ()
+#9  0x0000555555abecf6 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#10 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#11 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#12 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#13 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#14 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#15 0x0000555555cc5cff in autopilot_bench::main ()
+#16 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#17 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#18 0x0000555556c00697 in std::rt::lang_start_internal ()
+#19 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x000055555633b9c2 in <alloc::sync::Arc<alloc::collections::btree::map::BTreeMap<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::unit::BattleUnit>>>::make_mut ()
+SAMPLE 9
+#0  0x000055555633b9c2 in <alloc::sync::Arc<alloc::collections::btree::map::BTreeMap<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::unit::BattleUnit>>>::make_mut ()
+#1  0x0000555556382552 in stompymux_rs::btech::contacts::update_optical_contact ()
+#2  0x0000555555da3e57 in stompymux_rs::btech::scanner::refresh_optical_scanners ()
+#3  0x0000555555abd850 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#4  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#5  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#6  0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#7  0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#8  0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#9  0x0000555555cc5cff in autopilot_bench::main ()
+#10 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#11 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#12 0x0000555556c00697 in std::rt::lang_start_internal ()
+#13 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555556232ac2 in <alloc::collections::btree::map::BTreeMap<u64, alloc::collections::btree::set_val::SetValZST>>::insert ()
+SAMPLE 10
+#0  0x0000555556232ac2 in <alloc::collections::btree::map::BTreeMap<u64, alloc::collections::btree::set_val::SetValZST>>::insert ()
+#1  0x00005555566f7216 in <stompymux_rs::btech::autopilot::AutopilotController>::validate ()
+#2  0x0000555556708173 in <stompymux_rs::btech::state::BtechState>::validate ()
+#3  0x0000555555ad1a88 in stompymux_rs::persistence::load::read::{closure#0} ()
+#4  0x0000555555ac0c4d in stompymux_rs::persistence::save_with_timeout::{closure#0} ()
+#5  0x0000555555ab7c21 in <stompymux_rs::server::Server>::commit_heartbeat::{closure#0} ()
+#6  0x0000555555abecf6 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#7  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#8  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#9  0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#10 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#11 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#12 0x0000555555cc5cff in autopilot_bench::main ()
+#13 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#14 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#15 0x0000555556c00697 in std::rt::lang_start_internal ()
+#16 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00005555564e046b in <stompymux_rs::btech::geometry::BattlePoint>::containing_hex ()
+SAMPLE 11
+#0  0x00005555564e046b in <stompymux_rs::btech::geometry::BattlePoint>::containing_hex ()
+#1  0x00005555564e1066 in <stompymux_rs::btech::geometry::BattlePoint>::trace_positions ()
+#2  0x00005555562e503a in stompymux_rs::btech::los_trace::center_trace ()
+#3  0x0000555556670064 in stompymux_rs::btech::los::terrain_los_with_endpoint ()
+#4  0x000055555666fc3f in stompymux_rs::btech::los::unit_terrain_los ()
+#5  0x00005555565267fa in stompymux_rs::btech::sensors::map_optical_contact_prepared ()
+#6  0x0000555556381f7b in stompymux_rs::btech::contacts::update_optical_contact ()
+#7  0x0000555555da3e57 in stompymux_rs::btech::scanner::refresh_optical_scanners ()
+#8  0x0000555555abd850 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#9  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#10 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#11 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#12 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#13 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#14 0x0000555555cc5cff in autopilot_bench::main ()
+#15 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#16 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#17 0x0000555556c00697 in std::rt::lang_start_internal ()
+#18 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555556c25994 in core::str::converts::from_utf8 ()
+SAMPLE 12
+#0  0x0000555556c25994 in core::str::converts::from_utf8 ()
+#1  0x0000555556904670 in <sqlx_sqlite::value::SqliteValueRef>::text_owned ()
+#2  0x00005555568e3cb7 in <alloc::string::String as sqlx_core::decode::Decode<sqlx_sqlite::database::Sqlite>>::decode ()
+#3  0x0000555555c2e40c in <sqlx_sqlite::row::SqliteRow as sqlx_core::row::Row>::try_get::<alloc::string::String, usize> ()
+#4  0x0000555555ab4ec4 in <sqlx_core::query_scalar::QueryScalar<sqlx_sqlite::database::Sqlite, alloc::string::String, sqlx_sqlite::arguments::SqliteArguments>>::fetch_optional::<&mut sqlx_sqlite::connection::SqliteConnection>::{closure#0} ()
+#5  0x0000555555aff01b in stompymux_rs::persistence::btech::save::{closure#0} ()
+#6  0x0000555555b19ee4 in stompymux_rs::persistence::write::apply_changes::{closure#0} ()
+#7  0x0000555555ac0d6b in stompymux_rs::persistence::save_with_timeout::{closure#0} ()
+#8  0x0000555555ab7c21 in <stompymux_rs::server::Server>::commit_heartbeat::{closure#0} ()
+#9  0x0000555555abecf6 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#10 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#11 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#12 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#13 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#14 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#15 0x0000555555cc5cff in autopilot_bench::main ()
+#16 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#17 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#18 0x0000555556c00697 in std::rt::lang_start_internal ()
+#19 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555555da2d6a in stompymux_rs::btech::scanner::scanner_unit ()
+SAMPLE 13
+#0  0x0000555555da2d6a in stompymux_rs::btech::scanner::scanner_unit ()
+#1  0x0000555555da3d13 in stompymux_rs::btech::scanner::refresh_optical_scanners ()
+#2  0x0000555555abd850 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#3  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#4  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#5  0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#6  0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#7  0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#8  0x0000555555cc5cff in autopilot_bench::main ()
+#9  0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#10 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#11 0x0000555556c00697 in std::rt::lang_start_internal ()
+#12 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555555b37e72 in serde_json::ser::format_escaped_str::<&mut alloc::vec::Vec<u8>, serde_json::ser::CompactFormatter> ()
+SAMPLE 14
+#0  0x0000555555b37e72 in serde_json::ser::format_escaped_str::<&mut alloc::vec::Vec<u8>, serde_json::ser::CompactFormatter> ()
+#1  0x0000555555b5fecb in <serde_json::ser::Compound<&mut alloc::vec::Vec<u8>, serde_json::ser::CompactFormatter> as serde_core::ser::SerializeMap>::serialize_entry::<str, i32> ()
+#2  0x0000555555c9ea1b in <stompymux_rs::btech::base_movement_fields::BaseMovementFields as serde_core::ser::Serialize>::serialize::<&mut serde_json::ser::Serializer<&mut alloc::vec::Vec<u8>>> ()
+#3  0x0000555555ce36b3 in <stompymux_rs::btech::vehicle::BattleVehicle as serde_core::ser::Serialize>::serialize::<&mut serde_json::ser::Serializer<&mut alloc::vec::Vec<u8>>> ()
+#4  0x0000555555b01394 in stompymux_rs::persistence::btech::save::{closure#0} ()
+#5  0x0000555555b19ee4 in stompymux_rs::persistence::write::apply_changes::{closure#0} ()
+#6  0x0000555555ac0d6b in stompymux_rs::persistence::save_with_timeout::{closure#0} ()
+#7  0x0000555555ab7c21 in <stompymux_rs::server::Server>::commit_heartbeat::{closure#0} ()
+#8  0x0000555555abecf6 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#9  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#10 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#11 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#12 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#13 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#14 0x0000555555cc5cff in autopilot_bench::main ()
+#15 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#16 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#17 0x0000555556c00697 in std::rt::lang_start_internal ()
+#18 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00007ffff7cab271 in _int_free (av=0x7ffff7e04ac0 <main_arena>, p=0x55555726d890, have_lock=0) at ./malloc/malloc.c:4505
+SAMPLE 15
+#0  0x00007ffff7cab271 in _int_free (av=0x7ffff7e04ac0 <main_arena>, p=0x55555726d890, have_lock=0) at ./malloc/malloc.c:4505
+#1  0x00007ffff7cadeae in __GI___libc_free (mem=0x55555726d8a0) at ./malloc/malloc.c:3398
+#2  0x000055555666fba1 in stompymux_rs::btech::los::unit_terrain_los ()
+#3  0x0000555556382030 in stompymux_rs::btech::contacts::update_optical_contact ()
+#4  0x0000555555da3e57 in stompymux_rs::btech::scanner::refresh_optical_scanners ()
+#5  0x0000555555abd850 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#6  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#7  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#8  0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#9  0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#10 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#11 0x0000555555cc5cff in autopilot_bench::main ()
+#12 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#13 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#14 0x0000555556c00697 in std::rt::lang_start_internal ()
+#15 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00007ffff7cad7e3 in __GI___libc_malloc (bytes=12966) at ./malloc/malloc.c:3334
+3334	in ./malloc/malloc.c
+SAMPLE 16
+#0  0x00007ffff7cad7e3 in __GI___libc_malloc (bytes=12966) at ./malloc/malloc.c:3334
+#1  0x00005555569046db in <sqlx_sqlite::value::SqliteValueRef>::text_owned ()
+#2  0x00005555568e3cb7 in <alloc::string::String as sqlx_core::decode::Decode<sqlx_sqlite::database::Sqlite>>::decode ()
+#3  0x0000555555c2e40c in <sqlx_sqlite::row::SqliteRow as sqlx_core::row::Row>::try_get::<alloc::string::String, usize> ()
+#4  0x0000555555ab4ec4 in <sqlx_core::query_scalar::QueryScalar<sqlx_sqlite::database::Sqlite, alloc::string::String, sqlx_sqlite::arguments::SqliteArguments>>::fetch_optional::<&mut sqlx_sqlite::connection::SqliteConnection>::{closure#0} ()
+#5  0x0000555555b01518 in stompymux_rs::persistence::btech::save::{closure#0} ()
+#6  0x0000555555b19ee4 in stompymux_rs::persistence::write::apply_changes::{closure#0} ()
+#7  0x0000555555ac0d6b in stompymux_rs::persistence::save_with_timeout::{closure#0} ()
+#8  0x0000555555ab7c21 in <stompymux_rs::server::Server>::commit_heartbeat::{closure#0} ()
+#9  0x0000555555abecf6 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#10 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#11 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#12 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#13 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#14 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#15 0x0000555555cc5cff in autopilot_bench::main ()
+#16 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#17 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#18 0x0000555556c00697 in std::rt::lang_start_internal ()
+#19 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555556bed9f0 in __rustc::__rdl_alloc ()
+SAMPLE 17
+#0  0x0000555556bed9f0 in __rustc::__rdl_alloc ()
+#1  0x000055555689ee8d in <alloc::raw_vec::RawVecInner>::finish_grow ()
+#2  0x000055555689edda in <alloc::raw_vec::RawVec<char>>::grow_one ()
+#3  0x0000555556007fa7 in stompymux_rs::btech::observer::battlefield_label ()
+#4  0x0000555555da2c0c in stompymux_rs::btech::scanner::scanner_unit ()
+#5  0x000055555666face in stompymux_rs::btech::los::unit_terrain_los ()
+#6  0x00005555565267fa in stompymux_rs::btech::sensors::map_optical_contact_prepared ()
+#7  0x0000555556381f7b in stompymux_rs::btech::contacts::update_optical_contact ()
+#8  0x0000555555da3e57 in stompymux_rs::btech::scanner::refresh_optical_scanners ()
+#9  0x0000555555abd850 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#10 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#11 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#12 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#13 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#14 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#15 0x0000555555cc5cff in autopilot_bench::main ()
+#16 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#17 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#18 0x0000555556c00697 in std::rt::lang_start_internal ()
+#19 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555556bed9fd in __rustc::__rdl_alloc ()
+SAMPLE 18
+#0  0x0000555556bed9fd in __rustc::__rdl_alloc ()
+#1  0x0000555556c1df3f in <alloc::string::String as core::clone::Clone>::clone ()
+#2  0x0000555556595e9d in <indexmap::Bucket<alloc::string::String, toml::value::Value> as core::clone::Clone>::clone ()
+#3  0x0000555556595b9b in <[indexmap::Bucket<alloc::string::String, toml::value::Value>] as alloc::slice::SpecCloneIntoVec<indexmap::Bucket<alloc::string::String, toml::value::Value>, alloc::alloc::Global>>::clone_into ()
+#4  0x00005555562f54fc in <indexmap::inner::Core<alloc::string::String, toml::value::Value> as core::clone::Clone>::clone ()
+#5  0x0000555556595fc4 in <indexmap::Bucket<alloc::string::String, toml::value::Value> as core::clone::Clone>::clone ()
+#6  0x0000555556595b9b in <[indexmap::Bucket<alloc::string::String, toml::value::Value>] as alloc::slice::SpecCloneIntoVec<indexmap::Bucket<alloc::string::String, toml::value::Value>, alloc::alloc::Global>>::clone_into ()
+#7  0x00005555562f54fc in <indexmap::inner::Core<alloc::string::String, toml::value::Value> as core::clone::Clone>::clone ()
+#8  0x0000555556595fc4 in <indexmap::Bucket<alloc::string::String, toml::value::Value> as core::clone::Clone>::clone ()
+#9  0x0000555556595b9b in <[indexmap::Bucket<alloc::string::String, toml::value::Value>] as alloc::slice::SpecCloneIntoVec<indexmap::Bucket<alloc::string::String, toml::value::Value>, alloc::alloc::Global>>::clone_into ()
+#10 0x00005555562f54fc in <indexmap::inner::Core<alloc::string::String, toml::value::Value> as core::clone::Clone>::clone ()
+#11 0x0000555556480138 in <stompymux_rs::config::Config as core::clone::Clone>::clone ()
+#12 0x0000555556432ee5 in stompymux_rs::lua::configuration ()
+#13 0x00005555564e4915 in stompymux_rs::btech::notify_message ()
+#14 0x0000555555da34d0 in stompymux_rs::btech::scanner::notify_contact ()
+#15 0x0000555555abe2a4 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#16 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#17 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#18 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#19 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#20 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#21 0x0000555555cc5cff in autopilot_bench::main ()
+#22 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#23 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#24 0x0000555556c00697 in std::rt::lang_start_internal ()
+#25 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+syscall () at ../sysdeps/unix/sysv/linux/x86_64/syscall.S:38
+SAMPLE 19
+#0  syscall () at ../sysdeps/unix/sysv/linux/x86_64/syscall.S:38
+#1  0x0000555556b80849 in <parking_lot::condvar::Condvar>::wait_until_internal ()
+#2  0x0000555556b675be in <tokio::runtime::park::Inner>::park ()
+#3  0x0000555555b272a8 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#4  0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#5  0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#6  0x0000555555cc5cff in autopilot_bench::main ()
+#7  0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#8  0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#9  0x0000555556c00697 in std::rt::lang_start_internal ()
+#10 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555555da3d50 in stompymux_rs::btech::scanner::refresh_optical_scanners ()
+SAMPLE 20
+#0  0x0000555555da3d50 in stompymux_rs::btech::scanner::refresh_optical_scanners ()
+#1  0x0000555555abd850 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#2  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#3  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#4  0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#5  0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#6  0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#7  0x0000555555cc5cff in autopilot_bench::main ()
+#8  0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#9  0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#10 0x0000555556c00697 in std::rt::lang_start_internal ()
+#11 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+futex_wait (private=0, expected=2, futex_word=0x555556cdef10 <staticMutexes.112+48>) at ../sysdeps/nptl/futex-internal.h:146
+SAMPLE 21
+#0  futex_wait (private=0, expected=2, futex_word=0x555556cdef10 <staticMutexes.112+48>) at ../sysdeps/nptl/futex-internal.h:146
+#1  __GI___lll_lock_wait (futex=futex@entry=0x555556cdef10 <staticMutexes.112+48>, private=0) at ./nptl/lowlevellock.c:49
+#2  0x00007ffff7ca01e1 in lll_mutex_lock_optimized (mutex=0x555556cdef10 <staticMutexes.112+48>) at ./nptl/pthread_mutex_lock.c:48
+#3  ___pthread_mutex_lock (mutex=0x555556cdef10 <staticMutexes.112+48>) at ./nptl/pthread_mutex_lock.c:93
+#4  0x000055555691969c in sqlite3_free ()
+#5  0x0000555555aaf200 in core::ptr::drop_glue::<sqlx_sqlite::row::SqliteRow> ()
+#6  0x0000555555adde40 in stompymux_rs::persistence::btech::load::{closure#0} ()
+#7  0x0000555555ad19b8 in stompymux_rs::persistence::load::read::{closure#0} ()
+#8  0x0000555555ac0c4d in stompymux_rs::persistence::save_with_timeout::{closure#0} ()
+#9  0x0000555555ab7c21 in <stompymux_rs::server::Server>::commit_heartbeat::{closure#0} ()
+#10 0x0000555555abecf6 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#11 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#12 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#13 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#14 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#15 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#16 0x0000555555cc5cff in autopilot_bench::main ()
+#17 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#18 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#19 0x0000555556c00697 in std::rt::lang_start_internal ()
+#20 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555556702ead in <stompymux_rs::btech::state::BtechState>::validate_contacts ()
+SAMPLE 22
+#0  0x0000555556702ead in <stompymux_rs::btech::state::BtechState>::validate_contacts ()
+#1  0x0000555556708f09 in <stompymux_rs::btech::state::BtechState>::validate ()
+#2  0x00005555564d9044 in <stompymux_rs::world::model::World>::validate ()
+#3  0x0000555555fac776 in stompymux_rs::btech::self_destruct::advance_battle_self_destructs_action ()
+#4  0x0000555555abd7ce in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#5  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#6  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#7  0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#8  0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#9  0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#10 0x0000555555cc5cff in autopilot_bench::main ()
+#11 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#12 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#13 0x0000555556c00697 in std::rt::lang_start_internal ()
+#14 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00007ffff7ca00d7 in ___pthread_mutex_lock (mutex=0x555556cdef10 <staticMutexes.112+48>) at ./nptl/pthread_mutex_lock.c:80
+SAMPLE 23
+#0  0x00007ffff7ca00d7 in ___pthread_mutex_lock (mutex=0x555556cdef10 <staticMutexes.112+48>) at ./nptl/pthread_mutex_lock.c:80
+#1  0x000055555691969c in sqlite3_free ()
+#2  0x0000555555aaf200 in core::ptr::drop_glue::<sqlx_sqlite::row::SqliteRow> ()
+#3  0x0000555555adde40 in stompymux_rs::persistence::btech::load::{closure#0} ()
+#4  0x0000555555ad19b8 in stompymux_rs::persistence::load::read::{closure#0} ()
+#5  0x0000555555ac0c4d in stompymux_rs::persistence::save_with_timeout::{closure#0} ()
+#6  0x0000555555ab7c21 in <stompymux_rs::server::Server>::commit_heartbeat::{closure#0} ()
+#7  0x0000555555abecf6 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#8  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#9  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#10 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#11 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#12 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#13 0x0000555555cc5cff in autopilot_bench::main ()
+#14 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#15 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#16 0x0000555556c00697 in std::rt::lang_start_internal ()
+#17 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555556702ead in <stompymux_rs::btech::state::BtechState>::validate_contacts ()
+SAMPLE 24
+#0  0x0000555556702ead in <stompymux_rs::btech::state::BtechState>::validate_contacts ()
+#1  0x000055555670984a in <stompymux_rs::btech::state::BtechState>::validate ()
+#2  0x00005555564d9044 in <stompymux_rs::world::model::World>::validate ()
+#3  0x0000555556438b87 in stompymux_rs::btech::evacuation::stagger_action ()
+#4  0x0000555555abd0bd in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#5  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#6  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#7  0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#8  0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#9  0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#10 0x0000555555cc5cff in autopilot_bench::main ()
+#11 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#12 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#13 0x0000555556c00697 in std::rt::lang_start_internal ()
+#14 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+futex_wait (private=0, expected=2, futex_word=0x555556cdef10 <staticMutexes.112+48>) at ../sysdeps/nptl/futex-internal.h:146
+SAMPLE 25
+#0  futex_wait (private=0, expected=2, futex_word=0x555556cdef10 <staticMutexes.112+48>) at ../sysdeps/nptl/futex-internal.h:146
+#1  __GI___lll_lock_wait (futex=futex@entry=0x555556cdef10 <staticMutexes.112+48>, private=0) at ./nptl/lowlevellock.c:49
+#2  0x00007ffff7ca01e1 in lll_mutex_lock_optimized (mutex=0x555556cdef10 <staticMutexes.112+48>) at ./nptl/pthread_mutex_lock.c:48
+#3  ___pthread_mutex_lock (mutex=0x555556cdef10 <staticMutexes.112+48>) at ./nptl/pthread_mutex_lock.c:93
+#4  0x000055555691969c in sqlite3_free ()
+#5  0x0000555555aaf200 in core::ptr::drop_glue::<sqlx_sqlite::row::SqliteRow> ()
+#6  0x0000555555adde40 in stompymux_rs::persistence::btech::load::{closure#0} ()
+#7  0x0000555555ad19b8 in stompymux_rs::persistence::load::read::{closure#0} ()
+#8  0x0000555555ac0c4d in stompymux_rs::persistence::save_with_timeout::{closure#0} ()
+#9  0x0000555555ab7c21 in <stompymux_rs::server::Server>::commit_heartbeat::{closure#0} ()
+#10 0x0000555555abecf6 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#11 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#12 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#13 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#14 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#15 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#16 0x0000555555cc5cff in autopilot_bench::main ()
+#17 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#18 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#19 0x0000555556c00697 in std::rt::lang_start_internal ()
+#20 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00007ffff7cab50c in _int_free (av=0x7ffff7e04ac0 <main_arena>, p=0x55555738a250, have_lock=<optimized out>) at ./malloc/malloc.c:4644
+SAMPLE 26
+#0  0x00007ffff7cab50c in _int_free (av=0x7ffff7e04ac0 <main_arena>, p=0x55555738a250, have_lock=<optimized out>) at ./malloc/malloc.c:4644
+#1  0x00007ffff7cadeae in __GI___libc_free (mem=0x55555738a260) at ./malloc/malloc.c:3398
+#2  0x00005555561d14c6 in core::ptr::drop_glue::<stompymux_rs::btech::unit::BattleUnit> ()
+#3  0x000055555624b0f6 in <alloc::collections::btree::map::BTreeMap<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::unit::BattleUnit> as core::ops::drop::Drop>::drop ()
+#4  0x0000555556112330 in <alloc::sync::Arc<alloc::collections::btree::map::BTreeMap<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::unit::BattleUnit>>>::drop_slow ()
+#5  0x00005555565d73bf in core::ptr::drop_glue::<stompymux_rs::btech::state::BtechState> ()
+#6  0x00005555565d8058 in core::ptr::drop_glue::<stompymux_rs::world::model::World> ()
+#7  0x0000555556664576 in stompymux_rs::btech::spotter_events::advance_spotter_links ()
+#8  0x0000555555abd5cf in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#9  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#10 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#11 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#12 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#13 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#14 0x0000555555cc5cff in autopilot_bench::main ()
+#15 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#16 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#17 0x0000555556c00697 in std::rt::lang_start_internal ()
+#18 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+futex_wait (private=0, expected=2, futex_word=0x555556cdef10 <staticMutexes.112+48>) at ../sysdeps/nptl/futex-internal.h:146
+SAMPLE 27
+#0  futex_wait (private=0, expected=2, futex_word=0x555556cdef10 <staticMutexes.112+48>) at ../sysdeps/nptl/futex-internal.h:146
+#1  __GI___lll_lock_wait (futex=futex@entry=0x555556cdef10 <staticMutexes.112+48>, private=0) at ./nptl/lowlevellock.c:49
+#2  0x00007ffff7ca01e1 in lll_mutex_lock_optimized (mutex=0x555556cdef10 <staticMutexes.112+48>) at ./nptl/pthread_mutex_lock.c:48
+#3  ___pthread_mutex_lock (mutex=0x555556cdef10 <staticMutexes.112+48>) at ./nptl/pthread_mutex_lock.c:93
+#4  0x000055555691969c in sqlite3_free ()
+#5  0x0000555555aaf200 in core::ptr::drop_glue::<sqlx_sqlite::row::SqliteRow> ()
+#6  0x0000555555adde40 in stompymux_rs::persistence::btech::load::{closure#0} ()
+#7  0x0000555555ad19b8 in stompymux_rs::persistence::load::read::{closure#0} ()
+#8  0x0000555555ac0c4d in stompymux_rs::persistence::save_with_timeout::{closure#0} ()
+#9  0x0000555555ab7c21 in <stompymux_rs::server::Server>::commit_heartbeat::{closure#0} ()
+#10 0x0000555555abecf6 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#11 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#12 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#13 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#14 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#15 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#16 0x0000555555cc5cff in autopilot_bench::main ()
+#17 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#18 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#19 0x0000555556c00697 in std::rt::lang_start_internal ()
+#20 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00007ffff7ca9be3 in unlink_chunk (p=p@entry=0x555557992a10, av=0x7ffff7e04ac0 <main_arena>) at ./malloc/malloc.c:1613
+SAMPLE 28
+#0  0x00007ffff7ca9be3 in unlink_chunk (p=p@entry=0x555557992a10, av=0x7ffff7e04ac0 <main_arena>) at ./malloc/malloc.c:1613
+#1  0x00007ffff7cac2b5 in _int_malloc (av=av@entry=0x7ffff7e04ac0 <main_arena>, bytes=bytes@entry=304) at ./malloc/malloc.c:4381
+#2  0x00007ffff7cad7f4 in __GI___libc_malloc (bytes=304) at ./malloc/malloc.c:3336
+#3  0x000055555626532d in <stompymux_rs::btech::vehicle::BattleVehicle as core::clone::Clone>::clone ()
+#4  0x00005555561ef1b6 in <alloc::collections::btree::map::BTreeMap<_, _, _> as core::clone::Clone>::clone::clone_subtree::<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::vehicle::BattleVehicle, alloc::alloc::Global> ()
+#5  0x00005555561eefe0 in <alloc::collections::btree::map::BTreeMap<_, _, _> as core::clone::Clone>::clone::clone_subtree::<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::vehicle::BattleVehicle, alloc::alloc::Global> ()
+#6  0x00005555561106a9 in <alloc::sync::Arc<alloc::collections::btree::map::BTreeMap<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::vehicle::BattleVehicle>>>::clone_from_ref_in ()
+#7  0x000055555664bbef in <alloc::sync::Arc<alloc::collections::btree::map::BTreeMap<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::vehicle::BattleVehicle>>>::make_mut ()
+#8  0x0000555556662b5f in stompymux_rs::btech::spotter_events::events_mut ()
+#9  0x0000555556663043 in stompymux_rs::btech::spotter_events::advance_spotter_links ()
+#10 0x0000555555abd5cf in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#11 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#12 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#13 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#14 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#15 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#16 0x0000555555cc5cff in autopilot_bench::main ()
+#17 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#18 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#19 0x0000555556c00697 in std::rt::lang_start_internal ()
+#20 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00007ffff7cad803 in __GI___libc_malloc (bytes=11) at ./malloc/malloc.c:3347
+3347	in ./malloc/malloc.c
+SAMPLE 29
+#0  0x00007ffff7cad803 in __GI___libc_malloc (bytes=11) at ./malloc/malloc.c:3347
+#1  0x0000555556c1df3f in <alloc::string::String as core::clone::Clone>::clone ()
+#2  0x000055555659f1c3 in <alloc::vec::Vec<stompymux_rs::btech::stock_selection::BattlePartForm> as core::clone::Clone>::clone ()
+#3  0x00005555561a18c9 in stompymux_rs::btech::stock_selection::part_catalogue ()
+#4  0x0000555555ae8a15 in stompymux_rs::persistence::btech::load::{closure#0} ()
+#5  0x0000555555ad19b8 in stompymux_rs::persistence::load::read::{closure#0} ()
+#6  0x0000555555ac0c4d in stompymux_rs::persistence::save_with_timeout::{closure#0} ()
+#7  0x0000555555ab7c21 in <stompymux_rs::server::Server>::commit_heartbeat::{closure#0} ()
+#8  0x0000555555abecf6 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#9  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#10 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#11 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#12 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#13 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#14 0x0000555555cc5cff in autopilot_bench::main ()
+#15 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#16 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#17 0x0000555556c00697 in std::rt::lang_start_internal ()
+#18 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555556c30f9c in floor ()
+SAMPLE 30
+#0  0x0000555556c30f9c in floor ()
+#1  0x00005555564e0536 in <stompymux_rs::btech::geometry::BattlePoint>::containing_hex ()
+#2  0x00005555564dfc15 in <stompymux_rs::btech::geometry::BattlePoint>::trace_cuts ()
+#3  0x00005555564e0e55 in <stompymux_rs::btech::geometry::BattlePoint>::trace_positions ()
+#4  0x00005555562e503a in stompymux_rs::btech::los_trace::center_trace ()
+#5  0x0000555556670064 in stompymux_rs::btech::los::terrain_los_with_endpoint ()
+#6  0x000055555666fc3f in stompymux_rs::btech::los::unit_terrain_los ()
+#7  0x00005555565267fa in stompymux_rs::btech::sensors::map_optical_contact_prepared ()
+#8  0x0000555556381f7b in stompymux_rs::btech::contacts::update_optical_contact ()
+#9  0x0000555555da3e57 in stompymux_rs::btech::scanner::refresh_optical_scanners ()
+#10 0x0000555555abd850 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#11 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#12 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#13 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#14 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#15 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#16 0x0000555555cc5cff in autopilot_bench::main ()
+#17 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#18 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#19 0x0000555556c00697 in std::rt::lang_start_internal ()
+#20 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+__GI___lll_lock_wake (futex=futex@entry=0x555556cdef10 <staticMutexes.112+48>, private=<optimized out>) at ./nptl/lowlevellock.c:64
+SAMPLE 31
+#0  __GI___lll_lock_wake (futex=futex@entry=0x555556cdef10 <staticMutexes.112+48>, private=<optimized out>) at ./nptl/lowlevellock.c:64
+#1  0x00007ffff7ca1bb2 in lll_mutex_unlock_optimized (mutex=0x555556cdef10 <staticMutexes.112+48>) at ./nptl/pthread_mutex_unlock.c:43
+#2  __GI___pthread_mutex_unlock_usercnt (decr=1, mutex=0x555556cdef10 <staticMutexes.112+48>) at ./nptl/pthread_mutex_unlock.c:68
+#3  ___pthread_mutex_unlock (mutex=0x555556cdef10 <staticMutexes.112+48>) at ./nptl/pthread_mutex_unlock.c:368
+#4  0x0000555555aaf200 in core::ptr::drop_glue::<sqlx_sqlite::row::SqliteRow> ()
+#5  0x0000555555adde40 in stompymux_rs::persistence::btech::load::{closure#0} ()
+#6  0x0000555555ad19b8 in stompymux_rs::persistence::load::read::{closure#0} ()
+#7  0x0000555555ac0c4d in stompymux_rs::persistence::save_with_timeout::{closure#0} ()
+#8  0x0000555555ab7c21 in <stompymux_rs::server::Server>::commit_heartbeat::{closure#0} ()
+#9  0x0000555555abecf6 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#10 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#11 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#12 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#13 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#14 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#15 0x0000555555cc5cff in autopilot_bench::main ()
+#16 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#17 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#18 0x0000555556c00697 in std::rt::lang_start_internal ()
+#19 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+__memcmp_avx2_movbe () at ../sysdeps/x86_64/multiarch/memcmp-avx2-movbe.S:409
+SAMPLE 32
+#0  __memcmp_avx2_movbe () at ../sysdeps/x86_64/multiarch/memcmp-avx2-movbe.S:409
+#1  0x0000555556343eed in <stompymux_rs::btech::template::BattleTemplate>::has_special ()
+#2  0x0000555555da31ec in stompymux_rs::btech::scanner::scanner_unit ()
+#3  0x0000555555da3d13 in stompymux_rs::btech::scanner::refresh_optical_scanners ()
+#4  0x0000555555abd850 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#5  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#6  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#7  0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#8  0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#9  0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#10 0x0000555555cc5cff in autopilot_bench::main ()
+#11 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#12 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#13 0x0000555556c00697 in std::rt::lang_start_internal ()
+#14 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555555a8f314 in <&mut serde_json::de::Deserializer<serde_json::read::StrRead> as serde_core::de::Deserializer>::deserialize_struct::<<stompymux_rs::btech::autopilot::AutopilotConfig as serde_core::de::Deserialize>::deserialize::__Visitor> ()
+SAMPLE 33
+#0  0x0000555555a8f314 in <&mut serde_json::de::Deserializer<serde_json::read::StrRead> as serde_core::de::Deserializer>::deserialize_struct::<<stompymux_rs::btech::autopilot::AutopilotConfig as serde_core::de::Deserialize>::deserialize::__Visitor> ()
+#1  0x0000555555a90bd9 in <&mut serde_json::de::Deserializer<serde_json::read::StrRead> as serde_core::de::Deserializer>::deserialize_struct::<<stompymux_rs::btech::autopilot::AutopilotController as serde_core::de::Deserialize>::deserialize::__Visitor> ()
+#2  0x0000555555a23a4c in serde_json::de::from_str::<stompymux_rs::btech::autopilot::AutopilotController> ()
+#3  0x0000555555aece6f in stompymux_rs::persistence::btech::load::{closure#0} ()
+#4  0x0000555555ad19b8 in stompymux_rs::persistence::load::read::{closure#0} ()
+#5  0x0000555555ac0c4d in stompymux_rs::persistence::save_with_timeout::{closure#0} ()
+#6  0x0000555555ab7c21 in <stompymux_rs::server::Server>::commit_heartbeat::{closure#0} ()
+#7  0x0000555555abecf6 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#8  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#9  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#10 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#11 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#12 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#13 0x0000555555cc5cff in autopilot_bench::main ()
+#14 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#15 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#16 0x0000555556c00697 in std::rt::lang_start_internal ()
+#17 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00005555566f74d3 in <stompymux_rs::btech::autopilot::AutopilotController>::validate ()
+SAMPLE 34
+#0  0x00005555566f74d3 in <stompymux_rs::btech::autopilot::AutopilotController>::validate ()
+#1  0x0000555556708173 in <stompymux_rs::btech::state::BtechState>::validate ()
+#2  0x00005555564d9044 in <stompymux_rs::world::model::World>::validate ()
+#3  0x0000555555fbc7c3 in stompymux_rs::btech::computer_runtime::advance_battle_computer_failures_action ()
+#4  0x0000555555abd0e6 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#5  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#6  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#7  0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#8  0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#9  0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#10 0x0000555555cc5cff in autopilot_bench::main ()
+#11 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#12 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#13 0x0000555556c00697 in std::rt::lang_start_internal ()
+#14 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+futex_wait (private=0, expected=2, futex_word=0x555556cdef10 <staticMutexes.112+48>) at ../sysdeps/nptl/futex-internal.h:146
+SAMPLE 35
+#0  futex_wait (private=0, expected=2, futex_word=0x555556cdef10 <staticMutexes.112+48>) at ../sysdeps/nptl/futex-internal.h:146
+#1  __GI___lll_lock_wait (futex=futex@entry=0x555556cdef10 <staticMutexes.112+48>, private=0) at ./nptl/lowlevellock.c:49
+#2  0x00007ffff7ca01e1 in lll_mutex_lock_optimized (mutex=0x555556cdef10 <staticMutexes.112+48>) at ./nptl/pthread_mutex_lock.c:48
+#3  ___pthread_mutex_lock (mutex=0x555556cdef10 <staticMutexes.112+48>) at ./nptl/pthread_mutex_lock.c:93
+#4  0x000055555691969c in sqlite3_free ()
+#5  0x0000555555aaf200 in core::ptr::drop_glue::<sqlx_sqlite::row::SqliteRow> ()
+#6  0x0000555555adde40 in stompymux_rs::persistence::btech::load::{closure#0} ()
+#7  0x0000555555ad19b8 in stompymux_rs::persistence::load::read::{closure#0} ()
+#8  0x0000555555ac0c4d in stompymux_rs::persistence::save_with_timeout::{closure#0} ()
+#9  0x0000555555ab7c21 in <stompymux_rs::server::Server>::commit_heartbeat::{closure#0} ()
+#10 0x0000555555abecf6 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#11 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#12 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#13 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#14 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#15 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#16 0x0000555555cc5cff in autopilot_bench::main ()
+#17 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#18 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#19 0x0000555556c00697 in std::rt::lang_start_internal ()
+#20 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00007ffff7cade59 in __GI___libc_free (mem=0x555557a29810) at ./malloc/malloc.c:3371
+SAMPLE 36
+#0  0x00007ffff7cade59 in __GI___libc_free (mem=0x555557a29810) at ./malloc/malloc.c:3371
+#1  0x0000555556245c5e in <alloc::collections::btree::map::BTreeMap<std::path::PathBuf, alloc::string::String> as core::ops::drop::Drop>::drop ()
+#2  0x00005555564882ef in core::ptr::drop_glue::<stompymux_rs::config::Config> ()
+#3  0x00005555564e49d7 in stompymux_rs::btech::notify_message ()
+#4  0x0000555555abcba8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#5  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#6  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#7  0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#8  0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#9  0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#10 0x0000555555cc5cff in autopilot_bench::main ()
+#11 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#12 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#13 0x0000555556c00697 in std::rt::lang_start_internal ()
+#14 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00005555566da2b7 in <stompymux_rs::btech::state::StoredBattleMap>::hex ()
+SAMPLE 37
+#0  0x00005555566da2b7 in <stompymux_rs::btech::state::StoredBattleMap>::hex ()
+#1  0x000055555667087e in stompymux_rs::btech::los::terrain_los_with_endpoint ()
+#2  0x000055555666fc3f in stompymux_rs::btech::los::unit_terrain_los ()
+#3  0x0000555556382aa6 in stompymux_rs::btech::contacts::contact_facts_with_unit ()
+#4  0x0000555556571cc4 in <alloc::vec::Vec<stompymux_rs::btech::contacts::BattleContactFacts> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<stompymux_rs::btech::contacts::BattleContactFacts, core::iter::adapters::filter_map::FilterMap<alloc::collections::btree::map::Keys<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::contacts::BattleContact>, stompymux_rs::btech::contacts::acquired_contact_facts::{closure#0}>>>::from_iter ()
+#5  0x0000555556381c11 in stompymux_rs::btech::contacts::acquired_contact_facts ()
+#6  0x0000555556243d37 in stompymux_rs::btech::autopilot::observations::observe_with_memory ()
+#7  0x000055555675c883 in stompymux_rs::btech::autopilot::runtime::advance_combat_inner ()
+#8  0x000055555675f829 in stompymux_rs::btech::autopilot::runtime::advance_combat_with_metrics ()
+#9  0x0000555555abd9d8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#10 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#11 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#12 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#13 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#14 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#15 0x0000555555cc5cff in autopilot_bench::main ()
+#16 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#17 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#18 0x0000555556c00697 in std::rt::lang_start_internal ()
+#19 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00007ffff7cab8e6 in _int_malloc (av=av@entry=0x7ffff7e04ac0 <main_arena>, bytes=bytes@entry=1568) at ./malloc/malloc.c:4085
+4085	in ./malloc/malloc.c
+SAMPLE 38
+#0  0x00007ffff7cab8e6 in _int_malloc (av=av@entry=0x7ffff7e04ac0 <main_arena>, bytes=bytes@entry=1568) at ./malloc/malloc.c:4085
+#1  0x00007ffff7cad7f4 in __GI___libc_malloc (bytes=1568) at ./malloc/malloc.c:3336
+#2  0x0000555556558c7d in <alloc::raw_vec::RawVecInner>::finish_grow ()
+#3  0x00005555562f5554 in <indexmap::inner::Core<alloc::string::String, toml::value::Value> as core::clone::Clone>::clone ()
+#4  0x0000555556595fc4 in <indexmap::Bucket<alloc::string::String, toml::value::Value> as core::clone::Clone>::clone ()
+#5  0x0000555556595b9b in <[indexmap::Bucket<alloc::string::String, toml::value::Value>] as alloc::slice::SpecCloneIntoVec<indexmap::Bucket<alloc::string::String, toml::value::Value>, alloc::alloc::Global>>::clone_into ()
+#6  0x00005555562f54fc in <indexmap::inner::Core<alloc::string::String, toml::value::Value> as core::clone::Clone>::clone ()
+#7  0x0000555556480138 in <stompymux_rs::config::Config as core::clone::Clone>::clone ()
+#8  0x0000555556432ee5 in stompymux_rs::lua::configuration ()
+#9  0x00005555564e4915 in stompymux_rs::btech::notify_message ()
+#10 0x0000555555abcba8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#11 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#12 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#13 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#14 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#15 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#16 0x0000555555cc5cff in autopilot_bench::main ()
+#17 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#18 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#19 0x0000555556c00697 in std::rt::lang_start_internal ()
+#20 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00005555566703c5 in stompymux_rs::btech::los::terrain_los_with_endpoint ()
+SAMPLE 39
+#0  0x00005555566703c5 in stompymux_rs::btech::los::terrain_los_with_endpoint ()
+#1  0x000055555666fc3f in stompymux_rs::btech::los::unit_terrain_los ()
+#2  0x0000555556382aa6 in stompymux_rs::btech::contacts::contact_facts_with_unit ()
+#3  0x0000555556571cc4 in <alloc::vec::Vec<stompymux_rs::btech::contacts::BattleContactFacts> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<stompymux_rs::btech::contacts::BattleContactFacts, core::iter::adapters::filter_map::FilterMap<alloc::collections::btree::map::Keys<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::contacts::BattleContact>, stompymux_rs::btech::contacts::acquired_contact_facts::{closure#0}>>>::from_iter ()
+#4  0x0000555556381c11 in stompymux_rs::btech::contacts::acquired_contact_facts ()
+#5  0x0000555556243d37 in stompymux_rs::btech::autopilot::observations::observe_with_memory ()
+#6  0x000055555675c883 in stompymux_rs::btech::autopilot::runtime::advance_combat_inner ()
+#7  0x000055555675f829 in stompymux_rs::btech::autopilot::runtime::advance_combat_with_metrics ()
+#8  0x0000555555abd9d8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#9  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#10 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#11 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#12 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#13 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#14 0x0000555555cc5cff in autopilot_bench::main ()
+#15 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#16 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#17 0x0000555556c00697 in std::rt::lang_start_internal ()
+#18 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00005555561e10c6 in <alloc::collections::btree::map::BTreeMap<_, _, _> as core::clone::Clone>::clone::clone_subtree::<alloc::string::String, alloc::string::String, alloc::alloc::Global> ()
+SAMPLE 40
+#0  0x00005555561e10c6 in <alloc::collections::btree::map::BTreeMap<_, _, _> as core::clone::Clone>::clone::clone_subtree::<alloc::string::String, alloc::string::String, alloc::alloc::Global> ()
+#1  0x000055555647f62b in <stompymux_rs::config::Config as core::clone::Clone>::clone ()
+#2  0x0000555556432ee5 in stompymux_rs::lua::configuration ()
+#3  0x00005555564e4915 in stompymux_rs::btech::notify_message ()
+#4  0x0000555555abcba8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#5  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#6  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#7  0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#8  0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#9  0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#10 0x0000555555cc5cff in autopilot_bench::main ()
+#11 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#12 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#13 0x0000555556c00697 in std::rt::lang_start_internal ()
+#14 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+__memcpy_avx_unaligned_erms () at ../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:334
+SAMPLE 41
+#0  __memcpy_avx_unaligned_erms () at ../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:334
+#1  0x0000555555b3801c in serde_json::ser::format_escaped_str::<&mut alloc::vec::Vec<u8>, serde_json::ser::CompactFormatter> ()
+#2  0x0000555555b59d68 in <serde_json::ser::Compound<&mut alloc::vec::Vec<u8>, serde_json::ser::CompactFormatter> as serde_core::ser::SerializeMap>::serialize_entry::<str, alloc::string::String> ()
+#3  0x0000555555ce2788 in <stompymux_rs::btech::radio::BattleRadioChannel as serde_core::ser::Serialize>::serialize::<&mut serde_json::ser::Serializer<&mut alloc::vec::Vec<u8>>> ()
+#4  0x0000555555b3a37d in <serde_json::ser::Compound<&mut alloc::vec::Vec<u8>, serde_json::ser::CompactFormatter> as serde_core::ser::SerializeMap>::serialize_entry::<str, [stompymux_rs::btech::radio::BattleRadioChannel; 16]> ()
+#5  0x0000555555ce41b3 in <stompymux_rs::btech::vehicle::BattleVehicle as serde_core::ser::Serialize>::serialize::<&mut serde_json::ser::Serializer<&mut alloc::vec::Vec<u8>>> ()
+#6  0x0000555555b4301a in <serde_json::ser::Compound<&mut alloc::vec::Vec<u8>, serde_json::ser::CompactFormatter> as serde_core::ser::SerializeMap>::serialize_entry::<str, alloc::sync::Arc<alloc::collections::btree::map::BTreeMap<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::vehicle::BattleVehicle>>> ()
+#7  0x0000555555c7bf74 in <stompymux_rs::btech::state::BtechState as serde_core::ser::Serialize>::serialize::<&mut serde_json::ser::Serializer<&mut alloc::vec::Vec<u8>>> ()
+#8  0x0000555555ca16cc in <stompymux_rs::world::model::World as serde_core::ser::Serialize>::serialize::<&mut serde_json::ser::Serializer<&mut alloc::vec::Vec<u8>>> ()
+#9  0x0000555555ab72b5 in <stompymux_rs::server::Server>::commit_heartbeat::{closure#0} ()
+#10 0x0000555555abecf6 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#11 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#12 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#13 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#14 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#15 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#16 0x0000555555cc5cff in autopilot_bench::main ()
+#17 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#18 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#19 0x0000555556c00697 in std::rt::lang_start_internal ()
+#20 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00007ffff7ca9bdd in unlink_chunk (p=p@entry=0x555557c49ad0, av=0x7ffff7e04ac0 <main_arena>) at ./malloc/malloc.c:1616
+SAMPLE 42
+#0  0x00007ffff7ca9bdd in unlink_chunk (p=p@entry=0x555557c49ad0, av=0x7ffff7e04ac0 <main_arena>) at ./malloc/malloc.c:1616
+#1  0x00007ffff7cac2b5 in _int_malloc (av=av@entry=0x7ffff7e04ac0 <main_arena>, bytes=bytes@entry=18) at ./malloc/malloc.c:4381
+#2  0x00007ffff7cad7f4 in __GI___libc_malloc (bytes=18) at ./malloc/malloc.c:3336
+#3  0x0000555556c1df3f in <alloc::string::String as core::clone::Clone>::clone ()
+#4  0x00005555561e3c98 in <alloc::collections::btree::map::BTreeMap<_, _, _> as core::clone::Clone>::clone::clone_subtree::<alloc::string::String, stompymux_rs::access::Permissions, alloc::alloc::Global> ()
+#5  0x00005555561e3ae1 in <alloc::collections::btree::map::BTreeMap<_, _, _> as core::clone::Clone>::clone::clone_subtree::<alloc::string::String, stompymux_rs::access::Permissions, alloc::alloc::Global> ()
+#6  0x00005555561e39fb in <alloc::collections::btree::map::BTreeMap<_, _, _> as core::clone::Clone>::clone::clone_subtree::<alloc::string::String, stompymux_rs::access::Permissions, alloc::alloc::Global> ()
+#7  0x000055555647ff98 in <stompymux_rs::config::Config as core::clone::Clone>::clone ()
+#8  0x0000555556432ee5 in stompymux_rs::lua::configuration ()
+#9  0x00005555564e4915 in stompymux_rs::btech::notify_message ()
+#10 0x0000555555abcba8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#11 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#12 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#13 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#14 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#15 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#16 0x0000555555cc5cff in autopilot_bench::main ()
+#17 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#18 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#19 0x0000555556c00697 in std::rt::lang_start_internal ()
+#20 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555556634342 in <core::iter::adapters::rev::Rev<alloc::vec::into_iter::IntoIter<char>> as core::iter::traits::iterator::Iterator>::fold::<(), core::iter::traits::iterator::Iterator::for_each::call<char, <alloc::string::String as core::iter::traits::collect::Extend<char>>::extend<core::iter::adapters::rev::Rev<alloc::vec::into_iter::IntoIter<char>>>::{closure#0}>::{closure#0}> ()
+SAMPLE 43
+#0  0x0000555556634342 in <core::iter::adapters::rev::Rev<alloc::vec::into_iter::IntoIter<char>> as core::iter::traits::iterator::Iterator>::fold::<(), core::iter::traits::iterator::Iterator::for_each::call<char, <alloc::string::String as core::iter::traits::collect::Extend<char>>::extend<core::iter::adapters::rev::Rev<alloc::vec::into_iter::IntoIter<char>>>::{closure#0}>::{closure#0}> ()
+#1  0x0000555556323b5c in <alloc::string::String as core::iter::traits::collect::FromIterator<char>>::from_iter::<core::iter::adapters::rev::Rev<alloc::vec::into_iter::IntoIter<char>>> ()
+#2  0x0000555556008042 in stompymux_rs::btech::observer::battlefield_label ()
+#3  0x0000555555da2c0c in stompymux_rs::btech::scanner::scanner_unit ()
+#4  0x000055555666face in stompymux_rs::btech::los::unit_terrain_los ()
+#5  0x0000555556382aa6 in stompymux_rs::btech::contacts::contact_facts_with_unit ()
+#6  0x0000555556571cc4 in <alloc::vec::Vec<stompymux_rs::btech::contacts::BattleContactFacts> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<stompymux_rs::btech::contacts::BattleContactFacts, core::iter::adapters::filter_map::FilterMap<alloc::collections::btree::map::Keys<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::contacts::BattleContact>, stompymux_rs::btech::contacts::acquired_contact_facts::{closure#0}>>>::from_iter ()
+#7  0x0000555556381c11 in stompymux_rs::btech::contacts::acquired_contact_facts ()
+#8  0x0000555556243d37 in stompymux_rs::btech::autopilot::observations::observe_with_memory ()
+#9  0x000055555675c883 in stompymux_rs::btech::autopilot::runtime::advance_combat_inner ()
+#10 0x000055555675f829 in stompymux_rs::btech::autopilot::runtime::advance_combat_with_metrics ()
+#11 0x0000555555abd9d8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#12 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#13 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#14 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#15 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#16 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#17 0x0000555555cc5cff in autopilot_bench::main ()
+#18 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#19 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#20 0x0000555556c00697 in std::rt::lang_start_internal ()
+#21 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+syscall () at ../sysdeps/unix/sysv/linux/x86_64/syscall.S:38
+SAMPLE 44
+#0  syscall () at ../sysdeps/unix/sysv/linux/x86_64/syscall.S:38
+#1  0x0000555556b80849 in <parking_lot::condvar::Condvar>::wait_until_internal ()
+#2  0x0000555556b675be in <tokio::runtime::park::Inner>::park ()
+#3  0x0000555555b272a8 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#4  0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#5  0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#6  0x0000555555cc5cff in autopilot_bench::main ()
+#7  0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#8  0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#9  0x0000555556c00697 in std::rt::lang_start_internal ()
+#10 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x000055555631d48a in <core::iter::adapters::map::Map<alloc::collections::btree::map::Iter<u8, stompymux_rs::btech::template::CriticalDefinition>, <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#3}::{closure#0}> as core::iter::traits::iterator::Iterator>::fold::<usize, &mut core::iter::adapters::map::map_fold<(stompymux_rs::btech::loadout::CriticalLocation, &stompymux_rs::btech::template::CriticalDefinition), usize, usize, <core::iter::adapters::filter::Filter<_, _> as core::iter::traits::iterator::Iterator>::count::to_usize<(stompymux_rs::btech::loadout::CriticalLocation, &stompymux_rs::btech::template::CriticalDefinition), <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#4}>::{closure#0}, <usize as core::iter::traits::accum::Sum>::sum<core::iter::adapters::map::Map<core::iter::adapters::flatten::FlatMap<alloc::collections::btree::map::Iter<stompymux_rs::btech::template::BattleSection, stompymux_rs::btech::template::SectionDefinition>, core::iter::adapters::map::Map<alloc::collections::btree::map::Iter<u8, stompymux_rs::btech::template::CriticalDefinition>, <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#3}::{closure#0}>, <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#3}>, <core::iter::adapters::filter::Filter<_, _> as core::iter::traits::iterator::Iterator>::count::to_usize<(stompymux_rs::btech::loadout::CriticalLocation, &stompymux_rs::btech::template::CriticalDefinition), <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#4}>::{closure#0}>>::{closure#0}>::{closure#0}> ()
+SAMPLE 45
+#0  0x000055555631d48a in <core::iter::adapters::map::Map<alloc::collections::btree::map::Iter<u8, stompymux_rs::btech::template::CriticalDefinition>, <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#3}::{closure#0}> as core::iter::traits::iterator::Iterator>::fold::<usize, &mut core::iter::adapters::map::map_fold<(stompymux_rs::btech::loadout::CriticalLocation, &stompymux_rs::btech::template::CriticalDefinition), usize, usize, <core::iter::adapters::filter::Filter<_, _> as core::iter::traits::iterator::Iterator>::count::to_usize<(stompymux_rs::btech::loadout::CriticalLocation, &stompymux_rs::btech::template::CriticalDefinition), <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#4}>::{closure#0}, <usize as core::iter::traits::accum::Sum>::sum<core::iter::adapters::map::Map<core::iter::adapters::flatten::FlatMap<alloc::collections::btree::map::Iter<stompymux_rs::btech::template::BattleSection, stompymux_rs::btech::template::SectionDefinition>, core::iter::adapters::map::Map<alloc::collections::btree::map::Iter<u8, stompymux_rs::btech::template::CriticalDefinition>, <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#3}::{closure#0}>, <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#3}>, <core::iter::adapters::filter::Filter<_, _> as core::iter::traits::iterator::Iterator>::count::to_usize<(stompymux_rs::btech::loadout::CriticalLocation, &stompymux_rs::btech::template::CriticalDefinition), <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#4}>::{closure#0}>>::{closure#0}>::{closure#0}> ()
+#1  0x000055555631c300 in <core::iter::adapters::map::Map<alloc::collections::btree::map::Iter<stompymux_rs::btech::template::BattleSection, stompymux_rs::btech::template::SectionDefinition>, <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#3}> as core::iter::traits::iterator::Iterator>::fold::<usize, <core::iter::adapters::flatten::FlattenCompat<_, _>>::iter_fold::flatten<core::iter::adapters::map::Map<alloc::collections::btree::map::Iter<u8, stompymux_rs::btech::template::CriticalDefinition>, <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#3}::{closure#0}>, usize, <core::iter::adapters::flatten::FlattenCompat<_, _> as core::iter::traits::iterator::Iterator>::fold::flatten<core::iter::adapters::map::Map<alloc::collections::btree::map::Iter<u8, stompymux_rs::btech::template::CriticalDefinition>, <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#3}::{closure#0}>, usize, core::iter::adapters::map::map_fold<(stompymux_rs::btech::loadout::CriticalLocation, &stompymux_rs::btech::template::CriticalDefinition), usize, usize, <core::iter::adapters::filter::Filter<_, _> as core::iter::traits::iterator::Iterator>::count::to_usize<(stompymux_rs::btech::loadout::CriticalLocation, &stompymux_rs::btech::template::CriticalDefinition), <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#4}>::{closure#0}, <usize as core::iter::traits::accum::Sum>::sum<core::iter::adapters::map::Map<core::iter::adapters::flatten::FlatMap<alloc::collections::btree::map::Iter<stompymux_rs::btech::template::BattleSection, stompymux_rs::btech::template::SectionDefinition>, core::iter::adapters::map::Map<alloc::collections::btree::map::Iter<u8, stompymux_rs::btech::template::CriticalDefinition>, <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#3}::{closure#0}>, <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#3}>, <core::iter::adapters::filter::Filter<_, _> as core::iter::traits::iterator::Iterator>::count::to_usize<(stompymux_rs::btech::loadout::CriticalLocation, &stompymux_rs::btech::template::CriticalDefinition), <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#4}>::{closure#0}>>::{closure#0}>::{closure#0}>::{closure#0}>::{closure#0}> ()
+#2  0x00005555566e723c in <stompymux_rs::btech::unit::BattleUnit>::system_hits ()
+#3  0x00005555566dc599 in <stompymux_rs::btech::unit::BattleUnit>::is_destroyed ()
+#4  0x0000555555da2f27 in stompymux_rs::btech::scanner::scanner_unit ()
+#5  0x000055555666fb31 in stompymux_rs::btech::los::unit_terrain_los ()
+#6  0x00005555565267fa in stompymux_rs::btech::sensors::map_optical_contact_prepared ()
+#7  0x0000555556381f7b in stompymux_rs::btech::contacts::update_optical_contact ()
+#8  0x0000555555da3e57 in stompymux_rs::btech::scanner::refresh_optical_scanners ()
+#9  0x0000555555abd850 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#10 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#11 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#12 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#13 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#14 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#15 0x0000555555cc5cff in autopilot_bench::main ()
+#16 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#17 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#18 0x0000555556c00697 in std::rt::lang_start_internal ()
+#19 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555555b142c1 in stompymux_rs::persistence::write::apply_changes::{closure#0} ()
+SAMPLE 46
+#0  0x0000555555b142c1 in stompymux_rs::persistence::write::apply_changes::{closure#0} ()
+#1  0x0000555555ac0d6b in stompymux_rs::persistence::save_with_timeout::{closure#0} ()
+#2  0x0000555555ab7c21 in <stompymux_rs::server::Server>::commit_heartbeat::{closure#0} ()
+#3  0x0000555555abecf6 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#4  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#5  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#6  0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#7  0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#8  0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#9  0x0000555555cc5cff in autopilot_bench::main ()
+#10 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#11 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#12 0x0000555556c00697 in std::rt::lang_start_internal ()
+#13 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x000055555623747e in <alloc::collections::btree::map::IntoIter<stompymux_rs::btech::template::BattleSection, stompymux_rs::btech::template::SectionDefinition>>::dying_next ()
+SAMPLE 47
+#0  0x000055555623747e in <alloc::collections::btree::map::IntoIter<stompymux_rs::btech::template::BattleSection, stompymux_rs::btech::template::SectionDefinition>>::dying_next ()
+#1  0x00005555561d2a0b in core::ptr::drop_glue::<stompymux_rs::btech::template::BattleTemplate> ()
+#2  0x00005555561d1884 in core::ptr::drop_glue::<stompymux_rs::btech::unit::BattleUnit> ()
+#3  0x000055555624b0f6 in <alloc::collections::btree::map::BTreeMap<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::unit::BattleUnit> as core::ops::drop::Drop>::drop ()
+#4  0x0000555556112330 in <alloc::sync::Arc<alloc::collections::btree::map::BTreeMap<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::unit::BattleUnit>>>::drop_slow ()
+#5  0x00005555565d73bf in core::ptr::drop_glue::<stompymux_rs::btech::state::BtechState> ()
+#6  0x00005555565d8058 in core::ptr::drop_glue::<stompymux_rs::world::model::World> ()
+#7  0x0000555556664576 in stompymux_rs::btech::spotter_events::advance_spotter_links ()
+#8  0x0000555555abd5cf in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#9  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#10 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#11 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#12 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#13 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#14 0x0000555555cc5cff in autopilot_bench::main ()
+#15 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#16 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#17 0x0000555556c00697 in std::rt::lang_start_internal ()
+#18 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+__GI___lll_lock_wake (futex=futex@entry=0x555556cdef10 <staticMutexes.112+48>, private=<optimized out>) at ./nptl/lowlevellock.c:64
+SAMPLE 48
+#0  __GI___lll_lock_wake (futex=futex@entry=0x555556cdef10 <staticMutexes.112+48>, private=<optimized out>) at ./nptl/lowlevellock.c:64
+#1  0x00007ffff7ca1bb2 in lll_mutex_unlock_optimized (mutex=0x555556cdef10 <staticMutexes.112+48>) at ./nptl/pthread_mutex_unlock.c:43
+#2  __GI___pthread_mutex_unlock_usercnt (decr=1, mutex=0x555556cdef10 <staticMutexes.112+48>) at ./nptl/pthread_mutex_unlock.c:68
+#3  ___pthread_mutex_unlock (mutex=0x555556cdef10 <staticMutexes.112+48>) at ./nptl/pthread_mutex_unlock.c:368
+#4  0x0000555555aaf200 in core::ptr::drop_glue::<sqlx_sqlite::row::SqliteRow> ()
+#5  0x0000555555adde40 in stompymux_rs::persistence::btech::load::{closure#0} ()
+#6  0x0000555555ad19b8 in stompymux_rs::persistence::load::read::{closure#0} ()
+#7  0x0000555555ac0c4d in stompymux_rs::persistence::save_with_timeout::{closure#0} ()
+#8  0x0000555555ab7c21 in <stompymux_rs::server::Server>::commit_heartbeat::{closure#0} ()
+#9  0x0000555555abecf6 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#10 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#11 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#12 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#13 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#14 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#15 0x0000555555cc5cff in autopilot_bench::main ()
+#16 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#17 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#18 0x0000555556c00697 in std::rt::lang_start_internal ()
+#19 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00007ffff7cab2dc in _int_free (av=0x7ffff7e04ac0 <main_arena>, p=0x555557938d60, have_lock=0) at ./malloc/malloc.c:4547
+SAMPLE 49
+#0  0x00007ffff7cab2dc in _int_free (av=0x7ffff7e04ac0 <main_arena>, p=0x555557938d60, have_lock=0) at ./malloc/malloc.c:4547
+#1  0x00007ffff7cadeae in __GI___libc_free (mem=0x555557938d70) at ./malloc/malloc.c:3398
+#2  0x0000555556245c3b in <alloc::collections::btree::map::BTreeMap<std::path::PathBuf, alloc::string::String> as core::ops::drop::Drop>::drop ()
+#3  0x000055555648b206 in core::ptr::drop_glue::<stompymux_rs::config::model::Settings> ()
+#4  0x00005555564881a8 in core::ptr::drop_glue::<stompymux_rs::config::Config> ()
+#5  0x00005555564e49d7 in stompymux_rs::btech::notify_message ()
+#6  0x0000555555abcba8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#7  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#8  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#9  0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#10 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#11 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#12 0x0000555555cc5cff in autopilot_bench::main ()
+#13 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#14 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#15 0x0000555556c00697 in std::rt::lang_start_internal ()
+#16 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555556676ed1 in stompymux_rs::btech::power::autopilot_controlled_vehicle ()
+SAMPLE 50
+#0  0x0000555556676ed1 in stompymux_rs::btech::power::autopilot_controlled_vehicle ()
+#1  0x00005555567c176d in stompymux_rs::btech::combat_operator::controlled ()
+#2  0x0000555555d64ffa in stompymux_rs::btech::vehicle_shot::check_with_dice ()
+#3  0x000055555673814e in stompymux_rs::btech::vehicle_fire::fire_shot ()
+#4  0x000055555675ea80 in stompymux_rs::btech::autopilot::runtime::advance_combat_inner ()
+#5  0x000055555675f829 in stompymux_rs::btech::autopilot::runtime::advance_combat_with_metrics ()
+#6  0x0000555555abd9d8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#7  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#8  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#9  0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#10 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#11 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#12 0x0000555555cc5cff in autopilot_bench::main ()
+#13 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#14 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#15 0x0000555556c00697 in std::rt::lang_start_internal ()
+#16 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00007ffff7cade68 in __GI___libc_free (mem=0x555557c93260) at ./malloc/malloc.c:3392
+3392	in ./malloc/malloc.c
+SAMPLE 51
+#0  0x00007ffff7cade68 in __GI___libc_free (mem=0x555557c93260) at ./malloc/malloc.c:3392
+#1  0x00005555567ae3a7 in <stompymux_rs::btech::loadout::BattleLoadout>::resolve ()
+#2  0x000055555674e7bd in stompymux_rs::btech::unit::validate_definition ()
+#3  0x00005555566d921e in <stompymux_rs::btech::unit::BattleUnit>::validate ()
+#4  0x00005555567094d4 in <stompymux_rs::btech::state::BtechState>::validate ()
+#5  0x00005555564d9044 in <stompymux_rs::world::model::World>::validate ()
+#6  0x000055555643fd91 in stompymux_rs::btech::evacuation::advance_vehicle_fires_action ()
+#7  0x0000555555abc0bd in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#8  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#9  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#10 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#11 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#12 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#13 0x0000555555cc5cff in autopilot_bench::main ()
+#14 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#15 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#16 0x0000555556c00697 in std::rt::lang_start_internal ()
+#17 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00005555566e6684 in <stompymux_rs::btech::unit::BattleUnit>::system_hits ()
+SAMPLE 52
+#0  0x00005555566e6684 in <stompymux_rs::btech::unit::BattleUnit>::system_hits ()
+#1  0x00005555566ec3cd in <stompymux_rs::btech::unit::BattleUnit>::mobility ()
+#2  0x00005555566d90b8 in <stompymux_rs::btech::unit::BattleUnit>::validate ()
+#3  0x0000555555d9613b in stompymux_rs::btech::shot::resolve_shot_inner ()
+#4  0x000055555675d9d4 in stompymux_rs::btech::autopilot::runtime::advance_combat_inner ()
+#5  0x000055555675f829 in stompymux_rs::btech::autopilot::runtime::advance_combat_with_metrics ()
+#6  0x0000555555abd9d8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#7  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#8  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#9  0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#10 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#11 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#12 0x0000555555cc5cff in autopilot_bench::main ()
+#13 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#14 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#15 0x0000555556c00697 in std::rt::lang_start_internal ()
+#16 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+syscall () at ../sysdeps/unix/sysv/linux/x86_64/syscall.S:38
+SAMPLE 53
+#0  syscall () at ../sysdeps/unix/sysv/linux/x86_64/syscall.S:38
+#1  0x0000555556b80849 in <parking_lot::condvar::Condvar>::wait_until_internal ()
+#2  0x0000555556b675be in <tokio::runtime::park::Inner>::park ()
+#3  0x0000555555b272a8 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#4  0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#5  0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#6  0x0000555555cc5cff in autopilot_bench::main ()
+#7  0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#8  0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#9  0x0000555556c00697 in std::rt::lang_start_internal ()
+#10 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555556381ec5 in stompymux_rs::btech::contacts::update_optical_contact ()
+SAMPLE 54
+#0  0x0000555556381ec5 in stompymux_rs::btech::contacts::update_optical_contact ()
+#1  0x0000555555da3e57 in stompymux_rs::btech::scanner::refresh_optical_scanners ()
+#2  0x0000555555abd850 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#3  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#4  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#5  0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#6  0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#7  0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#8  0x0000555555cc5cff in autopilot_bench::main ()
+#9  0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#10 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#11 0x0000555556c00697 in std::rt::lang_start_internal ()
+#12 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555556927f40 in vdbeMemClear ()
+SAMPLE 55
+#0  0x0000555556927f40 in vdbeMemClear ()
+#1  0x00005555569284b8 in sqlite3_value_free ()
+#2  0x0000555555aaf200 in core::ptr::drop_glue::<sqlx_sqlite::row::SqliteRow> ()
+#3  0x0000555555aee7a3 in stompymux_rs::persistence::btech::load::{closure#0} ()
+#4  0x0000555555ad19b8 in stompymux_rs::persistence::load::read::{closure#0} ()
+#5  0x0000555555ac0c4d in stompymux_rs::persistence::save_with_timeout::{closure#0} ()
+#6  0x0000555555ab7c21 in <stompymux_rs::server::Server>::commit_heartbeat::{closure#0} ()
+#7  0x0000555555abecf6 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#8  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#9  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#10 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#11 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#12 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#13 0x0000555555cc5cff in autopilot_bench::main ()
+#14 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#15 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#16 0x0000555556c00697 in std::rt::lang_start_internal ()
+#17 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00007ffff7ca9be3 in unlink_chunk (p=p@entry=0x555556d4a980, av=0x7ffff7e04ac0 <main_arena>) at ./malloc/malloc.c:1613
+SAMPLE 56
+#0  0x00007ffff7ca9be3 in unlink_chunk (p=p@entry=0x555556d4a980, av=0x7ffff7e04ac0 <main_arena>) at ./malloc/malloc.c:1613
+#1  0x00007ffff7cac2b5 in _int_malloc (av=av@entry=0x7ffff7e04ac0 <main_arena>, bytes=bytes@entry=1) at ./malloc/malloc.c:4381
+#2  0x00007ffff7cad7f4 in __GI___libc_malloc (bytes=1) at ./malloc/malloc.c:3336
+#3  0x0000555556c1df3f in <alloc::string::String as core::clone::Clone>::clone ()
+#4  0x00005555561e128d in <alloc::collections::btree::map::BTreeMap<_, _, _> as core::clone::Clone>::clone::clone_subtree::<alloc::string::String, alloc::string::String, alloc::alloc::Global> ()
+#5  0x0000555556279514 in <stompymux_rs::btech::template::BattleTemplate as core::clone::Clone>::clone ()
+#6  0x0000555556272996 in <stompymux_rs::btech::unit::BattleUnit as core::clone::Clone>::clone ()
+#7  0x00005555561ee190 in <alloc::collections::btree::map::BTreeMap<_, _, _> as core::clone::Clone>::clone::clone_subtree::<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::unit::BattleUnit, alloc::alloc::Global> ()
+#8  0x00005555561edfdb in <alloc::collections::btree::map::BTreeMap<_, _, _> as core::clone::Clone>::clone::clone_subtree::<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::unit::BattleUnit, alloc::alloc::Global> ()
+#9  0x0000555556110379 in <alloc::sync::Arc<alloc::collections::btree::map::BTreeMap<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::unit::BattleUnit>>>::clone_from_ref_in ()
+#10 0x000055555633b9ff in <alloc::sync::Arc<alloc::collections::btree::map::BTreeMap<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::unit::BattleUnit>>>::make_mut ()
+#11 0x0000555556382552 in stompymux_rs::btech::contacts::update_optical_contact ()
+#12 0x0000555555da3e57 in stompymux_rs::btech::scanner::refresh_optical_scanners ()
+#13 0x0000555555abd850 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#14 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#15 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#16 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#17 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#18 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#19 0x0000555555cc5cff in autopilot_bench::main ()
+#20 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#21 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#22 0x0000555556c00697 in std::rt::lang_start_internal ()
+#23 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555555b5f6b2 in <serde_json::ser::Compound<&mut alloc::vec::Vec<u8>, serde_json::ser::CompactFormatter> as serde_core::ser::SerializeMap>::serialize_entry::<str, bool> ()
+SAMPLE 57
+#0  0x0000555555b5f6b2 in <serde_json::ser::Compound<&mut alloc::vec::Vec<u8>, serde_json::ser::CompactFormatter> as serde_core::ser::SerializeMap>::serialize_entry::<str, bool> ()
+#1  0x0000555555c48f3c in <stompymux_rs::btech::sixth_sense::SixthSense as serde_core::ser::Serialize>::serialize::<&mut serde_json::ser::Serializer<&mut alloc::vec::Vec<u8>>> ()
+#2  0x0000555555c4c3e3 in <stompymux_rs::btech::unit::BattleUnit as serde_core::ser::Serialize>::serialize::<&mut serde_json::ser::Serializer<&mut alloc::vec::Vec<u8>>> ()
+#3  0x0000555555b4203e in <serde_json::ser::Compound<&mut alloc::vec::Vec<u8>, serde_json::ser::CompactFormatter> as serde_core::ser::SerializeMap>::serialize_entry::<str, alloc::sync::Arc<alloc::collections::btree::map::BTreeMap<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::unit::BattleUnit>>> ()
+#4  0x0000555555c7bf50 in <stompymux_rs::btech::state::BtechState as serde_core::ser::Serialize>::serialize::<&mut serde_json::ser::Serializer<&mut alloc::vec::Vec<u8>>> ()
+#5  0x0000555555ca16cc in <stompymux_rs::world::model::World as serde_core::ser::Serialize>::serialize::<&mut serde_json::ser::Serializer<&mut alloc::vec::Vec<u8>>> ()
+#6  0x0000555555ab73d2 in <stompymux_rs::server::Server>::commit_heartbeat::{closure#0} ()
+#7  0x0000555555abecf6 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#8  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#9  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#10 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#11 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#12 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#13 0x0000555555cc5cff in autopilot_bench::main ()
+#14 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#15 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#16 0x0000555556c00697 in std::rt::lang_start_internal ()
+#17 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00007ffff7cab3ed in _int_free (av=0x7ffff7e04ac0 <main_arena>, p=<optimized out>, have_lock=0) at ./malloc/malloc.c:4622
+4622	in ./malloc/malloc.c
+SAMPLE 58
+#0  0x00007ffff7cab3ed in _int_free (av=0x7ffff7e04ac0 <main_arena>, p=<optimized out>, have_lock=0) at ./malloc/malloc.c:4622
+#1  0x00007ffff7cadeae in __GI___libc_free (mem=0x555557603320) at ./malloc/malloc.c:3398
+#2  0x000055555653b4c5 in core::ptr::drop_glue::<indexmap::Bucket<alloc::string::String, toml::value::Value>> ()
+#3  0x000055555653b5a2 in core::ptr::drop_glue::<indexmap::Bucket<alloc::string::String, toml::value::Value>> ()
+#4  0x000055555653b5a2 in core::ptr::drop_glue::<indexmap::Bucket<alloc::string::String, toml::value::Value>> ()
+#5  0x00005555564886a2 in core::ptr::drop_glue::<toml::value::Value> ()
+#6  0x00005555564881ce in core::ptr::drop_glue::<stompymux_rs::config::Config> ()
+#7  0x00005555564e49d7 in stompymux_rs::btech::notify_message ()
+#8  0x0000555555abcba8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#9  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#10 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#11 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#12 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#13 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#14 0x0000555555cc5cff in autopilot_bench::main ()
+#15 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#16 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#17 0x0000555556c00697 in std::rt::lang_start_internal ()
+#18 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00005555562717b8 in <stompymux_rs::btech::unit::BattleUnit as core::clone::Clone>::clone ()
+SAMPLE 59
+#0  0x00005555562717b8 in <stompymux_rs::btech::unit::BattleUnit as core::clone::Clone>::clone ()
+#1  0x00005555561ee190 in <alloc::collections::btree::map::BTreeMap<_, _, _> as core::clone::Clone>::clone::clone_subtree::<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::unit::BattleUnit, alloc::alloc::Global> ()
+#2  0x00005555561edfdb in <alloc::collections::btree::map::BTreeMap<_, _, _> as core::clone::Clone>::clone::clone_subtree::<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::unit::BattleUnit, alloc::alloc::Global> ()
+#3  0x0000555556110379 in <alloc::sync::Arc<alloc::collections::btree::map::BTreeMap<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::unit::BattleUnit>>>::clone_from_ref_in ()
+#4  0x0000555555d49a4f in <alloc::sync::Arc<alloc::collections::btree::map::BTreeMap<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::unit::BattleUnit>>>::make_mut ()
+#5  0x0000555555d91648 in stompymux_rs::btech::dice::unit_dice_mut ()
+#6  0x00005555567c8273 in stompymux_rs::btech::woodland_action::resolve_woodland_attack ()
+#7  0x0000555555d6b48d in stompymux_rs::btech::direct_effects::resolve ()
+#8  0x0000555555d9720b in stompymux_rs::btech::shot::resolve_shot_inner ()
+#9  0x000055555675d9d4 in stompymux_rs::btech::autopilot::runtime::advance_combat_inner ()
+#10 0x000055555675f829 in stompymux_rs::btech::autopilot::runtime::advance_combat_with_metrics ()
+#11 0x0000555555abd9d8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#12 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#13 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#14 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#15 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#16 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#17 0x0000555555cc5cff in autopilot_bench::main ()
+#18 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#19 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#20 0x0000555556c00697 in std::rt::lang_start_internal ()
+#21 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+syscall () at ../sysdeps/unix/sysv/linux/x86_64/syscall.S:38
+SAMPLE 60
+#0  syscall () at ../sysdeps/unix/sysv/linux/x86_64/syscall.S:38
+#1  0x0000555556b80849 in <parking_lot::condvar::Condvar>::wait_until_internal ()
+#2  0x0000555556b675be in <tokio::runtime::park::Inner>::park ()
+#3  0x0000555555b272a8 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#4  0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#5  0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#6  0x0000555555cc5cff in autopilot_bench::main ()
+#7  0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#8  0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#9  0x0000555556c00697 in std::rt::lang_start_internal ()
+#10 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00005555563599f2 in stompymux_rs::btech::searchlight::unit_illuminated ()
+SAMPLE 61
+#0  0x00005555563599f2 in stompymux_rs::btech::searchlight::unit_illuminated ()
+#1  0x0000555556526a62 in stompymux_rs::btech::sensors::map_optical_contact_prepared ()
+#2  0x0000555556381f7b in stompymux_rs::btech::contacts::update_optical_contact ()
+#3  0x0000555555da3e57 in stompymux_rs::btech::scanner::refresh_optical_scanners ()
+#4  0x0000555555abd850 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#5  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#6  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#7  0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#8  0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#9  0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#10 0x0000555555cc5cff in autopilot_bench::main ()
+#11 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#12 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#13 0x0000555556c00697 in std::rt::lang_start_internal ()
+#14 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555555b27284 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+SAMPLE 62
+#0  0x0000555555b27284 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#1  0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#2  0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#3  0x0000555555cc5cff in autopilot_bench::main ()
+#4  0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#5  0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#6  0x0000555556c00697 in std::rt::lang_start_internal ()
+#7  0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00007ffff7cab387 in _int_free (av=<optimized out>, p=<optimized out>, have_lock=<optimized out>) at ./malloc/malloc.c:4658
+SAMPLE 63
+#0  0x00007ffff7cab387 in _int_free (av=<optimized out>, p=<optimized out>, have_lock=<optimized out>) at ./malloc/malloc.c:4658
+#1  0x00007ffff7cadeae in __GI___libc_free (mem=0x555558693ed0) at ./malloc/malloc.c:3398
+#2  0x00005555566af62c in core::ptr::drop_glue::<stompymux_rs::btech::state::StoredBattleUnit> ()
+#3  0x00005555567099cd in <stompymux_rs::btech::state::BtechState>::validate ()
+#4  0x00005555564d9044 in <stompymux_rs::world::model::World>::validate ()
+#5  0x0000555555fbc7c3 in stompymux_rs::btech::computer_runtime::advance_battle_computer_failures_action ()
+#6  0x0000555555abd0e6 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#7  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#8  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#9  0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#10 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#11 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#12 0x0000555555cc5cff in autopilot_bench::main ()
+#13 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#14 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#15 0x0000555556c00697 in std::rt::lang_start_internal ()
+#16 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00007ffff7cad803 in __GI___libc_malloc (bytes=11) at ./malloc/malloc.c:3347
+3347	in ./malloc/malloc.c
+SAMPLE 64
+#0  0x00007ffff7cad803 in __GI___libc_malloc (bytes=11) at ./malloc/malloc.c:3347
+#1  0x0000555556c1df3f in <alloc::string::String as core::clone::Clone>::clone ()
+#2  0x00005555561e3c98 in <alloc::collections::btree::map::BTreeMap<_, _, _> as core::clone::Clone>::clone::clone_subtree::<alloc::string::String, stompymux_rs::access::Permissions, alloc::alloc::Global> ()
+#3  0x00005555561e3ae1 in <alloc::collections::btree::map::BTreeMap<_, _, _> as core::clone::Clone>::clone::clone_subtree::<alloc::string::String, stompymux_rs::access::Permissions, alloc::alloc::Global> ()
+#4  0x00005555561e39fb in <alloc::collections::btree::map::BTreeMap<_, _, _> as core::clone::Clone>::clone::clone_subtree::<alloc::string::String, stompymux_rs::access::Permissions, alloc::alloc::Global> ()
+#5  0x000055555647ff98 in <stompymux_rs::config::Config as core::clone::Clone>::clone ()
+#6  0x0000555556432ee5 in stompymux_rs::lua::configuration ()
+#7  0x00005555564e4915 in stompymux_rs::btech::notify_message ()
+#8  0x0000555555da34d0 in stompymux_rs::btech::scanner::notify_contact ()
+#9  0x0000555555abe2a4 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#10 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#11 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#12 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#13 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#14 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#15 0x0000555555cc5cff in autopilot_bench::main ()
+#16 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#17 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#18 0x0000555556c00697 in std::rt::lang_start_internal ()
+#19 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+_int_malloc (av=av@entry=0x7ffff7e04ac0 <main_arena>, bytes=bytes@entry=1) at ./malloc/malloc.c:3878
+3878	in ./malloc/malloc.c
+SAMPLE 65
+#0  _int_malloc (av=av@entry=0x7ffff7e04ac0 <main_arena>, bytes=bytes@entry=1) at ./malloc/malloc.c:3878
+#1  0x00007ffff7cad7f4 in __GI___libc_malloc (bytes=1) at ./malloc/malloc.c:3336
+#2  0x0000555556c1df3f in <alloc::string::String as core::clone::Clone>::clone ()
+#3  0x0000555556595e9d in <indexmap::Bucket<alloc::string::String, toml::value::Value> as core::clone::Clone>::clone ()
+#4  0x0000555556595b9b in <[indexmap::Bucket<alloc::string::String, toml::value::Value>] as alloc::slice::SpecCloneIntoVec<indexmap::Bucket<alloc::string::String, toml::value::Value>, alloc::alloc::Global>>::clone_into ()
+#5  0x00005555562f54fc in <indexmap::inner::Core<alloc::string::String, toml::value::Value> as core::clone::Clone>::clone ()
+#6  0x0000555556595fc4 in <indexmap::Bucket<alloc::string::String, toml::value::Value> as core::clone::Clone>::clone ()
+#7  0x0000555556595b9b in <[indexmap::Bucket<alloc::string::String, toml::value::Value>] as alloc::slice::SpecCloneIntoVec<indexmap::Bucket<alloc::string::String, toml::value::Value>, alloc::alloc::Global>>::clone_into ()
+#8  0x00005555562f54fc in <indexmap::inner::Core<alloc::string::String, toml::value::Value> as core::clone::Clone>::clone ()
+#9  0x0000555556595fc4 in <indexmap::Bucket<alloc::string::String, toml::value::Value> as core::clone::Clone>::clone ()
+#10 0x0000555556595b9b in <[indexmap::Bucket<alloc::string::String, toml::value::Value>] as alloc::slice::SpecCloneIntoVec<indexmap::Bucket<alloc::string::String, toml::value::Value>, alloc::alloc::Global>>::clone_into ()
+#11 0x00005555562f54fc in <indexmap::inner::Core<alloc::string::String, toml::value::Value> as core::clone::Clone>::clone ()
+#12 0x0000555556480138 in <stompymux_rs::config::Config as core::clone::Clone>::clone ()
+#13 0x0000555556432ee5 in stompymux_rs::lua::configuration ()
+#14 0x00005555564e4915 in stompymux_rs::btech::notify_message ()
+#15 0x0000555555abcba8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#16 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#17 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#18 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#19 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#20 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#21 0x0000555555cc5cff in autopilot_bench::main ()
+#22 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#23 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#24 0x0000555556c00697 in std::rt::lang_start_internal ()
+#25 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555556343ec5 in <stompymux_rs::btech::template::BattleTemplate>::has_special ()
+SAMPLE 66
+#0  0x0000555556343ec5 in <stompymux_rs::btech::template::BattleTemplate>::has_special ()
+#1  0x0000555555da31ec in stompymux_rs::btech::scanner::scanner_unit ()
+#2  0x0000555556382815 in stompymux_rs::btech::contacts::contact_facts_with_unit ()
+#3  0x0000555556571cc4 in <alloc::vec::Vec<stompymux_rs::btech::contacts::BattleContactFacts> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<stompymux_rs::btech::contacts::BattleContactFacts, core::iter::adapters::filter_map::FilterMap<alloc::collections::btree::map::Keys<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::contacts::BattleContact>, stompymux_rs::btech::contacts::acquired_contact_facts::{closure#0}>>>::from_iter ()
+#4  0x0000555556381c11 in stompymux_rs::btech::contacts::acquired_contact_facts ()
+#5  0x0000555556243d37 in stompymux_rs::btech::autopilot::observations::observe_with_memory ()
+#6  0x000055555675c883 in stompymux_rs::btech::autopilot::runtime::advance_combat_inner ()
+#7  0x000055555675f829 in stompymux_rs::btech::autopilot::runtime::advance_combat_with_metrics ()
+#8  0x0000555555abd9d8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#9  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#10 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#11 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#12 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#13 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#14 0x0000555555cc5cff in autopilot_bench::main ()
+#15 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#16 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#17 0x0000555556c00697 in std::rt::lang_start_internal ()
+#18 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+_int_free (av=0x7ffff7e04ac0 <main_arena>, p=0x5555579d7ff0, have_lock=0) at ./malloc/malloc.c:4547
+4547	in ./malloc/malloc.c
+SAMPLE 67
+#0  _int_free (av=0x7ffff7e04ac0 <main_arena>, p=0x5555579d7ff0, have_lock=0) at ./malloc/malloc.c:4547
+#1  0x00007ffff7cadeae in __GI___libc_free (mem=0x5555579d8000) at ./malloc/malloc.c:3398
+#2  0x00005555561d2c8b in core::ptr::drop_glue::<stompymux_rs::btech::template::CriticalDefinition> ()
+#3  0x00005555561d2bea in core::ptr::drop_glue::<stompymux_rs::btech::template::SectionDefinition> ()
+#4  0x00005555561d2a27 in core::ptr::drop_glue::<stompymux_rs::btech::template::BattleTemplate> ()
+#5  0x00005555561d1884 in core::ptr::drop_glue::<stompymux_rs::btech::unit::BattleUnit> ()
+#6  0x000055555624b0f6 in <alloc::collections::btree::map::BTreeMap<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::unit::BattleUnit> as core::ops::drop::Drop>::drop ()
+#7  0x0000555556112330 in <alloc::sync::Arc<alloc::collections::btree::map::BTreeMap<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::unit::BattleUnit>>>::drop_slow ()
+#8  0x00005555563a14cf in core::ptr::drop_glue::<stompymux_rs::btech::state::BtechState> ()
+#9  0x00005555563a3868 in core::ptr::drop_glue::<stompymux_rs::world::model::World> ()
+#10 0x0000555556439fc6 in stompymux_rs::btech::evacuation::movement_action ()
+#11 0x000055555643ba93 in stompymux_rs::btech::evacuation::advance_motion_action ()
+#12 0x0000555555abb916 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#13 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#14 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#15 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#16 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#17 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#18 0x0000555555cc5cff in autopilot_bench::main ()
+#19 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#20 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#21 0x0000555556c00697 in std::rt::lang_start_internal ()
+#22 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00005555566da1c6 in <stompymux_rs::btech::state::StoredBattleMap>::stored_hex ()
+SAMPLE 68
+#0  0x00005555566da1c6 in <stompymux_rs::btech::state::StoredBattleMap>::stored_hex ()
+#1  0x00005555566da2d1 in <stompymux_rs::btech::state::StoredBattleMap>::hex ()
+#2  0x000055555667087e in stompymux_rs::btech::los::terrain_los_with_endpoint ()
+#3  0x000055555666fc3f in stompymux_rs::btech::los::unit_terrain_los ()
+#4  0x0000555556382aa6 in stompymux_rs::btech::contacts::contact_facts_with_unit ()
+#5  0x0000555556571cc4 in <alloc::vec::Vec<stompymux_rs::btech::contacts::BattleContactFacts> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<stompymux_rs::btech::contacts::BattleContactFacts, core::iter::adapters::filter_map::FilterMap<alloc::collections::btree::map::Keys<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::contacts::BattleContact>, stompymux_rs::btech::contacts::acquired_contact_facts::{closure#0}>>>::from_iter ()
+#6  0x0000555556381c11 in stompymux_rs::btech::contacts::acquired_contact_facts ()
+#7  0x0000555556243d37 in stompymux_rs::btech::autopilot::observations::observe_with_memory ()
+#8  0x000055555675c883 in stompymux_rs::btech::autopilot::runtime::advance_combat_inner ()
+#9  0x000055555675f829 in stompymux_rs::btech::autopilot::runtime::advance_combat_with_metrics ()
+#10 0x0000555555abd9d8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#11 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#12 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#13 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#14 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#15 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#16 0x0000555555cc5cff in autopilot_bench::main ()
+#17 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#18 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#19 0x0000555556c00697 in std::rt::lang_start_internal ()
+#20 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00007ffff7cabed7 in _int_malloc (av=av@entry=0x7ffff7e04ac0 <main_arena>, bytes=bytes@entry=7) at ./malloc/malloc.c:4100
+4100	in ./malloc/malloc.c
+SAMPLE 69
+#0  0x00007ffff7cabed7 in _int_malloc (av=av@entry=0x7ffff7e04ac0 <main_arena>, bytes=bytes@entry=7) at ./malloc/malloc.c:4100
+#1  0x00007ffff7cad7f4 in __GI___libc_malloc (bytes=7) at ./malloc/malloc.c:3336
+#2  0x0000555556c1df3f in <alloc::string::String as core::clone::Clone>::clone ()
+#3  0x00005555561e128d in <alloc::collections::btree::map::BTreeMap<_, _, _> as core::clone::Clone>::clone::clone_subtree::<alloc::string::String, alloc::string::String, alloc::alloc::Global> ()
+#4  0x00005555562641fc in <stompymux_rs::btech::vehicle::BattleVehicle as core::clone::Clone>::clone ()
+#5  0x00005555561ef1b6 in <alloc::collections::btree::map::BTreeMap<_, _, _> as core::clone::Clone>::clone::clone_subtree::<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::vehicle::BattleVehicle, alloc::alloc::Global> ()
+#6  0x00005555561eefe0 in <alloc::collections::btree::map::BTreeMap<_, _, _> as core::clone::Clone>::clone::clone_subtree::<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::vehicle::BattleVehicle, alloc::alloc::Global> ()
+#7  0x00005555561106a9 in <alloc::sync::Arc<alloc::collections::btree::map::BTreeMap<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::vehicle::BattleVehicle>>>::clone_from_ref_in ()
+#8  0x0000555555fa0fdf in <alloc::sync::Arc<alloc::collections::btree::map::BTreeMap<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::vehicle::BattleVehicle>>>::make_mut ()
+#9  0x0000555555fd98f8 in stompymux_rs::btech::motion::advance_motion_inner ()
+#10 0x0000555555fe1a16 in stompymux_rs::btech::motion::advance_motion_candidate ()
+#11 0x0000555555fe336e in stompymux_rs::btech::motion::advance_motion_in_action ()
+#12 0x0000555556438f7d in stompymux_rs::btech::evacuation::movement_action ()
+#13 0x000055555643ba93 in stompymux_rs::btech::evacuation::advance_motion_action ()
+#14 0x0000555555abb916 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#15 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#16 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#17 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#18 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#19 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#20 0x0000555555cc5cff in autopilot_bench::main ()
+#21 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#22 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#23 0x0000555556c00697 in std::rt::lang_start_internal ()
+#24 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00005555564d3da2 in stompymux_rs::btech::geometry::unit_range::{closure#0} ()
+SAMPLE 70
+#0  0x00005555564d3da2 in stompymux_rs::btech::geometry::unit_range::{closure#0} ()
+#1  0x000055555652722b in stompymux_rs::btech::geometry::unit_range ()
+#2  0x0000555556382ae9 in stompymux_rs::btech::contacts::contact_facts_with_unit ()
+#3  0x0000555556571cc4 in <alloc::vec::Vec<stompymux_rs::btech::contacts::BattleContactFacts> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<stompymux_rs::btech::contacts::BattleContactFacts, core::iter::adapters::filter_map::FilterMap<alloc::collections::btree::map::Keys<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::contacts::BattleContact>, stompymux_rs::btech::contacts::acquired_contact_facts::{closure#0}>>>::from_iter ()
+#4  0x0000555556381c11 in stompymux_rs::btech::contacts::acquired_contact_facts ()
+#5  0x0000555556243d37 in stompymux_rs::btech::autopilot::observations::observe_with_memory ()
+#6  0x000055555675c883 in stompymux_rs::btech::autopilot::runtime::advance_combat_inner ()
+#7  0x000055555675f829 in stompymux_rs::btech::autopilot::runtime::advance_combat_with_metrics ()
+#8  0x0000555555abd9d8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#9  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#10 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#11 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#12 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#13 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#14 0x0000555555cc5cff in autopilot_bench::main ()
+#15 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#16 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#17 0x0000555556c00697 in std::rt::lang_start_internal ()
+#18 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555555db7248 in <&mut stompymux_rs::btech::transport_loss::publish::{closure#0} as core::ops::function::FnMut<(&stompymux_rs::world::model::ObjectId,)>>::call_mut ()
+SAMPLE 71
+#0  0x0000555555db7248 in <&mut stompymux_rs::btech::transport_loss::publish::{closure#0} as core::ops::function::FnMut<(&stompymux_rs::world::model::ObjectId,)>>::call_mut ()
+#1  0x000055555658f6a0 in <alloc::collections::vec_deque::VecDeque<stompymux_rs::world::model::ObjectId> as alloc::collections::vec_deque::spec_from_iter::SpecFromIter<stompymux_rs::world::model::ObjectId, core::iter::adapters::filter::Filter<core::iter::adapters::copied::Copied<core::iter::adapters::chain::Chain<alloc::collections::btree::map::Keys<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::unit::BattleUnit>, alloc::collections::btree::map::Keys<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::vehicle::BattleVehicle>>>, stompymux_rs::btech::transport_loss::publish::{closure#0}>>>::spec_from_iter ()
+#2  0x0000555555d6dc02 in stompymux_rs::btech::transport_loss::publish ()
+#3  0x000055555643bf4f in stompymux_rs::btech::evacuation::publish_new_casualties ()
+#4  0x000055555643fd45 in stompymux_rs::btech::evacuation::advance_vehicle_fires_action ()
+#5  0x0000555555abc0bd in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#6  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#7  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#8  0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#9  0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#10 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#11 0x0000555555cc5cff in autopilot_bench::main ()
+#12 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#13 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#14 0x0000555556c00697 in std::rt::lang_start_internal ()
+#15 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00005555561c73b0 in <alloc::collections::btree::map::BTreeMap<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::vehicle::BattleVehicle>>::get::<stompymux_rs::world::model::ObjectId> ()
+SAMPLE 72
+#0  0x00005555561c73b0 in <alloc::collections::btree::map::BTreeMap<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::vehicle::BattleVehicle>>::get::<stompymux_rs::world::model::ObjectId> ()
+#1  0x000055555633abf4 in <stompymux_rs::btech::searchlight::IlluminationContext>::illuminated ()
+#2  0x0000555556526978 in stompymux_rs::btech::sensors::map_optical_contact_prepared ()
+#3  0x00005555563279bb in stompymux_rs::btech::contacts::contact_facts_with_unit::{closure#2} ()
+#4  0x0000555556382bac in stompymux_rs::btech::contacts::contact_facts_with_unit ()
+#5  0x0000555556571cc4 in <alloc::vec::Vec<stompymux_rs::btech::contacts::BattleContactFacts> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<stompymux_rs::btech::contacts::BattleContactFacts, core::iter::adapters::filter_map::FilterMap<alloc::collections::btree::map::Keys<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::contacts::BattleContact>, stompymux_rs::btech::contacts::acquired_contact_facts::{closure#0}>>>::from_iter ()
+#6  0x0000555556381c11 in stompymux_rs::btech::contacts::acquired_contact_facts ()
+#7  0x0000555556243d37 in stompymux_rs::btech::autopilot::observations::observe_with_memory ()
+#8  0x000055555675c883 in stompymux_rs::btech::autopilot::runtime::advance_combat_inner ()
+#9  0x000055555675f829 in stompymux_rs::btech::autopilot::runtime::advance_combat_with_metrics ()
+#10 0x0000555555abd9d8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#11 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#12 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#13 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#14 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#15 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#16 0x0000555555cc5cff in autopilot_bench::main ()
+#17 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#18 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#19 0x0000555556c00697 in std::rt::lang_start_internal ()
+#20 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555555da2e4a in stompymux_rs::btech::scanner::scanner_unit ()
+SAMPLE 73
+#0  0x0000555555da2e4a in stompymux_rs::btech::scanner::scanner_unit ()
+#1  0x0000555555f7c614 in alloc::vec::in_place_collect::from_iter_in_place::<core::iter::adapters::filter::Filter<alloc::vec::into_iter::IntoIter<stompymux_rs::world::model::ObjectId>, stompymux_rs::btech::map_slots::hex_occupants::{closure#0}>, stompymux_rs::world::model::ObjectId> ()
+#2  0x000055555652ce64 in stompymux_rs::btech::map_slots::hex_occupants ()
+#3  0x0000555556756eb1 in stompymux_rs::btech::autopilot::runtime::should_yield ()
+#4  0x0000555556759fd2 in stompymux_rs::btech::autopilot::runtime::advance_inner ()
+#5  0x000055555675f669 in stompymux_rs::btech::autopilot::runtime::advance_with_metrics ()
+#6  0x0000555555abb107 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#7  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#8  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#9  0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#10 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#11 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#12 0x0000555555cc5cff in autopilot_bench::main ()
+#13 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#14 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#15 0x0000555556c00697 in std::rt::lang_start_internal ()
+#16 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x000055555635b75e in stompymux_rs::btech::searchlight::beam ()
+SAMPLE 74
+#0  0x000055555635b75e in stompymux_rs::btech::searchlight::beam ()
+#1  0x000055555633ab4b in <stompymux_rs::btech::searchlight::IlluminationContext>::illuminated ()
+#2  0x0000555556526978 in stompymux_rs::btech::sensors::map_optical_contact_prepared ()
+#3  0x00005555563279bb in stompymux_rs::btech::contacts::contact_facts_with_unit::{closure#2} ()
+#4  0x0000555556382bac in stompymux_rs::btech::contacts::contact_facts_with_unit ()
+#5  0x0000555556571cc4 in <alloc::vec::Vec<stompymux_rs::btech::contacts::BattleContactFacts> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<stompymux_rs::btech::contacts::BattleContactFacts, core::iter::adapters::filter_map::FilterMap<alloc::collections::btree::map::Keys<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::contacts::BattleContact>, stompymux_rs::btech::contacts::acquired_contact_facts::{closure#0}>>>::from_iter ()
+#6  0x0000555556381c11 in stompymux_rs::btech::contacts::acquired_contact_facts ()
+#7  0x0000555556243d37 in stompymux_rs::btech::autopilot::observations::observe_with_memory ()
+#8  0x000055555675c883 in stompymux_rs::btech::autopilot::runtime::advance_combat_inner ()
+#9  0x000055555675f829 in stompymux_rs::btech::autopilot::runtime::advance_combat_with_metrics ()
+#10 0x0000555555abd9d8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#11 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#12 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#13 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#14 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#15 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#16 0x0000555555cc5cff in autopilot_bench::main ()
+#17 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#18 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#19 0x0000555556c00697 in std::rt::lang_start_internal ()
+#20 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x0000555556702ce7 in <stompymux_rs::btech::state::BtechState>::validate_contacts ()
+SAMPLE 75
+#0  0x0000555556702ce7 in <stompymux_rs::btech::state::BtechState>::validate_contacts ()
+#1  0x000055555670984a in <stompymux_rs::btech::state::BtechState>::validate ()
+#2  0x00005555564d9044 in <stompymux_rs::world::model::World>::validate ()
+#3  0x0000555556439f1a in stompymux_rs::btech::evacuation::movement_action ()
+#4  0x000055555643ba93 in stompymux_rs::btech::evacuation::advance_motion_action ()
+#5  0x0000555555abb916 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#6  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#7  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#8  0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#9  0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#10 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#11 0x0000555555cc5cff in autopilot_bench::main ()
+#12 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#13 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#14 0x0000555556c00697 in std::rt::lang_start_internal ()
+#15 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x000055555631d5a9 in <core::iter::adapters::map::Map<alloc::collections::btree::map::Iter<u8, stompymux_rs::btech::template::CriticalDefinition>, <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#3}::{closure#0}> as core::iter::traits::iterator::Iterator>::fold::<usize, &mut core::iter::adapters::map::map_fold<(stompymux_rs::btech::loadout::CriticalLocation, &stompymux_rs::btech::template::CriticalDefinition), usize, usize, <core::iter::adapters::filter::Filter<_, _> as core::iter::traits::iterator::Iterator>::count::to_usize<(stompymux_rs::btech::loadout::CriticalLocation, &stompymux_rs::btech::template::CriticalDefinition), <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#4}>::{closure#0}, <usize as core::iter::traits::accum::Sum>::sum<core::iter::adapters::map::Map<core::iter::adapters::flatten::FlatMap<alloc::collections::btree::map::Iter<stompymux_rs::btech::template::BattleSection, stompymux_rs::btech::template::SectionDefinition>, core::iter::adapters::map::Map<alloc::collections::btree::map::Iter<u8, stompymux_rs::btech::template::CriticalDefinition>, <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#3}::{closure#0}>, <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#3}>, <core::iter::adapters::filter::Filter<_, _> as core::iter::traits::iterator::Iterator>::count::to_usize<(stompymux_rs::btech::loadout::CriticalLocation, &stompymux_rs::btech::template::CriticalDefinition), <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#4}>::{closure#0}>>::{closure#0}>::{closure#0}> ()
+SAMPLE 76
+#0  0x000055555631d5a9 in <core::iter::adapters::map::Map<alloc::collections::btree::map::Iter<u8, stompymux_rs::btech::template::CriticalDefinition>, <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#3}::{closure#0}> as core::iter::traits::iterator::Iterator>::fold::<usize, &mut core::iter::adapters::map::map_fold<(stompymux_rs::btech::loadout::CriticalLocation, &stompymux_rs::btech::template::CriticalDefinition), usize, usize, <core::iter::adapters::filter::Filter<_, _> as core::iter::traits::iterator::Iterator>::count::to_usize<(stompymux_rs::btech::loadout::CriticalLocation, &stompymux_rs::btech::template::CriticalDefinition), <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#4}>::{closure#0}, <usize as core::iter::traits::accum::Sum>::sum<core::iter::adapters::map::Map<core::iter::adapters::flatten::FlatMap<alloc::collections::btree::map::Iter<stompymux_rs::btech::template::BattleSection, stompymux_rs::btech::template::SectionDefinition>, core::iter::adapters::map::Map<alloc::collections::btree::map::Iter<u8, stompymux_rs::btech::template::CriticalDefinition>, <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#3}::{closure#0}>, <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#3}>, <core::iter::adapters::filter::Filter<_, _> as core::iter::traits::iterator::Iterator>::count::to_usize<(stompymux_rs::btech::loadout::CriticalLocation, &stompymux_rs::btech::template::CriticalDefinition), <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#4}>::{closure#0}>>::{closure#0}>::{closure#0}> ()
+#1  0x000055555631c300 in <core::iter::adapters::map::Map<alloc::collections::btree::map::Iter<stompymux_rs::btech::template::BattleSection, stompymux_rs::btech::template::SectionDefinition>, <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#3}> as core::iter::traits::iterator::Iterator>::fold::<usize, <core::iter::adapters::flatten::FlattenCompat<_, _>>::iter_fold::flatten<core::iter::adapters::map::Map<alloc::collections::btree::map::Iter<u8, stompymux_rs::btech::template::CriticalDefinition>, <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#3}::{closure#0}>, usize, <core::iter::adapters::flatten::FlattenCompat<_, _> as core::iter::traits::iterator::Iterator>::fold::flatten<core::iter::adapters::map::Map<alloc::collections::btree::map::Iter<u8, stompymux_rs::btech::template::CriticalDefinition>, <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#3}::{closure#0}>, usize, core::iter::adapters::map::map_fold<(stompymux_rs::btech::loadout::CriticalLocation, &stompymux_rs::btech::template::CriticalDefinition), usize, usize, <core::iter::adapters::filter::Filter<_, _> as core::iter::traits::iterator::Iterator>::count::to_usize<(stompymux_rs::btech::loadout::CriticalLocation, &stompymux_rs::btech::template::CriticalDefinition), <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#4}>::{closure#0}, <usize as core::iter::traits::accum::Sum>::sum<core::iter::adapters::map::Map<core::iter::adapters::flatten::FlatMap<alloc::collections::btree::map::Iter<stompymux_rs::btech::template::BattleSection, stompymux_rs::btech::template::SectionDefinition>, core::iter::adapters::map::Map<alloc::collections::btree::map::Iter<u8, stompymux_rs::btech::template::CriticalDefinition>, <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#3}::{closure#0}>, <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#3}>, <core::iter::adapters::filter::Filter<_, _> as core::iter::traits::iterator::Iterator>::count::to_usize<(stompymux_rs::btech::loadout::CriticalLocation, &stompymux_rs::btech::template::CriticalDefinition), <stompymux_rs::btech::unit::BattleUnit>::system_hits::{closure#4}>::{closure#0}>>::{closure#0}>::{closure#0}>::{closure#0}>::{closure#0}> ()
+#2  0x00005555566e723c in <stompymux_rs::btech::unit::BattleUnit>::system_hits ()
+#3  0x00005555566dc599 in <stompymux_rs::btech::unit::BattleUnit>::is_destroyed ()
+#4  0x0000555555da2f27 in stompymux_rs::btech::scanner::scanner_unit ()
+#5  0x000055555666fb31 in stompymux_rs::btech::los::unit_terrain_los ()
+#6  0x0000555556382aa6 in stompymux_rs::btech::contacts::contact_facts_with_unit ()
+#7  0x0000555556571cc4 in <alloc::vec::Vec<stompymux_rs::btech::contacts::BattleContactFacts> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<stompymux_rs::btech::contacts::BattleContactFacts, core::iter::adapters::filter_map::FilterMap<alloc::collections::btree::map::Keys<stompymux_rs::world::model::ObjectId, stompymux_rs::btech::contacts::BattleContact>, stompymux_rs::btech::contacts::acquired_contact_facts::{closure#0}>>>::from_iter ()
+#8  0x0000555556381c11 in stompymux_rs::btech::contacts::acquired_contact_facts ()
+#9  0x0000555556243d37 in stompymux_rs::btech::autopilot::observations::observe_with_memory ()
+#10 0x000055555675c883 in stompymux_rs::btech::autopilot::runtime::advance_combat_inner ()
+#11 0x000055555675f829 in stompymux_rs::btech::autopilot::runtime::advance_combat_with_metrics ()
+#12 0x0000555555abd9d8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#13 0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#14 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#15 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#16 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#17 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#18 0x0000555555cc5cff in autopilot_bench::main ()
+#19 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#20 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#21 0x0000555556c00697 in std::rt::lang_start_internal ()
+#22 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00005555566f74d3 in <stompymux_rs::btech::autopilot::AutopilotController>::validate ()
+SAMPLE 77
+#0  0x00005555566f74d3 in <stompymux_rs::btech::autopilot::AutopilotController>::validate ()
+#1  0x0000555556708173 in <stompymux_rs::btech::state::BtechState>::validate ()
+#2  0x00005555564d9044 in <stompymux_rs::world::model::World>::validate ()
+#3  0x0000555556439f1a in stompymux_rs::btech::evacuation::movement_action ()
+#4  0x000055555643ba93 in stompymux_rs::btech::evacuation::advance_motion_action ()
+#5  0x0000555555abb916 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#6  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#7  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#8  0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#9  0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#10 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#11 0x0000555555cc5cff in autopilot_bench::main ()
+#12 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#13 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#14 0x0000555556c00697 in std::rt::lang_start_internal ()
+#15 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00005555567a72e9 in <stompymux_rs::btech::equipment::catalogue::BattleWeapon>::parse ()
+SAMPLE 78
+#0  0x00005555567a72e9 in <stompymux_rs::btech::equipment::catalogue::BattleWeapon>::parse ()
+#1  0x00005555567adeeb in <stompymux_rs::btech::loadout::BattleLoadout>::resolve ()
+#2  0x00005555566d7de8 in <stompymux_rs::btech::unit::BattleUnit>::loadout ()
+#3  0x000055555675d1ab in stompymux_rs::btech::autopilot::runtime::advance_combat_inner ()
+#4  0x000055555675f829 in stompymux_rs::btech::autopilot::runtime::advance_combat_with_metrics ()
+#5  0x0000555555abd9d8 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#6  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#7  0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#8  0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#9  0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#10 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#11 0x0000555555cc5cff in autopilot_bench::main ()
+#12 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#13 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#14 0x0000555556c00697 in std::rt::lang_start_internal ()
+#15 0x0000555555ccdcf5 in main ()
+
+
+Thread 1 "instrumented" received signal SIGINT, Interrupt.
+0x00005555561c653e in <alloc::collections::btree::map::BTreeMap<stompymux_rs::btech::template::BattleSection, stompymux_rs::btech::unit::BattleSectionState>>::get::<stompymux_rs::btech::template::BattleSection> ()
+SAMPLE 79
+#0  0x00005555561c653e in <alloc::collections::btree::map::BTreeMap<stompymux_rs::btech::template::BattleSection, stompymux_rs::btech::unit::BattleSectionState>>::get::<stompymux_rs::btech::template::BattleSection> ()
+#1  0x00005555566dc5e7 in <stompymux_rs::btech::unit::BattleUnit>::is_destroyed ()
+#2  0x0000555555da2f27 in stompymux_rs::btech::scanner::scanner_unit ()
+#3  0x0000555555f7c614 in alloc::vec::in_place_collect::from_iter_in_place::<core::iter::adapters::filter::Filter<alloc::vec::into_iter::IntoIter<stompymux_rs::world::model::ObjectId>, stompymux_rs::btech::map_slots::hex_occupants::{closure#0}>, stompymux_rs::world::model::ObjectId> ()
+#4  0x000055555652ce64 in stompymux_rs::btech::map_slots::hex_occupants ()
+#5  0x0000555556756eb1 in stompymux_rs::btech::autopilot::runtime::should_yield ()
+#6  0x0000555556759fd2 in stompymux_rs::btech::autopilot::runtime::advance_inner ()
+#7  0x000055555675f669 in stompymux_rs::btech::autopilot::runtime::advance_with_metrics ()
+#8  0x0000555555abb107 in <stompymux_rs::server::Server>::btech_tick_measured::{closure#0} ()
+#9  0x0000555555b2248a in stompymux_rs::btech::autopilot::benchmark::run_case::{closure#0} ()
+#10 0x0000555555ab652d in autopilot_bench::main::{closure#0} ()
+#11 0x0000555555b27281 in <tokio::runtime::park::CachedParkThread>::block_on::<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>> ()
+#12 0x0000555555c2b243 in tokio::runtime::context::runtime::enter_runtime::<<tokio::runtime::scheduler::multi_thread::MultiThread>::block_on<core::pin::Pin<alloc::boxed::Box<autopilot_bench::main::{closure#0}>>>::{closure#0}, core::result::Result<(), anyhow::Error>> ()
+#13 0x0000555555c88d4f in <tokio::runtime::runtime::Runtime>::block_on::<autopilot_bench::main::{closure#0}> ()
+#14 0x0000555555cc5cff in autopilot_bench::main ()
+#15 0x0000555555c48483 in std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>> ()
+#16 0x0000555555cc4b9d in std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0} ()
+#17 0x0000555556c00697 in std::rt::lang_start_internal ()
+#18 0x0000555555ccdcf5 in main ()
+
+[Inferior 1 (process 863186) killed]

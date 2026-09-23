@@ -44,6 +44,26 @@ impl<'a> LoadoutScope<'a> {
         };
         Self::register(projections)
     }
+    /// Admission repeatedly reads its two participants. Other units keep the
+    /// ordinary uncached path, avoiding registration of the entire battlefield.
+    pub(super) fn participants(state: &'a BtechState, ids: [crate::ObjectId; 2]) -> Self {
+        let mut projections = Projections::default();
+        for id in ids {
+            if let Some(unit) = state.constructed.get(&id) {
+                projections.mechs.insert(
+                    std::ptr::from_ref(unit) as usize,
+                    super::validation_context::cached_loadout(id, unit),
+                );
+            }
+            if let Some(unit) = state.vehicles.get(&id) {
+                projections
+                    .vehicles
+                    .insert(std::ptr::from_ref(unit) as usize, None);
+            }
+        }
+        Self::register(projections)
+    }
+
     /// Standalone unit validation also shares its equipment projection internally.
     pub(super) fn unit(unit: &'a BattleUnit) -> Self {
         let address = std::ptr::from_ref(unit) as usize;

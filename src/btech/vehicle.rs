@@ -1325,11 +1325,8 @@ impl BattleVehicle {
         if let Some(projection) = super::loadout_context::vehicle(self) {
             return Ok(projection);
         }
-        let projection = (if self.contract_loadout {
-            BattleVehicleLoadout::resolve_contract(&self.definition)
-        } else {
-            BattleVehicleLoadout::resolve(&self.definition)
-        })?;
+        let projection =
+            super::equipment_context::vehicle(&self.definition, self.contract_loadout)?;
         super::loadout_context::remember_vehicle(self, &projection);
         Ok(projection)
     }

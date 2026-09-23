@@ -6,7 +6,6 @@ use super::{
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// Effects the enclosing combat action must handle alongside material/equipment damage.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -110,7 +109,7 @@ pub fn resolve_impact(
             .is_some_and(|object| !object.flags.contains(Flag::Going)),
         "Unit is unavailable"
     );
-    let mut candidate = world.clone();
+    let mut candidate = super::autopilot::diagnostics::candidate(world, true);
     let report = resolve_in_candidate(&mut candidate, id, hit, damage, None, None)?;
     *world = candidate;
     Ok(report.impact)
@@ -230,7 +229,7 @@ fn explode_ammunition_inner(
     );
     let character_effects = character;
     let character = character && object.flags.contains(Flag::InCharacter);
-    let mut candidate = world.clone();
+    let mut candidate = super::autopilot::diagnostics::candidate(world, true);
     let mut context = ImpactContext::new(&mut candidate, id, Some(rules))?;
     context.character_effects = character_effects;
     context.character_toughness = character.then_some(rules.toughness);
@@ -1002,7 +1001,7 @@ impl<'a> ImpactContext<'a> {
 
     /// Mutate only the unit owned by this cascade.
     fn unit_mut(&mut self) -> &mut BattleUnit {
-        Arc::make_mut(&mut self.world.btech.constructed)
+        super::autopilot::diagnostics::make_mut(&mut self.world.btech.constructed)
             .get_mut(&self.id)
             .unwrap()
     }

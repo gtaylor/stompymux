@@ -3,7 +3,6 @@ use super::*;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// Host policies for a tactical vehicle shot and each side's anatomy-specific consequences.
 #[derive(Debug, Clone, Copy)]
@@ -122,7 +121,10 @@ fn fire_shot(
     rules: BattleVehicleShotRules,
     xp: Option<&crate::config::XpConfig>,
 ) -> Result<BattleVehicleShotReport> {
-    let loadouts = super::loadout_context::LoadoutScope::state(&world.btech);
+    let mut attempt = super::autopilot::diagnostics::Attempt::begin();
+    let admission = super::autopilot::diagnostics::combat("admission_aim");
+    let loadouts =
+        super::loadout_context::LoadoutScope::participants(&world.btech, [shooter, target.unit]);
     let operator = super::combat_operator::controlled(world, shooter, pilot)?;
     let character = xp.is_some();
     let attacker = world
@@ -168,13 +170,15 @@ fn fire_shot(
     let angel_blocked = source_field.angel_disturbed || target_field.angel_protected;
     let submerged = super::weapon_geometry::submerged(world, shooter, weapon_index)?;
     drop(loadouts);
-    let mut candidate = world.clone();
+    drop(admission);
+    let mut candidate = super::shot_transaction::ShotCandidate::new(world);
+    let launch_measurement = super::autopilot::diagnostics::combat("launch_defenses");
     let experience_messages = if character && let Some(link) = indirect {
         super::spotter::award_indirect_experience(&mut candidate, shooter, link, &mut aim)?
     } else {
         Vec::new()
     };
-    Arc::make_mut(&mut candidate.btech.vehicles)
+    super::autopilot::diagnostics::make_mut(&mut candidate.btech.vehicles)
         .get_mut(&shooter)
         .unwrap()
         .dice = aim_dice;
@@ -270,6 +274,10 @@ fn fire_shot(
             now: crate::clock::wall_time(),
         },
     });
+    #[cfg(test)]
+    super::shot_transaction::checkpoint(super::shot_transaction::FailurePoint::Expenditure)?;
+    drop(launch_measurement);
+    let damage_measurement = super::autopilot::diagnostics::combat("damage_recoil");
     let salvo = if resolved.hit && launch.expenditure.launched && ammunition.is_swarm() {
         Some(super::BattleTargetSalvo::Swarm(super::swarm::resolve(
             &mut candidate,
@@ -289,7 +297,7 @@ fn fire_shot(
     } else if !resolved.hit || narc.is_some() || cooling.is_some() || heat_transfer > 0 {
         None
     } else if candidate.btech.vehicles().contains_key(&target) {
-        Some(super::target_salvo::resolve_vehicle_target(
+        Some(super::target_salvo::resolve_vehicle_target_in_candidate(
             &mut candidate,
             shooter,
             target,
@@ -320,7 +328,7 @@ fn fire_shot(
         )?)
     } else {
         Some(BattleTargetSalvo::Mech(
-            super::salvo::resolve_salvo_from_shot(
+            super::salvo::resolve_salvo_in_candidate(
                 &mut candidate,
                 shooter,
                 target,
@@ -366,8 +374,15 @@ fn fire_shot(
         coordinate.is_some(),
         super::shot_counters::hit(launch.roll, aim.subtotal(), rules.shot.glancing),
     )?;
+    #[cfg(test)]
+    super::shot_transaction::checkpoint(super::shot_transaction::FailurePoint::Damage)?;
+    drop(damage_measurement);
+    #[cfg(test)]
+    super::shot_transaction::checkpoint(super::shot_transaction::FailurePoint::Validation)?;
     candidate.btech.validate(&candidate)?;
-    *world = candidate;
+    let _publication = super::autopilot::diagnostics::combat("publication");
+    attempt.succeed();
+    candidate.commit(world);
     Ok(BattleVehicleShotReport {
         shooter,
         target,

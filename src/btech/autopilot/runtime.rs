@@ -54,10 +54,7 @@ pub struct AutopilotRuntimeMetrics {
 impl AutopilotRuntimeMetrics {
     pub fn merge(&mut self, other: &Self) {
         self.notice_trace.extend(other.notice_trace.iter().cloned());
-        for i in 0..7 {
-            self.diagnostics.calls[i] += other.diagnostics.calls[i];
-            self.diagnostics.nanoseconds[i] += other.diagnostics.nanoseconds[i];
-        }
+        self.diagnostics.merge(&other.diagnostics);
         self.controller_ticks = self.controller_ticks.saturating_add(other.controller_ticks);
         self.service_time_ns = self.service_time_ns.saturating_add(other.service_time_ns);
         self.movement_service_time_ns = self
@@ -312,6 +309,8 @@ fn advance_combat_inner(
     let diagnostic_scope =
         super::diagnostics::Scope::begin(metrics.as_ref().is_some_and(|m| m.diagnostics_enabled));
     let started = metrics.as_ref().map(|_| Instant::now());
+    let equipment_scope = crate::btech::equipment_context::Scope::begin(&world.btech);
+    let validation_scope = crate::btech::validation_context::Scope::begin(&world.btech);
     let ids: Vec<_> = world.btech.controllers().keys().copied().collect();
     let mut notices = Vec::new();
     for id in ids {
@@ -369,6 +368,8 @@ fn advance_combat_inner(
             );
         }
     }
+    drop(validation_scope);
+    drop(equipment_scope);
     if let (Some(metrics), Some(started)) = (metrics.as_deref_mut(), started) {
         let elapsed = started.elapsed().as_nanos();
         metrics.service_time_ns = metrics.service_time_ns.saturating_add(elapsed);
@@ -1418,8 +1419,9 @@ fn fire_target_if_ready(
             })
             .unwrap_or_default();
         for index in indices {
+            let preparation = super::diagnostics::combat("mount_preparation");
             let unit = &world.btech.constructed_units()[&shooter];
-            let Ok(loadout) = unit.loadout() else {
+            let Ok(loadout) = crate::btech::validation_context::loadout(shooter, unit) else {
                 continue;
             };
             let Some(readiness) = unit
@@ -1443,6 +1445,7 @@ fn fire_target_if_ready(
             }
             // Admission is checked per mount. A ready weapon outside its arc
             // or range must not hide a later ordinary direct-fire mount.
+            drop(preparation);
             if let Ok(report) = crate::btech::shot::resolve_shot_autopilot(
                 world,
                 shooter,
@@ -1483,6 +1486,7 @@ fn fire_target_if_ready(
             .criticals,
         };
         for index in indices {
+            let preparation = super::diagnostics::combat("mount_preparation");
             let unit = &world.btech.vehicles()[&shooter];
             let Ok(loadout) = unit.loadout() else {
                 continue;
@@ -1503,6 +1507,7 @@ fn fire_target_if_ready(
             {
                 continue;
             }
+            drop(preparation);
             if let Ok(report) = crate::btech::vehicle_fire::fire_vehicle_shot_autopilot(
                 world, shooter, target, index, rules,
             ) {

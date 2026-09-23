@@ -2,7 +2,6 @@
 use super::*;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// Target-independent inputs supplied after the enclosing attack has checked geometry and authority.
 pub(super) struct WeaponLaunchRequest {
@@ -75,7 +74,7 @@ pub(super) fn resolve_prepared_launch(
     } else {
         let mut dice = attacker.dice.clone();
         let prepared = super::gatling::prepare(world, shooter, weapon_index, &mut dice)?;
-        Arc::make_mut(&mut world.btech.constructed)
+        super::autopilot::diagnostics::make_mut(&mut world.btech.constructed)
             .get_mut(&shooter)
             .unwrap()
             .dice = dice;
@@ -107,7 +106,7 @@ pub(super) fn resolve_prepared_launch(
             streak_confused,
             glancing: request.glancing,
         },
-        &mut Arc::make_mut(&mut world.btech.constructed)
+        &mut super::autopilot::diagnostics::make_mut(&mut world.btech.constructed)
             .get_mut(&shooter)
             .unwrap()
             .dice,
@@ -120,24 +119,24 @@ pub(super) fn resolve_prepared_launch(
     let mut misload = None;
     let mut expenditure = if jammed || loader_destroyed {
         if loader_destroyed {
-            Arc::make_mut(&mut world.btech.constructed)
+            super::autopilot::diagnostics::make_mut(&mut world.btech.constructed)
                 .get_mut(&shooter)
                 .unwrap()
                 .weapon_damage_jams
                 .remove(&weapon_index);
-            Arc::make_mut(&mut world.btech.constructed)
+            super::autopilot::diagnostics::make_mut(&mut world.btech.constructed)
                 .get_mut(&shooter)
                 .unwrap()
                 .lost_criticals
                 .extend(mount.criticals.iter().copied());
         } else if critical_jam {
-            Arc::make_mut(&mut world.btech.constructed)
+            super::autopilot::diagnostics::make_mut(&mut world.btech.constructed)
                 .get_mut(&shooter)
                 .unwrap()
                 .weapon_damage_jams
                 .insert(weapon_index);
         } else {
-            Arc::make_mut(&mut world.btech.constructed)
+            super::autopilot::diagnostics::make_mut(&mut world.btech.constructed)
                 .get_mut(&shooter)
                 .unwrap()
                 .jam_weapon(weapon_index)?;
@@ -174,7 +173,7 @@ pub(super) fn resolve_prepared_launch(
     };
     if misload_required {
         if critical_explosion && mount.one_shot {
-            Arc::make_mut(&mut world.btech.constructed)
+            super::autopilot::diagnostics::make_mut(&mut world.btech.constructed)
                 .get_mut(&shooter)
                 .unwrap()
                 .spent_launchers
@@ -199,7 +198,7 @@ pub(super) fn resolve_prepared_launch(
             request.fall,
         )?);
         // Damage may have destroyed a supply bin. Decrement only its surviving inventory.
-        let unit = Arc::make_mut(&mut world.btech.constructed)
+        let unit = super::autopilot::diagnostics::make_mut(&mut world.btech.constructed)
             .get_mut(&shooter)
             .unwrap();
         expenditure

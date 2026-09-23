@@ -3,7 +3,7 @@
 use clap::Parser;
 use stompymux_rs::{
     AutopilotBenchmarkOptions as BenchmarkOptions, AutopilotBenchmarkReport as BenchmarkReport,
-    run_autopilot_benchmark as run,
+    AutopilotBenchmarkScenario as Scenario, run_autopilot_benchmark as run,
 };
 
 #[derive(Debug, Parser)]
@@ -30,6 +30,12 @@ struct Args {
     /// Write one deterministic gameplay checksum per tick to this JSONL file.
     #[arg(long)]
     trace: Option<std::path::PathBuf>,
+    /// Select a battlefield geometry; all retains the acceptance protocol.
+    #[arg(long, default_value = "all", value_parser = ["all", "open", "obstacles", "moving_congestion"])]
+    scenario: String,
+    /// Select a firing policy; all retains the acceptance protocol.
+    #[arg(long, default_value = "all", value_parser = ["all", "hold", "opportunistic"])]
+    fire: String,
 }
 
 #[tokio::main]
@@ -43,6 +49,17 @@ async fn main() -> anyhow::Result<()> {
         controllers: args.controllers,
         detailed: args.detailed,
         trace: args.trace,
+        scenario: match args.scenario.as_str() {
+            "open" => Some(Scenario::Open),
+            "obstacles" => Some(Scenario::Obstacles),
+            "moving_congestion" => Some(Scenario::MovingCongestion),
+            _ => None,
+        },
+        fire: match args.fire.as_str() {
+            "hold" => Some(false),
+            "opportunistic" => Some(true),
+            _ => None,
+        },
     })
     .await?;
     print_report(&report);
@@ -98,5 +115,31 @@ fn print_report(report: &BenchmarkReport) {
             result.peak_trace_entries,
             result.peak_trace_cells,
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn filters_default_to_full_protocol_and_reject_unknown_values() {
+        let defaults = Args::try_parse_from(["autopilot-bench"]).unwrap();
+        assert_eq!(
+            (defaults.scenario.as_str(), defaults.fire.as_str()),
+            ("all", "all")
+        );
+        let selected = Args::try_parse_from([
+            "autopilot-bench",
+            "--scenario",
+            "moving_congestion",
+            "--fire",
+            "opportunistic",
+        ])
+        .unwrap();
+        assert_eq!(selected.scenario, "moving_congestion");
+        assert_eq!(selected.fire, "opportunistic");
+        assert!(Args::try_parse_from(["autopilot-bench", "--scenario", "unknown"]).is_err());
+        assert!(Args::try_parse_from(["autopilot-bench", "--fire", "unknown"]).is_err());
     }
 }

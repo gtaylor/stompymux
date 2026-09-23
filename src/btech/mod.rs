@@ -335,7 +335,11 @@ pub use targeting::{BattleTargetLock, advance_target_locks, select_target};
 
 pub(crate) mod fire_target;
 pub use fire_target::BattleFireTarget;
+mod equipment_context;
 mod shot;
+mod shot_transaction;
+mod validation_contacts;
+mod validation_context;
 pub use shot::{
     BattleGlancingMode, BattleRecoilReport, BattleShotReport, BattleShotRules, resolve_shot,
 };

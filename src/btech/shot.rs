@@ -3,7 +3,6 @@ use super::{BattleAimModifiers, BattleAimRules, BattleHitRules, BattleWeaponUse}
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// How the configured glancing rule treats the boundary of a successful shot.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -308,7 +307,10 @@ fn resolve_shot_inner(
     rules: BattleShotRules,
     effects: ShotEffects<'_>,
 ) -> Result<BattleShotReport> {
-    let loadouts = super::loadout_context::LoadoutScope::state(&world.btech);
+    let mut attempt = super::autopilot::diagnostics::Attempt::begin();
+    let admission = super::autopilot::diagnostics::combat("admission_aim");
+    let loadouts =
+        super::loadout_context::LoadoutScope::participants(&world.btech, [shooter, target]);
     let character = effects.character;
     let operator = super::combat_operator::controlled_mech(world, shooter, pilot)?;
     let mut rules = rules;
@@ -371,7 +373,7 @@ fn resolve_shot_inner(
         ensure!(!state.destroyed, "Unit is destroyed");
         super::unit_elevation(world, id)?.context("Unit is not on a battlefield")?;
         if let Some(unit) = world.btech.constructed_units().get(&id) {
-            unit.validate()?;
+            super::validation_context::unit(id, unit)?;
         }
     }
     let submerged = super::weapon_geometry::submerged(world, shooter, weapon_index)?;
@@ -434,14 +436,16 @@ fn resolve_shot_inner(
     }
     .current(world, target)?;
     drop(loadouts);
-    let mut candidate = world.clone();
+    drop(admission);
+    let mut candidate = super::shot_transaction::ShotCandidate::new(world);
+    let launch_measurement = super::autopilot::diagnostics::combat("launch_defenses");
     let experience_messages = if character && let Some(link) = indirect {
         super::spotter::award_indirect_experience(&mut candidate, shooter, link, &mut aim)?
     } else {
         Vec::new()
     };
     let target_number = aim.subtotal();
-    Arc::make_mut(&mut candidate.btech.constructed)
+    super::autopilot::diagnostics::make_mut(&mut candidate.btech.constructed)
         .get_mut(&shooter)
         .unwrap()
         .dice = aim_dice;
@@ -564,6 +568,10 @@ fn resolve_shot_inner(
                 now: crate::clock::wall_time(),
             },
         });
+    #[cfg(test)]
+    super::shot_transaction::checkpoint(super::shot_transaction::FailurePoint::Expenditure)?;
+    drop(launch_measurement);
+    let damage_measurement = super::autopilot::diagnostics::combat("damage_recoil");
     let salvo = if resolved.hit && launched && expenditure.ammunition_mode.is_swarm() {
         Some(super::BattleTargetSalvo::Swarm(super::swarm::resolve(
             &mut candidate,
@@ -581,7 +589,7 @@ fn resolve_shot_inner(
             },
         )?))
     } else if resolved.hit && !pod && heat_transfer == 0 && cooling.is_none() && vehicle_target {
-        Some(super::target_salvo::resolve_vehicle_target(
+        Some(super::target_salvo::resolve_vehicle_target_in_candidate(
             &mut candidate,
             shooter,
             target,
@@ -611,7 +619,7 @@ fn resolve_shot_inner(
         )?)
     } else if resolved.hit && !pod && heat_transfer == 0 && cooling.is_none() {
         Some(super::BattleTargetSalvo::Mech(
-            super::salvo::resolve_salvo_from_shot(
+            super::salvo::resolve_salvo_in_candidate(
                 &mut candidate,
                 shooter,
                 target,
@@ -665,8 +673,15 @@ fn resolve_shot_inner(
         coordinate.is_some(),
         super::shot_counters::hit(roll, target_number, rules.glancing),
     )?;
+    #[cfg(test)]
+    super::shot_transaction::checkpoint(super::shot_transaction::FailurePoint::Damage)?;
+    drop(damage_measurement);
+    #[cfg(test)]
+    super::shot_transaction::checkpoint(super::shot_transaction::FailurePoint::Validation)?;
     candidate.btech.validate(&candidate)?;
-    *world = candidate;
+    let _publication = super::autopilot::diagnostics::combat("publication");
+    attempt.succeed();
+    candidate.commit(world);
     Ok(BattleShotReport {
         experience_messages,
         shooter,

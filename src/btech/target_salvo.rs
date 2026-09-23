@@ -104,10 +104,55 @@ pub(super) fn resolve_vehicle_target(
     world: &mut World,
     shooter: ObjectId,
     target: ObjectId,
+    request: BattleVehicleSalvoRequest,
+    hit_arc_mode: i64,
+    rules: BattleVehicleImpactRules,
+    context: super::vehicle_salvo::SalvoContext<'_>,
+) -> Result<BattleTargetSalvo> {
+    resolve_vehicle_target_mode(
+        world,
+        shooter,
+        target,
+        request,
+        hit_arc_mode,
+        rules,
+        context,
+        super::shot_transaction::EffectMode::Atomic,
+    )
+}
+
+/// Direct damage shares the enclosing shot's rollback boundary.
+pub(super) fn resolve_vehicle_target_in_candidate(
+    world: &mut super::shot_transaction::ShotCandidate,
+    shooter: ObjectId,
+    target: ObjectId,
+    request: BattleVehicleSalvoRequest,
+    hit_arc_mode: i64,
+    rules: BattleVehicleImpactRules,
+    context: super::vehicle_salvo::SalvoContext<'_>,
+) -> Result<BattleTargetSalvo> {
+    let mode = world.mode();
+    resolve_vehicle_target_mode(
+        world,
+        shooter,
+        target,
+        request,
+        hit_arc_mode,
+        rules,
+        context,
+        mode,
+    )
+}
+
+fn resolve_vehicle_target_mode(
+    world: &mut World,
+    shooter: ObjectId,
+    target: ObjectId,
     mut request: BattleVehicleSalvoRequest,
     hit_arc_mode: i64,
     rules: BattleVehicleImpactRules,
     context: super::vehicle_salvo::SalvoContext<'_>,
+    mode: super::shot_transaction::EffectMode,
 ) -> Result<BattleTargetSalvo> {
     let direction = super::hit_direction::HitDirection::Direct {
         shooter,
@@ -119,6 +164,8 @@ pub(super) fn resolve_vehicle_target(
     request.guidance_blocked =
         source.blocks_outgoing_guidance() || recipient.blocks_incoming_guidance();
     request.angel_blocked = source.angel_disturbed || recipient.angel_protected;
-    super::vehicle_salvo::resolve_with_context(world, target, direction, request, rules, context)
-        .map(BattleTargetSalvo::Vehicle)
+    super::vehicle_salvo::resolve_with_context_mode(
+        world, target, direction, request, rules, context, mode,
+    )
+    .map(BattleTargetSalvo::Vehicle)
 }

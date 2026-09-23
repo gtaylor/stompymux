@@ -1,0 +1,660 @@
+{
+  "before": {
+    "calls": [
+      35299,
+      624217,
+      620163,
+      624185,
+      34240,
+      2008,
+      5990
+    ],
+    "nanoseconds": [
+      1578266885,
+      774445330,
+      394281121,
+      248337973,
+      41560444,
+      4314098,
+      594952402
+    ],
+    "combat": {
+      "admission_aim": {
+        "calls": 7562,
+        "nanoseconds": 210986209
+      },
+      "attempted_shots": {
+        "calls": 7562,
+        "nanoseconds": 0
+      },
+      "candidate_creation": {
+        "calls": 137,
+        "nanoseconds": 3499253
+      },
+      "copy_on_write": {
+        "calls": 137,
+        "nanoseconds": 28444332
+      },
+      "damage_recoil": {
+        "calls": 100,
+        "nanoseconds": 39113893
+      },
+      "launch_defenses": {
+        "calls": 100,
+        "nanoseconds": 118721114
+      },
+      "mount_preparation": {
+        "calls": 14975,
+        "nanoseconds": 43743229
+      },
+      "nested_transactions": {
+        "calls": 37,
+        "nanoseconds": 0
+      },
+      "publication": {
+        "calls": 100,
+        "nanoseconds": 15853733
+      },
+      "rejected_shots": {
+        "calls": 7462,
+        "nanoseconds": 0
+      },
+      "shot_transactions": {
+        "calls": 100,
+        "nanoseconds": 0
+      },
+      "successful_shots": {
+        "calls": 100,
+        "nanoseconds": 0
+      },
+      "validation": {
+        "calls": 175,
+        "nanoseconds": 187861548
+      },
+      "validation_cross_object": {
+        "calls": 175,
+        "nanoseconds": 107353662
+      },
+      "validation_map": {
+        "calls": 238,
+        "nanoseconds": 1516387
+      },
+      "validation_unit": {
+        "calls": 24318,
+        "nanoseconds": 184244570
+      }
+    }
+  },
+  "transactions": {
+    "calls": [
+      35299,
+      624217,
+      620163,
+      624185,
+      34240,
+      2008,
+      5990
+    ],
+    "nanoseconds": [
+      1653663790,
+      807936158,
+      411402924,
+      257472378,
+      42230730,
+      4536231,
+      589974152
+    ],
+    "combat": {
+      "admission_aim": {
+        "calls": 7562,
+        "nanoseconds": 192129586
+      },
+      "attempted_shots": {
+        "calls": 7562,
+        "nanoseconds": 0
+      },
+      "candidate_creation": {
+        "calls": 100,
+        "nanoseconds": 4188409
+      },
+      "copy_on_write": {
+        "calls": 101,
+        "nanoseconds": 24030616
+      },
+      "damage_recoil": {
+        "calls": 100,
+        "nanoseconds": 28408010
+      },
+      "launch_defenses": {
+        "calls": 100,
+        "nanoseconds": 129049781
+      },
+      "mount_preparation": {
+        "calls": 14975,
+        "nanoseconds": 45052573
+      },
+      "publication": {
+        "calls": 100,
+        "nanoseconds": 18102166
+      },
+      "rejected_shots": {
+        "calls": 7462,
+        "nanoseconds": 0
+      },
+      "shot_transactions": {
+        "calls": 100,
+        "nanoseconds": 0
+      },
+      "successful_shots": {
+        "calls": 100,
+        "nanoseconds": 0
+      },
+      "validation": {
+        "calls": 175,
+        "nanoseconds": 199433824
+      },
+      "validation_cross_object": {
+        "calls": 175,
+        "nanoseconds": 114681498
+      },
+      "validation_map": {
+        "calls": 238,
+        "nanoseconds": 1523564
+      },
+      "validation_unit": {
+        "calls": 24318,
+        "nanoseconds": 193566664
+      }
+    }
+  },
+  "validation": {
+    "calls": [
+      35299,
+      624217,
+      620163,
+      624185,
+      34240,
+      2008,
+      5990
+    ],
+    "nanoseconds": [
+      1394079819,
+      651117144,
+      362610675,
+      225378427,
+      33974502,
+      3192846,
+      373590723
+    ],
+    "combat": {
+      "admission_aim": {
+        "calls": 7562,
+        "nanoseconds": 116077747
+      },
+      "attempted_shots": {
+        "calls": 7562,
+        "nanoseconds": 0
+      },
+      "candidate_creation": {
+        "calls": 100,
+        "nanoseconds": 2411260
+      },
+      "copy_on_write": {
+        "calls": 101,
+        "nanoseconds": 14543900
+      },
+      "damage_recoil": {
+        "calls": 100,
+        "nanoseconds": 18369964
+      },
+      "launch_defenses": {
+        "calls": 100,
+        "nanoseconds": 76168483
+      },
+      "mount_preparation": {
+        "calls": 14975,
+        "nanoseconds": 41056172
+      },
+      "publication": {
+        "calls": 100,
+        "nanoseconds": 9483658
+      },
+      "rejected_shots": {
+        "calls": 7462,
+        "nanoseconds": 0
+      },
+      "shot_transactions": {
+        "calls": 100,
+        "nanoseconds": 0
+      },
+      "successful_shots": {
+        "calls": 100,
+        "nanoseconds": 0
+      },
+      "validation": {
+        "calls": 175,
+        "nanoseconds": 108263455
+      },
+      "validation_cross_object": {
+        "calls": 175,
+        "nanoseconds": 97008063
+      },
+      "validation_map": {
+        "calls": 82,
+        "nanoseconds": 374200
+      },
+      "validation_map_reused": {
+        "calls": 156,
+        "nanoseconds": 0
+      },
+      "validation_unit": {
+        "calls": 14806,
+        "nanoseconds": 33094794
+      },
+      "validation_unit_reused": {
+        "calls": 9512,
+        "nanoseconds": 0
+      }
+    }
+  },
+  "candidate": {
+    "calls": [
+      35299,
+      624217,
+      620163,
+      624185,
+      34240,
+      2008,
+      5990
+    ],
+    "nanoseconds": [
+      1451034051,
+      677170044,
+      374168938,
+      232640489,
+      35596287,
+      3343717,
+      372729102
+    ],
+    "combat": {
+      "admission_aim": {
+        "calls": 7562,
+        "nanoseconds": 114354806
+      },
+      "attempted_shots": {
+        "calls": 7562,
+        "nanoseconds": 0
+      },
+      "candidate_creation": {
+        "calls": 100,
+        "nanoseconds": 2489163
+      },
+      "copy_on_write": {
+        "calls": 101,
+        "nanoseconds": 14678484
+      },
+      "damage_recoil": {
+        "calls": 100,
+        "nanoseconds": 18813160
+      },
+      "equipment_reused": {
+        "calls": 9198,
+        "nanoseconds": 0
+      },
+      "launch_defenses": {
+        "calls": 100,
+        "nanoseconds": 79109492
+      },
+      "mount_preparation": {
+        "calls": 14975,
+        "nanoseconds": 33863696
+      },
+      "publication": {
+        "calls": 100,
+        "nanoseconds": 9535262
+      },
+      "rejected_shots": {
+        "calls": 7462,
+        "nanoseconds": 0
+      },
+      "shot_transactions": {
+        "calls": 100,
+        "nanoseconds": 0
+      },
+      "successful_shots": {
+        "calls": 100,
+        "nanoseconds": 0
+      },
+      "validation": {
+        "calls": 175,
+        "nanoseconds": 112952725
+      },
+      "validation_cross_object": {
+        "calls": 175,
+        "nanoseconds": 101460870
+      },
+      "validation_map": {
+        "calls": 82,
+        "nanoseconds": 381874
+      },
+      "validation_map_reused": {
+        "calls": 156,
+        "nanoseconds": 0
+      },
+      "validation_unit": {
+        "calls": 14806,
+        "nanoseconds": 33517857
+      },
+      "validation_unit_reused": {
+        "calls": 9512,
+        "nanoseconds": 0
+      }
+    }
+  },
+  "v2": {
+    "calls": [
+      35299,
+      624217,
+      620163,
+      624185,
+      34240,
+      2008,
+      5990
+    ],
+    "nanoseconds": [
+      1429395636,
+      670258646,
+      370556842,
+      229991753,
+      33811001,
+      3197311,
+      392105043
+    ],
+    "combat": {
+      "admission_aim": {
+        "calls": 7562,
+        "nanoseconds": 114544468
+      },
+      "attempted_shots": {
+        "calls": 7562,
+        "nanoseconds": 0
+      },
+      "candidate_creation": {
+        "calls": 100,
+        "nanoseconds": 2515577
+      },
+      "copy_on_write": {
+        "calls": 101,
+        "nanoseconds": 14739172
+      },
+      "damage_recoil": {
+        "calls": 100,
+        "nanoseconds": 19886819
+      },
+      "equipment_reused": {
+        "calls": 9198,
+        "nanoseconds": 0
+      },
+      "launch_defenses": {
+        "calls": 100,
+        "nanoseconds": 86652503
+      },
+      "mount_preparation": {
+        "calls": 14975,
+        "nanoseconds": 35793888
+      },
+      "publication": {
+        "calls": 100,
+        "nanoseconds": 9533226
+      },
+      "rejected_shots": {
+        "calls": 7462,
+        "nanoseconds": 0
+      },
+      "shot_transactions": {
+        "calls": 100,
+        "nanoseconds": 0
+      },
+      "successful_shots": {
+        "calls": 100,
+        "nanoseconds": 0
+      },
+      "validation": {
+        "calls": 175,
+        "nanoseconds": 130750219
+      },
+      "validation_cross_object": {
+        "calls": 175,
+        "nanoseconds": 116671646
+      },
+      "validation_map": {
+        "calls": 82,
+        "nanoseconds": 394162
+      },
+      "validation_map_reused": {
+        "calls": 156,
+        "nanoseconds": 0
+      },
+      "validation_unit": {
+        "calls": 3149,
+        "nanoseconds": 35488020
+      },
+      "validation_unit_reused": {
+        "calls": 9512,
+        "nanoseconds": 0
+      },
+      "validation_vehicle_reused": {
+        "calls": 11657,
+        "nanoseconds": 0
+      },
+      "vehicle_equipment_reused": {
+        "calls": 4469,
+        "nanoseconds": 0
+      }
+    }
+  },
+  "v3": {
+    "calls": [
+      35299,
+      624217,
+      620163,
+      624185,
+      34240,
+      2008,
+      5990
+    ],
+    "nanoseconds": [
+      1415467133,
+      659657806,
+      370514206,
+      234594719,
+      25547104,
+      3331997,
+      335655274
+    ],
+    "combat": {
+      "admission_aim": {
+        "calls": 7562,
+        "nanoseconds": 110475149
+      },
+      "attempted_shots": {
+        "calls": 7562,
+        "nanoseconds": 0
+      },
+      "candidate_creation": {
+        "calls": 100,
+        "nanoseconds": 2336438
+      },
+      "copy_on_write": {
+        "calls": 101,
+        "nanoseconds": 14283168
+      },
+      "damage_recoil": {
+        "calls": 100,
+        "nanoseconds": 16924217
+      },
+      "equipment_projection_reused": {
+        "calls": 30967,
+        "nanoseconds": 0
+      },
+      "equipment_resolution": {
+        "calls": 240,
+        "nanoseconds": 1410945
+      },
+      "equipment_reused": {
+        "calls": 9198,
+        "nanoseconds": 0
+      },
+      "launch_defenses": {
+        "calls": 100,
+        "nanoseconds": 72094578
+      },
+      "mount_preparation": {
+        "calls": 14975,
+        "nanoseconds": 19252331
+      },
+      "publication": {
+        "calls": 100,
+        "nanoseconds": 9166971
+      },
+      "rejected_shots": {
+        "calls": 7462,
+        "nanoseconds": 0
+      },
+      "shot_transactions": {
+        "calls": 100,
+        "nanoseconds": 0
+      },
+      "successful_shots": {
+        "calls": 100,
+        "nanoseconds": 0
+      },
+      "validation": {
+        "calls": 175,
+        "nanoseconds": 109295386
+      },
+      "validation_cross_object": {
+        "calls": 175,
+        "nanoseconds": 99214454
+      },
+      "validation_map": {
+        "calls": 82,
+        "nanoseconds": 436978
+      },
+      "validation_map_reused": {
+        "calls": 156,
+        "nanoseconds": 0
+      },
+      "validation_unit": {
+        "calls": 14806,
+        "nanoseconds": 32491328
+      },
+      "validation_unit_reused": {
+        "calls": 9512,
+        "nanoseconds": 0
+      }
+    }
+  },
+  "final": {
+    "calls": [
+      35299,
+      624217,
+      620163,
+      624185,
+      34240,
+      2008,
+      5990
+    ],
+    "nanoseconds": [
+      1433767147,
+      676346274,
+      373551462,
+      232439770,
+      24787100,
+      3285835,
+      313781253
+    ],
+    "combat": {
+      "admission_aim": {
+        "calls": 7562,
+        "nanoseconds": 107777388
+      },
+      "attempted_shots": {
+        "calls": 7562,
+        "nanoseconds": 0
+      },
+      "candidate_creation": {
+        "calls": 100,
+        "nanoseconds": 2409624
+      },
+      "copy_on_write": {
+        "calls": 101,
+        "nanoseconds": 14171592
+      },
+      "damage_recoil": {
+        "calls": 100,
+        "nanoseconds": 15600864
+      },
+      "equipment_projection_reused": {
+        "calls": 30967,
+        "nanoseconds": 0
+      },
+      "equipment_resolution": {
+        "calls": 240,
+        "nanoseconds": 1422240
+      },
+      "equipment_reused": {
+        "calls": 9198,
+        "nanoseconds": 0
+      },
+      "launch_defenses": {
+        "calls": 100,
+        "nanoseconds": 65300427
+      },
+      "mount_preparation": {
+        "calls": 14975,
+        "nanoseconds": 18472855
+      },
+      "publication": {
+        "calls": 100,
+        "nanoseconds": 9438055
+      },
+      "rejected_shots": {
+        "calls": 7462,
+        "nanoseconds": 0
+      },
+      "shot_transactions": {
+        "calls": 100,
+        "nanoseconds": 0
+      },
+      "successful_shots": {
+        "calls": 100,
+        "nanoseconds": 0
+      },
+      "validation": {
+        "calls": 175,
+        "nanoseconds": 91131795
+      },
+      "validation_cross_object": {
+        "calls": 175,
+        "nanoseconds": 81339354
+      },
+      "validation_map": {
+        "calls": 82,
+        "nanoseconds": 369102
+      },
+      "validation_map_reused": {
+        "calls": 156,
+        "nanoseconds": 0
+      },
+      "validation_unit": {
+        "calls": 14806,
+        "nanoseconds": 31860628
+      },
+      "validation_unit_reused": {
+        "calls": 9512,
+        "nanoseconds": 0
+      }
+    }
+  }
+}

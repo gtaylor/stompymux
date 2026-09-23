@@ -1,0 +1,9 @@
+{
+  "records": 1710,
+  "byte_identical": true,
+  "sha256": "b2bf256932a14e11403374a8ea75547ff2bbc0054e88f60d37f9073b180fcc8b",
+  "warmup_ticks": 35,
+  "measured_ticks": 60,
+  "repetitions": 3,
+  "cases": 6
+}

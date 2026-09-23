@@ -1273,4 +1273,6 @@ pub use btech::autopilot::benchmark::{
 };
 pub use btech::autopilot::runtime::AutopilotRuntimeMetrics;
 
-pub use btech::autopilot::diagnostics::AutopilotDiagnostics;
+pub use btech::autopilot::diagnostics::{
+    AutopilotDiagnostics, CombatSample as AutopilotCombatSample,
+};

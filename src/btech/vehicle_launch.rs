@@ -3,7 +3,6 @@ use super::{BattleGlancingMode, BattleVehicleWeaponUse};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// Target-independent inputs from the enclosing attack's current admission and aim calculation.
 #[derive(Debug, Clone, Copy)]
@@ -52,7 +51,7 @@ pub fn launch_vehicle_weapon(
     world: &mut World,
     request: BattleVehicleLaunchRequest,
 ) -> Result<BattleVehicleLaunch> {
-    let mut candidate = world.clone();
+    let mut candidate = super::autopilot::diagnostics::candidate(world, true);
     let result = launch(&mut candidate, request, false, None)?;
     *world = candidate;
     Ok(result)
@@ -117,7 +116,7 @@ fn launch(
     };
     // Short supply changes the saved selection even when caseless ignition prevents launch.
     if effective != requested {
-        Arc::make_mut(&mut world.btech.vehicles)
+        super::autopilot::diagnostics::make_mut(&mut world.btech.vehicles)
             .get_mut(&shooter)
             .unwrap()
             .fire_modes
@@ -145,7 +144,7 @@ fn launch(
             streak_confused,
             glancing,
         },
-        &mut Arc::make_mut(&mut world.btech.vehicles)
+        &mut super::autopilot::diagnostics::make_mut(&mut world.btech.vehicles)
             .get_mut(&shooter)
             .unwrap()
             .dice,
@@ -158,7 +157,7 @@ fn launch(
     let mut expenditure = if let Some(prepared) = prepared {
         prepared
     } else if loader_destroyed || jammed {
-        let vehicle = Arc::make_mut(&mut world.btech.vehicles)
+        let vehicle = super::autopilot::diagnostics::make_mut(&mut world.btech.vehicles)
             .get_mut(&shooter)
             .unwrap();
         if loader_destroyed {
@@ -192,7 +191,7 @@ fn launch(
             critical_rules,
             super::vehicle_internal_damage::DamageContext::default(),
         )?;
-        let vehicle = Arc::make_mut(&mut world.btech.vehicles)
+        let vehicle = super::autopilot::diagnostics::make_mut(&mut world.btech.vehicles)
             .get_mut(&shooter)
             .unwrap();
         expenditure

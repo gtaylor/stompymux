@@ -3,7 +3,6 @@ use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// Damage inputs from an already successful attack, after launch expenditure and defense resolution.
 #[derive(Debug, Clone, Copy)]
@@ -89,6 +88,27 @@ pub(super) fn resolve_with_context(
     rules: BattleVehicleImpactRules,
     context: SalvoContext<'_>,
 ) -> Result<BattleVehicleSalvoReport> {
+    resolve_with_context_mode(
+        world,
+        target,
+        direction,
+        request,
+        rules,
+        context,
+        super::shot_transaction::EffectMode::Atomic,
+    )
+}
+
+/// Resolve all groups in the explicitly selected savepoint.
+pub(super) fn resolve_with_context_mode(
+    world: &mut World,
+    target: ObjectId,
+    direction: super::hit_direction::HitDirection,
+    request: BattleVehicleSalvoRequest,
+    rules: BattleVehicleImpactRules,
+    context: SalvoContext<'_>,
+    mode: super::shot_transaction::EffectMode,
+) -> Result<BattleVehicleSalvoReport> {
     let SalvoContext {
         woods_damage,
         submerged,
@@ -146,7 +166,9 @@ pub(super) fn resolve_with_context(
         },
         "Invalid gatling launch damage"
     );
-    let mut candidate = world.clone();
+    let target_beacon =
+        vehicle.has_beacon(BattleBeaconKind::Narc) || vehicle.has_beacon(BattleBeaconKind::Homing);
+    let mut candidate = super::shot_transaction::EffectCandidate::new(world, mode);
     let initial_woods = if woods_damage && let Some(shooter) = attacker {
         super::woods_absorption::begin_pellets(
             &mut candidate,
@@ -175,10 +197,9 @@ pub(super) fn resolve_with_context(
                 && (!shell_woods || request.fire_mode.rounds_per_cycle() > 1),
             guidance_blocked: request.guidance_blocked,
             angel_blocked: request.angel_blocked,
-            target_beacon: vehicle.has_beacon(BattleBeaconKind::Narc)
-                || vehicle.has_beacon(BattleBeaconKind::Homing),
+            target_beacon,
         },
-        &mut Arc::make_mut(&mut candidate.btech.vehicles)
+        &mut super::autopilot::diagnostics::make_mut(&mut candidate.btech.vehicles)
             .get_mut(&target)
             .unwrap()
             .dice,
@@ -208,7 +229,7 @@ pub(super) fn resolve_with_context(
                 )?);
             }
             candidate.btech.validate(&candidate)?;
-            *world = candidate;
+            candidate.commit();
             return Ok(report);
         }
     }
@@ -283,6 +304,6 @@ pub(super) fn resolve_with_context(
             .push(BattleVehicleSalvoGroup { damage, impact });
     }
     candidate.btech.validate(&candidate)?;
-    *world = candidate;
+    candidate.commit();
     Ok(report)
 }

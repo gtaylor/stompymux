@@ -162,6 +162,7 @@ impl StoredBattleMap {
 
     /// Check the complete decoded map before it can participate in a world transaction.
     pub(crate) fn validate(&self) -> Result<()> {
+        let _measurement = super::autopilot::diagnostics::combat("validation_map");
         self.building.validate()?;
         if let Some(point) = self.cargo_transfer_point {
             point.validate(self)?;
@@ -485,6 +486,7 @@ impl BtechState {
 
     /// Validate decoded maps without interpreting deferred identities or opaque terrain.
     pub(crate) fn validate(&self, world: &World) -> Result<()> {
+        let _measurement = super::autopilot::diagnostics::validation();
         let _loadouts = super::loadout_context::LoadoutScope::state(self);
         ensure!(self.simulation_seconds >= 0, "Invalid simulation time");
         super::autopilot::validate_controllers(&self.controllers)?;
@@ -579,9 +581,11 @@ impl BtechState {
             );
             recovery.target(world, *id)?;
         }
+        let contact_positions = super::validation_contacts::Positions::prepare(self);
         let mut pilots = BTreeSet::new();
         let mut map_slots = BTreeSet::new();
         for (id, vehicle) in self.vehicles.iter() {
+            let local_validation = super::autopilot::diagnostics::combat("validation_unit");
             vehicle.hardware.validate()?;
             vehicle.validate_flight_state()?;
             vehicle.validate_orbital_drop()?;
@@ -596,6 +600,7 @@ impl BtechState {
                 vehicle.radio_experience_remaining <= 61,
                 "Invalid radio experience countdown"
             );
+            drop(local_validation);
             if !tow_targets.contains(id)
                 && let Some(motion) = vehicle.motion()
             {
@@ -615,7 +620,12 @@ impl BtechState {
                     "Immobile untowed vehicle retains motion"
                 );
             }
-            self.validate_contacts(*id, vehicle.position(), vehicle.contacts())?;
+            self.validate_contacts(
+                *id,
+                vehicle.position(),
+                vehicle.contacts(),
+                contact_positions.as_ref(),
+            )?;
             if let Some(lock) = vehicle.target_lock() {
                 self.validate_target_lock(*id, vehicle.position(), lock)?;
             }
@@ -699,7 +709,7 @@ impl BtechState {
                     "Pilot must be inside its unit"
                 );
             }
-            unit.validate()?;
+            super::validation_context::unit(*id, unit)?;
             if !tow_targets.contains(id)
                 && let Some(motion) = unit.motion()
             {
@@ -733,7 +743,12 @@ impl BtechState {
                 let position = unit.position().context("Hex lock requires a battlefield")?;
                 self.maps[&position.map].hex(i64::from(lock.hex.x), i64::from(lock.hex.y))?;
             }
-            self.validate_contacts(*id, unit.position(), unit.contacts())?;
+            self.validate_contacts(
+                *id,
+                unit.position(),
+                unit.contacts(),
+                contact_positions.as_ref(),
+            )?;
 
             if let Some(position) = unit.position() {
                 let map = self
@@ -779,7 +794,7 @@ impl BtechState {
             );
         }
         for (id, map) in self.maps.iter().filter(|(_, map)| map.terrain_ready()) {
-            map.validate().with_context(|| format!("Map #{}", id.0))?;
+            super::validation_context::map(*id, map).with_context(|| format!("Map #{}", id.0))?;
             ensure!(
                 map.landing_exclusions
                     .values()
@@ -876,13 +891,18 @@ impl BtechState {
         observer: ObjectId,
         position: Option<super::BattlePosition>,
         contacts: &BTreeMap<ObjectId, super::BattleContact>,
+        positions: Option<&super::validation_contacts::Positions>,
     ) -> Result<()> {
         for (target, contact) in contacts {
             ensure!(
                 *target != observer && (contact.primary || contact.secondary),
                 "Invalid unit contact"
             );
-            let target_position = if let Some(vehicle) = self.vehicles.get(target) {
+            let target_position = if let Some(positions) = positions {
+                positions
+                    .get(*target)
+                    .context("Contact references missing unit")?
+            } else if let Some(vehicle) = self.vehicles.get(target) {
                 vehicle.position()
             } else {
                 self.constructed

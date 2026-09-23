@@ -3,7 +3,6 @@ use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// Vehicle hit-table, critical and environmental fire policy; the caller supplies configuration.
 #[derive(Debug, Clone, Copy)]
@@ -45,7 +44,7 @@ pub fn resolve_vehicle_impact(
         .get(&id)
         .context("Vehicle is unavailable")?;
     ensure!(!vehicle.is_destroyed(), "Vehicle is destroyed");
-    let mut candidate = world.clone();
+    let mut candidate = super::autopilot::diagnostics::candidate(world, true);
     let result = resolve_followup_in_candidate(
         &mut candidate,
         id,
@@ -143,7 +142,7 @@ pub(super) fn resolve_directed_followup(
             .notices
             .extend(super::combat_safe::notice(attacker, id));
         // Safe material impacts still enter the damage stage and consume its diagnostic roll.
-        Arc::make_mut(&mut world.btech.vehicles)
+        super::autopilot::diagnostics::make_mut(&mut world.btech.vehicles)
             .get_mut(&id)
             .unwrap()
             .dice
@@ -204,7 +203,7 @@ fn resolve_location_followup(
         broadcasts: Vec::new(),
     };
     if rules.criticals.combat_safe || vehicle.combat_safe {
-        Arc::make_mut(&mut world.btech.vehicles)
+        super::autopilot::diagnostics::make_mut(&mut world.btech.vehicles)
             .get_mut(&id)
             .unwrap()
             .dice = dice;
@@ -230,7 +229,7 @@ fn resolve_location_followup(
         } else {
             None
         };
-        Arc::make_mut(&mut world.btech.vehicles)
+        super::autopilot::diagnostics::make_mut(&mut world.btech.vehicles)
             .get_mut(&id)
             .unwrap()
             .dice = dice;
@@ -241,7 +240,7 @@ fn resolve_location_followup(
                 text: rotor.message().into(),
             });
         }
-        let vehicle = Arc::make_mut(&mut world.btech.vehicles)
+        let vehicle = super::autopilot::diagnostics::make_mut(&mut world.btech.vehicles)
             .get_mut(&id)
             .unwrap();
         if let Some((index, weapon)) = main_weapon {
@@ -301,7 +300,7 @@ fn resolve_location_followup(
     } else {
         vehicle.standard_hit(arc, roll, rules.fasa.critical_mode, &mut dice)?
     };
-    let vehicle = Arc::make_mut(&mut world.btech.vehicles)
+    let vehicle = super::autopilot::diagnostics::make_mut(&mut world.btech.vehicles)
         .get_mut(&id)
         .unwrap();
     vehicle.dice = dice;
