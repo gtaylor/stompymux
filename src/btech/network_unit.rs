@@ -57,7 +57,7 @@ impl NetworkUnit<'_> {
     }
     /// Tactical label independent of the construction store.
     pub fn battlefield_id(&self) -> Option<String> {
-        self.scanner.label.clone()
+        self.scanner.label()
     }
     /// Resolved presentation name shared with identified contacts.
     pub fn name(&self) -> &str {

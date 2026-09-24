@@ -166,7 +166,7 @@ fn value(world: &World, config: &Config, id: ObjectId, field: &str) -> Result<Op
     Ok(match field {
         "mapindex" => integer(scanner.position.map_or(-1, |p| p.map.0)),
         "id" => scanner
-            .label
+            .label()
             .or_else(|| mech.and_then(|unit| unit.battlefield_label.clone()))
             .or_else(|| vehicle.and_then(|unit| unit.battlefield_label.clone())),
         "unit_era" | "unit_tro" => {

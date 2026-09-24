@@ -1,0 +1,107 @@
+{
+  "candidate_sha256": "be35fbf45edf998e73d9279349d6bcf6aff338c8fcbcb770e2f7cebc6205ae7c",
+  "changed_cases": {
+    "[\"short_occlusions\",\"hover\",1,false]": {
+      "first_record": 14703,
+      "first_tick": 4
+    },
+    "[\"short_occlusions\",\"hover\",1,true]": {
+      "first_record": 15603,
+      "first_tick": 4
+    },
+    "[\"short_occlusions\",\"hover\",2,false]": {
+      "first_record": 16503,
+      "first_tick": 4
+    },
+    "[\"short_occlusions\",\"hover\",2,true]": {
+      "first_record": 17403,
+      "first_tick": 4
+    },
+    "[\"short_occlusions\",\"hover\",3,false]": {
+      "first_record": 18303,
+      "first_tick": 4
+    },
+    "[\"short_occlusions\",\"hover\",3,true]": {
+      "first_record": 19203,
+      "first_tick": 4
+    },
+    "[\"short_occlusions\",\"mech\",1,false]": {
+      "first_record": 4,
+      "first_tick": 4
+    },
+    "[\"short_occlusions\",\"mech\",1,true]": {
+      "first_record": 904,
+      "first_tick": 4
+    },
+    "[\"short_occlusions\",\"mech\",2,false]": {
+      "first_record": 1326,
+      "first_tick": 4
+    },
+    "[\"short_occlusions\",\"mech\",2,true]": {
+      "first_record": 2226,
+      "first_tick": 4
+    },
+    "[\"short_occlusions\",\"mech\",3,false]": {
+      "first_record": 2433,
+      "first_tick": 4
+    },
+    "[\"short_occlusions\",\"mech\",3,true]": {
+      "first_record": 3333,
+      "first_tick": 4
+    },
+    "[\"short_occlusions\",\"tracked\",1,false]": {
+      "first_record": 3903,
+      "first_tick": 4
+    },
+    "[\"short_occlusions\",\"tracked\",1,true]": {
+      "first_record": 4803,
+      "first_tick": 4
+    },
+    "[\"short_occlusions\",\"tracked\",2,false]": {
+      "first_record": 5703,
+      "first_tick": 4
+    },
+    "[\"short_occlusions\",\"tracked\",2,true]": {
+      "first_record": 6603,
+      "first_tick": 4
+    },
+    "[\"short_occlusions\",\"tracked\",3,false]": {
+      "first_record": 7503,
+      "first_tick": 4
+    },
+    "[\"short_occlusions\",\"tracked\",3,true]": {
+      "first_record": 8403,
+      "first_tick": 4
+    },
+    "[\"short_occlusions\",\"wheeled\",1,false]": {
+      "first_record": 9303,
+      "first_tick": 4
+    },
+    "[\"short_occlusions\",\"wheeled\",1,true]": {
+      "first_record": 10203,
+      "first_tick": 4
+    },
+    "[\"short_occlusions\",\"wheeled\",2,false]": {
+      "first_record": 11103,
+      "first_tick": 4
+    },
+    "[\"short_occlusions\",\"wheeled\",2,true]": {
+      "first_record": 12003,
+      "first_tick": 4
+    },
+    "[\"short_occlusions\",\"wheeled\",3,false]": {
+      "first_record": 12903,
+      "first_tick": 4
+    },
+    "[\"short_occlusions\",\"wheeled\",3,true]": {
+      "first_record": 13803,
+      "first_tick": 4
+    }
+  },
+  "failures": [
+    "trace mismatch"
+  ],
+  "first_difference": 4,
+  "records": 20099,
+  "reference_sha256": "74708f10b1bbef1fc25f4cd43b4e01fac03e701e8af51a6783d9e2b059e2891c"
+}

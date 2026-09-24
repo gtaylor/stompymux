@@ -196,7 +196,7 @@ fn scan_unit_configured(
                 .as_ref()
                 .map_or("something", |contact| contact.name.as_str());
             let mut label = super::scanner::scanner_unit(world, *towed)
-                .and_then(|unit| unit.label)
+                .and_then(|unit| unit.label())
                 .unwrap_or_else(|| "??".into());
             if seen.as_ref().is_some_and(|contact| contact.friendly) {
                 label.make_ascii_lowercase();
@@ -281,7 +281,7 @@ pub fn scan_unit_action(
                 None
             } else {
                 let seen = super::visible_contact(&world, target, observer)?;
-                let mut label = source.label.context("Scanner is not placed")?;
+                let mut label = source.label().context("Scanner is not placed")?;
                 if seen.as_ref().is_some_and(|view| view.friendly) {
                     label.make_ascii_lowercase();
                 }

@@ -1,0 +1,10 @@
+{
+  "encounters": 12,
+  "committed_ticks_per_trace": 2880,
+  "participants": 48,
+  "controlled_completions_before": 0,
+  "controlled_completions_after": 0,
+  "failures": [],
+  "limitations": [],
+  "changes": []
+}

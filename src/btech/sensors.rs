@@ -274,8 +274,7 @@ fn evaluate_optical_contact(
         return Ok(report);
     }
 
-    let terrain = super::unit_terrain_los(world, observer, target)?;
-    let range = super::unit_range(world, observer, target)?;
+    let (terrain, range) = super::los::unit_terrain_geometry(world, observer, target)?;
     let sight = super::los::unit_sight_point(world, target)?;
     let underwater = sight.below_waterline();
     let mut report = sensor.evaluate_with_ceiling(
@@ -431,10 +430,7 @@ fn evaluate_map_optical_contact(
 
     let (terrain, range) = match geometry {
         Some(geometry) => geometry,
-        None => (
-            super::unit_terrain_los(world, observer, target)?,
-            super::unit_range(world, observer, target)?,
-        ),
+        None => super::los::unit_terrain_geometry(world, observer, target)?,
     };
     let sight = super::los::unit_sight_point(world, target)?;
     let position = sight.position;

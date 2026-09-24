@@ -63,7 +63,7 @@ pub fn list_map_action(
             for id in &units {
                 let unit =
                     super::scanner::scanner_unit(&before, *id).context("Unit is unavailable")?;
-                let label = unit.label.context("Unit has no battlefield ID")?;
+                let label = unit.label().context("Unit has no battlefield ID")?;
                 notify(&format!("Mech DB Number: {} : [{label}]\tValid Data", id.0))?;
             }
             notify(&format!("{} Mechs On Map", units.len()))?;

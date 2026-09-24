@@ -24,7 +24,7 @@ path = "src/bin/autopilot-bench.rs"
 
 [dependencies]
 tempfile = "3.27.0"
-nix = { version = "0.31.3", default-features = false, features = ["resource", "feature"] }
+nix = { version = "0.31.3", default-features = false, features = ["resource", "feature", "signal", "process"] }
 flate2 = { version = "1.1.10", default-features = false, features = ["rust_backend"] }
 futures-util = { version = "0.3.34", default-features = false, features = ["std"] }
 anyhow = "1.0.104"
@@ -44,6 +44,8 @@ pulldown-cmark = { version = "0.13.4", default-features = false, features = ["ht
 unicode-segmentation = "1.13.3"
 chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 rand_chacha = { version = "0.10.0", features = ["serde"] }
+csv = "1.4.0"
+sha2 = "0.11.0"
 
 [dev-dependencies]
 tokio = { version = "1.53.1", features = ["test-util"] }

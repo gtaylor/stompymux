@@ -75,8 +75,22 @@ impl HeartbeatHarness {
         outcomes: bool,
         direct: bool,
     ) -> HeartbeatMetrics {
+        self.step_pursuit_policy(now, detailed, outcomes, direct, Default::default())
+            .await
+    }
+
+    /// Select one bounded experimental policy in isolated encounters only.
+    pub async fn step_pursuit_policy(
+        &mut self,
+        now: i64,
+        detailed: bool,
+        outcomes: bool,
+        direct: bool,
+        policy: crate::AutopilotPursuitPolicy,
+    ) -> HeartbeatMetrics {
         let started = Instant::now();
         let mut metrics = HeartbeatMetrics::default();
+        metrics.autopilot.pursuit_policy = policy;
         metrics.autopilot.diagnostics_enabled = detailed;
         metrics.autopilot.direct_pursuit = direct;
         metrics.autopilot.capture_outcomes = outcomes;
@@ -85,6 +99,7 @@ impl HeartbeatHarness {
             .await;
         metrics.heartbeat = started.elapsed();
         if !metrics.committed {
+            metrics.autopilot.diagnostics.pursuit.clear();
             metrics.autopilot.notice_trace.clear();
             metrics.autopilot.shots_by_unit.clear();
             metrics.autopilot.replans_by_unit.clear();

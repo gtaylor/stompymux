@@ -17,6 +17,16 @@ pub const SCENARIOS: &[&str] = &[
     "intercept_move",
 ];
 
+/// Frozen supplemental cases; excluded from the established pursuit defaults.
+pub const EXTENDED_SCENARIOS: &[&str] = &[
+    "slow_crossing",
+    "fast_crossing",
+    "opposite_crossing",
+    "stop_start",
+    "gradual_turns",
+    "damaged_pursuit",
+];
+
 /// One uninterrupted observed-contact interval. Missing milestones remain null.
 #[derive(Default, Debug, Serialize)]
 pub struct Episode {
@@ -41,6 +51,9 @@ pub struct Episode {
 /// Detached metrics never participate in gameplay decisions.
 #[derive(Default, Debug, Serialize)]
 pub struct PursuitResult {
+    /// Script events record requested controls, not instantaneous target motion.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub script_events: Vec<(usize, String)>,
     pub schema: u8,
     pub scenario: String,
     pub chassis: String,
@@ -83,6 +96,27 @@ fn center(x: u16, y: u16) -> crate::BattlePoint {
         y: i32::from(y),
     }
     .center()
+}
+
+/// Fixture impairment, applied to a setup clone for speed selection and live at tick 30.
+fn impair(world: &mut crate::World, unit: ObjectId, chassis: &str) -> Result<()> {
+    if chassis == "mech" {
+        crate::btech::destroy_unit_critical(
+            world,
+            unit,
+            crate::btech::CriticalLocation {
+                section: crate::BattleSection::LeftLeg,
+                slot: 2,
+            },
+        )?;
+    } else {
+        crate::btech::damage_vehicle_motive(
+            world,
+            unit,
+            crate::btech::BattleVehicleMotiveHit::SpeedLoss { movement_points: 1 },
+        )?;
+    }
+    Ok(())
 }
 
 /// Waypoint driving uses ordinary control admission, never moves units administratively.
@@ -182,15 +216,27 @@ pub async fn run(
     trace: Option<&Path>,
     direct: bool,
     fire_filter: Option<bool>,
+    policy: super::interception::PursuitPolicy,
+    seed_start: u8,
+    extended: bool,
 ) -> Result<Vec<PursuitResult>> {
     ensure!(ticks > 0 && seeds > 0, "Positive ticks and seeds required");
+    let scenarios = if extended {
+        EXTENDED_SCENARIOS
+    } else {
+        SCENARIOS
+    };
+    let seed_end = seed_start
+        .checked_add(seeds - 1)
+        .ok_or_else(|| anyhow::anyhow!("Seed range overflow"))?;
+    ensure!(seed_start > 0, "Seed start must be positive");
     ensure!(
-        scenario.is_none_or(|s| SCENARIOS.contains(&s)),
+        scenario.is_none_or(|s| scenarios.contains(&s)),
         "Unknown pursuit scenario"
     );
     let mut file = trace.map(std::fs::File::create).transpose()?;
     let mut results = Vec::new();
-    for &name in SCENARIOS
+    for &name in scenarios
         .iter()
         .filter(|&&s| scenario.is_none_or(|n| n == s))
     {
@@ -209,7 +255,7 @@ pub async fn run(
                 include_str!("../../../game/mechs/Demolisher").replace("{ Track }", "{ Hover }"),
             ),
         ] {
-            for seed in 1..=seeds {
+            for seed in seed_start..=seed_end {
                 for fire in [false, true]
                     .into_iter()
                     .filter(|f| fire_filter.is_none_or(|v| v == *f))
@@ -254,12 +300,16 @@ pub async fn run(
                         .get_mut(&map)
                         .unwrap()
                         .fire_dice = dice;
-                    let start = if name == "intercept_move" {
+                    let start = if name == "opposite_crossing" {
+                        (34, 26)
+                    } else if name == "intercept_move" {
                         (18, 22)
                     } else {
                         (12, 26)
                     };
-                    let enemy = if name == "expiry" {
+                    let enemy = if name == "opposite_crossing" {
+                        (24, 10)
+                    } else if name == "expiry" {
                         (21, 10)
                     } else if name == "intercept_move" {
                         (22, 22)
@@ -329,11 +379,40 @@ pub async fn run(
                     Arc::make_mut(&mut world.btech.controllers)
                         .insert(target, AutopilotController::new());
                     crate::persistence::save(&config.database(), &world).await?;
-                    let cap = if name == "short_occlusions" {
+                    let mut cap = if name == "short_occlusions" {
                         90.0
                     } else {
-                        (obs.own.maximum_speed * 0.55).min(40.0)
+                        let fraction = match name {
+                            "slow_crossing" => 0.25,
+                            "fast_crossing" => 0.75,
+                            _ => 0.55,
+                        };
+                        let requested = obs.own.maximum_speed * fraction;
+                        if extended {
+                            requested
+                        } else {
+                            requested.min(40.0)
+                        }
                     };
+                    if extended {
+                        let target_obs =
+                            observations::observe(&world, target, world.btech.simulation_time())?;
+                        cap = cap.min(target_obs.own.maximum_speed);
+                    }
+                    if name == "damaged_pursuit" {
+                        let mut damaged = world.clone();
+                        impair(&mut damaged, focal, chassis)?;
+                        cap = cap.min(
+                            observations::observe(
+                                &damaged,
+                                focal,
+                                damaged.btech.simulation_time(),
+                            )?
+                            .own
+                            .maximum_speed
+                                * 0.55,
+                        );
+                    }
                     let points = match name {
                         "retreat" => vec![(22, 2), (42, 2), (42, 40), (2, 40), (2, 2)],
                         "lateral" | "reversals" => vec![(42, 10), (4, 10)],
@@ -341,6 +420,13 @@ pub async fn run(
                         "short_occlusions" => vec![(40, 10), (20, 10)],
                         "expiry" => vec![(26, 10), (26, 28), (40, 28)],
                         "intercept_move" => vec![(22, 40), (42, 40)],
+                        "slow_crossing" | "fast_crossing" | "stop_start" | "damaged_pursuit" => {
+                            vec![(42, 10), (4, 10)]
+                        }
+                        "opposite_crossing" => vec![(4, 10), (42, 10)],
+                        "gradual_turns" => {
+                            vec![(34, 10), (42, 22), (34, 34), (18, 34), (10, 22), (18, 10)]
+                        }
                         _ => vec![(enemy.0 as u16, enemy.1 as u16)],
                     };
                     let mut harness = HeartbeatHarness::new(config, world)?;
@@ -362,6 +448,21 @@ pub async fn run(
                     let mut last_heading: Option<f64> = None;
                     let mut previous_turn = 0.0_f64;
                     for tick in 1..=ticks {
+                        if name == "damaged_pursuit" && tick == 30 {
+                            let mut world = harness.scripts().world_mut();
+                            impair(&mut world, focal, chassis)?;
+                            cap = cap.min(
+                                observations::observe(
+                                    &world,
+                                    focal,
+                                    world.btech.simulation_time(),
+                                )?
+                                .own
+                                .maximum_speed
+                                    * 0.55,
+                            );
+                            result.script_events.push((tick, "mobility_damage".into()));
+                        }
                         if name == "short_occlusions" && tick == 200 {
                             let mut world = harness.scripts().world_mut();
                             let order = AutopilotOrder::Patrol {
@@ -392,18 +493,36 @@ pub async fn run(
                             if name == "reversals" && tick % 60 == 0 {
                                 cursor = (cursor + 1) % points.len();
                             }
+                            let stopping = name == "stop_start" && (tick - 1) % 150 >= 90;
+                            if name == "stop_start" && matches!((tick - 1) % 150, 0 | 90) {
+                                result.script_events.push((
+                                    tick,
+                                    if stopping {
+                                        "stop_requested"
+                                    } else {
+                                        "move_requested"
+                                    }
+                                    .into(),
+                                ));
+                            }
+                            let old_cursor = cursor;
                             result.script_rejections += usize::from(drive(
                                 &mut harness.scripts().world_mut(),
                                 target,
                                 &points,
                                 &mut cursor,
-                                cap,
+                                if stopping { 0.0 } else { cap },
                             )?);
+                            if name == "gradual_turns" && cursor != old_cursor {
+                                result.script_events.push((tick, "turn_requested".into()));
+                            }
                         }
                         let before = harness.world();
                         let point = steering::motion(&before, focal).unwrap().point;
                         let target_point = steering::motion(&before, target).map(|m| m.point);
-                        let metrics = harness.step_pursuit(tick as i64, false, true, direct).await;
+                        let metrics = harness
+                            .step_pursuit_policy(tick as i64, false, true, direct, policy)
+                            .await;
                         ensure!(metrics.committed, "Pursuit tick failed commit");
                         let after = harness.world();
                         let motion = steering::motion(&after, focal).unwrap();
@@ -558,7 +677,11 @@ pub async fn run(
                             writeln!(
                                 f,
                                 "{}",
-                                serde_json::json!({"scenario":name,"chassis":chassis,"seed":seed,"fire":fire,"tick":tick,"digest":format!("{digest:016x}"),"result":result})
+                                serde_json::json!({"scenario":name,"chassis":chassis,"seed":seed,"fire":fire,"tick":tick,"digest":format!("{digest:016x}"),"result":result,
+                                "pursuit": after.btech.autopilot_plans.get(&focal).map(|p| serde_json::json!({
+                                    "evidence":p.pursuit.evidence(),"goal":p.goal,"route_index":p.route_index,
+                                    "navigation_recoveries":p.recovery_attempts,"stagnant_ticks":p.stagnant_ticks
+                                }))})
                             )?;
                         }
                         if terminal.is_some() {

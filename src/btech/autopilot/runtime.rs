@@ -36,6 +36,7 @@ pub struct AutopilotRuntimeMetrics {
     pub diagnostics_enabled: bool,
     /// Isolated harness comparison input; never set by the server.
     pub(crate) direct_pursuit: bool,
+    pub(crate) pursuit_policy: super::interception::PursuitPolicy,
     pub diagnostics: super::diagnostics::AutopilotDiagnostics,
     /// Capture autonomous notices for deterministic comparisons, outside timing samples.
     pub capture_outcomes: bool,
@@ -138,6 +139,9 @@ pub(crate) struct AutopilotPlan {
     pub(crate) best_waypoint_distance: Option<f64>,
     pub(crate) stagnant_ticks: u16,
     pub(crate) recovery_attempts: u8,
+    pub(crate) steering_grace: u16,
+    /// One bounded courtesy wait per occupied waypoint, retained across replans.
+    pub(crate) yielding: Option<(Hex, i64)>,
     pub(crate) terrain_revision: usize,
     pub(crate) mobility_revision: u64,
 }
@@ -159,6 +163,8 @@ impl Default for AutopilotPlan {
             best_waypoint_distance: None,
             stagnant_ticks: 0,
             recovery_attempts: 0,
+            steering_grace: 0,
+            yielding: None,
             terrain_revision: 0,
             mobility_revision: 0,
         }
@@ -183,6 +189,8 @@ impl PartialEq for AutopilotPlan {
             && self.best_waypoint_distance == other.best_waypoint_distance
             && self.stagnant_ticks == other.stagnant_ticks
             && self.recovery_attempts == other.recovery_attempts
+            && self.steering_grace == other.steering_grace
+            && self.yielding == other.yielding
             && self.terrain_revision == other.terrain_revision
             && self.mobility_revision == other.mobility_revision
     }
@@ -410,13 +418,17 @@ fn advance_combat_inner(
                 combat_target(&config_for_unit, &observation, selected)
             }
         };
-        if let Some(target) = target
-            && config_for_unit.fire_mode != super::AutopilotFireMode::Hold
-        {
+        if let Some(target) = target {
             if let Some(contact) = observation.contacts.iter().find(|c| c.unit == target) {
                 let stationary = super::steering::motion(world, id)
                     .is_some_and(|m| m.speed.abs() < 0.1 && m.desired_speed.abs() < 0.1);
+                let navigating = world
+                    .btech
+                    .autopilot_plans
+                    .get(&id)
+                    .is_some_and(|p| p.search.is_some() || p.route_index < p.route.len());
                 let allow_hull = stationary
+                    && !navigating
                     && matches!(
                         active_order,
                         Some(
@@ -434,15 +446,18 @@ fn advance_combat_inner(
                     &mut notices,
                 );
             }
-            fire_target_if_ready(
-                world,
-                config,
-                id,
-                target,
-                &config_for_unit,
-                &mut notices,
-                &mut metrics,
-            );
+            // Weapons hold forbids expenditure, not aiming an explicitly assigned target.
+            if config_for_unit.fire_mode != super::AutopilotFireMode::Hold {
+                fire_target_if_ready(
+                    world,
+                    config,
+                    id,
+                    target,
+                    &config_for_unit,
+                    &mut notices,
+                    &mut metrics,
+                );
+            }
         }
     }
     drop(validation_scope);
@@ -624,12 +639,14 @@ fn advance_controller(
 
     // Reuse the durable diversion origin when attack-move is already pursuing
     // a contact. This keeps pursuit bounded across replans and restarts.
+    let plan_clone = super::diagnostics::pursuit("plan_clone");
     let mut existing_plan = world
         .btech
         .autopilot_plans
         .get(&id)
         .cloned()
         .unwrap_or_default();
+    drop(plan_clone);
     let mut engagement = observation
         .as_ref()
         .and_then(|o| super::engagement::resolve(world, id, &active, &controller_config, o));
@@ -637,6 +654,7 @@ fn advance_controller(
     // changes but never a lifecycle, terrain, mobility, order, or target invalidation.
     let direct = metrics.as_ref().is_some_and(|m| m.direct_pursuit);
     if let (Some(e), Some(o)) = (engagement.as_mut(), observation.as_ref()) {
+        let _estimation = super::diagnostics::pursuit("estimation");
         let map = &world.btech.maps()[&e.target.map];
         if existing_plan.terrain_revision != map_revision(map)
             || existing_plan.mobility_revision != unit_mobility_revision(world, id)
@@ -644,9 +662,15 @@ fn advance_controller(
             existing_plan.pursuit = Default::default();
         }
         if !direct {
-            existing_plan
-                .pursuit
-                .sample(active.id, e.target_id, e.target, simulation_time);
+            existing_plan.pursuit.sample_policy(
+                active.id,
+                e.target_id,
+                e.target,
+                simulation_time,
+                metrics
+                    .as_ref()
+                    .map_or(Default::default(), |m| m.pursuit_policy),
+            );
             if let Some(own) = o.position {
                 let rate = if map.movement_modifier > 0 {
                     map.movement_modifier as f64 / 100.0
@@ -661,7 +685,16 @@ fn advance_controller(
                 .unwrap_or(0.0);
                 let speed =
                     maximum * f64::from(controller_config.speed_percent) / 100.0 / 645.0 * rate;
-                if let Some(aim) = existing_plan.pursuit.predict(
+                let in_firing_range = o
+                    .contacts
+                    .iter()
+                    .find(|c| c.unit == e.target_id)
+                    .is_some_and(|c| c.range <= f64::from(e.maximum));
+                if in_firing_range {
+                    // Once engagement is possible, use the observed target for
+                    // closing to the preferred band instead of chasing a future point.
+                    existing_plan.pursuit.settle();
+                } else if let Some(aim) = existing_plan.pursuit.predict(
                     simulation_time,
                     own,
                     speed,
@@ -798,6 +831,8 @@ fn advance_controller(
             settled.route.clear();
             settled.route_index = 0;
             settled.stagnant_ticks = 0;
+            settled.recovery_attempts = 0;
+            settled.steering_grace = 0;
             settled.best_waypoint_distance = None;
             settled.order_id = active.id;
             settled.goal = Some((goal, directive.arrival_radius));
@@ -836,21 +871,24 @@ fn advance_controller(
 
     let selected_before_movement =
         crate::btech::scanner::scanner_unit(world, id).and_then(|unit| unit.selected);
+    let navigation_changed = existing_plan.order_id != active.id
+        || existing_plan.goal != Some((goal, directive.arrival_radius))
+        || !same_navigation(existing_plan.engagement, engagement);
     let (mut plan, expansions) = {
         let mut plan = existing_plan;
         let mut expansions = 0;
-        if plan.order_id != active.id
-            || plan.goal != Some((goal, directive.arrival_radius))
-            || !same_navigation(plan.engagement, engagement)
-        {
+        if navigation_changed {
             plan = AutopilotPlan {
                 steering: plan.steering.clone(),
                 pursuit: plan.pursuit.clone(),
                 engagement,
                 order_id: active.id,
                 goal: Some((goal, directive.arrival_radius)),
-                recovery_attempts: active.progress.recovery_attempts,
-                stagnant_ticks: active.progress.stagnant_ticks,
+                recovery_attempts: plan.recovery_attempts,
+                steering_grace: plan.steering_grace,
+                yielding: plan.yielding,
+                stagnant_ticks: plan.stagnant_ticks,
+                last_hex: plan.last_hex,
                 ..AutopilotPlan::default()
             };
         }
@@ -1081,9 +1119,9 @@ fn advance_controller(
         plan.route.clear();
         plan.search = None;
         plan.route_index = 0;
-        plan.recovery_attempts = plan.recovery_attempts.saturating_add(1);
-        sync_progress(world, id, plan.recovery_attempts, plan.stagnant_ticks);
-        if plan.recovery_attempts > MAX_RECOVERY_ATTEMPTS {
+        let exhausted = navigation_stalled(&mut plan);
+        sync_stagnation(world, id, plan.stagnant_ticks);
+        if exhausted {
             fail(world, id, simulation_time, AutopilotReason::Stuck);
             remove_plan(world, id);
             return Ok(expansions);
@@ -1092,6 +1130,9 @@ fn advance_controller(
         return Ok(expansions);
     }
     if plan.last_hex != Some(current_hex) {
+        if plan.last_hex.is_some() {
+            navigation_progress(&mut plan);
+        }
         plan.last_hex = Some(current_hex);
         plan.stagnant_ticks = 0;
         plan.best_waypoint_distance = None;
@@ -1109,21 +1150,18 @@ fn advance_controller(
             .best_waypoint_distance
             .is_none_or(|best| distance + 0.02 < best)
         {
+            if plan.best_waypoint_distance.is_some() {
+                navigation_progress(&mut plan);
+            } else if navigation_changed {
+                // A new goal establishes a distance baseline; it is not travel.
+                plan.stagnant_ticks = plan.stagnant_ticks.saturating_add(1);
+            }
             plan.best_waypoint_distance = Some(distance);
-            plan.stagnant_ticks = 0;
         } else {
             plan.stagnant_ticks = plan.stagnant_ticks.saturating_add(1);
         }
     } else {
         plan.stagnant_ticks = plan.stagnant_ticks.saturating_add(1);
-    }
-    if super::steering::motion(world, id).is_some_and(|motion| {
-        let error =
-            ((motion.desired_heading - motion.heading + 180.0).rem_euclid(360.0) - 180.0).abs();
-        error + 0.1 < plan.steering.last_error
-            || motion.speed.abs() + 0.01 < plan.steering.last_speed.abs()
-    }) {
-        plan.stagnant_ticks = 0;
     }
     if plan.stagnant_ticks >= STAGNANT_TICKS_BEFORE_REPLAN {
         record_replan(metrics, id);
@@ -1133,7 +1171,7 @@ fn advance_controller(
         plan.stagnant_ticks = 0;
         plan.best_waypoint_distance = None;
         plan.recovery_attempts = plan.recovery_attempts.saturating_add(1);
-        sync_progress(world, id, plan.recovery_attempts, 0);
+        sync_stagnation(world, id, 0);
         if plan.recovery_attempts > MAX_RECOVERY_ATTEMPTS {
             fail(world, id, simulation_time, AutopilotReason::Stuck);
             remove_plan(world, id);
@@ -1143,7 +1181,7 @@ fn advance_controller(
         return Ok(expansions);
     }
 
-    sync_progress(world, id, plan.recovery_attempts, plan.stagnant_ticks);
+    sync_stagnation(world, id, plan.stagnant_ticks);
 
     let Some(next) = plan.route.get(plan.route_index).copied() else {
         plan.route.clear();
@@ -1185,6 +1223,7 @@ fn advance_controller(
         assessment.reason,
         traversal::TraversalReason::Occupied | traversal::TraversalReason::Congested
     ) && should_yield(world, id, goal.map, next)
+        && courtesy_wait(&mut plan, next, simulation_time)
     {
         if !issue_stop(world, id, simulation_time, notices) {
             return Ok(expansions);
@@ -1202,13 +1241,14 @@ fn advance_controller(
         plan.route_index,
         cap,
         combat,
+        engagement.is_some_and(|e| e.aim != e.target),
         &mut plan.steering,
         simulation_time,
         notices,
     ) {
         Ok(true) => {
-            plan.stagnant_ticks = 0;
-            sync_progress(world, id, plan.recovery_attempts, 0);
+            navigation_control_progress(&mut plan);
+            sync_stagnation(world, id, plan.stagnant_ticks);
         }
         Ok(false) => {}
         Err(_) => {
@@ -1550,6 +1590,15 @@ fn should_yield(world: &World, moving: ObjectId, map: ObjectId, next: Hex) -> bo
     })
 }
 
+/// Yield briefly for known traffic, then let authoritative entry rules decide.
+/// A stationary occupant must not permanently reserve a legally traversable hex.
+fn courtesy_wait(plan: &mut AutopilotPlan, next: Hex, now: i64) -> bool {
+    if plan.yielding.is_none_or(|(hex, _)| hex != next) {
+        plan.yielding = Some((next, now + 5));
+    }
+    plan.yielding.is_some_and(|(_, until)| now < until)
+}
+
 fn unit_power(world: &World, id: ObjectId) -> Option<BattlePower> {
     world
         .btech
@@ -1646,13 +1695,37 @@ fn update_waypoint(world: &mut World, id: ObjectId, next: u16) {
     }
 }
 
-fn sync_progress(world: &mut World, id: ObjectId, recovery_attempts: u8, stagnant_ticks: u16) {
+fn sync_stagnation(world: &mut World, id: ObjectId, stagnant_ticks: u16) {
     if let Some(controller) = Arc::make_mut(&mut world.btech.controllers).get_mut(&id)
         && let Some(order) = controller.active_order_mut()
     {
-        order.progress.recovery_attempts = recovery_attempts;
         order.progress.stagnant_ticks = stagnant_ticks;
     }
+}
+
+/// Only actual forward travel or actual-target settling replenishes navigation retries.
+fn navigation_progress(plan: &mut AutopilotPlan) {
+    plan.recovery_attempts = 0;
+    plan.stagnant_ticks = 0;
+    plan.steering_grace = 0;
+}
+
+/// Turning and braking get finite patience, but cannot replenish failed-route retries.
+fn navigation_control_progress(plan: &mut AutopilotPlan) {
+    if plan.steering_grace < STAGNANT_TICKS_BEFORE_REPLAN {
+        plan.steering_grace += 1;
+        plan.stagnant_ticks = 0;
+    }
+}
+
+/// Stale route origins cannot consume a retry every tick or defer failure indefinitely.
+fn navigation_stalled(plan: &mut AutopilotPlan) -> bool {
+    plan.stagnant_ticks = plan.stagnant_ticks.saturating_add(1);
+    if plan.stagnant_ticks >= STAGNANT_TICKS_BEFORE_REPLAN {
+        plan.stagnant_ticks = 0;
+        plan.recovery_attempts = plan.recovery_attempts.saturating_add(1);
+    }
+    plan.recovery_attempts > MAX_RECOVERY_ATTEMPTS
 }
 
 fn complete(world: &mut World, id: ObjectId, now: i64) {
@@ -1672,6 +1745,7 @@ fn fail(world: &mut World, id: ObjectId, now: i64, reason: AutopilotReason) {
 }
 
 fn persist_plan(world: &mut World, id: ObjectId, plan: AutopilotPlan) {
+    let _publication = super::diagnostics::pursuit("plan_publication");
     Arc::make_mut(&mut world.btech.autopilot_plans).insert(id, plan);
 }
 
@@ -1863,5 +1937,214 @@ fn congestion_metric(
 ) {
     if let Some(metrics) = metrics.as_deref_mut().filter(|m| m.capture_outcomes) {
         update(metrics.congestion_by_unit.entry(id).or_default());
+    }
+}
+
+#[cfg(test)]
+mod navigation_recovery_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn visible_in_range_contact_replaces_stale_lead_with_observed_goal() {
+        let root = super::super::benchmark::copy_game_root().unwrap();
+        let config = Config::load(&root).unwrap();
+        let base = crate::persistence::load(&config.database()).await.unwrap();
+        let (mut world, id, target, map) = super::super::encounters::fixture(
+            &config,
+            base,
+            include_str!("../../../game/mechs/JR7-D"),
+            "approach",
+            1,
+        )
+        .unwrap();
+        super::super::adversarial::place(&mut world, target, map, 6, 3).unwrap();
+        crate::btech::refresh_optical_scanners(&mut world, &[id, target]).unwrap();
+        Arc::make_mut(&mut world.btech.controllers)
+            .get_mut(&id)
+            .unwrap()
+            .start_next(0);
+        let order_id = world.btech.controllers[&id].active_order().unwrap().id;
+        let mut plan = AutopilotPlan {
+            terrain_revision: map_revision(&world.btech.maps()[&map]),
+            mobility_revision: unit_mobility_revision(&world, id),
+            ..Default::default()
+        };
+        for now in 0..=64 {
+            plan.pursuit.sample_policy(
+                order_id,
+                target,
+                BattlePosition {
+                    map,
+                    x: 6,
+                    y: 6 - (now / 20) as u16,
+                },
+                now,
+                super::super::interception::PursuitPolicy::G,
+            );
+        }
+        let checkpoint = plan.clone();
+        Arc::make_mut(&mut world.btech.autopilot_plans).insert(id, plan);
+        advance(&mut world, &config, 65).unwrap();
+        let plan = &world.btech.autopilot_plans[&id];
+        let engagement = plan.engagement.unwrap();
+        assert_eq!(engagement.aim, engagement.target);
+        assert_eq!(plan.pursuit.evidence().reason, "settled");
+        assert_ne!(plan.pursuit, checkpoint.pursuit);
+    }
+
+    #[test]
+    fn courtesy_wait_is_bounded_and_checkpointed() {
+        let mut plan = AutopilotPlan::default();
+        let cell = Hex::new(4, 5);
+        assert!(courtesy_wait(&mut plan, cell, 100));
+        let checkpoint = plan.clone();
+        for time in 101..105 {
+            assert!(courtesy_wait(&mut plan, cell, time));
+        }
+        for time in 105..200 {
+            assert!(!courtesy_wait(&mut plan, cell, time));
+        }
+        assert_eq!(plan, checkpoint);
+        assert!(courtesy_wait(&mut plan, Hex::new(5, 5), 200));
+        assert_ne!(plan, checkpoint);
+        plan = checkpoint;
+        assert!(!courtesy_wait(&mut plan, cell, 200));
+    }
+
+    #[test]
+    fn changes_of_goal_do_not_replenish_failed_navigation() {
+        let mut plan = AutopilotPlan::default();
+        for tick in 1..=40 {
+            plan.goal = Some((
+                BattlePosition {
+                    map: ObjectId(1),
+                    x: tick % 2,
+                    y: 1,
+                },
+                0,
+            ));
+            assert_eq!(navigation_stalled(&mut plan), tick == 40);
+        }
+        assert_eq!(plan.recovery_attempts, 4);
+    }
+
+    #[test]
+    fn actual_progress_replenishes_only_the_transient_budget() {
+        let mut plan = AutopilotPlan::default();
+        for _ in 0..30 {
+            assert!(!navigation_stalled(&mut plan));
+        }
+        let checkpoint = plan.clone();
+        assert_eq!(plan.recovery_attempts, 3);
+        navigation_progress(&mut plan);
+        assert_eq!(plan.recovery_attempts, 0);
+        assert_ne!(plan, checkpoint);
+        for _ in 0..30 {
+            assert!(!navigation_stalled(&mut plan));
+        }
+        assert_eq!(plan, checkpoint);
+    }
+
+    #[test]
+    fn turning_without_travel_cannot_renew_navigation_forever() {
+        let mut plan = AutopilotPlan::default();
+        let mut blocked_at = None;
+        for tick in 1..=50 {
+            if navigation_stalled(&mut plan) {
+                blocked_at = Some(tick);
+                break;
+            }
+            navigation_control_progress(&mut plan);
+        }
+        assert_eq!(blocked_at, Some(50));
+        navigation_progress(&mut plan);
+        assert_eq!(plan.steering_grace, 0);
+    }
+
+    #[tokio::test]
+    async fn explicit_attack_with_weapons_hold_aligns_without_expenditure() {
+        let root = super::super::benchmark::copy_game_root().unwrap();
+        let config = Config::load(&root).unwrap();
+        let base = crate::persistence::load(&config.database()).await.unwrap();
+        let (mut world, id, _, _) = super::super::encounters::fixture(
+            &config,
+            base,
+            include_str!("../../../game/mechs/JR7-D"),
+            "behind",
+            1,
+        )
+        .unwrap();
+        Arc::make_mut(&mut world.btech.controllers)
+            .get_mut(&id)
+            .unwrap()
+            .configure(
+                super::super::AutopilotConfigPatch {
+                    fire_mode: Some(super::super::AutopilotFireMode::Hold),
+                    ..Default::default()
+                },
+                None,
+            )
+            .unwrap();
+        Arc::make_mut(&mut world.btech.controllers)
+            .get_mut(&id)
+            .unwrap()
+            .start_next(0);
+        let before = world.btech.constructed_units()[&id].clone();
+        let mut metrics = AutopilotRuntimeMetrics::default();
+        let notices = advance_combat_with_metrics(&mut world, &config, 1, &mut metrics).unwrap();
+        let after = &world.btech.constructed_units()[&id];
+        assert!(!notices.is_empty());
+        assert_eq!(metrics.autonomous_shots, 0);
+        assert_eq!(before.ammunition(), after.ammunition());
+        assert_eq!(before.heat(), after.heat());
+        assert_eq!(before.dice, after.dice);
+        // A stopped route may still be turning. Combat can twist/aim its mounts,
+        // but must not replace the navigation heading in that phase.
+        crate::btech::motion::set_heading_autopilot(&mut world, id, 123.0).unwrap();
+        Arc::make_mut(&mut world.btech.autopilot_plans).insert(
+            id,
+            AutopilotPlan {
+                route: vec![Hex::new(1, 1), Hex::new(1, 2)],
+                route_index: 1,
+                ..Default::default()
+            },
+        );
+        advance_combat_with_metrics(&mut world, &config, 2, &mut metrics).unwrap();
+        assert_eq!(
+            super::super::steering::motion(&world, id)
+                .unwrap()
+                .desired_heading,
+            123.0
+        );
+    }
+
+    #[tokio::test]
+    async fn navigation_publication_does_not_change_standing_attempts() {
+        let root = super::super::benchmark::copy_game_root().unwrap();
+        let config = Config::load(&root).unwrap();
+        let base = crate::persistence::load(&config.database()).await.unwrap();
+        let (mut world, id, _, _) = super::super::encounters::fixture(
+            &config,
+            base,
+            include_str!("../../../game/mechs/JR7-D"),
+            "long_approach",
+            1,
+        )
+        .unwrap();
+        advance(&mut world, &config, 1).unwrap();
+        Arc::make_mut(&mut world.btech.controllers)
+            .get_mut(&id)
+            .unwrap()
+            .active_order_mut()
+            .unwrap()
+            .progress
+            .recovery_attempts = 2;
+        sync_stagnation(&mut world, id, 7);
+        let progress = &world.btech.controllers()[&id]
+            .active_order()
+            .unwrap()
+            .progress;
+        assert_eq!(progress.recovery_attempts, 2);
+        assert_eq!(progress.stagnant_ticks, 7);
     }
 }

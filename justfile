@@ -87,3 +87,7 @@ parity-runtime-surface:
 parity-mux-text:
     python3 tools/lua_parity_probe.py --probe tests/fixtures/lua-probes/mux_text.lua \
         --allow-rust-extra 'extension_markdown.document_type={"bytes":"7573657264617461","type":"string"}'
+
+# Explicit local acceptance matrices; small tool tests run through cargo test.
+autopilot-acceptance *args:
+    cargo run --bin autopilot-acceptance -- {{args}}

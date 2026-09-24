@@ -62,7 +62,7 @@ pub(super) fn placement_label(
 ) -> Result<Option<String>> {
     let current = super::scanner::scanner_unit(world, id).context("Unit is unavailable")?;
     let preferred = if current.position.is_some_and(|position| position.map == map) {
-        current.label.context("Placed unit lacks an ID")?
+        current.label().context("Placed unit lacks an ID")?
     } else {
         super::observer::battlefield_label(slot)
     };

@@ -461,9 +461,7 @@ fn contact_facts_with_unit(
     let geometry = if unit.visibility.clairvoyant {
         None
     } else {
-        super::unit_terrain_los(world, observer, target)
-            .ok()
-            .zip(super::unit_range(world, observer, target).ok())
+        super::los::unit_terrain_geometry(world, observer, target).ok()
     };
     let eligible = |sensor| {
         super::sensors::map_optical_contact_prepared(
@@ -539,7 +537,7 @@ fn contact_view(
     let other = super::scanner::scanner_unit(world, target).context("Contact disappeared")?;
     let heading = unit.heading.context("Observer has no motion state")?;
     let bearing = facts.range.bearing.unwrap_or(180.0);
-    let mut label = other.label.context("Contact has no battlefield label")?;
+    let mut label = other.label().context("Contact has no battlefield label")?;
     if facts.friendly {
         label.make_ascii_lowercase();
     }

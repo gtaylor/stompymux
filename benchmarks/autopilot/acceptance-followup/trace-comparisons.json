@@ -1,0 +1,170 @@
+[
+  {
+    "comparison": "before",
+    "scenario": "lateral",
+    "identical": true,
+    "reference_sha256": "e3fb9c30383393f42dafdaaeafa7be90cbd6c2455c455facd9f6db94fde21a4c",
+    "candidate_sha256": "e3fb9c30383393f42dafdaaeafa7be90cbd6c2455c455facd9f6db94fde21a4c",
+    "records": 21600
+  },
+  {
+    "comparison": "before",
+    "scenario": "distant",
+    "identical": true,
+    "reference_sha256": "2a469fc63c303398c15dc081147b6ea41c08730cd887ce77642058c0babf52d8",
+    "candidate_sha256": "2a469fc63c303398c15dc081147b6ea41c08730cd887ce77642058c0babf52d8",
+    "records": 20889
+  },
+  {
+    "comparison": "before",
+    "scenario": "retreat",
+    "identical": true,
+    "reference_sha256": "469809a624ceddbaa342da4c47ec9cb5e81970e816e94aa2ec9d55c057650446",
+    "candidate_sha256": "469809a624ceddbaa342da4c47ec9cb5e81970e816e94aa2ec9d55c057650446",
+    "records": 21600
+  },
+  {
+    "comparison": "before",
+    "scenario": "reversals",
+    "identical": true,
+    "reference_sha256": "ccd748ab49d5a69f26bae88dbf6d2efaf369f55a8bb66fa4c241f1d37ae3c4f2",
+    "candidate_sha256": "ccd748ab49d5a69f26bae88dbf6d2efaf369f55a8bb66fa4c241f1d37ae3c4f2",
+    "records": 21570
+  },
+  {
+    "comparison": "before",
+    "scenario": "circuit",
+    "identical": true,
+    "reference_sha256": "f1c55f6a306a6756f64113c1dbc04e5513eb7c8c7a603f3963dabab5e0b5f0bc",
+    "candidate_sha256": "f1c55f6a306a6756f64113c1dbc04e5513eb7c8c7a603f3963dabab5e0b5f0bc",
+    "records": 21600
+  },
+  {
+    "comparison": "before",
+    "scenario": "short_occlusions",
+    "identical": true,
+    "reference_sha256": "5bfd23bf4b682fc127450864af1748ebeb03ae725b255c779c5108da26faf71e",
+    "candidate_sha256": "5bfd23bf4b682fc127450864af1748ebeb03ae725b255c779c5108da26faf71e",
+    "records": 20099
+  },
+  {
+    "comparison": "before",
+    "scenario": "expiry",
+    "identical": true,
+    "reference_sha256": "35871a65142606155785346cde967b67147bb043eede449c06a52f1b2b8db4e4",
+    "candidate_sha256": "35871a65142606155785346cde967b67147bb043eede449c06a52f1b2b8db4e4",
+    "records": 2172
+  },
+  {
+    "comparison": "before",
+    "scenario": "intercept_move",
+    "identical": true,
+    "reference_sha256": "6e611063558cb8b05a74d329b2dd4ec7ae4f9c11d2d0677cb4286a740a4445b3",
+    "candidate_sha256": "6e611063558cb8b05a74d329b2dd4ec7ae4f9c11d2d0677cb4286a740a4445b3",
+    "records": 7500
+  },
+  {
+    "comparison": "replay",
+    "scenario": "lateral",
+    "identical": true,
+    "reference_sha256": "e3fb9c30383393f42dafdaaeafa7be90cbd6c2455c455facd9f6db94fde21a4c",
+    "candidate_sha256": "e3fb9c30383393f42dafdaaeafa7be90cbd6c2455c455facd9f6db94fde21a4c",
+    "records": 21600
+  },
+  {
+    "comparison": "replay",
+    "scenario": "distant",
+    "identical": true,
+    "reference_sha256": "2a469fc63c303398c15dc081147b6ea41c08730cd887ce77642058c0babf52d8",
+    "candidate_sha256": "2a469fc63c303398c15dc081147b6ea41c08730cd887ce77642058c0babf52d8",
+    "records": 20889
+  },
+  {
+    "comparison": "replay",
+    "scenario": "retreat",
+    "identical": true,
+    "reference_sha256": "469809a624ceddbaa342da4c47ec9cb5e81970e816e94aa2ec9d55c057650446",
+    "candidate_sha256": "469809a624ceddbaa342da4c47ec9cb5e81970e816e94aa2ec9d55c057650446",
+    "records": 21600
+  },
+  {
+    "comparison": "replay",
+    "scenario": "reversals",
+    "identical": true,
+    "reference_sha256": "ccd748ab49d5a69f26bae88dbf6d2efaf369f55a8bb66fa4c241f1d37ae3c4f2",
+    "candidate_sha256": "ccd748ab49d5a69f26bae88dbf6d2efaf369f55a8bb66fa4c241f1d37ae3c4f2",
+    "records": 21570
+  },
+  {
+    "comparison": "replay",
+    "scenario": "circuit",
+    "identical": true,
+    "reference_sha256": "f1c55f6a306a6756f64113c1dbc04e5513eb7c8c7a603f3963dabab5e0b5f0bc",
+    "candidate_sha256": "f1c55f6a306a6756f64113c1dbc04e5513eb7c8c7a603f3963dabab5e0b5f0bc",
+    "records": 21600
+  },
+  {
+    "comparison": "replay",
+    "scenario": "short_occlusions",
+    "identical": true,
+    "reference_sha256": "5bfd23bf4b682fc127450864af1748ebeb03ae725b255c779c5108da26faf71e",
+    "candidate_sha256": "5bfd23bf4b682fc127450864af1748ebeb03ae725b255c779c5108da26faf71e",
+    "records": 20099
+  },
+  {
+    "comparison": "replay",
+    "scenario": "expiry",
+    "identical": true,
+    "reference_sha256": "35871a65142606155785346cde967b67147bb043eede449c06a52f1b2b8db4e4",
+    "candidate_sha256": "35871a65142606155785346cde967b67147bb043eede449c06a52f1b2b8db4e4",
+    "records": 2172
+  },
+  {
+    "comparison": "replay",
+    "scenario": "intercept_move",
+    "identical": true,
+    "reference_sha256": "6e611063558cb8b05a74d329b2dd4ec7ae4f9c11d2d0677cb4286a740a4445b3",
+    "candidate_sha256": "6e611063558cb8b05a74d329b2dd4ec7ae4f9c11d2d0677cb4286a740a4445b3",
+    "records": 7500
+  },
+  {
+    "comparison": "regression_replay",
+    "scenario": "existing",
+    "identical": true,
+    "reference_sha256": "abf1c3291bcb724ecd701b4447707d8ea476f27ed2e5e50befe88b56f4e58100",
+    "candidate_sha256": "abf1c3291bcb724ecd701b4447707d8ea476f27ed2e5e50befe88b56f4e58100",
+    "records": 28800
+  },
+  {
+    "comparison": "regression_replay",
+    "scenario": "adversarial",
+    "identical": true,
+    "reference_sha256": "fd236f555abfccf899dda9f9170aa2833cdcb87bc34fea2ab2d98b7be12627b1",
+    "candidate_sha256": "fd236f555abfccf899dda9f9170aa2833cdcb87bc34fea2ab2d98b7be12627b1",
+    "records": 25920
+  },
+  {
+    "comparison": "regression_replay",
+    "scenario": "late_clearance",
+    "identical": true,
+    "reference_sha256": "fd39425f1543d08e2cd3c26223ce5c1ed77387eb3c4fc3e9076b8ddd3832b648",
+    "candidate_sha256": "fd39425f1543d08e2cd3c26223ce5c1ed77387eb3c4fc3e9076b8ddd3832b648",
+    "records": 2880
+  },
+  {
+    "comparison": "regression_replay",
+    "scenario": "alternating_clearance",
+    "identical": true,
+    "reference_sha256": "9d65ecb8850a0ea69782e86c9c7b82e70185387e907433255158ab013e3c17ba",
+    "candidate_sha256": "9d65ecb8850a0ea69782e86c9c7b82e70185387e907433255158ab013e3c17ba",
+    "records": 2880
+  },
+  {
+    "comparison": "regression_replay",
+    "scenario": "waiting_controllers",
+    "identical": true,
+    "reference_sha256": "5987c30bd5b06325768192fb81e88c33028cd15cf256ebc810d72a92fc453e8c",
+    "candidate_sha256": "5987c30bd5b06325768192fb81e88c33028cd15cf256ebc810d72a92fc453e8c",
+    "records": 2880
+  }
+]

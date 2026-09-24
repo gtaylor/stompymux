@@ -3,11 +3,14 @@ use clap::Parser;
 #[derive(Parser)]
 struct Args {
     /// Select the established suite, adversarial opponents, or both.
-    #[arg(long, default_value = "existing", value_parser = ["existing", "adversarial", "pursuit", "all"])]
+    #[arg(long, default_value = "existing", value_parser = ["existing", "adversarial", "pursuit", "pursuit_extended", "all"])]
     suite: String,
     /// Compare against direct pursuit, only in the pursuit suite.
     #[arg(long)]
     direct_pursuit: bool,
+    /// Bounded experimental policy, restricted to the isolated pursuit suite.
+    #[arg(long, default_value="g", value_parser=["control", "a", "b", "c", "d", "e", "f", "g"])]
+    pursuit_policy: String,
     /// Pursuit fire mode selection.
     #[arg(long, default_value="all", value_parser=["all","hold","fire"])]
     fire: String,
@@ -15,6 +18,9 @@ struct Args {
     ticks: usize,
     #[arg(long, default_value_t = 3)]
     seeds: u8,
+    /// First pursuit seed; established movement and adversarial suites start at one.
+    #[arg(long, default_value_t = 1)]
+    seed_start: u8,
     #[arg(long)]
     scenario: Option<String>,
     /// Write a detached CSV summary in addition to JSON on stdout.
@@ -44,7 +50,9 @@ async fn main() -> anyhow::Result<()> {
                 || (matches!(args.suite.as_str(), "adversarial" | "all")
                     && stompymux_rs::AUTOPILOT_ADVERSARIAL_SCENARIOS.contains(&name))
                 || (matches!(args.suite.as_str(), "pursuit" | "all")
-                    && stompymux_rs::AUTOPILOT_PURSUIT_SCENARIOS.contains(&name)),
+                    && stompymux_rs::AUTOPILOT_PURSUIT_SCENARIOS.contains(&name))
+                || (matches!(args.suite.as_str(), "pursuit_extended" | "all")
+                    && stompymux_rs::AUTOPILOT_PURSUIT_EXTENDED_SCENARIOS.contains(&name)),
             "Unknown scenario for selected suite"
         );
     }
@@ -100,41 +108,62 @@ async fn main() -> anyhow::Result<()> {
             .cloned(),
         );
     }
-    if matches!(args.suite.as_str(), "pursuit" | "all")
-        && args
-            .scenario
-            .as_deref()
-            .is_none_or(|s| stompymux_rs::AUTOPILOT_PURSUIT_SCENARIOS.contains(&s))
-    {
-        let path = args.trace.as_ref().map(|p| {
-            if args.suite == "all" {
-                p.with_extension("pursuit.jsonl")
-            } else {
-                p.clone()
-            }
-        });
-        let fire = match args.fire.as_str() {
-            "hold" => Some(false),
-            "fire" => Some(true),
-            _ => None,
-        };
-        results.extend(
-            serde_json::to_value(
-                stompymux_rs::run_autopilot_pursuit(
-                    args.ticks,
-                    args.seeds,
-                    args.scenario.as_deref(),
-                    path.as_deref(),
-                    args.direct_pursuit,
-                    fire,
-                )
-                .await?,
-            )?
-            .as_array()
-            .unwrap()
-            .iter()
-            .cloned(),
-        );
+    for (suite, scenarios, extended) in [
+        ("pursuit", stompymux_rs::AUTOPILOT_PURSUIT_SCENARIOS, false),
+        (
+            "pursuit_extended",
+            stompymux_rs::AUTOPILOT_PURSUIT_EXTENDED_SCENARIOS,
+            true,
+        ),
+    ] {
+        if (args.suite == suite || args.suite == "all")
+            && args
+                .scenario
+                .as_deref()
+                .is_none_or(|s| scenarios.contains(&s))
+        {
+            let path = args.trace.as_ref().map(|p| {
+                if args.suite == "all" {
+                    p.with_extension(format!("{suite}.jsonl"))
+                } else {
+                    p.clone()
+                }
+            });
+            let fire = match args.fire.as_str() {
+                "hold" => Some(false),
+                "fire" => Some(true),
+                _ => None,
+            };
+            results.extend(
+                serde_json::to_value(
+                    stompymux_rs::run_autopilot_pursuit(
+                        args.ticks,
+                        args.seeds,
+                        args.scenario.as_deref(),
+                        path.as_deref(),
+                        args.direct_pursuit,
+                        fire,
+                        match args.pursuit_policy.as_str() {
+                            "a" => stompymux_rs::AutopilotPursuitPolicy::A,
+                            "b" => stompymux_rs::AutopilotPursuitPolicy::B,
+                            "c" => stompymux_rs::AutopilotPursuitPolicy::C,
+                            "d" => stompymux_rs::AutopilotPursuitPolicy::D,
+                            "e" => stompymux_rs::AutopilotPursuitPolicy::E,
+                            "f" => stompymux_rs::AutopilotPursuitPolicy::F,
+                            "g" => stompymux_rs::AutopilotPursuitPolicy::G,
+                            _ => stompymux_rs::AutopilotPursuitPolicy::Control,
+                        },
+                        args.seed_start,
+                        extended,
+                    )
+                    .await?,
+                )?
+                .as_array()
+                .unwrap()
+                .iter()
+                .cloned(),
+            );
+        }
     }
     if let Some(path) = args.csv {
         use std::io::Write;

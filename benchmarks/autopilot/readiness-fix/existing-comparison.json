@@ -1,0 +1,7 @@
+{
+  "encounters": 120,
+  "committed_ticks_per_trace": 28800,
+  "newly_engaged": 0,
+  "max_settled_distance": 0.0,
+  "failures": []
+}

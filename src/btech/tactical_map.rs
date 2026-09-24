@@ -147,7 +147,7 @@ fn display(
             let Some(view) = super::visible_contact(world, observer, id)? else {
                 continue;
             };
-            let mut label = unit.label.expect("placed contact");
+            let mut label = unit.label().expect("placed contact");
             if view.friendly {
                 label.make_ascii_lowercase();
             }

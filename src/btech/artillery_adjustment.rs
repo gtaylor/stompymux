@@ -155,9 +155,9 @@ pub(super) fn observe_miss(
     }
     let notices = if selected.is_some() {
         let observer_name = super::scanner::scanner_unit(world, observer)
-            .and_then(|observer| observer.label)
+            .and_then(|observer| observer.label())
             .unwrap_or_else(|| format!("#{}", observer.0));
-        let shooter_name = unit.label.unwrap_or_else(|| format!("#{}", shooter.0));
+        let shooter_name = unit.label().unwrap_or_else(|| format!("#{}", shooter.0));
         vec![
             BattleNotice {
                 unit: source.owner,

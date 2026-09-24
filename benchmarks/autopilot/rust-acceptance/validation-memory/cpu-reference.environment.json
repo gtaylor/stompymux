@@ -1,0 +1,25 @@
+{
+  "after": {
+    "ac_online": "1\n",
+    "cpu0_khz": "800000\n",
+    "governor": "powersave\n",
+    "load": "1.25 4.11 7.78 1/2325 3144181\n",
+    "utc": "2026-09-24T19:31:27.170619587+00:00"
+  },
+  "args": [
+    "--warmup",
+    "35",
+    "--ticks",
+    "60",
+    "--repetitions",
+    "3"
+  ],
+  "before": {
+    "ac_online": "1\n",
+    "cpu0_khz": "800000\n",
+    "governor": "powersave\n",
+    "load": "3.41 7.72 9.74 1/2330 3142117\n",
+    "utc": "2026-09-24T19:27:28.057181487+00:00"
+  },
+  "program": "/home/gtaylor/code/btmux-rewrite/stompymux-rs/target/autopilot-acceptance/reference/autopilot-bench"
+}

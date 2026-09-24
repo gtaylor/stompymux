@@ -1,0 +1,107 @@
+{
+  "candidate_sha256": "6207321240e265ae6df6b303f72dc5f7f4de66c8627992f47d8b96de02fee2a4",
+  "changed_cases": {
+    "[\"distant\",\"hover\",1,false]": {
+      "first_record": 15493,
+      "first_tick": 4
+    },
+    "[\"distant\",\"hover\",1,true]": {
+      "first_record": 16393,
+      "first_tick": 4
+    },
+    "[\"distant\",\"hover\",2,false]": {
+      "first_record": 17293,
+      "first_tick": 4
+    },
+    "[\"distant\",\"hover\",2,true]": {
+      "first_record": 18193,
+      "first_tick": 4
+    },
+    "[\"distant\",\"hover\",3,false]": {
+      "first_record": 19093,
+      "first_tick": 4
+    },
+    "[\"distant\",\"hover\",3,true]": {
+      "first_record": 19993,
+      "first_tick": 4
+    },
+    "[\"distant\",\"mech\",1,false]": {
+      "first_record": 4,
+      "first_tick": 4
+    },
+    "[\"distant\",\"mech\",1,true]": {
+      "first_record": 904,
+      "first_tick": 4
+    },
+    "[\"distant\",\"mech\",2,false]": {
+      "first_record": 1597,
+      "first_tick": 4
+    },
+    "[\"distant\",\"mech\",2,true]": {
+      "first_record": 2497,
+      "first_tick": 4
+    },
+    "[\"distant\",\"mech\",3,false]": {
+      "first_record": 2929,
+      "first_tick": 4
+    },
+    "[\"distant\",\"mech\",3,true]": {
+      "first_record": 3829,
+      "first_tick": 4
+    },
+    "[\"distant\",\"tracked\",1,false]": {
+      "first_record": 4693,
+      "first_tick": 4
+    },
+    "[\"distant\",\"tracked\",1,true]": {
+      "first_record": 5593,
+      "first_tick": 4
+    },
+    "[\"distant\",\"tracked\",2,false]": {
+      "first_record": 6493,
+      "first_tick": 4
+    },
+    "[\"distant\",\"tracked\",2,true]": {
+      "first_record": 7393,
+      "first_tick": 4
+    },
+    "[\"distant\",\"tracked\",3,false]": {
+      "first_record": 8293,
+      "first_tick": 4
+    },
+    "[\"distant\",\"tracked\",3,true]": {
+      "first_record": 9193,
+      "first_tick": 4
+    },
+    "[\"distant\",\"wheeled\",1,false]": {
+      "first_record": 10093,
+      "first_tick": 4
+    },
+    "[\"distant\",\"wheeled\",1,true]": {
+      "first_record": 10993,
+      "first_tick": 4
+    },
+    "[\"distant\",\"wheeled\",2,false]": {
+      "first_record": 11893,
+      "first_tick": 4
+    },
+    "[\"distant\",\"wheeled\",2,true]": {
+      "first_record": 12793,
+      "first_tick": 4
+    },
+    "[\"distant\",\"wheeled\",3,false]": {
+      "first_record": 13693,
+      "first_tick": 4
+    },
+    "[\"distant\",\"wheeled\",3,true]": {
+      "first_record": 14593,
+      "first_tick": 4
+    }
+  },
+  "failures": [
+    "trace mismatch"
+  ],
+  "first_difference": 4,
+  "records": 20889,
+  "reference_sha256": "33f32080a0f4b99043cf0551e522d1d2b23a4d6707deb9736d7e445128635a4b"
+}

@@ -55,6 +55,8 @@ pub struct BenchmarkOptions {
     pub controllers: usize,
     /// Inclusive CPU attribution, excluded from acceptance timings.
     pub detailed: bool,
+    /// Isolated same-executable control; never changes production configuration.
+    pub direct_pursuit: bool,
     /// Optional JSONL gameplay checksums; serialization occurs outside measured phases.
     pub trace: Option<std::path::PathBuf>,
     /// None selects all battlefield geometries.
@@ -72,6 +74,7 @@ impl Default for BenchmarkOptions {
             seed: 0x5eed_1000_1000_0001,
             controllers: DEFAULT_CONTROLLERS,
             detailed: false,
+            direct_pursuit: false,
             trace: None,
             scenario: None,
             fire: None,
@@ -252,10 +255,11 @@ async fn run_case(
                 alter_benchmark_terrain_with(&mut harness, map_id, base_terrain.clone());
             }
             let heartbeat = harness
-                .step_diagnostic(
+                .step_pursuit(
                     1_000_000_i64.saturating_add(tick as i64),
                     options.detailed,
                     trace.is_some(),
+                    options.direct_pursuit,
                 )
                 .await;
             ensure!(

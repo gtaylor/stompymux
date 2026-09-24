@@ -31,6 +31,11 @@ class ComparisonTests(unittest.TestCase):
         failures=compare(indexed([b]),indexed([a]))['failures']
         self.assertTrue(any('sustained-pursuit' in f['reason'] for f in failures))
 
+    def test_existing_blocking_is_still_a_failed_feasible_encounter(self):
+        b=self.row(); b.update(scenario='retreat',outcome='Stuck')
+        failures=compare(indexed([b]),indexed([b]))['failures']
+        self.assertTrue(any('sustained-pursuit' in f['reason'] for f in failures))
+
     def test_matrix_mismatch(self):
         with self.assertRaises(AssertionError): compare({},indexed([self.row()]))
 

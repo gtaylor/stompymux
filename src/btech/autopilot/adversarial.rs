@@ -953,7 +953,7 @@ pub async fn run(
                         writeln!(
                             file,
                             "{}",
-                            serde_json::json!({"schema":1,"scenario":scenario_name,"chassis":chassis,"seed":seed,"tick":tick,"digest":format!("{digest:016x}"),"participants":participants.iter().map(|p|&p.result).collect::<Vec<_>>()})
+                            serde_json::json!({"schema":1,"scenario":scenario_name,"chassis":chassis,"seed":seed,"tick":tick,"digest":format!("{digest:016x}"),"participants":participants.iter().map(|p|&p.result).collect::<Vec<_>>(),"navigation":participants.iter().map(|p|serde_json::json!({"role":p.result.role,"motion":super::steering::motion(&world,p.id),"plan":world.btech.autopilot_plans.get(&p.id).map(|x|serde_json::json!({"route":x.route.iter().map(|h|(h.x,h.y)).collect::<Vec<_>>(),"index":x.route_index,"stagnant":x.stagnant_ticks,"retries":x.recovery_attempts,"goal":x.goal.map(|(h,r)|(h.x,h.y,r))}))})).collect::<Vec<_>>()})
                         )?;
                     }
                 }

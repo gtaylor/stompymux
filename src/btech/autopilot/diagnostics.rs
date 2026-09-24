@@ -10,6 +10,8 @@ pub struct AutopilotDiagnostics {
     pub nanoseconds: [u128; 7],
     /// Named, inclusive combat measurements and counters; absent when disabled.
     pub combat: std::collections::BTreeMap<String, CombatSample>,
+    /// Named pursuit costs; independent of the established combat categories.
+    pub pursuit: std::collections::BTreeMap<String, CombatSample>,
 }
 
 /// One named measurement; counters have zero nanoseconds.
@@ -26,6 +28,11 @@ impl AutopilotDiagnostics {
             self.calls[i] += other.calls[i];
             self.nanoseconds[i] += other.nanoseconds[i];
         }
+        for (name, sample) in &other.pursuit {
+            let total = self.pursuit.entry(name.clone()).or_default();
+            total.calls += sample.calls;
+            total.nanoseconds += sample.nanoseconds;
+        }
         for (name, sample) in &other.combat {
             let total = self.combat.entry(name.clone()).or_default();
             total.calls += sample.calls;
@@ -38,19 +45,39 @@ impl AutopilotDiagnostics {
 pub(crate) fn combat(name: &'static str) -> CombatMeasurement {
     CombatMeasurement {
         name,
+        pursuit: false,
         started: ACTIVE.with(|slot| slot.borrow().as_ref().map(|_| Instant::now())),
     }
 }
 
+/// Named navigation attribution; disabled execution has no timer or allocation.
+pub(crate) fn pursuit(name: &'static str) -> CombatMeasurement {
+    let mut measurement = combat(name);
+    measurement.pursuit = true;
+    measurement
+}
+
 pub(crate) struct CombatMeasurement {
     name: &'static str,
+    pursuit: bool,
     started: Option<Instant>,
 }
 
 impl Drop for CombatMeasurement {
     fn drop(&mut self) {
         if let Some(started) = self.started {
-            record(self.name, started.elapsed().as_nanos());
+            let elapsed = started.elapsed().as_nanos();
+            if self.pursuit {
+                ACTIVE.with(|slot| {
+                    if let Some(total) = slot.borrow_mut().as_mut() {
+                        let sample = total.pursuit.entry(self.name.to_owned()).or_default();
+                        sample.calls += 1;
+                        sample.nanoseconds += elapsed;
+                    }
+                });
+            } else {
+                record(self.name, elapsed);
+            }
         }
     }
 }
@@ -223,10 +250,12 @@ mod tests {
         }
         {
             let _measurement = combat("admission_aim");
+            let _pursuit = pursuit("estimation");
         }
         {
             let disabled = Scope::begin(false);
             assert!(combat("disabled").started.is_none());
+            assert!(pursuit("disabled").started.is_none());
             let attempt = Attempt::begin();
             drop(attempt);
             disabled.finish(&mut total);
@@ -237,6 +266,8 @@ mod tests {
         assert_eq!(total.combat["successful_shots"].calls, 1);
         assert_eq!(total.combat["admission_aim"].calls, 1);
         assert!(!total.combat.contains_key("disabled"));
+        assert_eq!(total.pursuit["estimation"].calls, 1);
+        assert!(!total.pursuit.contains_key("disabled"));
         assert!(combat("outside").started.is_none());
     }
 

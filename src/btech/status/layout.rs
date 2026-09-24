@@ -226,7 +226,7 @@ pub(super) fn render(
 /// Standard identification and condition lines precede every non-heat block.
 fn header(lines: &mut Vec<String>, world: &World, id: ObjectId, f: &Facts<'_>) -> Result<()> {
     let scan = btech::scanner::scanner_unit(world, id).context("Unit is unavailable")?;
-    let label = scan.label.unwrap_or_else(|| "??".into());
+    let label = scan.label().unwrap_or_else(|| "??".into());
     match f.movement {
         None => {
             lines.push(format!(
@@ -318,7 +318,7 @@ fn display_id(world: &World, id: ObjectId) -> String {
             format!(
                 "{} [{}]",
                 text::escape(s.name),
-                text::escape(&s.label.unwrap_or_else(|| "??".into()))
+                text::escape(&s.label().unwrap_or_else(|| "??".into()))
             )
         },
     )

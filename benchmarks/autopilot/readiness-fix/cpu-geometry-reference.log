@@ -1,0 +1,54 @@
+benchmark: open fire=false repetition 1/3
+20260923.220959 Big Stompy Robot Game INI/INFO : Help reindexed: 0 article(s), 0 keyword(s), 0 error(s), 0 warning(s).
+benchmark: open fire=false repetition 1 tick 36/95; autopilot 22.7 ms, enabled 100, renewed 0
+benchmark: open fire=false repetition 2/3
+20260923.221012 Big Stompy Robot Game INI/INFO : Help reindexed: 0 article(s), 0 keyword(s), 0 error(s), 0 warning(s).
+benchmark: open fire=false repetition 2 tick 36/95; autopilot 22.2 ms, enabled 100, renewed 0
+benchmark: open fire=false repetition 3/3
+20260923.221024 Big Stompy Robot Game INI/INFO : Help reindexed: 0 article(s), 0 keyword(s), 0 error(s), 0 warning(s).
+benchmark: open fire=false repetition 3 tick 36/95; autopilot 22.0 ms, enabled 100, renewed 0
+benchmark: open fire=true repetition 1/3
+20260923.221036 Big Stompy Robot Game INI/INFO : Help reindexed: 0 article(s), 0 keyword(s), 0 error(s), 0 warning(s).
+benchmark: open fire=true repetition 1 tick 36/95; autopilot 47.3 ms, enabled 100, renewed 0
+benchmark: open fire=true repetition 2/3
+20260923.221050 Big Stompy Robot Game INI/INFO : Help reindexed: 0 article(s), 0 keyword(s), 0 error(s), 0 warning(s).
+benchmark: open fire=true repetition 2 tick 36/95; autopilot 44.7 ms, enabled 100, renewed 0
+benchmark: open fire=true repetition 3/3
+20260923.221104 Big Stompy Robot Game INI/INFO : Help reindexed: 0 article(s), 0 keyword(s), 0 error(s), 0 warning(s).
+benchmark: open fire=true repetition 3 tick 36/95; autopilot 43.3 ms, enabled 100, renewed 0
+benchmark: obstacles fire=false repetition 1/3
+20260923.221119 Big Stompy Robot Game INI/INFO : Help reindexed: 0 article(s), 0 keyword(s), 0 error(s), 0 warning(s).
+benchmark: obstacles fire=false repetition 1 tick 36/95; autopilot 25.8 ms, enabled 100, renewed 0
+benchmark: obstacles fire=false repetition 2/3
+20260923.221132 Big Stompy Robot Game INI/INFO : Help reindexed: 0 article(s), 0 keyword(s), 0 error(s), 0 warning(s).
+benchmark: obstacles fire=false repetition 2 tick 36/95; autopilot 26.0 ms, enabled 100, renewed 9
+benchmark: obstacles fire=false repetition 3/3
+20260923.221145 Big Stompy Robot Game INI/INFO : Help reindexed: 0 article(s), 0 keyword(s), 0 error(s), 0 warning(s).
+benchmark: obstacles fire=false repetition 3 tick 36/95; autopilot 25.7 ms, enabled 100, renewed 19
+benchmark: obstacles fire=true repetition 1/3
+20260923.221158 Big Stompy Robot Game INI/INFO : Help reindexed: 0 article(s), 0 keyword(s), 0 error(s), 0 warning(s).
+benchmark: obstacles fire=true repetition 1 tick 36/95; autopilot 34.1 ms, enabled 100, renewed 0
+benchmark: obstacles fire=true repetition 2/3
+20260923.221213 Big Stompy Robot Game INI/INFO : Help reindexed: 0 article(s), 0 keyword(s), 0 error(s), 0 warning(s).
+benchmark: obstacles fire=true repetition 2 tick 36/95; autopilot 37.1 ms, enabled 100, renewed 9
+benchmark: obstacles fire=true repetition 3/3
+20260923.221228 Big Stompy Robot Game INI/INFO : Help reindexed: 0 article(s), 0 keyword(s), 0 error(s), 0 warning(s).
+benchmark: obstacles fire=true repetition 3 tick 36/95; autopilot 31.1 ms, enabled 100, renewed 21
+benchmark: moving_congestion fire=false repetition 1/3
+20260923.221243 Big Stompy Robot Game INI/INFO : Help reindexed: 0 article(s), 0 keyword(s), 0 error(s), 0 warning(s).
+benchmark: moving_congestion fire=false repetition 1 tick 36/95; autopilot 22.2 ms, enabled 100, renewed 0
+benchmark: moving_congestion fire=false repetition 2/3
+20260923.221256 Big Stompy Robot Game INI/INFO : Help reindexed: 0 article(s), 0 keyword(s), 0 error(s), 0 warning(s).
+benchmark: moving_congestion fire=false repetition 2 tick 36/95; autopilot 22.3 ms, enabled 100, renewed 0
+benchmark: moving_congestion fire=false repetition 3/3
+20260923.221308 Big Stompy Robot Game INI/INFO : Help reindexed: 0 article(s), 0 keyword(s), 0 error(s), 0 warning(s).
+benchmark: moving_congestion fire=false repetition 3 tick 36/95; autopilot 22.4 ms, enabled 100, renewed 0
+benchmark: moving_congestion fire=true repetition 1/3
+20260923.221321 Big Stompy Robot Game INI/INFO : Help reindexed: 0 article(s), 0 keyword(s), 0 error(s), 0 warning(s).
+benchmark: moving_congestion fire=true repetition 1 tick 36/95; autopilot 45.4 ms, enabled 100, renewed 0
+benchmark: moving_congestion fire=true repetition 2/3
+20260923.221336 Big Stompy Robot Game INI/INFO : Help reindexed: 0 article(s), 0 keyword(s), 0 error(s), 0 warning(s).
+benchmark: moving_congestion fire=true repetition 2 tick 36/95; autopilot 47.8 ms, enabled 100, renewed 2
+benchmark: moving_congestion fire=true repetition 3/3
+20260923.221350 Big Stompy Robot Game INI/INFO : Help reindexed: 0 article(s), 0 keyword(s), 0 error(s), 0 warning(s).
+benchmark: moving_congestion fire=true repetition 3 tick 36/95; autopilot 51.0 ms, enabled 100, renewed 2

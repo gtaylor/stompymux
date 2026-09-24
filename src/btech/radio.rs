@@ -451,7 +451,7 @@ impl RadioUnit<'_> {
         self.state.signature
     }
     pub(super) fn battlefield_id(&self) -> Option<String> {
-        self.state.label.clone()
+        self.state.label()
     }
     pub(super) fn stunned(&self) -> bool {
         self.stun

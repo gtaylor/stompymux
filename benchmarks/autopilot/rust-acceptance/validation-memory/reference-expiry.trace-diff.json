@@ -1,0 +1,107 @@
+{
+  "candidate_sha256": "cf947975cf8cb311229c2e5330e88fb293be20dd924d6b7acab890c8b767f52e",
+  "changed_cases": {
+    "[\"expiry\",\"hover\",1,false]": {
+      "first_record": 1618,
+      "first_tick": 4
+    },
+    "[\"expiry\",\"hover\",1,true]": {
+      "first_record": 1711,
+      "first_tick": 4
+    },
+    "[\"expiry\",\"hover\",2,false]": {
+      "first_record": 1804,
+      "first_tick": 4
+    },
+    "[\"expiry\",\"hover\",2,true]": {
+      "first_record": 1897,
+      "first_tick": 4
+    },
+    "[\"expiry\",\"hover\",3,false]": {
+      "first_record": 1990,
+      "first_tick": 4
+    },
+    "[\"expiry\",\"hover\",3,true]": {
+      "first_record": 2083,
+      "first_tick": 4
+    },
+    "[\"expiry\",\"mech\",1,false]": {
+      "first_record": 4,
+      "first_tick": 4
+    },
+    "[\"expiry\",\"mech\",1,true]": {
+      "first_record": 87,
+      "first_tick": 4
+    },
+    "[\"expiry\",\"mech\",2,false]": {
+      "first_record": 170,
+      "first_tick": 4
+    },
+    "[\"expiry\",\"mech\",2,true]": {
+      "first_record": 253,
+      "first_tick": 4
+    },
+    "[\"expiry\",\"mech\",3,false]": {
+      "first_record": 336,
+      "first_tick": 4
+    },
+    "[\"expiry\",\"mech\",3,true]": {
+      "first_record": 419,
+      "first_tick": 4
+    },
+    "[\"expiry\",\"tracked\",1,false]": {
+      "first_record": 502,
+      "first_tick": 4
+    },
+    "[\"expiry\",\"tracked\",1,true]": {
+      "first_record": 595,
+      "first_tick": 4
+    },
+    "[\"expiry\",\"tracked\",2,false]": {
+      "first_record": 688,
+      "first_tick": 4
+    },
+    "[\"expiry\",\"tracked\",2,true]": {
+      "first_record": 781,
+      "first_tick": 4
+    },
+    "[\"expiry\",\"tracked\",3,false]": {
+      "first_record": 874,
+      "first_tick": 4
+    },
+    "[\"expiry\",\"tracked\",3,true]": {
+      "first_record": 967,
+      "first_tick": 4
+    },
+    "[\"expiry\",\"wheeled\",1,false]": {
+      "first_record": 1060,
+      "first_tick": 4
+    },
+    "[\"expiry\",\"wheeled\",1,true]": {
+      "first_record": 1153,
+      "first_tick": 4
+    },
+    "[\"expiry\",\"wheeled\",2,false]": {
+      "first_record": 1246,
+      "first_tick": 4
+    },
+    "[\"expiry\",\"wheeled\",2,true]": {
+      "first_record": 1339,
+      "first_tick": 4
+    },
+    "[\"expiry\",\"wheeled\",3,false]": {
+      "first_record": 1432,
+      "first_tick": 4
+    },
+    "[\"expiry\",\"wheeled\",3,true]": {
+      "first_record": 1525,
+      "first_tick": 4
+    }
+  },
+  "failures": [
+    "trace mismatch"
+  ],
+  "first_difference": 4,
+  "records": 2172,
+  "reference_sha256": "ed5cfd077b084c6c2a8f3d06f386712f01336ecb1abf31b0bfa71985641c6d83"
+}

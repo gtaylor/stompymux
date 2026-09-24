@@ -1,0 +1,5 @@
+{
+  "cpu_temp_root": "system default",
+  "encounter_temp_root": "/dev/shm",
+  "jobs": 8
+}

@@ -29,8 +29,8 @@ def compare(before, after):
             continue  # casualties are reported, not compared as equal observation windows
         if a.get('script_rejections', 0):
             fail(key, 'scripted controls rejected in hold fixture')
-        if a['outcome'] not in ('window_end','completed','ContactLost') and b['outcome'] in ('window_end','completed'):
-            fail(key, 'new sustained-pursuit failure: ' + a['outcome'])
+        if a['scenario'] != 'expiry' and a['outcome'] not in ('window_end', 'completed'):
+            fail(key, 'sustained-pursuit failure: ' + a['outcome'])
         scenario = a['scenario']
         if scenario == 'expiry':
             if 'ContactLost' not in a['outcome']:

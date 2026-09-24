@@ -1,0 +1,1404 @@
+diff --git a/src/bin/autopilot-bench.rs b/src/bin/autopilot-bench.rs
+index 679c696..103064f 100644
+--- a/src/bin/autopilot-bench.rs
++++ b/src/bin/autopilot-bench.rs
+@@ -27,6 +27,9 @@ struct Args {
+     /// Collect inclusive CPU attribution (do not use for acceptance timing).
+     #[arg(long)]
+     detailed: bool,
++    /// Use direct pursuit as a same-executable control in isolated benchmarks.
++    #[arg(long)]
++    direct_pursuit: bool,
+     /// Write one deterministic gameplay checksum per tick to this JSONL file.
+     #[arg(long)]
+     trace: Option<std::path::PathBuf>,
+@@ -48,6 +51,7 @@ async fn main() -> anyhow::Result<()> {
+         seed: args.seed,
+         controllers: args.controllers,
+         detailed: args.detailed,
++        direct_pursuit: args.direct_pursuit,
+         trace: args.trace,
+         scenario: match args.scenario.as_str() {
+             "open" => Some(Scenario::Open),
+diff --git a/src/bin/autopilot-encounters.rs b/src/bin/autopilot-encounters.rs
+index 1a36dbe..dfdd639 100644
+--- a/src/bin/autopilot-encounters.rs
++++ b/src/bin/autopilot-encounters.rs
+@@ -8,6 +8,9 @@ struct Args {
+     /// Compare against direct pursuit, only in the pursuit suite.
+     #[arg(long)]
+     direct_pursuit: bool,
++    /// Bounded experimental policy, restricted to the isolated pursuit suite.
++    #[arg(long, default_value="g", value_parser=["control", "a", "b", "c", "d", "e", "f", "g"])]
++    pursuit_policy: String,
+     /// Pursuit fire mode selection.
+     #[arg(long, default_value="all", value_parser=["all","hold","fire"])]
+     fire: String,
+@@ -127,6 +130,16 @@ async fn main() -> anyhow::Result<()> {
+                     path.as_deref(),
+                     args.direct_pursuit,
+                     fire,
++                    match args.pursuit_policy.as_str() {
++                        "a" => stompymux_rs::AutopilotPursuitPolicy::A,
++                        "b" => stompymux_rs::AutopilotPursuitPolicy::B,
++                        "c" => stompymux_rs::AutopilotPursuitPolicy::C,
++                        "d" => stompymux_rs::AutopilotPursuitPolicy::D,
++                        "e" => stompymux_rs::AutopilotPursuitPolicy::E,
++                        "f" => stompymux_rs::AutopilotPursuitPolicy::F,
++                        "g" => stompymux_rs::AutopilotPursuitPolicy::G,
++                        _ => stompymux_rs::AutopilotPursuitPolicy::Control,
++                    },
+                 )
+                 .await?,
+             )?
+diff --git a/src/btech/artillery_adjustment.rs b/src/btech/artillery_adjustment.rs
+index 84e691a..364c3c8 100644
+--- a/src/btech/artillery_adjustment.rs
++++ b/src/btech/artillery_adjustment.rs
+@@ -155,9 +155,9 @@ pub(super) fn observe_miss(
+     }
+     let notices = if selected.is_some() {
+         let observer_name = super::scanner::scanner_unit(world, observer)
+-            .and_then(|observer| observer.label)
++            .and_then(|observer| observer.label())
+             .unwrap_or_else(|| format!("#{}", observer.0));
+-        let shooter_name = unit.label.unwrap_or_else(|| format!("#{}", shooter.0));
++        let shooter_name = unit.label().unwrap_or_else(|| format!("#{}", shooter.0));
+         vec![
+             BattleNotice {
+                 unit: source.owner,
+diff --git a/src/btech/autopilot/adversarial.rs b/src/btech/autopilot/adversarial.rs
+index 9767b1f..ad4d129 100644
+--- a/src/btech/autopilot/adversarial.rs
++++ b/src/btech/autopilot/adversarial.rs
+@@ -953,7 +953,7 @@ pub async fn run(
+                         writeln!(
+                             file,
+                             "{}",
+-                            serde_json::json!({"schema":1,"scenario":scenario_name,"chassis":chassis,"seed":seed,"tick":tick,"digest":format!("{digest:016x}"),"participants":participants.iter().map(|p|&p.result).collect::<Vec<_>>()})
++                            serde_json::json!({"schema":1,"scenario":scenario_name,"chassis":chassis,"seed":seed,"tick":tick,"digest":format!("{digest:016x}"),"participants":participants.iter().map(|p|&p.result).collect::<Vec<_>>(),"navigation":participants.iter().map(|p|serde_json::json!({"role":p.result.role,"motion":super::steering::motion(&world,p.id),"plan":world.btech.autopilot_plans.get(&p.id).map(|x|serde_json::json!({"route":x.route.iter().map(|h|(h.x,h.y)).collect::<Vec<_>>(),"index":x.route_index,"stagnant":x.stagnant_ticks,"retries":x.recovery_attempts,"goal":x.goal.map(|(h,r)|(h.x,h.y,r))}))})).collect::<Vec<_>>()})
+                         )?;
+                     }
+                 }
+diff --git a/src/btech/autopilot/benchmark.rs b/src/btech/autopilot/benchmark.rs
+index 6c173af..523c82f 100644
+--- a/src/btech/autopilot/benchmark.rs
++++ b/src/btech/autopilot/benchmark.rs
+@@ -55,6 +55,8 @@ pub struct BenchmarkOptions {
+     pub controllers: usize,
+     /// Inclusive CPU attribution, excluded from acceptance timings.
+     pub detailed: bool,
++    /// Isolated same-executable control; never changes production configuration.
++    pub direct_pursuit: bool,
+     /// Optional JSONL gameplay checksums; serialization occurs outside measured phases.
+     pub trace: Option<std::path::PathBuf>,
+     /// None selects all battlefield geometries.
+@@ -72,6 +74,7 @@ impl Default for BenchmarkOptions {
+             seed: 0x5eed_1000_1000_0001,
+             controllers: DEFAULT_CONTROLLERS,
+             detailed: false,
++            direct_pursuit: false,
+             trace: None,
+             scenario: None,
+             fire: None,
+@@ -252,10 +255,11 @@ async fn run_case(
+                 alter_benchmark_terrain_with(&mut harness, map_id, base_terrain.clone());
+             }
+             let heartbeat = harness
+-                .step_diagnostic(
++                .step_pursuit(
+                     1_000_000_i64.saturating_add(tick as i64),
+                     options.detailed,
+                     trace.is_some(),
++                    options.direct_pursuit,
+                 )
+                 .await;
+             ensure!(
+diff --git a/src/btech/autopilot/diagnostics.rs b/src/btech/autopilot/diagnostics.rs
+index 79315d3..6621e92 100644
+--- a/src/btech/autopilot/diagnostics.rs
++++ b/src/btech/autopilot/diagnostics.rs
+@@ -10,6 +10,8 @@ pub struct AutopilotDiagnostics {
+     pub nanoseconds: [u128; 7],
+     /// Named, inclusive combat measurements and counters; absent when disabled.
+     pub combat: std::collections::BTreeMap<String, CombatSample>,
++    /// Named pursuit costs; independent of the established combat categories.
++    pub pursuit: std::collections::BTreeMap<String, CombatSample>,
+ }
+ 
+ /// One named measurement; counters have zero nanoseconds.
+@@ -26,6 +28,11 @@ impl AutopilotDiagnostics {
+             self.calls[i] += other.calls[i];
+             self.nanoseconds[i] += other.nanoseconds[i];
+         }
++        for (name, sample) in &other.pursuit {
++            let total = self.pursuit.entry(name.clone()).or_default();
++            total.calls += sample.calls;
++            total.nanoseconds += sample.nanoseconds;
++        }
+         for (name, sample) in &other.combat {
+             let total = self.combat.entry(name.clone()).or_default();
+             total.calls += sample.calls;
+@@ -38,19 +45,39 @@ impl AutopilotDiagnostics {
+ pub(crate) fn combat(name: &'static str) -> CombatMeasurement {
+     CombatMeasurement {
+         name,
++        pursuit: false,
+         started: ACTIVE.with(|slot| slot.borrow().as_ref().map(|_| Instant::now())),
+     }
+ }
+ 
++/// Named navigation attribution; disabled execution has no timer or allocation.
++pub(crate) fn pursuit(name: &'static str) -> CombatMeasurement {
++    let mut measurement = combat(name);
++    measurement.pursuit = true;
++    measurement
++}
++
+ pub(crate) struct CombatMeasurement {
+     name: &'static str,
++    pursuit: bool,
+     started: Option<Instant>,
+ }
+ 
+ impl Drop for CombatMeasurement {
+     fn drop(&mut self) {
+         if let Some(started) = self.started {
+-            record(self.name, started.elapsed().as_nanos());
++            let elapsed = started.elapsed().as_nanos();
++            if self.pursuit {
++                ACTIVE.with(|slot| {
++                    if let Some(total) = slot.borrow_mut().as_mut() {
++                        let sample = total.pursuit.entry(self.name.to_owned()).or_default();
++                        sample.calls += 1;
++                        sample.nanoseconds += elapsed;
++                    }
++                });
++            } else {
++                record(self.name, elapsed);
++            }
+         }
+     }
+ }
+@@ -223,10 +250,12 @@ mod tests {
+         }
+         {
+             let _measurement = combat("admission_aim");
++            let _pursuit = pursuit("estimation");
+         }
+         {
+             let disabled = Scope::begin(false);
+             assert!(combat("disabled").started.is_none());
++            assert!(pursuit("disabled").started.is_none());
+             let attempt = Attempt::begin();
+             drop(attempt);
+             disabled.finish(&mut total);
+@@ -237,6 +266,8 @@ mod tests {
+         assert_eq!(total.combat["successful_shots"].calls, 1);
+         assert_eq!(total.combat["admission_aim"].calls, 1);
+         assert!(!total.combat.contains_key("disabled"));
++        assert_eq!(total.pursuit["estimation"].calls, 1);
++        assert!(!total.pursuit.contains_key("disabled"));
+         assert!(combat("outside").started.is_none());
+     }
+ 
+diff --git a/src/btech/autopilot/interception.rs b/src/btech/autopilot/interception.rs
+index ddca570..fbcbef8 100644
+--- a/src/btech/autopilot/interception.rs
++++ b/src/btech/autopilot/interception.rs
+@@ -2,9 +2,52 @@
+ use super::navigation::Hex;
+ use crate::{BattleHexCoordinate, BattlePoint, BattlePosition, ObjectId};
+ 
++/// Fixed, bounded policies for isolated pursuit comparisons; not a game setting.
++#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize)]
++pub enum PursuitPolicy {
++    Control,
++    A,
++    B,
++    C,
++    D,
++    E,
++    F,
++    #[default]
++    G,
++}
++
++impl PursuitPolicy {
++    fn limits(self) -> (i64, usize, i64, u32) {
++        match self {
++            Self::Control => (4, 6, 5, 3),
++            Self::A => (16, 17, 30, 3),
++            Self::B => (32, 33, 60, 6),
++            Self::C => (32, 33, 120, 8),
++            Self::D => (16, 17, 120, 3),
++            Self::E => (16, 17, 120, 6),
++            Self::F => (64, 65, 120, 6),
++            Self::G => (64, 65, 120, 8),
++        }
++    }
++}
++
++/// Observation-derived evidence, emitted only by the committed diagnostic harness.
++#[derive(Debug, Clone, Default, PartialEq, serde::Serialize)]
++pub struct PursuitEvidence {
++    pub samples: usize,
++    pub span: i64,
++    pub velocity: (f64, f64),
++    pub horizon: i64,
++    pub reason: &'static str,
++    pub observed: Option<BattlePosition>,
++    pub aim: Option<BattlePosition>,
++}
++
+ /// One synchronous controller's observation history, excluded from persistence.
+ #[derive(Debug, Clone, Default, PartialEq)]
+ pub(crate) struct Pursuit {
++    policy: PursuitPolicy,
++    evidence: PursuitEvidence,
+     key: Option<(u64, ObjectId, ObjectId)>,
+     samples: Vec<(i64, BattlePosition)>,
+     vector: Option<(f64, f64)>,
+@@ -24,11 +67,27 @@ fn center(p: BattlePosition) -> BattlePoint {
+ 
+ impl Pursuit {
+     /// Add at most one sample per simulation second. Reversals immediately drop confidence.
++    #[cfg(test)]
+     pub fn sample(&mut self, order: u64, target: ObjectId, position: BattlePosition, now: i64) {
++        self.sample_policy(order, target, position, now, PursuitPolicy::Control);
++    }
++
++    pub fn sample_policy(
++        &mut self,
++        order: u64,
++        target: ObjectId,
++        position: BattlePosition,
++        now: i64,
++        policy: PursuitPolicy,
++    ) {
+         let key = (order, target, position.map);
+-        if self.key != Some(key) || self.samples.last().is_some_and(|s| s.0 > now) {
++        if self.key != Some(key)
++            || self.policy != policy
++            || self.samples.last().is_some_and(|s| s.0 > now)
++        {
+             *self = Self {
+                 key: Some(key),
++                policy,
+                 ..Self::default()
+             };
+         }
+@@ -47,13 +106,15 @@ impl Pursuit {
+                     self.samples.clear();
+                     self.aim = None;
+                     self.reconsider_at = now;
++                    self.evidence.reason = "reversal";
+                 }
+                 self.vector = Some(next);
+             }
+         }
+-        self.samples.retain(|s| now - s.0 <= 4);
++        let (window, limit, _, _) = self.policy.limits();
++        self.samples.retain(|s| now - s.0 <= window);
+         self.samples.push((now, position));
+-        if self.samples.len() > 6 {
++        if self.samples.len() > limit {
+             self.samples.remove(0);
+         }
+         if self.rejected_at.is_some_and(|p| p != position) {
+@@ -65,6 +126,7 @@ impl Pursuit {
+     pub fn reject(&mut self, observed: BattlePosition) {
+         self.rejected_at = Some(observed);
+         self.aim = None;
++        self.evidence.reason = "unreachable";
+     }
+ 
+     /// Estimate reachable lead using allowed own speed and public map bounds.
+@@ -79,6 +141,7 @@ impl Pursuit {
+         height: i64,
+         leash: Option<BattlePosition>,
+     ) -> Option<BattlePosition> {
++        let (_, _, horizon_limit, lead_limit) = self.policy.limits();
+         let &(last_time, last) = self.samples.last()?;
+         if last_time != now || self.rejected_at == Some(last) {
+             self.aim = None;
+@@ -98,26 +161,56 @@ impl Pursuit {
+         }
+         if now < self.reconsider_at {
+             self.aim = self.aim.filter(|p| {
+-                legal(*p) && Hex::new(last.x, last.y).distance(Hex::new(p.x, p.y)) <= 3
++                legal(*p) && Hex::new(last.x, last.y).distance(Hex::new(p.x, p.y)) <= lead_limit
+             });
+             return self.aim;
+         }
+         self.reconsider_at = now + 3;
+         self.aim = None;
+         let &(first_time, first) = self.samples.first()?;
++        self.evidence.samples = self.samples.len();
++        self.evidence.span = last_time - first_time;
++        self.evidence.observed = Some(last);
++        if self.evidence.reason != "reversal" {
++            self.evidence.reason = "insufficient_samples";
++        }
++        self.evidence.horizon = 0;
+         if self.samples.len() < 3 || last_time - first_time < 2 || speed <= 0.0 {
+             return None;
+         }
+         let a = center(first);
+         let b = center(last);
+         let dt = (last_time - first_time) as f64;
+-        let v = ((b.x - a.x) / dt, (b.y - a.y) / dt);
++        let v = if self.policy == PursuitPolicy::Control {
++            ((b.x - a.x) / dt, (b.y - a.y) / dt)
++        } else {
++            // Center time before summation: simulation uptime must not affect conditioning.
++            let n = self.samples.len() as f64;
++            let mean = self
++                .samples
++                .iter()
++                .map(|s| (s.0 - first_time) as f64)
++                .sum::<f64>()
++                / n;
++            let mut xy = (0.0, 0.0);
++            let mut variance = 0.0;
++            for &(time, position) in &self.samples {
++                let t = (time - first_time) as f64 - mean;
++                let p = center(position);
++                variance += t * t;
++                xy.0 += t * (p.x - a.x);
++                xy.1 += t * (p.y - a.y);
++            }
++            (xy.0 / variance, xy.1 / variance)
++        };
++        self.evidence.velocity = v;
+         if v.0.hypot(v.1) < 1e-9 {
++            self.evidence.reason = "stationary";
+             return None;
+         }
+         let own = center(own);
+-        for horizon in 1..=5 {
+-            let scale = (horizon as f64).min(3.0 / v.0.hypot(v.1));
++        for horizon in 1..=horizon_limit {
++            let scale = (horizon as f64).min(f64::from(lead_limit) / v.0.hypot(v.1));
+             let point = BattlePoint {
+                 x: b.x + v.0 * scale,
+                 y: b.y + v.1 * scale,
+@@ -131,12 +224,19 @@ impl Pursuit {
+                 x,
+                 y,
+             };
+-            if !legal(aim) || Hex::new(last.x, last.y).distance(Hex::new(x, y)) > 3 {
++            if !legal(aim) || Hex::new(last.x, last.y).distance(Hex::new(x, y)) > lead_limit {
++                self.evidence.reason = "boundary";
+                 return None;
+             }
+             let travel = (own.range(point).ok()? - f64::from(radius)).max(0.0) / speed;
+-            if travel <= horizon as f64 || horizon == 5 {
++            if travel <= horizon as f64 || horizon == horizon_limit {
+                 self.aim = (aim != last).then_some(aim);
++                self.evidence.horizon = horizon;
++                self.evidence.reason = if self.aim.is_some() {
++                    "predicted"
++                } else {
++                    "same_hex"
++                };
+                 return self.aim;
+             }
+         }
+@@ -147,6 +247,14 @@ impl Pursuit {
+     pub fn settle(&mut self) {
+         self.aim = None;
+         self.reconsider_at = 0;
++        self.evidence.reason = "settled";
++    }
++
++    pub fn evidence(&self) -> PursuitEvidence {
++        PursuitEvidence {
++            aim: self.aim,
++            ..self.evidence.clone()
++        }
+     }
+ }
+ 
+@@ -163,6 +271,61 @@ mod tests {
+     fn prediction(p: &mut Pursuit, t: i64) -> Option<BattlePosition> {
+         p.predict(t, pos(2, 20), 0.2, 3, 48, 48, None)
+     }
++    #[test]
++    fn experimental_policies_bound_storage_lead_and_time_origin() {
++        for policy in [
++            PursuitPolicy::Control,
++            PursuitPolicy::A,
++            PursuitPolicy::B,
++            PursuitPolicy::C,
++            PursuitPolicy::D,
++            PursuitPolicy::E,
++            PursuitPolicy::F,
++            PursuitPolicy::G,
++        ] {
++            let mut a = Pursuit::default();
++            let mut b = Pursuit::default();
++            for t in 0..100 {
++                let observed = pos(10, 10 + (t / 16) as u16);
++                a.sample_policy(1, ObjectId(2), observed, t, policy);
++                b.sample_policy(1, ObjectId(2), observed, t + 1_000_000, policy);
++                let aim = prediction(&mut a, t);
++                assert_eq!(aim, prediction(&mut b, t + 1_000_000));
++                assert!(a.samples.len() <= policy.limits().1);
++                if let Some(aim) = aim {
++                    assert!(
++                        Hex::new(observed.x, observed.y).distance(Hex::new(aim.x, aim.y))
++                            <= policy.limits().3
++                    );
++                }
++            }
++            a.sample_policy(1, ObjectId(2), pos(10, 15), 100, policy);
++            assert_eq!(prediction(&mut a, 100), None);
++        }
++    }
++
++    #[test]
++    fn slow_hex_center_motion_keeps_confidence_between_crossings() {
++        let mut pursuit = Pursuit::default();
++        for now in 0..=75 {
++            pursuit.sample_policy(
++                1,
++                ObjectId(2),
++                pos(10 + (now / 20) as u16, 10),
++                now,
++                PursuitPolicy::G,
++            );
++        }
++        assert!(prediction(&mut pursuit, 75).is_some());
++        assert_eq!(pursuit.samples.len(), 65);
++        assert!(pursuit.evidence.velocity.0 > 0.03);
++        assert!(pursuit.evidence.velocity.1.abs() < 0.01);
++        // A genuine observed reversal discards the long history immediately.
++        pursuit.sample_policy(1, ObjectId(2), pos(12, 10), 76, PursuitPolicy::G);
++        assert!(prediction(&mut pursuit, 76).is_none());
++        assert_eq!(pursuit.samples.len(), 1);
++    }
++
+     #[test]
+     fn stationary_and_insufficient_samples_do_not_predict() {
+         let mut p = Pursuit::default();
+diff --git a/src/btech/autopilot/mod.rs b/src/btech/autopilot/mod.rs
+index ec7add0..6ce0132 100644
+--- a/src/btech/autopilot/mod.rs
++++ b/src/btech/autopilot/mod.rs
+@@ -10,7 +10,7 @@ pub mod combat_policy;
+ mod congestion;
+ pub mod diagnostics;
+ pub mod encounters;
+-mod interception;
++pub(crate) mod interception;
+ pub mod navigation;
+ pub mod observations;
+ pub mod orders;
+diff --git a/src/btech/autopilot/pursuit_encounters.rs b/src/btech/autopilot/pursuit_encounters.rs
+index 94c5770..1efcb4c 100644
+--- a/src/btech/autopilot/pursuit_encounters.rs
++++ b/src/btech/autopilot/pursuit_encounters.rs
+@@ -182,6 +182,7 @@ pub async fn run(
+     trace: Option<&Path>,
+     direct: bool,
+     fire_filter: Option<bool>,
++    policy: super::interception::PursuitPolicy,
+ ) -> Result<Vec<PursuitResult>> {
+     ensure!(ticks > 0 && seeds > 0, "Positive ticks and seeds required");
+     ensure!(
+@@ -403,7 +404,9 @@ pub async fn run(
+                         let before = harness.world();
+                         let point = steering::motion(&before, focal).unwrap().point;
+                         let target_point = steering::motion(&before, target).map(|m| m.point);
+-                        let metrics = harness.step_pursuit(tick as i64, false, true, direct).await;
++                        let metrics = harness
++                            .step_pursuit_policy(tick as i64, false, true, direct, policy)
++                            .await;
+                         ensure!(metrics.committed, "Pursuit tick failed commit");
+                         let after = harness.world();
+                         let motion = steering::motion(&after, focal).unwrap();
+@@ -558,7 +561,11 @@ pub async fn run(
+                             writeln!(
+                                 f,
+                                 "{}",
+-                                serde_json::json!({"scenario":name,"chassis":chassis,"seed":seed,"fire":fire,"tick":tick,"digest":format!("{digest:016x}"),"result":result})
++                                serde_json::json!({"scenario":name,"chassis":chassis,"seed":seed,"fire":fire,"tick":tick,"digest":format!("{digest:016x}"),"result":result,
++                                "pursuit": after.btech.autopilot_plans.get(&focal).map(|p| serde_json::json!({
++                                    "evidence":p.pursuit.evidence(),"goal":p.goal,"route_index":p.route_index,
++                                    "navigation_recoveries":p.recovery_attempts,"stagnant_ticks":p.stagnant_ticks
++                                }))})
+                             )?;
+                         }
+                         if terminal.is_some() {
+diff --git a/src/btech/autopilot/runtime.rs b/src/btech/autopilot/runtime.rs
+index 0dc11e8..bca60e2 100644
+--- a/src/btech/autopilot/runtime.rs
++++ b/src/btech/autopilot/runtime.rs
+@@ -36,6 +36,7 @@ pub struct AutopilotRuntimeMetrics {
+     pub diagnostics_enabled: bool,
+     /// Isolated harness comparison input; never set by the server.
+     pub(crate) direct_pursuit: bool,
++    pub(crate) pursuit_policy: super::interception::PursuitPolicy,
+     pub diagnostics: super::diagnostics::AutopilotDiagnostics,
+     /// Capture autonomous notices for deterministic comparisons, outside timing samples.
+     pub capture_outcomes: bool,
+@@ -138,6 +139,9 @@ pub(crate) struct AutopilotPlan {
+     pub(crate) best_waypoint_distance: Option<f64>,
+     pub(crate) stagnant_ticks: u16,
+     pub(crate) recovery_attempts: u8,
++    pub(crate) steering_grace: u16,
++    /// One bounded courtesy wait per occupied waypoint, retained across replans.
++    pub(crate) yielding: Option<(Hex, i64)>,
+     pub(crate) terrain_revision: usize,
+     pub(crate) mobility_revision: u64,
+ }
+@@ -159,6 +163,8 @@ impl Default for AutopilotPlan {
+             best_waypoint_distance: None,
+             stagnant_ticks: 0,
+             recovery_attempts: 0,
++            steering_grace: 0,
++            yielding: None,
+             terrain_revision: 0,
+             mobility_revision: 0,
+         }
+@@ -183,6 +189,8 @@ impl PartialEq for AutopilotPlan {
+             && self.best_waypoint_distance == other.best_waypoint_distance
+             && self.stagnant_ticks == other.stagnant_ticks
+             && self.recovery_attempts == other.recovery_attempts
++            && self.steering_grace == other.steering_grace
++            && self.yielding == other.yielding
+             && self.terrain_revision == other.terrain_revision
+             && self.mobility_revision == other.mobility_revision
+     }
+@@ -410,13 +418,17 @@ fn advance_combat_inner(
+                 combat_target(&config_for_unit, &observation, selected)
+             }
+         };
+-        if let Some(target) = target
+-            && config_for_unit.fire_mode != super::AutopilotFireMode::Hold
+-        {
++        if let Some(target) = target {
+             if let Some(contact) = observation.contacts.iter().find(|c| c.unit == target) {
+                 let stationary = super::steering::motion(world, id)
+                     .is_some_and(|m| m.speed.abs() < 0.1 && m.desired_speed.abs() < 0.1);
++                let navigating = world
++                    .btech
++                    .autopilot_plans
++                    .get(&id)
++                    .is_some_and(|p| p.search.is_some() || p.route_index < p.route.len());
+                 let allow_hull = stationary
++                    && !navigating
+                     && matches!(
+                         active_order,
+                         Some(
+@@ -434,15 +446,18 @@ fn advance_combat_inner(
+                     &mut notices,
+                 );
+             }
+-            fire_target_if_ready(
+-                world,
+-                config,
+-                id,
+-                target,
+-                &config_for_unit,
+-                &mut notices,
+-                &mut metrics,
+-            );
++            // Weapons hold forbids expenditure, not aiming an explicitly assigned target.
++            if config_for_unit.fire_mode != super::AutopilotFireMode::Hold {
++                fire_target_if_ready(
++                    world,
++                    config,
++                    id,
++                    target,
++                    &config_for_unit,
++                    &mut notices,
++                    &mut metrics,
++                );
++            }
+         }
+     }
+     drop(validation_scope);
+@@ -624,12 +639,14 @@ fn advance_controller(
+ 
+     // Reuse the durable diversion origin when attack-move is already pursuing
+     // a contact. This keeps pursuit bounded across replans and restarts.
++    let plan_clone = super::diagnostics::pursuit("plan_clone");
+     let mut existing_plan = world
+         .btech
+         .autopilot_plans
+         .get(&id)
+         .cloned()
+         .unwrap_or_default();
++    drop(plan_clone);
+     let mut engagement = observation
+         .as_ref()
+         .and_then(|o| super::engagement::resolve(world, id, &active, &controller_config, o));
+@@ -637,6 +654,7 @@ fn advance_controller(
+     // changes but never a lifecycle, terrain, mobility, order, or target invalidation.
+     let direct = metrics.as_ref().is_some_and(|m| m.direct_pursuit);
+     if let (Some(e), Some(o)) = (engagement.as_mut(), observation.as_ref()) {
++        let _estimation = super::diagnostics::pursuit("estimation");
+         let map = &world.btech.maps()[&e.target.map];
+         if existing_plan.terrain_revision != map_revision(map)
+             || existing_plan.mobility_revision != unit_mobility_revision(world, id)
+@@ -644,9 +662,15 @@ fn advance_controller(
+             existing_plan.pursuit = Default::default();
+         }
+         if !direct {
+-            existing_plan
+-                .pursuit
+-                .sample(active.id, e.target_id, e.target, simulation_time);
++            existing_plan.pursuit.sample_policy(
++                active.id,
++                e.target_id,
++                e.target,
++                simulation_time,
++                metrics
++                    .as_ref()
++                    .map_or(Default::default(), |m| m.pursuit_policy),
++            );
+             if let Some(own) = o.position {
+                 let rate = if map.movement_modifier > 0 {
+                     map.movement_modifier as f64 / 100.0
+@@ -798,6 +822,8 @@ fn advance_controller(
+             settled.route.clear();
+             settled.route_index = 0;
+             settled.stagnant_ticks = 0;
++            settled.recovery_attempts = 0;
++            settled.steering_grace = 0;
+             settled.best_waypoint_distance = None;
+             settled.order_id = active.id;
+             settled.goal = Some((goal, directive.arrival_radius));
+@@ -836,21 +862,24 @@ fn advance_controller(
+ 
+     let selected_before_movement =
+         crate::btech::scanner::scanner_unit(world, id).and_then(|unit| unit.selected);
++    let navigation_changed = existing_plan.order_id != active.id
++        || existing_plan.goal != Some((goal, directive.arrival_radius))
++        || !same_navigation(existing_plan.engagement, engagement);
+     let (mut plan, expansions) = {
+         let mut plan = existing_plan;
+         let mut expansions = 0;
+-        if plan.order_id != active.id
+-            || plan.goal != Some((goal, directive.arrival_radius))
+-            || !same_navigation(plan.engagement, engagement)
+-        {
++        if navigation_changed {
+             plan = AutopilotPlan {
+                 steering: plan.steering.clone(),
+                 pursuit: plan.pursuit.clone(),
+                 engagement,
+                 order_id: active.id,
+                 goal: Some((goal, directive.arrival_radius)),
+-                recovery_attempts: active.progress.recovery_attempts,
+-                stagnant_ticks: active.progress.stagnant_ticks,
++                recovery_attempts: plan.recovery_attempts,
++                steering_grace: plan.steering_grace,
++                yielding: plan.yielding,
++                stagnant_ticks: plan.stagnant_ticks,
++                last_hex: plan.last_hex,
+                 ..AutopilotPlan::default()
+             };
+         }
+@@ -1081,9 +1110,9 @@ fn advance_controller(
+         plan.route.clear();
+         plan.search = None;
+         plan.route_index = 0;
+-        plan.recovery_attempts = plan.recovery_attempts.saturating_add(1);
+-        sync_progress(world, id, plan.recovery_attempts, plan.stagnant_ticks);
+-        if plan.recovery_attempts > MAX_RECOVERY_ATTEMPTS {
++        let exhausted = navigation_stalled(&mut plan);
++        sync_stagnation(world, id, plan.stagnant_ticks);
++        if exhausted {
+             fail(world, id, simulation_time, AutopilotReason::Stuck);
+             remove_plan(world, id);
+             return Ok(expansions);
+@@ -1092,6 +1121,9 @@ fn advance_controller(
+         return Ok(expansions);
+     }
+     if plan.last_hex != Some(current_hex) {
++        if plan.last_hex.is_some() {
++            navigation_progress(&mut plan);
++        }
+         plan.last_hex = Some(current_hex);
+         plan.stagnant_ticks = 0;
+         plan.best_waypoint_distance = None;
+@@ -1109,22 +1141,19 @@ fn advance_controller(
+             .best_waypoint_distance
+             .is_none_or(|best| distance + 0.02 < best)
+         {
++            if plan.best_waypoint_distance.is_some() {
++                navigation_progress(&mut plan);
++            } else if navigation_changed {
++                // A new goal establishes a distance baseline; it is not travel.
++                plan.stagnant_ticks = plan.stagnant_ticks.saturating_add(1);
++            }
+             plan.best_waypoint_distance = Some(distance);
+-            plan.stagnant_ticks = 0;
+         } else {
+             plan.stagnant_ticks = plan.stagnant_ticks.saturating_add(1);
+         }
+     } else {
+         plan.stagnant_ticks = plan.stagnant_ticks.saturating_add(1);
+     }
+-    if super::steering::motion(world, id).is_some_and(|motion| {
+-        let error =
+-            ((motion.desired_heading - motion.heading + 180.0).rem_euclid(360.0) - 180.0).abs();
+-        error + 0.1 < plan.steering.last_error
+-            || motion.speed.abs() + 0.01 < plan.steering.last_speed.abs()
+-    }) {
+-        plan.stagnant_ticks = 0;
+-    }
+     if plan.stagnant_ticks >= STAGNANT_TICKS_BEFORE_REPLAN {
+         record_replan(metrics, id);
+         plan.route.clear();
+@@ -1133,7 +1162,7 @@ fn advance_controller(
+         plan.stagnant_ticks = 0;
+         plan.best_waypoint_distance = None;
+         plan.recovery_attempts = plan.recovery_attempts.saturating_add(1);
+-        sync_progress(world, id, plan.recovery_attempts, 0);
++        sync_stagnation(world, id, 0);
+         if plan.recovery_attempts > MAX_RECOVERY_ATTEMPTS {
+             fail(world, id, simulation_time, AutopilotReason::Stuck);
+             remove_plan(world, id);
+@@ -1143,7 +1172,7 @@ fn advance_controller(
+         return Ok(expansions);
+     }
+ 
+-    sync_progress(world, id, plan.recovery_attempts, plan.stagnant_ticks);
++    sync_stagnation(world, id, plan.stagnant_ticks);
+ 
+     let Some(next) = plan.route.get(plan.route_index).copied() else {
+         plan.route.clear();
+@@ -1185,6 +1214,7 @@ fn advance_controller(
+         assessment.reason,
+         traversal::TraversalReason::Occupied | traversal::TraversalReason::Congested
+     ) && should_yield(world, id, goal.map, next)
++        && courtesy_wait(&mut plan, next, simulation_time)
+     {
+         if !issue_stop(world, id, simulation_time, notices) {
+             return Ok(expansions);
+@@ -1207,8 +1237,8 @@ fn advance_controller(
+         notices,
+     ) {
+         Ok(true) => {
+-            plan.stagnant_ticks = 0;
+-            sync_progress(world, id, plan.recovery_attempts, 0);
++            navigation_control_progress(&mut plan);
++            sync_stagnation(world, id, plan.stagnant_ticks);
+         }
+         Ok(false) => {}
+         Err(_) => {
+@@ -1550,6 +1580,15 @@ fn should_yield(world: &World, moving: ObjectId, map: ObjectId, next: Hex) -> bo
+     })
+ }
+ 
++/// Yield briefly for known traffic, then let authoritative entry rules decide.
++/// A stationary occupant must not permanently reserve a legally traversable hex.
++fn courtesy_wait(plan: &mut AutopilotPlan, next: Hex, now: i64) -> bool {
++    if plan.yielding.is_none_or(|(hex, _)| hex != next) {
++        plan.yielding = Some((next, now + 5));
++    }
++    plan.yielding.is_some_and(|(_, until)| now < until)
++}
++
+ fn unit_power(world: &World, id: ObjectId) -> Option<BattlePower> {
+     world
+         .btech
+@@ -1646,15 +1685,39 @@ fn update_waypoint(world: &mut World, id: ObjectId, next: u16) {
+     }
+ }
+ 
+-fn sync_progress(world: &mut World, id: ObjectId, recovery_attempts: u8, stagnant_ticks: u16) {
++fn sync_stagnation(world: &mut World, id: ObjectId, stagnant_ticks: u16) {
+     if let Some(controller) = Arc::make_mut(&mut world.btech.controllers).get_mut(&id)
+         && let Some(order) = controller.active_order_mut()
+     {
+-        order.progress.recovery_attempts = recovery_attempts;
+         order.progress.stagnant_ticks = stagnant_ticks;
+     }
+ }
+ 
++/// Only actual forward travel or actual-target settling replenishes navigation retries.
++fn navigation_progress(plan: &mut AutopilotPlan) {
++    plan.recovery_attempts = 0;
++    plan.stagnant_ticks = 0;
++    plan.steering_grace = 0;
++}
++
++/// Turning and braking get finite patience, but cannot replenish failed-route retries.
++fn navigation_control_progress(plan: &mut AutopilotPlan) {
++    if plan.steering_grace < STAGNANT_TICKS_BEFORE_REPLAN {
++        plan.steering_grace += 1;
++        plan.stagnant_ticks = 0;
++    }
++}
++
++/// Stale route origins cannot consume a retry every tick or defer failure indefinitely.
++fn navigation_stalled(plan: &mut AutopilotPlan) -> bool {
++    plan.stagnant_ticks = plan.stagnant_ticks.saturating_add(1);
++    if plan.stagnant_ticks >= STAGNANT_TICKS_BEFORE_REPLAN {
++        plan.stagnant_ticks = 0;
++        plan.recovery_attempts = plan.recovery_attempts.saturating_add(1);
++    }
++    plan.recovery_attempts > MAX_RECOVERY_ATTEMPTS
++}
++
+ fn complete(world: &mut World, id: ObjectId, now: i64) {
+     if let Some(controller) = Arc::make_mut(&mut world.btech.controllers).get_mut(&id) {
+         controller.complete_active(now);
+@@ -1672,6 +1735,7 @@ fn fail(world: &mut World, id: ObjectId, now: i64, reason: AutopilotReason) {
+ }
+ 
+ fn persist_plan(world: &mut World, id: ObjectId, plan: AutopilotPlan) {
++    let _publication = super::diagnostics::pursuit("plan_publication");
+     Arc::make_mut(&mut world.btech.autopilot_plans).insert(id, plan);
+ }
+ 
+@@ -1865,3 +1929,164 @@ fn congestion_metric(
+         update(metrics.congestion_by_unit.entry(id).or_default());
+     }
+ }
++
++#[cfg(test)]
++mod navigation_recovery_tests {
++    use super::*;
++
++    #[test]
++    fn courtesy_wait_is_bounded_and_checkpointed() {
++        let mut plan = AutopilotPlan::default();
++        let cell = Hex::new(4, 5);
++        assert!(courtesy_wait(&mut plan, cell, 100));
++        let checkpoint = plan.clone();
++        for time in 101..105 {
++            assert!(courtesy_wait(&mut plan, cell, time));
++        }
++        for time in 105..200 {
++            assert!(!courtesy_wait(&mut plan, cell, time));
++        }
++        assert_eq!(plan, checkpoint);
++        assert!(courtesy_wait(&mut plan, Hex::new(5, 5), 200));
++        assert_ne!(plan, checkpoint);
++        plan = checkpoint;
++        assert!(!courtesy_wait(&mut plan, cell, 200));
++    }
++
++    #[test]
++    fn changes_of_goal_do_not_replenish_failed_navigation() {
++        let mut plan = AutopilotPlan::default();
++        for tick in 1..=40 {
++            plan.goal = Some((
++                BattlePosition {
++                    map: ObjectId(1),
++                    x: tick % 2,
++                    y: 1,
++                },
++                0,
++            ));
++            assert_eq!(navigation_stalled(&mut plan), tick == 40);
++        }
++        assert_eq!(plan.recovery_attempts, 4);
++    }
++
++    #[test]
++    fn actual_progress_replenishes_only_the_transient_budget() {
++        let mut plan = AutopilotPlan::default();
++        for _ in 0..30 {
++            assert!(!navigation_stalled(&mut plan));
++        }
++        let checkpoint = plan.clone();
++        assert_eq!(plan.recovery_attempts, 3);
++        navigation_progress(&mut plan);
++        assert_eq!(plan.recovery_attempts, 0);
++        assert_ne!(plan, checkpoint);
++        for _ in 0..30 {
++            assert!(!navigation_stalled(&mut plan));
++        }
++        assert_eq!(plan, checkpoint);
++    }
++
++    #[test]
++    fn turning_without_travel_cannot_renew_navigation_forever() {
++        let mut plan = AutopilotPlan::default();
++        let mut blocked_at = None;
++        for tick in 1..=50 {
++            if navigation_stalled(&mut plan) {
++                blocked_at = Some(tick);
++                break;
++            }
++            navigation_control_progress(&mut plan);
++        }
++        assert_eq!(blocked_at, Some(50));
++        navigation_progress(&mut plan);
++        assert_eq!(plan.steering_grace, 0);
++    }
++
++    #[tokio::test]
++    async fn explicit_attack_with_weapons_hold_aligns_without_expenditure() {
++        let root = super::super::benchmark::copy_game_root().unwrap();
++        let config = Config::load(&root).unwrap();
++        let base = crate::persistence::load(&config.database()).await.unwrap();
++        let (mut world, id, _, _) = super::super::encounters::fixture(
++            &config,
++            base,
++            include_str!("../../../game/mechs/JR7-D"),
++            "behind",
++            1,
++        )
++        .unwrap();
++        Arc::make_mut(&mut world.btech.controllers)
++            .get_mut(&id)
++            .unwrap()
++            .configure(
++                super::super::AutopilotConfigPatch {
++                    fire_mode: Some(super::super::AutopilotFireMode::Hold),
++                    ..Default::default()
++                },
++                None,
++            )
++            .unwrap();
++        Arc::make_mut(&mut world.btech.controllers)
++            .get_mut(&id)
++            .unwrap()
++            .start_next(0);
++        let before = world.btech.constructed_units()[&id].clone();
++        let mut metrics = AutopilotRuntimeMetrics::default();
++        let notices = advance_combat_with_metrics(&mut world, &config, 1, &mut metrics).unwrap();
++        let after = &world.btech.constructed_units()[&id];
++        assert!(!notices.is_empty());
++        assert_eq!(metrics.autonomous_shots, 0);
++        assert_eq!(before.ammunition(), after.ammunition());
++        assert_eq!(before.heat(), after.heat());
++        assert_eq!(before.dice, after.dice);
++        // A stopped route may still be turning. Combat can twist/aim its mounts,
++        // but must not replace the navigation heading in that phase.
++        crate::btech::motion::set_heading_autopilot(&mut world, id, 123.0).unwrap();
++        Arc::make_mut(&mut world.btech.autopilot_plans).insert(
++            id,
++            AutopilotPlan {
++                route: vec![Hex::new(1, 1), Hex::new(1, 2)],
++                route_index: 1,
++                ..Default::default()
++            },
++        );
++        advance_combat_with_metrics(&mut world, &config, 2, &mut metrics).unwrap();
++        assert_eq!(
++            super::super::steering::motion(&world, id)
++                .unwrap()
++                .desired_heading,
++            123.0
++        );
++    }
++
++    #[tokio::test]
++    async fn navigation_publication_does_not_change_standing_attempts() {
++        let root = super::super::benchmark::copy_game_root().unwrap();
++        let config = Config::load(&root).unwrap();
++        let base = crate::persistence::load(&config.database()).await.unwrap();
++        let (mut world, id, _, _) = super::super::encounters::fixture(
++            &config,
++            base,
++            include_str!("../../../game/mechs/JR7-D"),
++            "long_approach",
++            1,
++        )
++        .unwrap();
++        advance(&mut world, &config, 1).unwrap();
++        Arc::make_mut(&mut world.btech.controllers)
++            .get_mut(&id)
++            .unwrap()
++            .active_order_mut()
++            .unwrap()
++            .progress
++            .recovery_attempts = 2;
++        sync_stagnation(&mut world, id, 7);
++        let progress = &world.btech.controllers()[&id]
++            .active_order()
++            .unwrap()
++            .progress;
++        assert_eq!(progress.recovery_attempts, 2);
++        assert_eq!(progress.stagnant_ticks, 7);
++    }
++}
+diff --git a/src/btech/battlefield_identity.rs b/src/btech/battlefield_identity.rs
+index 8fe5c31..78d4c06 100644
+--- a/src/btech/battlefield_identity.rs
++++ b/src/btech/battlefield_identity.rs
+@@ -129,6 +129,6 @@ pub(super) fn occupied_labels(world: &World, map: ObjectId, except: ObjectId) ->
+         .filter(|other| *other != except)
+         .filter_map(|other| super::scanner::scanner_unit(world, other))
+         .filter(|unit| unit.position.is_some_and(|position| position.map == map))
+-        .filter_map(|unit| unit.label)
++        .filter_map(|unit| unit.label())
+         .collect()
+ }
+diff --git a/src/btech/contacts.rs b/src/btech/contacts.rs
+index c83c23d..95ee379 100644
+--- a/src/btech/contacts.rs
++++ b/src/btech/contacts.rs
+@@ -539,7 +539,7 @@ fn contact_view(
+     let other = super::scanner::scanner_unit(world, target).context("Contact disappeared")?;
+     let heading = unit.heading.context("Observer has no motion state")?;
+     let bearing = facts.range.bearing.unwrap_or(180.0);
+-    let mut label = other.label.context("Contact has no battlefield label")?;
++    let mut label = other.label().context("Contact has no battlefield label")?;
+     if facts.friendly {
+         label.make_ascii_lowercase();
+     }
+diff --git a/src/btech/lua_map_contract.rs b/src/btech/lua_map_contract.rs
+index f26b827..9840170 100644
+--- a/src/btech/lua_map_contract.rs
++++ b/src/btech/lua_map_contract.rs
+@@ -42,7 +42,7 @@ pub fn battle_map_members(world: &World, map: ObjectId) -> Result<Vec<BattleMapM
+             };
+             Ok(BattleMapMember {
+                 id,
+-                label: unit.label.context("Placed unit lacks an ID")?,
++                label: unit.label().context("Placed unit lacks an ID")?,
+                 position,
+                 point,
+                 z,
+diff --git a/src/btech/map_list.rs b/src/btech/map_list.rs
+index 9321543..7091076 100644
+--- a/src/btech/map_list.rs
++++ b/src/btech/map_list.rs
+@@ -63,7 +63,7 @@ pub fn list_map_action(
+             for id in &units {
+                 let unit =
+                     super::scanner::scanner_unit(&before, *id).context("Unit is unavailable")?;
+-                let label = unit.label.context("Unit has no battlefield ID")?;
++                let label = unit.label().context("Unit has no battlefield ID")?;
+                 notify(&format!("Mech DB Number: {} : [{label}]\tValid Data", id.0))?;
+             }
+             notify(&format!("{} Mechs On Map", units.len()))?;
+diff --git a/src/btech/map_slots.rs b/src/btech/map_slots.rs
+index 948ee4a..fafe223 100644
+--- a/src/btech/map_slots.rs
++++ b/src/btech/map_slots.rs
+@@ -62,7 +62,7 @@ pub(super) fn placement_label(
+ ) -> Result<Option<String>> {
+     let current = super::scanner::scanner_unit(world, id).context("Unit is unavailable")?;
+     let preferred = if current.position.is_some_and(|position| position.map == map) {
+-        current.label.context("Placed unit lacks an ID")?
++        current.label().context("Placed unit lacks an ID")?
+     } else {
+         super::observer::battlefield_label(slot)
+     };
+diff --git a/src/btech/network_unit.rs b/src/btech/network_unit.rs
+index 0f5621d..23fb42e 100644
+--- a/src/btech/network_unit.rs
++++ b/src/btech/network_unit.rs
+@@ -57,7 +57,7 @@ impl NetworkUnit<'_> {
+     }
+     /// Tactical label independent of the construction store.
+     pub fn battlefield_id(&self) -> Option<String> {
+-        self.scanner.label.clone()
++        self.scanner.label()
+     }
+     /// Resolved presentation name shared with identified contacts.
+     pub fn name(&self) -> &str {
+diff --git a/src/btech/radio.rs b/src/btech/radio.rs
+index bd97ef1..6861c24 100644
+--- a/src/btech/radio.rs
++++ b/src/btech/radio.rs
+@@ -451,7 +451,7 @@ impl RadioUnit<'_> {
+         self.state.signature
+     }
+     pub(super) fn battlefield_id(&self) -> Option<String> {
+-        self.state.label.clone()
++        self.state.label()
+     }
+     pub(super) fn stunned(&self) -> bool {
+         self.stun
+diff --git a/src/btech/radio_targeted.rs b/src/btech/radio_targeted.rs
+index 1947d5d..0300f7d 100644
+--- a/src/btech/radio_targeted.rs
++++ b/src/btech/radio_targeted.rs
+@@ -34,7 +34,7 @@ pub fn resolve_targeted_radio(
+     let visible =
+         visible_contact(world, sender, target)?.context("Target is not in line of sight!")?;
+     let other = super::scanner::scanner_unit(world, target).context("Target is unavailable")?;
+-    let mut id = other.label.context("Target is not placed")?;
++    let mut id = other.label().context("Target is not placed")?;
+     if visible.friendly {
+         id.make_ascii_lowercase();
+     }
+@@ -44,7 +44,7 @@ pub fn resolve_targeted_radio(
+     }];
+     if other.power == BattlePower::Running {
+         let seen = visible_contact(world, target, sender)?;
+-        let mut source_id = source.label.context("Sender is not placed")?;
++        let mut source_id = source.label().context("Sender is not placed")?;
+         if seen.as_ref().is_some_and(|v| v.friendly) {
+             source_id.make_ascii_lowercase();
+         }
+@@ -103,7 +103,7 @@ pub(super) fn target(world: &World, sender: ObjectId, text: &str) -> Result<Obje
+             super::scanner::scanner_unit(world, *id).is_some_and(|unit| {
+                 unit.position.is_some_and(|position| position.map == map)
+                     && unit
+-                        .label
++                        .label()
+                         .is_some_and(|label| label.eq_ignore_ascii_case(text))
+             })
+         })
+diff --git a/src/btech/scan.rs b/src/btech/scan.rs
+index ed712bd..c9df1ac 100644
+--- a/src/btech/scan.rs
++++ b/src/btech/scan.rs
+@@ -196,7 +196,7 @@ fn scan_unit_configured(
+                 .as_ref()
+                 .map_or("something", |contact| contact.name.as_str());
+             let mut label = super::scanner::scanner_unit(world, *towed)
+-                .and_then(|unit| unit.label)
++                .and_then(|unit| unit.label())
+                 .unwrap_or_else(|| "??".into());
+             if seen.as_ref().is_some_and(|contact| contact.friendly) {
+                 label.make_ascii_lowercase();
+@@ -281,7 +281,7 @@ pub fn scan_unit_action(
+                 None
+             } else {
+                 let seen = super::visible_contact(&world, target, observer)?;
+-                let mut label = source.label.context("Scanner is not placed")?;
++                let mut label = source.label().context("Scanner is not placed")?;
+                 if seen.as_ref().is_some_and(|view| view.friendly) {
+                     label.make_ascii_lowercase();
+                 }
+diff --git a/src/btech/scan_summary.rs b/src/btech/scan_summary.rs
+index 5f7aa13..c84d16b 100644
+--- a/src/btech/scan_summary.rs
++++ b/src/btech/scan_summary.rs
+@@ -33,7 +33,7 @@ pub(super) fn render(
+         .round()
+         .rem_euclid(360.0) as u16;
+     let name: String = view.name.chars().take(25).collect();
+-    let mut label = unit.label.context("Target has no battlefield identity")?;
++    let mut label = unit.label().context("Target has no battlefield identity")?;
+     if view.friendly {
+         label.make_ascii_lowercase();
+     }
+diff --git a/src/btech/scanner.rs b/src/btech/scanner.rs
+index 8c81688..146157a 100644
+--- a/src/btech/scanner.rs
++++ b/src/btech/scanner.rs
+@@ -87,7 +87,7 @@ impl BattleContactEvent {
+         } else {
+             "something".into()
+         };
+-        let mut label = target.label?;
++        let mut label = target.label()?;
+         if clear && same_team {
+             label.make_ascii_lowercase();
+         }
+@@ -183,7 +183,7 @@ pub(super) struct ScannerUnit<'a> {
+     pub(super) heading: Option<f64>,
+     pub(super) facing: super::BattleFacing,
+     pub(super) name: &'a str,
+-    pub(super) label: Option<String>,
++    label_override: Option<&'a str>,
+     pub(super) brief: super::BattleBriefSettings,
+     pub(super) observer: bool,
+     pub(super) visibility: super::BattleVisibility,
+@@ -198,6 +198,17 @@ pub(super) struct ScannerUnit<'a> {
+     pub(super) point: Option<super::BattlePoint>,
+ }
+ 
++impl ScannerUnit<'_> {
++    /// Format identity only for presentation. Sensor/geometry queries need no label allocation.
++    pub(super) fn label(&self) -> Option<String> {
++        self.slot.map(|slot| {
++            self.label_override
++                .map(str::to_owned)
++                .unwrap_or_else(|| super::observer::battlefield_label(slot))
++        })
++    }
++}
++
+ /// Borrow scanner inputs without coupling vehicle state to Mech construction.
+ pub(super) fn scanner_unit(world: &World, id: ObjectId) -> Option<ScannerUnit<'_>> {
+     if let Some(unit) = world.btech.vehicles().get(&id) {
+@@ -225,7 +236,7 @@ pub(super) fn scanner_unit(world: &World, id: ObjectId) -> Option<ScannerUnit<'_
+                 .and_then(|configuration| configuration.display_name.as_deref())
+                 .filter(|value| !value.is_empty())
+                 .unwrap_or_else(|| unit.display_name.effective(&unit.definition().name)),
+-            label: unit.battlefield_id(),
++            label_override: unit.battlefield_label.as_deref(),
+             brief: unit.brief_settings(),
+             observer: unit.is_observer(),
+             visibility: unit.visibility,
+@@ -260,7 +271,7 @@ pub(super) fn scanner_unit(world: &World, id: ObjectId) -> Option<ScannerUnit<'_
+             .and_then(|configuration| configuration.display_name.as_deref())
+             .filter(|value| !value.is_empty())
+             .unwrap_or_else(|| unit.display_name.effective(&unit.definition().name)),
+-        label: unit.battlefield_id(),
++        label_override: unit.battlefield_label.as_deref(),
+         brief: unit.brief_settings(),
+         observer: unit.is_observer(),
+         visibility: unit.visibility,
+diff --git a/src/btech/spotter_events.rs b/src/btech/spotter_events.rs
+index fae0bf1..5fcccdd 100644
+--- a/src/btech/spotter_events.rs
++++ b/src/btech/spotter_events.rs
+@@ -158,7 +158,7 @@ fn identity(world: &World, viewer: ObjectId, subject: ObjectId) -> String {
+         .as_ref()
+         .map_or("something", |contact| contact.name.as_str());
+     let label = super::scanner::scanner_unit(world, subject)
+-        .and_then(|unit| unit.label)
++        .and_then(|unit| unit.label())
+         .unwrap_or_else(|| "??".into());
+     format!("{} [{label}]", crate::text::escape(name))
+ }
+diff --git a/src/btech/status/layout.rs b/src/btech/status/layout.rs
+index a41351a..6863e90 100644
+--- a/src/btech/status/layout.rs
++++ b/src/btech/status/layout.rs
+@@ -226,7 +226,7 @@ pub(super) fn render(
+ /// Standard identification and condition lines precede every non-heat block.
+ fn header(lines: &mut Vec<String>, world: &World, id: ObjectId, f: &Facts<'_>) -> Result<()> {
+     let scan = btech::scanner::scanner_unit(world, id).context("Unit is unavailable")?;
+-    let label = scan.label.unwrap_or_else(|| "??".into());
++    let label = scan.label().unwrap_or_else(|| "??".into());
+     match f.movement {
+         None => {
+             lines.push(format!(
+@@ -318,7 +318,7 @@ fn display_id(world: &World, id: ObjectId) -> String {
+             format!(
+                 "{} [{}]",
+                 text::escape(s.name),
+-                text::escape(&s.label.unwrap_or_else(|| "??".into()))
++                text::escape(&s.label().unwrap_or_else(|| "??".into()))
+             )
+         },
+     )
+diff --git a/src/btech/status/technology.rs b/src/btech/status/technology.rs
+index 92647d2..612cf93 100644
+--- a/src/btech/status/technology.rs
++++ b/src/btech/status/technology.rs
+@@ -157,7 +157,7 @@ pub(super) fn lines(world: &World, id: ObjectId) -> Result<Vec<String>> {
+                     format!(
+                         "{} [{}]",
+                         crate::text::escape(s.name),
+-                        s.label.unwrap_or_else(|| "??".into())
++                        s.label().unwrap_or_else(|| "??".into())
+                     )
+                 },
+             );
+diff --git a/src/btech/tactical_map.rs b/src/btech/tactical_map.rs
+index 9d5f0c0..d7a19c3 100644
+--- a/src/btech/tactical_map.rs
++++ b/src/btech/tactical_map.rs
+@@ -147,7 +147,7 @@ fn display(
+             let Some(view) = super::visible_contact(world, observer, id)? else {
+                 continue;
+             };
+-            let mut label = unit.label.expect("placed contact");
++            let mut label = unit.label().expect("placed contact");
+             if view.friendly {
+                 label.make_ascii_lowercase();
+             }
+diff --git a/src/btech/tag.rs b/src/btech/tag.rs
+index 9a468c5..94f8b36 100644
+--- a/src/btech/tag.rs
++++ b/src/btech/tag.rs
+@@ -241,7 +241,7 @@ pub fn select_tag(
+     let target_name = format!(
+         "{} [{}]",
+         crate::text::escape(&visible.name),
+-        victim.label.unwrap_or_else(|| "??".into())
++        victim.label().unwrap_or_else(|| "??".into())
+     );
+     let displaced: Vec<_> = super::scanner::scanner_ids(world)
+         .into_iter()
+diff --git a/src/btech/unit_fields.rs b/src/btech/unit_fields.rs
+index e715036..0e5fc9c 100644
+--- a/src/btech/unit_fields.rs
++++ b/src/btech/unit_fields.rs
+@@ -166,7 +166,7 @@ fn value(world: &World, config: &Config, id: ObjectId, field: &str) -> Result<Op
+     Ok(match field {
+         "mapindex" => integer(scanner.position.map_or(-1, |p| p.map.0)),
+         "id" => scanner
+-            .label
++            .label()
+             .or_else(|| mech.and_then(|unit| unit.battlefield_label.clone()))
+             .or_else(|| vehicle.and_then(|unit| unit.battlefield_label.clone())),
+         "unit_era" | "unit_tro" => {
+diff --git a/src/lib.rs b/src/lib.rs
+index ac097cb..c0392aa 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -1287,6 +1287,7 @@ pub use btech::autopilot::adversarial::{
+     SCENARIOS as AUTOPILOT_ADVERSARIAL_SCENARIOS, run as run_autopilot_adversarial,
+ };
+ 
++pub use btech::autopilot::interception::PursuitPolicy as AutopilotPursuitPolicy;
+ pub use btech::autopilot::pursuit_encounters::{
+     Episode as AutopilotPursuitEpisode, PursuitResult as AutopilotPursuitResult,
+     SCENARIOS as AUTOPILOT_PURSUIT_SCENARIOS, run as run_autopilot_pursuit,
+diff --git a/src/server/heartbeat_harness.rs b/src/server/heartbeat_harness.rs
+index 2f0cdb6..302211f 100644
+--- a/src/server/heartbeat_harness.rs
++++ b/src/server/heartbeat_harness.rs
+@@ -74,9 +74,23 @@ impl HeartbeatHarness {
+         detailed: bool,
+         outcomes: bool,
+         direct: bool,
++    ) -> HeartbeatMetrics {
++        self.step_pursuit_policy(now, detailed, outcomes, direct, Default::default())
++            .await
++    }
++
++    /// Select one bounded experimental policy in isolated encounters only.
++    pub async fn step_pursuit_policy(
++        &mut self,
++        now: i64,
++        detailed: bool,
++        outcomes: bool,
++        direct: bool,
++        policy: crate::AutopilotPursuitPolicy,
+     ) -> HeartbeatMetrics {
+         let started = Instant::now();
+         let mut metrics = HeartbeatMetrics::default();
++        metrics.autopilot.pursuit_policy = policy;
+         metrics.autopilot.diagnostics_enabled = detailed;
+         metrics.autopilot.direct_pursuit = direct;
+         metrics.autopilot.capture_outcomes = outcomes;
+@@ -85,6 +99,7 @@ impl HeartbeatHarness {
+             .await;
+         metrics.heartbeat = started.elapsed();
+         if !metrics.committed {
++            metrics.autopilot.diagnostics.pursuit.clear();
+             metrics.autopilot.notice_trace.clear();
+             metrics.autopilot.shots_by_unit.clear();
+             metrics.autopilot.replans_by_unit.clear();
+diff --git a/tools/compare_autopilot_pursuit.py b/tools/compare_autopilot_pursuit.py
+index eeed027..28ca26c 100644
+--- a/tools/compare_autopilot_pursuit.py
++++ b/tools/compare_autopilot_pursuit.py
+@@ -29,8 +29,8 @@ def compare(before, after):
+             continue  # casualties are reported, not compared as equal observation windows
+         if a.get('script_rejections', 0):
+             fail(key, 'scripted controls rejected in hold fixture')
+-        if a['outcome'] not in ('window_end','completed','ContactLost') and b['outcome'] in ('window_end','completed'):
+-            fail(key, 'new sustained-pursuit failure: ' + a['outcome'])
++        if a['scenario'] != 'expiry' and a['outcome'] not in ('window_end', 'completed'):
++            fail(key, 'sustained-pursuit failure: ' + a['outcome'])
+         scenario = a['scenario']
+         if scenario == 'expiry':
+             if 'ContactLost' not in a['outcome']:
+diff --git a/tools/test_compare_autopilot_pursuit.py b/tools/test_compare_autopilot_pursuit.py
+index 90bdbfd..997858b 100644
+--- a/tools/test_compare_autopilot_pursuit.py
++++ b/tools/test_compare_autopilot_pursuit.py
+@@ -31,6 +31,11 @@ class ComparisonTests(unittest.TestCase):
+         failures=compare(indexed([b]),indexed([a]))['failures']
+         self.assertTrue(any('sustained-pursuit' in f['reason'] for f in failures))
+ 
++    def test_existing_blocking_is_still_a_failed_feasible_encounter(self):
++        b=self.row(); b.update(scenario='retreat',outcome='Stuck')
++        failures=compare(indexed([b]),indexed([b]))['failures']
++        self.assertTrue(any('sustained-pursuit' in f['reason'] for f in failures))
++
+     def test_matrix_mismatch(self):
+         with self.assertRaises(AssertionError): compare({},indexed([self.row()]))
+ 

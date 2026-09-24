@@ -250,15 +250,21 @@ impl BattlePoint {
     /// Clockwise bearing from north, absent for coincident points.
     pub fn bearing(self, other: Self) -> Result<Option<f64>> {
         self.range(other)?;
+        Ok(self.bearing_after_range(other))
+    }
+
+    /// Both points and their range must already have passed `range` validation.
+    /// Keep the public checked entry point while sharing that proof within unit geometry.
+    fn bearing_after_range(self, other: Self) -> Option<f64> {
         if self == other {
-            return Ok(None);
+            return None;
         }
-        Ok(Some(
+        Some(
             (other.x - self.x)
                 .atan2(self.y - other.y)
                 .to_degrees()
                 .rem_euclid(360.0),
-        ))
+        )
     }
 
     /// Move a continuous position along a clockwise bearing for a nonnegative hex distance.
@@ -341,8 +347,13 @@ pub fn unit_range(world: &World, first: ObjectId, second: ObjectId) -> Result<Ba
         - second_height.unwrap_or(height(second.x, second.y)?);
     Ok(BattleRange {
         horizontal,
-        spatial: horizontal.hypot(dz),
-        bearing: first_point.bearing(second_point)?,
+        // Horizontal range is finite and nonnegative: hypot(horizontal, ±0) is exact.
+        spatial: if dz == 0.0 {
+            horizontal
+        } else {
+            horizontal.hypot(dz)
+        },
+        bearing: first_point.bearing_after_range(second_point),
         hex_distance: a.distance(b),
     })
 }

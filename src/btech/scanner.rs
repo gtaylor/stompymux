@@ -87,7 +87,7 @@ impl BattleContactEvent {
         } else {
             "something".into()
         };
-        let mut label = target.label?;
+        let mut label = target.label()?;
         if clear && same_team {
             label.make_ascii_lowercase();
         }
@@ -183,7 +183,7 @@ pub(super) struct ScannerUnit<'a> {
     pub(super) heading: Option<f64>,
     pub(super) facing: super::BattleFacing,
     pub(super) name: &'a str,
-    pub(super) label: Option<String>,
+    label_override: Option<&'a str>,
     pub(super) brief: super::BattleBriefSettings,
     pub(super) observer: bool,
     pub(super) visibility: super::BattleVisibility,
@@ -196,6 +196,17 @@ pub(super) struct ScannerUnit<'a> {
     pub(super) destroyed: bool,
     pub(super) slot: Option<u32>,
     pub(super) point: Option<super::BattlePoint>,
+}
+
+impl ScannerUnit<'_> {
+    /// Format identity only for presentation. Sensor/geometry queries need no label allocation.
+    pub(super) fn label(&self) -> Option<String> {
+        self.slot.map(|slot| {
+            self.label_override
+                .map(str::to_owned)
+                .unwrap_or_else(|| super::observer::battlefield_label(slot))
+        })
+    }
 }
 
 /// Borrow scanner inputs without coupling vehicle state to Mech construction.
@@ -225,7 +236,7 @@ pub(super) fn scanner_unit(world: &World, id: ObjectId) -> Option<ScannerUnit<'_
                 .and_then(|configuration| configuration.display_name.as_deref())
                 .filter(|value| !value.is_empty())
                 .unwrap_or_else(|| unit.display_name.effective(&unit.definition().name)),
-            label: unit.battlefield_id(),
+            label_override: unit.battlefield_label.as_deref(),
             brief: unit.brief_settings(),
             observer: unit.is_observer(),
             visibility: unit.visibility,
@@ -260,7 +271,7 @@ pub(super) fn scanner_unit(world: &World, id: ObjectId) -> Option<ScannerUnit<'_
             .and_then(|configuration| configuration.display_name.as_deref())
             .filter(|value| !value.is_empty())
             .unwrap_or_else(|| unit.display_name.effective(&unit.definition().name)),
-        label: unit.battlefield_id(),
+        label_override: unit.battlefield_label.as_deref(),
         brief: unit.brief_settings(),
         observer: unit.is_observer(),
         visibility: unit.visibility,

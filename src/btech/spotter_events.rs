@@ -158,7 +158,7 @@ fn identity(world: &World, viewer: ObjectId, subject: ObjectId) -> String {
         .as_ref()
         .map_or("something", |contact| contact.name.as_str());
     let label = super::scanner::scanner_unit(world, subject)
-        .and_then(|unit| unit.label)
+        .and_then(|unit| unit.label())
         .unwrap_or_else(|| "??".into());
     format!("{} [{label}]", crate::text::escape(name))
 }

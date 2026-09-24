@@ -129,6 +129,6 @@ pub(super) fn occupied_labels(world: &World, map: ObjectId, except: ObjectId) ->
         .filter(|other| *other != except)
         .filter_map(|other| super::scanner::scanner_unit(world, other))
         .filter(|unit| unit.position.is_some_and(|position| position.map == map))
-        .filter_map(|unit| unit.label)
+        .filter_map(|unit| unit.label())
         .collect()
 }

@@ -157,7 +157,7 @@ pub(super) fn lines(world: &World, id: ObjectId) -> Result<Vec<String>> {
                     format!(
                         "{} [{}]",
                         crate::text::escape(s.name),
-                        s.label.unwrap_or_else(|| "??".into())
+                        s.label().unwrap_or_else(|| "??".into())
                     )
                 },
             );

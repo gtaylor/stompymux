@@ -12,6 +12,8 @@ are not promises about current performance.
 - [Adversarial movement encounters](autopilot-adversarial.md)
 - [Congestion clearance](autopilot-clearance.md)
 - [Predictive pursuit](autopilot-pursuit.md)
+- [Pursuit recovery and acceptance follow-up](autopilot-acceptance-followup.md)
+- [Pursuit acceptance readiness fixes](autopilot-readiness-fix.md)
 
 Each report links its retained CSV, JSON, and provenance artifacts. Keep earlier
 measurements intact when adding a new report. Large scratch traces and binaries
@@ -19,3 +21,5 @@ referenced by historical reports may live outside the repository.
 
 See [autopilot design and audits](../../design/autopilot/README.md) for internal
 contracts, and [the documentation site](../../docs/README.md) for the Hugo layout.
+
+Current validation commands: [Rust acceptance runner](autopilot-acceptance.md).

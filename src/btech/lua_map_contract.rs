@@ -42,7 +42,7 @@ pub fn battle_map_members(world: &World, map: ObjectId) -> Result<Vec<BattleMapM
             };
             Ok(BattleMapMember {
                 id,
-                label: unit.label.context("Placed unit lacks an ID")?,
+                label: unit.label().context("Placed unit lacks an ID")?,
                 position,
                 point,
                 z,

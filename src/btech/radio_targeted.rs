@@ -34,7 +34,7 @@ pub fn resolve_targeted_radio(
     let visible =
         visible_contact(world, sender, target)?.context("Target is not in line of sight!")?;
     let other = super::scanner::scanner_unit(world, target).context("Target is unavailable")?;
-    let mut id = other.label.context("Target is not placed")?;
+    let mut id = other.label().context("Target is not placed")?;
     if visible.friendly {
         id.make_ascii_lowercase();
     }
@@ -44,7 +44,7 @@ pub fn resolve_targeted_radio(
     }];
     if other.power == BattlePower::Running {
         let seen = visible_contact(world, target, sender)?;
-        let mut source_id = source.label.context("Sender is not placed")?;
+        let mut source_id = source.label().context("Sender is not placed")?;
         if seen.as_ref().is_some_and(|v| v.friendly) {
             source_id.make_ascii_lowercase();
         }
@@ -103,7 +103,7 @@ pub(super) fn target(world: &World, sender: ObjectId, text: &str) -> Result<Obje
             super::scanner::scanner_unit(world, *id).is_some_and(|unit| {
                 unit.position.is_some_and(|position| position.map == map)
                     && unit
-                        .label
+                        .label()
                         .is_some_and(|label| label.eq_ignore_ascii_case(text))
             })
         })

@@ -10,7 +10,7 @@ pub mod combat_policy;
 mod congestion;
 pub mod diagnostics;
 pub mod encounters;
-mod interception;
+pub(crate) mod interception;
 pub mod navigation;
 pub mod observations;
 pub mod orders;

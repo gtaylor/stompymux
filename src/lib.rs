@@ -1287,7 +1287,9 @@ pub use btech::autopilot::adversarial::{
     SCENARIOS as AUTOPILOT_ADVERSARIAL_SCENARIOS, run as run_autopilot_adversarial,
 };
 
+pub use btech::autopilot::interception::PursuitPolicy as AutopilotPursuitPolicy;
 pub use btech::autopilot::pursuit_encounters::{
-    Episode as AutopilotPursuitEpisode, PursuitResult as AutopilotPursuitResult,
-    SCENARIOS as AUTOPILOT_PURSUIT_SCENARIOS, run as run_autopilot_pursuit,
+    EXTENDED_SCENARIOS as AUTOPILOT_PURSUIT_EXTENDED_SCENARIOS, Episode as AutopilotPursuitEpisode,
+    PursuitResult as AutopilotPursuitResult, SCENARIOS as AUTOPILOT_PURSUIT_SCENARIOS,
+    run as run_autopilot_pursuit,
 };

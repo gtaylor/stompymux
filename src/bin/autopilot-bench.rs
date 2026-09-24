@@ -27,6 +27,9 @@ struct Args {
     /// Collect inclusive CPU attribution (do not use for acceptance timing).
     #[arg(long)]
     detailed: bool,
+    /// Use direct pursuit as a same-executable control in isolated benchmarks.
+    #[arg(long)]
+    direct_pursuit: bool,
     /// Write one deterministic gameplay checksum per tick to this JSONL file.
     #[arg(long)]
     trace: Option<std::path::PathBuf>,
@@ -48,6 +51,7 @@ async fn main() -> anyhow::Result<()> {
         seed: args.seed,
         controllers: args.controllers,
         detailed: args.detailed,
+        direct_pursuit: args.direct_pursuit,
         trace: args.trace,
         scenario: match args.scenario.as_str() {
             "open" => Some(Scenario::Open),

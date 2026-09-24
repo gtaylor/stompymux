@@ -250,6 +250,15 @@ fn beyond_maximum_range(
     target: Option<ObjectId>,
     distance: f64,
 ) -> bool {
+    // Either endpoint's radar can select only one of these two ceilings.
+    // Outside their overlap, hardware inspection cannot change the answer.
+    let ordinary = map.maximum_visibility as f64;
+    if distance <= ordinary.min(180.0) {
+        return false;
+    }
+    if distance > ordinary.max(180.0) {
+        return true;
+    }
     let radar = std::iter::once(observer)
         .chain(target)
         .any(|id| super::scanner::scanner_unit(world, id).is_some_and(|unit| unit.radar));
@@ -267,12 +276,23 @@ pub fn unit_terrain_los(
     observer: ObjectId,
     target: ObjectId,
 ) -> Result<BattleTerrainLos> {
+    unit_terrain_geometry(world, observer, target).map(|(terrain, _)| terrain)
+}
+
+/// Share the range already required by LOS with synchronous sensor callers.
+/// No result survives this immutable query or bypasses live admission.
+pub(super) fn unit_terrain_geometry(
+    world: &World,
+    observer: ObjectId,
+    target: ObjectId,
+) -> Result<(BattleTerrainLos, super::BattleRange)> {
     let _measurement = crate::btech::autopilot::diagnostics::measure(
         crate::btech::autopilot::diagnostics::Category::Geometry,
     );
     let observer_id = observer;
     let target_id = target;
-    let distance = super::unit_range(world, observer, target)?.spatial;
+    let range = super::unit_range(world, observer, target)?;
+    let distance = range.spatial;
     let observer = unit_sight_point(world, observer)?;
     let target = unit_sight_point(world, target)?;
     ensure!(
@@ -285,10 +305,13 @@ pub fn unit_terrain_los(
         .get(&observer.position.map)
         .context("Map not found")?;
     if beyond_maximum_range(world, map, observer_id, Some(target_id), distance) {
-        return Ok(BattleTerrainLos {
-            blocked: true,
-            ..Default::default()
-        });
+        return Ok((
+            BattleTerrainLos {
+                blocked: true,
+                ..Default::default()
+            },
+            range,
+        ));
     }
     let mut report = terrain_los_at_heights(
         map,
@@ -307,7 +330,7 @@ pub fn unit_terrain_los(
     if target.level > i32::from(tile.elevation) + 2 {
         report.target_woods = 0;
     }
-    Ok(report)
+    Ok((report, range))
 }
 
 /// Trace a terrain hex from either supported unit class and report spatial range.

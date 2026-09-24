@@ -1,0 +1,230 @@
+{
+  "failures": [
+    {
+      "case": "lateral",
+      "reason": "median improvement below ten percent"
+    }
+  ],
+  "unmatched": [],
+  "paired_excess_travel": [
+    {
+      "case": [
+        "lateral",
+        "mech",
+        1,
+        false
+      ],
+      "additional_distance": -0.7424999999999926
+    },
+    {
+      "case": [
+        "lateral",
+        "tracked",
+        1,
+        false
+      ],
+      "additional_distance": -1.1083333333330287
+    },
+    {
+      "case": [
+        "lateral",
+        "wheeled",
+        1,
+        false
+      ],
+      "additional_distance": -1.1083333333330287
+    },
+    {
+      "case": [
+        "lateral",
+        "hover",
+        1,
+        false
+      ],
+      "additional_distance": -1.1083333333330287
+    },
+    {
+      "case": [
+        "distant",
+        "mech",
+        1,
+        false
+      ],
+      "additional_distance": 0.0
+    },
+    {
+      "case": [
+        "distant",
+        "tracked",
+        1,
+        false
+      ],
+      "additional_distance": 0.0
+    },
+    {
+      "case": [
+        "distant",
+        "wheeled",
+        1,
+        false
+      ],
+      "additional_distance": 0.0
+    },
+    {
+      "case": [
+        "distant",
+        "hover",
+        1,
+        false
+      ],
+      "additional_distance": 0.0
+    },
+    {
+      "case": [
+        "retreat",
+        "mech",
+        1,
+        false
+      ],
+      "additional_distance": 1.5583333333333442
+    },
+    {
+      "case": [
+        "retreat",
+        "tracked",
+        1,
+        false
+      ],
+      "additional_distance": 0.0
+    },
+    {
+      "case": [
+        "retreat",
+        "wheeled",
+        1,
+        false
+      ],
+      "additional_distance": 0.0
+    },
+    {
+      "case": [
+        "retreat",
+        "hover",
+        1,
+        false
+      ],
+      "additional_distance": 0.0
+    },
+    {
+      "case": [
+        "reversals",
+        "mech",
+        1,
+        false
+      ],
+      "additional_distance": -0.0550000000000086
+    },
+    {
+      "case": [
+        "reversals",
+        "tracked",
+        1,
+        false
+      ],
+      "additional_distance": 0.10416666666666785
+    },
+    {
+      "case": [
+        "reversals",
+        "wheeled",
+        1,
+        false
+      ],
+      "additional_distance": 0.10416666666666785
+    },
+    {
+      "case": [
+        "reversals",
+        "hover",
+        1,
+        false
+      ],
+      "additional_distance": 0.10416666666666785
+    },
+    {
+      "case": [
+        "circuit",
+        "mech",
+        1,
+        false
+      ],
+      "additional_distance": -0.19249999999999368
+    },
+    {
+      "case": [
+        "circuit",
+        "tracked",
+        1,
+        false
+      ],
+      "additional_distance": -0.15416666666664192
+    },
+    {
+      "case": [
+        "circuit",
+        "wheeled",
+        1,
+        false
+      ],
+      "additional_distance": -0.15416666666664192
+    },
+    {
+      "case": [
+        "circuit",
+        "hover",
+        1,
+        false
+      ],
+      "additional_distance": -0.15416666666664192
+    },
+    {
+      "case": [
+        "short_occlusions",
+        "mech",
+        1,
+        false
+      ],
+      "additional_distance": 0.0
+    },
+    {
+      "case": [
+        "short_occlusions",
+        "tracked",
+        1,
+        false
+      ],
+      "additional_distance": 0.0
+    },
+    {
+      "case": [
+        "short_occlusions",
+        "wheeled",
+        1,
+        false
+      ],
+      "additional_distance": 0.0
+    },
+    {
+      "case": [
+        "short_occlusions",
+        "hover",
+        1,
+        false
+      ],
+      "additional_distance": 0.0
+    }
+  ],
+  "lateral_improvement": 0.020270270270270285,
+  "readiness_before": 0.7367956929360439,
+  "readiness_after": 0.7362043251304996
+}

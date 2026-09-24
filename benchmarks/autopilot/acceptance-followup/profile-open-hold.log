@@ -1,0 +1,4 @@
+benchmark: open fire=false repetition 1/1
+20260923.185213 Big Stompy Robot Game INI/INFO : Help reindexed: 0 article(s), 0 keyword(s), 0 error(s), 0 warning(s).
+benchmark: open fire=false repetition 1 tick 36/95; autopilot 26.4 ms, enabled 100, renewed 0
+diagnostics: open fire=false categories=contacts,geometry,sensors,illumination,readiness,selection,shots {"calls":[6150,593126,593126,593126,6000,0,0],"nanoseconds":[1221859797,557195430,343117393,207142167,10644990,0,0],"combat":{"equipment_projection_reused":{"calls":5760,"nanoseconds":0},"equipment_resolution":{"calls":240,"nanoseconds":1443894}},"pursuit":{"plan_clone":{"calls":6000,"nanoseconds":944047},"plan_publication":{"calls":6000,"nanoseconds":2182396}}}

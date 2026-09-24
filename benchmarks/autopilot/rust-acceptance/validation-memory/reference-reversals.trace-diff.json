@@ -1,0 +1,107 @@
+{
+  "candidate_sha256": "9781142ad7f78609887840d8861a58e2395bc9eaf0aaf7727eb23a8480f9a46b",
+  "changed_cases": {
+    "[\"reversals\",\"hover\",1,false]": {
+      "first_record": 16108,
+      "first_tick": 1
+    },
+    "[\"reversals\",\"hover\",1,true]": {
+      "first_record": 17008,
+      "first_tick": 1
+    },
+    "[\"reversals\",\"hover\",2,false]": {
+      "first_record": 17908,
+      "first_tick": 1
+    },
+    "[\"reversals\",\"hover\",2,true]": {
+      "first_record": 18808,
+      "first_tick": 1
+    },
+    "[\"reversals\",\"hover\",3,false]": {
+      "first_record": 19708,
+      "first_tick": 1
+    },
+    "[\"reversals\",\"hover\",3,true]": {
+      "first_record": 20608,
+      "first_tick": 1
+    },
+    "[\"reversals\",\"mech\",1,false]": {
+      "first_record": 4,
+      "first_tick": 4
+    },
+    "[\"reversals\",\"mech\",1,true]": {
+      "first_record": 904,
+      "first_tick": 4
+    },
+    "[\"reversals\",\"mech\",2,false]": {
+      "first_record": 1804,
+      "first_tick": 4
+    },
+    "[\"reversals\",\"mech\",2,true]": {
+      "first_record": 2704,
+      "first_tick": 4
+    },
+    "[\"reversals\",\"mech\",3,false]": {
+      "first_record": 3604,
+      "first_tick": 4
+    },
+    "[\"reversals\",\"mech\",3,true]": {
+      "first_record": 4504,
+      "first_tick": 4
+    },
+    "[\"reversals\",\"tracked\",1,false]": {
+      "first_record": 5308,
+      "first_tick": 1
+    },
+    "[\"reversals\",\"tracked\",1,true]": {
+      "first_record": 6208,
+      "first_tick": 1
+    },
+    "[\"reversals\",\"tracked\",2,false]": {
+      "first_record": 7108,
+      "first_tick": 1
+    },
+    "[\"reversals\",\"tracked\",2,true]": {
+      "first_record": 8008,
+      "first_tick": 1
+    },
+    "[\"reversals\",\"tracked\",3,false]": {
+      "first_record": 8908,
+      "first_tick": 1
+    },
+    "[\"reversals\",\"tracked\",3,true]": {
+      "first_record": 9808,
+      "first_tick": 1
+    },
+    "[\"reversals\",\"wheeled\",1,false]": {
+      "first_record": 10708,
+      "first_tick": 1
+    },
+    "[\"reversals\",\"wheeled\",1,true]": {
+      "first_record": 11608,
+      "first_tick": 1
+    },
+    "[\"reversals\",\"wheeled\",2,false]": {
+      "first_record": 12508,
+      "first_tick": 1
+    },
+    "[\"reversals\",\"wheeled\",2,true]": {
+      "first_record": 13408,
+      "first_tick": 1
+    },
+    "[\"reversals\",\"wheeled\",3,false]": {
+      "first_record": 14308,
+      "first_tick": 1
+    },
+    "[\"reversals\",\"wheeled\",3,true]": {
+      "first_record": 15208,
+      "first_tick": 1
+    }
+  },
+  "failures": [
+    "trace mismatch"
+  ],
+  "first_difference": 4,
+  "records": 21600,
+  "reference_sha256": "8ae9127c9f1185d1526b3169d613662b52a4bb91fa7492fec2e77ee6f6a22473"
+}

@@ -241,7 +241,7 @@ pub fn select_tag(
     let target_name = format!(
         "{} [{}]",
         crate::text::escape(&visible.name),
-        victim.label.unwrap_or_else(|| "??".into())
+        victim.label().unwrap_or_else(|| "??".into())
     );
     let displaced: Vec<_> = super::scanner::scanner_ids(world)
         .into_iter()

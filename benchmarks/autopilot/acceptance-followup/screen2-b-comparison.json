@@ -1,0 +1,342 @@
+{
+  "failures": [
+    {
+      "case": [
+        "reversals",
+        "tracked",
+        1,
+        false
+      ],
+      "reason": "first opportunity regressed by more than five ticks"
+    },
+    {
+      "case": [
+        "reversals",
+        "wheeled",
+        1,
+        false
+      ],
+      "reason": "first opportunity regressed by more than five ticks"
+    },
+    {
+      "case": [
+        "reversals",
+        "hover",
+        1,
+        false
+      ],
+      "reason": "first opportunity regressed by more than five ticks"
+    },
+    {
+      "case": [
+        "circuit",
+        "tracked",
+        1,
+        false
+      ],
+      "reason": "sustained-pursuit failure: ContactLost"
+    },
+    {
+      "case": [
+        "circuit",
+        "wheeled",
+        1,
+        false
+      ],
+      "reason": "sustained-pursuit failure: ContactLost"
+    },
+    {
+      "case": [
+        "circuit",
+        "hover",
+        1,
+        false
+      ],
+      "reason": "sustained-pursuit failure: ContactLost"
+    },
+    {
+      "case": [
+        "short_occlusions",
+        "tracked",
+        1,
+        false
+      ],
+      "reason": "sustained-pursuit failure: ContactLost"
+    },
+    {
+      "case": [
+        "short_occlusions",
+        "tracked",
+        1,
+        false
+      ],
+      "reason": "fewer than three short reacquisitions"
+    },
+    {
+      "case": [
+        "short_occlusions",
+        "wheeled",
+        1,
+        false
+      ],
+      "reason": "sustained-pursuit failure: ContactLost"
+    },
+    {
+      "case": [
+        "short_occlusions",
+        "wheeled",
+        1,
+        false
+      ],
+      "reason": "fewer than three short reacquisitions"
+    },
+    {
+      "case": [
+        "short_occlusions",
+        "hover",
+        1,
+        false
+      ],
+      "reason": "sustained-pursuit failure: ContactLost"
+    },
+    {
+      "case": [
+        "short_occlusions",
+        "hover",
+        1,
+        false
+      ],
+      "reason": "fewer than three short reacquisitions"
+    },
+    {
+      "case": "aggregate",
+      "reason": "readiness fraction regressed"
+    },
+    {
+      "case": "lateral",
+      "reason": "median improvement below ten percent"
+    }
+  ],
+  "unmatched": [],
+  "paired_excess_travel": [
+    {
+      "case": [
+        "lateral",
+        "mech",
+        1,
+        false
+      ],
+      "additional_distance": -2.145000000000014
+    },
+    {
+      "case": [
+        "lateral",
+        "tracked",
+        1,
+        false
+      ],
+      "additional_distance": -2.849999999999959
+    },
+    {
+      "case": [
+        "lateral",
+        "wheeled",
+        1,
+        false
+      ],
+      "additional_distance": -2.849999999999959
+    },
+    {
+      "case": [
+        "lateral",
+        "hover",
+        1,
+        false
+      ],
+      "additional_distance": -2.849999999999959
+    },
+    {
+      "case": [
+        "distant",
+        "mech",
+        1,
+        false
+      ],
+      "additional_distance": 0.0
+    },
+    {
+      "case": [
+        "distant",
+        "tracked",
+        1,
+        false
+      ],
+      "additional_distance": 0.0
+    },
+    {
+      "case": [
+        "distant",
+        "wheeled",
+        1,
+        false
+      ],
+      "additional_distance": 0.0
+    },
+    {
+      "case": [
+        "distant",
+        "hover",
+        1,
+        false
+      ],
+      "additional_distance": 0.0
+    },
+    {
+      "case": [
+        "retreat",
+        "mech",
+        1,
+        false
+      ],
+      "additional_distance": 1.824166666666681
+    },
+    {
+      "case": [
+        "retreat",
+        "tracked",
+        1,
+        false
+      ],
+      "additional_distance": 0.0
+    },
+    {
+      "case": [
+        "retreat",
+        "wheeled",
+        1,
+        false
+      ],
+      "additional_distance": 0.0
+    },
+    {
+      "case": [
+        "retreat",
+        "hover",
+        1,
+        false
+      ],
+      "additional_distance": 0.0
+    },
+    {
+      "case": [
+        "reversals",
+        "mech",
+        1,
+        false
+      ],
+      "additional_distance": -0.4950000000000081
+    },
+    {
+      "case": [
+        "reversals",
+        "tracked",
+        1,
+        false
+      ],
+      "additional_distance": 0.17083333333337336
+    },
+    {
+      "case": [
+        "reversals",
+        "wheeled",
+        1,
+        false
+      ],
+      "additional_distance": 0.17083333333337336
+    },
+    {
+      "case": [
+        "reversals",
+        "hover",
+        1,
+        false
+      ],
+      "additional_distance": 0.17083333333337336
+    },
+    {
+      "case": [
+        "circuit",
+        "mech",
+        1,
+        false
+      ],
+      "additional_distance": -1.2283333333333424
+    },
+    {
+      "case": [
+        "circuit",
+        "tracked",
+        1,
+        false
+      ],
+      "additional_distance": -0.9333333333333353
+    },
+    {
+      "case": [
+        "circuit",
+        "wheeled",
+        1,
+        false
+      ],
+      "additional_distance": -0.9333333333333353
+    },
+    {
+      "case": [
+        "circuit",
+        "hover",
+        1,
+        false
+      ],
+      "additional_distance": -0.9333333333333353
+    },
+    {
+      "case": [
+        "short_occlusions",
+        "mech",
+        1,
+        false
+      ],
+      "additional_distance": 0.0
+    },
+    {
+      "case": [
+        "short_occlusions",
+        "tracked",
+        1,
+        false
+      ],
+      "additional_distance": 0.0
+    },
+    {
+      "case": [
+        "short_occlusions",
+        "wheeled",
+        1,
+        false
+      ],
+      "additional_distance": 0.0
+    },
+    {
+      "case": [
+        "short_occlusions",
+        "hover",
+        1,
+        false
+      ],
+      "additional_distance": 0.0
+    }
+  ],
+  "lateral_improvement": 0.07770270270270274,
+  "readiness_before": 0.7367956929360439,
+  "readiness_after": 0.704869546846942
+}

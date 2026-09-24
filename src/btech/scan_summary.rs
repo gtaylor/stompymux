@@ -33,7 +33,7 @@ pub(super) fn render(
         .round()
         .rem_euclid(360.0) as u16;
     let name: String = view.name.chars().take(25).collect();
-    let mut label = unit.label.context("Target has no battlefield identity")?;
+    let mut label = unit.label().context("Target has no battlefield identity")?;
     if view.friendly {
         label.make_ascii_lowercase();
     }

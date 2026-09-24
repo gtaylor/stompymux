@@ -1,0 +1,17 @@
+{
+  "reference-encounters": "0d92ab38e97c123a1fac35307b679b8cb5ca365cebf09ace3c2174cb2c029792",
+  "reference-bench": "26b3e878f464bb8b8aa55e76c2ae79d7c6163a12e339f59c375684b4bf07acb1",
+  "candidate-encounters": "3cd8c88f26a38e6d454292b839a7441c04d52af65b04c676123a830823dac5d4",
+  "fg-encounters": "72024eda31cc50298bbc2f16cc0ac9e5c9750c237229cb60f2eb02def96ecc6f",
+  "approach-encounters": "c5b493005e89f238d6340352d7455dc4b111a5c48098874f929e8925ac14f13f",
+  "final-encounters": "d2799265b8e651780e9619795d613592b4c0b30ef228c6fee0695bf5f1ec3715",
+  "final-bench": "4b11eb95847e53f3bafd990dce468bcbd0d5803c4d51a9662ef57b0154871540",
+  "geometry-bench": "f41259051181bd338bddb90d4fc0a9ca48eb9a7c055556c01c6634c1da4b2397",
+  "geometry-encounters": "cff26dc675eb256666fb0f40879f135e1cd5722f37854049d1c7d4e251d4822b",
+  "ceiling-bench": "1b2ec4a47fd6be314f2ebae4fee5957658e8e6b4b2dfb62edbdc6451cfb61323",
+  "ceiling-encounters": "48bb54de362c335d1deae1edab378b7bfe2a39dd20169b776dc30368713a55c7",
+  "range-bench": "bf273b5ec79b8a02bb4b9fda17ec47197d5a0de8308eb737ac87a8fcbb6fdf64",
+  "range-encounters": "e2de1ae404e03937474ad6edf760d9f57b49d7e13bd1736f1b6b0acb02036971",
+  "optimized-bench": "bf273b5ec79b8a02bb4b9fda17ec47197d5a0de8308eb737ac87a8fcbb6fdf64",
+  "optimized-encounters": "e2de1ae404e03937474ad6edf760d9f57b49d7e13bd1736f1b6b0acb02036971"
+}

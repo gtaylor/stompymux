@@ -112,7 +112,38 @@ fn safe_segment(
     true
 }
 
-/// Drive toward a straight route lookahead, reserving enough distance to stop at its end.
+/// Select a bounded lookahead without leaving the planned route corridor.
+fn lookahead(
+    route: &[Hex],
+    index: usize,
+    point: BattlePoint,
+    heading: f64,
+    smooth: bool,
+) -> Result<BattlePoint> {
+    let mut goal = center(*route.get(index).context("Missing route waypoint")?);
+    let mut previous = goal;
+    let first = point.bearing(goal)?.unwrap_or(heading);
+    for (offset, next) in route.iter().skip(index + 1).take(8).enumerate() {
+        let next = center(*next);
+        if smooth {
+            let corridor = &route[index.saturating_sub(1)..=index + 1 + offset];
+            if !point.trace(next)?.iter().all(|cell| {
+                corridor
+                    .iter()
+                    .any(|h| i32::from(h.x) == cell.x && i32::from(h.y) == cell.y)
+            }) {
+                continue;
+            }
+        } else if angle(previous.bearing(next)?.unwrap_or(first), first) > 5.0 {
+            break;
+        }
+        goal = next;
+        previous = next;
+    }
+    Ok(goal)
+}
+
+/// Drive toward a route lookahead, reserving enough distance to stop at its end.
 /// Returns true when braking or turning is making measurable progress.
 pub(crate) fn drive(
     world: &mut World,
@@ -122,6 +153,7 @@ pub(crate) fn drive(
     index: usize,
     cap: f64,
     combat: Option<(&AutopilotObservation, BattlePosition)>,
+    smooth_route: bool,
     state: &mut SteeringState,
     time: i64,
     notices: &mut Vec<BattleNotice>,
@@ -131,17 +163,7 @@ pub(crate) fn drive(
         .and_then(|u| u.position)
         .context("Unplaced steering unit")?
         .map;
-    let mut goal = center(*route.get(index).context("Missing route waypoint")?);
-    let mut previous = goal;
-    let first = current.point.bearing(goal)?.unwrap_or(current.heading);
-    for next in route.iter().skip(index + 1).take(8) {
-        let next = center(*next);
-        if angle(previous.bearing(next)?.unwrap_or(first), first) > 5.0 {
-            break;
-        }
-        goal = next;
-        previous = next;
-    }
+    let goal = lookahead(route, index, current.point, current.heading, smooth_route)?;
     let bearing = current.point.bearing(goal)?.unwrap_or(current.heading);
     let distance = current.point.range(goal)?;
     let mut reverse = false;
@@ -279,4 +301,50 @@ pub(crate) fn drive(
         )?);
     }
     Ok(progress)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn smoothing_follows_a_staircase_without_leaving_its_cells() {
+        let start = center(Hex::new(2, 10));
+        let end = center(Hex::new(8, 6));
+        let route: Vec<_> = start
+            .trace(end)
+            .unwrap()
+            .into_iter()
+            .map(|cell| Hex::new(cell.x as u16, cell.y as u16))
+            .collect();
+        assert!(route.len() <= 10);
+        assert_eq!(lookahead(&route, 1, start, 0.0, true).unwrap(), end);
+        assert_ne!(lookahead(&route, 1, start, 0.0, false).unwrap(), end);
+    }
+
+    #[test]
+    fn smoothing_cannot_cut_across_cells_outside_the_route() {
+        let route = [
+            Hex::new(2, 10),
+            Hex::new(2, 9),
+            Hex::new(2, 8),
+            Hex::new(2, 7),
+            Hex::new(3, 7),
+            Hex::new(4, 7),
+            Hex::new(5, 7),
+        ];
+        let start = center(route[0]);
+        let goal = lookahead(&route, 1, start, 0.0, true).unwrap();
+        assert_ne!(goal, center(*route.last().unwrap()));
+        for cell in start.trace(goal).unwrap() {
+            assert!(route.contains(&Hex::new(cell.x as u16, cell.y as u16)));
+        }
+    }
+
+    #[test]
+    fn smoothing_inspects_at_most_eight_additional_waypoints() {
+        let route: Vec<_> = (0..40).map(|x| Hex::new(x, 10)).collect();
+        let goal = lookahead(&route, 1, center(route[0]), 90.0, true).unwrap();
+        assert!(goal.containing_hex().unwrap().x <= 9);
+    }
 }
