@@ -1,7 +1,6 @@
 //! Integration suite for core 03 scenarios.
 
-#[path = "../support/mod.rs"]
-mod support;
+use stompymux_test_support as support;
 
 #[path = "../administration.rs"]
 mod administration;

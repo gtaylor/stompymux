@@ -1,10 +1,9 @@
 //! Streak LRM catalogue, shared launch control and missile-defense integration across unit types.
+use crate::support;
+use crate::support::btech_defense as defense;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_defense.rs"]
-mod defense;
-use crate::support;
-use crate::support::btech_firing as firing;
 
 /// Mech and vehicle reports expose their common launch result at different existing nesting levels.
 fn launched(report: &mlua::Table) -> bool {

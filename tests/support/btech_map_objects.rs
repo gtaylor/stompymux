@@ -1,9 +1,9 @@
 //! Shared map-object fixture for selection, listing and atomic operator actions.
-use crate::support;
 use stompymux_rs::*;
 
+/// Build an isolated world holding an exterior battle map and an interior map room.
 pub async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
-    let (dir, config, mut world) = support::isolated_world().await;
+    let (dir, config, mut world) = crate::isolated_world().await;
     let map = world.create(&config, "Exterior".into(), Kind::Room);
     let interior = world.create(&config, "Interior".into(), Kind::Room);
     for id in [map, interior] {

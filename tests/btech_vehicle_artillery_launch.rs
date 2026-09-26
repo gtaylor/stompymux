@@ -1,9 +1,8 @@
 //! Vehicle artillery uses the common host firing transaction and persistent flight queue.
+use crate::support;
+use crate::support::btech_station_sight as station_sight;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_station_sight.rs"]
-mod station_sight;
-use crate::support;
 
 /// A running Sniper platform faces a nearby empty coordinate.
 async fn fixture(flags: &[&str]) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {

@@ -14,7 +14,6 @@ pub fn run_text(
 }
 
 /// Collect only the actor's output when a command also publishes to other occupants.
-#[allow(dead_code)]
 pub fn run_text_for_player(
     scripts: &Scripts,
     config: &Config,

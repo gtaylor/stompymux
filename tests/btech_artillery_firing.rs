@@ -1,8 +1,7 @@
 //! Native and Lua artillery launches spend once, arrive later and replay saved correction.
-use stompymux_rs::*;
-#[path = "support/btech_station_sight.rs"]
-mod station_sight;
 use crate::support;
+use crate::support::btech_station_sight as station_sight;
+use stompymux_rs::*;
 
 /// A running artillery platform and friendly observer on an open field.
 async fn fixture(flags: &[&str]) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {

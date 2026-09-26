@@ -1,7 +1,6 @@
 //! Integration suite for btech 04 scenarios.
 
-#[path = "../support/mod.rs"]
-mod support;
+use stompymux_test_support as support;
 
 #[path = "../btech_armor_piercing.rs"]
 mod btech_armor_piercing;

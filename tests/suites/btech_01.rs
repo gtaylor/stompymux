@@ -1,10 +1,6 @@
 //! Integration suite for btech 01 scenarios.
 
-#[path = "../support/mod.rs"]
-mod support;
-
-#[path = "../support/autopilot.rs"]
-mod autopilot_support;
+use stompymux_test_support as support;
 
 #[path = "../btech_ammunition_preference.rs"]
 mod btech_ammunition_preference;

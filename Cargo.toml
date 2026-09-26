@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2024"
 autotests = false
 
+[workspace]
+members = ["tests/support"]
+
 [features]
 lua-type-updater = []
 lua-doc-updater = []
@@ -48,6 +51,7 @@ csv = "1.4.0"
 sha2 = "0.11.0"
 
 [dev-dependencies]
+stompymux-test-support = { path = "tests/support" }
 tokio = { version = "1.53.1", features = ["test-util"] }
 
 [profile.dev]

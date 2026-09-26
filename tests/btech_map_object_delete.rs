@@ -3,8 +3,7 @@ use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
-#[path = "support/btech_map_objects.rs"]
-mod map_objects;
+use crate::support::btech_map_objects as map_objects;
 use map_objects::fixture;
 
 #[tokio::test]

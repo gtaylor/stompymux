@@ -1,5 +1,6 @@
 //! Swarm supplies and flights reuse controls, launch transactions and damage across chassis.
 use crate::support;
+use crate::support::btech_defense as defense_support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
@@ -800,9 +801,6 @@ fn swarm_template_modes_cover_compatible_catalogue() {
         }
     }
 }
-
-#[path = "support/btech_defense.rs"]
-mod defense_support;
 
 /// Dice seeds for the swarm flight shapes; pure rolls, shared across shards.
 fn aimed_swarm_seeds() -> ([u8; 32], [u8; 32], [u8; 32]) {

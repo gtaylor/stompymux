@@ -1,5 +1,6 @@
 //! Anatomical controls and directed fire preserve one policy across all supported firing chassis.
 use crate::support;
+use crate::support::btech_defense as defense_support;
 use crate::support::btech_firing as firing_support;
 use firing_support::{edit, fixture_with_target, templates};
 use std::{cell::RefCell, rc::Rc};
@@ -681,9 +682,6 @@ async fn changed_target_class_preserves_selection_and_numeric_immobile_hits() {
         }
     }
 }
-
-#[path = "support/btech_defense.rs"]
-mod defense_support;
 
 /// Aimed missiles preserve initial target preparation, attacker-owned interception and atomic publication.
 #[tokio::test]
