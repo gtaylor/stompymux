@@ -3,9 +3,8 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_defense.rs"]
 mod defense;
-#[path = "support/btech_firing.rs"]
-mod firing;
 use crate::support;
+use crate::support::btech_firing as firing;
 
 /// Catalogue cluster rows and ammo markers preserve the reference's range and damage profile.
 #[test]

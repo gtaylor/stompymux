@@ -1,9 +1,8 @@
 //! Map-role teardown shares unit shutdown while preserving containers and external route markers.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Every supported chassis survives map retirement as a stopped, detached unit in the same container.
 #[tokio::test]

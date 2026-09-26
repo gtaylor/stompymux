@@ -1,8 +1,7 @@
 //! Mech vacuum damage shares exposure effects, random streams and casualty transactions.
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
 
 /// A located hit with no additional hit-table effects.
 fn hit(section: BattleSection) -> BattleHit {

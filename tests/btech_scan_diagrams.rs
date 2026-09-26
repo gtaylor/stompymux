@@ -1,9 +1,7 @@
 //! Standard adversarial armor diagrams share cockpit artwork without disclosing numeric protection.
-use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
 use crate::support;
+use crate::support::btech_firing as firing;
+use stompymux_rs::*;
 
 /// Every silhouette has a fixed three-column legend and identical native/Lua disclosure after restart.
 #[tokio::test]

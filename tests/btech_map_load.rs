@@ -1,9 +1,8 @@
 //! Map loading activates new terrain before shared shutdown and honors GOD's retained membership.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Both operator classes receive the same assets and metadata; only membership policy differs.
 #[tokio::test]

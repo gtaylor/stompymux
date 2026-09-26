@@ -1,9 +1,8 @@
 //! Native linked-map control shares Lua wrapping state and durable marker ownership.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// All chassis retain their exact state while the map acquires one shared wrapping marker.
 #[tokio::test]

@@ -3,9 +3,8 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_defense.rs"]
 mod defense;
-#[path = "support/btech_firing.rs"]
-mod firing;
 use crate::support;
+use crate::support::btech_firing as firing;
 
 /// Mech and vehicle reports expose their common launch result at different existing nesting levels.
 fn launched(report: &mlua::Table) -> bool {

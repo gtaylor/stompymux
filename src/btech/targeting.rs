@@ -403,40 +403,6 @@ pub fn select_hex_target(
     Ok(notice)
 }
 
-/// Select coordinates on behalf of the attached autopilot.
-pub(crate) fn select_hex_target_autopilot(
-    world: &mut World,
-    unit: ObjectId,
-    hex: super::BattleHexCoordinate,
-    mode: BattleHexTargetMode,
-) -> Result<BattleNotice> {
-    let source =
-        controlled_source_by_actor(world, unit, super::combat_operator::ControlActor::Autopilot)?;
-    let position = super::scanner::scanner_unit(world, source)
-        .and_then(|state| state.position)
-        .context("Unit is not on a battlefield")?;
-    let elevation = world.btech.maps()[&position.map]
-        .hex(i64::from(hex.x), i64::from(hex.y))?
-        .elevation;
-    let remaining = settling_delay(world, unit);
-    set_selection(
-        world,
-        unit,
-        Some(BattleTargetSelection::Hex(BattleHexLock {
-            hex,
-            mode,
-            remaining,
-        })),
-    );
-    if let Some(station) = world.btech.gunner_stations.get_mut(&unit) {
-        station.target_coordinates[2] = i16::from(elevation);
-    }
-    Ok(BattleNotice {
-        unit,
-        text: format!("Target coordinates set (X,Y) {}, {}", hex.x, hex.y),
-    })
-}
-
 /// Settle unit locks silently when unseen; coordinate locks announce completion regardless of visibility.
 pub fn advance_target_locks(world: &mut World) -> Vec<BattleNotice> {
     let updates: Vec<_> = world

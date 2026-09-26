@@ -1,9 +1,8 @@
 //! Critical status fields project material facts through native/Lua inspection and saved replay.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// One shared VM per chassis shard: every scenario installs its candidate world,
 /// and the restart probe fires once per shard, per the sandbox-reuse convention.

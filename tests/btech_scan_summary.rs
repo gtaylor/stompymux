@@ -1,9 +1,7 @@
 //! Reference SCAN/REPORT information columns share motion, condition and geometry authorities.
-use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
 use crate::support;
+use crate::support::btech_firing as firing;
+use stompymux_rs::*;
 
 /// Every supported chassis uses the same name field, indentation, tabs and read-only native/Lua report.
 #[tokio::test]

@@ -1,9 +1,8 @@
 //! Selected turret fields and reserved commands precede exit and global command lookup.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Carried stations receive field edits without relocating actors or modifying their location's station.
 #[tokio::test]

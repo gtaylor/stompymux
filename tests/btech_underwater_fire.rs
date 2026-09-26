@@ -1,10 +1,8 @@
 //! Underwater launch admission and damage share mount geometry across native and Lua combat.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Place both units below the surface without advancing unrelated simulation clocks.
 async fn field(

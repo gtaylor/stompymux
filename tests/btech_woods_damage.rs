@@ -1,10 +1,8 @@
 //! Occupied woodland damage, terrain consequences and transactional cockpit feedback.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Activate the persisted server settings without changing unrelated fixture policy.
 fn configured(dir: &tempfile::TempDir, enabled: bool, glancing: bool) -> Config {
@@ -1023,7 +1021,7 @@ async fn pellet_matrix(
 
 #[tokio::test]
 async fn pellet_woods_two_stage_terrain_mech_v_mech_lbx2() {
-    let (cleared, thinned, absorbed_all) = pellet_matrix(
+    let (_cleared, _thinned, absorbed_all) = pellet_matrix(
         include_str!("../game/mechs/JR7-D"),
         include_str!("../game/mechs/AS7-D"),
         BattleWeapon::Lbx2,
@@ -1063,7 +1061,7 @@ async fn pellet_woods_two_stage_terrain_mech_v_mech_lbx20_light_forest() {
 
 #[tokio::test]
 async fn pellet_woods_two_stage_terrain_mech_v_vehicle_lbx2() {
-    let (cleared, thinned, absorbed_all) = pellet_matrix(
+    let (_cleared, _thinned, absorbed_all) = pellet_matrix(
         include_str!("../game/mechs/JR7-D"),
         include_str!("../game/mechs/Demolisher"),
         BattleWeapon::Lbx2,
@@ -1078,7 +1076,7 @@ async fn pellet_woods_two_stage_terrain_mech_v_vehicle_lbx2() {
 
 #[tokio::test]
 async fn pellet_woods_two_stage_terrain_mech_v_vehicle_lbx20() {
-    let (cleared, thinned, absorbed_all) = pellet_matrix(
+    let (cleared, thinned, _absorbed_all) = pellet_matrix(
         include_str!("../game/mechs/JR7-D"),
         include_str!("../game/mechs/Demolisher"),
         BattleWeapon::Lbx20,
@@ -1093,7 +1091,7 @@ async fn pellet_woods_two_stage_terrain_mech_v_vehicle_lbx20() {
 
 #[tokio::test]
 async fn pellet_woods_two_stage_terrain_vehicle_v_mech_lbx2() {
-    let (cleared, thinned, absorbed_all) = pellet_matrix(
+    let (_cleared, _thinned, absorbed_all) = pellet_matrix(
         include_str!("../game/mechs/Demolisher"),
         include_str!("../game/mechs/AS7-D"),
         BattleWeapon::Lbx2,
@@ -1130,7 +1128,7 @@ async fn pellet_woods_two_stage_terrain_vehicle_v_mech_lbx20_light_forest() {
 
 #[tokio::test]
 async fn pellet_woods_two_stage_terrain_vehicle_v_vehicle_lbx2() {
-    let (cleared, thinned, absorbed_all) = pellet_matrix(
+    let (_cleared, _thinned, absorbed_all) = pellet_matrix(
         include_str!("../game/mechs/Demolisher"),
         include_str!("../game/mechs/Demolisher"),
         BattleWeapon::Lbx2,
@@ -1145,7 +1143,7 @@ async fn pellet_woods_two_stage_terrain_vehicle_v_vehicle_lbx2() {
 
 #[tokio::test]
 async fn pellet_woods_two_stage_terrain_vehicle_v_vehicle_lbx20() {
-    let (cleared, thinned, absorbed_all) = pellet_matrix(
+    let (cleared, thinned, _absorbed_all) = pellet_matrix(
         include_str!("../game/mechs/Demolisher"),
         include_str!("../game/mechs/Demolisher"),
         BattleWeapon::Lbx20,

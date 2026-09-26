@@ -1,9 +1,8 @@
 //! Native and Lua orbital insertion share authorization, placement, restart and aircraft startup.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Native and Lua use independent checkpoints over the identical initial world.
 fn scripts(config: &Config, world: &World) -> Scripts {

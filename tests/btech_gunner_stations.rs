@@ -1,9 +1,8 @@
 //! Independent station ownership, supported-parent admission and selective persistence.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 #[tokio::test]
 async fn station_lifecycle_is_shared_across_all_supported_parents() {

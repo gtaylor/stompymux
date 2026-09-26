@@ -1,9 +1,7 @@
 //! Damage totals follow initial packet admission and preserve attacker attribution across chassis.
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
 
 /// Inspect the durable owner without invoking another gameplay action.
 fn counters(world: &World, id: ObjectId) -> serde_json::Value {

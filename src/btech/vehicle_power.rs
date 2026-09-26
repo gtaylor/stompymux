@@ -47,21 +47,6 @@ pub(super) fn controlled_by_actor(
     Ok(())
 }
 
-/// Begin the normal thirty-second sequence or the adapter-authorized five-second override.
-pub(super) fn start(
-    world: &mut World,
-    id: ObjectId,
-    pilot: ObjectId,
-    fast: bool,
-) -> Result<BattleNotice> {
-    start_by_actor(
-        world,
-        id,
-        super::combat_operator::ControlActor::Player(pilot),
-        fast,
-    )
-}
-
 pub(super) fn start_by_actor(
     world: &mut World,
     id: ObjectId,

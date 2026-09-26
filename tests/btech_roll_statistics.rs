@@ -1,10 +1,8 @@
 //! Wizard roll reports preserve access policy, committed checks and read-only command behavior.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Empty reports need no cockpit; argument text is ignored and switches are rejected after permission.
 #[tokio::test]

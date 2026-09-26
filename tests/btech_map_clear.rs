@@ -1,9 +1,8 @@
 //! Bulk map clearing shares placement cleanup, shutdown rules and atomic host consequences.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Keep the operator in the map room while cockpit pilots remain assigned.
 fn operator(world: &mut World, config: &Config, map: ObjectId) -> ObjectId {

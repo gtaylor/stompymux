@@ -1,9 +1,8 @@
 //! Tracking modes share combat modifiers, administrative admission and saved state across chassis.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Ordinary direct-fire rules keep the selected-target settling contribution visible.
 fn rules() -> BattleAimRules {

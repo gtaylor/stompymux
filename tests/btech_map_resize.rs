@@ -1,9 +1,8 @@
 //! Resizing keeps overlapping tiles and valid unit positions with durable grid cropping.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Keep the operator outside the assigned cockpit.
 fn operator(world: &mut World, config: &Config, map: ObjectId) -> ObjectId {

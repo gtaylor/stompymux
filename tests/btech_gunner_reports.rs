@@ -1,9 +1,8 @@
 //! Station equipment inspection shares parent reports without granting pilot authority.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Every supported chassis exposes identical reports to its pilot and registered gunner.
 #[tokio::test]

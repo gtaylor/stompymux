@@ -1,10 +1,8 @@
 //! Live computer failures preserve sensor timers, target state, shutdown and database replay.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc, sync::OnceLock};
 use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Find reproducible real random streams once; host tests do not bypass the failure selector.
 fn stream(effect: BattleComputerFailure) -> BattleDice {

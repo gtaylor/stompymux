@@ -1,11 +1,8 @@
 //! Rotorcraft pod removal uses landed-state admission before crew busy checks.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-#[allow(dead_code)]
-// The shared fixture also exposes a full chassis matrix unused by this VTOL test.
-mod firing;
-use crate::support;
 
 /// Native and Lua requests distinguish launch preparation from flight without altering rejected state.
 #[tokio::test]

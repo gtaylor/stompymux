@@ -1,10 +1,9 @@
 //! Source-backed C contract coverage for the canonical `btech.map` package.
 
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 #[tokio::test]
 async fn terrain_zones_cargo_links_and_strict_errors_match_c_shapes() {

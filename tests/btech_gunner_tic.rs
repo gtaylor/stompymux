@@ -1,9 +1,8 @@
 //! Reserved station TIC commands remain inert and never grant physical cockpit group control.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Catalogued station TIC entries ignore arguments, assignment and the parent's live weapons.
 #[tokio::test]

@@ -1,9 +1,8 @@
 //! MechWarrior safety configuration is shared across chassis and resets only on completed startup.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Safety command, preference and Lua edit the same inverse flag with normal rollback and persistence.
 #[tokio::test]

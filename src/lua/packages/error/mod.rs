@@ -327,23 +327,6 @@ fn checked_string(lua: &Lua, value: Value, to: &'static str) -> mlua::Result<Str
         })
 }
 
-fn checked_bytes(lua: &Lua, value: Value, to: &'static str) -> mlua::Result<Vec<u8>> {
-    lua.coerce_string(value.clone())?
-        .map(|value| {
-            let bytes = value.as_bytes();
-            let end = bytes
-                .iter()
-                .position(|byte| *byte == 0)
-                .unwrap_or(bytes.len());
-            bytes[..end].to_vec()
-        })
-        .ok_or_else(|| mlua::Error::FromLuaConversionError {
-            from: value.type_name(),
-            to: to.to_owned(),
-            message: None,
-        })
-}
-
 fn code_node(lua: &Lua, metatable: &Table, code: &str) -> mlua::Result<Table> {
     let node = lua.create_table()?;
     node.raw_set("code", code)?;

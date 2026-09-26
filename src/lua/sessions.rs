@@ -13,7 +13,6 @@ pub(crate) struct Player {
 #[derive(Clone, Default)]
 pub(crate) struct Sessions {
     pub players: Vec<Player>,
-    pub hidden: usize,
     pub record: i64,
     pub maximum: Option<i64>,
     pub environments: BTreeMap<u64, crate::telnet::environment::Environment>,

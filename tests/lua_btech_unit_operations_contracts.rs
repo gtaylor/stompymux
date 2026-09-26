@@ -1,10 +1,9 @@
 //! Source-backed contracts for trusted live-unit and construction operations.
 
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 #[tokio::test]
 async fn damage_piloting_and_template_lifecycle_match_zero_return_contracts() {

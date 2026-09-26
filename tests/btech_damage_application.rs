@@ -1,9 +1,8 @@
 //! Vehicle damage fields replace material atomically through both administrative entry points.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 #[tokio::test]
 async fn vehicle_material_replacement_matches_native_lua_and_restart() {

@@ -342,9 +342,7 @@ async fn coordinate_deletion_rebuilds_surviving_mines_after_removing_lookup_obje
     );
 }
 
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
+use crate::support::btech_firing as firing;
 
 /// All supported scanner anatomies honor deletion before selecting fields or spending scan dice.
 #[tokio::test]

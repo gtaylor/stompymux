@@ -1,9 +1,8 @@
 //! Station navigation uses shared chassis geometry, independent selections and guarded occupants.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// A station with the same settled hex selection as its parent, on any supported chassis.
 async fn fixture(

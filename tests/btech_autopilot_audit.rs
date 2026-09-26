@@ -19,9 +19,7 @@ use stompymux_rs::{
     refresh_battle_contacts, set_battle_speed, set_battle_unit_signature,
 };
 
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
+use crate::support::btech_firing as firing;
 
 /// Build an uncrewed, running JR7-D on an isolated map.  The fixture is kept
 /// unpiloted so these scenarios exercise the ordinary no-pilot skill path.

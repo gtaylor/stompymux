@@ -1,9 +1,7 @@
 //! Stagger diagnostics follow severity warnings and precede private or cockpit roll feedback.
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
 
 /// All stagger policies retain the same diagnostic order, including unassigned cockpit fallback.
 #[tokio::test]

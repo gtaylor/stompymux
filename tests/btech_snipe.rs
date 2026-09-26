@@ -1,9 +1,8 @@
 //! Predictive firing reuses ordinary launch state, validates boundaries and rolls back Lua failures.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Every supported shooter uses identical native/Lua prediction and queued artillery transactions.
 #[tokio::test]

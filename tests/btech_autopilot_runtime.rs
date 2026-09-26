@@ -7,9 +7,7 @@ use stompymux_rs::{
     refresh_battle_contacts, set_battle_speed, set_battle_unit_signature,
 };
 
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
+use crate::support::btech_firing as firing;
 
 /// Build a placed, running and piloted JR7-D on a private straight battlefield.
 async fn ground_fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {

@@ -3,9 +3,8 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_defense.rs"]
 mod defense;
-#[path = "support/btech_firing.rs"]
-mod firing;
 use crate::support;
+use crate::support::btech_firing as firing;
 
 /// Published MML cluster columns and both ammunition profiles are independent of chassis.
 #[test]

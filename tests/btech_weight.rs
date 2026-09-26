@@ -1,10 +1,8 @@
 //! Wizard allocation reports retain design mass across live losses and share native/Lua publication.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-#[allow(dead_code)]
-mod firing;
-use crate::support;
 
 /// Report totals count intact parts and installed bins rather than depleted live ammunition.
 #[tokio::test]

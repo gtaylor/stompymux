@@ -1,8 +1,6 @@
 //! Restored action-time staggering participates in landing without replacing rolling damage history.
+use crate::support::btech_firing as firing;
 use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
 
 /// Advance to settlement while verifying every committed flight sample against a saved replay.
 fn land(

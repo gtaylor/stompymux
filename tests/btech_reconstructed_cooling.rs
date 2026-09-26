@@ -1,9 +1,8 @@
 //! Cooling reconstruction adopts engine allocation only on critical changes and retains future losses.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Set one trusted administrative field under normal authorization and rollback.
 fn set(scripts: &Scripts, config: &Config, id: ObjectId, field: &str, value: &str) {

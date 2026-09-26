@@ -1,8 +1,7 @@
 //! Wizard map listings share unit order, object selection and atomic read-only publication.
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
 #[path = "support/btech_map_objects.rs"]
 mod map_objects;
 use crate::support;

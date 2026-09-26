@@ -1,8 +1,7 @@
 //! Scenario map changes preserve live units and roll back invalid destination changes.
-use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
 use crate::support;
+use crate::support::btech_firing as firing;
+use stompymux_rs::*;
 
 /// Running chassis keep crew and controls across same-map and cross-map ID assignment.
 #[tokio::test]

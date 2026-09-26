@@ -1,9 +1,8 @@
 //! Wizard located damage shares native/Lua impacts, criticals and transaction boundaries.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Both interfaces use identical damage and dice across seven chassis, including lethal critical hits.
 #[tokio::test]

@@ -1,9 +1,8 @@
 //! Live terrain edits and seasonal changes commit against occupied, already-persisted battlefields.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Keep the assigned pilot in its cockpit while a separate wizard edits its map.
 fn operator(world: &mut World, config: &Config, map: ObjectId) -> ObjectId {

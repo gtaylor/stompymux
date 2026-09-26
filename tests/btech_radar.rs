@@ -96,9 +96,7 @@ fn radar_flying_type_bonus_applies_below_ten_without_relaxing_detection() {
     }
 }
 
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
+use crate::support::btech_firing as firing;
 
 /// Live tracking gives rotorcraft the radar bonus, ignores clouds and obeys the map switch.
 #[tokio::test]

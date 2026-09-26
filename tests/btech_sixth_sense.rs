@@ -1,9 +1,7 @@
 //! Lock warnings share startup sampling, random draws and durable delivery across chassis.
-use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
 use crate::support;
+use crate::support::btech_firing as firing;
+use stompymux_rs::*;
 
 /// Inspect the serialized authority rather than maintaining a parallel test event queue.
 fn state(world: &World, id: ObjectId) -> serde_json::Value {

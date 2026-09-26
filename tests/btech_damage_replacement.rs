@@ -1,8 +1,7 @@
 //! Shared material replacement plans resolve against installed equipment without touching runtime state.
-use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
 use crate::support;
+use crate::support::btech_firing as firing;
+use stompymux_rs::*;
 
 /// Replacement is complete, ordered and independent of the current damaged material.
 #[tokio::test]

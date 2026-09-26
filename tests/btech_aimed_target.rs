@@ -1,10 +1,9 @@
 //! Anatomical controls and directed fire preserve one policy across all supported firing chassis.
+use crate::support;
+use crate::support::btech_firing as firing_support;
+use firing_support::{edit, fixture_with_target, templates};
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing_support;
-use crate::support;
-use firing_support::{edit, fixture_with_target, templates};
 
 /// Independent script hosts compare native and Lua actions from the same saved world.
 fn scripts(config: &Config, world: &World) -> Scripts {

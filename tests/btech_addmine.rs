@@ -1,10 +1,9 @@
 //! Operator mine placement shares newest-first traversal, durable identities and atomic output.
+use crate::support;
+use crate::support::btech_firing as firing;
 use sqlx::Connection;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 #[tokio::test]
 async fn native_lua_mines_share_clamping_order_and_leave_every_chassis_untouched() {

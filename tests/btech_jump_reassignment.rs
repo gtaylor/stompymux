@@ -1,8 +1,7 @@
 //! Scenario-transferred jumps retain their route and resolve the destination map's boundaries on update.
-use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
 use crate::support;
+use crate::support::btech_firing as firing;
+use stompymux_rs::*;
 
 /// Both jump-capable anatomies survive changes in map size and wrapping, including saved continuation.
 #[tokio::test]

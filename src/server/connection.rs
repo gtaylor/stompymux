@@ -80,7 +80,6 @@ impl Server {
             .queue_enabled
             .set(self.controls.enabled(crate::controls::Control::Queueing));
         let w = scripts.world.borrow();
-        let mut hidden = 0;
         let players = self
             .sessions
             .iter()
@@ -88,7 +87,6 @@ impl Server {
                 let id = session.player?;
                 let object = &w.objects[&id];
                 if object.flags.contains(crate::flags::Flag::Dark) {
-                    hidden += 1;
                     return None;
                 }
                 Some(crate::lua::sessions::Player {
@@ -103,7 +101,6 @@ impl Server {
             .collect();
         scripts.lua.set_app_data(crate::lua::sessions::Sessions {
             players,
-            hidden,
             record: w.record_players as i64,
             maximum: (self.config.mux.max_players != -1).then_some(self.config.mux.max_players),
             environments: self

@@ -1,9 +1,8 @@
 //! Map broadcasts use a shared cockpit audience, preserving state and atomic notification delivery.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Inspect recipient identity and exact message source without socket rendering.
 fn output(scripts: &Scripts) -> Vec<(ObjectId, String)> {

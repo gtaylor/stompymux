@@ -1,9 +1,8 @@
 //! Wizard coordinate edits preserve live controls, clear stale observations and replay airborne state.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Both interfaces retain crew, heading, speed, map slot and outgoing selection across every chassis.
 #[tokio::test]

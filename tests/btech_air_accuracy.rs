@@ -1,8 +1,6 @@
 //! Airborne targeting modifiers are shared by all supported firing chassis and durable target poses.
+use crate::support::btech_firing as firing;
 use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
 
 /// Ordinary aim policy leaves the target's air bonuses visible without range extensions.
 fn rules() -> BattleAimRules {

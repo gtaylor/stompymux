@@ -1,8 +1,7 @@
 //! Scenario IDs stay independent of membership and survive collision resolution and restart.
-use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
 use crate::support;
+use crate::support::btech_firing as firing;
+use stompymux_rs::*;
 
 /// Resolve the shared identity without depending on chassis storage.
 fn identity(world: &World, id: ObjectId) -> String {

@@ -1,9 +1,8 @@
 //! DEBUG registration is usable without SQL imports and persists through creation and teardown.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Register, use, reload and unregister a carried tool without changing its game containment.
 #[tokio::test]
