@@ -15,7 +15,7 @@ pub struct CharacterValueDefinition {
 }
 
 pub fn character_value_definitions() -> Vec<CharacterValueDefinition> {
-    let mut result = Vec::with_capacity(119);
+    let mut result = Vec::with_capacity(117);
     for name in super::character_names::VALUES {
         result.push(CharacterValueDefinition {
             code: result.len(),

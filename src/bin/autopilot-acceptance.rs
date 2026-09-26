@@ -50,6 +50,8 @@ enum Command {
         #[arg(required = true)]
         traces: Vec<PathBuf>,
     },
+    /// Summarize committed pursuit transitions without inferring causality.
+    Timeline { trace: PathBuf },
     /// Review exact intended reference differences without rerunning or replacing measurements.
     Finalize {
         #[arg(long)]
@@ -70,6 +72,7 @@ enum Kind {
 }
 fn main() -> Result<()> {
     let result = match Args::parse().command {
+        Command::Timeline { trace } => evidence::timeline(&trace)?,
         Command::Capture { output } => return runner::capture(&output),
         Command::Finalize {
             run,

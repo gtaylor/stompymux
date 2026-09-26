@@ -47,7 +47,7 @@ pub(crate) fn speed_request(
     Ok(speed.clamp(-walking, maximum))
 }
 
-/// Towing refusal precedes sprint refusal; salvage equipment bypasses only the towing guard.
+/// Reversing while towing requires salvage equipment.
 pub(super) fn require_reverse_allowed(world: &World, id: ObjectId, speed: f64) -> Result<()> {
     if speed >= 0.0 {
         return Ok(());
@@ -66,10 +66,6 @@ pub(super) fn require_reverse_allowed(world: &World, id: ObjectId, speed: f64) -
         };
         ensure!(salvage, "You can not backup while towing!");
     }
-    ensure!(
-        !super::sprint::enabled(world, id)?,
-        "You can not backup while sprinting!"
-    );
     Ok(())
 }
 
@@ -86,29 +82,12 @@ pub fn throttle_maximum(world: &World, id: ObjectId, tsm_tow_bonus: bool) -> Res
     )
 }
 
-/// Host-aware throttle uses one policy for load and sprint conversion.
+/// Host-aware throttle uses one policy for load accounting.
 pub(crate) fn throttle_configured(
     world: &World,
     id: ObjectId,
     policy: super::SpeedPolicy,
 ) -> Result<f64> {
-    if super::sprint::enabled(world, id)? {
-        let base = world
-            .btech
-            .constructed_units()
-            .get(&id)
-            .map(|unit| unit.mobility().maximum_speed)
-            .or_else(|| {
-                world
-                    .btech
-                    .vehicles()
-                    .get(&id)
-                    .map(|unit| unit.maximum_speed())
-            })
-            .context("Unit is unavailable")?;
-        let loaded = super::load::movement_maximum(world, id, base, policy.tsm_tow_bonus)?;
-        return super::sprint::maximum(world, id, loaded, policy.tsm_sprint_bonus);
-    }
     if let Some(unit) = world.btech.vehicles().get(&id) {
         let maximum =
             super::load::movement_maximum(world, id, unit.maximum_speed(), policy.tsm_tow_bonus)?;
@@ -126,4 +105,16 @@ pub(crate) fn throttle_configured(
         policy.tsm_tow_bonus,
     )?;
     super::speed_bonus::on_map(world, unit.position(), unit.movement_maximum_at(base))
+}
+
+/// Apply the configured speed reduction during an ordinary heading change.
+pub(super) fn turning_throttle(target: f64, remaining: f64, slowdown: i64) -> f64 {
+    let remaining = remaining.abs();
+    let factor = match slowdown {
+        1 if remaining != 0.0 => 2.0 / 3.0,
+        1 => 0.75,
+        2 if remaining >= 1.0 => (8.0 - ((remaining - 1.0) / 30.0).floor()) / 10.0,
+        _ => 1.0,
+    };
+    target * factor
 }

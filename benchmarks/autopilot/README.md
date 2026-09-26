@@ -14,6 +14,8 @@ are not promises about current performance.
 - [Predictive pursuit](autopilot-pursuit.md)
 - [Pursuit recovery and acceptance follow-up](autopilot-acceptance-followup.md)
 - [Pursuit acceptance readiness fixes](autopilot-readiness-fix.md)
+- [Adaptive pursuit redesign and failed acceptance evidence](adaptive-pursuit/README.md)
+- [Sustained engagement recovery and remaining CPU regression](adaptive-pursuit/recovery/README.md)
 
 Each report links its retained CSV, JSON, and provenance artifacts. Keep earlier
 measurements intact when adding a new report. Large scratch traces and binaries

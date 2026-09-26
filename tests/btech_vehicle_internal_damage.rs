@@ -132,11 +132,11 @@ async fn internal_criticals_precede_structure_and_nested_errors_roll_back_all_da
         .find(|value| {
             let mut dice = BattleDice::seeded([*value; 32]);
             dice.two_d6();
-            dice.two_d6() >= 8 && dice.d6() >= 5
+            dice.two_d6() >= 8 && dice.die(3).unwrap() != 2 && dice.d6() >= 5
         })
         .unwrap();
     seed(&mut world, id, value);
-    critical_rules.table = BattleVehicleCriticalTable::Fasa;
+    critical_rules.table = BattleVehicleCriticalTable::Standard;
     world
         .objects
         .get_mut(&id)

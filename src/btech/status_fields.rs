@@ -90,7 +90,6 @@ pub(super) fn secondary_status(world: &World, id: ObjectId) -> Result<u32> {
         (10, field.angel_protected),
         (11, field.angel_disturbed),
         (14, turret),
-        (16, super::sprint::enabled(world, id)?),
         (22, fortified),
         (23, hold),
         (24, no_xp),

@@ -75,14 +75,12 @@ fn shot_rules() -> BattleShotRules {
     BattleShotRules {
         range_damage: false,
         tsm_tow_bonus: true,
-        tsm_sprint_bonus: true,
         vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
         stacking: BattleStackingRules::STANDARD,
         stagger: BattleStaggerMode::Retain,
         glancing: BattleGlancingMode::Disabled,
         aim: rules(),
         hit: BattleHitRules {
-            fasa_criticals: false,
             inferno_penalty: false,
             exile_stun_mode: 0,
         },

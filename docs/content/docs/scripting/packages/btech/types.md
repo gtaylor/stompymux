@@ -277,7 +277,6 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `kind`: `"mech"`
 - `mass`: `BattleMass` — Derived current mass; detached from world state.
 - `searchlight_warning`: `boolean` — Notify occupants on external illumination transitions.
-- `tight_turn_mode`: `boolean` — Extra speed reduction in slowdown mode two.
 - `lateral`: `BattleLateralState`
 - `autocon_shutdown`: `boolean` — Include shutdown targets in routine notices; defaults false.
 - `armor_warning`: `boolean` — Armor threshold warnings; enabled by default.
@@ -395,7 +394,6 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 
 ## BattleVehicleState
 
-- `tight_turn_mode`: `boolean` — Additional throttle reduction while turning under slowdown mode two.
 - `armor_warning`: `boolean` — Armor severity warnings; enabled by default.
 - `ammunition_warning`: `boolean` — Low-ammunition warnings; enabled by default.
 - `searchlight`: `{on: boolean, destroyed: boolean, remaining: integer}` — Hardware and pending five-second switch.

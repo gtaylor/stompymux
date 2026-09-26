@@ -489,7 +489,6 @@ impl BattleFallRules {
                 hit_arcs: config.hit_arcs,
             },
             hit: super::BattleHitRules {
-                fasa_criticals: config.fasacrit != 0,
                 inferno_penalty: config.inferno_penalty != 0,
                 exile_stun_mode: config.exile_stun_code.clamp(0, 2) as u8,
             },

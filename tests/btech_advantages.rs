@@ -37,7 +37,7 @@ fn value(world: &mut World, name: &str, raw: u8) {
 /// The typed catalog distinguishes all reference ranks and attribute masks from boolean switches.
 #[tokio::test]
 async fn advantage_catalog_is_complete_case_insensitive_and_detached_in_lua() {
-    assert_eq!(BATTLE_ADVANTAGES.len(), 22);
+    assert_eq!(BATTLE_ADVANTAGES.len(), 20);
     for entry in BATTLE_ADVANTAGES {
         assert_eq!(
             battle_advantage_definition(&entry.name.to_ascii_lowercase()),
@@ -74,15 +74,23 @@ async fn advantage_catalog_is_complete_case_insensitive_and_detached_in_lua() {
             .iter()
             .filter(|entry| entry.kind == BattleAdvantageKind::Boolean)
             .count(),
-        13
+        11
     );
-    for name in ["Tough", "Lives", "ShotsHit", "Piloting-Biped", " Toughness"] {
+    for name in [
+        "Dodge_Maneuver",
+        "Maneuvering_Ace",
+        "Tough",
+        "Lives",
+        "ShotsHit",
+        "Piloting-Biped",
+        " Toughness",
+    ] {
         assert!(battle_advantage_definition(name).is_none());
     }
     let (_dir, config, world) = support::isolated_world().await;
     let before = world.btech.clone();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-    let encoded: String = scripts.eval_callback("local a=btech.character.advantages(); assert(#a==22); a[1].name='changed'; a[1].kind='ranked'; return btech.character.advantages()[1].name..':'..btech.character.advantages()[1].kind").unwrap();
+    let encoded: String = scripts.eval_callback("local a=btech.character.advantages(); assert(#a==20); a[1].name='changed'; a[1].kind='ranked'; return btech.character.advantages()[1].name..':'..btech.character.advantages()[1].kind").unwrap();
     assert_eq!(encoded, "Ambidextrous:boolean");
     assert_eq!(scripts.world().btech, before);
 }

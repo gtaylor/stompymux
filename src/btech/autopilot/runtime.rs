@@ -133,6 +133,7 @@ pub(crate) struct AutopilotPlan {
     pub(crate) order_id: u64,
     pub(crate) goal: Option<(BattlePosition, u16)>,
     pub(crate) search: Option<AStarSearch>,
+    pub(crate) replacement_pending: bool,
     pub(crate) route: Vec<Hex>,
     pub(crate) route_index: usize,
     pub(crate) last_hex: Option<Hex>,
@@ -157,6 +158,7 @@ impl Default for AutopilotPlan {
             order_id: 0,
             goal: None,
             search: None,
+            replacement_pending: false,
             route: Vec::new(),
             route_index: 0,
             last_hex: None,
@@ -177,6 +179,7 @@ impl Default for AutopilotPlan {
 impl PartialEq for AutopilotPlan {
     fn eq(&self, other: &Self) -> bool {
         self.pursuit == other.pursuit
+            && self.replacement_pending == other.replacement_pending
             && self.congestion == other.congestion
             && self.engagement == other.engagement
             && self.fallback == other.fallback
@@ -653,6 +656,7 @@ fn advance_controller(
     // Prediction consumes only filtered sightings and own capability. It survives route
     // changes but never a lifecycle, terrain, mobility, order, or target invalidation.
     let direct = metrics.as_ref().is_some_and(|m| m.direct_pursuit);
+    let mut checked_initial = None;
     if let (Some(e), Some(o)) = (engagement.as_mut(), observation.as_ref()) {
         let _estimation = super::diagnostics::pursuit("estimation");
         let map = &world.btech.maps()[&e.target.map];
@@ -662,6 +666,18 @@ fn advance_controller(
             existing_plan.pursuit = Default::default();
         }
         if !direct {
+            // Geometry and all candidate forecasts read the same immutable own
+            // equipment. The scope ends before any admitted controls mutate the world.
+            let _loadouts = (metrics
+                .as_ref()
+                .map_or(Default::default(), |m| m.pursuit_policy)
+                == super::interception::PursuitPolicy::Adaptive)
+                .then(|| {
+                    crate::btech::loadout_context::LoadoutScope::participants(
+                        &world.btech,
+                        [id, id],
+                    )
+                });
             existing_plan.pursuit.sample_policy(
                 active.id,
                 e.target_id,
@@ -690,11 +706,33 @@ fn advance_controller(
                     .iter()
                     .find(|c| c.unit == e.target_id)
                     .is_some_and(|c| c.range <= f64::from(e.maximum));
-                if in_firing_range {
+                let adaptive = metrics
+                    .as_ref()
+                    .map_or(Default::default(), |m| m.pursuit_policy)
+                    == super::interception::PursuitPolicy::Adaptive;
+                if adaptive && *geometry_budget > 0 {
+                    *geometry_budget -= 1;
+                    let positional = e.usable(world, o, Hex::new(own.x, own.y));
+                    let preferred = e.observed_goal(false).contains(Hex::new(own.x, own.y));
+                    // Cache positional eligibility independently of the selected
+                    // band: navigation may already have admitted a fallback band.
+                    checked_initial = Some(positional);
+                    existing_plan.pursuit.geometry(
+                        simulation_time,
+                        own,
+                        e.band,
+                        positional,
+                        positional && preferred && e.actual_arc(world, id, o),
+                    );
+                    if let Some(m) = metrics.as_deref_mut() {
+                        m.geometry_checks += 1;
+                    }
+                }
+                if in_firing_range && !adaptive {
                     // Once engagement is possible, use the observed target for
                     // closing to the preferred band instead of chasing a future point.
                     existing_plan.pursuit.settle();
-                } else if let Some(aim) = existing_plan.pursuit.predict(
+                } else if let Some(aim) = existing_plan.pursuit.choose(
                     simulation_time,
                     own,
                     speed,
@@ -702,6 +740,21 @@ fn advance_controller(
                     map.width,
                     map.height,
                     e.leash,
+                    |aim, velocity, uncertainty| {
+                        super::steering::pursuit_score(
+                            world,
+                            config,
+                            id,
+                            aim,
+                            e.target,
+                            velocity,
+                            uncertainty,
+                            maximum * f64::from(controller_config.speed_percent) / 100.0,
+                            speed,
+                            e.band.maximum,
+                            Some((o, &existing_plan.steering, simulation_time)),
+                        )
+                    },
                 ) {
                     e.aim = aim;
                 }
@@ -726,7 +779,9 @@ fn advance_controller(
         }
     };
     let fallback = same_navigation(existing_plan.engagement, engagement) && existing_plan.fallback;
-    let mut geometry_left = (*geometry_budget).min(16);
+    // The observed-position check spends from the same per-controller allowance
+    // as prospective goal filtering; it is not a supplemental search budget.
+    let mut geometry_left = (*geometry_budget).min(16 - usize::from(checked_initial.is_some()));
     let mut geometry_used = 0u64;
     let mut usable = |hex: Hex| -> Option<bool> {
         let Some(engagement) = engagement else {
@@ -746,8 +801,9 @@ fn advance_controller(
             current_position(world, id)
                 .filter(|p| e.observed_goal(fallback).contains(Hex::new(p.x, p.y)))
         })
-        .and_then(|p| usable(Hex::new(p.x, p.y)))
-        .unwrap_or(false);
+        .is_some_and(|p| {
+            checked_initial.unwrap_or_else(|| usable(Hex::new(p.x, p.y)).unwrap_or(false))
+        });
     drop(usable);
     if let Some(metrics) = metrics.as_deref_mut() {
         metrics.geometry_checks += geometry_used;
@@ -756,7 +812,13 @@ fn advance_controller(
         if let Some(e) = engagement.as_mut() {
             e.aim = e.target;
         }
-        existing_plan.pursuit.settle();
+        if metrics
+            .as_ref()
+            .map_or(Default::default(), |m| m.pursuit_policy)
+            != super::interception::PursuitPolicy::Adaptive
+        {
+            existing_plan.pursuit.settle();
+        }
     }
     if engagement.is_some_and(|e| e.aim != e.target) {
         if let Some(m) = metrics.as_deref_mut().filter(|m| m.capture_outcomes) {
@@ -828,6 +890,7 @@ fn advance_controller(
             let mut settled = existing_plan;
             settled.congestion = Default::default();
             settled.search = None;
+            settled.replacement_pending = false;
             settled.route.clear();
             settled.route_index = 0;
             settled.stagnant_ticks = 0;
@@ -878,7 +941,29 @@ fn advance_controller(
         let mut plan = existing_plan;
         let mut expansions = 0;
         if navigation_changed {
+            let retain = metrics
+                .as_ref()
+                .map_or(Default::default(), |m| m.pursuit_policy)
+                == super::interception::PursuitPolicy::Adaptive
+                && plan.order_id == active.id
+                && plan.terrain_revision == map_revision(&world.btech.maps()[&goal.map])
+                && plan.mobility_revision == unit_mobility_revision(world, id)
+                && plan.engagement.zip(engagement).is_some_and(|(a, b)| {
+                    a.target_id == b.target_id
+                        && a.target.map == b.target.map
+                        && a.leash == b.leash
+                        && (a.aim != a.target || b.aim != b.target)
+                });
             plan = AutopilotPlan {
+                route: if retain {
+                    std::mem::take(&mut plan.route)
+                } else {
+                    Vec::new()
+                },
+                route_index: if retain { plan.route_index } else { 0 },
+                replacement_pending: retain,
+                terrain_revision: if retain { plan.terrain_revision } else { 0 },
+                mobility_revision: if retain { plan.mobility_revision } else { 0 },
                 steering: plan.steering.clone(),
                 pursuit: plan.pursuit.clone(),
                 engagement,
@@ -935,6 +1020,7 @@ fn advance_controller(
         let mobility_key = unit_mobility_revision(world, id);
         if plan.terrain_revision != terrain_revision || plan.mobility_revision != mobility_key {
             plan.route.clear();
+            plan.replacement_pending = false;
             plan.fallback = false;
             plan.congestion = Default::default();
             if let Some(search) = plan.search.as_mut() {
@@ -961,7 +1047,7 @@ fn advance_controller(
             issue_stop(world, id, simulation_time, notices);
             return Ok(0);
         }
-        if plan.route.is_empty() {
+        if plan.route.is_empty() || plan.replacement_pending {
             if plan.search.is_none() {
                 // Reserve enough records for every map cell before admitting a job.
                 // Existing jobs can finish without eviction or quota shrinkage, while
@@ -979,10 +1065,28 @@ fn advance_controller(
                     if retry.is_some() {
                         congestion_metric(metrics, id, |m| m.resource_deferrals += 1);
                     }
+                    drive_pending(
+                        world,
+                        config,
+                        id,
+                        &mut plan,
+                        engagement,
+                        observation.as_ref(),
+                        controller_config.speed_percent,
+                        simulation_time,
+                        notices,
+                    );
                     persist_plan(world, id, plan);
                     return Ok(0);
                 }
                 record_replan(metrics, id);
+                super::diagnostics::pursuit_count(if retry.is_some() {
+                    "search_congestion"
+                } else if plan.replacement_pending {
+                    "search_replacement"
+                } else {
+                    "search_route"
+                });
                 let Ok(search) = AStarSearch::with_record_limit(
                     width,
                     height,
@@ -1047,14 +1151,41 @@ fn advance_controller(
                 .unwrap_or(usize::MAX);
             expansions = match status {
                 SearchStatus::Pending { .. } => {
+                    drive_pending(
+                        world,
+                        config,
+                        id,
+                        &mut plan,
+                        engagement,
+                        observation.as_ref(),
+                        controller_config.speed_percent,
+                        simulation_time,
+                        notices,
+                    );
                     persist_plan(world, id, plan);
-                    issue_stop(world, id, simulation_time, notices);
                     // Keep the frontier intact for the next heartbeat.  A
                     // pending search must never be mistaken for an empty
                     // route and restarted from scratch.
                     return Ok(spent);
                 }
                 SearchStatus::Found { path } => {
+                    if plan.replacement_pending && !path.cells.contains(&current_hex) {
+                        plan.search = None;
+                        drive_pending(
+                            world,
+                            config,
+                            id,
+                            &mut plan,
+                            engagement,
+                            observation.as_ref(),
+                            controller_config.speed_percent,
+                            simulation_time,
+                            notices,
+                        );
+                        persist_plan(world, id, plan);
+                        return Ok(spent);
+                    }
+                    plan.replacement_pending = false;
                     plan.congestion = Default::default();
                     plan.route = path.cells;
                     plan.route_index = 0;
@@ -1242,6 +1373,19 @@ fn advance_controller(
         cap,
         combat,
         engagement.is_some_and(|e| e.aim != e.target),
+        plan.pursuit.velocity().map(|velocity| {
+            (
+                velocity,
+                cap / 645.0
+                    * world.btech.maps().get(&position.map).map_or(1.0, |m| {
+                        if m.movement_modifier > 0 {
+                            m.movement_modifier as f64 / 100.0
+                        } else {
+                            1.0
+                        }
+                    }),
+            )
+        }),
         &mut plan.steering,
         simulation_time,
         notices,
@@ -1944,54 +2088,6 @@ fn congestion_metric(
 mod navigation_recovery_tests {
     use super::*;
 
-    #[tokio::test]
-    async fn visible_in_range_contact_replaces_stale_lead_with_observed_goal() {
-        let root = super::super::benchmark::copy_game_root().unwrap();
-        let config = Config::load(&root).unwrap();
-        let base = crate::persistence::load(&config.database()).await.unwrap();
-        let (mut world, id, target, map) = super::super::encounters::fixture(
-            &config,
-            base,
-            include_str!("../../../game/mechs/JR7-D"),
-            "approach",
-            1,
-        )
-        .unwrap();
-        super::super::adversarial::place(&mut world, target, map, 6, 3).unwrap();
-        crate::btech::refresh_optical_scanners(&mut world, &[id, target]).unwrap();
-        Arc::make_mut(&mut world.btech.controllers)
-            .get_mut(&id)
-            .unwrap()
-            .start_next(0);
-        let order_id = world.btech.controllers[&id].active_order().unwrap().id;
-        let mut plan = AutopilotPlan {
-            terrain_revision: map_revision(&world.btech.maps()[&map]),
-            mobility_revision: unit_mobility_revision(&world, id),
-            ..Default::default()
-        };
-        for now in 0..=64 {
-            plan.pursuit.sample_policy(
-                order_id,
-                target,
-                BattlePosition {
-                    map,
-                    x: 6,
-                    y: 6 - (now / 20) as u16,
-                },
-                now,
-                super::super::interception::PursuitPolicy::G,
-            );
-        }
-        let checkpoint = plan.clone();
-        Arc::make_mut(&mut world.btech.autopilot_plans).insert(id, plan);
-        advance(&mut world, &config, 65).unwrap();
-        let plan = &world.btech.autopilot_plans[&id];
-        let engagement = plan.engagement.unwrap();
-        assert_eq!(engagement.aim, engagement.target);
-        assert_eq!(plan.pursuit.evidence().reason, "settled");
-        assert_ne!(plan.pursuit, checkpoint.pursuit);
-    }
-
     #[test]
     fn courtesy_wait_is_bounded_and_checkpointed() {
         let mut plan = AutopilotPlan::default();
@@ -2146,5 +2242,280 @@ mod navigation_recovery_tests {
             .progress;
         assert_eq!(progress.recovery_attempts, 2);
         assert_eq!(progress.stagnant_ticks, 7);
+    }
+}
+
+/// Follow only a live-admitted prefix while the single replacement frontier is pending.
+fn drive_pending(
+    world: &mut World,
+    config: &Config,
+    id: ObjectId,
+    plan: &mut AutopilotPlan,
+    engagement: Option<super::engagement::Engagement>,
+    observation: Option<&AutopilotObservation>,
+    speed_percent: u8,
+    now: i64,
+    notices: &mut Vec<BattleNotice>,
+) {
+    let Some(position) = current_position(world, id) else {
+        return;
+    };
+    let hex = Hex::new(position.x, position.y);
+    let Some(index) = plan.route.iter().position(|p| *p == hex) else {
+        issue_stop(world, id, now, notices);
+        return;
+    };
+    let traversal = traversal::GroundTraversal::new(world, id, position.map);
+    let mut prefix = vec![hex];
+    for next in plan.route.iter().skip(index + 1).take(8) {
+        if engagement.is_some_and(|e| !e.permits(*next))
+            || super::navigation::Traversal::traversal_cost(
+                &traversal,
+                *prefix.last().unwrap(),
+                *next,
+            )
+            .is_none()
+        {
+            break;
+        }
+        prefix.push(*next);
+    }
+    if prefix.len() < 2 {
+        issue_stop(world, id, now, notices);
+        return;
+    }
+    plan.route_index = index + 1;
+    let cap = maximum_speed(world, id) * f64::from(speed_percent) / 100.0;
+    let combat = engagement.and_then(|e| observation.map(|o| (o, e.target)));
+    if super::steering::drive(
+        world,
+        config,
+        id,
+        &prefix,
+        1,
+        cap,
+        combat,
+        true,
+        plan.pursuit.velocity().map(|velocity| {
+            (
+                velocity,
+                cap / 645.0
+                    * world.btech.maps().get(&position.map).map_or(1.0, |m| {
+                        if m.movement_modifier > 0 {
+                            m.movement_modifier as f64 / 100.0
+                        } else {
+                            1.0
+                        }
+                    }),
+            )
+        }),
+        &mut plan.steering,
+        now,
+        notices,
+    )
+    .is_err()
+    {
+        issue_stop(world, id, now, notices);
+    }
+}
+
+#[cfg(test)]
+mod replacement_tests {
+    use super::*;
+    #[tokio::test]
+    async fn cached_geometry_honors_an_admitted_fallback_band() {
+        let root = super::super::benchmark::copy_game_root().unwrap();
+        let config = Config::load(&root).unwrap();
+        let base = crate::persistence::load(&config.database()).await.unwrap();
+        let (mut world, id, _, _) = super::super::encounters::fixture(
+            &config,
+            base,
+            include_str!("../../../game/mechs/JR7-D"),
+            "fallback",
+            1,
+        )
+        .unwrap();
+        for tick in 1..=3 {
+            let mut metrics = AutopilotRuntimeMetrics {
+                pursuit_policy: super::super::interception::PursuitPolicy::Adaptive,
+                ..Default::default()
+            };
+            advance_with_metrics(&mut world, &config, tick, &mut metrics).unwrap();
+        }
+        let plan = &world.btech.autopilot_plans[&id];
+        assert!(
+            plan.fallback,
+            "The preferred band is deliberately unreachable"
+        );
+        assert_eq!(
+            plan.stagnant_ticks, 0,
+            "A usable fallback is settled, not stuck"
+        );
+        assert!(plan.route.is_empty() && plan.search.is_none());
+        assert_eq!(
+            super::super::steering::motion(&world, id)
+                .unwrap()
+                .desired_speed,
+            0.0
+        );
+    }
+    #[test]
+    fn pending_route_state_participates_in_checkpoint_equality() {
+        let before = AutopilotPlan::default();
+        let mut after = before.clone();
+        after.replacement_pending = true;
+        assert_ne!(before, after);
+        after = before.clone();
+        assert_eq!(before, after);
+    }
+    #[tokio::test]
+    async fn missing_retained_prefix_requests_normal_stop() {
+        let root = super::super::benchmark::copy_game_root().unwrap();
+        let config = Config::load(&root).unwrap();
+        let base = crate::persistence::load(&config.database()).await.unwrap();
+        let (mut world, id, _, _) = super::super::encounters::fixture(
+            &config,
+            base,
+            include_str!("../../../game/mechs/JR7-D"),
+            "approach",
+            1,
+        )
+        .unwrap();
+        let mut plan = AutopilotPlan {
+            replacement_pending: true,
+            ..Default::default()
+        };
+        let mut notices = Vec::new();
+        drive_pending(
+            &mut world,
+            &config,
+            id,
+            &mut plan,
+            None,
+            None,
+            100,
+            1,
+            &mut notices,
+        );
+        assert_eq!(
+            super::super::steering::motion(&world, id)
+                .unwrap()
+                .desired_speed,
+            0.0
+        );
+        assert!(plan.search.is_none());
+        assert!(plan.replacement_pending);
+        let position = current_position(&world, id).unwrap();
+        let before = world.btech.clone();
+        let score = super::super::steering::pursuit_score(
+            &world,
+            &config,
+            id,
+            position,
+            position,
+            (0.0, 0.0),
+            0.0,
+            100.0,
+            0.2,
+            3,
+            None,
+        )
+        .unwrap();
+        let uncertain = super::super::steering::pursuit_score(
+            &world,
+            &config,
+            id,
+            position,
+            position,
+            (0.0, 0.0),
+            1.0,
+            100.0,
+            0.2,
+            3,
+            None,
+        )
+        .unwrap();
+        assert!((uncertain.0 - score.0 - 5.0).abs() < 1e-9);
+        assert_eq!(uncertain.1, score.1);
+        assert_eq!(world.btech, before);
+
+        let mut aim = position;
+        aim.x += 1;
+        let destination = crate::BattleHexCoordinate {
+            x: i32::from(aim.x),
+            y: i32::from(aim.y),
+        }
+        .center();
+        let motion = Arc::make_mut(&mut world.btech.constructed)
+            .get_mut(&id)
+            .unwrap()
+            .motion
+            .as_mut()
+            .unwrap();
+        motion.heading = motion.point.bearing(destination).unwrap().unwrap();
+        motion.desired_heading = motion.heading;
+        motion.speed = 0.0;
+        plan.route = vec![Hex::new(position.x, position.y), Hex::new(aim.x, aim.y)];
+        drive_pending(
+            &mut world,
+            &config,
+            id,
+            &mut plan,
+            None,
+            None,
+            100,
+            2,
+            &mut notices,
+        );
+        assert!(
+            super::super::steering::motion(&world, id)
+                .unwrap()
+                .desired_speed
+                > 0.0
+        );
+        assert!(
+            plan.search.is_none(),
+            "route continuation must not allocate a frontier"
+        );
+        assert_eq!(plan.route_index, 1);
+        Arc::make_mut(&mut world.btech.constructed)
+            .get_mut(&id)
+            .unwrap()
+            .motion
+            .as_mut()
+            .unwrap()
+            .speed = -1.0;
+        assert!(
+            super::super::steering::pursuit_score(
+                &world,
+                &config,
+                id,
+                aim,
+                position,
+                (0.0, 0.0),
+                0.0,
+                100.0,
+                0.2,
+                3,
+                None,
+            )
+            .is_some()
+        );
+        assert!(
+            super::super::steering::pursuit_score(
+                &world,
+                &config,
+                id,
+                position,
+                position,
+                (0.0, 0.0),
+                0.0,
+                100.0,
+                0.2,
+                3,
+                None,
+            )
+            .is_some()
+        );
     }
 }

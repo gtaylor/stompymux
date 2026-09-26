@@ -64,9 +64,7 @@ fn rules(table: BattleVehicleCriticalTable) -> BattleVehicleImpactRules {
             combat_safe: false,
             toughness: false,
         },
-        fasa: BattleVehicleFasaHitRules {
-            friendly_criticals: true,
-            critical_shielding: true,
+        hit: BattleVehicleHitRules {
             critical_mode: 1,
             critical_level: 40,
         },
@@ -249,22 +247,6 @@ async fn complete_impacts_apply_hit_effects_and_damage_with_saved_replay() {
             false,
         ),
         (
-            T::Fasa,
-            BattleHitArc::Left,
-            3,
-            BattleVehicleSection::Left,
-            21.5,
-            false,
-        ),
-        (
-            T::Fasa,
-            BattleHitArc::Front,
-            11,
-            BattleVehicleSection::Turret,
-            0.0,
-            true,
-        ),
-        (
             T::Advanced,
             BattleHitArc::Front,
             5,
@@ -325,10 +307,7 @@ async fn complete_impacts_apply_hit_effects_and_damage_with_saved_replay() {
 #[tokio::test]
 async fn hull_impacts_preserve_occupants_and_combat_safety_preserves_material() {
     let (_dir, _config, mut world, id) = fixture(include_str!("../game/mechs/Demolisher")).await;
-    let stream = matching_seed(|dice| {
-        dice.two_d6();
-        dice.two_d6() == 3
-    });
+    let stream = matching_seed(|dice| dice.two_d6() == 3);
     set_seed(&mut world, id, stream);
     world
         .objects
@@ -343,7 +322,7 @@ async fn hull_impacts_preserve_occupants_and_combat_safety_preserves_material() 
         BattleHitArc::Left,
         40,
         None,
-        rules(BattleVehicleCriticalTable::Fasa),
+        rules(BattleVehicleCriticalTable::Standard),
     )
     .unwrap();
     assert!(report.damage.unwrap().unit_destroyed);
@@ -357,13 +336,13 @@ async fn hull_impacts_preserve_occupants_and_combat_safety_preserves_material() 
             BattleHitArc::Left,
             0,
             None,
-            rules(BattleVehicleCriticalTable::Fasa)
+            rules(BattleVehicleCriticalTable::Standard)
         )
         .is_err()
     );
     assert_eq!(world.btech, before);
     let sections = world.btech.vehicles()[&id].sections().clone();
-    let mut policy = rules(BattleVehicleCriticalTable::Fasa);
+    let mut policy = rules(BattleVehicleCriticalTable::Standard);
     policy.criticals.combat_safe = true;
     let report =
         resolve_battle_vehicle_impact(&mut world, id, BattleHitArc::Left, 40, None, policy)
@@ -374,7 +353,6 @@ async fn hull_impacts_preserve_occupants_and_combat_safety_preserves_material() 
     assert_eq!(world.btech.vehicles()[&id].sections(), &sections);
     assert_eq!(world.btech.vehicles()[&id].motive_speed_loss(), 0.0);
     let mut dice = BattleDice::seeded(stream);
-    dice.two_d6();
     dice.two_d6();
     dice.two_d6();
     assert_eq!(roll_unit_dice(&mut world, id, 1).unwrap(), [dice.d6()]);

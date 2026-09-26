@@ -1295,7 +1295,16 @@ async fn preference_fields_share_cockpit_state_validation_and_restart_scenario(f
             view_battle_unit_fields_action(&named, &config, ObjectId(1), id, "mechprefs").unwrap();
         assert_eq!(field(&report, "MechPrefs"), Some("bcdegh"));
         let before = named.world().btech.clone();
-        for value in ["k", "-1", "G", "2147483648", "bcdegh!"] {
+        for value in [
+            "i",
+            "256",
+            "bcdeghi",
+            "k",
+            "-1",
+            "G",
+            "2147483648",
+            "bcdegh!",
+        ] {
             assert!(
                 set_battle_unit_field_action(&named, &config, ObjectId(1), id, "MechPrefs", value)
                     .is_err(),
@@ -1311,19 +1320,6 @@ async fn preference_fields_share_cockpit_state_validation_and_restart_scenario(f
             .is_err()
         );
         assert_eq!(lua.world().btech, before);
-        set_battle_unit_field_action(&named, &config, ObjectId(1), id, "MechPrefs", "bcdeghi")
-            .unwrap();
-        assert!(
-            named
-                .world()
-                .btech
-                .constructed_units()
-                .get(&id)
-                .map_or_else(
-                    || named.world().btech.vehicles()[&id].tight_turn_mode(),
-                    |unit| unit.tight_turn_mode()
-                )
-        );
         set_battle_unit_field_action(&named, &config, ObjectId(1), id, "MechPrefs", "bcdegh!b!g")
             .unwrap();
         let report =
@@ -2919,7 +2915,7 @@ async fn secondary_status_edits_preserve_observations_and_validate_controls_scen
             );
         }
         let before = scripts.world().btech.clone();
-        for value in ["abc", "cij", "cF", "cghw"] {
+        for value in ["q", "65536", "cq", "abc", "cij", "cF", "cghw"] {
             scripts.drain_outbox();
             assert!(
                 set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "status2", value)

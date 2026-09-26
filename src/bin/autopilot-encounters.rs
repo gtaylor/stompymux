@@ -8,9 +8,12 @@ struct Args {
     /// Compare against direct pursuit, only in the pursuit suite.
     #[arg(long)]
     direct_pursuit: bool,
-    /// Bounded experimental policy, restricted to the isolated pursuit suite.
-    #[arg(long, default_value="g", value_parser=["control", "a", "b", "c", "d", "e", "f", "g"])]
+    /// Pursuit policy; alternate policies are explicit comparison controls.
+    #[arg(long, default_value="adaptive", value_parser=["control", "a", "b", "c", "d", "e", "f", "adaptive"])]
     pursuit_policy: String,
+    /// Write policy identity after every selected suite verifies its runtime selection.
+    #[arg(long)]
+    policy_metadata: Option<std::path::PathBuf>,
     /// Pursuit fire mode selection.
     #[arg(long, default_value="all", value_parser=["all","hold","fire"])]
     fire: String,
@@ -32,6 +35,16 @@ struct Args {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
+    let policy = match args.pursuit_policy.as_str() {
+        "a" => stompymux_rs::AutopilotPursuitPolicy::A,
+        "b" => stompymux_rs::AutopilotPursuitPolicy::B,
+        "c" => stompymux_rs::AutopilotPursuitPolicy::C,
+        "d" => stompymux_rs::AutopilotPursuitPolicy::D,
+        "e" => stompymux_rs::AutopilotPursuitPolicy::E,
+        "f" => stompymux_rs::AutopilotPursuitPolicy::F,
+        "adaptive" => stompymux_rs::AutopilotPursuitPolicy::Adaptive,
+        _ => stompymux_rs::AutopilotPursuitPolicy::Control,
+    };
     let existing = [
         "approach",
         "long_approach",
@@ -65,11 +78,12 @@ async fn main() -> anyhow::Result<()> {
     {
         results.extend(
             serde_json::to_value(
-                stompymux_rs::run_autopilot_encounters(
+                stompymux_rs::run_autopilot_encounters_policy(
                     args.ticks,
                     args.seeds,
                     args.scenario.as_deref(),
                     args.trace.as_deref(),
+                    policy,
                 )
                 .await?,
             )?
@@ -94,11 +108,12 @@ async fn main() -> anyhow::Result<()> {
         });
         results.extend(
             serde_json::to_value(
-                stompymux_rs::run_autopilot_adversarial(
+                stompymux_rs::run_autopilot_adversarial_policy(
                     args.ticks,
                     args.seeds,
                     args.scenario.as_deref(),
                     path.as_deref(),
+                    policy,
                 )
                 .await?,
             )?
@@ -143,16 +158,7 @@ async fn main() -> anyhow::Result<()> {
                         path.as_deref(),
                         args.direct_pursuit,
                         fire,
-                        match args.pursuit_policy.as_str() {
-                            "a" => stompymux_rs::AutopilotPursuitPolicy::A,
-                            "b" => stompymux_rs::AutopilotPursuitPolicy::B,
-                            "c" => stompymux_rs::AutopilotPursuitPolicy::C,
-                            "d" => stompymux_rs::AutopilotPursuitPolicy::D,
-                            "e" => stompymux_rs::AutopilotPursuitPolicy::E,
-                            "f" => stompymux_rs::AutopilotPursuitPolicy::F,
-                            "g" => stompymux_rs::AutopilotPursuitPolicy::G,
-                            _ => stompymux_rs::AutopilotPursuitPolicy::Control,
-                        },
+                        policy,
                         args.seed_start,
                         extended,
                     )
@@ -196,6 +202,15 @@ async fn main() -> anyhow::Result<()> {
             writeln!(file, "{}", fields.join(","))?;
         }
     }
+    if let Some(path) = args.policy_metadata {
+        std::fs::write(
+            path,
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "requested": args.pursuit_policy, "resolved": args.pursuit_policy,
+                "direct_pursuit": args.direct_pursuit, "verified_each_tick": true
+            }))?,
+        )?;
+    }
     println!("{}", serde_json::to_string_pretty(&results)?);
     Ok(())
 }
@@ -205,6 +220,11 @@ mod tests {
     use super::*;
     #[test]
     fn suite_defaults_and_validation() {
+        assert_eq!(
+            Args::try_parse_from(["encounters"]).unwrap().pursuit_policy,
+            "adaptive"
+        );
+        assert!(Args::try_parse_from(["encounters", "--pursuit-policy", "g"]).is_err());
         assert_eq!(
             Args::try_parse_from(["encounters"]).unwrap().suite,
             "existing"

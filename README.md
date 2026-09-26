@@ -20,5 +20,5 @@ No support is guaranteed, but you may be able to get help on our [Discord server
 
 ## License
 
-The historical BattletechMUX license and credits are recorded in the [history](./docs/content/docs/history.md) article.
-Check the applicable license for the source and game assets you use.
+StompyMUX is licensed under the 3-clause BSD License.
+A copy is included in the [LICENSE](./LICENSE) file in this repo.

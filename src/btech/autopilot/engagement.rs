@@ -58,6 +58,24 @@ pub(crate) struct Engagement {
     pub maximum: u16,
 }
 impl Engagement {
+    /// Actual bearing after positional eligibility; temporary heat and recycle do not matter.
+    pub fn actual_arc(
+        self,
+        world: &World,
+        id: ObjectId,
+        observation: &AutopilotObservation,
+    ) -> bool {
+        let Some(motion) = super::steering::motion(world, id) else {
+            return false;
+        };
+        let target = BattleHexCoordinate {
+            x: i32::from(self.target.x),
+            y: i32::from(self.target.y),
+        }
+        .center();
+        super::steering::actual_arc(world, id, observation, motion, target)
+    }
+
     pub fn goal(self, fallback: bool) -> Goal {
         Goal::annulus(
             Hex::new(self.aim.x, self.aim.y),

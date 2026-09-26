@@ -97,11 +97,7 @@ pub(super) fn advance_all(
         let mut motion = unit.motion().context("Aircraft motion is unavailable")?;
         let maximum =
             super::load::movement_maximum(world, id, unit.maximum_speed(), rules.tsm_tow_bonus)?;
-        let maximum = if unit.sprinting {
-            super::sprint::maximum(world, id, maximum, rules.tsm_sprint_bonus)?
-        } else {
-            super::speed_bonus::on_map(world, Some(position), maximum)?
-        };
+        let maximum = super::speed_bonus::on_map(world, Some(position), maximum)?;
         if super::load::carries_load(world, id) {
             motion.limit_load(maximum, maximum);
         }
@@ -122,7 +118,6 @@ pub(super) fn advance_all(
         let movement = BattleVehicleMotionRules {
             fasa_turning: rules.fasa_turning,
             slowdown: rules.slowdown,
-            tight_turn_mode: unit.tight_turn_mode(),
             speed_demon,
             movement_modifier: map.movement_modifier,
         };

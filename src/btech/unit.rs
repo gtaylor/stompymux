@@ -117,8 +117,6 @@ pub struct BattleUnit {
     #[serde(default)]
     pub(super) hull_down: super::BattleHullDownState,
     #[serde(default)]
-    pub(super) tight_turn_mode: bool,
-    #[serde(default)]
     pub(super) masc: super::BattleBoosterState,
     /// Shared identity of a C3i network; peers are derived from world membership.
     #[serde(default)]
@@ -146,9 +144,6 @@ pub struct BattleUnit {
     /// Operator-imposed firing restriction, separate from weapon mechanics.
     #[serde(default)]
     pub(super) weapons_hold: bool,
-    /// Saved sprint mode, independent of equipment boosts and requested speed.
-    #[serde(default)]
-    pub(super) sprinting: bool,
     /// Operator-imposed immunity to combat damage.
     #[serde(default)]
     pub(super) combat_safe: bool,
@@ -781,7 +776,6 @@ impl BattleUnit {
             tics: Default::default(),
             lateral: Default::default(),
             hull_down: Default::default(),
-            tight_turn_mode: false,
             masc: Default::default(),
             c3i_network: None,
             c3_network: None,
@@ -792,7 +786,6 @@ impl BattleUnit {
             radio_experience_remaining: 0,
             observer: false,
             weapons_hold: false,
-            sprinting: false,
             combat_safe: false,
             visibility: super::BattleVisibility::default(),
             fired_recently: false,
@@ -1022,6 +1015,11 @@ impl BattleUnit {
         }
         self.brief.validate()?;
         self.lateral.validate()?;
+        ensure!(
+            self.chassis() == super::BattleMechChassis::Quad
+                || self.lateral == super::BattleLateralState::default(),
+            "Only quads can use lateral movement"
+        );
         self.validate_hull_down()?;
         ensure!(
             self.position().is_some() == self.map_slot.is_some(),

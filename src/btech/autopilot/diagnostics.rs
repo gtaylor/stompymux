@@ -97,6 +97,15 @@ pub(crate) fn count(name: &'static str) {
     record(name, 0);
 }
 
+/// Count bounded pursuit work with no clock reads; publication belongs to the enclosing tick.
+pub(crate) fn pursuit_count(name: &'static str) {
+    ACTIVE.with(|slot| {
+        if let Some(total) = slot.borrow_mut().as_mut() {
+            total.pursuit.entry(name.to_owned()).or_default().calls += 1;
+        }
+    });
+}
+
 /// Count rejection on every early return, including errors after expenditure.
 pub(crate) struct Attempt(bool);
 impl Attempt {

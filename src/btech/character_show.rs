@@ -90,9 +90,9 @@ mod tests {
             assert_eq!(render(name), "Invalid arguments to +show command!");
         }
         assert_eq!(render(""), HELP);
-        assert!(render("allvalues").ends_with("Total of 119 things found."));
+        assert!(render("allvalues").ends_with("Total of 117 things found."));
         assert!(render("values").ends_with("Total of 14 things found."));
         assert!(render("skills").ends_with("Total of 78 things found."));
-        assert!(render("advantages").ends_with("Total of 22 things found."));
+        assert!(render("advantages").ends_with("Total of 20 things found."));
     }
 }

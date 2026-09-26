@@ -248,24 +248,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         "unit_dump",
         error::wrap(lua, dump, "btech.operation.failed")?,
     )?;
-    let turnmode = lua.create_function(
-        |lua, (unit, pilot, arguments): (i64, i64, Option<String>)| {
-            crate::lua::transactions::require(lua)?;
-            let scripts = crate::Scripts::services(lua)?;
-            let report = crate::battle_turnmode(
-                &scripts,
-                ObjectId(unit),
-                ObjectId(pilot),
-                arguments.as_deref().unwrap_or_default(),
-            )
-            .map_err(|e| error::failure("btech.operation.failed", e))?;
-            detached(lua, &report)
-        },
-    )?;
-    native.set(
-        "unit_turnmode",
-        error::wrap(lua, turnmode, "btech.operation.failed")?,
-    )?;
     let lateral = lua.create_function(
         |lua, (unit, pilot, arguments): (i64, i64, Option<String>)| {
             crate::lua::transactions::require(lua)?;

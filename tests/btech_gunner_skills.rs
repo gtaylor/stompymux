@@ -231,7 +231,6 @@ async fn conventional_vtol_experience_uses_the_same_aerospace_skill() {
         BattleGunneryAwardRequest {
             tsm_tow_bonus: false,
 
-            tsm_sprint_bonus: true,
             attacker: parent,
             pilot: ObjectId(1),
             target,

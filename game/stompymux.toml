@@ -117,8 +117,6 @@ allow_cargo_commands = true
 # Overall repair-time multiplier, from 0.0 through 10.0. Zero makes newly
 # started repairs complete on the event scheduler's next one-second tick.
 techtime_multiplier = 1.0
-# Allow units that lose armor or ammunition to exceed their normal maximum speed.
-dynspeed = 0
 # To-hit penalty applied when firing at a dug-in unit.
 digbonus = 2
 # Apply the dug-in to-hit penalty only when attacking a target's front side.
@@ -127,8 +125,6 @@ dig_only_fs = 1
 critlevel = 66
 # Enable vehicle critical-hit handling; zero disables it.
 vcrit = 101
-# Critical-hit rules: -1 for MaxTech, 0 for Semi-FASA, 1 for FASA.
-fasacrit = -1
 # Allow players to self-destruct a unit by exploding its reactor.
 explode_reactor = 1
 # Allow players to self-destruct a unit by exploding its ammunition.
@@ -153,10 +149,6 @@ fasaturn = 0
 newterrain = 0
 # Use the newer charge movement, damage, and distance rules.
 newcharge = 1
-# Reduce vehicle movement points rather than setting speed to zero for most vehicle crits.
-tankfriendly = 0
-# Prevent vehicles from taking crash damage.
-tankshield = 0
 # Use skid-based piloting checks when colliding with cliffs or drops.
 skidcliff = 1
 # Require units to be stalled before non-wizard players can perform serious repairs.

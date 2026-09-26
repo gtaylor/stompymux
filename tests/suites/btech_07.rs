@@ -54,9 +54,6 @@ mod btech_scan_weapons;
 #[path = "../btech_sight.rs"]
 mod btech_sight;
 
-#[path = "../btech_sprint.rs"]
-mod btech_sprint;
-
 #[path = "../btech_stacking.rs"]
 mod btech_stacking;
 

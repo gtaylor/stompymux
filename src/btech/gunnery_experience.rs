@@ -265,8 +265,6 @@ pub fn gunnery_experience_eligible(
 pub struct BattleGunneryAwardRequest {
     /// Apply configured hot-myomer assistance to both participants' external towing load.
     pub tsm_tow_bonus: bool,
-    /// Apply configured hot-myomer assistance while sprinting to both participants.
-    pub tsm_sprint_bonus: bool,
     pub attacker: crate::ObjectId,
     pub pilot: crate::ObjectId,
     pub target: crate::ObjectId,
@@ -280,11 +278,10 @@ pub struct BattleGunneryAwardRequest {
 }
 
 impl BattleGunneryAwardRequest {
-    /// Share both speed settings between classic difficulty and battle-value awards.
+    /// Share the towing policy between classic difficulty and battle-value awards.
     pub(super) fn speed_policy(self) -> super::SpeedPolicy {
         super::SpeedPolicy {
             tsm_tow_bonus: self.tsm_tow_bonus,
-            tsm_sprint_bonus: self.tsm_sprint_bonus,
         }
     }
 }

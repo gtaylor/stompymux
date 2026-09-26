@@ -25,7 +25,7 @@ async fn character_contract_uses_object_identity_catalog_codes_and_zero_return_m
         assert(e.message:sub(-#suffix)==suffix,e.message)
       end
       local c=mux.world.object(1)
-      local rows=btech.character.catalog('Char_attribute'); assert(#rows==5 and rows[1].code==36 and rows[1].name=='Build')
+      local rows=btech.character.catalog('Char_attribute'); assert(#rows==5 and rows[1].code==34 and rows[1].name=='Build')
       assert(#btech.character.catalog('attributes')==0)
       local v=btech.character.value(c,'Refle');assert(v.amount==6 and v.definition.kind=='Char_attribute')
       assert(select('#',btech.character.set_value(c,'Bruise',9))==0);assert(btech.character.value(c,6).amount==9)

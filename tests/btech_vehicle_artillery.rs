@@ -49,7 +49,7 @@ async fn fixture(
 fn rules() -> BattleFallRules {
     let mut rules = BattleMovementRules::STANDARD.fall;
     rules.vehicle_impact.criticals.enabled = false;
-    rules.vehicle_impact.fasa.critical_mode = 0;
+    rules.vehicle_impact.hit.critical_mode = 0;
     rules
 }
 
@@ -282,7 +282,6 @@ async fn blast_rear_selection_redirects_later_vehicle_faces_and_preserves_dice()
         for salvage in [false, true] {
             for table in [
                 BattleVehicleCriticalTable::Standard,
-                BattleVehicleCriticalTable::Fasa,
                 BattleVehicleCriticalTable::Advanced,
             ] {
                 let mut world = base.clone();

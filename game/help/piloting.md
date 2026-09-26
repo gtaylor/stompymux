@@ -1008,19 +1008,11 @@ match. C3 displays only contact rows; an empty list produces no output.
 
 Use `lateral ne` or `lateral fr` for Front/Right travel, `nw`/`fl` for Front/Left,
 `se`/`rr` for Rear/Right, and `sw`/`rl` for Rear/Left. `lateral -` restores straight
-travel. Biped pilots need Maneuvering Ace. A change takes six seconds; requesting
+travel. Only quads with all four legs intact can move laterally. A change takes six seconds; requesting
 your current direction cancels a pending change. The chassis and weapon facing
 stay unchanged. Reverse speed travels opposite the chosen direction. Changes
 complete only if the unit is running when the timer expires.
-
-Maneuvering Ace pilots can use `turnmode tight` or `turnmode normal`. Use `turnmode`
-to see the current choice. Tight mode subtracts another 4.3 KPH from the target
-speed while an unfinished turn is slowing the unit under slowdown mode 2. Normal
-mode uses the usual turn slowdown. The setting stays with the unit after restart.
-
-`status info` shows your active lateral direction. It also shows TIGHT or NORMAL
-turn mode when your assigned pilot has Maneuvering Ace. Heading remains the
-chassis facing; lateral travel does not turn the weapons.
+`status info` shows your active lateral direction; heading remains the chassis facing.
 
 Use `bootlegger left` or `bootlegger right` to attempt a 90-degree pivot. You need
 at least 43 KPH forward speed and intact legs with no recovering actions or

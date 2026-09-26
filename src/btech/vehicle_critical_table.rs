@@ -5,23 +5,19 @@ use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 use std::sync::Arc;
 
-/// Advanced criticals take precedence over the FASA switch.
+/// Available vehicle critical tables.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum BattleVehicleCriticalTable {
     Standard,
-    Fasa,
     Advanced,
 }
 
 impl BattleVehicleCriticalTable {
-    /// Translate the two independent configuration switches into one selected table.
-    pub fn from_settings(advanced: bool, fasa: bool) -> Self {
+    /// Select the critical table from the advanced-rules switch.
+    pub fn from_settings(advanced: bool) -> Self {
         if advanced {
             return Self::Advanced;
-        }
-        if fasa {
-            return Self::Fasa;
         }
         Self::Standard
     }
@@ -79,7 +75,7 @@ pub enum BattleVehicleCriticalEffect {
 pub struct BattleVehicleCriticalReport {
     pub table: BattleVehicleCriticalTable,
     pub section: BattleVehicleSection,
-    /// Ground standard preliminary die then optional d6; VTOL standard/FASA d6; advanced 2d6 total.
+    /// Ground standard preliminary die then optional d6; VTOL standard d6; advanced 2d6 total.
     pub rolls: Vec<u8>,
     pub effect: Option<BattleVehicleCriticalEffect>,
 }
@@ -131,11 +127,7 @@ fn select(
     use BattleVehicleCriticalTable as T;
     let table = rules.table_for(vehicle);
     let mut report = BattleVehicleCriticalReport {
-        table: if vehicle.definition().is_vtol() && table == T::Fasa {
-            T::Standard
-        } else {
-            table
-        },
+        table,
         section,
         rolls: Vec::new(),
         effect: None,

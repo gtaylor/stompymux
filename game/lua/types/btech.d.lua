@@ -311,7 +311,6 @@ function btech_unit.inspect(dbref) end
 ---@field kind "mech"
 ---@field mass BattleMass Derived current mass; detached from world state.
 ---@field searchlight_warning boolean Notify occupants on external illumination transitions.
----@field tight_turn_mode boolean Extra speed reduction in slowdown mode two.
 ---@field lateral BattleLateralState
 ---@field autocon_shutdown boolean Include shutdown targets in routine notices; defaults false.
 ---@field armor_warning boolean Armor threshold warnings; enabled by default.
@@ -426,7 +425,6 @@ function btech_unit.inspect(dbref) end
 ---@field completion integer[] Pending completion deadlines in seconds; empty means none.
 
 ---@class BattleVehicleState: BattleTransportState, BattleRadioState
----@field tight_turn_mode boolean Additional throttle reduction while turning under slowdown mode two.
 ---@field armor_warning boolean Armor severity warnings; enabled by default.
 ---@field ammunition_warning boolean Low-ammunition warnings; enabled by default.
 ---@field searchlight {on: boolean, destroyed: boolean, remaining: integer} Hardware and pending five-second switch.
@@ -745,7 +743,7 @@ local btech_character = {}
 ---@field name string Canonical advantage name.
 ---@field kind "boolean"|"ranked"|"attribute_mask" Boolean values activate only at one.
 
----Return the detached catalog of all twenty-two advantages; gameplay availability varies by action.
+---Return the detached catalog of supported advantages; gameplay availability varies by action.
 ---@return BattleAdvantageDefinition[]
 function btech_character.advantages() end
 
@@ -2744,19 +2742,12 @@ function btech_unit.brief(unit, pilot, arguments) end
 ---@return boolean
 function btech_unit.autocon_shutdown(dbref, player, enabled) end
 
----Request a six-second lateral change; requires the assigned Maneuvering Ace pilot.
+---Request a six-second lateral change; requires an intact quad and its assigned pilot.
 ---@param dbref integer
 ---@param player integer
 ---@param direction string nw/fl, ne/fr, sw/rl, se/rr, or - to travel straight.
 ---@return BattleNotice
 function btech_unit.lateral(dbref, player, direction) end
-
----Set tight/normal turning, or query the mode with any other argument. Requires Maneuvering Ace.
----@param dbref integer
----@param player integer
----@param mode string?
----@return BattleNotice
-function btech_unit.turnmode(dbref, player, mode) end
 
 ---@class BattleBootleggerReport
 ---@field modifier integer Situational difficulty and failed-fall severity.

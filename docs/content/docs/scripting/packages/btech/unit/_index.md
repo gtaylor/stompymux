@@ -220,7 +220,6 @@ no_list: true
 - [`tic_weapons`](tic-weapons/)
 - [`towable`](towable/)
 - [`trip`](trip/)
-- [`turnmode`](turnmode/)
 - [`turret`](turret/)
 - [`ultra`](ultra/)
 - [`unjam`](unjam/)

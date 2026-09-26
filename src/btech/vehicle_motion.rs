@@ -7,7 +7,6 @@ use anyhow::{Result, ensure};
 pub struct BattleVehicleMotionRules {
     pub fasa_turning: bool,
     pub slowdown: i64,
-    pub tight_turn_mode: bool,
     pub speed_demon: bool,
     /// Positive map movement percentage; nonpositive values use the ordinary rate.
     pub movement_modifier: i64,
@@ -18,7 +17,6 @@ impl BattleVehicleMotionRules {
     pub const STANDARD: Self = Self {
         fasa_turning: false,
         slowdown: 2,
-        tight_turn_mode: false,
         speed_demon: false,
         movement_modifier: 0,
     };
@@ -53,7 +51,8 @@ impl BattleVehicleTemplate {
         };
         motion.point = motion.project_step(rate)?;
         motion.validate(
-            super::sprint::saved_limit(self.max_speed.max(maximum), false, false, false) + 10.75,
+            super::speed_bonus::saved_limit(self.max_speed.max(maximum), false, false, false)
+                + 10.75,
         )?;
         Ok(motion)
     }
@@ -72,9 +71,11 @@ impl BattleVehicleTemplate {
         );
         // Roads increase actual speed, while commands retain the chassis throttle envelope.
         motion.validate(
-            super::sprint::saved_limit(self.max_speed.max(maximum), false, false, false) + 10.75,
+            super::speed_bonus::saved_limit(self.max_speed.max(maximum), false, false, false)
+                + 10.75,
         )?;
-        let retained = super::sprint::saved_limit(self.max_speed.max(maximum), false, false, false);
+        let retained =
+            super::speed_bonus::saved_limit(self.max_speed.max(maximum), false, false, false);
         ensure!(
             motion.desired_speed >= -retained * 2.0 / 3.0 && motion.desired_speed <= retained,
             "Speed exceeds vehicle limits"
@@ -115,14 +116,14 @@ impl BattleVehicleTemplate {
         if motion.heading != old_heading {
             let remaining =
                 ((motion.desired_heading - motion.heading + 180.0).rem_euclid(360.0) - 180.0).abs();
-            target =
-                super::turnmode::throttle(target, remaining, rules.slowdown, rules.tight_turn_mode);
+            target = super::motion_controls::turning_throttle(target, remaining, rules.slowdown);
         }
         target *= motion.desired_speed.signum();
         let acceleration = maximum / 20.0 * if rules.speed_demon { 1.25 } else { 1.0 };
         motion.accelerate(target, acceleration, maximum);
         motion.validate(
-            super::sprint::saved_limit(self.max_speed.max(maximum), false, false, false) + 10.75,
+            super::speed_bonus::saved_limit(self.max_speed.max(maximum), false, false, false)
+                + 10.75,
         )?;
         Ok(motion)
     }
@@ -136,14 +137,7 @@ impl super::BattleVehicle {
         terrain: Terrain,
         rules: BattleVehicleMotionRules,
     ) -> Result<BattleMotion> {
-        self.definition().motion_at_maximum(
-            motion,
-            terrain,
-            BattleVehicleMotionRules {
-                tight_turn_mode: self.tight_turn_mode(),
-                ..rules
-            },
-            self.maximum_speed(),
-        )
+        self.definition()
+            .motion_at_maximum(motion, terrain, rules, self.maximum_speed())
     }
 }

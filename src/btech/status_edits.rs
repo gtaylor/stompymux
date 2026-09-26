@@ -18,7 +18,6 @@ pub(super) fn secondary(world: &mut World, id: ObjectId, bits: u32) -> Result<()
         | (1 << 10)
         | (1 << 11)
         | (1 << 14)
-        | (1 << 16)
         | (1 << 22)
         | (1 << 23)
         | (1 << 24);
@@ -73,7 +72,6 @@ pub(super) fn secondary(world: &mut World, id: ObjectId, bits: u32) -> Result<()
     electronics.field.angel_protected = bits & (1 << 10) != 0;
     electronics.field.angel_disturbed = bits & (1 << 11) != 0;
     lamp.on = bits & (1 << 5) != 0;
-    super::sprint::set(world, id, bits & (1 << 16) != 0)?;
     Ok(())
 }
 

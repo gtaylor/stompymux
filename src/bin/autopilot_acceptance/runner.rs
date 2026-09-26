@@ -149,6 +149,10 @@ fn build(path: &Path) -> Result<()> {
     Ok(())
 }
 fn provenance(path: &Path) -> Result<()> {
+    write(
+        &path.join("policy-capabilities.json"),
+        &json!({"encounters":true,"benchmark":true,"pursuit_policy":"adaptive"}),
+    )?;
     let diff = output("git", &["diff", "HEAD", "--binary"])?;
     fs::write(path.join("source.patch"), diff)?;
     let files = output(
@@ -301,6 +305,7 @@ fn encounter_directory(temp_root: Option<&Path>) -> Result<tempfile::TempDir> {
 }
 
 fn execute(task: &Task, path: &Path, temp_root: Option<&Path>) -> Result<()> {
+    validate_capture_policy(task.exe.parent().context("Executable directory")?)?;
     let args = vec![
         "--suite".into(),
         task.suite.clone(),
@@ -322,6 +327,15 @@ fn execute(task: &Task, path: &Path, temp_root: Option<&Path>) -> Result<()> {
     if task.direct {
         args.push("--direct-pursuit".into());
     }
+    let requested = "adaptive";
+    args.extend([
+        "--pursuit-policy".into(),
+        requested.into(),
+        "--policy-metadata".into(),
+        path.join(format!("{}.policy.json", task.label))
+            .to_string_lossy()
+            .into_owned(),
+    ]);
     let tmp = encounter_directory(temp_root)?;
     write(
         &path.join(format!("{}.command.json", task.label)),
@@ -335,6 +349,10 @@ fn execute(task: &Task, path: &Path, temp_root: Option<&Path>) -> Result<()> {
         Some(tmp.path()),
     )?;
     let rows = compare::read(&path.join(format!("{}.json", task.label)))?;
+    validate_policy_metadata(
+        &compare::read(&path.join(format!("{}.policy.json", task.label)))?,
+        requested,
+    )?;
     let kind = if task.suite == "existing" {
         "movement"
     } else if task.suite == "adversarial" {
@@ -345,6 +363,12 @@ fn execute(task: &Task, path: &Path, temp_root: Option<&Path>) -> Result<()> {
     let indexed = compare::indexed(&rows, kind)?;
     let mut cases = std::collections::BTreeSet::new();
     for row in indexed.values() {
+        if kind == "pursuit" && !task.label.starts_with("reference-") {
+            ensure!(
+                row["pursuit_policy"] == "Adaptive",
+                "Encounter pursuit policy mismatch"
+            );
+        }
         let scenario = row["scenario"].as_str().context("Missing scenario")?;
         let legal = if let Some(expected) = &task.scenario {
             scenario == expected
@@ -422,6 +446,29 @@ fn execute(task: &Task, path: &Path, temp_root: Option<&Path>) -> Result<()> {
 fn number_usize(row: &Value, k: &str) -> Result<usize> {
     Ok(row[k].as_u64().context("Expected integer")? as usize)
 }
+/// Fail closed when benchmark metadata cannot prove the requested runtime policy.
+pub(crate) fn validate_policy_metadata(policy: &Value, expected: &str) -> Result<()> {
+    ensure!(
+        policy["requested"] == expected
+            && policy["resolved"] == expected
+            && policy["verified_each_tick"] == true,
+        "CPU pursuit policy mismatch"
+    );
+    Ok(())
+}
+
+/// Require a capture that explicitly identifies the supported runtime policy.
+pub(crate) fn validate_capture_policy(path: &Path) -> Result<()> {
+    let capabilities = compare::read(&path.join("policy-capabilities.json"))
+        .context("Capture a fresh reference with explicit Adaptive policy metadata")?;
+    ensure!(
+        capabilities["encounters"] == true
+            && capabilities["benchmark"] == true
+            && capabilities["pursuit_policy"] == "adaptive",
+        "Unsupported reference policy; capture a fresh Adaptive reference"
+    );
+    Ok(())
+}
 fn batch(tasks: &[Task], path: &Path, jobs: usize, temp_root: Option<&Path>) -> Result<()> {
     let index = AtomicUsize::new(0);
     let errors = Mutex::new(Vec::new());
@@ -479,6 +526,7 @@ pub fn run(
         );
     }
     verify(baseline)?;
+    validate_capture_policy(baseline)?;
     let baseline = fs::canonicalize(baseline)?;
     unique(path)?;
     let path = fs::canonicalize(path)?;
@@ -639,12 +687,22 @@ fn run_inner(
         )?;
         for workload in ["cpu", "moving"] {
             for (label, dir) in [("reference", baseline), ("candidate", candidate.as_path())] {
+                validate_capture_policy(dir)?;
+                let requested = "adaptive";
                 let mut args = ["--warmup", "35", "--ticks", "60", "--repetitions", "3"]
                     .map(str::to_owned)
                     .to_vec();
                 if workload == "moving" {
                     args.extend(["--scenario".into(), "moving_pursuit".into()]);
                 }
+                args.extend([
+                    "--pursuit-policy".into(),
+                    requested.into(),
+                    "--policy-metadata".into(),
+                    path.join(format!("{workload}-{label}.policy.json"))
+                        .to_string_lossy()
+                        .into_owned(),
+                ]);
                 let tmp = tempfile::tempdir()?;
                 let before_machine = machine_sample();
                 command(
@@ -654,6 +712,11 @@ fn run_inner(
                     &path.join(format!("{workload}-{label}.log")),
                     Some(tmp.path()),
                 )?;
+                {
+                    let policy =
+                        compare::read(&path.join(format!("{workload}-{label}.policy.json")))?;
+                    validate_policy_metadata(&policy, requested)?;
+                }
                 write(
                     &path.join(format!("{workload}-{label}.environment.json")),
                     &json!({"program":dir.join(BINS[1]),"args":args,"before":before_machine,"after":machine_sample()}),

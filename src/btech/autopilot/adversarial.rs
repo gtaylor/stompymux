@@ -235,6 +235,17 @@ pub async fn run(
     scenario: Option<&str>,
     trace: Option<&Path>,
 ) -> Result<Vec<ParticipantResult>> {
+    run_policy(ticks, seeds, scenario, trace, Default::default()).await
+}
+
+/// Execute the same frozen fixtures with an explicit isolated-harness policy.
+pub async fn run_policy(
+    ticks: usize,
+    seeds: u8,
+    scenario: Option<&str>,
+    trace: Option<&Path>,
+    policy: super::interception::PursuitPolicy,
+) -> Result<Vec<ParticipantResult>> {
     ensure!(
         ticks > 0 && seeds > 0,
         "Encounter ticks and seeds must be positive"
@@ -766,7 +777,13 @@ pub async fn run(
                             }
                         }
                     }
-                    let metrics = harness.step_diagnostic(tick as i64, false, true).await;
+                    let metrics = harness
+                        .step_pursuit_policy(tick as i64, false, true, false, policy)
+                        .await;
+                    ensure!(
+                        metrics.autopilot.pursuit_policy == policy,
+                        "Encounter pursuit policy mismatch"
+                    );
                     ensure!(
                         metrics.committed,
                         "{name}/{chassis}/{seed} tick {tick} failed commit"

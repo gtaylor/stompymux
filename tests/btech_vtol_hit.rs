@@ -11,56 +11,40 @@ fn vtol_tables_cover_every_arc_roll_and_critical_proof_override() {
                 .attributes
                 .insert("specials".into(), "CritProof_Tech".into());
         }
-        for fasa in [false, true] {
-            let layout = if fasa && !proof {
-                "RRRRHHHHRRR"
-            } else {
-                "RRRHHHHHRRR"
-            };
-            for (arc, hull) in [
-                (BattleHitArc::Front, BattleVehicleSection::Front),
-                (BattleHitArc::Rear, BattleVehicleSection::Rear),
-                (BattleHitArc::Left, BattleVehicleSection::Left),
-                (BattleHitArc::Right, BattleVehicleSection::Right),
-            ] {
-                for roll in 2..=12 {
-                    let before = template.clone();
-                    let report = template.vtol_hit(arc, roll, fasa).unwrap();
-                    let rotor = layout.as_bytes()[usize::from(roll - 2)] == b'R';
-                    let main_weapon = fasa
-                        && !proof
-                        && roll == 9
-                        && matches!(arc, BattleHitArc::Left | BattleHitArc::Right);
-                    let expected = if main_weapon {
-                        BattleVehicleSection::Left
-                    } else if rotor {
-                        BattleVehicleSection::Rotor
+
+        let layout = "RRRHHHHHRRR";
+        for (arc, hull) in [
+            (BattleHitArc::Front, BattleVehicleSection::Front),
+            (BattleHitArc::Rear, BattleVehicleSection::Rear),
+            (BattleHitArc::Left, BattleVehicleSection::Left),
+            (BattleHitArc::Right, BattleVehicleSection::Right),
+        ] {
+            for roll in 2..=12 {
+                let before = template.clone();
+                let report = template.vtol_hit(arc, roll).unwrap();
+                let rotor = layout.as_bytes()[usize::from(roll - 2)] == b'R';
+                let expected = if rotor {
+                    BattleVehicleSection::Rotor
+                } else {
+                    hull
+                };
+                assert_eq!(report.hit.section, expected, "{arc:?}/{roll}/{proof}");
+                assert_eq!(
+                    report.hit.through_armor_critical,
+                    !proof && [2, 12].contains(&roll)
+                );
+                assert_eq!(
+                    report.rotor,
+                    if proof || !rotor {
+                        None
+                    } else if roll == 2 {
+                        Some(BattleRotorHit::Destroy)
                     } else {
-                        hull
-                    };
-                    assert_eq!(
-                        report.hit.section, expected,
-                        "{arc:?}/{roll}/{fasa}/{proof}"
-                    );
-                    assert_eq!(report.destroy_main_weapon, main_weapon);
-                    assert_eq!(
-                        report.hit.through_armor_critical,
-                        !proof && [2, 12].contains(&roll)
-                    );
-                    assert_eq!(
-                        report.rotor,
-                        if proof || !rotor {
-                            None
-                        } else if roll == 2 || (fasa && roll == 3) {
-                            Some(BattleRotorHit::Destroy)
-                        } else {
-                            Some(BattleRotorHit::Damage)
-                        }
-                    );
-                    assert_eq!(report.hit.motive, None);
-                    assert!(!report.hit.lock_turret);
-                    assert_eq!(template, before);
-                }
+                        Some(BattleRotorHit::Damage)
+                    }
+                );
+                assert_eq!(report.hit.motive, None);
+                assert_eq!(template, before);
             }
         }
     }
@@ -90,10 +74,10 @@ fn rotor_critical_ranges_and_invalid_requests_are_explicit() {
     let template = BattleVehicleTemplate::parse(include_str!("../game/mechs/Kestrel")).unwrap();
     for roll in [0, 1, 13, 255] {
         assert!(BattleRotorHit::from_critical_roll(roll).is_err());
-        assert!(template.vtol_hit(BattleHitArc::Front, roll, false).is_err());
+        assert!(template.vtol_hit(BattleHitArc::Front, roll).is_err());
     }
     let ground = BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap();
-    assert!(ground.vtol_hit(BattleHitArc::Front, 7, false).is_err());
+    assert!(ground.vtol_hit(BattleHitArc::Front, 7).is_err());
 }
 
 #[test]
@@ -144,7 +128,7 @@ fn advanced_aircraft_locations_share_armor_gate_draws_without_direct_rotor_effec
                                 || (matches!(arc, BattleHitArc::Left | BattleHitArc::Right)
                                     && roll == 8))
                     );
-                    assert!(hit.rotor.is_none() && !hit.destroy_main_weapon);
+                    assert!(hit.rotor.is_none());
                     assert_eq!(
                         serde_json::to_value(dice).unwrap(),
                         serde_json::to_value(expected).unwrap()

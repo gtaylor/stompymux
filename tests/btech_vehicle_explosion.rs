@@ -1,4 +1,4 @@
-//! Tactical vehicle catastrophes preserve FASA containment and avoid unrelated battlefield damage.
+//! Tactical vehicle catastrophes preserve containment policy and avoid unrelated battlefield damage.
 use crate::support;
 use stompymux_rs::*;
 
@@ -53,9 +53,9 @@ fn rules(table: BattleVehicleCriticalTable) -> BattleVehicleCriticalRules {
 }
 
 #[tokio::test]
-async fn powerplant_case_containment_is_fasa_only_and_persists() {
+async fn ground_powerplant_explosions_ignore_case_and_persist() {
     use BattleVehicleCriticalTable as T;
-    for (table, case) in [(T::Fasa, false), (T::Fasa, true), (T::Standard, true)] {
+    for case in [false, true] {
         let text = if case {
             include_str!("../game/mechs/Demolisher")
                 .replace("Aft_Side\n", "Aft_Side\n    CRIT_1 { CASE - - }\n")
@@ -66,7 +66,7 @@ async fn powerplant_case_containment_is_fasa_only_and_persists() {
         let value = (0..=255)
             .find(|value| {
                 let mut dice = BattleDice::seeded([*value; 32]);
-                if table == T::Standard && dice.die(3).unwrap() == 2 {
+                if dice.die(3).unwrap() == 2 {
                     return false;
                 }
                 dice.d6() == 6
@@ -74,36 +74,25 @@ async fn powerplant_case_containment_is_fasa_only_and_persists() {
             .unwrap();
         seed(&mut world, id, value);
         let mut dice = BattleDice::seeded([value; 32]);
-        if table == T::Standard {
-            dice.die(3).unwrap();
-        }
+        dice.die(3).unwrap();
         dice.d6();
-        let original = world.btech.vehicles()[&id].sections().clone();
         let result = resolve_battle_vehicle_critical(
             &mut world,
             id,
             BattleVehicleSection::Turret,
-            rules(table),
+            rules(T::Standard),
         )
         .unwrap();
         let explosion = result.explosion.unwrap();
-        let contained = table == T::Fasa && case;
-        assert_eq!(explosion.contained, contained);
-        assert_eq!(
-            explosion.destroyed_sections.len(),
-            if contained { 1 } else { 5 }
-        );
+        assert!(!explosion.contained);
+        assert_eq!(explosion.destroyed_sections.len(), 5);
         let vehicle = &world.btech.vehicles()[&id];
         assert!(vehicle.is_destroyed());
         assert_eq!(vehicle.power(), BattlePower::Off);
         assert!(vehicle.pilot().is_none());
-        for (section, state) in vehicle.sections() {
-            if contained && *section != BattleVehicleSection::Rear {
-                assert_eq!(state, &original[section]);
-            } else {
-                assert_eq!(state.internal, 0);
-                assert_eq!(state.armor, 0);
-            }
+        for state in vehicle.sections().values() {
+            assert_eq!(state.internal, 0);
+            assert_eq!(state.armor, 0);
         }
         assert_eq!(world.objects[&ObjectId(1)].location, Some(id));
         assert_eq!(roll_unit_dice(&mut world, id, 1).unwrap(), vec![dice.d6()]);
@@ -132,14 +121,17 @@ async fn fuel_explosions_ignore_case_and_do_not_damage_nearby_units() {
     place_battle_unit(&mut world, neighbor, map, 0, 0).unwrap();
     let before = world.btech.vehicles()[&neighbor].clone();
     let value = (0..=255)
-        .find(|value| BattleDice::seeded([*value; 32]).d6() == 5)
+        .find(|value| {
+            let mut dice = BattleDice::seeded([*value; 32]);
+            dice.die(10).unwrap() > 5 && dice.d6() == 5
+        })
         .unwrap();
     seed(&mut world, id, value);
     let result = resolve_battle_vehicle_critical(
         &mut world,
         id,
         BattleVehicleSection::Front,
-        rules(BattleVehicleCriticalTable::Fasa),
+        rules(BattleVehicleCriticalTable::Standard),
     )
     .unwrap();
     assert!(!result.explosion.unwrap().contained);
@@ -163,7 +155,10 @@ async fn case_requires_installed_equipment_and_character_explosions_record_crew_
     }
     let (_dir, _config, mut world, id) = fixture(include_str!("../game/mechs/Demolisher")).await;
     let value = (0..=255)
-        .find(|value| BattleDice::seeded([*value; 32]).d6() == 6)
+        .find(|value| {
+            let mut dice = BattleDice::seeded([*value; 32]);
+            dice.die(10).unwrap() > 5 && dice.d6() == 6
+        })
         .unwrap();
     seed(&mut world, id, value);
     world
@@ -176,7 +171,7 @@ async fn case_requires_installed_equipment_and_character_explosions_record_crew_
         &mut world,
         id,
         BattleVehicleSection::Front,
-        rules(BattleVehicleCriticalTable::Fasa),
+        rules(BattleVehicleCriticalTable::Standard),
     )
     .unwrap();
     assert!(!report.explosion.unwrap().contained);
@@ -208,7 +203,10 @@ async fn carried_battlesuits_require_casualty_handling_before_explosion_commit()
     .unwrap();
     world.btech = serde_json::from_value(state).unwrap();
     let value = (0..=255)
-        .find(|value| BattleDice::seeded([*value; 32]).d6() == 5)
+        .find(|value| {
+            let mut dice = BattleDice::seeded([*value; 32]);
+            dice.die(10).unwrap() > 5 && dice.d6() == 5
+        })
         .unwrap();
     seed(&mut world, id, value);
     let before = world.btech.clone();
@@ -216,7 +214,7 @@ async fn carried_battlesuits_require_casualty_handling_before_explosion_commit()
         &mut world,
         id,
         BattleVehicleSection::Front,
-        rules(BattleVehicleCriticalTable::Fasa),
+        rules(BattleVehicleCriticalTable::Standard),
     )
     .unwrap_err();
     assert!(error.to_string().contains("battlesuit"));

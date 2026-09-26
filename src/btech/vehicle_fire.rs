@@ -261,7 +261,6 @@ fn fire_shot(
         config,
         request: BattleGunneryAwardRequest {
             tsm_tow_bonus: rules.shot.tsm_tow_bonus,
-            tsm_sprint_bonus: rules.shot.tsm_sprint_bonus,
             attacker: shooter,
             pilot,
             target,

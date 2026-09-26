@@ -247,7 +247,6 @@ pub fn advance_boosters_action(scripts: &Scripts, config: &Config) -> Result<Vec
                 },
                 stagger: super::BattleStaggerMode::from_setting(settings.newstagger),
                 hit: super::BattleHitRules {
-                    fasa_criticals: settings.fasacrit != 0,
                     inferno_penalty: settings.inferno_penalty != 0,
                     exile_stun_mode: settings.exile_stun_code.clamp(0, 2) as u8,
                 },

@@ -280,7 +280,6 @@ async fn retired_building_target_does_not_panic_or_reappear() {
         BattleShotRules {
             range_damage: false,
             tsm_tow_bonus: true,
-            tsm_sprint_bonus: true,
             vehicle_impact: BattleVehicleImpactRules::STANDARD,
             stacking: BattleStackingRules::STANDARD,
             glancing: BattleGlancingMode::Disabled,
@@ -297,7 +296,6 @@ async fn retired_building_target_does_not_panic_or_reappear() {
                 override_weapon_arcs: false,
             },
             hit: BattleHitRules {
-                fasa_criticals: false,
                 inferno_penalty: false,
                 exile_stun_mode: 0,
             },

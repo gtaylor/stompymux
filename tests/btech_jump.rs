@@ -134,7 +134,6 @@ fn jump_rules() -> stompymux_rs::BattleFallRules {
         stacking: stompymux_rs::BattleStackingRules::STANDARD,
         stagger: stompymux_rs::BattleStaggerMode::Retain,
         hit: stompymux_rs::BattleHitRules {
-            fasa_criticals: false,
             inferno_penalty: false,
             exile_stun_mode: 0,
         },
@@ -5661,105 +5660,6 @@ async fn damage_replacement_during_jump_defers_lost_thrust_and_replays_restorati
         }
         assert!(restored.btech.constructed_units()[&id].flight().is_none());
         restored.validate(&config).unwrap();
-    }
-}
-
-/// Host sprint policy reaches both jump forms at the cargo admission boundary.
-#[tokio::test]
-async fn hot_sprint_cargo_jump_uses_host_policy_and_replays() {
-    use std::{cell::RefCell, rc::Rc};
-    use stompymux_rs::*;
-    let (_dir, config, mut world, id) = runtime_fixture().await;
-    let (target, _) = jump_observer(&mut world, &config, id);
-    refresh_optical_scanners(&mut world, &[id]).unwrap();
-    select_battle_target(&mut world, id, ObjectId(1), Some(target)).unwrap();
-    let mut definition = world.btech.constructed_units()[&id].definition().clone();
-    definition
-        .attributes
-        .insert("specials".into(), "FlipArms CargoTech".into());
-    let mut remaining = 6;
-    for section in [BattleSection::LeftTorso, BattleSection::RightTorso] {
-        let layout = definition.sections.get_mut(&section).unwrap();
-        for slot in 0..12 {
-            if remaining == 0 || layout.criticals.contains_key(&slot) {
-                continue;
-            }
-            layout.criticals.insert(
-                slot,
-                CriticalDefinition {
-                    equipment: "TripleStrengthMyomer".into(),
-                    data: "-".into(),
-                    modes: vec![],
-                    brand: None,
-                },
-            );
-            remaining -= 1;
-        }
-    }
-    assert_eq!(remaining, 0);
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    let unit = &mut saved["constructed"][id.0.to_string()];
-    unit["definition"] = serde_json::to_value(definition).unwrap();
-    unit["live_mass"] = (35 * 1024).into();
-    unit["heat"]["excess"] = 9.0.into();
-    unit["sprinting"] = true.into();
-    world.btech = serde_json::from_value(saved).unwrap();
-    set_battle_inventory_named(&mut world, ObjectId(1), id, "Cockpit", 0, 50).unwrap();
-    assert!(118.25 - battle_effective_maximum_speed(&world, id, true).unwrap() <= 10.75);
-    persistence::save(&config.database(), &world).await.unwrap();
-    let restored = persistence::load(&config.database()).await.unwrap();
-    for enabled in [false, true] {
-        let path = config.root.join("stompymux.toml");
-        let mut settings: toml::Value =
-            toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-        settings
-            .as_table_mut()
-            .unwrap()
-            .entry("battletech")
-            .or_insert_with(|| toml::Value::Table(Default::default()))
-            .as_table_mut()
-            .unwrap()
-            .insert("tsm_sprint_bonus".into(), i64::from(enabled).into());
-        std::fs::write(&path, toml::to_string(&settings).unwrap()).unwrap();
-        let configured = Config::load(&config.root).unwrap();
-        for targeted in [false, true] {
-            let native = Scripts::new(&configured, Rc::new(RefCell::new(world.clone()))).unwrap();
-            let lua = Scripts::new(&configured, Rc::new(RefCell::new(restored.clone()))).unwrap();
-            let output = support::run_text(
-                &native,
-                &configured,
-                ObjectId(1),
-                1,
-                if targeted { "jump" } else { "jump 0 1" },
-            );
-            let call = if targeted {
-                format!("btech.unit.dfa({},1,nil)", id.0)
-            } else {
-                format!("btech.unit.jump({},1,0,1)", id.0)
-            };
-            let result = lua.eval_callback::<()>(&call);
-            assert_eq!(result.is_ok(), enabled, "{call}: {result:?}");
-            assert_eq!(native.world().btech, lua.world().btech);
-            if enabled {
-                assert!(
-                    native.world().btech.constructed_units()[&id]
-                        .flight()
-                        .is_some()
-                );
-                let rollback =
-                    Scripts::new(&configured, Rc::new(RefCell::new(world.clone()))).unwrap();
-                assert!(
-                    rollback
-                        .eval_callback::<()>(&format!("{call}; error('abort')"))
-                        .is_err()
-                );
-                assert_eq!(rollback.world().btech, world.btech);
-            } else {
-                assert!(output.contains("No, with this cargo you won't!"));
-                assert_eq!(native.world().btech, world.btech);
-                assert!(lua.drain_outbox().is_empty());
-            }
-        }
     }
 }
 

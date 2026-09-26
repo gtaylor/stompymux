@@ -273,7 +273,6 @@ async fn artillery_mines_precede_existing_records_without_replacing_them() {
         stacking: BattleStackingRules::STANDARD,
         stagger: BattleStaggerMode::Retain,
         hit: BattleHitRules {
-            fasa_criticals: false,
             inferno_penalty: false,
             exile_stun_mode: 0,
         },

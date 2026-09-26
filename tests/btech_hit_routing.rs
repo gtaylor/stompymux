@@ -20,17 +20,12 @@ async fn fixture(
     vehicle: bool,
     quad: bool,
     proof: bool,
-    fasa: bool,
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
     let (dir, _, mut world) = support::isolated_world().await;
     let path = dir.path().join("stompymux.toml");
     let mut settings: toml::Value =
         toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-    for (key, value) in [
-        ("fasacrit", i64::from(fasa)),
-        ("exile_stun_code", 1),
-        ("glancing_blows", 0),
-    ] {
+    for (key, value) in [("exile_stun_code", 1), ("glancing_blows", 0)] {
         settings["battletech"]
             .as_table_mut()
             .unwrap()
@@ -124,101 +119,93 @@ async fn configured_hit_routes_share_native_lua_and_restart() {
     for vehicle in [false, true] {
         for quad in [false, true] {
             for proof in [false, true] {
-                for fasa in [false, true] {
-                    let (_dir, config, base, shooter, target) =
-                        fixture(vehicle, quad, proof, fasa).await;
-                    for safe in [false, true] {
-                        let mut world = base.clone();
-                        set_battle_combat_safe(&mut world, target, safe).unwrap();
-                        edit(&mut world, target, |state| {
-                            state["dice"] =
-                                serde_json::to_value(BattleDice::seeded([selected; 32])).unwrap()
-                        });
-                        let mut expected_dice = BattleDice::seeded([selected; 32]);
-                        let entry = expected_dice.two_d6();
-                        let roll = if proof || fasa {
-                            expected_dice.two_d6()
-                        } else {
-                            entry
-                        };
-                        // The shooter approaches the target from behind.
-                        let section = if safe {
-                            BattleSection::LeftArm
-                        } else if roll == 12 {
-                            BattleHitTable::Punch
-                                .location(
-                                    base.btech.constructed_units()[&target].chassis(),
-                                    BattleHitArc::Rear,
-                                    expected_dice.d6(),
-                                )
-                                .unwrap()
-                        } else {
-                            BattleHitTable::Weapon
-                                .location(
-                                    base.btech.constructed_units()[&target].chassis(),
-                                    BattleHitArc::Rear,
-                                    roll,
-                                )
-                                .unwrap()
-                        };
-                        let native =
-                            Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-                        let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-                        let before = lua.world().clone();
-                        let call = format!("btech.unit.fire({},1,0,{})", shooter.0, target.0);
-                        assert!(
-                            lua.eval_callback::<()>(&format!("{call}; error('abort')"))
-                                .is_err()
-                        );
-                        assert_eq!(lua.world().btech, before.btech);
-                        assert!(lua.drain_outbox().is_empty());
-                        persistence::save(&config.database(), &before)
-                            .await
-                            .unwrap();
-                        let loaded = persistence::load(&config.database()).await.unwrap();
-                        let replay = Scripts::new(&config, Rc::new(RefCell::new(loaded))).unwrap();
-                        let output = support::run_text(
-                            &native,
-                            &config,
-                            ObjectId(1),
-                            1,
-                            &format!("fire 0 #{}", target.0),
-                        );
-                        assert!(output.contains("Hit."), "{output}");
-                        let inspect = format!(
-                            "local r={call}; local h=r.salvo.report.groups[1].hit; return h.section,h.crew_stun,h.through_armor_critical"
-                        );
-                        let actual: (String, bool, bool) = lua.eval_callback(&inspect).unwrap();
-                        assert_eq!(
-                            actual,
-                            (
-                                format!("{section:?}"),
-                                !safe && roll == 12 && section != BattleSection::Head,
-                                false
+                let (_dir, config, base, shooter, target) = fixture(vehicle, quad, proof).await;
+                for safe in [false, true] {
+                    let mut world = base.clone();
+                    set_battle_combat_safe(&mut world, target, safe).unwrap();
+                    edit(&mut world, target, |state| {
+                        state["dice"] =
+                            serde_json::to_value(BattleDice::seeded([selected; 32])).unwrap()
+                    });
+                    let mut expected_dice = BattleDice::seeded([selected; 32]);
+                    let entry = expected_dice.two_d6();
+                    let roll = if proof { expected_dice.two_d6() } else { entry };
+                    // The shooter approaches the target from behind.
+                    let section = if safe {
+                        BattleSection::LeftArm
+                    } else if roll == 12 {
+                        BattleHitTable::Punch
+                            .location(
+                                base.btech.constructed_units()[&target].chassis(),
+                                BattleHitArc::Rear,
+                                expected_dice.d6(),
                             )
-                        );
-                        assert_eq!(native.world().btech, lua.world().btech);
-                        assert_eq!(
-                            replay
-                                .eval_callback::<(String, bool, bool)>(&inspect)
-                                .unwrap(),
-                            actual
-                        );
-                        assert_eq!(lua.world().btech, replay.world().btech);
-                        if safe {
-                            expected_dice.two_d6(); // Immune damage still consumes its entry diagnostic.
-                            let state = serde_json::to_value(
-                                &lua.world().btech.constructed_units()[&target],
+                            .unwrap()
+                    } else {
+                        BattleHitTable::Weapon
+                            .location(
+                                base.btech.constructed_units()[&target].chassis(),
+                                BattleHitArc::Rear,
+                                roll,
                             )
-                            .unwrap();
-                            assert_eq!(state["dice"], serde_json::to_value(expected_dice).unwrap());
-                            assert_eq!(
-                                lua.world().btech.constructed_units()[&target].sections(),
-                                before.btech.constructed_units()[&target].sections()
-                            );
-                        }
-                        lua.world().validate(&config).unwrap();
+                            .unwrap()
+                    };
+                    let native =
+                        Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
+                    let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+                    let before = lua.world().clone();
+                    let call = format!("btech.unit.fire({},1,0,{})", shooter.0, target.0);
+                    assert!(
+                        lua.eval_callback::<()>(&format!("{call}; error('abort')"))
+                            .is_err()
+                    );
+                    assert_eq!(lua.world().btech, before.btech);
+                    assert!(lua.drain_outbox().is_empty());
+                    persistence::save(&config.database(), &before)
+                        .await
+                        .unwrap();
+                    let loaded = persistence::load(&config.database()).await.unwrap();
+                    let replay = Scripts::new(&config, Rc::new(RefCell::new(loaded))).unwrap();
+                    let output = support::run_text(
+                        &native,
+                        &config,
+                        ObjectId(1),
+                        1,
+                        &format!("fire 0 #{}", target.0),
+                    );
+                    assert!(output.contains("Hit."), "{output}");
+                    let inspect = format!(
+                        "local r={call}; local h=r.salvo.report.groups[1].hit; return h.section,h.crew_stun,h.through_armor_critical"
+                    );
+                    let actual: (String, bool, bool) = lua.eval_callback(&inspect).unwrap();
+                    assert_eq!(
+                        actual,
+                        (
+                            format!("{section:?}"),
+                            !safe && roll == 12 && section != BattleSection::Head,
+                            false
+                        )
+                    );
+                    assert_eq!(native.world().btech, lua.world().btech);
+                    assert_eq!(
+                        replay
+                            .eval_callback::<(String, bool, bool)>(&inspect)
+                            .unwrap(),
+                        actual
+                    );
+                    assert_eq!(lua.world().btech, replay.world().btech);
+                    if safe {
+                        expected_dice.two_d6(); // Immune damage still consumes its entry diagnostic.
+                        let state =
+                            serde_json::to_value(&lua.world().btech.constructed_units()[&target])
+                                .unwrap();
+                        assert_eq!(state["dice"], serde_json::to_value(expected_dice).unwrap());
+                        assert_eq!(
+                            lua.world().btech.constructed_units()[&target].sections(),
+                            before.btech.constructed_units()[&target].sections()
+                        );
                     }
+                    lua.world().validate(&config).unwrap();
                 }
             }
         }
@@ -229,7 +216,7 @@ async fn configured_hit_routes_share_native_lua_and_restart() {
 #[tokio::test]
 async fn critical_proof_preserves_damage_head_injury_and_limb_loss() {
     for quad in [false, true] {
-        let (_dir, config, base, _, target) = fixture(false, quad, true, false).await;
+        let (_dir, config, base, _, target) = fixture(false, quad, true).await;
         for section in [
             BattleSection::CenterTorso,
             BattleSection::LeftArm,

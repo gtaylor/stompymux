@@ -30,6 +30,12 @@ struct Args {
     /// Use direct pursuit as a same-executable control in isolated benchmarks.
     #[arg(long)]
     direct_pursuit: bool,
+    /// Explicit pursuit selection; does not change production defaults.
+    #[arg(long, default_value = "adaptive", value_parser = ["adaptive", "direct"])]
+    pursuit_policy: String,
+    /// Write policy identity separately, preserving the benchmark CSV contract.
+    #[arg(long)]
+    policy_metadata: Option<std::path::PathBuf>,
     /// Write one deterministic gameplay checksum per tick to this JSONL file.
     #[arg(long)]
     trace: Option<std::path::PathBuf>,
@@ -51,7 +57,8 @@ async fn main() -> anyhow::Result<()> {
         seed: args.seed,
         controllers: args.controllers,
         detailed: args.detailed,
-        direct_pursuit: args.direct_pursuit,
+        direct_pursuit: args.direct_pursuit || args.pursuit_policy == "direct",
+        pursuit_policy: stompymux_rs::AutopilotPursuitPolicy::Adaptive,
         trace: args.trace,
         scenario: match args.scenario.as_str() {
             "open" => Some(Scenario::Open),
@@ -67,6 +74,20 @@ async fn main() -> anyhow::Result<()> {
         },
     })
     .await?;
+    // run() checks the actual heartbeat policy on every tick before returning.
+    if let Some(path) = args.policy_metadata {
+        let effective = if args.direct_pursuit {
+            "direct"
+        } else {
+            &args.pursuit_policy
+        };
+        std::fs::write(
+            path,
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "requested": effective, "resolved": effective, "verified_each_tick": true
+            }))?,
+        )?;
+    }
     print_report(&report);
     Ok(())
 }
@@ -130,6 +151,8 @@ mod tests {
     #[test]
     fn filters_default_to_full_protocol_and_reject_unknown_values() {
         let defaults = Args::try_parse_from(["autopilot-bench"]).unwrap();
+        assert_eq!(defaults.pursuit_policy, "adaptive");
+        assert!(Args::try_parse_from(["autopilot-bench", "--pursuit-policy", "g"]).is_err());
         assert_eq!(
             (defaults.scenario.as_str(), defaults.fire.as_str()),
             ("all", "all")

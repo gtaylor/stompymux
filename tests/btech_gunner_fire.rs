@@ -311,7 +311,6 @@ async fn station_gunnery_experience_belongs_to_the_gunner() {
             BattleGunneryAwardRequest {
                 tsm_tow_bonus: false,
 
-                tsm_sprint_bonus: true,
                 attacker: parent,
                 pilot: gunner,
                 target,

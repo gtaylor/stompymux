@@ -28,7 +28,7 @@ const fn advantage(name: &'static str, kind: BattleAdvantageKind) -> BattleAdvan
 }
 
 use BattleAdvantageKind::{AttributeMask as A, Boolean as B, Ranked as R};
-/// All twenty-two reference advantages; values remain in the ordinary character record.
+/// Supported character advantages; values remain in the ordinary character record.
 pub const BATTLE_ADVANTAGES: &[BattleAdvantageDefinition] = &[
     advantage("Ambidextrous", B),
     advantage("Bloodname", B),
@@ -46,8 +46,6 @@ pub const BATTLE_ADVANTAGES: &[BattleAdvantageDefinition] = &[
     advantage("Wealth", R),
     advantage("Well-Connected", R),
     advantage("Well_Equipped", R),
-    advantage("Dodge_Maneuver", B),
-    advantage("Maneuvering_Ace", B),
     advantage("Melee_Specialist", B),
     advantage("Pain_Resistance", B),
     advantage("Speed_Demon", B),

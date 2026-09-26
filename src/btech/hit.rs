@@ -177,8 +177,6 @@ pub struct BattleHit {
 /// Conventional biped hit variants selected by game configuration.
 #[derive(Debug, Clone, Copy)]
 pub struct BattleHitRules {
-    /// Delegate to the FASA location roll and guarantee TACs on its roll of two.
-    pub fasa_criticals: bool,
     /// Add thirty stored heat when an inferno ammunition bin explodes.
     pub inferno_penalty: bool,
     /// Zero preserves head hits; one rerolls and stuns on a graze; larger values only reroll.
@@ -187,7 +185,7 @@ pub struct BattleHitRules {
 
 impl BattleHitRules {
     /// Resolve an already successful weapon hit, including conditional secondary rolls.
-    /// The caller supplies the routing-entry roll; FASA and critical-proof tables draw
+    /// The caller supplies the routing-entry roll; critical-proof tables draw
     /// their own location roll. All returned effects and dice commit together.
     pub fn resolve(
         self,
@@ -199,7 +197,7 @@ impl BattleHitRules {
         use BattleSection::*;
         ensure!((2..=12).contains(&roll), "Invalid hit-location roll");
         let critical_proof = target.definition().has_special("CritProof_Tech");
-        let roll = if critical_proof || self.fasa_criticals {
+        let roll = if critical_proof {
             dice.generic_roll()
         } else {
             roll
@@ -217,7 +215,7 @@ impl BattleHitRules {
         if roll == 2 && !critical_proof {
             let original = target.definition().sections[&section].armor;
             let armor = target.sections()[&section].armor;
-            critical = if self.fasa_criticals || original == 0 {
+            critical = if original == 0 {
                 true
             } else {
                 let remaining = u32::from(armor) * 100 / u32::from(original);

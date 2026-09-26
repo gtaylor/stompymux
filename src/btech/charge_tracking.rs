@@ -90,10 +90,6 @@ pub fn select_charge(
         "Start the unit first"
     );
     unit.validate_charge_support()?;
-    ensure!(
-        !unit.sprinting,
-        "You cannot charge while in a special movement mode!"
-    );
     let position = unit.position().context("Unit is not on a battlefield")?;
     if selection == BattleChargeSelection::Cancel {
         Arc::make_mut(&mut world.btech.constructed)

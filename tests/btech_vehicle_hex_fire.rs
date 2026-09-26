@@ -327,7 +327,7 @@ async fn character_coordinate_misload_publishes_injuries_and_rolls_back_failed_e
         let path = dir.path().join("stompymux.toml");
         let mut settings: toml::Value =
             toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-        for (key, value) in [("vcrit", 1), ("fasacrit", 1), ("fasaadvvhlcrit", 0)] {
+        for (key, value) in [("vcrit", 1), ("fasaadvvhlcrit", 0)] {
             settings["battletech"]
                 .as_table_mut()
                 .unwrap()
@@ -344,9 +344,13 @@ async fn character_coordinate_misload_publishes_injuries_and_rolls_back_failed_e
                 let attack = dice.two_d6();
                 dice.two_d6();
                 let count = dice.two_d6();
+                let preliminary = dice.die(3).unwrap();
                 let effect = dice.d6();
-                (attack == 2 && matches!(count, 8 | 9) && effect == if fatal { 4 } else { 1 })
-                    .then_some(seed)
+                (preliminary != 2
+                    && attack == 2
+                    && matches!(count, 8 | 9)
+                    && effect == if fatal { 4 } else { 1 })
+                .then_some(seed)
             })
             .unwrap();
         let mut saved = serde_json::to_value(&world.btech).unwrap();

@@ -18,13 +18,12 @@ pub enum BattleRotorHit {
 pub struct BattleVtolHit {
     pub hit: BattleVehicleHit,
     pub rotor: Option<BattleRotorHit>,
-    pub destroy_main_weapon: bool,
 }
 
 impl BattleVehicleTemplate {
     /// Select a VTOL location from a supplied 2d6 roll without drawing dice or mutating material.
     /// Critical-proof equipment uses standard locations and suppresses all secondary effects.
-    pub fn vtol_hit(&self, arc: BattleHitArc, roll: u8, fasa: bool) -> Result<BattleVtolHit> {
+    pub fn vtol_hit(&self, arc: BattleHitArc, roll: u8) -> Result<BattleVtolHit> {
         ensure!(
             self.is_vtol(),
             "VTOL hit selection requires a VTOL template"
@@ -34,25 +33,15 @@ impl BattleVehicleTemplate {
             "Hit location roll must be between 2 and 12"
         );
         let proof = self.has_special("CritProof_Tech");
-        let fasa = fasa && !proof;
-        let rotor_hit = if fasa {
-            matches!(roll, 2..=5 | 10..=12)
-        } else {
-            matches!(roll, 2..=4 | 10..=12)
-        };
-        let destroy_main_weapon =
-            fasa && roll == 9 && matches!(arc, BattleHitArc::Left | BattleHitArc::Right);
+        let rotor_hit = matches!(roll, 2..=4 | 10..=12);
         let section = if rotor_hit {
             BattleVehicleSection::Rotor
-        } else if destroy_main_weapon {
-            // The FASA side-nine outcome retains the left hull location for subsequent damage.
-            BattleVehicleSection::Left
         } else {
             BattleVehicleSection::from_hit_arc(arc)
         };
         let rotor = if proof || !rotor_hit {
             None
-        } else if roll == 2 || (fasa && roll == 3) {
+        } else if roll == 2 {
             Some(BattleRotorHit::Destroy)
         } else {
             Some(BattleRotorHit::Damage)
@@ -62,12 +51,10 @@ impl BattleVehicleTemplate {
                 section,
                 through_armor_critical: !proof && matches!(roll, 2 | 12),
                 motive: None,
-                lock_turret: false,
                 motive_roll: None,
                 piloting_penalty: 0,
             },
             rotor,
-            destroy_main_weapon,
         })
     }
 }
@@ -140,12 +127,10 @@ impl super::BattleVehicle {
                 section,
                 through_armor_critical: eligible && (matches!(roll, 2 | 12) || (side && roll == 8)),
                 motive: None,
-                lock_turret: false,
                 motive_roll: None,
                 piloting_penalty: 0,
             },
             rotor: None,
-            destroy_main_weapon: false,
         })
     }
 }

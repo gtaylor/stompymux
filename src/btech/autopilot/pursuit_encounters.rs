@@ -60,6 +60,8 @@ pub struct PursuitResult {
     pub seed: u8,
     pub fire: bool,
     pub direct: bool,
+    /// Explicit requested policy; every committed heartbeat is checked against it.
+    pub pursuit_policy: super::interception::PursuitPolicy,
     pub ticks: usize,
     pub first_geometry: Option<usize>,
     pub first_arc: Option<usize>,
@@ -437,6 +439,7 @@ pub async fn run(
                         seed,
                         fire,
                         direct,
+                        pursuit_policy: policy,
                         outcome: "window_end".into(),
                         stationary_route_length,
                         ..Default::default()
@@ -524,6 +527,11 @@ pub async fn run(
                             .step_pursuit_policy(tick as i64, false, true, direct, policy)
                             .await;
                         ensure!(metrics.committed, "Pursuit tick failed commit");
+                        ensure!(
+                            metrics.autopilot.pursuit_policy == policy
+                                && metrics.autopilot.direct_pursuit == direct,
+                            "Requested and resolved pursuit policies differ"
+                        );
                         let after = harness.world();
                         let motion = steering::motion(&after, focal).unwrap();
                         let traveled = point.range(motion.point)?;
@@ -680,6 +688,14 @@ pub async fn run(
                                 serde_json::json!({"scenario":name,"chassis":chassis,"seed":seed,"fire":fire,"tick":tick,"digest":format!("{digest:016x}"),"result":result,
                                 "pursuit": after.btech.autopilot_plans.get(&focal).map(|p| serde_json::json!({
                                     "evidence":p.pursuit.evidence(),"goal":p.goal,"route_index":p.route_index,
+                                    "replacement_pending":p.replacement_pending,
+                                    "search_expanded":p.search.as_ref().map(|s|s.total_expanded()),
+                                    "motion":super::steering::motion(&after,focal).map(|m|serde_json::json!({
+                                        "heading":m.heading,"desired_heading":m.desired_heading,
+                                        "heading_error":((m.heading-m.desired_heading+180.0).rem_euclid(360.0)-180.0).abs(),
+                                        "speed":m.speed,"desired_speed":m.desired_speed,
+                                        "braking":m.desired_speed.abs()+0.01<m.speed.abs()
+                                    })),
                                     "navigation_recoveries":p.recovery_attempts,"stagnant_ticks":p.stagnant_ticks
                                 }))})
                             )?;

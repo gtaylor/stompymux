@@ -1,4 +1,4 @@
-//! Catastrophic vehicle explosions destroy local sections with FASA rear CASE containment.
+//! Catastrophic vehicle explosions destroy local sections with aircraft rear CASE containment.
 use super::{BattleDamagePhase, BattleNotice, BattleSystem, BattleVehicle, BattleVehicleSection};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};

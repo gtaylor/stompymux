@@ -48,7 +48,7 @@ async fn critical_resolution_applies_all_tables_for_tactical_crews() {
         fixture(&include_str!("../game/mechs/Demolisher").replace("ICEEngine_Tech", "")).await;
     let mut seen = std::collections::BTreeSet::new();
     let mut saved = None;
-    for table in [T::Standard, T::Fasa, T::Advanced] {
+    for table in [T::Standard, T::Advanced] {
         let rules = BattleVehicleCriticalRules {
             rotor_damage_divisor: 0,
             extended_piloting: false,
@@ -120,10 +120,10 @@ async fn critical_resolution_applies_all_tables_for_tactical_crews() {
                     E::TurretJam => assert!(vehicle.turret_jammed()),
                     E::TurretLock => assert!(vehicle.turret_locked()),
                     E::MotiveSpeedLoss => assert_eq!(vehicle.motive_speed_loss(), 10.75),
-                    E::Immobilize => assert!(vehicle.hit_condition().immobilized),
+                    E::Immobilize => assert!(vehicle.immobilized()),
                     E::Engine | E::FuelTank => {
                         assert_eq!(vehicle.maximum_speed(), 0.0);
-                        assert_eq!(vehicle.hit_condition().immobilized, table == T::Advanced);
+                        assert_eq!(vehicle.immobilized(), table == T::Advanced);
                         assert_eq!(
                             vehicle.definition(),
                             base.btech.vehicles()[&id].definition()

@@ -154,12 +154,6 @@ pub const KEYS: &[KeySpec] = &[
         bounds: Some((-2147483648.0, 2147483647.0)),
     },
     KeySpec {
-        path: "battletech.dynspeed",
-        legacy: "btech_dynspeed",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
         path: "battletech.slowdown",
         legacy: "btech_slowdown",
         kind: "i64",
@@ -168,12 +162,6 @@ pub const KEYS: &[KeySpec] = &[
     KeySpec {
         path: "battletech.fasaturn",
         legacy: "btech_fasaturn",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
-        path: "battletech.fasacrit",
-        legacy: "btech_fasacrit",
         kind: "i64",
         bounds: Some((-2147483648.0, 2147483647.0)),
     },
@@ -226,12 +214,6 @@ pub const KEYS: &[KeySpec] = &[
         bounds: Some((-2147483648.0, 2147483647.0)),
     },
     KeySpec {
-        path: "battletech.tankfriendly",
-        legacy: "btech_tankfriendly",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
         path: "battletech.newcharge",
         legacy: "btech_newcharge",
         kind: "i64",
@@ -258,12 +240,6 @@ pub const KEYS: &[KeySpec] = &[
     KeySpec {
         path: "battletech.critlevel",
         legacy: "btech_critlevel",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
-        path: "battletech.tankshield",
-        legacy: "btech_tankshield",
         kind: "i64",
         bounds: Some((-2147483648.0, 2147483647.0)),
     },
@@ -390,18 +366,6 @@ pub const KEYS: &[KeySpec] = &[
     KeySpec {
         path: "battletech.maxtechtime",
         legacy: "btech_maxtechtime",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
-        path: "battletech.sprint_bth",
-        legacy: "btech_sprint_bth",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
-        path: "battletech.tsm_sprint_bonus",
-        legacy: "btech_tsm_sprint_bonus",
         kind: "i64",
         bounds: Some((-2147483648.0, 2147483647.0)),
     },

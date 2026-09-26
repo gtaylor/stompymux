@@ -10,7 +10,6 @@ pub struct BattleVehicleHit {
     pub section: BattleVehicleSection,
     pub through_armor_critical: bool,
     pub motive: Option<BattleVehicleMotiveHit>,
-    pub lock_turret: bool,
     /// Advanced motive roll before the movement-class adjustment.
     pub motive_roll: Option<u8>,
     pub piloting_penalty: u8,
@@ -27,19 +26,9 @@ pub enum BattleVehicleMotiveHit {
     Immobilize,
 }
 
-/// Existing damage conditions needed when deciding whether a hit produces a new effect.
-#[derive(Debug, Default, Clone, Copy)]
-pub struct BattleVehicleHitCondition {
-    pub immobilized: bool,
-    pub turret_locked: bool,
-}
-
-/// Configuration inputs for the FASA ground-vehicle hit table.
+/// Armor thresholds shared by vehicle hit tables.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleVehicleFasaHitRules {
-    pub friendly_criticals: bool,
-    /// Enable the front/rear roll-three and roll-four motive effects.
-    pub critical_shielding: bool,
+pub struct BattleVehicleHitRules {
     pub critical_mode: i64,
     pub critical_level: i64,
 }
@@ -47,7 +36,7 @@ pub struct BattleVehicleFasaHitRules {
 impl BattleVehicle {
     /// Resolve the standard ground-vehicle table from an existing 2d6 roll.
     /// Critical modes at most one disable armor-based candidates, except originally unarmored faces.
-    /// The caller owns the supplied dice and commits all effects together. FASA, advanced vehicle,
+    /// The caller owns the supplied dice and commits all effects together. Advanced vehicle,
     /// dug-in and combat-safe policies must be handled by the combat adapter before choosing this table.
     pub fn standard_hit(
         &self,
@@ -74,13 +63,12 @@ impl BattleVehicle {
             section,
             through_armor_critical: critical,
             motive: None,
-            lock_turret: false,
             motive_roll: None,
             piloting_penalty: 0,
         })
     }
 
-    /// Shared standard/FASA location selection after validating the primary roll.
+    /// Standard location selection after validating the primary roll.
     fn hit_section(&self, arc: BattleHitArc, roll: u8) -> BattleVehicleSection {
         use BattleVehicleSection as S;
         let hull = S::from_hit_arc(arc);
@@ -94,63 +82,6 @@ impl BattleVehicle {
         if turret_hit { S::Turret } else { hull }
     }
 
-    /// Resolve FASA location and explicit secondary effects without applying damage.
-    /// Critical-proof equipment takes precedence. Dug-in and combat-safe routing belongs to the caller.
-    pub fn fasa_hit(
-        &self,
-        arc: BattleHitArc,
-        roll: u8,
-        rules: BattleVehicleFasaHitRules,
-        condition: BattleVehicleHitCondition,
-        dice: &mut BattleDice,
-    ) -> Result<BattleVehicleHit> {
-        ensure!(
-            (2..=12).contains(&roll),
-            "Hit location roll must be between 2 and 12"
-        );
-        if self.definition().has_special("CritProof_Tech") {
-            return self.critical_proof_hit(arc, roll);
-        }
-        let section = self.hit_section(arc, roll);
-        let side = matches!(arc, BattleHitArc::Left | BattleHitArc::Right);
-        let hover = self.definition().movement == BattleVehicleMovement::Hover;
-        let through_armor_critical = match roll {
-            2 => true,
-            11 => !side,
-            12 if side => true,
-            12 => {
-                self.critical_candidate(section, rules.critical_mode, rules.critical_level, dice)?
-            }
-            _ => false,
-        };
-        let motive = if condition.immobilized {
-            None
-        } else if roll == 3 && (side || rules.critical_shielding) {
-            Some(if rules.friendly_criticals {
-                BattleVehicleMotiveHit::SpeedLoss { movement_points: 2 }
-            } else {
-                BattleVehicleMotiveHit::Immobilize
-            })
-        } else if (roll == 4 && (side || rules.critical_shielding))
-            || (roll == 5 && (side || hover))
-            || (roll == 9 && arc == BattleHitArc::Right && hover)
-        {
-            Some(BattleVehicleMotiveHit::SpeedLoss { movement_points: 1 })
-        } else {
-            None
-        };
-        Ok(BattleVehicleHit {
-            section,
-            through_armor_critical,
-            motive,
-            lock_turret: roll == 11
-                && section == BattleVehicleSection::Turret
-                && !condition.turret_locked,
-            motive_roll: None,
-            piloting_penalty: 0,
-        })
-    }
-
     /// Critical-proof routing sends roll twelve to the hull even when a turret survives.
     pub fn critical_proof_hit(&self, arc: BattleHitArc, roll: u8) -> Result<BattleVehicleHit> {
         ensure!(
@@ -162,7 +93,6 @@ impl BattleVehicle {
             section,
             through_armor_critical: false,
             motive: None,
-            lock_turret: false,
             motive_roll: None,
             piloting_penalty: 0,
         })
@@ -219,7 +149,6 @@ impl BattleVehicle {
             section,
             through_armor_critical: matches!(roll, 2 | 12) || (side && roll == 8),
             motive: None,
-            lock_turret: false,
             motive_roll: None,
             piloting_penalty: 0,
         };

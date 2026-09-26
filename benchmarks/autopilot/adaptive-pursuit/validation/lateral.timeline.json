@@ -1,0 +1,480 @@
+{
+  "source_sha256": "7e0749d4368dffdd70f19f744b7df986ed875d098f940dc5629657663e491089",
+  "attribution": "Observed categories; not causal proof",
+  "cases": {
+    "[\"lateral\",\"hover\",1,false]": {
+      "braking_ticks": 74,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 62,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "44f744e2110908850a219ad456efce70cf34406a054f0daeead803b9c56f1e38",
+      "goal_changes": 58,
+      "heading_error_sum": 6897.922214843157,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 472,
+        "predicted": 192,
+        "settled": 118,
+        "unreliable_model": 118
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"lateral\",\"hover\",1,true]": {
+      "braking_ticks": 74,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 62,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "d8d78d91a672dfa45c7ddbfc5f36a9d4693d1b621a9b0bba2f927fb1a1db562e",
+      "goal_changes": 58,
+      "heading_error_sum": 6897.922214843157,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 472,
+        "predicted": 192,
+        "settled": 118,
+        "unreliable_model": 118
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"lateral\",\"hover\",2,false]": {
+      "braking_ticks": 74,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 62,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "ee4283a84dd89365f391544d6a5de2f3adc96f610ad8fa5d3a09ecd425e2f040",
+      "goal_changes": 58,
+      "heading_error_sum": 6897.922214843157,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 472,
+        "predicted": 192,
+        "settled": 118,
+        "unreliable_model": 118
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"lateral\",\"hover\",2,true]": {
+      "braking_ticks": 74,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 62,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "5c928425ae466c8bfc87dd6f12ced7d07ffc2f71e7e89b6e1bad4f44b81e471a",
+      "goal_changes": 58,
+      "heading_error_sum": 6897.922214843157,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 472,
+        "predicted": 192,
+        "settled": 118,
+        "unreliable_model": 118
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"lateral\",\"hover\",3,false]": {
+      "braking_ticks": 74,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 62,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "50a422a445d2098584fa7f831a55576a40be186d9d88589ff6070b6d3a8404a4",
+      "goal_changes": 58,
+      "heading_error_sum": 6897.922214843157,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 472,
+        "predicted": 192,
+        "settled": 118,
+        "unreliable_model": 118
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"lateral\",\"hover\",3,true]": {
+      "braking_ticks": 74,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 62,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "9ec23d4c63cdb3967cba896e0da63aad968334f0af49e7d142328d788a97e8ee",
+      "goal_changes": 58,
+      "heading_error_sum": 6897.922214843157,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 472,
+        "predicted": 192,
+        "settled": 118,
+        "unreliable_model": 118
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"lateral\",\"mech\",1,false]": {
+      "braking_ticks": 273,
+      "confidence_resets": {
+        "motion_paused": 2
+      },
+      "decision_changes": 93,
+      "first_prediction": null,
+      "gameplay_digest_sequence_sha256": "70dcf646d69d9d37b031a5cdb8f22ff93f583fdf9784eb2fdae6e45c45173767",
+      "goal_changes": 61,
+      "heading_error_sum": 4597.521556111592,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 492,
+        "settled": 322,
+        "unreliable_model": 86
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"lateral\",\"mech\",1,true]": {
+      "braking_ticks": 273,
+      "confidence_resets": {
+        "motion_paused": 2
+      },
+      "decision_changes": 93,
+      "first_prediction": null,
+      "gameplay_digest_sequence_sha256": "be32b98a808c2a111cc2448b1f65214f8ce40290cee574bbb2b0de5ffa1c0f2a",
+      "goal_changes": 61,
+      "heading_error_sum": 4597.521556111592,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 492,
+        "settled": 322,
+        "unreliable_model": 86
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"lateral\",\"mech\",2,false]": {
+      "braking_ticks": 273,
+      "confidence_resets": {
+        "motion_paused": 2
+      },
+      "decision_changes": 93,
+      "first_prediction": null,
+      "gameplay_digest_sequence_sha256": "cc00846bc56410939c4d01cf64155b786564351d3f365af0f26108f4a195c58d",
+      "goal_changes": 61,
+      "heading_error_sum": 4597.521556111592,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 492,
+        "settled": 322,
+        "unreliable_model": 86
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"lateral\",\"mech\",2,true]": {
+      "braking_ticks": 273,
+      "confidence_resets": {
+        "motion_paused": 2
+      },
+      "decision_changes": 93,
+      "first_prediction": null,
+      "gameplay_digest_sequence_sha256": "eaf342e2dfa0d4fdf26eaaa3456cbc65d3ce94d98d4ce45beb8ef8348ee5f63c",
+      "goal_changes": 61,
+      "heading_error_sum": 4597.521556111592,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 492,
+        "settled": 322,
+        "unreliable_model": 86
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"lateral\",\"mech\",3,false]": {
+      "braking_ticks": 273,
+      "confidence_resets": {
+        "motion_paused": 2
+      },
+      "decision_changes": 93,
+      "first_prediction": null,
+      "gameplay_digest_sequence_sha256": "56ca688debb50746ebbf1d348c5746598df7128375d47daf384bf29397b99855",
+      "goal_changes": 61,
+      "heading_error_sum": 4597.521556111592,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 492,
+        "settled": 322,
+        "unreliable_model": 86
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"lateral\",\"mech\",3,true]": {
+      "braking_ticks": 239,
+      "confidence_resets": {
+        "motion_paused": 2
+      },
+      "decision_changes": 80,
+      "first_prediction": null,
+      "gameplay_digest_sequence_sha256": "64bb75959101fe60a9608fd6eb4b61a94bbd479c04358b920c88b22f152310a2",
+      "goal_changes": 52,
+      "heading_error_sum": 3958.89037400718,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 430,
+        "settled": 389,
+        "unreliable_model": 81
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"lateral\",\"tracked\",1,false]": {
+      "braking_ticks": 74,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 62,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "6790245e59853940efbe0fd1e0d47ebef98c23556e7761f2fe55b3e0dc14bae4",
+      "goal_changes": 58,
+      "heading_error_sum": 6897.922214843157,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 472,
+        "predicted": 192,
+        "settled": 118,
+        "unreliable_model": 118
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"lateral\",\"tracked\",1,true]": {
+      "braking_ticks": 74,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 62,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "b0b956153ba98d6ba1beab7f7d75eec73facf7c847069cb976419d2480582e99",
+      "goal_changes": 58,
+      "heading_error_sum": 6897.922214843157,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 472,
+        "predicted": 192,
+        "settled": 118,
+        "unreliable_model": 118
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"lateral\",\"tracked\",2,false]": {
+      "braking_ticks": 74,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 62,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "646c5b96a47ace51108581f33f58c0326b88f09a8d5e692761075afc5ddb6192",
+      "goal_changes": 58,
+      "heading_error_sum": 6897.922214843157,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 472,
+        "predicted": 192,
+        "settled": 118,
+        "unreliable_model": 118
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"lateral\",\"tracked\",2,true]": {
+      "braking_ticks": 74,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 62,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "c878b271b6a164ac7d9b183e357e53259276be18dfa4a55be3230ac157e3dc0a",
+      "goal_changes": 58,
+      "heading_error_sum": 6897.922214843157,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 472,
+        "predicted": 192,
+        "settled": 118,
+        "unreliable_model": 118
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"lateral\",\"tracked\",3,false]": {
+      "braking_ticks": 74,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 62,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "1d0bdaf9e9c6bf457b02b9aa2920574d56f07b94f37e0f4d10e5ed72e2b8bc0a",
+      "goal_changes": 58,
+      "heading_error_sum": 6897.922214843157,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 472,
+        "predicted": 192,
+        "settled": 118,
+        "unreliable_model": 118
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"lateral\",\"tracked\",3,true]": {
+      "braking_ticks": 74,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 62,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "e019c5c69a42f750ef102abe67e605e5feca571e9fa175cb1c0c284f1bbbb8fd",
+      "goal_changes": 58,
+      "heading_error_sum": 6897.922214843157,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 472,
+        "predicted": 192,
+        "settled": 118,
+        "unreliable_model": 118
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"lateral\",\"wheeled\",1,false]": {
+      "braking_ticks": 74,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 62,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "699788cd558097410247e4c4c41249770374c58c58233c47568e5a3d16a6071c",
+      "goal_changes": 58,
+      "heading_error_sum": 6897.922214843157,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 472,
+        "predicted": 192,
+        "settled": 118,
+        "unreliable_model": 118
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"lateral\",\"wheeled\",1,true]": {
+      "braking_ticks": 74,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 62,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "236c1c48b6b757894f1d6106312648bb3a60a3d28b6f5fa399a28e84da35c691",
+      "goal_changes": 58,
+      "heading_error_sum": 6897.922214843157,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 472,
+        "predicted": 192,
+        "settled": 118,
+        "unreliable_model": 118
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"lateral\",\"wheeled\",2,false]": {
+      "braking_ticks": 74,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 62,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "d4f02dee6c0f8df609c9d7cd62e9b75aeae89a8c73cf7f53fc7b6a6623e35496",
+      "goal_changes": 58,
+      "heading_error_sum": 6897.922214843157,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 472,
+        "predicted": 192,
+        "settled": 118,
+        "unreliable_model": 118
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"lateral\",\"wheeled\",2,true]": {
+      "braking_ticks": 74,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 62,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "e40fd581b2af2740f5a12ed26132f3215312bed41b07810a582366e13fec594d",
+      "goal_changes": 58,
+      "heading_error_sum": 6897.922214843157,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 472,
+        "predicted": 192,
+        "settled": 118,
+        "unreliable_model": 118
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"lateral\",\"wheeled\",3,false]": {
+      "braking_ticks": 74,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 62,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "1a0f17d73c4ffc8f11bd0dc5883e0c674abc81c506fbd385e9e34411cc6be0a8",
+      "goal_changes": 58,
+      "heading_error_sum": 6897.922214843157,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 472,
+        "predicted": 192,
+        "settled": 118,
+        "unreliable_model": 118
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"lateral\",\"wheeled\",3,true]": {
+      "braking_ticks": 74,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 62,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "94c7b96fe351a869d0bc26e75120ca82fd5c3ff7866c8b1b0f589a530707c324",
+      "goal_changes": 58,
+      "heading_error_sum": 6897.922214843157,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 472,
+        "predicted": 192,
+        "settled": 118,
+        "unreliable_model": 118
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    }
+  }
+}

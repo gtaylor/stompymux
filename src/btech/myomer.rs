@@ -43,9 +43,9 @@ impl BattleUnit {
         }
     }
 
-    /// Saved controls can retain a legal sprint, pilot or gravity ceiling after those inputs change.
+    /// Saved controls can retain an equipment or gravity ceiling after those inputs change.
     pub(super) fn motion_speed_limit(&self, maximum: f64) -> f64 {
-        let retained = super::sprint::saved_limit(
+        let retained = super::speed_bonus::saved_limit(
             maximum,
             self.masc_installed().unwrap_or(false),
             self.supercharger_installed(),
@@ -74,7 +74,7 @@ impl BattleUnit {
         self.update_from_maximum(self.movement_maximum_at(base))
     }
 
-    /// Movement-update conversion after the world has applied load, sprint, pilot and gravity.
+    /// Movement-update conversion after the world has applied load, equipment and gravity.
     pub(super) fn update_from_maximum(&self, maximum: f64) -> f64 {
         // Hot TSM replaces the movement-update booster adjustment with its own conversion.
         if self.triple_myomer_active() {

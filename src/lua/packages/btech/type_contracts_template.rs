@@ -22,7 +22,7 @@
 //|function btech_template.check(name) end
 // lua-types-end
 
-// lua-types-begin btech 00495
+// lua-types-begin btech 00494
 //|---Read current, original and rear armor values; an omitted section reports the totals.
 //|---@param reference string Relative name under database.mech_database.
 //|---@param section? BattleSection Typed section constant from btech.unit.sections.
@@ -30,21 +30,21 @@
 //|function btech_template.armor(reference, section) end
 // lua-types-end
 
-// lua-types-begin btech 00496
+// lua-types-begin btech 00495
 //|---Read the constructed base cost in C-bills.
 //|---@param reference string
 //|---@return integer cost
 //|function btech_template.base_cost(reference) end
 // lua-types-end
 
-// lua-types-begin btech 00497
+// lua-types-begin btech 00496
 //|---Read offensive, defensive and total Battle Value.
 //|---@param reference string
 //|---@return BattleBattleValue value
 //|function btech_template.battle_value(reference) end
 // lua-types-end
 
-// lua-types-begin btech 00498
+// lua-types-begin btech 00497
 //|---List one section's critical slots with resolved parts, modes and ammunition state.
 //|---@param reference string
 //|---@param section BattleSection Typed section constant from btech.unit.sections.
@@ -52,49 +52,49 @@
 //|function btech_template.critical_slots(reference, section) end
 // lua-types-end
 
-// lua-types-begin btech 00499
+// lua-types-begin btech 00498
 //|---Read the engine rating and suspension factor.
 //|---@param reference string
 //|---@return BattleEngine engine
 //|function btech_template.engine(reference) end
 // lua-types-end
 
-// lua-types-begin btech 00500
+// lua-types-begin btech 00499
 //|---Report whether the reference resolves to a loadable template.
 //|---@param reference string
 //|---@return boolean exists
 //|function btech_template.exists(reference) end
 // lua-types-end
 
-// lua-types-begin btech 00501
+// lua-types-begin btech 00500
 //|---List installed equipment in catalogue order.
 //|---@param reference string
 //|---@return BattlePartStack[] parts
 //|function btech_template.installed_parts(reference) end
 // lua-types-end
 
-// lua-types-begin btech 00502
+// lua-types-begin btech 00501
 //|---List carried ammunition stock in catalogue order.
 //|---@param reference string
 //|---@return BattlePartStack[] parts
 //|function btech_template.payload(reference) end
 // lua-types-end
 
-// lua-types-begin btech 00503
+// lua-types-begin btech 00502
 //|---Publish the full template status report to a player.
 //|---@param reference string
 //|---@param player DbRef|Object
 //|function btech_template.show_status(reference, player) end
 // lua-types-end
 
-// lua-types-begin btech 00504
+// lua-types-begin btech 00503
 //|---Publish the template weapon specifications to a player.
 //|---@param reference string
 //|---@param player DbRef|Object
 //|function btech_template.show_weapon_specs(reference, player) end
 // lua-types-end
 
-// lua-types-begin btech 00505
+// lua-types-begin btech 00504
 //|---Publish one section's critical status report to a player.
 //|---@param reference string
 //|---@param player DbRef|Object
@@ -102,14 +102,14 @@
 //|function btech_template.show_critical_status(reference, player, section) end
 // lua-types-end
 
-// lua-types-begin btech 00506
+// lua-types-begin btech 00505
 //|---List configured and inferred technologies.
 //|---@param reference string
 //|---@return BattleTechnology[] technologies
 //|function btech_template.technologies(reference) end
 // lua-types-end
 
-// lua-types-begin btech 00507
+// lua-types-begin btech 00506
 //|---List mounted weapons in mounting order; an optional section restricts the result.
 //|---@param reference string
 //|---@param section? BattleSection Typed section constant from btech.unit.sections.

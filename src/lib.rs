@@ -51,15 +51,14 @@ pub use btech::{
     BattleStaggerReport, BattleStaggerRules, BattleStandAttempt, BattleStandMode, BattleStandTimer,
     BattleSurfaceBreak, BattleSystem, BattleTacticalImpact, BattleTargetLock, BattleTemplate,
     BattleTemplateCheck, BattleTerrainLos, BattleTorso, BattleUnit, BattleUnitConfiguration,
-    BattleUnjam, BattleVehicleFasaHitRules, BattleVehicleHit, BattleVehicleHitCondition,
-    BattleVehicleMotiveHit, BattleWaterRanges, BattleWeapon, BattleWeaponDamage,
-    BattleWeaponDamageEffects, BattleWeaponDamageKind, BattleWeaponRange, BattleWeaponReadiness,
-    BattleWeaponUse, BtechState, CriticalDefinition, CriticalLocation, RawMovement, RawSectionCode,
-    RawTemplate, RawUnitClass, SectionDefinition, StoredBattleMap, StoredBattleUnit,
-    SystemCritical, Terrain, WeaponMount, WeaponProfile, advance_heat as advance_battle_heat,
-    advance_jumps as advance_battle_jumps, advance_motion as advance_battle_motion,
-    advance_overheat as advance_battle_overheat, advance_recovery as advance_battle_recovery,
-    advance_recycle as advance_battle_recycle,
+    BattleUnjam, BattleVehicleHit, BattleVehicleHitRules, BattleVehicleMotiveHit,
+    BattleWaterRanges, BattleWeapon, BattleWeaponDamage, BattleWeaponDamageEffects,
+    BattleWeaponDamageKind, BattleWeaponRange, BattleWeaponReadiness, BattleWeaponUse, BtechState,
+    CriticalDefinition, CriticalLocation, RawMovement, RawSectionCode, RawTemplate, RawUnitClass,
+    SectionDefinition, StoredBattleMap, StoredBattleUnit, SystemCritical, Terrain, WeaponMount,
+    WeaponProfile, advance_heat as advance_battle_heat, advance_jumps as advance_battle_jumps,
+    advance_motion as advance_battle_motion, advance_overheat as advance_battle_overheat,
+    advance_recovery as advance_battle_recovery, advance_recycle as advance_battle_recycle,
     advance_sensor_selection as advance_battle_sensor_selection,
     advance_stagger as advance_battle_stagger, advance_standing as advance_battle_standing,
     advance_stun as advance_battle_stun, advance_target_locks as advance_battle_target_locks,
@@ -618,8 +617,6 @@ pub use btech::{
     BattleLateralMode, BattleLateralState, lateral as battle_lateral,
     set_lateral as set_battle_lateral,
 };
-
-pub use btech::turnmode as battle_turnmode;
 
 pub use btech::{
     BattleBootleggerReport, bootlegger as battle_bootlegger,
@@ -1280,11 +1277,13 @@ pub use btech::autopilot::diagnostics::{
 // Deterministic combat movement measurement surface.
 pub use btech::autopilot::encounters::{
     EncounterResult as AutopilotEncounterResult, run as run_autopilot_encounters,
+    run_policy as run_autopilot_encounters_policy,
 };
 
 pub use btech::autopilot::adversarial::{
     ParticipantResult as AutopilotAdversarialParticipantResult,
     SCENARIOS as AUTOPILOT_ADVERSARIAL_SCENARIOS, run as run_autopilot_adversarial,
+    run_policy as run_autopilot_adversarial_policy,
 };
 
 pub use btech::autopilot::interception::PursuitPolicy as AutopilotPursuitPolicy;

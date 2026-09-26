@@ -136,8 +136,7 @@ pub(super) fn resolve_in_candidate(
         {
             let powerplant = effect == BattleVehicleCriticalEffect::PowerPlant;
             let contained = powerplant
-                && (selection.table == BattleVehicleCriticalTable::Fasa
-                    || candidate.btech.vehicles()[&id].definition().is_vtol())
+                && candidate.btech.vehicles()[&id].definition().is_vtol()
                 && candidate.btech.vehicles()[&id].has_powerplant_containment();
             notices.push(BattleNotice {
                 unit: id,
@@ -458,7 +457,7 @@ fn apply(
                     )),
                 "Airborne VTOL engine loss requires emergency landing and crash resolution"
             );
-            if advanced && vehicle.hit_condition().immobilized {
+            if advanced && vehicle.immobilized() {
                 "Your destroyed engine takes another direct hit!"
             } else {
                 vehicle.disable_engine(advanced);

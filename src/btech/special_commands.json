@@ -50,9 +50,9 @@
       "category": false
     },
     {
-      "class_mask": 0,
+      "class_mask": 1,
       "syntax": "LATERAL [fl|fr|rl|rr|-]",
-      "description": "Change your lateral movement mode (quad only/vtol/hover, or with Maneuvering_ace). fl/fr/rl/rr = Directions, - = Disable lateral movement.",
+      "description": "Change your lateral movement mode (intact quads only). fl/fr/rl/rr = Directions, - = Disable lateral movement.",
       "restricted": false,
       "category": false
     },
@@ -676,13 +676,6 @@
       "class_mask": 0,
       "syntax": "MECHPREFS [SETTING [ON|OFF]]",
       "description": "Toggle the mechpref setting of SETTING",
-      "restricted": false,
-      "category": false
-    },
-    {
-      "class_mask": 51,
-      "syntax": "TURNMODE [TIGHT | NORMAL]",
-      "description": "Sets turnmode.",
       "restricted": false,
       "category": false
     },

@@ -88,7 +88,6 @@ async fn classic_awards_share_the_formula_for_every_attacker_target_pair() {
             let request = BattleGunneryAwardRequest {
                 tsm_tow_bonus: true,
 
-                tsm_sprint_bonus: true,
                 attacker,
                 pilot: ObjectId(1),
                 target,
@@ -229,7 +228,6 @@ async fn classic_vehicle_difficulty_uses_current_motive_damage() {
     let request = BattleGunneryAwardRequest {
         tsm_tow_bonus: true,
 
-        tsm_sprint_bonus: true,
         attacker,
         pilot: ObjectId(1),
         target,
@@ -294,7 +292,6 @@ async fn battle_value_awards_share_mixed_participants_and_preserve_dice() {
                 let request = BattleGunneryAwardRequest {
                     tsm_tow_bonus: true,
 
-                    tsm_sprint_bonus: true,
                     attacker,
                     pilot: ObjectId(1),
                     target,
@@ -470,7 +467,6 @@ async fn experience_and_battle_value_use_live_load_for_either_participant() {
                 let request = BattleGunneryAwardRequest {
                     tsm_tow_bonus: true,
 
-                    tsm_sprint_bonus: true,
                     attacker,
                     pilot: ObjectId(1),
                     target,
@@ -600,7 +596,6 @@ async fn experience_load_queries_honor_hot_myomer_configuration() {
     let request = BattleGunneryAwardRequest {
         tsm_tow_bonus: false,
 
-        tsm_sprint_bonus: true,
         attacker,
         pilot: ObjectId(1),
         target,
@@ -620,7 +615,6 @@ async fn experience_load_queries_honor_hot_myomer_configuration() {
         BattleGunneryAwardRequest {
             tsm_tow_bonus: true,
 
-            tsm_sprint_bonus: true,
             ..request
         },
     )
@@ -646,7 +640,6 @@ async fn experience_load_queries_honor_hot_myomer_configuration() {
         BattleGunneryAwardRequest {
             tsm_tow_bonus: true,
 
-            tsm_sprint_bonus: true,
             ..request
         },
         &xp,
@@ -710,7 +703,6 @@ async fn vtol_battle_value_experience_supports_mixed_pairs_load_and_replay() {
             let request = BattleGunneryAwardRequest {
                 tsm_tow_bonus: true,
 
-                tsm_sprint_bonus: true,
                 attacker,
                 pilot: ObjectId(1),
                 target,
@@ -787,154 +779,4 @@ async fn authored_vtol_without_catalogued_engine_mass_survives_restart() {
     let restored = persistence::load(&config.database()).await.unwrap();
     assert_eq!(restored.btech, world.btech);
     assert_eq!(battle_unit_value(&restored, id, true).unwrap(), value);
-}
-
-/// Both XP formulas honor the sprint policy for either participant without changing nominal BV speeds.
-#[tokio::test]
-async fn sprint_myomer_policy_reaches_classic_and_battle_value_awards() {
-    for (hot_attacker, base_speed) in [(false, 64.5), (true, 64.5), (false, 70.0), (true, 70.0)] {
-        let (_dir, config, mut world, attacker, target) = fixture(false, false).await;
-        let hot = if hot_attacker { attacker } else { target };
-        let mut definition = world.btech.constructed_units()[&hot].definition().clone();
-        // The two base speeds straddle distinct BV and classic-XP rounding bands.
-        definition.max_speed = base_speed;
-        let mut remaining = 6;
-        for section in [BattleSection::LeftTorso, BattleSection::RightTorso] {
-            let layout = definition.sections.get_mut(&section).unwrap();
-            for slot in 0..12 {
-                if remaining == 0 || layout.criticals.contains_key(&slot) {
-                    continue;
-                }
-                layout.criticals.insert(
-                    slot,
-                    CriticalDefinition {
-                        equipment: "TripleStrengthMyomer".into(),
-                        data: "-".into(),
-                        modes: vec![],
-                        brand: None,
-                    },
-                );
-                remaining -= 1;
-            }
-        }
-        assert_eq!(remaining, 0);
-        let mut encoded = serde_json::to_value(&world.btech).unwrap();
-        encoded["constructed"][hot.0.to_string()]["definition"] =
-            serde_json::to_value(definition).unwrap();
-        encoded["constructed"][hot.0.to_string()]["sprinting"] = true.into();
-        encoded["constructed"][hot.0.to_string()]["heat"]["excess"] = 9.0.into();
-        world.btech = serde_json::from_value(encoded.clone()).unwrap();
-        encoded["constructed"][hot.0.to_string()]["heat"]["excess"] = 0.0.into();
-        let mut cold = world.clone();
-        cold.btech = serde_json::from_value(encoded).unwrap();
-        // Host field inspection uses the configured policy and remains read-only in native/Lua paths.
-        for policy in [false, true] {
-            let path = config.root.join("stompymux.toml");
-            let mut settings: toml::Value =
-                toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-            settings
-                .as_table_mut()
-                .unwrap()
-                .entry("battletech")
-                .or_insert_with(|| toml::Value::Table(Default::default()))
-                .as_table_mut()
-                .unwrap()
-                .insert("tsm_sprint_bonus".into(), i64::from(policy).into());
-            std::fs::write(&path, toml::to_string(&settings).unwrap()).unwrap();
-            let configured = Config::load(&config.root).unwrap();
-            let scripts = Scripts::new(
-                &configured,
-                std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
-            )
-            .unwrap();
-            let expected = battle_unit_value(if policy { &world } else { &cold }, hot, true)
-                .unwrap()
-                .total;
-            let report =
-                view_battle_unit_fields_action(&scripts, &configured, ObjectId(1), hot, "bv")
-                    .unwrap();
-            assert_eq!(
-                report
-                    .fields
-                    .iter()
-                    .find(|field| field.name == "bv")
-                    .unwrap()
-                    .value,
-                Some(format!("{expected:.2}"))
-            );
-            let lua: mlua::Table = scripts
-                .eval_callback(&format!("return btech.unit.fields(1,{},'bv')", hot.0))
-                .unwrap();
-            assert_eq!(
-                serde_json::to_value(lua).unwrap(),
-                serde_json::to_value(report).unwrap()
-            );
-            assert_eq!(scripts.world().btech, world.btech);
-        }
-        let request = BattleGunneryAwardRequest {
-            tsm_tow_bonus: true,
-            tsm_sprint_bonus: false,
-            attacker,
-            pilot: ObjectId(1),
-            target,
-            weapon: BattleWeapon::MediumLaser,
-            damage: 20,
-            base_to_hit: 7,
-            extended_gunnery: true,
-            extended_piloting: true,
-            use_unit_modifier: false,
-            now: 100,
-        };
-        let enabled = BattleGunneryAwardRequest {
-            tsm_sprint_bonus: true,
-            ..request
-        };
-        let disabled_classic = award_battle_classic_gunnery_experience(&mut world.clone(), request)
-            .unwrap()
-            .unwrap();
-        let cold_classic = award_battle_classic_gunnery_experience(&mut cold.clone(), enabled)
-            .unwrap()
-            .unwrap();
-        let hot_classic = award_battle_classic_gunnery_experience(&mut world.clone(), enabled)
-            .unwrap()
-            .unwrap();
-        assert_eq!(disabled_classic, cold_classic);
-        if base_speed == 70.0 {
-            assert_ne!(disabled_classic.chance, hot_classic.chance);
-        }
-        let xp = config::XpConfig {
-            use_pilot_bv_mod: 0,
-            ..Default::default()
-        };
-        let disabled_bv = award_battle_value_gunnery_experience(&mut world.clone(), request, &xp)
-            .unwrap()
-            .unwrap();
-        let cold_bv = award_battle_value_gunnery_experience(&mut cold.clone(), enabled, &xp)
-            .unwrap()
-            .unwrap();
-        let hot_bv = award_battle_value_gunnery_experience(&mut world.clone(), enabled, &xp)
-            .unwrap()
-            .unwrap();
-        assert_eq!(disabled_bv, cold_bv);
-        if base_speed == 64.5 {
-            assert_ne!(disabled_bv.calculation, hot_bv.calculation);
-        }
-        persistence::save(&config.database(), &world).await.unwrap();
-        let mut restored = persistence::load(&config.database()).await.unwrap();
-        // Connection state is deliberately transient; reconnect before testing award eligibility.
-        restored
-            .objects
-            .get_mut(&ObjectId(1))
-            .unwrap()
-            .flags
-            .insert(Flag::Connected);
-        assert_eq!(
-            award_battle_classic_gunnery_experience(&mut restored.clone(), request).unwrap(),
-            Some(disabled_classic)
-        );
-        assert_eq!(
-            award_battle_value_gunnery_experience(&mut restored.clone(), request, &xp).unwrap(),
-            Some(disabled_bv)
-        );
-    }
 }

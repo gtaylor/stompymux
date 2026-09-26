@@ -402,7 +402,7 @@
 //|function btech_map.units(map, filter) end
 // lua-types-end
 
-// lua-types-begin btech 00416
+// lua-types-begin btech 00415
 //|---Check map membership and world invariants without changing placements or unit state.
 //|---@param actor integer Wizard performing the check.
 //|---@param map integer
@@ -410,7 +410,7 @@
 //|function btech_map.check(actor, map) end
 // lua-types-end
 
-// lua-types-begin btech 00417
+// lua-types-begin btech 00416
 //|---Publish and return a wizard's map field report in catalogue order.
 //|---@param actor integer
 //|---@param map integer

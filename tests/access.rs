@@ -339,7 +339,6 @@ fn c_catalog_defaults() {
                 | "incendiary"
                 | "brief"
                 | "lateral"
-                | "turnmode"
                 | "dump"
                 | "masc"
                 | "scharge"

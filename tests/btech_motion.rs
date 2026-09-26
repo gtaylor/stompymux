@@ -2841,14 +2841,12 @@ fn shot_rules() -> stompymux_rs::BattleShotRules {
     stompymux_rs::BattleShotRules {
         range_damage: false,
         tsm_tow_bonus: true,
-        tsm_sprint_bonus: true,
         vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
         stacking: stompymux_rs::BattleStackingRules::STANDARD,
         glancing: stompymux_rs::BattleGlancingMode::Disabled,
         stagger: stompymux_rs::BattleStaggerMode::Retain,
         aim: optical_aim_rules(),
         hit: stompymux_rs::BattleHitRules {
-            fasa_criticals: false,
             inferno_penalty: false,
             exile_stun_mode: 0,
         },
@@ -5897,18 +5895,19 @@ async fn fire_command_matrix(cases: &[(bool, bool)]) {
         shot_seed(&mut world, id, seed);
         shot_seed(&mut world, target, seed);
         if lethal {
-            // A damaged CT and a seeded first missile impact produce a real lethal shot.
-            let seed = (0..=255).find(|seed| {
-                let mut dice = stompymux_rs::BattleDice::seeded([*seed; 32]);
-                dice.two_d6(); // Cluster roll precedes the first location roll.
-                dice.two_d6() == 7
-            }).unwrap();
-            shot_seed(&mut world, target, seed);
+            // Damage the CT before selecting a lethal missile stream under the configured rules.
             stompymux_rs::apply_damage_phase(&mut world, target, stompymux_rs::BattleSection::CenterTorso, u16::MAX, stompymux_rs::BattleDamagePhase::Armor { rear: false }).unwrap();
             let structure = world.btech.constructed_units()[&target].sections()[&stompymux_rs::BattleSection::CenterTorso].internal;
             stompymux_rs::apply_damage_phase(&mut world, target, stompymux_rs::BattleSection::CenterTorso, structure - 1, stompymux_rs::BattleDamagePhase::Internal).unwrap();
             world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
             assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
+            let seed = (0..=255).find(|seed| {
+                let mut probe = world.clone();
+                shot_seed(&mut probe, target, *seed);
+                let _report = stompymux_rs::resolve_battle_shot(&mut probe, id, ObjectId(1), target, index, configured_shot_rules(&config)).unwrap();
+                probe.btech.constructed_units()[&target].is_destroyed()
+            }).unwrap();
+            shot_seed(&mut world, target, seed);
         }
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
@@ -7249,7 +7248,6 @@ async fn flamer_heat_hits_glances_and_misses_do_not_roll_target_damage() {
         let rules = BattleShotRules {
             range_damage: false,
             tsm_tow_bonus: true,
-            tsm_sprint_bonus: true,
             glancing: BattleGlancingMode::AtTarget,
             ..shot_rules()
         };
@@ -7437,7 +7435,6 @@ async fn pulse_accuracy_changes_a_miss_to_a_glancing_hit() {
     let rules = BattleShotRules {
         range_damage: false,
         tsm_tow_bonus: true,
-        tsm_sprint_bonus: true,
         glancing: BattleGlancingMode::AtTarget,
         ..shot_rules()
     };
@@ -8086,7 +8083,6 @@ async fn streak_lock_failure_launch_boundaries_and_saved_recycle() {
                 BattleShotRules {
                     range_damage: false,
                     tsm_tow_bonus: true,
-                    tsm_sprint_bonus: true,
                     glancing,
                     ..shot_rules()
                 },
@@ -8314,7 +8310,7 @@ async fn heavy_gauss_recoil_matrix(classes: &[(u16, i32)]) {
     // Match the direct scenario rules instead of inheriting optional rules from the game fixture.
     let path = dir.path().join("stompymux.toml");
     let mut source: toml::Value = toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-    for name in ["fasacrit", "extendedmovemod", "glancing_blows"] {
+    for name in ["extendedmovemod", "glancing_blows"] {
         source["battletech"]
             .as_table_mut()
             .unwrap()
@@ -14072,13 +14068,16 @@ async fn stand_attempt_observers_share_native_lua_order_and_saved_replay() {
                 if !success {
                     expected.extend(battle_observer_messages(&world, subject, "falls down!"));
                 }
-                assert_eq!(
-                    witnessed,
-                    expected
-                        .into_iter()
-                        .map(|(_, text)| text)
-                        .collect::<Vec<_>>()
-                );
+                let expected = expected
+                    .into_iter()
+                    .map(|(_, text)| text)
+                    .collect::<Vec<_>>();
+                // Fall criticals may add damage notices after the ordered stand/fall messages.
+                if visible && !success {
+                    assert!(witnessed.starts_with(&expected), "{witnessed:?}");
+                } else {
+                    assert_eq!(witnessed, expected);
+                }
                 if visible {
                     assert_eq!(output[0].0, witness);
                     assert!(output[0].1.ends_with("attempts to stand up."));
@@ -16107,7 +16106,6 @@ async fn coolant_modes_fuel_native_lua_and_saved_replay() {
         let rules = BattleShotRules {
             range_damage: false,
             tsm_tow_bonus: true,
-            tsm_sprint_bonus: true,
             glancing: BattleGlancingMode::AtTarget,
             ..shot_rules()
         };
@@ -16183,7 +16181,6 @@ async fn plasma_hit_boundaries_keep_heat_separate_from_material_damage() {
     let rules = BattleShotRules {
         range_damage: false,
         tsm_tow_bonus: true,
-        tsm_sprint_bonus: true,
         glancing: BattleGlancingMode::AtTarget,
         ..shot_rules()
     };
@@ -23362,12 +23359,7 @@ async fn character_firing_commands_match_and_rollback() {
                         let dice = BattleDice::seeded(bytes);
                         let mut probe = dice.clone();
                         let cluster = !missile || probe.two_d6() == 12;
-                        let entry = probe.two_d6();
-                        let location = if config.battletech.fasacrit != 0 {
-                            probe.two_d6()
-                        } else {
-                            entry
-                        };
+                        let location = probe.two_d6();
                         (cluster && location == 12).then_some(dice)
                     })
                     .unwrap();
@@ -23633,7 +23625,6 @@ async fn character_heavy_gauss_recoil_uses_shooter_health_and_toughness() {
         let rules = BattleShotRules {
             range_damage: false,
             tsm_tow_bonus: true,
-            tsm_sprint_bonus: true,
             target_toughness: true,
             ..shot_rules()
         };
@@ -24109,7 +24100,6 @@ async fn classic_gunnery_awards_are_atomic_and_replayable() {
     let request = BattleGunneryAwardRequest {
         tsm_tow_bonus: true,
 
-        tsm_sprint_bonus: true,
         attacker,
         pilot: ObjectId(1),
         target,
@@ -24135,7 +24125,6 @@ async fn classic_gunnery_awards_are_atomic_and_replayable() {
         let ineligible = BattleGunneryAwardRequest {
             tsm_tow_bonus: true,
 
-            tsm_sprint_bonus: true,
             damage,
             base_to_hit: 2,
             ..request
@@ -24198,7 +24187,6 @@ async fn classic_gunnery_awards_are_atomic_and_replayable() {
         BattleGunneryAwardRequest {
             tsm_tow_bonus: true,
 
-            tsm_sprint_bonus: true,
             use_unit_modifier: false,
             extended_gunnery: false,
             ..request
@@ -24225,7 +24213,6 @@ async fn classic_gunnery_awards_are_atomic_and_replayable() {
             BattleGunneryAwardRequest {
                 tsm_tow_bonus: true,
 
-                tsm_sprint_bonus: true,
                 use_unit_modifier: false,
                 ..request
             }
@@ -24418,7 +24405,6 @@ async fn battle_value_gunnery_awards_are_atomic_without_dice() {
     let request = BattleGunneryAwardRequest {
         tsm_tow_bonus: true,
 
-        tsm_sprint_bonus: true,
         attacker,
         target,
         pilot: ObjectId(1),
@@ -26224,7 +26210,6 @@ async fn heavy_gauss_recoil_experience_and_delivery_rollback() {
             let rules = BattleShotRules {
                 range_damage: false,
                 tsm_tow_bonus: true,
-                tsm_sprint_bonus: true,
                 extended_piloting: extended,
                 ..shot_rules()
             };
@@ -29845,11 +29830,6 @@ async fn seismic_runtime_policy_and_lua_rollback() {
         .as_table_mut()
         .unwrap()
         .insert("seismic_see_stopped".into(), 1.into());
-    // Compare the sensor paths under the same critical-hit policy as shot_rules().
-    source["battletech"]
-        .as_table_mut()
-        .unwrap()
-        .insert("fasacrit".into(), 0.into());
     std::fs::write(path, toml::to_string(&source).unwrap()).unwrap();
     let config = Config::load(dir.path()).unwrap();
     prepare_seismic_runtime(&mut world, id, target);
@@ -30121,8 +30101,7 @@ async fn electromagnetic_native_lua_selection_and_fire_rollback() {
         id.0, target.0
     ))
     .unwrap();
-    let mut rules = shot_rules();
-    rules.hit.fasa_criticals = config.battletech.fasacrit != 0;
+    let rules = shot_rules();
     let _shot = resolve_battle_shot(&mut selected, id, ObjectId(1), target, 0, rules).unwrap();
     assert_eq!(lua.world().btech, selected.btech);
 }
@@ -30333,8 +30312,7 @@ async fn radar_native_lua_aim_and_shot_rollback() {
         id.0, target.0
     ))
     .unwrap();
-    let mut rules = shot_rules();
-    rules.hit.fasa_criticals = config.battletech.fasacrit != 0;
+    let rules = shot_rules();
     let _shot = resolve_battle_shot(&mut selected, id, ObjectId(1), target, 0, rules).unwrap();
     assert_eq!(lua.world().btech, selected.btech);
 }
@@ -30639,8 +30617,7 @@ async fn active_probe_native_lua_shot_and_jitter() {
             id.0, target.0
         ))
         .unwrap();
-        let mut rules = shot_rules();
-        rules.hit.fasa_criticals = config.battletech.fasacrit != 0;
+        let rules = shot_rules();
         let shot = resolve_battle_shot(&mut selected, id, ObjectId(1), target, 0, rules).unwrap();
         assert_eq!(shot.roll, attack_roll);
         assert_eq!(lua.world().btech, selected.btech);
@@ -31167,8 +31144,7 @@ async fn semiguided_native_lua_fire_and_matching_supply() {
     ))
     .unwrap();
     let mut direct = selected.clone();
-    let mut rules = shot_rules();
-    rules.hit.fasa_criticals = config.battletech.fasacrit != 0;
+    let rules = shot_rules();
     let shot =
         resolve_battle_shot(&mut direct, shooter, ObjectId(1), target, index, rules).unwrap();
     assert_eq!(
@@ -33820,12 +33796,14 @@ async fn speed_demon_acceleration_braking_and_restart_use_the_assigned_pilot() {
     world.validate(&config).unwrap();
 }
 
-/// Quad lateral admission is an anatomy rule; damaged support needs the pilot advantage.
+/// Lateral travel rejects bipeds and damaged quad support without changing state.
 #[tokio::test]
-async fn quad_lateral_component_admission_distinguishes_intact_support_and_advantage() {
+async fn quad_lateral_requires_intact_support() {
     use stompymux_rs::*;
     let (_dir, _config, mut world, id) = fixture('.').await;
-    // Component fixture only: constructed quad lifecycle remains intentionally gated.
+    let before = world.btech.clone();
+    assert!(set_battle_lateral(&mut world, id, ObjectId(1), BattleLateralMode::FrontLeft).is_err());
+    assert_eq!(world.btech, before);
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     encoded["constructed"][id.0.to_string()]["definition"]["attributes"]["move_type"] =
         "Quad".into();
@@ -33841,35 +33819,6 @@ async fn quad_lateral_component_admission_distinguishes_intact_support_and_advan
         set_battle_lateral(&mut world, id, ObjectId(1), BattleLateralMode::FrontRight).is_err()
     );
     assert_eq!(world.btech, before);
-    set_battle_character(
-        &mut world,
-        ObjectId(1),
-        BattleCharacter {
-            bruise: 0,
-            lethal: 0,
-            build: 5,
-            reflexes: 5,
-            intuition: 5,
-            learn: 5,
-            charisma: 5,
-        },
-    )
-    .unwrap();
-    set_battle_character_value(
-        &mut world,
-        ObjectId(1),
-        "Maneuvering_Ace",
-        BattleCharacterValue {
-            value: 1,
-            ..Default::default()
-        },
-    )
-    .unwrap();
-    set_battle_lateral(&mut world, id, ObjectId(1), BattleLateralMode::FrontRight).unwrap();
-    assert_eq!(
-        world.btech.constructed_units()[&id].lateral().pending,
-        Some(BattleLateralMode::FrontRight)
-    );
 }
 
 /// Constructed quads use live movement, automatic standing and durable world persistence.

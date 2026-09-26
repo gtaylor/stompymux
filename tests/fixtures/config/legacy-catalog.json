@@ -199,13 +199,6 @@
     "default": 2
   },
   {
-    "path": "battletech.dynspeed",
-    "legacy_name": "btech_dynspeed",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 1
-  },
-  {
     "path": "battletech.slowdown",
     "legacy_name": "btech_slowdown",
     "registry_type": "cf_int",
@@ -218,13 +211,6 @@
     "registry_type": "cf_int",
     "rust_type": "i64",
     "default": 1
-  },
-  {
-    "path": "battletech.fasacrit",
-    "legacy_name": "btech_fasacrit",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 0
   },
   {
     "path": "battletech.fasaadvvtolcrit",
@@ -283,13 +269,6 @@
     "default": 0
   },
   {
-    "path": "battletech.tankfriendly",
-    "legacy_name": "btech_tankfriendly",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 0
-  },
-  {
     "path": "battletech.newcharge",
     "legacy_name": "btech_newcharge",
     "registry_type": "cf_int",
@@ -323,13 +302,6 @@
     "registry_type": "cf_int",
     "rust_type": "i64",
     "default": 100
-  },
-  {
-    "path": "battletech.tankshield",
-    "legacy_name": "btech_tankshield",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 0
   },
   {
     "path": "battletech.newstagger",
@@ -477,20 +449,6 @@
     "registry_type": "cf_int",
     "rust_type": "i64",
     "default": 600
-  },
-  {
-    "path": "battletech.sprint_bth",
-    "legacy_name": "btech_sprint_bth",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": -4
-  },
-  {
-    "path": "battletech.tsm_sprint_bonus",
-    "legacy_name": "btech_tsm_sprint_bonus",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 1
   },
   {
     "path": "battletech.vtol_ice_causes_fire",

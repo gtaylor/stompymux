@@ -315,3 +315,113 @@ pub fn validate_trace(path: &Path, summary: &Value, kind: &str) -> Result<()> {
     ensure!(seen == expected, "Incomplete trace matrix");
     Ok(())
 }
+
+/// Summarize observed decisions per case, with bounded storage independent of trace length.
+pub fn timeline(path: &Path) -> Result<Value> {
+    let mut cases = BTreeMap::<String, Value>::new();
+    let mut previous = BTreeMap::<String, Value>::new();
+    let mut gameplay = BTreeMap::<String, (Sha256, u64)>::new();
+    for line in BufReader::new(File::open(path)?).lines() {
+        let row: Value = serde_json::from_str(&line?)?;
+        let key = serde_json::to_string(&json!([
+            row["scenario"],
+            row["chassis"],
+            row["seed"],
+            row["fire"]
+        ]))?;
+        let tick = row["tick"].as_u64().context("Missing timeline tick")?;
+        if let Some(digest) = row["digest"].as_str() {
+            ensure!(
+                digest.len() == 16 && digest.bytes().all(|b| b.is_ascii_hexdigit()),
+                "Invalid gameplay digest"
+            );
+            let (hash, count) = gameplay
+                .entry(key.clone())
+                .or_insert_with(|| (Sha256::new(), 0));
+            hash.update(digest.as_bytes());
+            hash.update(b"\n");
+            *count += 1;
+        }
+        let state = json!({"reason":row["pursuit"]["evidence"]["reason"],
+            "model":row["pursuit"]["evidence"]["model"], "goal":row["pursuit"]["goal"]});
+        let entry = cases.entry(key.clone()).or_insert_with(|| {
+            json!({
+                "ticks":0,"decision_changes":0,"goal_changes":0,"reason_ticks":{},"confidence_resets":{},
+                "first_prediction":null,"last_result":null
+                ,"motion_samples":0,"stopped_pending_ticks":0,"braking_ticks":0,"heading_error_sum":0.0
+            })
+        });
+        if let Some(old) = previous.get(&key) {
+            ensure!(
+                tick == entry["ticks"].as_u64().unwrap() + 1,
+                "Nonconsecutive timeline ticks"
+            );
+            for (field, changed) in [
+                ("decision_changes", old != &state),
+                ("goal_changes", old["goal"] != state["goal"]),
+            ] {
+                if changed {
+                    entry[field] = json!(entry[field].as_u64().unwrap() + 1);
+                }
+            }
+        } else {
+            ensure!(tick == 1, "Timeline must start at tick one");
+        }
+        entry["ticks"] = json!(tick);
+        let reason = state["reason"].as_str().unwrap_or("no_plan");
+        let count = entry["reason_ticks"][reason].as_u64().unwrap_or(0);
+        entry["reason_ticks"][reason] = json!(count + 1);
+        if reason == "predicted" && entry["first_prediction"].is_null() {
+            entry["first_prediction"] = json!(tick);
+        }
+        entry["last_result"] = row["result"].clone();
+        // These are separate committed harness measurements, not inferred shot admissions.
+        entry["engagement_milestones"] = json!({
+            "first_geometry": row["result"]["first_geometry"],
+            "first_arc": row["result"]["first_arc"],
+            "first_ready": row["result"]["first_ready"],
+            "first_shot": row["result"]["first_shot"],
+            "arc_ticks": row["result"]["arc_ticks"],
+            "ready_ticks": row["result"]["ready_ticks"],
+            "shots": row["result"]["shots"]
+        });
+        if let Some(reason) = row["pursuit"]["evidence"]["confidence_reset"].as_str() {
+            entry["confidence_resets"][reason] =
+                json!(entry["confidence_resets"][reason].as_u64().unwrap_or(0) + 1);
+        }
+        let motion = &row["pursuit"]["motion"];
+        if let (Some(speed), Some(error)) =
+            (motion["speed"].as_f64(), motion["heading_error"].as_f64())
+        {
+            entry["motion_samples"] = json!(entry["motion_samples"].as_u64().unwrap() + 1);
+            entry["heading_error_sum"] =
+                json!(entry["heading_error_sum"].as_f64().unwrap() + error);
+            for (field, active) in [
+                (
+                    "stopped_pending_ticks",
+                    speed.abs() <= 0.1 && row["pursuit"]["search_expanded"].is_number(),
+                ),
+                ("braking_ticks", motion["braking"] == true),
+            ] {
+                if active {
+                    entry[field] = json!(entry[field].as_u64().unwrap() + 1);
+                }
+            }
+        }
+        previous.insert(key, state);
+    }
+    ensure!(!cases.is_empty(), "Empty timeline");
+    for (key, (hash, count)) in gameplay {
+        let entry = cases.get_mut(&key).unwrap();
+        ensure!(entry["ticks"] == count, "Missing gameplay digests");
+        entry["gameplay_digest_sequence_sha256"] = json!(
+            hash.finalize()
+                .iter()
+                .map(|v| format!("{v:02x}"))
+                .collect::<String>()
+        );
+    }
+    Ok(
+        json!({"source_sha256":hash(path)?,"attribution":"Observed categories; not causal proof", "cases":cases}),
+    )
+}

@@ -1,0 +1,30 @@
+[
+  {
+    "basis": "verified historical source default",
+    "direct_pursuit": false,
+    "executable_sha256": "19007e5e8e030f809a8223635a00fd3580ee6ce10c8588ac347758c815c3559a",
+    "policy_source_sha256": "d239ac00f67d0b904d0caf3b9d226d7d9c2ebc2c9314179cc2fa8559b225f53e",
+    "requested": "g",
+    "resolved": "g",
+    "verified_each_tick": false
+  },
+  {
+    "requested": "adaptive",
+    "resolved": "adaptive",
+    "verified_each_tick": true
+  },
+  {
+    "basis": "verified historical source default",
+    "direct_pursuit": false,
+    "executable_sha256": "19007e5e8e030f809a8223635a00fd3580ee6ce10c8588ac347758c815c3559a",
+    "policy_source_sha256": "d239ac00f67d0b904d0caf3b9d226d7d9c2ebc2c9314179cc2fa8559b225f53e",
+    "requested": "g",
+    "resolved": "g",
+    "verified_each_tick": false
+  },
+  {
+    "requested": "adaptive",
+    "resolved": "adaptive",
+    "verified_each_tick": true
+  }
+]

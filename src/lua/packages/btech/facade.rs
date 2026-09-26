@@ -49,7 +49,6 @@ pub(in crate::lua::packages) fn install(lua: &Lua, api: &Table, mux: &Table) -> 
         ("weapon", "weapon_set_battle_value", "set_battle_value"),
         ("unit", "unit_brief", "brief"),
         ("unit", "unit_lateral", "lateral"),
-        ("unit", "unit_turnmode", "turnmode"),
         ("unit", "unit_dump", "dump"),
         ("unit", "unit_masc", "masc"),
         ("unit", "unit_c3i", "c3i"),

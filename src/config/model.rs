@@ -138,14 +138,10 @@ pub struct BattleTechConfig {
     pub afterlife_dbref: i64,
     /// Configuration value for `vcrit`; defaults are centralized below.
     pub vcrit: i64,
-    /// Configuration value for `dynspeed`; defaults are centralized below.
-    pub dynspeed: i64,
     /// Configuration value for `slowdown`; defaults are centralized below.
     pub slowdown: i64,
     /// Configuration value for `fasaturn`; defaults are centralized below.
     pub fasaturn: i64,
-    /// Configuration value for `fasacrit`; defaults are centralized below.
-    pub fasacrit: i64,
     /// Configuration value for `fasaadvvtolcrit`; defaults are centralized below.
     pub fasaadvvtolcrit: i64,
     /// Configuration value for `fasaadvvhlcrit`; defaults are centralized below.
@@ -162,8 +158,6 @@ pub struct BattleTechConfig {
     pub hotloadaddshalfbthmod: i64,
     /// Configuration value for `nofusionvtolfuel`; defaults are centralized below.
     pub nofusionvtolfuel: i64,
-    /// Configuration value for `tankfriendly`; defaults are centralized below.
-    pub tankfriendly: i64,
     /// Configuration value for `newcharge`; defaults are centralized below.
     pub newcharge: i64,
     /// Configuration value for `tl3_charge`; defaults are centralized below.
@@ -174,8 +168,6 @@ pub struct BattleTechConfig {
     pub xploss: i64,
     /// Configuration value for `critlevel`; defaults are centralized below.
     pub critlevel: i64,
-    /// Configuration value for `tankshield`; defaults are centralized below.
-    pub tankshield: i64,
     /// Configuration value for `newstagger`; defaults are centralized below.
     pub newstagger: i64,
     /// Configuration value for `newstaggertons`; defaults are centralized below.
@@ -218,10 +210,6 @@ pub struct BattleTechConfig {
     pub standcareful: i64,
     /// Configuration value for `maxtechtime`; defaults are centralized below.
     pub maxtechtime: i64,
-    /// Configuration value for `sprint_bth`; defaults are centralized below.
-    pub sprint_bth: i64,
-    /// Configuration value for `tsm_sprint_bonus`; defaults are centralized below.
-    pub tsm_sprint_bonus: i64,
     /// Configuration value for `vtol_ice_causes_fire`; defaults are centralized below.
     pub vtol_ice_causes_fire: i64,
     /// Configuration value for `glancing_blows`; defaults are centralized below.
@@ -274,10 +262,8 @@ impl Default for BattleTechConfig {
             ic: 1,
             afterlife_dbref: 5,
             vcrit: 2,
-            dynspeed: 1,
             slowdown: 2,
             fasaturn: 1,
-            fasacrit: 0,
             fasaadvvtolcrit: 0,
             fasaadvvhlcrit: 0,
             fasaadvvhlfire: 0,
@@ -286,13 +272,11 @@ impl Default for BattleTechConfig {
             moddamagewithwoods: 0,
             hotloadaddshalfbthmod: 0,
             nofusionvtolfuel: 0,
-            tankfriendly: 0,
             newcharge: 0,
             tl3_charge: 0,
             newterrain: 0,
             xploss: 666,
             critlevel: 100,
-            tankshield: 0,
             newstagger: 1,
             newstaggertons: 1,
             newstaggertime: 5,
@@ -314,8 +298,6 @@ impl Default for BattleTechConfig {
             mwpickup_action: 1,
             standcareful: 1,
             maxtechtime: 600,
-            sprint_bth: -4,
-            tsm_sprint_bonus: 1,
             vtol_ice_causes_fire: 1,
             glancing_blows: 1,
             inferno_penalty: 0,

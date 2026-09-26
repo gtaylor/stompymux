@@ -149,7 +149,6 @@ pub(crate) fn configured_land(
         BattleMovementRules {
             free_fusion_vtol_fuel: settings.nofusionvtolfuel != 0,
             tsm_tow_bonus: settings.tsm_tow_bonus != 0,
-            tsm_sprint_bonus: settings.tsm_sprint_bonus != 0,
             physical_pilot_skill: settings.phys_use_pskill != 0,
             fasa_turning: settings.fasaturn != 0,
             charge: super::BattleChargePolicy {

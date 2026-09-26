@@ -16,7 +16,7 @@ pub fn inspection_effective_maximum_speed(
     super::effective_speed::configured(world, id, super::SpeedPolicy::configured(config))
 }
 
-/// Battle value using the same live host load and sprint policies as C-facing speed.
+/// Battle value using the same live host load policy as C-facing speed.
 pub fn inspection_battle_value(
     world: &crate::World,
     id: crate::ObjectId,

@@ -279,7 +279,6 @@ pub(super) fn resolve_with_context_mode(
                 section,
                 through_armor_critical: false,
                 motive: None,
-                lock_turret: false,
                 motive_roll: None,
                 piloting_penalty: 0,
             }),

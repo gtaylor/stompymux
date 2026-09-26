@@ -86,13 +86,16 @@ async fn vehicle_injury_guards_and_critical_casualties_are_atomic() {
         rotor_damage_divisor: 0,
         extended_piloting: false,
         vtol_table: None,
-        table: BattleVehicleCriticalTable::Fasa,
+        table: BattleVehicleCriticalTable::Standard,
         enabled: true,
         combat_safe: false,
         toughness: true,
     };
     let seed = (0..=255)
-        .find(|value| BattleDice::seeded([*value; 32]).d6() == 1)
+        .find(|value| {
+            let mut dice = BattleDice::seeded([*value; 32]);
+            dice.die(10).unwrap() > 5 && dice.d6() == 1
+        })
         .unwrap();
     for absent in [false, true] {
         let mut world = base.clone();

@@ -139,8 +139,6 @@ pub struct BattleMovementRules {
     pub free_fusion_vtol_fuel: bool,
     /// Enable hot-myomer assistance when calculating towing load.
     pub tsm_tow_bonus: bool,
-    /// Permit hot-myomer speed rounding during sprint.
-    pub tsm_sprint_bonus: bool,
     /// Use pilot-based aim for DFA landing attacks.
     pub physical_pilot_skill: bool,
     pub fasa_turning: bool,
@@ -174,7 +172,6 @@ impl BattleMovementRules {
     pub const STANDARD: Self = Self {
         free_fusion_vtol_fuel: false,
         tsm_tow_bonus: true,
-        tsm_sprint_bonus: true,
         physical_pilot_skill: true,
         fasa_turning: false,
         charge: super::BattleChargePolicy::STANDARD,
@@ -187,7 +184,6 @@ impl BattleMovementRules {
             stacking: crate::BattleStackingRules::STANDARD,
             stagger: super::BattleStaggerMode::Retain,
             hit: super::BattleHitRules {
-                fasa_criticals: false,
                 inferno_penalty: false,
                 exile_stun_mode: 0,
             },
@@ -530,24 +526,15 @@ fn advance_fall_headings(
             world.btech.vehicles()[&id].maximum_speed()
         };
         let maximum = super::load::movement_maximum(world, id, maximum, rules.tsm_tow_bonus)?;
-        let maximum = if super::sprint::enabled(world, id)? {
-            let effective = super::sprint::maximum(world, id, maximum, rules.tsm_sprint_bonus)?;
-            world
-                .btech
-                .constructed_units()
-                .get(&id)
-                .map_or(effective, |unit| unit.turning_from_maximum(effective))
+        let maximum = if let Some(unit) = world.btech.constructed_units().get(&id) {
+            let effective = super::speed_bonus::on_map(
+                world,
+                unit.position(),
+                unit.movement_maximum_at(maximum),
+            )?;
+            unit.turning_from_maximum(effective)
         } else {
-            if let Some(unit) = world.btech.constructed_units().get(&id) {
-                let effective = super::speed_bonus::on_map(
-                    world,
-                    unit.position(),
-                    unit.movement_maximum_at(maximum),
-                )?;
-                unit.turning_from_maximum(effective)
-            } else {
-                super::speed_bonus::on_map(world, world.btech.vehicles()[&id].position(), maximum)?
-            }
+            super::speed_bonus::on_map(world, world.btech.vehicles()[&id].position(), maximum)?
         };
         let multiplier = world
             .btech

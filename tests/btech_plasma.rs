@@ -17,7 +17,6 @@ async fn plasma_heat_transfer_unwind_and_saved_dice_replay() {
     )
     .unwrap();
     let rules = BattleHitRules {
-        fasa_criticals: false,
         inferno_penalty: false,
         exile_stun_mode: 0,
     };

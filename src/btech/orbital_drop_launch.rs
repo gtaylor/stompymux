@@ -97,7 +97,6 @@ pub fn initiate_action(
         let flight;
         {
             let mut world = scripts.world_mut();
-            super::sprint::set(&mut world, id, false)?;
             // Cancel competing vertical owners before the scenario helper chooses retained altitude.
             if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
                 unit.flight = None;

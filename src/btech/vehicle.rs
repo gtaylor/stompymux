@@ -23,7 +23,6 @@ pub struct BattleVehicle {
     /// Attributed destruction events, independent of damage volume.
     #[serde(default)]
     pub(super) units_killed: i32,
-    pub(super) tight_turn_mode: bool,
     pub(super) no_armor_warning: bool,
     pub(super) no_ammunition_warning: bool,
     pub(super) searchlight: super::BattleSearchlight,
@@ -56,9 +55,6 @@ pub struct BattleVehicle {
     /// Operator-imposed firing restriction, separate from weapon mechanics.
     #[serde(default)]
     pub(super) weapons_hold: bool,
-    /// Saved sprint mode, independent of equipment boosts and requested speed.
-    #[serde(default)]
-    pub(super) sprinting: bool,
     /// Operator-imposed immunity to combat damage.
     #[serde(default)]
     pub(super) combat_safe: bool,
@@ -204,8 +200,6 @@ struct VehicleRecord {
     #[serde(default)]
     units_killed: i32,
     #[serde(default)]
-    tight_turn_mode: bool,
-    #[serde(default)]
     no_armor_warning: bool,
     #[serde(default)]
     no_ammunition_warning: bool,
@@ -245,8 +239,6 @@ struct VehicleRecord {
     observer: bool,
     #[serde(default)]
     weapons_hold: bool,
-    #[serde(default)]
-    sprinting: bool,
     #[serde(default)]
     combat_safe: bool,
     #[serde(default)]
@@ -730,7 +722,6 @@ impl BattleVehicle {
             .collect();
         let vtol_flight = definition.is_vtol().then(super::BattleVtolFlight::default);
         Ok(Self {
-            tight_turn_mode: false,
             no_armor_warning: false,
             no_ammunition_warning: false,
             searchlight: Default::default(),
@@ -810,7 +801,6 @@ impl BattleVehicle {
             fortified: false,
             observer: false,
             weapons_hold: false,
-            sprinting: false,
             combat_safe: false,
             visibility: super::BattleVisibility::default(),
             dig: super::BattleDigState::default(),
@@ -858,14 +848,6 @@ impl BattleVehicle {
             .map(|_| (self.heading() + self.turret_offset).rem_euclid(360.0))
     }
 
-    /// Current conditions used to suppress repeated hit-table effects.
-    pub fn hit_condition(&self) -> super::BattleVehicleHitCondition {
-        super::BattleVehicleHitCondition {
-            immobilized: self.immobilized,
-            turret_locked: self.turret_locked,
-        }
-    }
-
     /// Whether damage has locked the surviving turret to its current hull-relative facing.
     pub fn turret_locked(&self) -> bool {
         self.turret_locked
@@ -890,7 +872,7 @@ impl BattleVehicle {
         Ok(())
     }
 
-    /// Disable propulsion, retaining the distinct standard/FASA and advanced immobility flags.
+    /// Disable propulsion, retaining the distinct standard and advanced immobility flags.
     pub(super) fn disable_engine(&mut self, advanced: bool) {
         self.motive_speed_loss = self.definition.max_speed;
         self.immobilized |= advanced;
@@ -1651,8 +1633,7 @@ impl TryFrom<VehicleRecord> for BattleVehicle {
         vehicle.propulsion = record.propulsion;
         vehicle.motive_speed_loss = record.motive_speed_loss;
         vehicle.immobilized = record.immobilized;
-        vehicle.sprinting = record.sprinting;
-        let maximum = super::sprint::saved_limit(vehicle.maximum_speed(), false, false, false);
+        let maximum = super::speed_bonus::saved_limit(vehicle.maximum_speed(), false, false, false);
         if let Some(motion) = record.motion {
             let propelled = motion.propelled(record.power)?;
             propelled.validate(maximum + 10.75)?;
@@ -1938,7 +1919,6 @@ impl TryFrom<VehicleRecord> for BattleVehicle {
             .searchlight
             .validate(vehicle.definition().has_special("Searchlight"))?;
         vehicle.searchlight = record.searchlight;
-        vehicle.tight_turn_mode = record.tight_turn_mode;
         vehicle.no_armor_warning = record.no_armor_warning;
         vehicle.no_ammunition_warning = record.no_ammunition_warning;
         vehicle.autocon_shutdown = record.autocon_shutdown;
@@ -1959,7 +1939,6 @@ impl TryFrom<VehicleRecord> for BattleVehicle {
         vehicle.fortified = record.fortified;
         vehicle.observer = record.observer;
         vehicle.weapons_hold = record.weapons_hold;
-        vehicle.sprinting = record.sprinting;
         vehicle.combat_safe = record.combat_safe;
         vehicle.visibility = record.visibility;
         vehicle.dig = record.dig;

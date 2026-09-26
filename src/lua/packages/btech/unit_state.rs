@@ -230,7 +230,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             state.set("tag", detached(lua, &vehicle.tag())?)?;
             state.set("mw_safety", vehicle.mw_safety())?;
             state.set("bth_debug", vehicle.bth_debug())?;
-            state.set("tight_turn_mode", vehicle.tight_turn_mode())?;
             state.set("armor_warning", vehicle.armor_warning())?;
             state.set("ammunition_warning", vehicle.ammunition_warning())?;
             state.set("searchlight_warning", vehicle.searchlight_warning())?;
@@ -285,7 +284,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         state.set("mw_safety", unit.mw_safety())?;
         state.set("bth_debug", unit.bth_debug())?;
         state.set("armor_warning", unit.armor_warning())?;
-        state.set("tight_turn_mode", unit.tight_turn_mode())?;
         state.set("lateral", detached(lua, &unit.lateral())?)?;
         state.set("autocon_shutdown", unit.autocon_shutdown())?;
         state.set("ammunition_warning", unit.ammunition_warning())?;

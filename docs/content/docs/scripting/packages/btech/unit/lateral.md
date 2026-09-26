@@ -5,7 +5,7 @@ linkTitle: "lateral"
 manualLinkTitle: "lateral"
 ---
 
-Request a six-second lateral change; requires the assigned Maneuvering Ace pilot.
+Request a six-second lateral change; requires an intact quad and its assigned pilot.
 
 ## Signature
 

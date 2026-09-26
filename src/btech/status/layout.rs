@@ -407,21 +407,14 @@ fn targeting(
         )),
         None => {}
     }
-    let (pilot, tight, safety) = if let Some(u) = world.btech.constructed_units().get(&source.unit)
-    {
-        (u.pilot(), u.tight_turn_mode(), u.mw_safety())
+    let safety = if let Some(u) = world.btech.constructed_units().get(&source.unit) {
+        u.mw_safety()
     } else {
         let u = &world.btech.vehicles()[&source.unit];
-        (u.pilot(), u.tight_turn_mode(), u.mw_safety())
+        u.mw_safety()
     };
     if !safety {
         lines.push("Weapon Safeties are [fg=red bold]OFF[reset].".into());
-    }
-    if pilot.is_some_and(|p| btech::lateral::maneuvering_ace(world, p)) {
-        lines.push(format!(
-            "Turn Mode: {}",
-            if tight { "TIGHT" } else { "NORMAL" }
-        ));
     }
     if new_charge
         && let Some(unit) = world.btech.constructed_units().get(&source.unit)

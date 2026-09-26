@@ -1,0 +1,504 @@
+{
+  "source_sha256": "d56d7bb1e445d6fb26979aeb207af76be5124febcdf641d07149253cee3e9467",
+  "attribution": "Observed categories; not causal proof",
+  "cases": {
+    "[\"opposite_crossing\",\"hover\",4,false]": {
+      "braking_ticks": 29,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 27,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "0d745707db68c51f824c959b01325cddd5e418c10ad9f7cc37fbd806a5eb4ef5",
+      "goal_changes": 21,
+      "heading_error_sum": 240.2282954914706,
+      "motion_samples": 537,
+      "reason_ticks": {
+        "direct_score": 38,
+        "no_plan": 1,
+        "predicted": 282,
+        "settled": 124,
+        "unreliable_model": 93
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 538
+    },
+    "[\"opposite_crossing\",\"hover\",4,true]": {
+      "braking_ticks": 29,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 27,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "48a6c8305c61487d38df3b4e343573898ac207496f44754f857fff63a3e7b672",
+      "goal_changes": 21,
+      "heading_error_sum": 240.2282954914706,
+      "motion_samples": 537,
+      "reason_ticks": {
+        "direct_score": 38,
+        "no_plan": 1,
+        "predicted": 282,
+        "settled": 124,
+        "unreliable_model": 93
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 538
+    },
+    "[\"opposite_crossing\",\"hover\",5,false]": {
+      "braking_ticks": 29,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 27,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "19cc396e440c7e97f30ceb7b59eef0c297407816edba58d1d8c908180e1027a8",
+      "goal_changes": 21,
+      "heading_error_sum": 240.2282954914706,
+      "motion_samples": 537,
+      "reason_ticks": {
+        "direct_score": 38,
+        "no_plan": 1,
+        "predicted": 282,
+        "settled": 124,
+        "unreliable_model": 93
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 538
+    },
+    "[\"opposite_crossing\",\"hover\",5,true]": {
+      "braking_ticks": 29,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 27,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "0222e3d76ea088446c9a535134606464695f68edbe318613f0afe1c8f9231c6a",
+      "goal_changes": 21,
+      "heading_error_sum": 240.2282954914706,
+      "motion_samples": 537,
+      "reason_ticks": {
+        "direct_score": 38,
+        "no_plan": 1,
+        "predicted": 282,
+        "settled": 124,
+        "unreliable_model": 93
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 538
+    },
+    "[\"opposite_crossing\",\"hover\",6,false]": {
+      "braking_ticks": 29,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 27,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "9a1d2a52434b579222c6aa7c92648c3b534852d22824287af079d7534f4c9f5c",
+      "goal_changes": 21,
+      "heading_error_sum": 240.2282954914706,
+      "motion_samples": 537,
+      "reason_ticks": {
+        "direct_score": 38,
+        "no_plan": 1,
+        "predicted": 282,
+        "settled": 124,
+        "unreliable_model": 93
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 538
+    },
+    "[\"opposite_crossing\",\"hover\",6,true]": {
+      "braking_ticks": 29,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 27,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "895140f738ea8216ba8dc1daf17d80b985307bba580b591622ec3844d52c6d1e",
+      "goal_changes": 21,
+      "heading_error_sum": 240.2282954914706,
+      "motion_samples": 537,
+      "reason_ticks": {
+        "direct_score": 38,
+        "no_plan": 1,
+        "predicted": 282,
+        "settled": 124,
+        "unreliable_model": 93
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 538
+    },
+    "[\"opposite_crossing\",\"mech\",4,false]": {
+      "braking_ticks": 295,
+      "confidence_resets": {
+        "motion_paused": 2
+      },
+      "decision_changes": 111,
+      "first_prediction": 94,
+      "gameplay_digest_sequence_sha256": "e8222aad73d3235cdaa741a5b4f0106b0a16bbf5ede80ceff09eb5edd1eea830",
+      "goal_changes": 78,
+      "heading_error_sum": 5008.163314176252,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 522,
+        "predicted": 30,
+        "settled": 251,
+        "unreliable_model": 97
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"opposite_crossing\",\"mech\",4,true]": {
+      "braking_ticks": 295,
+      "confidence_resets": {
+        "motion_paused": 2
+      },
+      "decision_changes": 111,
+      "first_prediction": 94,
+      "gameplay_digest_sequence_sha256": "dde9b4bdfa46481e2396666ce160411ee150e08a0c52bd4d63cc2937eb44aef3",
+      "goal_changes": 78,
+      "heading_error_sum": 5008.163314176252,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 522,
+        "predicted": 30,
+        "settled": 251,
+        "unreliable_model": 97
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"opposite_crossing\",\"mech\",5,false]": {
+      "braking_ticks": 295,
+      "confidence_resets": {
+        "motion_paused": 2
+      },
+      "decision_changes": 111,
+      "first_prediction": 94,
+      "gameplay_digest_sequence_sha256": "66c8fe50b793c11da2eaa9f8f847ef71615fdf4bf638417e213fac8da6df994d",
+      "goal_changes": 78,
+      "heading_error_sum": 5008.163314176252,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 522,
+        "predicted": 30,
+        "settled": 251,
+        "unreliable_model": 97
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"opposite_crossing\",\"mech\",5,true]": {
+      "braking_ticks": 295,
+      "confidence_resets": {
+        "motion_paused": 2
+      },
+      "decision_changes": 111,
+      "first_prediction": 94,
+      "gameplay_digest_sequence_sha256": "887838a53ac5b5a3b8c9ea683eb827b143b9895e705b269d0d0a7754929aaa00",
+      "goal_changes": 78,
+      "heading_error_sum": 5008.163314176252,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 522,
+        "predicted": 30,
+        "settled": 251,
+        "unreliable_model": 97
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"opposite_crossing\",\"mech\",6,false]": {
+      "braking_ticks": 295,
+      "confidence_resets": {
+        "motion_paused": 2
+      },
+      "decision_changes": 111,
+      "first_prediction": 94,
+      "gameplay_digest_sequence_sha256": "1daa4d1f41f007f727911bd6f9e5368b7234dc7aa53566a4fd22c8ae08910f6c",
+      "goal_changes": 78,
+      "heading_error_sum": 5008.163314176252,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 522,
+        "predicted": 30,
+        "settled": 251,
+        "unreliable_model": 97
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"opposite_crossing\",\"mech\",6,true]": {
+      "braking_ticks": 295,
+      "confidence_resets": {
+        "motion_paused": 2
+      },
+      "decision_changes": 111,
+      "first_prediction": 94,
+      "gameplay_digest_sequence_sha256": "ceff46847776412233c87505a90f1e2064f912fe207fd13830a87a7dc831f08e",
+      "goal_changes": 78,
+      "heading_error_sum": 5008.163314176252,
+      "motion_samples": 900,
+      "reason_ticks": {
+        "direct_score": 522,
+        "predicted": 30,
+        "settled": 251,
+        "unreliable_model": 97
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 900
+    },
+    "[\"opposite_crossing\",\"tracked\",4,false]": {
+      "braking_ticks": 29,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 27,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "b1f8c1d99560cbcb11df070f56db92501dc68d3122a25d0bb634ac359124bb56",
+      "goal_changes": 21,
+      "heading_error_sum": 240.2282954914706,
+      "motion_samples": 537,
+      "reason_ticks": {
+        "direct_score": 38,
+        "no_plan": 1,
+        "predicted": 282,
+        "settled": 124,
+        "unreliable_model": 93
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 538
+    },
+    "[\"opposite_crossing\",\"tracked\",4,true]": {
+      "braking_ticks": 29,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 27,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "abe47de16e315294b35cf465acad787014a7ec07e59e38eaef91b5aad65c5533",
+      "goal_changes": 21,
+      "heading_error_sum": 240.2282954914706,
+      "motion_samples": 537,
+      "reason_ticks": {
+        "direct_score": 38,
+        "no_plan": 1,
+        "predicted": 282,
+        "settled": 124,
+        "unreliable_model": 93
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 538
+    },
+    "[\"opposite_crossing\",\"tracked\",5,false]": {
+      "braking_ticks": 29,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 27,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "1b13018779b1e5dd47bd07d5a9774f5ffcce460e47686d3a940eae217e7691d9",
+      "goal_changes": 21,
+      "heading_error_sum": 240.2282954914706,
+      "motion_samples": 537,
+      "reason_ticks": {
+        "direct_score": 38,
+        "no_plan": 1,
+        "predicted": 282,
+        "settled": 124,
+        "unreliable_model": 93
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 538
+    },
+    "[\"opposite_crossing\",\"tracked\",5,true]": {
+      "braking_ticks": 29,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 27,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "40ac081ae251dd76dfe208b426f5f86114b8db7a74a434f7b98ea7ca92839f0b",
+      "goal_changes": 21,
+      "heading_error_sum": 240.2282954914706,
+      "motion_samples": 537,
+      "reason_ticks": {
+        "direct_score": 38,
+        "no_plan": 1,
+        "predicted": 282,
+        "settled": 124,
+        "unreliable_model": 93
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 538
+    },
+    "[\"opposite_crossing\",\"tracked\",6,false]": {
+      "braking_ticks": 29,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 27,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "5986a47a5e92e92c81e8db8e1bf9dd4a3d57c662d416323436d1f59d881f0eb4",
+      "goal_changes": 21,
+      "heading_error_sum": 240.2282954914706,
+      "motion_samples": 537,
+      "reason_ticks": {
+        "direct_score": 38,
+        "no_plan": 1,
+        "predicted": 282,
+        "settled": 124,
+        "unreliable_model": 93
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 538
+    },
+    "[\"opposite_crossing\",\"tracked\",6,true]": {
+      "braking_ticks": 29,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 27,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "ccfcaeccf0941bfa2733d1cc604138046acfa6f025e087a3119527e4741c3b6e",
+      "goal_changes": 21,
+      "heading_error_sum": 240.2282954914706,
+      "motion_samples": 537,
+      "reason_ticks": {
+        "direct_score": 38,
+        "no_plan": 1,
+        "predicted": 282,
+        "settled": 124,
+        "unreliable_model": 93
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 538
+    },
+    "[\"opposite_crossing\",\"wheeled\",4,false]": {
+      "braking_ticks": 29,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 27,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "23be63892160a1f27a2d154763729090f8c2f2ef7f13e3d65943c07ffff264ad",
+      "goal_changes": 21,
+      "heading_error_sum": 240.2282954914706,
+      "motion_samples": 537,
+      "reason_ticks": {
+        "direct_score": 38,
+        "no_plan": 1,
+        "predicted": 282,
+        "settled": 124,
+        "unreliable_model": 93
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 538
+    },
+    "[\"opposite_crossing\",\"wheeled\",4,true]": {
+      "braking_ticks": 29,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 27,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "663e2c2443ab47fcd53b6b8f373e7e7b27e1bf3174e4d09370991f8c4fa92faf",
+      "goal_changes": 21,
+      "heading_error_sum": 240.2282954914706,
+      "motion_samples": 537,
+      "reason_ticks": {
+        "direct_score": 38,
+        "no_plan": 1,
+        "predicted": 282,
+        "settled": 124,
+        "unreliable_model": 93
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 538
+    },
+    "[\"opposite_crossing\",\"wheeled\",5,false]": {
+      "braking_ticks": 29,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 27,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "71173a1a96a9a2691d7e4ca7ace71178ddad371952190d3f4e13cdc031f93dae",
+      "goal_changes": 21,
+      "heading_error_sum": 240.2282954914706,
+      "motion_samples": 537,
+      "reason_ticks": {
+        "direct_score": 38,
+        "no_plan": 1,
+        "predicted": 282,
+        "settled": 124,
+        "unreliable_model": 93
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 538
+    },
+    "[\"opposite_crossing\",\"wheeled\",5,true]": {
+      "braking_ticks": 29,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 27,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "23d49f3a629742497d5ec0e3d78200016410aed4a2335f2c5b88c5dbb02f0916",
+      "goal_changes": 21,
+      "heading_error_sum": 240.2282954914706,
+      "motion_samples": 537,
+      "reason_ticks": {
+        "direct_score": 38,
+        "no_plan": 1,
+        "predicted": 282,
+        "settled": 124,
+        "unreliable_model": 93
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 538
+    },
+    "[\"opposite_crossing\",\"wheeled\",6,false]": {
+      "braking_ticks": 29,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 27,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "f8d4a69787bf7b766bc59abdf634c2f4016c991c647e7655aa2fe3bc4fbb3754",
+      "goal_changes": 21,
+      "heading_error_sum": 240.2282954914706,
+      "motion_samples": 537,
+      "reason_ticks": {
+        "direct_score": 38,
+        "no_plan": 1,
+        "predicted": 282,
+        "settled": 124,
+        "unreliable_model": 93
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 538
+    },
+    "[\"opposite_crossing\",\"wheeled\",6,true]": {
+      "braking_ticks": 29,
+      "confidence_resets": {
+        "motion_paused": 1
+      },
+      "decision_changes": 27,
+      "first_prediction": 91,
+      "gameplay_digest_sequence_sha256": "1b4f3392b96fc4e7d8a18102ec4b444ab9289cd18fcbb8004a720bfb00512a95",
+      "goal_changes": 21,
+      "heading_error_sum": 240.2282954914706,
+      "motion_samples": 537,
+      "reason_ticks": {
+        "direct_score": 38,
+        "no_plan": 1,
+        "predicted": 282,
+        "settled": 124,
+        "unreliable_model": 93
+      },
+      "stopped_pending_ticks": 0,
+      "ticks": 538
+    }
+  }
+}

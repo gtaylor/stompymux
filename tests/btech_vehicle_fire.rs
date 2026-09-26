@@ -75,14 +75,12 @@ fn shot_rules() -> BattleShotRules {
     BattleShotRules {
         range_damage: false,
         tsm_tow_bonus: true,
-        tsm_sprint_bonus: true,
         vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
         stacking: BattleStackingRules::STANDARD,
         stagger: BattleStaggerMode::Retain,
         glancing: BattleGlancingMode::Disabled,
         aim: rules(),
         hit: BattleHitRules {
-            fasa_criticals: false,
             inferno_penalty: false,
             exile_stun_mode: 0,
         },
@@ -169,13 +167,10 @@ fn fire_rules() -> BattleVehicleShotRules {
         shot: BattleShotRules {
             range_damage: false,
             tsm_tow_bonus: true,
-            tsm_sprint_bonus: true,
             vehicle_impact: BattleVehicleImpactRules {
                 advanced_fire: false,
                 criticals,
-                fasa: BattleVehicleFasaHitRules {
-                    friendly_criticals: true,
-                    critical_shielding: true,
+                hit: BattleVehicleHitRules {
                     critical_mode: 1,
                     critical_level: 40,
                 },
@@ -1526,59 +1521,6 @@ async fn vehicle_pod_host_action_rolls_back_attachment_and_location_effects() {
     lua.world().validate(&config).unwrap();
 }
 
-#[tokio::test]
-async fn vehicle_pods_apply_fasa_location_effects_without_entering_damage() {
-    let template = include_str!("../game/mechs/Demolisher").replace("IS.AC/20", "IS.NarcBeacon");
-    let (_dir, config, mut base, _, [_, _, shooter, target]) = engagement(&template).await;
-    let attack = (0..=255)
-        .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
-        .unwrap();
-    seed(&mut base, shooter, attack);
-    let mut rules = fire_rules();
-    rules.shot.vehicle_impact.criticals.table = BattleVehicleCriticalTable::Fasa;
-    rules.shot.vehicle_impact.fasa.friendly_criticals = true;
-    rules.shot.vehicle_impact.fasa.critical_shielding = true;
-    for location in [3, 11] {
-        let mut world = base.clone();
-        let value = (0..=255)
-            .find(|value| {
-                let mut dice = BattleDice::seeded([*value; 32]);
-                dice.two_d6();
-                dice.two_d6() == location
-            })
-            .unwrap();
-        seed(&mut world, target, value);
-        let before = world.btech.vehicles()[&target].clone();
-        let mut dice = BattleDice::seeded([value; 32]);
-        dice.two_d6();
-        dice.two_d6();
-        let report =
-            fire_battle_vehicle_shot(&mut world, shooter, ObjectId(1), target, 0, rules).unwrap();
-        let pod = report.narc.unwrap();
-        assert!(pod.hit && pod.section.is_some());
-        let after = &world.btech.vehicles()[&target];
-        assert_eq!(after.sections(), before.sections());
-        assert_eq!(after.ammunition(), before.ammunition());
-        if location == 3 {
-            assert_eq!(after.motive_speed_loss(), 21.5);
-            assert!(
-                pod.notices
-                    .iter()
-                    .any(|notice| notice.text.contains("seriously damaged"))
-            );
-        } else {
-            assert!(after.turret_locked());
-            assert!(
-                pod.notices
-                    .iter()
-                    .any(|notice| notice.text.contains("turret takes a direct hit"))
-            );
-        }
-        assert_eq!(roll_unit_dice(&mut world, target, 1).unwrap(), [dice.d6()]);
-        world.validate(&config).unwrap();
-    }
-}
-
 /// Seed attached effects without altering the vehicle's controls or equipment.
 fn attach_removal_test_pods(world: &mut World, id: ObjectId) {
     let mut saved = serde_json::to_value(&world.btech).unwrap();
@@ -2817,13 +2759,7 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                     let head_seed = (0..=255)
                         .find(|seed| {
                             let mut dice = BattleDice::seeded([*seed; 32]);
-                            let entry = dice.two_d6();
-                            let location = if config.battletech.fasacrit != 0 {
-                                dice.two_d6()
-                            } else {
-                                entry
-                            };
-                            location == 12
+                            dice.two_d6() == 12
                         })
                         .unwrap();
                     saved["constructed"][target.0.to_string()]["dice"] =
@@ -2838,12 +2774,9 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                     let mut impact_rules = BattleVehicleImpactRules::STANDARD;
                     impact_rules.criticals.table = BattleVehicleCriticalTable::from_settings(
                         config.battletech.fasaadvvhlcrit != 0,
-                        config.battletech.fasacrit != 0,
                     );
-                    impact_rules.fasa.critical_mode = config.battletech.vcrit;
-                    impact_rules.fasa.critical_level = config.battletech.critlevel;
-                    impact_rules.fasa.friendly_criticals = config.battletech.tankfriendly != 0;
-                    impact_rules.fasa.critical_shielding = config.battletech.tankshield != 0;
+                    impact_rules.hit.critical_mode = config.battletech.vcrit;
+                    impact_rules.hit.critical_level = config.battletech.critlevel;
                     let seed = (0..=255)
                         .find(|seed| {
                             let mut probe = world.clone();

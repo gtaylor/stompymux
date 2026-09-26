@@ -109,11 +109,11 @@ async fn advanced_ground_tables_cover_every_face_and_roll() {
 }
 
 #[tokio::test]
-async fn standard_and_fasa_branches_preserve_suppression_and_replay() {
+async fn standard_branches_preserve_suppression_and_replay() {
     use BattleVehicleCriticalEffect as E;
     use BattleVehicleCriticalTable as T;
     let (_dir, config, base, id) = fixture(include_str!("../game/mechs/Demolisher")).await;
-    for table in [T::Standard, T::Fasa] {
+    for table in [T::Standard] {
         for section in [BattleVehicleSection::Front, BattleVehicleSection::Turret] {
             for damaged in [false, true] {
                 for value in 0..32 {
@@ -209,10 +209,8 @@ async fn standard_and_fasa_branches_preserve_suppression_and_replay() {
 #[tokio::test]
 async fn disabled_safe_critproof_and_stationary_criticals_preserve_draw_order() {
     use BattleVehicleCriticalTable as T;
-    assert_eq!(T::from_settings(true, true), T::Advanced);
-    assert_eq!(T::from_settings(true, false), T::Advanced);
-    assert_eq!(T::from_settings(false, true), T::Fasa);
-    assert_eq!(T::from_settings(false, false), T::Standard);
+    assert_eq!(T::from_settings(true), T::Advanced);
+    assert_eq!(T::from_settings(false), T::Standard);
     for (template, critproof, stationary) in [
         (
             include_str!("../game/mechs/Demolisher").to_owned(),
@@ -234,7 +232,7 @@ async fn disabled_safe_critproof_and_stationary_criticals_preserve_draw_order() 
         ),
     ] {
         let (_dir, _config, base, id) = fixture(&template).await;
-        for table in [T::Standard, T::Fasa, T::Advanced] {
+        for table in [T::Standard, T::Advanced] {
             for (enabled, combat_safe) in [(false, false), (true, true), (true, false)] {
                 if !critproof && !stationary && enabled && !combat_safe {
                     continue;

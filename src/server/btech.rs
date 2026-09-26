@@ -92,7 +92,6 @@ impl Server {
                 },
                 stagger: crate::BattleStaggerMode::from_setting(self.config.battletech.newstagger),
                 hit: crate::BattleHitRules {
-                    fasa_criticals: self.config.battletech.fasacrit != 0,
                     inferno_penalty: self.config.battletech.inferno_penalty != 0,
                     exile_stun_mode: self.config.battletech.exile_stun_code.clamp(0, 2) as u8,
                 },
@@ -207,7 +206,6 @@ impl Server {
             crate::BattleMovementRules {
                 free_fusion_vtol_fuel: self.config.battletech.nofusionvtolfuel != 0,
                 tsm_tow_bonus: self.config.battletech.tsm_tow_bonus != 0,
-                tsm_sprint_bonus: self.config.battletech.tsm_sprint_bonus != 0,
                 physical_pilot_skill: self.config.battletech.phys_use_pskill != 0,
                 new_terrain: self.config.battletech.newterrain != 0,
                 charge: crate::BattleChargePolicy {
@@ -234,7 +232,6 @@ impl Server {
                         self.config.battletech.newstagger,
                     ),
                     hit: crate::BattleHitRules {
-                        fasa_criticals: self.config.battletech.fasacrit != 0,
                         inferno_penalty: self.config.battletech.inferno_penalty != 0,
                         exile_stun_mode: self.config.battletech.exile_stun_code.clamp(0, 2) as u8,
                     },
@@ -370,7 +367,6 @@ impl Server {
             crate::BattleMovementRules {
                 free_fusion_vtol_fuel: self.config.battletech.nofusionvtolfuel != 0,
                 tsm_tow_bonus: self.config.battletech.tsm_tow_bonus != 0,
-                tsm_sprint_bonus: self.config.battletech.tsm_sprint_bonus != 0,
                 physical_pilot_skill: self.config.battletech.phys_use_pskill != 0,
                 new_terrain: self.config.battletech.newterrain != 0,
                 fall: crate::BattleFallRules {
@@ -387,7 +383,6 @@ impl Server {
                         self.config.battletech.newstagger,
                     ),
                     hit: crate::BattleHitRules {
-                        fasa_criticals: self.config.battletech.fasacrit != 0,
                         inferno_penalty: self.config.battletech.inferno_penalty != 0,
                         exile_stun_mode: self.config.battletech.exile_stun_code.clamp(0, 2) as u8,
                     },
@@ -482,7 +477,6 @@ impl Server {
                     hit_arcs: settings.hit_arcs,
                 },
                 hit: crate::BattleHitRules {
-                    fasa_criticals: settings.fasacrit != 0,
                     inferno_penalty: settings.inferno_penalty != 0,
                     exile_stun_mode: settings.exile_stun_code.clamp(0, 2) as u8,
                 },
@@ -517,7 +511,6 @@ impl Server {
                 interval: settings.newstaggertime.max(1) as u64,
                 tonnage: settings.newstaggertons != 0,
                 hit: crate::BattleHitRules {
-                    fasa_criticals: settings.fasacrit != 0,
                     inferno_penalty: settings.inferno_penalty != 0,
                     exile_stun_mode: settings.exile_stun_code.clamp(0, 2) as u8,
                 },

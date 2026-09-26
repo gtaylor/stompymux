@@ -362,10 +362,7 @@ async fn standard_vtol_criticals_share_common_effects_without_ground_preliminary
         include_str!("../game/mechs/ObservationVTOL"),
     ] {
         let aircraft = BattleVehicle::new(BattleVehicleTemplate::parse(source).unwrap()).unwrap();
-        for table in [
-            BattleVehicleCriticalTable::Standard,
-            BattleVehicleCriticalTable::Fasa,
-        ] {
+        for table in [BattleVehicleCriticalTable::Standard] {
             for (index, effect) in [
                 E::CrewKilled,
                 E::MainWeaponJam,

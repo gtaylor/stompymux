@@ -5,58 +5,48 @@ use std::sync::Arc;
 
 /// Bits for the six shared preferences, in their persistent field's public order.
 const MASKS: [u32; 6] = [2, 4, 8, 16, 64, 128];
-/// Tight turning uses the same field bit on every supported chassis.
-const TIGHT_TURN: u32 = 256;
 
 /// Project the same booleans read by cockpit controls and combat services.
 pub(super) fn read(world: &World, id: ObjectId) -> Result<u32> {
-    let (values, tight) = if let Some(unit) = world.btech.constructed_units().get(&id) {
-        (
-            [
-                unit.searchlight_warning(),
-                unit.auto_fall(),
-                !unit.armor_warning(),
-                !unit.ammunition_warning(),
-                unit.autocon_shutdown(),
-                unit.friendly_fire_safety(),
-            ],
-            unit.tight_turn_mode(),
-        )
+    let values = if let Some(unit) = world.btech.constructed_units().get(&id) {
+        [
+            unit.searchlight_warning(),
+            unit.auto_fall(),
+            !unit.armor_warning(),
+            !unit.ammunition_warning(),
+            unit.autocon_shutdown(),
+            unit.friendly_fire_safety(),
+        ]
     } else {
         let unit = world
             .btech
             .vehicles()
             .get(&id)
             .context("Unit is unavailable")?;
-        (
-            [
-                unit.searchlight_warning(),
-                unit.auto_fall(),
-                !unit.armor_warning(),
-                !unit.ammunition_warning(),
-                unit.autocon_shutdown(),
-                unit.friendly_fire_safety(),
-            ],
-            unit.tight_turn_mode(),
-        )
+        [
+            unit.searchlight_warning(),
+            unit.auto_fall(),
+            !unit.armor_warning(),
+            !unit.ammunition_warning(),
+            unit.autocon_shutdown(),
+            unit.friendly_fire_safety(),
+        ]
     };
     Ok(values.into_iter().zip(MASKS).fold(
-        (if tight { TIGHT_TURN } else { 0 }) | super::auxiliary_preferences::bits(world, id)?,
+        super::auxiliary_preferences::bits(world, id)?,
         |bits, (enabled, mask)| bits | if enabled { mask } else { 0 },
     ))
 }
 
 /// Update existing authoritative settings after wizard admission and before whole-world validation.
 pub(super) fn set(world: &mut World, id: ObjectId, bits: u32) -> Result<()> {
-    let allowed = MASKS.into_iter().fold(
-        TIGHT_TURN | super::auxiliary_preferences::MASK,
-        |bits, mask| bits | mask,
-    );
+    let allowed = MASKS
+        .into_iter()
+        .fold(super::auxiliary_preferences::MASK, |bits, mask| bits | mask);
     ensure!(
         bits & !allowed == 0,
         "Preference bitvector includes settings not implemented for this chassis"
     );
-    super::turnmode::set(world, id, bits & TIGHT_TURN != 0)?;
     super::auxiliary_preferences::set_bits(world, id, bits)?;
     let fields = if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
         [

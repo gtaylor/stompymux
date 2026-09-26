@@ -605,7 +605,7 @@ impl BtechState {
                 && let Some(motion) = vehicle.motion()
             {
                 motion.validate(
-                    super::sprint::saved_limit(vehicle.maximum_speed(), false, false, false)
+                    super::speed_bonus::saved_limit(vehicle.maximum_speed(), false, false, false)
                         + 10.75,
                 )?;
                 ensure!(

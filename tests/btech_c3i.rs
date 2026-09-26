@@ -646,14 +646,12 @@ async fn shared_range_applies_to_hex_aim_and_replays_in_actual_shots() {
     let rules = BattleShotRules {
         range_damage: false,
         tsm_tow_bonus: true,
-        tsm_sprint_bonus: true,
         vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
         stacking: BattleStackingRules::STANDARD,
         stagger: BattleStaggerMode::Retain,
         glancing: BattleGlancingMode::Disabled,
         aim: aim_rules(),
         hit: BattleHitRules {
-            fasa_criticals: false,
             inferno_penalty: false,
             exile_stun_mode: 0,
         },
@@ -1464,14 +1462,12 @@ async fn classic_assisted_unit_and_hex_shots_share_limits_and_restart_replay() {
     let rules = BattleShotRules {
         range_damage: false,
         tsm_tow_bonus: true,
-        tsm_sprint_bonus: true,
         vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
         stacking: BattleStackingRules::STANDARD,
         stagger: BattleStaggerMode::Retain,
         glancing: BattleGlancingMode::Disabled,
         aim: aim_rules(),
         hit: BattleHitRules {
-            fasa_criticals: false,
             inferno_penalty: false,
             exile_stun_mode: 0,
         },

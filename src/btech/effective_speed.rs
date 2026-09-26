@@ -4,8 +4,8 @@ use anyhow::Result;
 
 impl BattleUnit {
     /// Maximum used by classic gunnery XP, derived from current mass and template speed.
-    /// This unit-local query excludes external load and pilot advantages; world load
-    /// queries include towing and Speed Demon. Damage-only mobility and throttle limits remain separate.
+    /// This unit-local query excludes external load; world load queries include towing.
+    /// Damage-only mobility and throttle limits remain separate.
     /// Gravity applies only on maps enabling special environmental rules.
     pub fn effective_maximum_speed(&self, map: Option<&StoredBattleMap>) -> Result<f64> {
         self.effective_speed_with_load(
@@ -17,8 +17,6 @@ impl BattleUnit {
                 destroyed: self.is_destroyed(),
             },
             self.definition().max_speed,
-            false,
-            true,
         )
     }
 
@@ -28,16 +26,11 @@ impl BattleUnit {
         map: Option<&StoredBattleMap>,
         load: super::BattleUnitLoad,
         maximum: f64,
-        speed_demon: bool,
-        tsm_sprint_bonus: bool,
     ) -> Result<f64> {
         let speed = super::speed_bonus::SpeedBonuses {
             masc: self.masc_active(),
             supercharger: self.supercharger_active(),
-            sprint: self.sprinting,
             hot_myomer: self.triple_myomer_active(),
-            tsm_sprint_bonus,
-            speed_demon,
         }
         .apply(load.maximum_speed(maximum)?)?;
         super::speed_bonus::gravity(
@@ -51,7 +44,7 @@ impl BattleUnit {
 /// Effective transfer speed includes live external load without caching chassis state.
 /// Mechs retain their mass, booster, myomer and environmental conversions; vehicles
 /// use the damage-adjusted movement ceiling with the shared external-load penalty.
-/// Both chassis families apply pilot bonuses and enabled map gravity after load.
+/// Both chassis families apply enabled map gravity after load.
 pub fn unit_effective_maximum_speed(
     world: &crate::World,
     id: crate::ObjectId,
@@ -67,7 +60,7 @@ pub fn unit_effective_maximum_speed(
     )
 }
 
-/// Host-aware effective speed keeps both myomer policies together through every transfer recheck.
+/// Host-aware effective speed keeps the towing policy consistent through every transfer recheck.
 pub(crate) fn configured(
     world: &crate::World,
     id: crate::ObjectId,
@@ -76,7 +69,7 @@ pub(crate) fn configured(
     if let Some(unit) = world.btech.vehicles().get(&id) {
         let base =
             super::load::movement_maximum(world, id, unit.maximum_speed(), policy.tsm_tow_bonus)?;
-        return super::sprint::maximum(world, id, base, policy.tsm_sprint_bonus);
+        return super::speed_bonus::on_map(world, unit.position(), f64::from(base as f32));
     }
     let unit = world
         .btech
@@ -90,9 +83,6 @@ pub(crate) fn configured(
         map,
         super::unit_load(world, id, policy.tsm_tow_bonus)?,
         unit.definition().max_speed,
-        unit.pilot()
-            .is_some_and(|pilot| super::skills::boolean_advantage(world, pilot, "Speed_Demon")),
-        policy.tsm_sprint_bonus,
     )
 }
 

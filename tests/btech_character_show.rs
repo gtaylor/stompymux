@@ -15,10 +15,10 @@ async fn wizard_catalogs_are_read_only_and_available_after_restart() {
         .remove(Flag::Wizard);
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
     let cases = [
-        ("allvalues", "charvalues", 119),
+        ("allvalues", "charvalues", 117),
         ("values", "Char_value", 14),
         ("skills", "Char_skill", 78),
-        ("advantages", "Char_advantage", 22),
+        ("advantages", "Char_advantage", 20),
         ("attributes", "Char_attribute", 5),
     ];
     for (category, heading, count) in cases {

@@ -34,6 +34,20 @@ repetitions, with tracing disabled. Both the six established CPU cases and the
 two moving-target cases run. A hold regression above 5% is an investigation
 failure; it is never silently retried away.
 
+Encounter and CPU runs explicitly select Adaptive for both the captured reference
+and candidate/replay, and direct pursuit for direct comparisons. The CPU executable
+supports `--pursuit-policy adaptive|direct`; encounters use
+`--pursuit-policy adaptive` with `--direct-pursuit` for direct comparisons.
+Both support `--policy-metadata PATH`.
+Metadata records requested/resolved policy after checking every heartbeat; a
+mismatch fails the run without changing existing CSV columns. Captures record
+selector capabilities and `pursuit_policy: "adaptive"`. Runs reject captures without
+that explicit identity before building the candidate; capture a fresh reference
+with the current tool. G is removed from runtime and CLI selection. Historical
+reports and measurements remain valid records of their captured executables;
+use their preserved tools to reproduce historical protocols. Removing G does not
+reclassify any earlier failed CPU verdict as passing.
+
 Interruptions terminate child process groups and leave partial evidence. Nonzero
 exit status, `status.json`, `report.json`, and `report.md` distinguish incomplete
 work, failed gates, and completed acceptance. Do not label behavior-only success
@@ -67,6 +81,7 @@ just autopilot-acceptance compare pursuit direct.json predictive.json
 just autopilot-acceptance compare trace first.jsonl replay.jsonl
 just autopilot-acceptance compare cpu reference.csv candidate.csv
 just autopilot-acceptance episodes summary.json trace.jsonl
+just autopilot-acceptance timeline trace.jsonl
 ```
 
 `compare` prints JSON and exits nonzero on failed gates or invalid input.
@@ -86,3 +101,10 @@ Large traces and binaries stay in ignored `target/autopilot-acceptance/`.
 Retain compact final reports, CSVs, hashes, and unresolved limitations under
 `benchmarks/autopilot/`, outside Hugo content. Small Rust tests for tools and
 behavior run in `cargo test`; the large encounter matrices remain opt-in.
+
+`timeline` summarizes committed pursuit reasons, goal changes, motion diagnostics,
+and first prediction per case. Where complete gameplay digests are present, it
+also hashes each case's ordered digest sequence so diagnostic-only trace changes
+can be distinguished from gameplay changes. Motion sample counts make absent
+fields in older traces explicit. These categories describe observations, not
+causal proof, and never replace exact candidate replay comparisons.

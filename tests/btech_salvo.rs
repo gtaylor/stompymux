@@ -93,7 +93,6 @@ async fn salvo_locations_replay_and_restart_preserves_every_group_and_roll() {
     persistence::save(&config.database(), &world).await.unwrap();
     let before = world.clone();
     let rules = BattleHitRules {
-        fasa_criticals: false,
         inferno_penalty: false,
         exile_stun_mode: 0,
     };
@@ -210,7 +209,6 @@ async fn tactical_salvo_applies_later_head_injury_and_rolls_back_an_entire_faile
     use stompymux_rs::{BattleSection, resolve_battle_tactical_salvo};
     let (_dir, config, world, id) = tactical_fixture().await;
     let rules = BattleHitRules {
-        fasa_criticals: false,
         inferno_penalty: false,
         exile_stun_mode: 0,
     };
@@ -292,7 +290,6 @@ async fn pilot_loss_stops_remaining_missile_groups_without_rolling_them() {
     use stompymux_rs::{BattleSection, resolve_battle_tactical_salvo};
     let (_dir, config, mut world, id) = tactical_fixture().await;
     let rules = BattleHitRules {
-        fasa_criticals: false,
         inferno_penalty: false,
         exile_stun_mode: 0,
     };

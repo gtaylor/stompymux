@@ -361,9 +361,7 @@ mod vehicle_hit;
 mod vehicle_piloting;
 mod vehicle_turret;
 pub use piloting::{BattlePilotNotice, BattlePilotingCheck, roll_piloting};
-pub use vehicle_hit::{
-    BattleVehicleFasaHitRules, BattleVehicleHit, BattleVehicleHitCondition, BattleVehicleMotiveHit,
-};
+pub use vehicle_hit::{BattleVehicleHit, BattleVehicleHitRules, BattleVehicleMotiveHit};
 pub use vehicle_turret::{lock_vehicle_turret, set_turret, turret_readout};
 
 mod fall;
@@ -896,9 +894,6 @@ pub use preferences::set_autocon_shutdown;
 
 pub(crate) mod lateral;
 pub use lateral::{BattleLateralMode, BattleLateralState, lateral, set_lateral};
-
-pub(crate) mod turnmode;
-pub use turnmode::turnmode;
 
 pub(crate) mod bootlegger;
 pub use bootlegger::{BattleBootleggerReport, bootlegger, bootlegger_modifier};
@@ -1534,8 +1529,6 @@ mod shot_counters;
 
 mod damage_counters;
 mod kill_counters;
-
-mod sprint;
 
 mod speed_bonus;
 

@@ -445,7 +445,7 @@ fn corridor_entries(world: &World, id: ObjectId) -> Vec<BattleHexCoordinate> {
 fn mine_movement_rules() -> BattleMovementRules {
     let mut rules = BattleMovementRules::STANDARD;
     rules.fall.vehicle_impact.criticals.enabled = false;
-    rules.fall.vehicle_impact.fasa.critical_mode = 0;
+    rules.fall.vehicle_impact.hit.critical_mode = 0;
     rules
 }
 
@@ -1523,7 +1523,7 @@ async fn terrain_fire_crew_death_evacuates_in_the_movement_checkpoint() {
             }
             dice.d6();
             dice.two_d6();
-            if !matches!(dice.two_d6(), 8 | 9) || dice.d6() != 4 {
+            if !matches!(dice.two_d6(), 8 | 9) || dice.die(10).unwrap() <= 5 || dice.d6() != 4 {
                 return None;
             }
             Some(seed)
@@ -1548,7 +1548,7 @@ async fn terrain_fire_crew_death_evacuates_in_the_movement_checkpoint() {
         .insert(Flag::InCharacter);
     let mut rules = BattleMovementRules::STANDARD;
     rules.fall.vehicle_impact.advanced_fire = true;
-    rules.fall.vehicle_impact.criticals.table = BattleVehicleCriticalTable::Fasa;
+    rules.fall.vehicle_impact.criticals.table = BattleVehicleCriticalTable::Standard;
     world
         .objects
         .get_mut(&ObjectId(2))

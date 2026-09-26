@@ -1,4 +1,4 @@
-//! Standard and FASA aircraft impacts share weapon ranking, armor and critical transactions.
+//! Aircraft impacts share armor and critical transactions.
 use crate::support;
 use stompymux_rs::*;
 
@@ -6,75 +6,64 @@ use stompymux_rs::*;
 async fn aircraft_impacts_apply_location_rotor_and_armor_effects_with_saved_replay() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Aircraft impact".into(), Kind::Thing);
-    for fasa in [false, true] {
-        for proof in [false, true] {
-            let source = if proof {
-                include_str!("../game/mechs/Kestrel")
-                    .replace("CargoTech", "CargoTech CritProof_Tech")
-            } else {
-                include_str!("../game/mechs/Kestrel").into()
-            };
-            let unit = BattleVehicle::new(BattleVehicleTemplate::parse(&source).unwrap()).unwrap();
-            for arc in [
-                BattleHitArc::Front,
-                BattleHitArc::Rear,
-                BattleHitArc::Left,
-                BattleHitArc::Right,
-            ] {
-                for roll in 2..=12 {
-                    let seed = (0..=255)
-                        .find(|seed| {
-                            let mut dice = BattleDice::seeded([*seed; 32]);
-                            let first = dice.two_d6();
-                            (if fasa || proof { dice.two_d6() } else { first }) == roll
-                        })
-                        .unwrap();
-                    let mut saved = serde_json::to_value(&unit).unwrap();
-                    saved["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-                    let mut state = serde_json::to_value(&world.btech).unwrap();
-                    state["vehicles"][id.0.to_string()] = saved;
-                    world.btech = serde_json::from_value(state).unwrap();
-                    let mut replay = world.clone();
-                    let mut rules = BattleVehicleImpactRules::STANDARD;
-                    rules.criticals.enabled = false;
-                    if fasa {
-                        rules.criticals.table = BattleVehicleCriticalTable::Fasa;
-                    }
-                    let selected = unit.definition().vtol_hit(arc, roll, fasa).unwrap();
-                    let report =
-                        resolve_battle_vehicle_impact(&mut world, id, arc, 1, None, rules).unwrap();
-                    assert_eq!(report.hit, Some(selected.hit));
-                    assert_eq!(report.rolls.len(), if fasa || proof { 2 } else { 1 });
-                    assert_eq!(*report.rolls.last().unwrap(), roll);
-                    assert_eq!(
-                        resolve_battle_vehicle_impact(&mut replay, id, arc, 1, None, rules)
-                            .unwrap(),
-                        report
-                    );
-                    assert_eq!(world.btech, replay.btech);
-                    let changed = &world.btech.vehicles()[&id];
-                    assert_eq!(
-                        changed.rotor_destroyed(),
-                        selected.rotor == Some(BattleRotorHit::Destroy)
-                    );
-                    if selected.rotor == Some(BattleRotorHit::Damage) {
-                        assert_eq!(changed.maximum_speed(), 182.75);
-                    }
-                    assert_eq!(
-                        changed.lost_criticals().is_empty(),
-                        !selected.destroy_main_weapon
-                    );
-                    assert!(!changed.crew_killed());
-                    assert_eq!(
-                        serde_json::from_value::<BattleVehicle>(
-                            serde_json::to_value(changed).unwrap()
-                        )
+
+    for proof in [false, true] {
+        let source = if proof {
+            include_str!("../game/mechs/Kestrel").replace("CargoTech", "CargoTech CritProof_Tech")
+        } else {
+            include_str!("../game/mechs/Kestrel").into()
+        };
+        let unit = BattleVehicle::new(BattleVehicleTemplate::parse(&source).unwrap()).unwrap();
+        for arc in [
+            BattleHitArc::Front,
+            BattleHitArc::Rear,
+            BattleHitArc::Left,
+            BattleHitArc::Right,
+        ] {
+            for roll in 2..=12 {
+                let seed = (0..=255)
+                    .find(|seed| {
+                        let mut dice = BattleDice::seeded([*seed; 32]);
+                        let first = dice.two_d6();
+                        (if proof { dice.two_d6() } else { first }) == roll
+                    })
+                    .unwrap();
+                let mut saved = serde_json::to_value(&unit).unwrap();
+                saved["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                let mut state = serde_json::to_value(&world.btech).unwrap();
+                state["vehicles"][id.0.to_string()] = saved;
+                world.btech = serde_json::from_value(state).unwrap();
+                let mut replay = world.clone();
+                let mut rules = BattleVehicleImpactRules::STANDARD;
+                rules.criticals.enabled = false;
+                let selected = unit.definition().vtol_hit(arc, roll).unwrap();
+                let report =
+                    resolve_battle_vehicle_impact(&mut world, id, arc, 1, None, rules).unwrap();
+                assert_eq!(report.hit, Some(selected.hit));
+                assert_eq!(report.rolls.len(), if proof { 2 } else { 1 });
+                assert_eq!(*report.rolls.last().unwrap(), roll);
+                assert_eq!(
+                    resolve_battle_vehicle_impact(&mut replay, id, arc, 1, None, rules).unwrap(),
+                    report
+                );
+                assert_eq!(world.btech, replay.btech);
+                let changed = &world.btech.vehicles()[&id];
+                assert_eq!(
+                    changed.rotor_destroyed(),
+                    selected.rotor == Some(BattleRotorHit::Destroy)
+                );
+                if selected.rotor == Some(BattleRotorHit::Damage) {
+                    assert_eq!(changed.maximum_speed(), 182.75);
+                }
+                assert!(changed.lost_criticals().is_empty());
+                assert!(!changed.crew_killed());
+                assert_eq!(
+                    serde_json::from_value::<BattleVehicle>(serde_json::to_value(changed).unwrap())
                         .unwrap(),
-                        *changed
-                    );
-                    if !changed.rotor_destroyed() {
-                        assert_eq!(report.damage.as_ref().unwrap().absorbed, 1);
-                    }
+                    *changed
+                );
+                if !changed.rotor_destroyed() {
+                    assert_eq!(report.damage.as_ref().unwrap().absorbed, 1);
                 }
             }
         }
@@ -99,7 +88,7 @@ async fn safe_aircraft_impacts_preserve_material_and_rejected_input_rolls_back()
         resolve_battle_vehicle_impact(&mut world, id, BattleHitArc::Front, 0, None, rules).is_err()
     );
     assert_eq!(world.btech, before);
-    rules.criticals.table = BattleVehicleCriticalTable::Fasa;
+    rules.criticals.table = BattleVehicleCriticalTable::Standard;
     assert!(
         resolve_battle_vehicle_impact(&mut world, id, BattleHitArc::Left, 0, None, rules).is_err()
     );

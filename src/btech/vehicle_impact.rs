@@ -10,14 +10,14 @@ pub struct BattleVehicleImpactRules {
     /// Inferno ignites section fires instead of rolling for a heat explosion.
     pub advanced_fire: bool,
     pub criticals: BattleVehicleCriticalRules,
-    pub fasa: BattleVehicleFasaHitRules,
+    pub hit: BattleVehicleHitRules,
 }
 
 /// One damage group's table selection and all staged effects, before visibility publication.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Publish impact effects only with the enclosing attack transaction"]
 pub struct BattleVehicleImpact {
-    /// Initial routing roll, plus the selected table's own roll for FASA, advanced or critical-proof routing.
+    /// Initial routing roll, plus the selected table's own roll for advanced or critical-proof routing.
     pub rolls: Vec<u8>,
     /// Combat-safe routing has no hit location or motive effects.
     pub hit: Option<BattleVehicleHit>,
@@ -215,19 +215,12 @@ fn resolve_location_followup(
             vehicle.advanced_vtol_hit(
                 arc,
                 roll,
-                rules.fasa.critical_mode,
-                rules.fasa.critical_level,
+                rules.hit.critical_mode,
+                rules.hit.critical_level,
                 &mut dice,
             )?
         } else {
-            vehicle
-                .definition()
-                .vtol_hit(arc, roll, table == BattleVehicleCriticalTable::Fasa)?
-        };
-        let main_weapon = if selected.destroy_main_weapon {
-            vehicle.rank_main_weapon(&mut dice)?
-        } else {
-            None
+            vehicle.definition().vtol_hit(arc, roll)?
         };
         super::autopilot::diagnostics::make_mut(&mut world.btech.vehicles)
             .get_mut(&id)
@@ -238,25 +231,6 @@ fn resolve_location_followup(
             result.notices.push(BattleNotice {
                 unit: id,
                 text: rotor.message().into(),
-            });
-        }
-        let vehicle = super::autopilot::diagnostics::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap();
-        if let Some((index, weapon)) = main_weapon {
-            let mount = vehicle.loadout()?.weapons[index].clone();
-            for location in mount.criticals {
-                vehicle.destroy_critical(location)?;
-            }
-            result.notices.push(BattleNotice {
-                unit: id,
-                text: format!(
-                    "[fg=red bold]Your {} is destroyed![reset]",
-                    weapon
-                        .name()
-                        .split_once('.')
-                        .map_or(weapon.name(), |(_, name)| name)
-                ),
             });
         }
         result.hit = Some(selected.hit);
@@ -281,7 +255,6 @@ fn resolve_location_followup(
             section: BattleVehicleSection::Turret,
             through_armor_critical: false,
             motive: None,
-            lock_turret: false,
             motive_roll: None,
             piloting_penalty: 0,
         }
@@ -289,16 +262,14 @@ fn resolve_location_followup(
         vehicle.advanced_hit(
             arc,
             roll,
-            rules.fasa.critical_mode,
-            rules.fasa.critical_level,
+            rules.hit.critical_mode,
+            rules.hit.critical_level,
             &mut dice,
         )?
     } else if proof {
         vehicle.critical_proof_hit(arc, roll)?
-    } else if table == BattleVehicleCriticalTable::Fasa {
-        vehicle.fasa_hit(arc, roll, rules.fasa, vehicle.hit_condition(), &mut dice)?
     } else {
-        vehicle.standard_hit(arc, roll, rules.fasa.critical_mode, &mut dice)?
+        vehicle.standard_hit(arc, roll, rules.hit.critical_mode, &mut dice)?
     };
     let vehicle = super::autopilot::diagnostics::make_mut(&mut world.btech.vehicles)
         .get_mut(&id)
@@ -313,15 +284,6 @@ fn resolve_location_followup(
     );
     result.notices.extend(notices);
     result.broadcasts.extend(broadcasts);
-    if hit.lock_turret {
-        vehicle.lock_turret()?;
-    }
-    if hit.lock_turret {
-        result.notices.push(BattleNotice {
-            unit: id,
-            text: "Your turret takes a direct hit and locks up!".into(),
-        });
-    }
     result.hit = Some(hit);
     Ok(result)
 }
@@ -339,9 +301,7 @@ impl BattleVehicleImpactRules {
             combat_safe: false,
             toughness: false,
         },
-        fasa: BattleVehicleFasaHitRules {
-            friendly_criticals: false,
-            critical_shielding: false,
+        hit: BattleVehicleHitRules {
             critical_mode: 2,
             critical_level: 60,
         },
@@ -356,19 +316,13 @@ impl BattleVehicleImpactRules {
                 extended_piloting: config.extended_piloting != 0,
                 vtol_table: Some(BattleVehicleCriticalTable::from_settings(
                     config.fasaadvvtolcrit != 0,
-                    config.fasacrit != 0,
                 )),
-                table: BattleVehicleCriticalTable::from_settings(
-                    config.fasaadvvhlcrit != 0,
-                    config.fasacrit != 0,
-                ),
+                table: BattleVehicleCriticalTable::from_settings(config.fasaadvvhlcrit != 0),
                 enabled: config.vcrit != 0,
                 combat_safe: false,
                 toughness,
             },
-            fasa: BattleVehicleFasaHitRules {
-                friendly_criticals: config.tankfriendly != 0,
-                critical_shielding: config.tankshield != 0,
+            hit: BattleVehicleHitRules {
                 critical_mode: config.vcrit,
                 critical_level: config.critlevel,
             },
@@ -409,39 +363,34 @@ mod policy_tests {
         .unwrap();
         for ground_advanced in [false, true] {
             for aircraft_advanced in [false, true] {
-                for fasa in [false, true] {
-                    let config = crate::config::BattleTechConfig {
-                        fasaadvvhlcrit: i64::from(ground_advanced),
-                        fasaadvvtolcrit: i64::from(aircraft_advanced),
-                        fasacrit: i64::from(fasa),
-                        ..Default::default()
+                let config = crate::config::BattleTechConfig {
+                    fasaadvvhlcrit: i64::from(ground_advanced),
+                    fasaadvvtolcrit: i64::from(aircraft_advanced),
+                    ..Default::default()
+                };
+                let rules = BattleVehicleImpactRules::configured(&config, true);
+                for (unit, advanced) in [
+                    (&ground, ground_advanced),
+                    (&aircraft, aircraft_advanced),
+                    (&observation, aircraft_advanced),
+                ] {
+                    let expected = if advanced {
+                        BattleVehicleCriticalTable::Advanced
+                    } else {
+                        BattleVehicleCriticalTable::Standard
                     };
-                    let rules = BattleVehicleImpactRules::configured(&config, true);
-                    for (unit, advanced) in [
-                        (&ground, ground_advanced),
-                        (&aircraft, aircraft_advanced),
-                        (&observation, aircraft_advanced),
-                    ] {
-                        let expected = if advanced {
-                            BattleVehicleCriticalTable::Advanced
-                        } else if fasa {
-                            BattleVehicleCriticalTable::Fasa
-                        } else {
-                            BattleVehicleCriticalTable::Standard
-                        };
-                        assert_eq!(rules.criticals.table_for(unit), expected);
-                    }
-                    assert!(rules.criticals.toughness);
-                    // Shared launcher policy updates must preserve both victim choices.
-                    let launch = BattleVehicleCriticalRules {
-                        toughness: false,
-                        ..rules.criticals
-                    };
-                    assert_eq!(
-                        launch.table_for(&aircraft),
-                        rules.criticals.table_for(&aircraft)
-                    );
+                    assert_eq!(rules.criticals.table_for(unit), expected);
                 }
+                assert!(rules.criticals.toughness);
+                // Shared launcher policy updates must preserve both victim choices.
+                let launch = BattleVehicleCriticalRules {
+                    toughness: false,
+                    ..rules.criticals
+                };
+                assert_eq!(
+                    launch.table_for(&aircraft),
+                    rules.criticals.table_for(&aircraft)
+                );
             }
         }
     }

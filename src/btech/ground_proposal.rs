@@ -53,11 +53,8 @@ pub fn propose_mech_ground_motion(
         unit.mobility().maximum_speed,
         rules.tsm_tow_bonus,
     )?;
-    let effective = if unit.sprinting {
-        super::sprint::maximum(world, id, base, rules.tsm_sprint_bonus)?
-    } else {
-        super::speed_bonus::on_map(world, Some(position), unit.movement_maximum_at(base))?
-    };
+    let effective =
+        super::speed_bonus::on_map(world, Some(position), unit.movement_maximum_at(base))?;
     let maximum = unit.update_from_maximum(effective);
     if super::load::carries_load(world, id) {
         motion.limit_load(maximum, maximum);
@@ -88,8 +85,7 @@ pub fn propose_mech_ground_motion(
     let mut target = desired * unit.movement_heat_multiplier(maximum) / divisor;
     if motion.heading != old_heading {
         let remaining = (motion.desired_heading - motion.heading + 180.0).rem_euclid(360.0) - 180.0;
-        target =
-            super::turnmode::throttle(target, remaining, rules.slowdown, unit.tight_turn_mode());
+        target = super::motion_controls::turning_throttle(target, remaining, rules.slowdown);
     }
     target = unit.lateral_speed_at(target, maximum);
     let acceleration = unit.ground_acceleration_at(world, maximum);
@@ -140,11 +136,7 @@ pub fn propose_vehicle_ground_motion(
         .is_some_and(|pilot| super::skills::boolean_advantage(world, pilot, "Speed_Demon"));
     let maximum =
         super::load::movement_maximum(world, id, vehicle.maximum_speed(), rules.tsm_tow_bonus)?;
-    let maximum = if vehicle.sprinting {
-        super::sprint::maximum(world, id, maximum, rules.tsm_sprint_bonus)?
-    } else {
-        super::speed_bonus::on_map(world, Some(position), maximum)?
-    };
+    let maximum = super::speed_bonus::on_map(world, Some(position), maximum)?;
     let mut loaded = old;
     if super::load::carries_load(world, id) {
         loaded.limit_load(
@@ -167,7 +159,6 @@ pub fn propose_vehicle_ground_motion(
         super::BattleVehicleMotionRules {
             fasa_turning: rules.fasa_turning,
             slowdown: rules.slowdown,
-            tight_turn_mode: vehicle.tight_turn_mode(),
             speed_demon: advantage,
             movement_modifier: map.movement_modifier,
         },

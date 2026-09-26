@@ -64,9 +64,7 @@ fn rules(table: BattleVehicleCriticalTable) -> BattleVehicleImpactRules {
             combat_safe: false,
             toughness: false,
         },
-        fasa: BattleVehicleFasaHitRules {
-            friendly_criticals: true,
-            critical_shielding: true,
+        hit: BattleVehicleHitRules {
             critical_mode: 1,
             critical_level: 40,
         },

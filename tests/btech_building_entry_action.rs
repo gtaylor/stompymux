@@ -1256,40 +1256,6 @@ async fn building_host_honors_configured_hot_myomer_load_assistance() {
         serde_json::to_value(definition).unwrap();
     encoded["constructed"][id.0.to_string()]["heat"]["excess"] = 9.0.into();
     world.btech = serde_json::from_value(encoded).unwrap();
-    // Sprint policy must reach every host entry recheck, independently of towing policy.
-    let mut sprint = serde_json::to_value(&world.btech).unwrap();
-    sprint["constructed"][id.0.to_string()]["sprinting"] = true.into();
-    let mut sprint_world = world.clone();
-    sprint_world.btech = serde_json::from_value(sprint.clone()).unwrap();
-    let hot_speed = battle_effective_maximum_speed(&sprint_world, id, true).unwrap();
-    sprint["constructed"][id.0.to_string()]["heat"]["excess"] = 0.0.into();
-    let mut cold = world.clone();
-    cold.btech = serde_json::from_value(sprint).unwrap();
-    let no_myomer_speed = battle_effective_maximum_speed(&cold, id, true).unwrap();
-    assert!(hot_speed > no_myomer_speed);
-    actual_speed(&mut sprint_world, id, (hot_speed + no_myomer_speed) / 10.0);
-    for enabled in [false, true] {
-        let path = config.root.join("stompymux.toml");
-        let mut settings: toml::Value =
-            toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-        settings
-            .as_table_mut()
-            .unwrap()
-            .entry("battletech")
-            .or_insert_with(|| toml::Value::Table(Default::default()))
-            .as_table_mut()
-            .unwrap()
-            .insert("tsm_sprint_bonus".into(), i64::from(enabled).into());
-        std::fs::write(&path, toml::to_string(&settings).unwrap()).unwrap();
-        let configured = Config::load(&config.root).unwrap();
-        let scripts = host(&configured, sprint_world.clone());
-        let result =
-            scripts.eval_callback::<bool>(&format!("return btech.unit.enterbase({},1,'N')", id.0));
-        assert_eq!(result.is_ok(), enabled);
-        if !enabled {
-            assert_eq!(scripts.world().btech, sprint_world.btech);
-        }
-    }
     attach(
         &mut world,
         &config,

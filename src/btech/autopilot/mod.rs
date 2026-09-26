@@ -4,6 +4,7 @@
 //! observations, and combat execution consume this state from later heartbeat
 //! work; no path or world mutation is stored here.
 
+mod adaptive_pursuit;
 pub(crate) mod alignment;
 pub mod benchmark;
 pub mod combat_policy;

@@ -12,8 +12,9 @@ pub enum PursuitPolicy {
     D,
     E,
     F,
+    /// Production pursuit policy with recoverable engagement and adaptive interception.
     #[default]
-    G,
+    Adaptive,
 }
 
 impl PursuitPolicy {
@@ -26,7 +27,7 @@ impl PursuitPolicy {
             Self::D => (16, 17, 120, 3),
             Self::E => (16, 17, 120, 6),
             Self::F => (64, 65, 120, 6),
-            Self::G => (64, 65, 120, 8),
+            Self::Adaptive => (64, 65, 120, 8),
         }
     }
 }
@@ -34,6 +35,15 @@ impl PursuitPolicy {
 /// Observation-derived evidence, emitted only by the committed diagnostic harness.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize)]
 pub struct PursuitEvidence {
+    /// Confidence reset observed on this committed simulation second, if any.
+    pub confidence_reset: Option<&'static str>,
+    pub model: &'static str,
+    pub model_error: f64,
+    pub candidates: usize,
+    pub estimated_seconds: f64,
+    pub scores: Vec<(BattlePosition, f64)>,
+    /// Moving-target and stopped-target estimates for each candidate, in seconds.
+    pub scenario_scores: Vec<(BattlePosition, f64, f64)>,
     pub samples: usize,
     pub span: i64,
     pub velocity: (f64, f64),
@@ -46,6 +56,7 @@ pub struct PursuitEvidence {
 /// One synchronous controller's observation history, excluded from persistence.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub(crate) struct Pursuit {
+    adaptive: super::adaptive_pursuit::AdaptivePursuit,
     policy: PursuitPolicy,
     evidence: PursuitEvidence,
     key: Option<(u64, ObjectId, ObjectId)>,
@@ -57,13 +68,6 @@ pub(crate) struct Pursuit {
     rejected_at: Option<BattlePosition>,
     /// Once in firing range, direct pursuit owns this uninterrupted contact episode.
     engaged: bool,
-    /// An observed pause makes constant-velocity interception unreliable for this contact.
-    motion_uncertain: bool,
-    /// Pause detection needs a previously established cadence, not startup quantization.
-    cadence_gap: Option<i64>,
-    /// Saturating count allows confidence to mature without increasing retained samples.
-    motion_transitions: u8,
-    last_motion_at: Option<i64>,
 }
 
 fn center(p: BattlePosition) -> BattlePoint {
@@ -75,6 +79,27 @@ fn center(p: BattlePosition) -> BattlePoint {
 }
 
 impl Pursuit {
+    /// Latest reliable observed velocity, available only to experimental steering.
+    pub fn velocity(&self) -> Option<(f64, f64)> {
+        (self.policy == PursuitPolicy::Adaptive
+            && matches!(self.adaptive.evidence.model, "velocity_16" | "velocity_64"))
+        .then_some(self.adaptive.evidence.velocity)
+    }
+    /// Update adaptive suspension and ineffective lead eligibility from permitted geometry.
+    pub fn geometry(
+        &mut self,
+        now: i64,
+        own: BattlePosition,
+        band: super::AutopilotRangeBand,
+        positional: bool,
+        actual: bool,
+    ) {
+        if self.policy == PursuitPolicy::Adaptive {
+            self.adaptive
+                .geometry(now, own, band.minimum, band.maximum, positional, actual);
+        }
+    }
+
     /// Add at most one sample per simulation second. Reversals immediately drop confidence.
     #[cfg(test)]
     pub fn sample(&mut self, order: u64, target: ObjectId, position: BattlePosition, now: i64) {
@@ -103,6 +128,10 @@ impl Pursuit {
         if self.samples.last().is_some_and(|s| s.0 == now) {
             return;
         }
+        if policy == PursuitPolicy::Adaptive {
+            self.adaptive.sample(now, position);
+            return;
+        }
         if let Some((_, previous)) = self.samples.last() {
             let a = center(*previous);
             let b = center(position);
@@ -113,19 +142,11 @@ impl Pursuit {
                         < 0.5 * v.0.hypot(v.1) * next.0.hypot(next.1) - 1e-12
                 }) {
                     self.samples.clear();
-                    self.cadence_gap = None;
-                    self.motion_transitions = 0;
                     self.aim = None;
                     self.reconsider_at = now;
                     self.evidence.reason = "reversal";
                 }
                 self.vector = Some(next);
-                self.last_motion_at = Some(now);
-                if self.policy == PursuitPolicy::G && self.motion_transitions == 4 {
-                    // New confidence must not reuse an earlier pending decision.
-                    self.reconsider_at = now;
-                }
-                self.motion_transitions = self.motion_transitions.saturating_add(1).min(5);
             }
         }
         let (window, limit, _, _) = self.policy.limits();
@@ -141,9 +162,30 @@ impl Pursuit {
 
     /// Reject one predicted region, allowing direct pursuit through the normal scheduler.
     pub fn reject(&mut self, observed: BattlePosition) {
+        self.adaptive.reject(observed);
         self.rejected_at = Some(observed);
         self.aim = None;
         self.evidence.reason = "unreachable";
+    }
+
+    /// Score the bounded adaptive candidates, retaining isolated comparison policies.
+    pub fn choose(
+        &mut self,
+        now: i64,
+        own: BattlePosition,
+        speed: f64,
+        radius: u16,
+        width: i64,
+        height: i64,
+        leash: Option<BattlePosition>,
+        score: impl FnMut(BattlePosition, (f64, f64), f64) -> Option<(f64, f64)>,
+    ) -> Option<BattlePosition> {
+        if self.policy == PursuitPolicy::Adaptive {
+            return self
+                .adaptive
+                .choose(now, own, speed, radius, width, height, leash, score);
+        }
+        self.predict(now, own, speed, radius, width, height, leash)
     }
 
     /// Estimate reachable lead using allowed own speed and public map bounds.
@@ -164,20 +206,9 @@ impl Pursuit {
             self.aim = None;
             return None;
         }
-        if self.policy == PursuitPolicy::G
-            && let (Some(period), Some(last_motion)) = (self.cadence_gap, self.last_motion_at)
-            && now - last_motion > period + 1
-        {
-            self.motion_uncertain = true;
-        }
         if self.engaged {
             self.aim = None;
             self.evidence.reason = "engaged";
-            return None;
-        }
-        if self.motion_uncertain {
-            self.aim = None;
-            self.evidence.reason = "motion_paused";
             return None;
         }
         let legal = |p: BattlePosition| {
@@ -211,31 +242,6 @@ impl Pursuit {
         if self.samples.len() < 3 || last_time - first_time < 2 || speed <= 0.0 {
             return None;
         }
-        let (first_transition, last_transition, transition_count, longest_gap) = self
-            .samples
-            .windows(2)
-            .filter(|pair| pair[0].1 != pair[1].1)
-            .fold(
-                (None, None, 0usize, 0i64),
-                |(first, last, count, gap), pair| {
-                    (
-                        first.or(Some(pair[1])),
-                        Some(pair[1]),
-                        count + 1,
-                        gap.max(last.map_or(0, |last: (i64, BattlePosition)| pair[1].0 - last.0)),
-                    )
-                },
-            );
-        if transition_count >= 3 {
-            self.cadence_gap = Some(self.cadence_gap.unwrap_or(0).max(longest_gap));
-        }
-        // One offset-hex transition cannot distinguish steady travel from a diagonal
-        // quantization step. Require five transitions overall and three in the current window.
-        if self.policy == PursuitPolicy::G && (self.motion_transitions < 5 || transition_count < 3)
-        {
-            self.evidence.reason = "insufficient_motion";
-            return None;
-        }
         let a = center(first);
         let b = center(last);
         let dt = (last_time - first_time) as f64;
@@ -266,29 +272,10 @@ impl Pursuit {
             self.evidence.reason = "stationary";
             return None;
         }
-        // Slow contact motion offers little interception benefit, while quantized
-        // goal changes can cost more turning time than the small lead saves.
-        if self.policy == PursuitPolicy::G {
-            if let (Some(first), Some(last)) = (first_transition, last_transition) {
-                let span = (last.0 - first.0) as f64;
-                if span > 0.0 {
-                    let pace = center(first.1).range(center(last.1)).ok()? / span;
-                    if pace > speed * 0.7 {
-                        self.evidence.reason = "low_closing_margin";
-                        return None;
-                    }
-                    if pace.min(v.0.hypot(v.1)) < speed * 0.3 {
-                        self.evidence.reason = "direct_closure";
-                        return None;
-                    }
-                }
-            }
-        }
         let own = center(own);
-        let mut bounded = None;
         for horizon in 1..=horizon_limit {
             let scale = (horizon as f64).min(f64::from(lead_limit) / v.0.hypot(v.1));
-            let mut point = BattlePoint {
+            let point = BattlePoint {
                 x: b.x + v.0 * scale,
                 y: b.y + v.1 * scale,
             };
@@ -296,7 +283,7 @@ impl Pursuit {
             let (Ok(x), Ok(y)) = (u16::try_from(hex.x), u16::try_from(hex.y)) else {
                 return None;
             };
-            let mut aim = BattlePosition {
+            let aim = BattlePosition {
                 map: last.map,
                 x,
                 y,
@@ -306,18 +293,8 @@ impl Pursuit {
                 return None;
             }
             if Hex::new(last.x, last.y).distance(Hex::new(x, y)) > lead_limit {
-                if self.policy == PursuitPolicy::G {
-                    let Some((previous_point, previous_aim)) = bounded else {
-                        return None;
-                    };
-                    point = previous_point;
-                    aim = previous_aim;
-                } else {
-                    self.evidence.reason = "boundary";
-                    return None;
-                }
-            } else {
-                bounded = Some((point, aim));
+                self.evidence.reason = "boundary";
+                return None;
             }
             let travel = (own.range(point).ok()? - f64::from(radius)).max(0.0) / speed;
             if travel <= horizon as f64 || horizon == horizon_limit {
@@ -336,6 +313,10 @@ impl Pursuit {
 
     /// Settling uses actual target geometry and cancels the current lead immediately.
     pub fn settle(&mut self) {
+        if self.policy == PursuitPolicy::Adaptive {
+            self.adaptive.suspend();
+            return;
+        }
         self.engaged = true;
         self.aim = None;
         self.reconsider_at = 0;
@@ -343,6 +324,9 @@ impl Pursuit {
     }
 
     pub fn evidence(&self) -> PursuitEvidence {
+        if self.policy == PursuitPolicy::Adaptive {
+            return self.adaptive.evidence.clone();
+        }
         PursuitEvidence {
             aim: self.aim,
             ..self.evidence.clone()
@@ -373,7 +357,6 @@ mod tests {
             PursuitPolicy::D,
             PursuitPolicy::E,
             PursuitPolicy::F,
-            PursuitPolicy::G,
         ] {
             let mut a = Pursuit::default();
             let mut b = Pursuit::default();
@@ -394,301 +377,6 @@ mod tests {
             a.sample_policy(1, ObjectId(2), pos(10, 15), 100, policy);
             assert_eq!(prediction(&mut a, 100), None);
         }
-    }
-
-    #[test]
-    fn capped_lead_keeps_a_legal_intercept_instead_of_oscillating_to_direct() {
-        let mut pursuit = Pursuit::default();
-        for now in 0..=64 {
-            pursuit.sample_policy(
-                1,
-                ObjectId(2),
-                pos(22 + (now / 10) as u16, 10),
-                now,
-                PursuitPolicy::G,
-            );
-        }
-        let aim = pursuit
-            .predict(64, pos(12, 20), 0.183, 3, 48, 48, None)
-            .expect("bounded intercept");
-        assert!(Hex::new(28, 10).distance(Hex::new(aim.x, aim.y)) <= 8);
-    }
-
-    #[test]
-    fn missed_observed_transition_suppresses_stale_motion_without_rejecting_normal_gaps() {
-        let mut pursuit = Pursuit::default();
-        for now in 0..=69 {
-            pursuit.sample_policy(
-                1,
-                ObjectId(2),
-                pos(10 + (now.min(60) / 10) as u16, 10),
-                now,
-                PursuitPolicy::G,
-            );
-        }
-        assert!(
-            pursuit
-                .predict(69, pos(2, 20), 0.2, 3, 48, 48, None)
-                .is_some()
-        );
-        for now in 70..=79 {
-            pursuit.sample_policy(1, ObjectId(2), pos(16, 10), now, PursuitPolicy::G);
-        }
-        assert!(
-            pursuit
-                .predict(79, pos(2, 20), 0.2, 3, 48, 48, None)
-                .is_none()
-        );
-        assert_eq!(pursuit.evidence.reason, "motion_paused");
-    }
-
-    #[test]
-    fn pause_is_detected_when_rolling_window_loses_motion_confidence() {
-        let mut pursuit = Pursuit::default();
-        for now in 0..=111 {
-            pursuit.sample_policy(
-                1,
-                ObjectId(2),
-                pos(10 + (now.min(80) / 20) as u16, 10),
-                now,
-                PursuitPolicy::G,
-            );
-            if now == 80 {
-                pursuit.predict(now, pos(2, 20), 0.1, 3, 48, 48, None);
-                assert!(pursuit.cadence_gap.is_some());
-            }
-        }
-        assert!(
-            pursuit
-                .predict(111, pos(2, 20), 0.1, 3, 48, 48, None)
-                .is_none()
-        );
-        assert_eq!(pursuit.evidence.reason, "motion_paused");
-        for now in 112..=180 {
-            pursuit.sample_policy(
-                1,
-                ObjectId(2),
-                pos(14 + ((now - 112) / 20) as u16, 10),
-                now,
-                PursuitPolicy::G,
-            );
-        }
-        assert!(
-            pursuit
-                .predict(180, pos(2, 20), 0.1, 3, 48, 48, None)
-                .is_none()
-        );
-        assert!(pursuit.motion_uncertain);
-    }
-
-    #[test]
-    fn uneven_hex_intervals_do_not_look_like_a_pause() {
-        let mut pursuit = Pursuit::default();
-        for now in 0..=45 {
-            let steps = [1, 2, 20, 21, 40].into_iter().filter(|t| *t <= now).count();
-            pursuit.sample_policy(
-                1,
-                ObjectId(2),
-                pos(10 + steps as u16, 10),
-                now,
-                PursuitPolicy::G,
-            );
-            pursuit.predict(now, pos(2, 20), 0.2, 3, 48, 48, None);
-            assert!(!pursuit.motion_uncertain);
-        }
-        assert_eq!(pursuit.motion_transitions, 5);
-        assert!(pursuit.cadence_gap.unwrap() >= 18);
-        let checkpoint = pursuit.clone();
-        pursuit.sample_policy(2, ObjectId(2), pos(15, 10), 46, PursuitPolicy::G);
-        assert_eq!(pursuit.cadence_gap, None);
-        assert_eq!(pursuit.motion_transitions, 0);
-        assert_ne!(pursuit, checkpoint);
-    }
-
-    #[test]
-    fn engagement_latch_is_transient_and_scoped_to_contact_identity() {
-        let mut pursuit = Pursuit::default();
-        for now in 0..=64 {
-            pursuit.sample_policy(
-                1,
-                ObjectId(2),
-                pos(10 + (now / 10) as u16, 10),
-                now,
-                PursuitPolicy::G,
-            );
-        }
-        let checkpoint = pursuit.clone();
-        pursuit.settle();
-        pursuit.sample_policy(1, ObjectId(2), pos(17, 10), 65, PursuitPolicy::G);
-        assert!(
-            pursuit
-                .predict(65, pos(2, 20), 0.2, 3, 48, 48, None)
-                .is_none()
-        );
-        assert!(pursuit.engaged);
-        assert!(!checkpoint.engaged);
-        pursuit.sample_policy(1, ObjectId(3), pos(17, 10), 66, PursuitPolicy::G);
-        assert!(!pursuit.engaged);
-        pursuit = checkpoint;
-        assert!(
-            pursuit
-                .predict(64, pos(2, 20), 0.2, 3, 48, 48, None)
-                .is_some()
-        );
-    }
-
-    #[test]
-    fn slow_relative_motion_uses_direct_closure_and_rolls_back() {
-        let mut pursuit = Pursuit::default();
-        for now in 0..=115 {
-            pursuit.sample_policy(
-                1,
-                ObjectId(2),
-                pos(10 + (now / 20) as u16, 10),
-                now,
-                PursuitPolicy::G,
-            );
-        }
-        let checkpoint = pursuit.clone();
-        assert!(
-            pursuit
-                .predict(115, pos(2, 20), 0.2, 3, 48, 48, None)
-                .is_none()
-        );
-        assert_eq!(pursuit.evidence.reason, "direct_closure");
-        pursuit = checkpoint.clone();
-        assert!(
-            pursuit
-                .predict(115, pos(2, 20), 0.1, 3, 48, 48, None)
-                .is_some()
-        );
-        pursuit.settle();
-        assert!(pursuit.aim.is_none());
-        assert_eq!(pursuit.samples, checkpoint.samples);
-    }
-
-    #[test]
-    fn lead_requires_additional_observed_transitions() {
-        let mut pursuit = Pursuit::default();
-        for now in 0..=64 {
-            pursuit.sample_policy(
-                1,
-                ObjectId(2),
-                pos(10 + (now / 20) as u16, 10),
-                now,
-                PursuitPolicy::G,
-            );
-        }
-        assert!(
-            pursuit
-                .predict(64, pos(2, 20), 0.1, 3, 48, 48, None)
-                .is_none()
-        );
-        for now in 65..=104 {
-            pursuit.sample_policy(
-                1,
-                ObjectId(2),
-                pos(10 + (now / 20) as u16, 10),
-                now,
-                PursuitPolicy::G,
-            );
-        }
-        let aim = pursuit
-            .predict(104, pos(2, 20), 0.1, 3, 48, 48, None)
-            .unwrap();
-        assert!(Hex::new(15, 10).distance(Hex::new(aim.x, aim.y)) > 3);
-        assert!(Hex::new(15, 10).distance(Hex::new(aim.x, aim.y)) <= 8);
-    }
-
-    #[test]
-    fn observed_pause_invalidates_a_cached_lead_immediately() {
-        let mut pursuit = Pursuit::default();
-        for now in 0..=75 {
-            pursuit.sample_policy(
-                1,
-                ObjectId(2),
-                pos(10 + (now.min(60) / 10) as u16, 10),
-                now,
-                PursuitPolicy::G,
-            );
-        }
-        assert!(
-            pursuit
-                .predict(75, pos(2, 20), 0.2, 3, 48, 48, None)
-                .is_some()
-        );
-        pursuit.sample_policy(1, ObjectId(2), pos(16, 10), 76, PursuitPolicy::G);
-        assert!(
-            pursuit
-                .predict(76, pos(2, 20), 0.2, 3, 48, 48, None)
-                .is_none()
-        );
-        assert_eq!(pursuit.evidence.reason, "motion_paused");
-    }
-
-    #[test]
-    fn additional_motion_evidence_invalidates_pending_confidence() {
-        let mut pursuit = Pursuit::default();
-        for now in 0..=84 {
-            pursuit.sample_policy(
-                1,
-                ObjectId(2),
-                pos(10 + (now / 20) as u16, 10),
-                now,
-                PursuitPolicy::G,
-            );
-        }
-        assert!(
-            pursuit
-                .predict(84, pos(2, 20), 0.1, 3, 48, 48, None)
-                .is_none()
-        );
-        pursuit.sample_policy(1, ObjectId(2), pos(15, 10), 85, PursuitPolicy::G);
-        let long = pursuit
-            .predict(85, pos(2, 20), 0.1, 3, 48, 48, None)
-            .unwrap();
-        assert!(Hex::new(15, 10).distance(Hex::new(long.x, long.y)) > 2);
-    }
-
-    #[test]
-    fn one_quantized_transition_does_not_establish_a_long_lead() {
-        let mut pursuit = Pursuit::default();
-        for now in 0..=40 {
-            pursuit.sample_policy(
-                1,
-                ObjectId(2),
-                pos(if now < 25 { 22 } else { 23 }, 10),
-                now,
-                PursuitPolicy::G,
-            );
-        }
-        assert!(prediction(&mut pursuit, 40).is_none());
-    }
-
-    #[test]
-    fn slow_hex_center_motion_keeps_confidence_between_crossings() {
-        let mut pursuit = Pursuit::default();
-        for now in 0..=115 {
-            pursuit.sample_policy(
-                1,
-                ObjectId(2),
-                pos(10 + (now / 20) as u16, 10),
-                now,
-                PursuitPolicy::G,
-            );
-        }
-        assert!(
-            pursuit
-                .predict(115, pos(2, 20), 0.1, 3, 48, 48, None)
-                .is_some()
-        );
-        assert_eq!(pursuit.samples.len(), 65);
-        assert!(pursuit.evidence.velocity.0 > 0.03);
-        assert!(pursuit.evidence.velocity.1.abs() < 0.01);
-        // A genuine observed reversal discards the long history immediately.
-        pursuit.sample_policy(1, ObjectId(2), pos(12, 10), 116, PursuitPolicy::G);
-        assert!(prediction(&mut pursuit, 116).is_none());
-        assert_eq!(pursuit.samples.len(), 1);
     }
 
     #[test]
@@ -771,27 +459,6 @@ mod integration_tests {
     use super::*;
     use crate::btech::autopilot::{self, AutopilotOrder, AutopilotSubmissionMode, runtime};
     use std::sync::Arc;
-
-    /// Transient evidence participates in checkpoint equality and is cleared at lifecycle boundaries.
-    #[tokio::test]
-    async fn settling_retains_consecutive_visible_samples() {
-        let root = autopilot::benchmark::copy_game_root().unwrap();
-        let config = crate::Config::load(&root).unwrap();
-        let base = crate::persistence::load(&config.database()).await.unwrap();
-        let (mut world, id, _, _) = autopilot::encounters::fixture(
-            &config,
-            base,
-            include_str!("../../../game/mechs/JR7-D"),
-            "behind",
-            1,
-        )
-        .unwrap();
-        for now in 1..=3 {
-            runtime::advance(&mut world, &config, now).unwrap();
-        }
-        assert_eq!(world.btech.autopilot_plans[&id].pursuit.samples.len(), 3);
-        assert!(world.btech.autopilot_plans[&id].pursuit.aim.is_none());
-    }
 
     #[tokio::test]
     async fn tracking_checkpoint_takeover_replacement_and_restart() {

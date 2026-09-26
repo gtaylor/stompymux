@@ -25,7 +25,6 @@ pub fn snipe_action(
             fasa_turning: config.battletech.fasaturn != 0,
             slowdown: config.battletech.slowdown,
             tsm_tow_bonus: config.battletech.tsm_tow_bonus != 0,
-            tsm_sprint_bonus: config.battletech.tsm_sprint_bonus != 0,
             ..super::BattleMovementRules::STANDARD
         };
         for weapon in weapons {

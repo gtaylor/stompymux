@@ -37,8 +37,6 @@ pub struct BattleShotRules {
     pub range_damage: bool,
     /// Shared load configuration used by pre-impact experience calculations.
     pub tsm_tow_bonus: bool,
-    /// Apply configured hot-myomer assistance while sprinting in experience calculations.
-    pub tsm_sprint_bonus: bool,
     pub stacking: super::BattleStackingRules,
     pub stagger: super::BattleStaggerMode,
     pub glancing: BattleGlancingMode,
@@ -555,7 +553,6 @@ fn resolve_shot_inner(
             config,
             request: super::BattleGunneryAwardRequest {
                 tsm_tow_bonus: rules.tsm_tow_bonus,
-                tsm_sprint_bonus: rules.tsm_sprint_bonus,
                 attacker: shooter,
                 pilot,
                 target,
@@ -718,7 +715,6 @@ impl BattleShotRules {
         Self {
             range_damage: config.moddamagewithrange != 0,
             tsm_tow_bonus: config.tsm_tow_bonus != 0,
-            tsm_sprint_bonus: config.tsm_sprint_bonus != 0,
             stacking: crate::BattleStackingRules {
                 mode: config.stacking,
                 damage_percent: config.stackdamage,
@@ -728,7 +724,6 @@ impl BattleShotRules {
             glancing: super::BattleGlancingMode::from_setting(config.glancing_blows),
             aim: super::BattleAimRules::configured(config),
             hit: super::BattleHitRules {
-                fasa_criticals: config.fasacrit != 0,
                 inferno_penalty: config.inferno_penalty != 0,
                 exile_stun_mode: config.exile_stun_code.clamp(0, 2) as u8,
             },

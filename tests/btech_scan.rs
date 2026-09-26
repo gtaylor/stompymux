@@ -4585,40 +4585,8 @@ async fn verbose_contacts_share_multiline_reports_with_lua_and_restart() {
 
 #[tokio::test]
 async fn lateral_changes_delay_cancel_persist_and_move_without_turning_weapons() {
-    let (_dir, config, mut world, _map, source, target) = fixture().await;
-    assert!(
-        set_battle_lateral(
-            &mut world,
-            source,
-            ObjectId(1),
-            BattleLateralMode::FrontRight
-        )
-        .is_err()
-    );
-    set_battle_character(
-        &mut world,
-        ObjectId(1),
-        BattleCharacter {
-            bruise: 0,
-            lethal: 0,
-            build: 5,
-            reflexes: 5,
-            intuition: 5,
-            learn: 5,
-            charisma: 5,
-        },
-    )
-    .unwrap();
-    set_battle_character_value(
-        &mut world,
-        ObjectId(1),
-        "Maneuvering_Ace",
-        BattleCharacterValue {
-            value: 1,
-            ..Default::default()
-        },
-    )
-    .unwrap();
+    let (_dir, config, world, _map, source, target) =
+        fixture_with_ranges(&[("move_type", "Quad")]).await;
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
     assert!(battle_lateral(&scripts, source, ObjectId(2), "ne").is_err());
@@ -4796,146 +4764,15 @@ async fn lateral_changes_delay_cancel_persist_and_move_without_turning_weapons()
 }
 
 #[tokio::test]
-async fn tight_turn_mode_is_guarded_durable_and_applies_only_to_slowdown_two() {
-    let (_dir, config, mut world, _map, source, _target) = fixture().await;
-    set_battle_character(
-        &mut world,
-        ObjectId(1),
-        BattleCharacter {
-            bruise: 0,
-            lethal: 0,
-            build: 5,
-            reflexes: 5,
-            intuition: 5,
-            learn: 5,
-            charisma: 5,
-        },
-    )
-    .unwrap();
-    let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
-    let scripts = Scripts::new(&config, shared.clone()).unwrap();
-    assert!(battle_turnmode(&scripts, source, ObjectId(1), "tight").is_err());
-    set_battle_character_value(
-        &mut shared.borrow_mut(),
-        ObjectId(1),
-        "Maneuvering_Ace",
-        BattleCharacterValue {
-            value: 1,
-            ..Default::default()
-        },
-    )
-    .unwrap();
-    assert!(battle_turnmode(&scripts, source, ObjectId(2), "tight").is_err());
-    let before = scripts.world().btech.clone();
-    assert_eq!(
-        battle_turnmode(&scripts, source, ObjectId(1), "unknown")
-            .unwrap()
-            .text,
-        "Your turning type is : NORMAL"
-    );
-    assert_eq!(scripts.world().btech, before);
-    assert!(
-        scripts
-            .eval_callback::<()>(&format!(
-                "btech.unit.turnmode({},1,'tight'); error('abort')",
-                source.0
-            ))
-            .is_err()
-    );
-    assert!(!scripts.world().btech.constructed_units()[&source].tight_turn_mode());
-    let _ = support::run_text(&scripts, &config, ObjectId(1), 1, "turnmode TIGHT");
-    assert!(scripts.world().btech.constructed_units()[&source].tight_turn_mode());
-    let state: bool = scripts
-        .eval_callback(&format!(
-            "return btech.unit.state({}).tight_turn_mode",
-            source.0
-        ))
-        .unwrap();
-    assert!(state);
-    let _ = scripts.drain_outbox();
-    let saved = scripts.world().clone();
-    persistence::save(&config.database(), &saved).await.unwrap();
-    let restored = persistence::load(&config.database()).await.unwrap();
-    assert!(restored.btech.constructed_units()[&source].tight_turn_mode());
-    for slowdown in 0..=2 {
-        for desired_heading in [0.0, 90.0] {
-            let mut state = serde_json::to_value(&restored.btech).unwrap();
-            let unit = &mut state["constructed"][source.0.to_string()];
-            unit["motion"]["heading"] = serde_json::json!(0.0);
-            unit["motion"]["desired_heading"] = serde_json::json!(desired_heading);
-            unit["motion"]["speed"] = serde_json::json!(30.0);
-            unit["motion"]["desired_speed"] = serde_json::json!(50.0);
-            unit["tight_turn_mode"] = serde_json::json!(true);
-            let mut tight = restored.clone();
-            tight.btech = serde_json::from_value(state.clone()).unwrap();
-            state["constructed"][source.0.to_string()]["tight_turn_mode"] =
-                serde_json::json!(false);
-            let mut normal = restored.clone();
-            normal.btech = serde_json::from_value(state).unwrap();
-            let rules = BattleMovementRules {
-                slowdown,
-                ..BattleMovementRules::STANDARD
-            };
-            let _ = advance_battle_motion(&mut tight, rules).unwrap();
-            let _ = advance_battle_motion(&mut normal, rules).unwrap();
-            let tight = tight.btech.constructed_units()[&source].motion().unwrap();
-            let normal = normal.btech.constructed_units()[&source].motion().unwrap();
-            assert_eq!(tight.heading, normal.heading);
-            if slowdown == 2 && desired_heading != 0.0 {
-                assert!(
-                    (normal.speed - tight.speed - 4.3).abs() < 1e-8,
-                    "{} {}",
-                    normal.speed,
-                    tight.speed
-                );
-            } else {
-                assert_eq!(tight, normal);
-            }
-        }
-    }
-    let _: mlua::Table = scripts
-        .eval_callback(&format!(
-            "return btech.unit.turnmode({},1,'normal')",
-            source.0
-        ))
-        .unwrap();
-    assert!(!scripts.world().btech.constructed_units()[&source].tight_turn_mode());
-}
-
-#[tokio::test]
-async fn cockpit_status_reports_active_maneuvers_and_current_pilot_eligibility() {
-    let (_dir, config, mut world, _map, source, _target) = fixture().await;
-    set_battle_character(
-        &mut world,
-        ObjectId(1),
-        BattleCharacter {
-            bruise: 0,
-            lethal: 0,
-            build: 5,
-            reflexes: 5,
-            intuition: 5,
-            learn: 5,
-            charisma: 5,
-        },
-    )
-    .unwrap();
-    set_battle_character_value(
-        &mut world,
-        ObjectId(1),
-        "Maneuvering_Ace",
-        BattleCharacterValue {
-            value: 1,
-            ..Default::default()
-        },
-    )
-    .unwrap();
+async fn cockpit_status_reports_quad_lateral_travel() {
+    let (_dir, config, world, _map, source, _target) =
+        fixture_with_ranges(&[("move_type", "Quad")]).await;
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
     let initial = battle_unit_status(&scripts.world(), source, "info").unwrap();
-    assert!(initial.contains("Turn Mode: NORMAL"));
+    assert!(!initial.contains("Turn Mode:"));
     assert!(!initial.contains("moving laterally"));
     battle_lateral(&scripts, source, ObjectId(1), "fl").unwrap();
-    battle_turnmode(&scripts, source, ObjectId(1), "tight").unwrap();
     assert!(
         !battle_unit_status(&scripts.world(), source, "info")
             .unwrap()
@@ -4948,7 +4785,7 @@ async fn cockpit_status_reports_active_maneuvers_and_current_pilot_eligibility()
     let before = scripts.world().btech.clone();
     let status = battle_unit_status(&scripts.world(), source, "info").unwrap();
     assert!(status.contains("You are moving laterally Front/Left"));
-    assert!(status.contains("Turn Mode: TIGHT"));
+    assert!(!status.contains("Turn Mode:"));
     assert!(stompymux_rs::text::plain(&status).contains("Heading:        0 deg"));
     let native = support::run_text(&scripts, &config, ObjectId(1), 1, "status info");
     assert_eq!(native, status);
@@ -4957,7 +4794,7 @@ async fn cockpit_status_reports_active_maneuvers_and_current_pilot_eligibility()
         .unwrap();
     assert_eq!(lua, status);
     let short = battle_unit_status(&scripts.world(), source, "short").unwrap();
-    assert!(short.contains("Turn Mode: TIGHT"));
+    assert!(!short.contains("Turn Mode:"));
     assert!(!short.contains("moving laterally"));
     for options in ["armor", "heat", "N"] {
         let output = battle_unit_status(&scripts.world(), source, options).unwrap();
@@ -4972,17 +4809,9 @@ async fn cockpit_status_reports_active_maneuvers_and_current_pilot_eligibility()
         battle_unit_status(&restored, source, "info").unwrap(),
         status
     );
-    set_battle_character_value(
-        &mut shared.borrow_mut(),
-        ObjectId(1),
-        "Maneuvering_Ace",
-        BattleCharacterValue::default(),
-    )
-    .unwrap();
     let output = battle_unit_status(&scripts.world(), source, "info").unwrap();
     assert!(!output.contains("Turn Mode:"));
     assert!(output.contains("You are moving laterally Front/Left"));
-    assert!(scripts.world().btech.constructed_units()[&source].tight_turn_mode());
 }
 
 #[tokio::test]
@@ -6293,4 +6122,50 @@ async fn tactical_unknown_flags_share_reference_rejection_without_mutation() {
         assert_eq!(scripts.world().btech, before);
         assert!(scripts.drain_outbox().is_empty());
     }
+}
+
+/// Removed controls are absent from Lua and storage; bipeds cannot request lateral travel.
+#[tokio::test]
+async fn removed_movement_controls_and_biped_lateral_are_unavailable() {
+    let (_dir, config, world, _map, source, _target) = fixture().await;
+    let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
+    let before = scripts.world().btech.clone();
+    scripts.eval_callback::<()>(&format!(
+        "assert(btech.unit.turnmode == nil); local s=btech.unit.state({}); assert(s.tight_turn_mode == nil)",
+        source.0
+    )).unwrap();
+    for direction in ["fl", "fr", "rl", "rr", "-"] {
+        assert!(battle_lateral(&scripts, source, ObjectId(1), direction).is_err());
+        assert!(
+            scripts
+                .eval_callback::<()>(&format!("btech.unit.lateral({},1,'{direction}')", source.0))
+                .is_err()
+        );
+        let output = support::run_text(
+            &scripts,
+            &config,
+            ObjectId(1),
+            1,
+            &format!("lateral {direction}"),
+        );
+        assert!(
+            output.contains("You cannot alter your lateral movement!"),
+            "{output}"
+        );
+        assert_eq!(scripts.world().btech, before);
+    }
+    let state = serde_json::to_value(&before).unwrap();
+    let unit = &state["constructed"][source.0.to_string()];
+    assert!(unit.get("sprinting").is_none());
+    assert!(unit.get("tight_turn_mode").is_none());
+    let mut invalid = state;
+    invalid["constructed"][source.0.to_string()]["lateral"] =
+        serde_json::to_value(BattleLateralState {
+            active: BattleLateralMode::FrontLeft,
+            ..Default::default()
+        })
+        .unwrap();
+    let mut world = scripts.world().clone();
+    world.btech = serde_json::from_value(invalid).unwrap();
+    assert!(world.validate(&config).is_err());
 }

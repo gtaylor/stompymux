@@ -274,7 +274,6 @@ async fn cover_blocks_hull_weapons_at_the_shared_reservation_boundary() {
 async fn dug_in_turret_routing_uses_the_41_42_boundary_for_each_hit_table() {
     for table in [
         BattleVehicleCriticalTable::Standard,
-        BattleVehicleCriticalTable::Fasa,
         BattleVehicleCriticalTable::Advanced,
     ] {
         for percentage in [41, 42] {

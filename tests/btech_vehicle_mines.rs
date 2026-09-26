@@ -197,7 +197,7 @@ async fn blast_fixture(
 fn blast_rules() -> BattleFallRules {
     let mut rules = BattleMovementRules::STANDARD.fall;
     rules.vehicle_impact.criticals.enabled = false;
-    rules.vehicle_impact.fasa.critical_mode = 0;
+    rules.vehicle_impact.hit.critical_mode = 0;
     rules
 }
 
@@ -446,7 +446,6 @@ async fn mine_vehicle_hit_policy_controls_location_dice_and_safe_damage() {
     let (_dir, config, base, map, ids) = blast_fixture(BattleVehicleMovement::Stationary).await;
     for table in [
         BattleVehicleCriticalTable::Standard,
-        BattleVehicleCriticalTable::Fasa,
         BattleVehicleCriticalTable::Advanced,
     ] {
         let mut world = base.clone();
@@ -629,7 +628,6 @@ async fn mine_followups_reselect_locations_after_turret_and_hull_loss() {
     let (_dir, config, base, map, ids) = blast_fixture(BattleVehicleMovement::Stationary).await;
     for table in [
         BattleVehicleCriticalTable::Standard,
-        BattleVehicleCriticalTable::Fasa,
         BattleVehicleCriticalTable::Advanced,
     ] {
         let mut world = base.clone();

@@ -5,7 +5,7 @@ linkTitle: "advantages"
 manualLinkTitle: "advantages"
 ---
 
-Return the detached catalog of all twenty-two advantages; gameplay availability varies by action.
+Return the detached catalog of supported advantages; gameplay availability varies by action.
 
 ## Signature
 

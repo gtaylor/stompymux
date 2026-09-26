@@ -1,6 +1,47 @@
 //! Small deterministic acceptance-tool regression tests.
-use super::{compare, evidence};
+use super::{compare, evidence, runner};
 use serde_json::json;
+#[test]
+fn reference_capture_requires_explicit_supported_policy() {
+    let dir = tempfile::tempdir().unwrap();
+    assert!(runner::validate_capture_policy(dir.path()).is_err());
+    for policy in [
+        json!({"encounters":true,"benchmark":true}),
+        json!({"encounters":true,"benchmark":true,"pursuit_policy":"unknown"}),
+        json!({"encounters":false,"benchmark":true,"pursuit_policy":"adaptive"}),
+    ] {
+        std::fs::write(
+            dir.path().join("policy-capabilities.json"),
+            policy.to_string(),
+        )
+        .unwrap();
+        assert!(runner::validate_capture_policy(dir.path()).is_err());
+    }
+    std::fs::write(
+        dir.path().join("policy-capabilities.json"),
+        json!({"encounters":true,"benchmark":true,"pursuit_policy":"adaptive"}).to_string(),
+    )
+    .unwrap();
+    runner::validate_capture_policy(dir.path()).unwrap();
+}
+
+#[test]
+fn policy_metadata_rejects_defaults_mismatches_and_unverified_runs() {
+    assert!(
+        runner::validate_policy_metadata(
+            &json!({"requested":"adaptive","resolved":"adaptive","verified_each_tick":true}),
+            "adaptive"
+        )
+        .is_ok()
+    );
+    for value in [
+        json!({}),
+        json!({"requested":"adaptive","resolved":"unknown","verified_each_tick":true}),
+        json!({"requested":"adaptive","resolved":"adaptive","verified_each_tick":false}),
+    ] {
+        assert!(runner::validate_policy_metadata(&value, "adaptive").is_err());
+    }
+}
 #[test]
 fn rejects_empty_and_duplicate_matrices() {
     assert!(compare::indexed(&json!([]), "pursuit").is_err());
@@ -283,4 +324,35 @@ fn event_responses_are_measured_from_requested_controls() {
     let v = summarize(row, traces).unwrap();
     assert_eq!(v[0]["event_responses"][0]["first_opportunity_delay"], 0);
     assert!(v[0]["event_responses"][1]["first_opportunity_delay"].is_null());
+}
+
+#[test]
+fn timeline_rejects_gaps_and_counts_committed_decisions() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("trace.jsonl");
+    let row = |tick, reason| {
+        json!({"scenario":"x","chassis":"mech","seed":1,"fire":false,"tick":tick,
+        "pursuit":{"evidence":{"reason":reason},"goal":[1,2]},"result":{}})
+        .to_string()
+    };
+    std::fs::write(
+        &path,
+        format!("{}\n{}\n", row(1, "direct_score"), row(2, "predicted")),
+    )
+    .unwrap();
+    let report = evidence::timeline(&path).unwrap();
+    let case = report["cases"]
+        .as_object()
+        .unwrap()
+        .values()
+        .next()
+        .unwrap();
+    assert_eq!(case["first_prediction"], 2);
+    assert_eq!(case["decision_changes"], 1);
+    std::fs::write(
+        &path,
+        format!("{}\n{}\n", row(1, "direct_score"), row(3, "predicted")),
+    )
+    .unwrap();
+    assert!(evidence::timeline(&path).is_err());
 }

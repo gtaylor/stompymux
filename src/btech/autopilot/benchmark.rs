@@ -57,6 +57,8 @@ pub struct BenchmarkOptions {
     pub detailed: bool,
     /// Isolated same-executable control; never changes production configuration.
     pub direct_pursuit: bool,
+    /// Explicit experimental policy for isolated comparisons.
+    pub pursuit_policy: super::interception::PursuitPolicy,
     /// Optional JSONL gameplay checksums; serialization occurs outside measured phases.
     pub trace: Option<std::path::PathBuf>,
     /// None selects all battlefield geometries.
@@ -75,6 +77,7 @@ impl Default for BenchmarkOptions {
             controllers: DEFAULT_CONTROLLERS,
             detailed: false,
             direct_pursuit: false,
+            pursuit_policy: Default::default(),
             trace: None,
             scenario: None,
             fire: None,
@@ -255,13 +258,19 @@ async fn run_case(
                 alter_benchmark_terrain_with(&mut harness, map_id, base_terrain.clone());
             }
             let heartbeat = harness
-                .step_pursuit(
+                .step_pursuit_policy(
                     1_000_000_i64.saturating_add(tick as i64),
                     options.detailed,
                     trace.is_some(),
                     options.direct_pursuit,
+                    options.pursuit_policy,
                 )
                 .await;
+            ensure!(
+                heartbeat.autopilot.pursuit_policy == options.pursuit_policy
+                    && heartbeat.autopilot.direct_pursuit == options.direct_pursuit,
+                "Requested and resolved pursuit policies differ"
+            );
             ensure!(
                 heartbeat.committed,
                 "production benchmark heartbeat failed to commit at repetition {repetition}, tick {tick}"
@@ -778,5 +787,31 @@ impl std::io::Write for GameplayDigest {
     }
     fn flush(&mut self) -> std::io::Result<()> {
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod budget_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn observed_and_navigation_geometry_share_controller_budget() {
+        // One tick reproduces the crowded firing-region search that previously
+        // spent an initial observation check plus sixteen navigation checks.
+        let report = run(&BenchmarkOptions {
+            warmup_ticks: 0,
+            measured_ticks: 1,
+            repetitions: 1,
+            controllers: 100,
+            scenario: Some(BenchmarkScenario::MovingPursuit),
+            fire: Some(false),
+            pursuit_policy: super::super::interception::PursuitPolicy::Adaptive,
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+        assert_eq!(report.results.len(), 1);
+        assert_eq!(report.results[0].minimum_enabled_controllers, 100);
+        assert!(report.results[0].max_controller_expansions <= 256);
     }
 }

@@ -1006,17 +1006,11 @@ bits. `@setmech MechPrefs <bits>` replaces the supported settings; decimal masks
 are also accepted. Use `0` to clear them. Letters `b`, `c`, `d`, `e`, `g`, and `h`
 mean searchlight warnings, automatic cliff falls, disabled armor warnings,
 disabled ammunition warnings, shutdown-contact notices, and friendly-fire safety.
-Bit `i` selects tight turning. For example, `bcdegh!b!g` sets
+For example, `bcdegh!b!g` sets
 `cdeh`: `!` clears a bit in the supplied value, not in the unit's previous value.
 
 Bits for unimplemented settings are rejected atomically. This field edits the
 same values as cockpit preferences; it does not maintain an independent mask.
-
-Vehicle and VTOL pilots with Maneuvering Ace can use `turnmode tight` or
-`turnmode normal`. Tight mode adds the same throttle reduction as Mechs while
-turning under slowdown mode two. Other slowdown modes are unaffected. The choice
-persists, appears in status and Lua state, and is editable as `MechPrefs` bit `i`.
-Stationary installations can retain the preference but cannot move.
 
 `mechprefs BTHDebug [ON|OFF]` and `btech.unit.bth_debug(unit, pilot, enabled)`
 control the retained debug preference. `MechPrefs` bit `j` exposes the same value;

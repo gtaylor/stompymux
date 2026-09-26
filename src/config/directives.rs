@@ -90,22 +90,12 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "btech_dynspeed",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
         name: "btech_slowdown",
         parser: "cf_int",
         permission: P::GOD,
     },
     Directive {
         name: "btech_fasaturn",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_fasacrit",
         parser: "cf_int",
         permission: P::GOD,
     },
@@ -150,11 +140,6 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "btech_tankfriendly",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
         name: "btech_newcharge",
         parser: "cf_int",
         permission: P::GOD,
@@ -176,11 +161,6 @@ pub const DIRECTIVES: &[Directive] = &[
     },
     Directive {
         name: "btech_critlevel",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_tankshield",
         parser: "cf_int",
         permission: P::GOD,
     },
@@ -351,16 +331,6 @@ pub const DIRECTIVES: &[Directive] = &[
     },
     Directive {
         name: "btech_maxtechtime",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_sprint_bth",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_tsm_sprint_bonus",
         parser: "cf_int",
         permission: P::GOD,
     },

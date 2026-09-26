@@ -1,0 +1,893 @@
+{
+  "terminal_changes": 24,
+  "changes": [
+    {
+      "case": [
+        "opposite_crossing",
+        "hover",
+        4,
+        false
+      ],
+      "classification": "gameplay_change_not_accepted",
+      "reference_digest": "af8694ee6420ba51288117e79cd6dd8b7a2597c604b49155d25f2c8b816880df",
+      "candidate_digest": "0d745707db68c51f824c959b01325cddd5e418c10ad9f7cc37fbd806a5eb4ef5",
+      "before": {
+        "ticks": 900,
+        "first_geometry": 200,
+        "first_ready": 200,
+        "first_shot": null,
+        "ready_ticks": 701,
+        "preferred_band_ticks": 134,
+        "approach_distance": 15.624999999999867,
+        "distance": 47.35833333333323,
+        "replans": 62,
+        "outcome": "window_end",
+        "target_destroyed_at": null
+      },
+      "after": {
+        "ticks": 538,
+        "first_geometry": 200,
+        "first_ready": 200,
+        "first_shot": null,
+        "ready_ticks": 339,
+        "preferred_band_ticks": 113,
+        "approach_distance": 15.624999999999867,
+        "distance": 27.037499999999735,
+        "replans": 101,
+        "outcome": "Stuck",
+        "target_destroyed_at": null
+      }
+    },
+    {
+      "case": [
+        "opposite_crossing",
+        "hover",
+        4,
+        true
+      ],
+      "classification": "gameplay_change_not_accepted",
+      "reference_digest": "2e0f3cf3bc104a8e3470feceeea93347d6883312d07e8e41313cd8d259945861",
+      "candidate_digest": "48a6c8305c61487d38df3b4e343573898ac207496f44754f857fff63a3e7b672",
+      "before": {
+        "ticks": 900,
+        "first_geometry": 200,
+        "first_ready": 1,
+        "first_shot": 1,
+        "ready_ticks": 1,
+        "preferred_band_ticks": 134,
+        "approach_distance": 0.0,
+        "distance": 47.35833333333323,
+        "replans": 62,
+        "outcome": "window_end",
+        "target_destroyed_at": null
+      },
+      "after": {
+        "ticks": 538,
+        "first_geometry": 200,
+        "first_ready": 1,
+        "first_shot": 1,
+        "ready_ticks": 1,
+        "preferred_band_ticks": 113,
+        "approach_distance": 0.0,
+        "distance": 27.037499999999735,
+        "replans": 101,
+        "outcome": "Stuck",
+        "target_destroyed_at": null
+      }
+    },
+    {
+      "case": [
+        "opposite_crossing",
+        "hover",
+        5,
+        false
+      ],
+      "classification": "gameplay_change_not_accepted",
+      "reference_digest": "ef2385ddf664bcbc89f69eda3eb52b67948f1d79ac4b16fdcfcf7aceb77f6977",
+      "candidate_digest": "19cc396e440c7e97f30ceb7b59eef0c297407816edba58d1d8c908180e1027a8",
+      "before": {
+        "ticks": 900,
+        "first_geometry": 200,
+        "first_ready": 200,
+        "first_shot": null,
+        "ready_ticks": 701,
+        "preferred_band_ticks": 134,
+        "approach_distance": 15.624999999999867,
+        "distance": 47.35833333333323,
+        "replans": 62,
+        "outcome": "window_end",
+        "target_destroyed_at": null
+      },
+      "after": {
+        "ticks": 538,
+        "first_geometry": 200,
+        "first_ready": 200,
+        "first_shot": null,
+        "ready_ticks": 339,
+        "preferred_band_ticks": 113,
+        "approach_distance": 15.624999999999867,
+        "distance": 27.037499999999735,
+        "replans": 101,
+        "outcome": "Stuck",
+        "target_destroyed_at": null
+      }
+    },
+    {
+      "case": [
+        "opposite_crossing",
+        "hover",
+        5,
+        true
+      ],
+      "classification": "gameplay_change_not_accepted",
+      "reference_digest": "09bb9d9dcf912ebec7e2cc45d30d90a4a7b247aaf1060320d36fc6c8182775f3",
+      "candidate_digest": "0222e3d76ea088446c9a535134606464695f68edbe318613f0afe1c8f9231c6a",
+      "before": {
+        "ticks": 900,
+        "first_geometry": 200,
+        "first_ready": 1,
+        "first_shot": 1,
+        "ready_ticks": 1,
+        "preferred_band_ticks": 134,
+        "approach_distance": 0.0,
+        "distance": 47.35833333333323,
+        "replans": 62,
+        "outcome": "window_end",
+        "target_destroyed_at": null
+      },
+      "after": {
+        "ticks": 538,
+        "first_geometry": 200,
+        "first_ready": 1,
+        "first_shot": 1,
+        "ready_ticks": 1,
+        "preferred_band_ticks": 113,
+        "approach_distance": 0.0,
+        "distance": 27.037499999999735,
+        "replans": 101,
+        "outcome": "Stuck",
+        "target_destroyed_at": null
+      }
+    },
+    {
+      "case": [
+        "opposite_crossing",
+        "hover",
+        6,
+        false
+      ],
+      "classification": "gameplay_change_not_accepted",
+      "reference_digest": "495add6dc790bf10c0ebd0d3d28ce8bc5a87908135c13a8a83833a48ef97d8ad",
+      "candidate_digest": "9a1d2a52434b579222c6aa7c92648c3b534852d22824287af079d7534f4c9f5c",
+      "before": {
+        "ticks": 900,
+        "first_geometry": 200,
+        "first_ready": 200,
+        "first_shot": null,
+        "ready_ticks": 701,
+        "preferred_band_ticks": 134,
+        "approach_distance": 15.624999999999867,
+        "distance": 47.35833333333323,
+        "replans": 62,
+        "outcome": "window_end",
+        "target_destroyed_at": null
+      },
+      "after": {
+        "ticks": 538,
+        "first_geometry": 200,
+        "first_ready": 200,
+        "first_shot": null,
+        "ready_ticks": 339,
+        "preferred_band_ticks": 113,
+        "approach_distance": 15.624999999999867,
+        "distance": 27.037499999999735,
+        "replans": 101,
+        "outcome": "Stuck",
+        "target_destroyed_at": null
+      }
+    },
+    {
+      "case": [
+        "opposite_crossing",
+        "hover",
+        6,
+        true
+      ],
+      "classification": "gameplay_change_not_accepted",
+      "reference_digest": "9a03530b98db72317c542d160e3d9aaf81507ec18fa5d4ff79e637f9429c07da",
+      "candidate_digest": "895140f738ea8216ba8dc1daf17d80b985307bba580b591622ec3844d52c6d1e",
+      "before": {
+        "ticks": 900,
+        "first_geometry": 200,
+        "first_ready": 1,
+        "first_shot": 1,
+        "ready_ticks": 1,
+        "preferred_band_ticks": 134,
+        "approach_distance": 0.0,
+        "distance": 47.35833333333323,
+        "replans": 62,
+        "outcome": "window_end",
+        "target_destroyed_at": null
+      },
+      "after": {
+        "ticks": 538,
+        "first_geometry": 200,
+        "first_ready": 1,
+        "first_shot": 1,
+        "ready_ticks": 1,
+        "preferred_band_ticks": 113,
+        "approach_distance": 0.0,
+        "distance": 27.037499999999735,
+        "replans": 101,
+        "outcome": "Stuck",
+        "target_destroyed_at": null
+      }
+    },
+    {
+      "case": [
+        "opposite_crossing",
+        "tracked",
+        4,
+        false
+      ],
+      "classification": "gameplay_change_not_accepted",
+      "reference_digest": "a2c3f2a86f96a45b36a3458fcf7724bfcf2ac275152f426a69170c0996625ebe",
+      "candidate_digest": "b1f8c1d99560cbcb11df070f56db92501dc68d3122a25d0bb634ac359124bb56",
+      "before": {
+        "ticks": 900,
+        "first_geometry": 200,
+        "first_ready": 200,
+        "first_shot": null,
+        "ready_ticks": 701,
+        "preferred_band_ticks": 134,
+        "approach_distance": 15.624999999999867,
+        "distance": 47.35833333333323,
+        "replans": 62,
+        "outcome": "window_end",
+        "target_destroyed_at": null
+      },
+      "after": {
+        "ticks": 538,
+        "first_geometry": 200,
+        "first_ready": 200,
+        "first_shot": null,
+        "ready_ticks": 339,
+        "preferred_band_ticks": 113,
+        "approach_distance": 15.624999999999867,
+        "distance": 27.037499999999735,
+        "replans": 101,
+        "outcome": "Stuck",
+        "target_destroyed_at": null
+      }
+    },
+    {
+      "case": [
+        "opposite_crossing",
+        "tracked",
+        4,
+        true
+      ],
+      "classification": "gameplay_change_not_accepted",
+      "reference_digest": "f2ad16c5eed2ae36360ab6d55a1a9f2bc8556c12cd53caeea5ba8225ba904ac1",
+      "candidate_digest": "abe47de16e315294b35cf465acad787014a7ec07e59e38eaef91b5aad65c5533",
+      "before": {
+        "ticks": 900,
+        "first_geometry": 200,
+        "first_ready": 1,
+        "first_shot": 1,
+        "ready_ticks": 1,
+        "preferred_band_ticks": 134,
+        "approach_distance": 0.0,
+        "distance": 47.35833333333323,
+        "replans": 62,
+        "outcome": "window_end",
+        "target_destroyed_at": null
+      },
+      "after": {
+        "ticks": 538,
+        "first_geometry": 200,
+        "first_ready": 1,
+        "first_shot": 1,
+        "ready_ticks": 1,
+        "preferred_band_ticks": 113,
+        "approach_distance": 0.0,
+        "distance": 27.037499999999735,
+        "replans": 101,
+        "outcome": "Stuck",
+        "target_destroyed_at": null
+      }
+    },
+    {
+      "case": [
+        "opposite_crossing",
+        "tracked",
+        5,
+        false
+      ],
+      "classification": "gameplay_change_not_accepted",
+      "reference_digest": "8d7cc05a525cc5f536c32750de4b83b92f229a45366d548dfbce8fc11a12ce00",
+      "candidate_digest": "1b13018779b1e5dd47bd07d5a9774f5ffcce460e47686d3a940eae217e7691d9",
+      "before": {
+        "ticks": 900,
+        "first_geometry": 200,
+        "first_ready": 200,
+        "first_shot": null,
+        "ready_ticks": 701,
+        "preferred_band_ticks": 134,
+        "approach_distance": 15.624999999999867,
+        "distance": 47.35833333333323,
+        "replans": 62,
+        "outcome": "window_end",
+        "target_destroyed_at": null
+      },
+      "after": {
+        "ticks": 538,
+        "first_geometry": 200,
+        "first_ready": 200,
+        "first_shot": null,
+        "ready_ticks": 339,
+        "preferred_band_ticks": 113,
+        "approach_distance": 15.624999999999867,
+        "distance": 27.037499999999735,
+        "replans": 101,
+        "outcome": "Stuck",
+        "target_destroyed_at": null
+      }
+    },
+    {
+      "case": [
+        "opposite_crossing",
+        "tracked",
+        5,
+        true
+      ],
+      "classification": "gameplay_change_not_accepted",
+      "reference_digest": "7a5f3452048408efa1eb5477da7fef0d10ed6ab21bdf595afe1263c9a4274e80",
+      "candidate_digest": "40ac081ae251dd76dfe208b426f5f86114b8db7a74a434f7b98ea7ca92839f0b",
+      "before": {
+        "ticks": 900,
+        "first_geometry": 200,
+        "first_ready": 1,
+        "first_shot": 1,
+        "ready_ticks": 1,
+        "preferred_band_ticks": 134,
+        "approach_distance": 0.0,
+        "distance": 47.35833333333323,
+        "replans": 62,
+        "outcome": "window_end",
+        "target_destroyed_at": null
+      },
+      "after": {
+        "ticks": 538,
+        "first_geometry": 200,
+        "first_ready": 1,
+        "first_shot": 1,
+        "ready_ticks": 1,
+        "preferred_band_ticks": 113,
+        "approach_distance": 0.0,
+        "distance": 27.037499999999735,
+        "replans": 101,
+        "outcome": "Stuck",
+        "target_destroyed_at": null
+      }
+    },
+    {
+      "case": [
+        "opposite_crossing",
+        "tracked",
+        6,
+        false
+      ],
+      "classification": "gameplay_change_not_accepted",
+      "reference_digest": "5d95b6bef38889aee7add19d9ae0a688390e163d4b2d8c7e36bacd9117574aae",
+      "candidate_digest": "5986a47a5e92e92c81e8db8e1bf9dd4a3d57c662d416323436d1f59d881f0eb4",
+      "before": {
+        "ticks": 900,
+        "first_geometry": 200,
+        "first_ready": 200,
+        "first_shot": null,
+        "ready_ticks": 701,
+        "preferred_band_ticks": 134,
+        "approach_distance": 15.624999999999867,
+        "distance": 47.35833333333323,
+        "replans": 62,
+        "outcome": "window_end",
+        "target_destroyed_at": null
+      },
+      "after": {
+        "ticks": 538,
+        "first_geometry": 200,
+        "first_ready": 200,
+        "first_shot": null,
+        "ready_ticks": 339,
+        "preferred_band_ticks": 113,
+        "approach_distance": 15.624999999999867,
+        "distance": 27.037499999999735,
+        "replans": 101,
+        "outcome": "Stuck",
+        "target_destroyed_at": null
+      }
+    },
+    {
+      "case": [
+        "opposite_crossing",
+        "tracked",
+        6,
+        true
+      ],
+      "classification": "gameplay_change_not_accepted",
+      "reference_digest": "054243e8e7983e3d9194621ea7f78af5892545bb3e9f788d2990859a7f808b54",
+      "candidate_digest": "ccfcaeccf0941bfa2733d1cc604138046acfa6f025e087a3119527e4741c3b6e",
+      "before": {
+        "ticks": 900,
+        "first_geometry": 200,
+        "first_ready": 1,
+        "first_shot": 1,
+        "ready_ticks": 1,
+        "preferred_band_ticks": 134,
+        "approach_distance": 0.0,
+        "distance": 47.35833333333323,
+        "replans": 62,
+        "outcome": "window_end",
+        "target_destroyed_at": null
+      },
+      "after": {
+        "ticks": 538,
+        "first_geometry": 200,
+        "first_ready": 1,
+        "first_shot": 1,
+        "ready_ticks": 1,
+        "preferred_band_ticks": 113,
+        "approach_distance": 0.0,
+        "distance": 27.037499999999735,
+        "replans": 101,
+        "outcome": "Stuck",
+        "target_destroyed_at": null
+      }
+    },
+    {
+      "case": [
+        "opposite_crossing",
+        "wheeled",
+        4,
+        false
+      ],
+      "classification": "gameplay_change_not_accepted",
+      "reference_digest": "56f615de5bcfd93e15f923d33a3c56fb721c094fecc30d939c2322ba66c8f07b",
+      "candidate_digest": "23be63892160a1f27a2d154763729090f8c2f2ef7f13e3d65943c07ffff264ad",
+      "before": {
+        "ticks": 900,
+        "first_geometry": 200,
+        "first_ready": 200,
+        "first_shot": null,
+        "ready_ticks": 701,
+        "preferred_band_ticks": 134,
+        "approach_distance": 15.624999999999867,
+        "distance": 47.35833333333323,
+        "replans": 62,
+        "outcome": "window_end",
+        "target_destroyed_at": null
+      },
+      "after": {
+        "ticks": 538,
+        "first_geometry": 200,
+        "first_ready": 200,
+        "first_shot": null,
+        "ready_ticks": 339,
+        "preferred_band_ticks": 113,
+        "approach_distance": 15.624999999999867,
+        "distance": 27.037499999999735,
+        "replans": 101,
+        "outcome": "Stuck",
+        "target_destroyed_at": null
+      }
+    },
+    {
+      "case": [
+        "opposite_crossing",
+        "wheeled",
+        4,
+        true
+      ],
+      "classification": "gameplay_change_not_accepted",
+      "reference_digest": "acf56fe818568863402507b10c0692b2af8f80eeb7e77d1c5fa6a5e7daf8fd67",
+      "candidate_digest": "663e2c2443ab47fcd53b6b8f373e7e7b27e1bf3174e4d09370991f8c4fa92faf",
+      "before": {
+        "ticks": 900,
+        "first_geometry": 200,
+        "first_ready": 1,
+        "first_shot": 1,
+        "ready_ticks": 1,
+        "preferred_band_ticks": 134,
+        "approach_distance": 0.0,
+        "distance": 47.35833333333323,
+        "replans": 62,
+        "outcome": "window_end",
+        "target_destroyed_at": null
+      },
+      "after": {
+        "ticks": 538,
+        "first_geometry": 200,
+        "first_ready": 1,
+        "first_shot": 1,
+        "ready_ticks": 1,
+        "preferred_band_ticks": 113,
+        "approach_distance": 0.0,
+        "distance": 27.037499999999735,
+        "replans": 101,
+        "outcome": "Stuck",
+        "target_destroyed_at": null
+      }
+    },
+    {
+      "case": [
+        "opposite_crossing",
+        "wheeled",
+        5,
+        false
+      ],
+      "classification": "gameplay_change_not_accepted",
+      "reference_digest": "a1b4babeaf307c5b053d5fbbaaff379df32cde1426a3b828fae0899d799e014f",
+      "candidate_digest": "71173a1a96a9a2691d7e4ca7ace71178ddad371952190d3f4e13cdc031f93dae",
+      "before": {
+        "ticks": 900,
+        "first_geometry": 200,
+        "first_ready": 200,
+        "first_shot": null,
+        "ready_ticks": 701,
+        "preferred_band_ticks": 134,
+        "approach_distance": 15.624999999999867,
+        "distance": 47.35833333333323,
+        "replans": 62,
+        "outcome": "window_end",
+        "target_destroyed_at": null
+      },
+      "after": {
+        "ticks": 538,
+        "first_geometry": 200,
+        "first_ready": 200,
+        "first_shot": null,
+        "ready_ticks": 339,
+        "preferred_band_ticks": 113,
+        "approach_distance": 15.624999999999867,
+        "distance": 27.037499999999735,
+        "replans": 101,
+        "outcome": "Stuck",
+        "target_destroyed_at": null
+      }
+    },
+    {
+      "case": [
+        "opposite_crossing",
+        "wheeled",
+        5,
+        true
+      ],
+      "classification": "gameplay_change_not_accepted",
+      "reference_digest": "71ef885035bedd56d6808f208df0c5036d8d1e63bd2a9e1543cc88d1c02e0316",
+      "candidate_digest": "23d49f3a629742497d5ec0e3d78200016410aed4a2335f2c5b88c5dbb02f0916",
+      "before": {
+        "ticks": 900,
+        "first_geometry": 200,
+        "first_ready": 1,
+        "first_shot": 1,
+        "ready_ticks": 1,
+        "preferred_band_ticks": 134,
+        "approach_distance": 0.0,
+        "distance": 47.35833333333323,
+        "replans": 62,
+        "outcome": "window_end",
+        "target_destroyed_at": null
+      },
+      "after": {
+        "ticks": 538,
+        "first_geometry": 200,
+        "first_ready": 1,
+        "first_shot": 1,
+        "ready_ticks": 1,
+        "preferred_band_ticks": 113,
+        "approach_distance": 0.0,
+        "distance": 27.037499999999735,
+        "replans": 101,
+        "outcome": "Stuck",
+        "target_destroyed_at": null
+      }
+    },
+    {
+      "case": [
+        "opposite_crossing",
+        "wheeled",
+        6,
+        false
+      ],
+      "classification": "gameplay_change_not_accepted",
+      "reference_digest": "2916f7c5bd837ad777f64e3c1843f9e691beadedfdb2a8d65fcaac9f40c324a0",
+      "candidate_digest": "f8d4a69787bf7b766bc59abdf634c2f4016c991c647e7655aa2fe3bc4fbb3754",
+      "before": {
+        "ticks": 900,
+        "first_geometry": 200,
+        "first_ready": 200,
+        "first_shot": null,
+        "ready_ticks": 701,
+        "preferred_band_ticks": 134,
+        "approach_distance": 15.624999999999867,
+        "distance": 47.35833333333323,
+        "replans": 62,
+        "outcome": "window_end",
+        "target_destroyed_at": null
+      },
+      "after": {
+        "ticks": 538,
+        "first_geometry": 200,
+        "first_ready": 200,
+        "first_shot": null,
+        "ready_ticks": 339,
+        "preferred_band_ticks": 113,
+        "approach_distance": 15.624999999999867,
+        "distance": 27.037499999999735,
+        "replans": 101,
+        "outcome": "Stuck",
+        "target_destroyed_at": null
+      }
+    },
+    {
+      "case": [
+        "opposite_crossing",
+        "wheeled",
+        6,
+        true
+      ],
+      "classification": "gameplay_change_not_accepted",
+      "reference_digest": "79e4c3ea332bfe5fb5557d7295543481b90eec9107d9a4fd56fc6a928242a823",
+      "candidate_digest": "1b4f3392b96fc4e7d8a18102ec4b444ab9289cd18fcbb8004a720bfb00512a95",
+      "before": {
+        "ticks": 900,
+        "first_geometry": 200,
+        "first_ready": 1,
+        "first_shot": 1,
+        "ready_ticks": 1,
+        "preferred_band_ticks": 134,
+        "approach_distance": 0.0,
+        "distance": 47.35833333333323,
+        "replans": 62,
+        "outcome": "window_end",
+        "target_destroyed_at": null
+      },
+      "after": {
+        "ticks": 538,
+        "first_geometry": 200,
+        "first_ready": 1,
+        "first_shot": 1,
+        "ready_ticks": 1,
+        "preferred_band_ticks": 113,
+        "approach_distance": 0.0,
+        "distance": 27.037499999999735,
+        "replans": 101,
+        "outcome": "Stuck",
+        "target_destroyed_at": null
+      }
+    },
+    {
+      "case": [
+        "slow_crossing",
+        "mech",
+        4,
+        false
+      ],
+      "classification": "gameplay_change_not_accepted",
+      "reference_digest": "62cbe46be0bdb2ff8fd37ba5c7acbed9c89a19799522e860f094a15a37a7d433",
+      "candidate_digest": "6ca85338084e8e05af0e989ead7e4d9bb786f4ef79d7761da4ae5a788f45b614",
+      "before": {
+        "ticks": 900,
+        "first_geometry": 101,
+        "first_ready": 101,
+        "first_shot": null,
+        "ready_ticks": 800,
+        "preferred_band_ticks": 65,
+        "approach_distance": 14.996666666666679,
+        "distance": 55.13750000000004,
+        "replans": 41,
+        "outcome": "window_end",
+        "target_destroyed_at": null
+      },
+      "after": {
+        "ticks": 193,
+        "first_geometry": 101,
+        "first_ready": 101,
+        "first_shot": null,
+        "ready_ticks": 93,
+        "preferred_band_ticks": 0,
+        "approach_distance": 14.996666666666679,
+        "distance": 23.833333333333353,
+        "replans": 53,
+        "outcome": "Stuck",
+        "target_destroyed_at": null
+      }
+    },
+    {
+      "case": [
+        "slow_crossing",
+        "mech",
+        4,
+        true
+      ],
+      "classification": "gameplay_change_not_accepted",
+      "reference_digest": "8f47fb63cc7aa41d839bf4a7882b1f0d2e5a6af45ff7093a421d74258f50b9ac",
+      "candidate_digest": "7928f597a5691f6b8aa88a22d0be76267c948fc9e9945ded21c4cee0d8ea41b2",
+      "before": {
+        "ticks": 900,
+        "first_geometry": 101,
+        "first_ready": 1,
+        "first_shot": 1,
+        "ready_ticks": 90,
+        "preferred_band_ticks": 65,
+        "approach_distance": 0.009166666666665435,
+        "distance": 55.13750000000004,
+        "replans": 41,
+        "outcome": "window_end",
+        "target_destroyed_at": null
+      },
+      "after": {
+        "ticks": 193,
+        "first_geometry": 101,
+        "first_ready": 1,
+        "first_shot": 1,
+        "ready_ticks": 19,
+        "preferred_band_ticks": 0,
+        "approach_distance": 0.009166666666665435,
+        "distance": 23.833333333333353,
+        "replans": 53,
+        "outcome": "Stuck",
+        "target_destroyed_at": null
+      }
+    },
+    {
+      "case": [
+        "slow_crossing",
+        "mech",
+        5,
+        false
+      ],
+      "classification": "gameplay_change_not_accepted",
+      "reference_digest": "1bbfac78c491bdf3993c77eaca96b9d00d5a9f0da304eaf11ee2d83bde448122",
+      "candidate_digest": "a7bbd840a6a793d83610dbc9383d5f6975f5aba9e6fa97aefe92593697a3ac2b",
+      "before": {
+        "ticks": 900,
+        "first_geometry": 101,
+        "first_ready": 101,
+        "first_shot": null,
+        "ready_ticks": 800,
+        "preferred_band_ticks": 65,
+        "approach_distance": 14.996666666666679,
+        "distance": 55.13750000000004,
+        "replans": 41,
+        "outcome": "window_end",
+        "target_destroyed_at": null
+      },
+      "after": {
+        "ticks": 193,
+        "first_geometry": 101,
+        "first_ready": 101,
+        "first_shot": null,
+        "ready_ticks": 93,
+        "preferred_band_ticks": 0,
+        "approach_distance": 14.996666666666679,
+        "distance": 23.833333333333353,
+        "replans": 53,
+        "outcome": "Stuck",
+        "target_destroyed_at": null
+      }
+    },
+    {
+      "case": [
+        "slow_crossing",
+        "mech",
+        5,
+        true
+      ],
+      "classification": "gameplay_change_not_accepted",
+      "reference_digest": "64c957e6dff462429b91974e8bb71f91d0e03f7b7c09efc6b83f427f5ff929a3",
+      "candidate_digest": "f7c80f526ee32cacaf70de92462430a2b164acb0bf02104c13df2a15447e5fa5",
+      "before": {
+        "ticks": 900,
+        "first_geometry": 101,
+        "first_ready": 1,
+        "first_shot": 1,
+        "ready_ticks": 90,
+        "preferred_band_ticks": 65,
+        "approach_distance": 0.009166666666665435,
+        "distance": 55.13750000000004,
+        "replans": 41,
+        "outcome": "window_end",
+        "target_destroyed_at": null
+      },
+      "after": {
+        "ticks": 193,
+        "first_geometry": 101,
+        "first_ready": 1,
+        "first_shot": 1,
+        "ready_ticks": 19,
+        "preferred_band_ticks": 0,
+        "approach_distance": 0.009166666666665435,
+        "distance": 23.833333333333353,
+        "replans": 53,
+        "outcome": "Stuck",
+        "target_destroyed_at": null
+      }
+    },
+    {
+      "case": [
+        "slow_crossing",
+        "mech",
+        6,
+        false
+      ],
+      "classification": "gameplay_change_not_accepted",
+      "reference_digest": "96f6a5e461a6b9b261f3b5a55e960a7844c22ea8daf23a52f456922193e13936",
+      "candidate_digest": "c6efb9dbcc7f8903331f8105b111a3f2f5ca6fd2e57f5698737802cee75ce871",
+      "before": {
+        "ticks": 900,
+        "first_geometry": 101,
+        "first_ready": 101,
+        "first_shot": null,
+        "ready_ticks": 800,
+        "preferred_band_ticks": 65,
+        "approach_distance": 14.996666666666679,
+        "distance": 55.13750000000004,
+        "replans": 41,
+        "outcome": "window_end",
+        "target_destroyed_at": null
+      },
+      "after": {
+        "ticks": 193,
+        "first_geometry": 101,
+        "first_ready": 101,
+        "first_shot": null,
+        "ready_ticks": 93,
+        "preferred_band_ticks": 0,
+        "approach_distance": 14.996666666666679,
+        "distance": 23.833333333333353,
+        "replans": 53,
+        "outcome": "Stuck",
+        "target_destroyed_at": null
+      }
+    },
+    {
+      "case": [
+        "slow_crossing",
+        "mech",
+        6,
+        true
+      ],
+      "classification": "gameplay_change_not_accepted",
+      "reference_digest": "1774b6541bd46ad89f10f06adefd8814b0d123b08c5d9f9ba3de458b39c659d7",
+      "candidate_digest": "e3281d433adab811de2523b557c72d04f734628cafe7c84708ddfa240cada13c",
+      "before": {
+        "ticks": 900,
+        "first_geometry": 101,
+        "first_ready": 1,
+        "first_shot": 1,
+        "ready_ticks": 90,
+        "preferred_band_ticks": 65,
+        "approach_distance": 0.009166666666665435,
+        "distance": 55.13750000000004,
+        "replans": 41,
+        "outcome": "window_end",
+        "target_destroyed_at": null
+      },
+      "after": {
+        "ticks": 193,
+        "first_geometry": 101,
+        "first_ready": 1,
+        "first_shot": 1,
+        "ready_ticks": 19,
+        "preferred_band_ticks": 0,
+        "approach_distance": 0.009166666666665435,
+        "distance": 23.833333333333353,
+        "replans": 53,
+        "outcome": "Stuck",
+        "target_destroyed_at": null
+      }
+    }
+  ]
+}

@@ -810,8 +810,6 @@ impl CommandRegistry {
             .policy(SwitchPolicy::Reject("masc takes no switches."), false),
             CommandDefinition::native("dump", P::EVERYONE, crate::btech::dumping::command)
                 .policy(SwitchPolicy::Reject("dump takes no switches."), false),
-            CommandDefinition::native("turnmode", P::EVERYONE, crate::btech::turnmode::command)
-                .policy(SwitchPolicy::Reject("turnmode takes no switches."), false),
             CommandDefinition::native("lateral", P::EVERYONE, crate::btech::lateral::command)
                 .policy(SwitchPolicy::Reject("lateral takes no switches."), false),
             CommandDefinition::native("brief", P::EVERYONE, crate::btech::brief::command)

@@ -90,7 +90,7 @@ impl super::BattleUnit {
     }
 }
 
-/// Intact quads can move laterally; Maneuvering Ace also permits other supported mechs.
+/// Only intact quads can select lateral movement.
 pub fn set_lateral(
     world: &mut World,
     id: ObjectId,
@@ -104,13 +104,12 @@ pub fn set_lateral(
         "Start the unit first"
     );
     ensure!(
-        (unit.chassis() == super::BattleMechChassis::Quad
+        unit.chassis() == super::BattleMechChassis::Quad
             && unit
                 .chassis()
                 .legs()
                 .iter()
-                .all(|leg| !unit.leg_unavailable(*leg)))
-            || maneuvering_ace(world, pilot),
+                .all(|leg| !unit.leg_unavailable(*leg)),
         "You cannot alter your lateral movement!"
     );
     unit.position().context("Unit is not on a battlefield")?;
@@ -227,9 +226,4 @@ pub(crate) fn command(
             crate::CommandAction::Report(crate::CommandReport::Reply(format!("{error:#}")))
         }
     })
-}
-
-/// The saved boolean advantage is shared by lateral and turning controls.
-pub(super) fn maneuvering_ace(world: &World, pilot: ObjectId) -> bool {
-    super::skills::boolean_advantage(world, pilot, "Maneuvering_Ace")
 }

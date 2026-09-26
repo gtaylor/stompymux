@@ -318,11 +318,8 @@ fn launch(
     // Towing was rejected above, so the configured myomer towing discount cannot apply.
     let loaded = unit.effective_speed_with_load(
         map,
-        super::unit_load(world, id, true)?,
+        super::unit_load(world, id, speed.tsm_tow_bonus)?,
         maximum,
-        unit.pilot()
-            .is_some_and(|pilot| super::skills::boolean_advantage(world, pilot, "Speed_Demon")),
-        speed.tsm_sprint_bonus,
     )?;
     ensure!(maximum - loaded <= 10.75, "No, with this cargo you won't!");
     ensure!(

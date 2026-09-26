@@ -338,7 +338,6 @@ async fn offensive_value_and_experience_follow_runtime_overrides() {
         let request = BattleGunneryAwardRequest {
             tsm_tow_bonus: true,
 
-            tsm_sprint_bonus: true,
             attacker: shooter,
             pilot: ObjectId(1),
             target,

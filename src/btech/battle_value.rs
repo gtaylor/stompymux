@@ -336,7 +336,7 @@ pub fn unit_battle_value(
     )
 }
 
-/// Compute live battle value with the host's towing and sprint policies.
+/// Compute live battle value with the host's towing policy.
 pub(crate) fn configured(
     world: &crate::World,
     id: crate::ObjectId,

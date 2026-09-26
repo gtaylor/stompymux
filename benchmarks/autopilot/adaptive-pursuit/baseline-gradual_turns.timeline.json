@@ -1,0 +1,1950 @@
+{
+  "attribution": "Observed categories; not causal proof",
+  "cases": {
+    "[\"gradual_turns\",\"hover\",4,false]": {
+      "decision_changes": 58,
+      "first_prediction": 103,
+      "goal_changes": 57,
+      "last_result": {
+        "approach_distance": 19.683333333333326,
+        "arc_fraction": 652.0,
+        "arc_ticks": 652,
+        "chassis": "hover",
+        "direct": false,
+        "distance": 52.841666666666725,
+        "episodes": [
+          {
+            "arc_sum": 652.0,
+            "arc_ticks": 652,
+            "distance": 52.841666666666725,
+            "end": 900,
+            "first_arc": 249,
+            "first_geometry": 249,
+            "first_ready": 249,
+            "first_shot": null,
+            "geometry_ticks": 652,
+            "preferred_band_ticks": 71,
+            "range_error_mean": 0.0,
+            "range_error_p95": 0.0,
+            "ready_ticks": 652,
+            "start": 1
+          }
+        ],
+        "fire": false,
+        "first_arc": 249,
+        "first_geometry": 249,
+        "first_ready": 249,
+        "first_shot": null,
+        "outcome": "window_end",
+        "prediction_fallbacks": 0,
+        "prediction_ticks": 147,
+        "preferred_band_ticks": 71,
+        "range_error_mean": 0.0,
+        "range_error_p95": 0.0,
+        "ready_ticks": 652,
+        "replans": 61,
+        "reversals": 26,
+        "scenario": "gradual_turns",
+        "schema": 1,
+        "script_events": [
+          [
+            229,
+            "turn_requested"
+          ],
+          [
+            534,
+            "turn_requested"
+          ],
+          [
+            838,
+            "turn_requested"
+          ]
+        ],
+        "script_rejections": 0,
+        "seed": 4,
+        "settled_distance": 13.03749999999998,
+        "settled_ticks": 337,
+        "shots": 0,
+        "stationary_detour_distance": null,
+        "stationary_route_length": null,
+        "target_destroyed_at": null,
+        "target_distance": 39.595641548177596,
+        "ticks": 900,
+        "visible_ticks": 900
+      },
+      "reason_ticks": {
+        "insufficient_motion": 99,
+        "insufficient_samples": 3,
+        "predicted": 147,
+        "settled": 651
+      },
+      "ticks": 900
+    },
+    "[\"gradual_turns\",\"hover\",4,true]": {
+      "decision_changes": 58,
+      "first_prediction": 103,
+      "goal_changes": 57,
+      "last_result": {
+        "approach_distance": 0.00416666666666643,
+        "arc_fraction": 652.0,
+        "arc_ticks": 652,
+        "chassis": "hover",
+        "direct": false,
+        "distance": 52.841666666666725,
+        "episodes": [
+          {
+            "arc_sum": 652.0,
+            "arc_ticks": 652,
+            "distance": 52.841666666666725,
+            "end": 900,
+            "first_arc": 249,
+            "first_geometry": 249,
+            "first_ready": 1,
+            "first_shot": 1,
+            "geometry_ticks": 652,
+            "preferred_band_ticks": 71,
+            "range_error_mean": 0.0,
+            "range_error_p95": 0.0,
+            "ready_ticks": 1,
+            "start": 1
+          }
+        ],
+        "fire": true,
+        "first_arc": 249,
+        "first_geometry": 249,
+        "first_ready": 1,
+        "first_shot": 1,
+        "outcome": "window_end",
+        "prediction_fallbacks": 0,
+        "prediction_ticks": 147,
+        "preferred_band_ticks": 71,
+        "range_error_mean": 0.0,
+        "range_error_p95": 0.0,
+        "ready_ticks": 1,
+        "replans": 61,
+        "reversals": 26,
+        "scenario": "gradual_turns",
+        "schema": 1,
+        "script_events": [
+          [
+            229,
+            "turn_requested"
+          ],
+          [
+            534,
+            "turn_requested"
+          ],
+          [
+            838,
+            "turn_requested"
+          ]
+        ],
+        "script_rejections": 0,
+        "seed": 4,
+        "settled_distance": 13.03749999999998,
+        "settled_ticks": 337,
+        "shots": 1,
+        "stationary_detour_distance": null,
+        "stationary_route_length": null,
+        "target_destroyed_at": null,
+        "target_distance": 39.595641548177596,
+        "ticks": 900,
+        "visible_ticks": 900
+      },
+      "reason_ticks": {
+        "insufficient_motion": 99,
+        "insufficient_samples": 3,
+        "predicted": 147,
+        "settled": 651
+      },
+      "ticks": 900
+    },
+    "[\"gradual_turns\",\"hover\",5,false]": {
+      "decision_changes": 58,
+      "first_prediction": 103,
+      "goal_changes": 57,
+      "last_result": {
+        "approach_distance": 19.683333333333326,
+        "arc_fraction": 652.0,
+        "arc_ticks": 652,
+        "chassis": "hover",
+        "direct": false,
+        "distance": 52.841666666666725,
+        "episodes": [
+          {
+            "arc_sum": 652.0,
+            "arc_ticks": 652,
+            "distance": 52.841666666666725,
+            "end": 900,
+            "first_arc": 249,
+            "first_geometry": 249,
+            "first_ready": 249,
+            "first_shot": null,
+            "geometry_ticks": 652,
+            "preferred_band_ticks": 71,
+            "range_error_mean": 0.0,
+            "range_error_p95": 0.0,
+            "ready_ticks": 652,
+            "start": 1
+          }
+        ],
+        "fire": false,
+        "first_arc": 249,
+        "first_geometry": 249,
+        "first_ready": 249,
+        "first_shot": null,
+        "outcome": "window_end",
+        "prediction_fallbacks": 0,
+        "prediction_ticks": 147,
+        "preferred_band_ticks": 71,
+        "range_error_mean": 0.0,
+        "range_error_p95": 0.0,
+        "ready_ticks": 652,
+        "replans": 61,
+        "reversals": 26,
+        "scenario": "gradual_turns",
+        "schema": 1,
+        "script_events": [
+          [
+            229,
+            "turn_requested"
+          ],
+          [
+            534,
+            "turn_requested"
+          ],
+          [
+            838,
+            "turn_requested"
+          ]
+        ],
+        "script_rejections": 0,
+        "seed": 5,
+        "settled_distance": 13.03749999999998,
+        "settled_ticks": 337,
+        "shots": 0,
+        "stationary_detour_distance": null,
+        "stationary_route_length": null,
+        "target_destroyed_at": null,
+        "target_distance": 39.595641548177596,
+        "ticks": 900,
+        "visible_ticks": 900
+      },
+      "reason_ticks": {
+        "insufficient_motion": 99,
+        "insufficient_samples": 3,
+        "predicted": 147,
+        "settled": 651
+      },
+      "ticks": 900
+    },
+    "[\"gradual_turns\",\"hover\",5,true]": {
+      "decision_changes": 58,
+      "first_prediction": 103,
+      "goal_changes": 57,
+      "last_result": {
+        "approach_distance": 0.00416666666666643,
+        "arc_fraction": 652.0,
+        "arc_ticks": 652,
+        "chassis": "hover",
+        "direct": false,
+        "distance": 52.841666666666725,
+        "episodes": [
+          {
+            "arc_sum": 652.0,
+            "arc_ticks": 652,
+            "distance": 52.841666666666725,
+            "end": 900,
+            "first_arc": 249,
+            "first_geometry": 249,
+            "first_ready": 1,
+            "first_shot": 1,
+            "geometry_ticks": 652,
+            "preferred_band_ticks": 71,
+            "range_error_mean": 0.0,
+            "range_error_p95": 0.0,
+            "ready_ticks": 1,
+            "start": 1
+          }
+        ],
+        "fire": true,
+        "first_arc": 249,
+        "first_geometry": 249,
+        "first_ready": 1,
+        "first_shot": 1,
+        "outcome": "window_end",
+        "prediction_fallbacks": 0,
+        "prediction_ticks": 147,
+        "preferred_band_ticks": 71,
+        "range_error_mean": 0.0,
+        "range_error_p95": 0.0,
+        "ready_ticks": 1,
+        "replans": 61,
+        "reversals": 26,
+        "scenario": "gradual_turns",
+        "schema": 1,
+        "script_events": [
+          [
+            229,
+            "turn_requested"
+          ],
+          [
+            534,
+            "turn_requested"
+          ],
+          [
+            838,
+            "turn_requested"
+          ]
+        ],
+        "script_rejections": 0,
+        "seed": 5,
+        "settled_distance": 13.03749999999998,
+        "settled_ticks": 337,
+        "shots": 1,
+        "stationary_detour_distance": null,
+        "stationary_route_length": null,
+        "target_destroyed_at": null,
+        "target_distance": 39.595641548177596,
+        "ticks": 900,
+        "visible_ticks": 900
+      },
+      "reason_ticks": {
+        "insufficient_motion": 99,
+        "insufficient_samples": 3,
+        "predicted": 147,
+        "settled": 651
+      },
+      "ticks": 900
+    },
+    "[\"gradual_turns\",\"hover\",6,false]": {
+      "decision_changes": 58,
+      "first_prediction": 103,
+      "goal_changes": 57,
+      "last_result": {
+        "approach_distance": 19.683333333333326,
+        "arc_fraction": 652.0,
+        "arc_ticks": 652,
+        "chassis": "hover",
+        "direct": false,
+        "distance": 52.841666666666725,
+        "episodes": [
+          {
+            "arc_sum": 652.0,
+            "arc_ticks": 652,
+            "distance": 52.841666666666725,
+            "end": 900,
+            "first_arc": 249,
+            "first_geometry": 249,
+            "first_ready": 249,
+            "first_shot": null,
+            "geometry_ticks": 652,
+            "preferred_band_ticks": 71,
+            "range_error_mean": 0.0,
+            "range_error_p95": 0.0,
+            "ready_ticks": 652,
+            "start": 1
+          }
+        ],
+        "fire": false,
+        "first_arc": 249,
+        "first_geometry": 249,
+        "first_ready": 249,
+        "first_shot": null,
+        "outcome": "window_end",
+        "prediction_fallbacks": 0,
+        "prediction_ticks": 147,
+        "preferred_band_ticks": 71,
+        "range_error_mean": 0.0,
+        "range_error_p95": 0.0,
+        "ready_ticks": 652,
+        "replans": 61,
+        "reversals": 26,
+        "scenario": "gradual_turns",
+        "schema": 1,
+        "script_events": [
+          [
+            229,
+            "turn_requested"
+          ],
+          [
+            534,
+            "turn_requested"
+          ],
+          [
+            838,
+            "turn_requested"
+          ]
+        ],
+        "script_rejections": 0,
+        "seed": 6,
+        "settled_distance": 13.03749999999998,
+        "settled_ticks": 337,
+        "shots": 0,
+        "stationary_detour_distance": null,
+        "stationary_route_length": null,
+        "target_destroyed_at": null,
+        "target_distance": 39.595641548177596,
+        "ticks": 900,
+        "visible_ticks": 900
+      },
+      "reason_ticks": {
+        "insufficient_motion": 99,
+        "insufficient_samples": 3,
+        "predicted": 147,
+        "settled": 651
+      },
+      "ticks": 900
+    },
+    "[\"gradual_turns\",\"hover\",6,true]": {
+      "decision_changes": 58,
+      "first_prediction": 103,
+      "goal_changes": 57,
+      "last_result": {
+        "approach_distance": 0.00416666666666643,
+        "arc_fraction": 652.0,
+        "arc_ticks": 652,
+        "chassis": "hover",
+        "direct": false,
+        "distance": 52.841666666666725,
+        "episodes": [
+          {
+            "arc_sum": 652.0,
+            "arc_ticks": 652,
+            "distance": 52.841666666666725,
+            "end": 900,
+            "first_arc": 249,
+            "first_geometry": 249,
+            "first_ready": 1,
+            "first_shot": 1,
+            "geometry_ticks": 652,
+            "preferred_band_ticks": 71,
+            "range_error_mean": 0.0,
+            "range_error_p95": 0.0,
+            "ready_ticks": 1,
+            "start": 1
+          }
+        ],
+        "fire": true,
+        "first_arc": 249,
+        "first_geometry": 249,
+        "first_ready": 1,
+        "first_shot": 1,
+        "outcome": "window_end",
+        "prediction_fallbacks": 0,
+        "prediction_ticks": 147,
+        "preferred_band_ticks": 71,
+        "range_error_mean": 0.0,
+        "range_error_p95": 0.0,
+        "ready_ticks": 1,
+        "replans": 61,
+        "reversals": 26,
+        "scenario": "gradual_turns",
+        "schema": 1,
+        "script_events": [
+          [
+            229,
+            "turn_requested"
+          ],
+          [
+            534,
+            "turn_requested"
+          ],
+          [
+            838,
+            "turn_requested"
+          ]
+        ],
+        "script_rejections": 0,
+        "seed": 6,
+        "settled_distance": 13.03749999999998,
+        "settled_ticks": 337,
+        "shots": 1,
+        "stationary_detour_distance": null,
+        "stationary_route_length": null,
+        "target_destroyed_at": null,
+        "target_distance": 39.595641548177596,
+        "ticks": 900,
+        "visible_ticks": 900
+      },
+      "reason_ticks": {
+        "insufficient_motion": 99,
+        "insufficient_samples": 3,
+        "predicted": 147,
+        "settled": 651
+      },
+      "ticks": 900
+    },
+    "[\"gradual_turns\",\"mech\",4,false]": {
+      "decision_changes": 83,
+      "first_prediction": 67,
+      "goal_changes": 82,
+      "last_result": {
+        "approach_distance": 17.79250000000002,
+        "arc_fraction": 781.0714285714288,
+        "arc_ticks": 792,
+        "chassis": "mech",
+        "direct": false,
+        "distance": 80.42833333333344,
+        "episodes": [
+          {
+            "arc_sum": 781.0714285714288,
+            "arc_ticks": 792,
+            "distance": 80.42833333333344,
+            "end": 900,
+            "first_arc": 109,
+            "first_geometry": 109,
+            "first_ready": 109,
+            "first_shot": null,
+            "geometry_ticks": 792,
+            "preferred_band_ticks": 70,
+            "range_error_mean": 0.0,
+            "range_error_p95": 0.0,
+            "ready_ticks": 792,
+            "start": 1
+          }
+        ],
+        "fire": false,
+        "first_arc": 109,
+        "first_geometry": 109,
+        "first_ready": 109,
+        "first_shot": null,
+        "outcome": "window_end",
+        "prediction_fallbacks": 0,
+        "prediction_ticks": 43,
+        "preferred_band_ticks": 70,
+        "range_error_mean": 0.0,
+        "range_error_p95": 0.0,
+        "ready_ticks": 792,
+        "replans": 89,
+        "reversals": 40,
+        "scenario": "gradual_turns",
+        "schema": 1,
+        "script_events": [
+          [
+            142,
+            "turn_requested"
+          ],
+          [
+            323,
+            "turn_requested"
+          ],
+          [
+            504,
+            "turn_requested"
+          ],
+          [
+            685,
+            "turn_requested"
+          ],
+          [
+            866,
+            "turn_requested"
+          ]
+        ],
+        "script_rejections": 0,
+        "seed": 4,
+        "settled_distance": 37.99583333333336,
+        "settled_ticks": 554,
+        "shots": 0,
+        "stationary_detour_distance": null,
+        "stationary_route_length": null,
+        "target_destroyed_at": null,
+        "target_distance": 66.094570005538,
+        "ticks": 900,
+        "visible_ticks": 900
+      },
+      "reason_ticks": {
+        "insufficient_motion": 63,
+        "insufficient_samples": 3,
+        "predicted": 43,
+        "settled": 791
+      },
+      "ticks": 900
+    },
+    "[\"gradual_turns\",\"mech\",4,true]": {
+      "decision_changes": 83,
+      "first_prediction": 67,
+      "goal_changes": 82,
+      "last_result": {
+        "approach_distance": 0.009166666666665435,
+        "arc_fraction": 781.0714285714288,
+        "arc_ticks": 792,
+        "chassis": "mech",
+        "direct": false,
+        "distance": 80.42833333333344,
+        "episodes": [
+          {
+            "arc_sum": 781.0714285714288,
+            "arc_ticks": 792,
+            "distance": 80.42833333333344,
+            "end": 900,
+            "first_arc": 109,
+            "first_geometry": 109,
+            "first_ready": 1,
+            "first_shot": 1,
+            "geometry_ticks": 792,
+            "preferred_band_ticks": 70,
+            "range_error_mean": 0.0,
+            "range_error_p95": 0.0,
+            "ready_ticks": 86,
+            "start": 1
+          }
+        ],
+        "fire": true,
+        "first_arc": 109,
+        "first_geometry": 109,
+        "first_ready": 1,
+        "first_shot": 1,
+        "outcome": "window_end",
+        "prediction_fallbacks": 0,
+        "prediction_ticks": 43,
+        "preferred_band_ticks": 70,
+        "range_error_mean": 0.0,
+        "range_error_p95": 0.0,
+        "ready_ticks": 86,
+        "replans": 89,
+        "reversals": 40,
+        "scenario": "gradual_turns",
+        "schema": 1,
+        "script_events": [
+          [
+            142,
+            "turn_requested"
+          ],
+          [
+            323,
+            "turn_requested"
+          ],
+          [
+            504,
+            "turn_requested"
+          ],
+          [
+            685,
+            "turn_requested"
+          ],
+          [
+            866,
+            "turn_requested"
+          ]
+        ],
+        "script_rejections": 0,
+        "seed": 4,
+        "settled_distance": 37.99583333333336,
+        "settled_ticks": 554,
+        "shots": 87,
+        "stationary_detour_distance": null,
+        "stationary_route_length": null,
+        "target_destroyed_at": null,
+        "target_distance": 66.094570005538,
+        "ticks": 900,
+        "visible_ticks": 900
+      },
+      "reason_ticks": {
+        "insufficient_motion": 63,
+        "insufficient_samples": 3,
+        "predicted": 43,
+        "settled": 791
+      },
+      "ticks": 900
+    },
+    "[\"gradual_turns\",\"mech\",5,false]": {
+      "decision_changes": 83,
+      "first_prediction": 67,
+      "goal_changes": 82,
+      "last_result": {
+        "approach_distance": 17.79250000000002,
+        "arc_fraction": 781.0714285714288,
+        "arc_ticks": 792,
+        "chassis": "mech",
+        "direct": false,
+        "distance": 80.42833333333344,
+        "episodes": [
+          {
+            "arc_sum": 781.0714285714288,
+            "arc_ticks": 792,
+            "distance": 80.42833333333344,
+            "end": 900,
+            "first_arc": 109,
+            "first_geometry": 109,
+            "first_ready": 109,
+            "first_shot": null,
+            "geometry_ticks": 792,
+            "preferred_band_ticks": 70,
+            "range_error_mean": 0.0,
+            "range_error_p95": 0.0,
+            "ready_ticks": 792,
+            "start": 1
+          }
+        ],
+        "fire": false,
+        "first_arc": 109,
+        "first_geometry": 109,
+        "first_ready": 109,
+        "first_shot": null,
+        "outcome": "window_end",
+        "prediction_fallbacks": 0,
+        "prediction_ticks": 43,
+        "preferred_band_ticks": 70,
+        "range_error_mean": 0.0,
+        "range_error_p95": 0.0,
+        "ready_ticks": 792,
+        "replans": 89,
+        "reversals": 40,
+        "scenario": "gradual_turns",
+        "schema": 1,
+        "script_events": [
+          [
+            142,
+            "turn_requested"
+          ],
+          [
+            323,
+            "turn_requested"
+          ],
+          [
+            504,
+            "turn_requested"
+          ],
+          [
+            685,
+            "turn_requested"
+          ],
+          [
+            866,
+            "turn_requested"
+          ]
+        ],
+        "script_rejections": 0,
+        "seed": 5,
+        "settled_distance": 37.99583333333336,
+        "settled_ticks": 554,
+        "shots": 0,
+        "stationary_detour_distance": null,
+        "stationary_route_length": null,
+        "target_destroyed_at": null,
+        "target_distance": 66.094570005538,
+        "ticks": 900,
+        "visible_ticks": 900
+      },
+      "reason_ticks": {
+        "insufficient_motion": 63,
+        "insufficient_samples": 3,
+        "predicted": 43,
+        "settled": 791
+      },
+      "ticks": 900
+    },
+    "[\"gradual_turns\",\"mech\",5,true]": {
+      "decision_changes": 83,
+      "first_prediction": 67,
+      "goal_changes": 82,
+      "last_result": {
+        "approach_distance": 0.009166666666665435,
+        "arc_fraction": 781.0714285714288,
+        "arc_ticks": 792,
+        "chassis": "mech",
+        "direct": false,
+        "distance": 80.42833333333344,
+        "episodes": [
+          {
+            "arc_sum": 781.0714285714288,
+            "arc_ticks": 792,
+            "distance": 80.42833333333344,
+            "end": 900,
+            "first_arc": 109,
+            "first_geometry": 109,
+            "first_ready": 1,
+            "first_shot": 1,
+            "geometry_ticks": 792,
+            "preferred_band_ticks": 70,
+            "range_error_mean": 0.0,
+            "range_error_p95": 0.0,
+            "ready_ticks": 86,
+            "start": 1
+          }
+        ],
+        "fire": true,
+        "first_arc": 109,
+        "first_geometry": 109,
+        "first_ready": 1,
+        "first_shot": 1,
+        "outcome": "window_end",
+        "prediction_fallbacks": 0,
+        "prediction_ticks": 43,
+        "preferred_band_ticks": 70,
+        "range_error_mean": 0.0,
+        "range_error_p95": 0.0,
+        "ready_ticks": 86,
+        "replans": 89,
+        "reversals": 40,
+        "scenario": "gradual_turns",
+        "schema": 1,
+        "script_events": [
+          [
+            142,
+            "turn_requested"
+          ],
+          [
+            323,
+            "turn_requested"
+          ],
+          [
+            504,
+            "turn_requested"
+          ],
+          [
+            685,
+            "turn_requested"
+          ],
+          [
+            866,
+            "turn_requested"
+          ]
+        ],
+        "script_rejections": 0,
+        "seed": 5,
+        "settled_distance": 37.99583333333336,
+        "settled_ticks": 554,
+        "shots": 87,
+        "stationary_detour_distance": null,
+        "stationary_route_length": null,
+        "target_destroyed_at": null,
+        "target_distance": 66.094570005538,
+        "ticks": 900,
+        "visible_ticks": 900
+      },
+      "reason_ticks": {
+        "insufficient_motion": 63,
+        "insufficient_samples": 3,
+        "predicted": 43,
+        "settled": 791
+      },
+      "ticks": 900
+    },
+    "[\"gradual_turns\",\"mech\",6,false]": {
+      "decision_changes": 83,
+      "first_prediction": 67,
+      "goal_changes": 82,
+      "last_result": {
+        "approach_distance": 17.79250000000002,
+        "arc_fraction": 781.0714285714288,
+        "arc_ticks": 792,
+        "chassis": "mech",
+        "direct": false,
+        "distance": 80.42833333333344,
+        "episodes": [
+          {
+            "arc_sum": 781.0714285714288,
+            "arc_ticks": 792,
+            "distance": 80.42833333333344,
+            "end": 900,
+            "first_arc": 109,
+            "first_geometry": 109,
+            "first_ready": 109,
+            "first_shot": null,
+            "geometry_ticks": 792,
+            "preferred_band_ticks": 70,
+            "range_error_mean": 0.0,
+            "range_error_p95": 0.0,
+            "ready_ticks": 792,
+            "start": 1
+          }
+        ],
+        "fire": false,
+        "first_arc": 109,
+        "first_geometry": 109,
+        "first_ready": 109,
+        "first_shot": null,
+        "outcome": "window_end",
+        "prediction_fallbacks": 0,
+        "prediction_ticks": 43,
+        "preferred_band_ticks": 70,
+        "range_error_mean": 0.0,
+        "range_error_p95": 0.0,
+        "ready_ticks": 792,
+        "replans": 89,
+        "reversals": 40,
+        "scenario": "gradual_turns",
+        "schema": 1,
+        "script_events": [
+          [
+            142,
+            "turn_requested"
+          ],
+          [
+            323,
+            "turn_requested"
+          ],
+          [
+            504,
+            "turn_requested"
+          ],
+          [
+            685,
+            "turn_requested"
+          ],
+          [
+            866,
+            "turn_requested"
+          ]
+        ],
+        "script_rejections": 0,
+        "seed": 6,
+        "settled_distance": 37.99583333333336,
+        "settled_ticks": 554,
+        "shots": 0,
+        "stationary_detour_distance": null,
+        "stationary_route_length": null,
+        "target_destroyed_at": null,
+        "target_distance": 66.094570005538,
+        "ticks": 900,
+        "visible_ticks": 900
+      },
+      "reason_ticks": {
+        "insufficient_motion": 63,
+        "insufficient_samples": 3,
+        "predicted": 43,
+        "settled": 791
+      },
+      "ticks": 900
+    },
+    "[\"gradual_turns\",\"mech\",6,true]": {
+      "decision_changes": 83,
+      "first_prediction": 67,
+      "goal_changes": 82,
+      "last_result": {
+        "approach_distance": 0.009166666666665435,
+        "arc_fraction": 781.0714285714288,
+        "arc_ticks": 792,
+        "chassis": "mech",
+        "direct": false,
+        "distance": 80.42833333333344,
+        "episodes": [
+          {
+            "arc_sum": 781.0714285714288,
+            "arc_ticks": 792,
+            "distance": 80.42833333333344,
+            "end": 900,
+            "first_arc": 109,
+            "first_geometry": 109,
+            "first_ready": 1,
+            "first_shot": 1,
+            "geometry_ticks": 792,
+            "preferred_band_ticks": 70,
+            "range_error_mean": 0.0,
+            "range_error_p95": 0.0,
+            "ready_ticks": 86,
+            "start": 1
+          }
+        ],
+        "fire": true,
+        "first_arc": 109,
+        "first_geometry": 109,
+        "first_ready": 1,
+        "first_shot": 1,
+        "outcome": "window_end",
+        "prediction_fallbacks": 0,
+        "prediction_ticks": 43,
+        "preferred_band_ticks": 70,
+        "range_error_mean": 0.0,
+        "range_error_p95": 0.0,
+        "ready_ticks": 86,
+        "replans": 89,
+        "reversals": 40,
+        "scenario": "gradual_turns",
+        "schema": 1,
+        "script_events": [
+          [
+            142,
+            "turn_requested"
+          ],
+          [
+            323,
+            "turn_requested"
+          ],
+          [
+            504,
+            "turn_requested"
+          ],
+          [
+            685,
+            "turn_requested"
+          ],
+          [
+            866,
+            "turn_requested"
+          ]
+        ],
+        "script_rejections": 0,
+        "seed": 6,
+        "settled_distance": 37.99583333333336,
+        "settled_ticks": 554,
+        "shots": 87,
+        "stationary_detour_distance": null,
+        "stationary_route_length": null,
+        "target_destroyed_at": null,
+        "target_distance": 66.094570005538,
+        "ticks": 900,
+        "visible_ticks": 900
+      },
+      "reason_ticks": {
+        "insufficient_motion": 63,
+        "insufficient_samples": 3,
+        "predicted": 43,
+        "settled": 791
+      },
+      "ticks": 900
+    },
+    "[\"gradual_turns\",\"tracked\",4,false]": {
+      "decision_changes": 58,
+      "first_prediction": 103,
+      "goal_changes": 57,
+      "last_result": {
+        "approach_distance": 19.683333333333326,
+        "arc_fraction": 652.0,
+        "arc_ticks": 652,
+        "chassis": "tracked",
+        "direct": false,
+        "distance": 52.841666666666725,
+        "episodes": [
+          {
+            "arc_sum": 652.0,
+            "arc_ticks": 652,
+            "distance": 52.841666666666725,
+            "end": 900,
+            "first_arc": 249,
+            "first_geometry": 249,
+            "first_ready": 249,
+            "first_shot": null,
+            "geometry_ticks": 652,
+            "preferred_band_ticks": 71,
+            "range_error_mean": 0.0,
+            "range_error_p95": 0.0,
+            "ready_ticks": 652,
+            "start": 1
+          }
+        ],
+        "fire": false,
+        "first_arc": 249,
+        "first_geometry": 249,
+        "first_ready": 249,
+        "first_shot": null,
+        "outcome": "window_end",
+        "prediction_fallbacks": 0,
+        "prediction_ticks": 147,
+        "preferred_band_ticks": 71,
+        "range_error_mean": 0.0,
+        "range_error_p95": 0.0,
+        "ready_ticks": 652,
+        "replans": 61,
+        "reversals": 26,
+        "scenario": "gradual_turns",
+        "schema": 1,
+        "script_events": [
+          [
+            229,
+            "turn_requested"
+          ],
+          [
+            534,
+            "turn_requested"
+          ],
+          [
+            838,
+            "turn_requested"
+          ]
+        ],
+        "script_rejections": 0,
+        "seed": 4,
+        "settled_distance": 13.03749999999998,
+        "settled_ticks": 337,
+        "shots": 0,
+        "stationary_detour_distance": null,
+        "stationary_route_length": null,
+        "target_destroyed_at": null,
+        "target_distance": 39.595641548177596,
+        "ticks": 900,
+        "visible_ticks": 900
+      },
+      "reason_ticks": {
+        "insufficient_motion": 99,
+        "insufficient_samples": 3,
+        "predicted": 147,
+        "settled": 651
+      },
+      "ticks": 900
+    },
+    "[\"gradual_turns\",\"tracked\",4,true]": {
+      "decision_changes": 58,
+      "first_prediction": 103,
+      "goal_changes": 57,
+      "last_result": {
+        "approach_distance": 0.00416666666666643,
+        "arc_fraction": 652.0,
+        "arc_ticks": 652,
+        "chassis": "tracked",
+        "direct": false,
+        "distance": 52.841666666666725,
+        "episodes": [
+          {
+            "arc_sum": 652.0,
+            "arc_ticks": 652,
+            "distance": 52.841666666666725,
+            "end": 900,
+            "first_arc": 249,
+            "first_geometry": 249,
+            "first_ready": 1,
+            "first_shot": 1,
+            "geometry_ticks": 652,
+            "preferred_band_ticks": 71,
+            "range_error_mean": 0.0,
+            "range_error_p95": 0.0,
+            "ready_ticks": 1,
+            "start": 1
+          }
+        ],
+        "fire": true,
+        "first_arc": 249,
+        "first_geometry": 249,
+        "first_ready": 1,
+        "first_shot": 1,
+        "outcome": "window_end",
+        "prediction_fallbacks": 0,
+        "prediction_ticks": 147,
+        "preferred_band_ticks": 71,
+        "range_error_mean": 0.0,
+        "range_error_p95": 0.0,
+        "ready_ticks": 1,
+        "replans": 61,
+        "reversals": 26,
+        "scenario": "gradual_turns",
+        "schema": 1,
+        "script_events": [
+          [
+            229,
+            "turn_requested"
+          ],
+          [
+            534,
+            "turn_requested"
+          ],
+          [
+            838,
+            "turn_requested"
+          ]
+        ],
+        "script_rejections": 0,
+        "seed": 4,
+        "settled_distance": 13.03749999999998,
+        "settled_ticks": 337,
+        "shots": 1,
+        "stationary_detour_distance": null,
+        "stationary_route_length": null,
+        "target_destroyed_at": null,
+        "target_distance": 39.595641548177596,
+        "ticks": 900,
+        "visible_ticks": 900
+      },
+      "reason_ticks": {
+        "insufficient_motion": 99,
+        "insufficient_samples": 3,
+        "predicted": 147,
+        "settled": 651
+      },
+      "ticks": 900
+    },
+    "[\"gradual_turns\",\"tracked\",5,false]": {
+      "decision_changes": 58,
+      "first_prediction": 103,
+      "goal_changes": 57,
+      "last_result": {
+        "approach_distance": 19.683333333333326,
+        "arc_fraction": 652.0,
+        "arc_ticks": 652,
+        "chassis": "tracked",
+        "direct": false,
+        "distance": 52.841666666666725,
+        "episodes": [
+          {
+            "arc_sum": 652.0,
+            "arc_ticks": 652,
+            "distance": 52.841666666666725,
+            "end": 900,
+            "first_arc": 249,
+            "first_geometry": 249,
+            "first_ready": 249,
+            "first_shot": null,
+            "geometry_ticks": 652,
+            "preferred_band_ticks": 71,
+            "range_error_mean": 0.0,
+            "range_error_p95": 0.0,
+            "ready_ticks": 652,
+            "start": 1
+          }
+        ],
+        "fire": false,
+        "first_arc": 249,
+        "first_geometry": 249,
+        "first_ready": 249,
+        "first_shot": null,
+        "outcome": "window_end",
+        "prediction_fallbacks": 0,
+        "prediction_ticks": 147,
+        "preferred_band_ticks": 71,
+        "range_error_mean": 0.0,
+        "range_error_p95": 0.0,
+        "ready_ticks": 652,
+        "replans": 61,
+        "reversals": 26,
+        "scenario": "gradual_turns",
+        "schema": 1,
+        "script_events": [
+          [
+            229,
+            "turn_requested"
+          ],
+          [
+            534,
+            "turn_requested"
+          ],
+          [
+            838,
+            "turn_requested"
+          ]
+        ],
+        "script_rejections": 0,
+        "seed": 5,
+        "settled_distance": 13.03749999999998,
+        "settled_ticks": 337,
+        "shots": 0,
+        "stationary_detour_distance": null,
+        "stationary_route_length": null,
+        "target_destroyed_at": null,
+        "target_distance": 39.595641548177596,
+        "ticks": 900,
+        "visible_ticks": 900
+      },
+      "reason_ticks": {
+        "insufficient_motion": 99,
+        "insufficient_samples": 3,
+        "predicted": 147,
+        "settled": 651
+      },
+      "ticks": 900
+    },
+    "[\"gradual_turns\",\"tracked\",5,true]": {
+      "decision_changes": 58,
+      "first_prediction": 103,
+      "goal_changes": 57,
+      "last_result": {
+        "approach_distance": 0.00416666666666643,
+        "arc_fraction": 652.0,
+        "arc_ticks": 652,
+        "chassis": "tracked",
+        "direct": false,
+        "distance": 52.841666666666725,
+        "episodes": [
+          {
+            "arc_sum": 652.0,
+            "arc_ticks": 652,
+            "distance": 52.841666666666725,
+            "end": 900,
+            "first_arc": 249,
+            "first_geometry": 249,
+            "first_ready": 1,
+            "first_shot": 1,
+            "geometry_ticks": 652,
+            "preferred_band_ticks": 71,
+            "range_error_mean": 0.0,
+            "range_error_p95": 0.0,
+            "ready_ticks": 1,
+            "start": 1
+          }
+        ],
+        "fire": true,
+        "first_arc": 249,
+        "first_geometry": 249,
+        "first_ready": 1,
+        "first_shot": 1,
+        "outcome": "window_end",
+        "prediction_fallbacks": 0,
+        "prediction_ticks": 147,
+        "preferred_band_ticks": 71,
+        "range_error_mean": 0.0,
+        "range_error_p95": 0.0,
+        "ready_ticks": 1,
+        "replans": 61,
+        "reversals": 26,
+        "scenario": "gradual_turns",
+        "schema": 1,
+        "script_events": [
+          [
+            229,
+            "turn_requested"
+          ],
+          [
+            534,
+            "turn_requested"
+          ],
+          [
+            838,
+            "turn_requested"
+          ]
+        ],
+        "script_rejections": 0,
+        "seed": 5,
+        "settled_distance": 13.03749999999998,
+        "settled_ticks": 337,
+        "shots": 1,
+        "stationary_detour_distance": null,
+        "stationary_route_length": null,
+        "target_destroyed_at": null,
+        "target_distance": 39.595641548177596,
+        "ticks": 900,
+        "visible_ticks": 900
+      },
+      "reason_ticks": {
+        "insufficient_motion": 99,
+        "insufficient_samples": 3,
+        "predicted": 147,
+        "settled": 651
+      },
+      "ticks": 900
+    },
+    "[\"gradual_turns\",\"tracked\",6,false]": {
+      "decision_changes": 58,
+      "first_prediction": 103,
+      "goal_changes": 57,
+      "last_result": {
+        "approach_distance": 19.683333333333326,
+        "arc_fraction": 652.0,
+        "arc_ticks": 652,
+        "chassis": "tracked",
+        "direct": false,
+        "distance": 52.841666666666725,
+        "episodes": [
+          {
+            "arc_sum": 652.0,
+            "arc_ticks": 652,
+            "distance": 52.841666666666725,
+            "end": 900,
+            "first_arc": 249,
+            "first_geometry": 249,
+            "first_ready": 249,
+            "first_shot": null,
+            "geometry_ticks": 652,
+            "preferred_band_ticks": 71,
+            "range_error_mean": 0.0,
+            "range_error_p95": 0.0,
+            "ready_ticks": 652,
+            "start": 1
+          }
+        ],
+        "fire": false,
+        "first_arc": 249,
+        "first_geometry": 249,
+        "first_ready": 249,
+        "first_shot": null,
+        "outcome": "window_end",
+        "prediction_fallbacks": 0,
+        "prediction_ticks": 147,
+        "preferred_band_ticks": 71,
+        "range_error_mean": 0.0,
+        "range_error_p95": 0.0,
+        "ready_ticks": 652,
+        "replans": 61,
+        "reversals": 26,
+        "scenario": "gradual_turns",
+        "schema": 1,
+        "script_events": [
+          [
+            229,
+            "turn_requested"
+          ],
+          [
+            534,
+            "turn_requested"
+          ],
+          [
+            838,
+            "turn_requested"
+          ]
+        ],
+        "script_rejections": 0,
+        "seed": 6,
+        "settled_distance": 13.03749999999998,
+        "settled_ticks": 337,
+        "shots": 0,
+        "stationary_detour_distance": null,
+        "stationary_route_length": null,
+        "target_destroyed_at": null,
+        "target_distance": 39.595641548177596,
+        "ticks": 900,
+        "visible_ticks": 900
+      },
+      "reason_ticks": {
+        "insufficient_motion": 99,
+        "insufficient_samples": 3,
+        "predicted": 147,
+        "settled": 651
+      },
+      "ticks": 900
+    },
+    "[\"gradual_turns\",\"tracked\",6,true]": {
+      "decision_changes": 58,
+      "first_prediction": 103,
+      "goal_changes": 57,
+      "last_result": {
+        "approach_distance": 0.00416666666666643,
+        "arc_fraction": 652.0,
+        "arc_ticks": 652,
+        "chassis": "tracked",
+        "direct": false,
+        "distance": 52.841666666666725,
+        "episodes": [
+          {
+            "arc_sum": 652.0,
+            "arc_ticks": 652,
+            "distance": 52.841666666666725,
+            "end": 900,
+            "first_arc": 249,
+            "first_geometry": 249,
+            "first_ready": 1,
+            "first_shot": 1,
+            "geometry_ticks": 652,
+            "preferred_band_ticks": 71,
+            "range_error_mean": 0.0,
+            "range_error_p95": 0.0,
+            "ready_ticks": 1,
+            "start": 1
+          }
+        ],
+        "fire": true,
+        "first_arc": 249,
+        "first_geometry": 249,
+        "first_ready": 1,
+        "first_shot": 1,
+        "outcome": "window_end",
+        "prediction_fallbacks": 0,
+        "prediction_ticks": 147,
+        "preferred_band_ticks": 71,
+        "range_error_mean": 0.0,
+        "range_error_p95": 0.0,
+        "ready_ticks": 1,
+        "replans": 61,
+        "reversals": 26,
+        "scenario": "gradual_turns",
+        "schema": 1,
+        "script_events": [
+          [
+            229,
+            "turn_requested"
+          ],
+          [
+            534,
+            "turn_requested"
+          ],
+          [
+            838,
+            "turn_requested"
+          ]
+        ],
+        "script_rejections": 0,
+        "seed": 6,
+        "settled_distance": 13.03749999999998,
+        "settled_ticks": 337,
+        "shots": 1,
+        "stationary_detour_distance": null,
+        "stationary_route_length": null,
+        "target_destroyed_at": null,
+        "target_distance": 39.595641548177596,
+        "ticks": 900,
+        "visible_ticks": 900
+      },
+      "reason_ticks": {
+        "insufficient_motion": 99,
+        "insufficient_samples": 3,
+        "predicted": 147,
+        "settled": 651
+      },
+      "ticks": 900
+    },
+    "[\"gradual_turns\",\"wheeled\",4,false]": {
+      "decision_changes": 58,
+      "first_prediction": 103,
+      "goal_changes": 57,
+      "last_result": {
+        "approach_distance": 19.683333333333326,
+        "arc_fraction": 652.0,
+        "arc_ticks": 652,
+        "chassis": "wheeled",
+        "direct": false,
+        "distance": 52.841666666666725,
+        "episodes": [
+          {
+            "arc_sum": 652.0,
+            "arc_ticks": 652,
+            "distance": 52.841666666666725,
+            "end": 900,
+            "first_arc": 249,
+            "first_geometry": 249,
+            "first_ready": 249,
+            "first_shot": null,
+            "geometry_ticks": 652,
+            "preferred_band_ticks": 71,
+            "range_error_mean": 0.0,
+            "range_error_p95": 0.0,
+            "ready_ticks": 652,
+            "start": 1
+          }
+        ],
+        "fire": false,
+        "first_arc": 249,
+        "first_geometry": 249,
+        "first_ready": 249,
+        "first_shot": null,
+        "outcome": "window_end",
+        "prediction_fallbacks": 0,
+        "prediction_ticks": 147,
+        "preferred_band_ticks": 71,
+        "range_error_mean": 0.0,
+        "range_error_p95": 0.0,
+        "ready_ticks": 652,
+        "replans": 61,
+        "reversals": 26,
+        "scenario": "gradual_turns",
+        "schema": 1,
+        "script_events": [
+          [
+            229,
+            "turn_requested"
+          ],
+          [
+            534,
+            "turn_requested"
+          ],
+          [
+            838,
+            "turn_requested"
+          ]
+        ],
+        "script_rejections": 0,
+        "seed": 4,
+        "settled_distance": 13.03749999999998,
+        "settled_ticks": 337,
+        "shots": 0,
+        "stationary_detour_distance": null,
+        "stationary_route_length": null,
+        "target_destroyed_at": null,
+        "target_distance": 39.595641548177596,
+        "ticks": 900,
+        "visible_ticks": 900
+      },
+      "reason_ticks": {
+        "insufficient_motion": 99,
+        "insufficient_samples": 3,
+        "predicted": 147,
+        "settled": 651
+      },
+      "ticks": 900
+    },
+    "[\"gradual_turns\",\"wheeled\",4,true]": {
+      "decision_changes": 58,
+      "first_prediction": 103,
+      "goal_changes": 57,
+      "last_result": {
+        "approach_distance": 0.00416666666666643,
+        "arc_fraction": 652.0,
+        "arc_ticks": 652,
+        "chassis": "wheeled",
+        "direct": false,
+        "distance": 52.841666666666725,
+        "episodes": [
+          {
+            "arc_sum": 652.0,
+            "arc_ticks": 652,
+            "distance": 52.841666666666725,
+            "end": 900,
+            "first_arc": 249,
+            "first_geometry": 249,
+            "first_ready": 1,
+            "first_shot": 1,
+            "geometry_ticks": 652,
+            "preferred_band_ticks": 71,
+            "range_error_mean": 0.0,
+            "range_error_p95": 0.0,
+            "ready_ticks": 1,
+            "start": 1
+          }
+        ],
+        "fire": true,
+        "first_arc": 249,
+        "first_geometry": 249,
+        "first_ready": 1,
+        "first_shot": 1,
+        "outcome": "window_end",
+        "prediction_fallbacks": 0,
+        "prediction_ticks": 147,
+        "preferred_band_ticks": 71,
+        "range_error_mean": 0.0,
+        "range_error_p95": 0.0,
+        "ready_ticks": 1,
+        "replans": 61,
+        "reversals": 26,
+        "scenario": "gradual_turns",
+        "schema": 1,
+        "script_events": [
+          [
+            229,
+            "turn_requested"
+          ],
+          [
+            534,
+            "turn_requested"
+          ],
+          [
+            838,
+            "turn_requested"
+          ]
+        ],
+        "script_rejections": 0,
+        "seed": 4,
+        "settled_distance": 13.03749999999998,
+        "settled_ticks": 337,
+        "shots": 1,
+        "stationary_detour_distance": null,
+        "stationary_route_length": null,
+        "target_destroyed_at": null,
+        "target_distance": 39.595641548177596,
+        "ticks": 900,
+        "visible_ticks": 900
+      },
+      "reason_ticks": {
+        "insufficient_motion": 99,
+        "insufficient_samples": 3,
+        "predicted": 147,
+        "settled": 651
+      },
+      "ticks": 900
+    },
+    "[\"gradual_turns\",\"wheeled\",5,false]": {
+      "decision_changes": 58,
+      "first_prediction": 103,
+      "goal_changes": 57,
+      "last_result": {
+        "approach_distance": 19.683333333333326,
+        "arc_fraction": 652.0,
+        "arc_ticks": 652,
+        "chassis": "wheeled",
+        "direct": false,
+        "distance": 52.841666666666725,
+        "episodes": [
+          {
+            "arc_sum": 652.0,
+            "arc_ticks": 652,
+            "distance": 52.841666666666725,
+            "end": 900,
+            "first_arc": 249,
+            "first_geometry": 249,
+            "first_ready": 249,
+            "first_shot": null,
+            "geometry_ticks": 652,
+            "preferred_band_ticks": 71,
+            "range_error_mean": 0.0,
+            "range_error_p95": 0.0,
+            "ready_ticks": 652,
+            "start": 1
+          }
+        ],
+        "fire": false,
+        "first_arc": 249,
+        "first_geometry": 249,
+        "first_ready": 249,
+        "first_shot": null,
+        "outcome": "window_end",
+        "prediction_fallbacks": 0,
+        "prediction_ticks": 147,
+        "preferred_band_ticks": 71,
+        "range_error_mean": 0.0,
+        "range_error_p95": 0.0,
+        "ready_ticks": 652,
+        "replans": 61,
+        "reversals": 26,
+        "scenario": "gradual_turns",
+        "schema": 1,
+        "script_events": [
+          [
+            229,
+            "turn_requested"
+          ],
+          [
+            534,
+            "turn_requested"
+          ],
+          [
+            838,
+            "turn_requested"
+          ]
+        ],
+        "script_rejections": 0,
+        "seed": 5,
+        "settled_distance": 13.03749999999998,
+        "settled_ticks": 337,
+        "shots": 0,
+        "stationary_detour_distance": null,
+        "stationary_route_length": null,
+        "target_destroyed_at": null,
+        "target_distance": 39.595641548177596,
+        "ticks": 900,
+        "visible_ticks": 900
+      },
+      "reason_ticks": {
+        "insufficient_motion": 99,
+        "insufficient_samples": 3,
+        "predicted": 147,
+        "settled": 651
+      },
+      "ticks": 900
+    },
+    "[\"gradual_turns\",\"wheeled\",5,true]": {
+      "decision_changes": 58,
+      "first_prediction": 103,
+      "goal_changes": 57,
+      "last_result": {
+        "approach_distance": 0.00416666666666643,
+        "arc_fraction": 652.0,
+        "arc_ticks": 652,
+        "chassis": "wheeled",
+        "direct": false,
+        "distance": 52.841666666666725,
+        "episodes": [
+          {
+            "arc_sum": 652.0,
+            "arc_ticks": 652,
+            "distance": 52.841666666666725,
+            "end": 900,
+            "first_arc": 249,
+            "first_geometry": 249,
+            "first_ready": 1,
+            "first_shot": 1,
+            "geometry_ticks": 652,
+            "preferred_band_ticks": 71,
+            "range_error_mean": 0.0,
+            "range_error_p95": 0.0,
+            "ready_ticks": 1,
+            "start": 1
+          }
+        ],
+        "fire": true,
+        "first_arc": 249,
+        "first_geometry": 249,
+        "first_ready": 1,
+        "first_shot": 1,
+        "outcome": "window_end",
+        "prediction_fallbacks": 0,
+        "prediction_ticks": 147,
+        "preferred_band_ticks": 71,
+        "range_error_mean": 0.0,
+        "range_error_p95": 0.0,
+        "ready_ticks": 1,
+        "replans": 61,
+        "reversals": 26,
+        "scenario": "gradual_turns",
+        "schema": 1,
+        "script_events": [
+          [
+            229,
+            "turn_requested"
+          ],
+          [
+            534,
+            "turn_requested"
+          ],
+          [
+            838,
+            "turn_requested"
+          ]
+        ],
+        "script_rejections": 0,
+        "seed": 5,
+        "settled_distance": 13.03749999999998,
+        "settled_ticks": 337,
+        "shots": 1,
+        "stationary_detour_distance": null,
+        "stationary_route_length": null,
+        "target_destroyed_at": null,
+        "target_distance": 39.595641548177596,
+        "ticks": 900,
+        "visible_ticks": 900
+      },
+      "reason_ticks": {
+        "insufficient_motion": 99,
+        "insufficient_samples": 3,
+        "predicted": 147,
+        "settled": 651
+      },
+      "ticks": 900
+    },
+    "[\"gradual_turns\",\"wheeled\",6,false]": {
+      "decision_changes": 58,
+      "first_prediction": 103,
+      "goal_changes": 57,
+      "last_result": {
+        "approach_distance": 19.683333333333326,
+        "arc_fraction": 652.0,
+        "arc_ticks": 652,
+        "chassis": "wheeled",
+        "direct": false,
+        "distance": 52.841666666666725,
+        "episodes": [
+          {
+            "arc_sum": 652.0,
+            "arc_ticks": 652,
+            "distance": 52.841666666666725,
+            "end": 900,
+            "first_arc": 249,
+            "first_geometry": 249,
+            "first_ready": 249,
+            "first_shot": null,
+            "geometry_ticks": 652,
+            "preferred_band_ticks": 71,
+            "range_error_mean": 0.0,
+            "range_error_p95": 0.0,
+            "ready_ticks": 652,
+            "start": 1
+          }
+        ],
+        "fire": false,
+        "first_arc": 249,
+        "first_geometry": 249,
+        "first_ready": 249,
+        "first_shot": null,
+        "outcome": "window_end",
+        "prediction_fallbacks": 0,
+        "prediction_ticks": 147,
+        "preferred_band_ticks": 71,
+        "range_error_mean": 0.0,
+        "range_error_p95": 0.0,
+        "ready_ticks": 652,
+        "replans": 61,
+        "reversals": 26,
+        "scenario": "gradual_turns",
+        "schema": 1,
+        "script_events": [
+          [
+            229,
+            "turn_requested"
+          ],
+          [
+            534,
+            "turn_requested"
+          ],
+          [
+            838,
+            "turn_requested"
+          ]
+        ],
+        "script_rejections": 0,
+        "seed": 6,
+        "settled_distance": 13.03749999999998,
+        "settled_ticks": 337,
+        "shots": 0,
+        "stationary_detour_distance": null,
+        "stationary_route_length": null,
+        "target_destroyed_at": null,
+        "target_distance": 39.595641548177596,
+        "ticks": 900,
+        "visible_ticks": 900
+      },
+      "reason_ticks": {
+        "insufficient_motion": 99,
+        "insufficient_samples": 3,
+        "predicted": 147,
+        "settled": 651
+      },
+      "ticks": 900
+    },
+    "[\"gradual_turns\",\"wheeled\",6,true]": {
+      "decision_changes": 58,
+      "first_prediction": 103,
+      "goal_changes": 57,
+      "last_result": {
+        "approach_distance": 0.00416666666666643,
+        "arc_fraction": 652.0,
+        "arc_ticks": 652,
+        "chassis": "wheeled",
+        "direct": false,
+        "distance": 52.841666666666725,
+        "episodes": [
+          {
+            "arc_sum": 652.0,
+            "arc_ticks": 652,
+            "distance": 52.841666666666725,
+            "end": 900,
+            "first_arc": 249,
+            "first_geometry": 249,
+            "first_ready": 1,
+            "first_shot": 1,
+            "geometry_ticks": 652,
+            "preferred_band_ticks": 71,
+            "range_error_mean": 0.0,
+            "range_error_p95": 0.0,
+            "ready_ticks": 1,
+            "start": 1
+          }
+        ],
+        "fire": true,
+        "first_arc": 249,
+        "first_geometry": 249,
+        "first_ready": 1,
+        "first_shot": 1,
+        "outcome": "window_end",
+        "prediction_fallbacks": 0,
+        "prediction_ticks": 147,
+        "preferred_band_ticks": 71,
+        "range_error_mean": 0.0,
+        "range_error_p95": 0.0,
+        "ready_ticks": 1,
+        "replans": 61,
+        "reversals": 26,
+        "scenario": "gradual_turns",
+        "schema": 1,
+        "script_events": [
+          [
+            229,
+            "turn_requested"
+          ],
+          [
+            534,
+            "turn_requested"
+          ],
+          [
+            838,
+            "turn_requested"
+          ]
+        ],
+        "script_rejections": 0,
+        "seed": 6,
+        "settled_distance": 13.03749999999998,
+        "settled_ticks": 337,
+        "shots": 1,
+        "stationary_detour_distance": null,
+        "stationary_route_length": null,
+        "target_destroyed_at": null,
+        "target_distance": 39.595641548177596,
+        "ticks": 900,
+        "visible_ticks": 900
+      },
+      "reason_ticks": {
+        "insufficient_motion": 99,
+        "insufficient_samples": 3,
+        "predicted": 147,
+        "settled": 651
+      },
+      "ticks": 900
+    }
+  },
+  "source_sha256": "8ff1d399de3645020077cf12c91c14f55b4820dd746dc6b40f40d6de097d7e7d"
+}

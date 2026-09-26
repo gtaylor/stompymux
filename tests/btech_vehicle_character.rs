@@ -185,13 +185,16 @@ async fn crew_critical_uses_shared_health_and_evacuates_fatal_injury_atomically(
         rotor_damage_divisor: 0,
         extended_piloting: false,
         vtol_table: None,
-        table: BattleVehicleCriticalTable::Fasa,
+        table: BattleVehicleCriticalTable::Standard,
         enabled: true,
         combat_safe: false,
         toughness: false,
     };
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).d6() == 1)
+        .find(|seed| {
+            let mut dice = BattleDice::seeded([*seed; 32]);
+            dice.die(10).unwrap() > 5 && dice.d6() == 1
+        })
         .unwrap();
     for previous_hits in [0, 9] {
         let mut world = base.clone();
@@ -323,7 +326,6 @@ async fn instant_crew_death_preserves_health_and_evacuates_with_or_without_a_pil
     let (_dir, config, base, id, passenger) = fixture().await;
     for table in [
         BattleVehicleCriticalTable::Standard,
-        BattleVehicleCriticalTable::Fasa,
         BattleVehicleCriticalTable::Advanced,
     ] {
         let rules = BattleVehicleCriticalRules {
@@ -503,7 +505,7 @@ async fn nested_crew_death_finishes_weapon_damage_before_single_evacuation() {
 }
 
 #[tokio::test]
-async fn explosions_evacuate_only_uncontained_crew_and_restore_failed_actions() {
+async fn ground_explosions_evacuate_crew_and_restore_failed_actions() {
     for (case, fuel) in [(false, false), (true, false), (true, true)] {
         let template = if case {
             include_str!("../game/mechs/Demolisher")
@@ -513,7 +515,10 @@ async fn explosions_evacuate_only_uncontained_crew_and_restore_failed_actions() 
         };
         let (_dir, config, mut world, id, passenger) = fixture_with_template(&template).await;
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).d6() == if fuel { 5 } else { 6 })
+            .find(|seed| {
+                let mut dice = BattleDice::seeded([*seed; 32]);
+                dice.die(10).unwrap() > 5 && dice.d6() == if fuel { 5 } else { 6 }
+            })
             .unwrap();
         seed_vehicle(&mut world, id, seed);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -521,30 +526,27 @@ async fn explosions_evacuate_only_uncontained_crew_and_restore_failed_actions() 
             rotor_damage_divisor: 0,
             extended_piloting: false,
             vtol_table: None,
-            table: BattleVehicleCriticalTable::Fasa,
+            table: BattleVehicleCriticalTable::Standard,
             enabled: true,
             combat_safe: false,
             toughness: false,
         };
         let before = scripts.world().clone();
-        let contained = case && !fuel;
         let afterlife = ObjectId(config.battletech.afterlife_dbref);
-        if !contained {
-            scripts.world_mut().objects.remove(&afterlife);
-            assert!(
-                resolve_battle_vehicle_critical_action(
-                    &scripts,
-                    &config,
-                    id,
-                    BattleVehicleSection::Front,
-                    rules
-                )
-                .is_err()
-            );
-            assert_eq!(scripts.world().btech, before.btech);
-            assert_eq!(scripts.world().objects[&passenger].location, Some(id));
-            *scripts.world_mut() = before.clone();
-        }
+        scripts.world_mut().objects.remove(&afterlife);
+        assert!(
+            resolve_battle_vehicle_critical_action(
+                &scripts,
+                &config,
+                id,
+                BattleVehicleSection::Front,
+                rules
+            )
+            .is_err()
+        );
+        assert_eq!(scripts.world().btech, before.btech);
+        assert_eq!(scripts.world().objects[&passenger].location, Some(id));
+        *scripts.world_mut() = before.clone();
         let report = resolve_battle_vehicle_critical_action(
             &scripts,
             &config,
@@ -553,30 +555,17 @@ async fn explosions_evacuate_only_uncontained_crew_and_restore_failed_actions() 
             rules,
         )
         .unwrap();
-        assert_eq!(report.explosion.unwrap().contained, contained);
+        assert!(!report.explosion.unwrap().contained);
         let result = scripts.world().clone();
         let vehicle = &result.btech.vehicles()[&id];
         assert!(vehicle.is_destroyed());
-        assert_eq!(vehicle.crew_killed(), !contained);
+        assert!(vehicle.crew_killed());
         assert_eq!(vehicle.pilot_injuries(), 0);
         assert_eq!(result.btech.characters(), before.btech.characters());
-        assert_eq!(
-            result.objects[&passenger].location,
-            Some(if contained { id } else { afterlife })
-        );
-        assert_eq!(
-            result.objects[&ObjectId(2)].location,
-            Some(if contained { id } else { afterlife })
-        );
+        assert_eq!(result.objects[&passenger].location, Some(afterlife));
+        assert_eq!(result.objects[&ObjectId(2)].location, Some(afterlife));
         assert_eq!(result.objects[&ObjectId(1)].location, Some(id));
-        if contained {
-            assert_eq!(
-                vehicle.sections()[&BattleVehicleSection::Front],
-                before.btech.vehicles()[&id].sections()[&BattleVehicleSection::Front]
-            );
-        } else {
-            assert!(vehicle.sections().values().all(|state| state.internal == 0));
-        }
+        assert!(vehicle.sections().values().all(|state| state.internal == 0));
         persistence::save(&config.database(), &result)
             .await
             .unwrap();
@@ -662,7 +651,7 @@ async fn fire_exposure_evacuates_crew_and_rolls_back_failed_publication() {
             }
             dice.d6();
             dice.two_d6();
-            if !matches!(dice.two_d6(), 8 | 9) || dice.d6() != 4 {
+            if !matches!(dice.two_d6(), 8 | 9) || dice.die(10).unwrap() <= 5 || dice.d6() != 4 {
                 return None;
             }
             Some(seed)
@@ -683,7 +672,7 @@ async fn fire_exposure_evacuates_crew_and_rolls_back_failed_publication() {
         rotor_damage_divisor: 0,
         extended_piloting: false,
         vtol_table: None,
-        table: BattleVehicleCriticalTable::Fasa,
+        table: BattleVehicleCriticalTable::Standard,
         enabled: true,
         combat_safe: false,
         toughness: false,
@@ -724,7 +713,8 @@ async fn scheduled_fires_publish_character_injuries_and_fatal_evacuation_with_re
                 let before = world.clone();
                 let report = advance_battle_vehicle_fires(&mut world, &config).ok()?;
                 (report.character_injuries.len() == 1
-                    && report.character_injuries[0].injury.fatal == fatal)
+                    && report.character_injuries[0].injury.fatal == fatal
+                    && world.btech.vehicles()[&id].is_destroyed() == fatal)
                     .then_some((before, world, report))
             })
             .unwrap();
@@ -739,7 +729,19 @@ async fn scheduled_fires_publish_character_injuries_and_fatal_evacuation_with_re
         }
         let report = advance_battle_vehicle_fires_action(&scripts, &config).unwrap();
         assert_eq!(report, expected_report);
-        assert_eq!(scripts.world().btech, expected.btech);
+        let mut expected_state = serde_json::to_value(&expected.btech).unwrap();
+        if expected.btech.vehicles()[&id]
+            .sections()
+            .values()
+            .all(|section| section.internal == 0)
+        {
+            // The host action also registers a fully destroyed IC wreck for retirement.
+            expected_state["wrecks"][id.0.to_string()] = 10.into();
+        }
+        assert_eq!(
+            serde_json::to_value(&scripts.world().btech).unwrap(),
+            expected_state
+        );
         assert_eq!(
             scripts.world().objects[&passenger].location,
             Some(if fatal { afterlife } else { id })
@@ -852,7 +854,7 @@ async fn character_mine_heat_evacuates_after_packets_and_rolls_back_the_field() 
     seed_vehicle(&mut world, id, seed);
     let mut rules = BattleMovementRules::STANDARD.fall;
     rules.vehicle_impact.criticals.enabled = false;
-    rules.vehicle_impact.fasa.critical_mode = 0;
+    rules.vehicle_impact.hit.critical_mode = 0;
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let before = scripts.world().clone();
     let afterlife = ObjectId(config.battletech.afterlife_dbref);
@@ -895,7 +897,7 @@ async fn advanced_thermal_actions_publish_nested_character_feedback_once() {
     base.btech = serde_json::from_value(saved).unwrap();
     let mut rules = BattleVehicleImpactRules::STANDARD;
     rules.advanced_fire = true;
-    rules.criticals.table = BattleVehicleCriticalTable::Fasa;
+    rules.criticals.table = BattleVehicleCriticalTable::Standard;
     for inferno in [false, true] {
         let (before, expected) = (0..=255)
             .find_map(|seed| {
