@@ -519,7 +519,7 @@ fn attack_profile_inner(
         map.flags & 512 == 0,
         "You cannot perform physical attacks here!"
     );
-    if source.sensor_signature().team == victim.sensor_signature().team {
+    if source.signature().team == victim.signature().team {
         ensure!(
             !source.friendly_fire_safety(),
             "You can't attack a teammate with FFSafeties on!"

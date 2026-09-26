@@ -447,7 +447,7 @@ pub(super) fn controlled_unit_by_actor(
     let super::combat_operator::ControlActor::Player(pilot) = actor else {
         unreachable!()
     };
-    control_health(world, id, pilot)?;
+    control_health(world, pilot)?;
     let unit = world
         .btech
         .constructed_units()
@@ -495,7 +495,7 @@ pub(super) fn autopilot_controlled_unit(world: &World, id: ObjectId) -> Result<(
     // still become unconscious while the controller remains attached; an
     // uncrewed unit continues to use the normal no-pilot skill path.
     if let Some(pilot) = unit.pilot() {
-        control_health(world, id, pilot)?;
+        control_health(world, pilot)?;
     }
     ensure!(unit.crew_recovery().remaining == 0, "Crew is unconscious");
     Ok(())
@@ -524,7 +524,7 @@ pub(super) fn autopilot_controlled_vehicle(world: &World, id: ObjectId) -> Resul
     // recovering crew operational.  With no assigned pilot, the existing
     // uncrewed-vehicle behavior remains available.
     if let Some(pilot) = vehicle.pilot() {
-        control_health(world, id, pilot)?;
+        control_health(world, pilot)?;
     }
     ensure!(
         vehicle.crew_recovery().remaining == 0,
@@ -533,12 +533,8 @@ pub(super) fn autopilot_controlled_vehicle(world: &World, id: ObjectId) -> Resul
     Ok(())
 }
 
-/// Shared operator health and temporary visual impairment gates for cockpit and station control.
-pub(super) fn control_health(world: &World, id: ObjectId, pilot: ObjectId) -> Result<()> {
-    ensure!(
-        !super::battle_unit_blinded(world, id),
-        "You are momentarily blinded!"
-    );
+/// Shared operator health gate for cockpit and station control.
+pub(super) fn control_health(world: &World, pilot: ObjectId) -> Result<()> {
     ensure!(!world.btech.unconscious(pilot), "You are unconscious");
     Ok(())
 }

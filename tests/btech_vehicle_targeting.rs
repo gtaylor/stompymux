@@ -76,7 +76,7 @@ async fn vehicle_unit_and_coordinate_selections_settle_replay_and_drive_scans() 
         let mut world = initial.clone();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
         assign_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
-        refresh_optical_scanners(&mut world, &[observer]).unwrap();
+        refresh_battle_contacts(&mut world, &[observer]).unwrap();
         let before = world.btech.clone();
         assert!(select_battle_target(&mut world, observer, ObjectId(2), Some(target)).is_err());
         assert!(select_battle_target(&mut world, observer, ObjectId(1), Some(observer)).is_err());
@@ -175,19 +175,24 @@ async fn vehicle_unit_and_coordinate_selections_settle_replay_and_drive_scans() 
     }
 }
 
+/// Losing every perception channel, placement, removal, shutdown and destruction clear vehicle
+/// locks; light changes alone do not.
 #[tokio::test]
 async fn vehicle_locks_clear_on_visibility_sensor_placement_and_power_changes() {
     let (_dir, config, mut initial, [mech, _, observer, vehicle]) = formation().await;
     let map = initial.btech.vehicles()[&observer].position().unwrap().map;
+    // Sight still reaches a target sharing the observer's hex, so hold this one four hexes off.
+    power(&mut initial, &[vehicle], BattlePower::Off);
+    place_battle_unit(&mut initial, vehicle, map, 0, 4).unwrap();
+    power(&mut initial, &[vehicle], BattlePower::Running);
     initial.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
     assign_battle_pilot(&mut initial, observer, ObjectId(1)).unwrap();
-    refresh_optical_scanners(&mut initial, &[observer]).unwrap();
+    refresh_battle_contacts(&mut initial, &[observer]).unwrap();
     select_battle_target(&mut initial, observer, ObjectId(1), Some(vehicle)).unwrap();
     let mut world = initial.clone();
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["maps"][map.0.to_string()]["sensor_flags"] = serde_json::json!(1);
-    world.btech = serde_json::from_value(saved).unwrap();
-    let events = refresh_optical_scanners(&mut world, &[observer]).unwrap();
+    set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
+    set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
+    let events = refresh_battle_contacts(&mut world, &[observer]).unwrap();
     assert!(
         events
             .iter()
@@ -229,22 +234,11 @@ async fn vehicle_locks_clear_on_visibility_sensor_placement_and_power_changes() 
             .is_none()
     );
     let mut world = initial.clone();
+    // Light changes wait for the next scan, where the sensor band still reaches the target.
     set_battle_map_visibility(&mut world, map, BattleLight::Night, 30).unwrap();
-    let pair = BattleSensorPair {
-        primary: BattleSensorMode::LightAmplification,
-        secondary: BattleSensorMode::LightAmplification,
-    };
-    select_battle_optical_sensors(&mut world, observer, ObjectId(1), pair).unwrap();
-    for _ in 0..9 {
-        advance_battle_sensor_selection(&mut world);
-    }
     assert!(world.btech.vehicles()[&observer].target_lock().is_some());
-    advance_battle_sensor_selection(&mut world);
-    assert!(
-        world.btech.vehicles()[&observer]
-            .target_selection()
-            .is_none()
-    );
+    refresh_battle_contacts(&mut world, &[observer]).unwrap();
+    assert!(world.btech.vehicles()[&observer].target_lock().is_some());
     select_battle_hex_target(
         &mut world,
         observer,
@@ -255,18 +249,10 @@ async fn vehicle_locks_clear_on_visibility_sensor_placement_and_power_changes() 
     .unwrap();
     let coordinate_target = world.btech.vehicles()[&observer].target_selection();
     set_battle_map_visibility(&mut world, map, BattleLight::Day, 30).unwrap();
-    // Automatic light rechecks retain coordinate targeting; completing a
-    // requested sensor change above still clears the settled unit lock.
+    refresh_battle_contacts(&mut world, &[observer]).unwrap();
     assert_eq!(
         world.btech.vehicles()[&observer].target_selection(),
         coordinate_target
-    );
-    assert_eq!(
-        world.btech.vehicles()[&observer]
-            .sensor_selection()
-            .active
-            .primary,
-        BattleSensorMode::Visual
     );
     let mut world = initial.clone();
     world
@@ -294,7 +280,7 @@ async fn vehicle_lock_snapshots_reject_invalid_countdowns_targets_and_coordinate
     let (_dir, config, mut world, [_, _, observer, target]) = formation().await;
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
     assign_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
-    refresh_optical_scanners(&mut world, &[observer]).unwrap();
+    refresh_battle_contacts(&mut world, &[observer]).unwrap();
     select_battle_target(&mut world, observer, ObjectId(1), Some(target)).unwrap();
     for value in [
         serde_json::json!({"target": observer.0,"remaining":8}),
@@ -330,7 +316,7 @@ async fn idle_vehicle_lock_countdown_retries_failed_server_commits() {
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
         assign_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
         select_battle_hex_target(&mut world, observer, ObjectId(1), BattleHexCoordinate { x: 0, y: 1 }, BattleHexTargetMode::Hex).unwrap();
-        assert!(optical_scanner_observers(&world).is_empty());
+        assert!(battle_contact_observers(&world).is_empty());
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER deny_lock BEFORE UPDATE ON btech_vehicles BEGIN SELECT RAISE(ABORT,'lock failure'); END;").execute(&mut sql).await.unwrap();

@@ -4,15 +4,13 @@ use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 use std::sync::Arc;
 
-/// All control checks share power, unit-owned recovery, assigned-pilot recovery and blindness gates.
+/// All control checks share power, unit-owned recovery and assigned-pilot recovery gates.
 /// Callers retain their distinct automatic-success rules and destruction policy.
 pub(super) fn controls_blocked(world: &World, unit: ObjectId, power: super::BattlePower) -> bool {
-    power != super::BattlePower::Running
-        || super::crew::unit_unconscious(world, unit)
-        || super::battle_unit_blinded(world, unit)
+    power != super::BattlePower::Running || super::crew::unit_unconscious(world, unit)
 }
 
-/// A control check; prone units succeed automatically, otherwise stopped, unconscious or blinded crew fail without dice.
+/// A control check; prone units succeed automatically, otherwise stopped or unconscious crew fail without dice.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[must_use = "Apply the failed check's movement or fall consequences in the enclosing action"]
 pub struct BattlePilotingCheck {

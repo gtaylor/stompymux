@@ -561,13 +561,20 @@ async fn map_condition_commands_and_lua_validate_and_rollback() {
     assert!(
         scripts
             .eval_callback::<()>(&format!(
-                "btech.map.conditions({}, 'day', 60); error('abort')",
+                "btech.map.conditions({}, btech.map.light_levels.DAY, 60); error('abort')",
                 id.0
             ))
             .is_err()
     );
     assert_eq!(scripts.world().btech, changed);
-    for invalid in ["'night', -1", "'night', 256", "'night', 61", "'noon', 10"] {
+    // Plain strings and constants from other catalogs are rejected like out-of-range visibility.
+    for invalid in [
+        "btech.map.light_levels.NIGHT, -1",
+        "btech.map.light_levels.NIGHT, 256",
+        "btech.map.light_levels.NIGHT, 61",
+        "'night', 10",
+        "btech.unit.types.MECH, 10",
+    ] {
         assert!(
             scripts
                 .eval_callback::<()>(&format!("btech.map.conditions({}, {invalid})", id.0))
@@ -577,7 +584,7 @@ async fn map_condition_commands_and_lua_validate_and_rollback() {
     }
     let light: i64 = scripts
         .eval_callback(&format!(
-            "btech.map.conditions({}, 'twilight', 20); return btech.map.inspect({}).light",
+            "btech.map.conditions({}, btech.map.light_levels.TWILIGHT, 20); return btech.map.inspect({}).light",
             id.0, id.0
         ))
         .unwrap();

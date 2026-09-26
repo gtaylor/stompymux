@@ -1,4 +1,4 @@
-//! Conventional weapon aim combines range, movement, equipment, optical visibility and target settling.
+//! Conventional weapon aim combines range, movement, equipment, perception and target settling.
 use super::{BattleSection, BattleSystem, BattleUnit, BattleWeapon, CriticalLocation};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -158,11 +158,13 @@ impl BattleAimRules {
     }
 }
 
-/// Optical mode contributing the lowest current aim penalty; secondary modes include their +1.
+/// How the aiming unit currently perceives its target and what that costs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleSensorAim {
-    pub sensor: super::BattleSensorMode,
-    pub secondary: bool,
+pub struct BattlePerceptionAim {
+    /// Absent only for a clairvoyant view of a target nobody has acquired.
+    pub channel: Option<super::BattleDetectionChannel>,
+    /// Terrain leaves a line of fire; probe contacts behind hills need indirect fire.
+    pub direct_fire: bool,
     pub modifier: i16,
 }
 
@@ -185,7 +187,7 @@ impl BattleIndirectAim {
 /// An inspectable subtotal, not firing permission; posture and advanced equipment remain separate.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct BattleAimModifiers {
-    /// Coolant self-application does not require an acquired optical contact.
+    /// Coolant self-application does not require an acquired contact.
     pub self_target: bool,
     /// Observer sensor aim replaces the firing unit sensor aim when present.
     pub indirect: Option<BattleIndirectAim>,
@@ -224,23 +226,23 @@ pub struct BattleAimModifiers {
     /// Anatomical head-target penalty; directed computer fire uses the computer term.
     pub aimed_section: i8,
     pub target_lock: u8,
-    /// None means the target has no acquired contact visible through current active sensors.
-    pub optical: Option<BattleSensorAim>,
+    /// None means the aiming unit has no acquired contact it can currently perceive.
+    pub perception: Option<BattlePerceptionAim>,
 }
 
 impl BattleAimModifiers {
     /// Sum supported contributions only; unseen or out-of-range shots have no subtotal.
     pub fn subtotal(&self) -> Option<i32> {
-        let optical = if self.self_target {
+        let perception = if self.self_target {
             0
         } else {
-            self.optical?.modifier
+            self.perception?.modifier
         };
-        self.subtotal_with_terrain(optical)
+        self.subtotal_with_terrain(perception)
     }
 
     /// Shared arithmetic; terrain targets supply zero instead of a unit sensor contribution.
-    pub(super) fn subtotal_with_terrain(&self, optical: i16) -> Option<i32> {
+    pub(super) fn subtotal_with_terrain(&self, perception: i16) -> Option<i32> {
         Some(
             i32::from(self.gunnery)
                 + i32::from(self.range?.modifier)
@@ -262,7 +264,7 @@ impl BattleAimModifiers {
                 + i32::from(self.targeting_mode)
                 + i32::from(self.aimed_section)
                 + i32::from(self.target_lock)
-                + i32::from(optical)
+                + i32::from(perception)
                 + self.indirect.map_or(0, BattleIndirectAim::modifier),
         )
     }
@@ -430,85 +432,57 @@ pub(super) fn target_motion(speed: f64, extended: bool) -> i8 {
     4 + ((speed - 107.5) / 43.0).trunc() as i8
 }
 
-/// Choose fresh eligible sensor modes using only the caller's candidate dice stream.
-pub(super) fn optical_aim(
+/// Perceive the target afresh; coordinate spotting replaces the perception term with zero.
+pub(super) fn perception_aim(
     world: &World,
-    shooter: ObjectId,
+    viewer: ObjectId,
     target: ObjectId,
-    dice: &mut super::BattleDice,
     coordinate_spotting: bool,
-) -> Result<Option<BattleSensorAim>> {
-    let attacker =
-        super::scanner::scanner_unit(world, shooter).context("Shooter is unavailable")?;
+) -> Result<Option<BattlePerceptionAim>> {
+    let attacker = super::scanner::scanner_unit(world, viewer).context("Shooter is unavailable")?;
     if attacker.power != super::BattlePower::Running {
         return Ok(None);
     }
-    // Visibility privileges do not fabricate primary/secondary sensor acquisition.
-    let unacquired = attacker.visibility.clairvoyant.then_some(BattleSensorAim {
-        sensor: attacker.pair.primary,
-        secondary: false,
-        modifier: 10_000,
-    });
+    // Visibility privileges do not fabricate an acquisition: the shot is effectively impossible.
+    let unacquired = attacker
+        .visibility
+        .clairvoyant
+        .then_some(BattlePerceptionAim {
+            channel: None,
+            direct_fire: true,
+            modifier: 10_000,
+        });
     if !attacker.contacts.contains_key(&target) {
         return Ok(unacquired);
     }
-    let pair = attacker.pair;
-    let lit = super::scanner::scanner_unit(world, target)
-        .context("Target is unavailable")?
-        .signature
-        .illuminated;
-    let mut primary = super::map_optical_contact(world, shooter, target, pair.primary, lit, false)?;
-    if !coordinate_spotting
-        && primary.eligible
-        && matches!(
-            pair.primary,
-            super::BattleSensorMode::Seismic | super::BattleSensorMode::Electromagnetic
-        )
-    {
-        primary.aim_modifier += (dice.die(2)? - 1) as i16;
-    }
-    if !coordinate_spotting && primary.eligible && pair.primary.active_probe().is_some() {
-        primary.aim_modifier += (dice.die(3)? - 1) as i16;
-    }
-    let mut best = primary.eligible.then_some(BattleSensorAim {
-        sensor: pair.primary,
-        secondary: false,
+    let Some(perception) = super::perceive(world, viewer, target)? else {
+        return Ok(unacquired);
+    };
+    Ok(Some(BattlePerceptionAim {
+        channel: Some(perception.channel),
+        direct_fire: perception.identified,
         modifier: if coordinate_spotting {
             0
         } else {
-            primary.aim_modifier
+            perception.aim_modifier
         },
-    });
-    if pair.primary == pair.secondary {
-        return Ok(best.or(unacquired));
+    }))
+}
+
+/// Shared firing admission: the target must be a perceived contact, and a direct shot needs a
+/// line of fire. Self-applied coolant needs neither.
+pub(super) fn ensure_perceived(aim: &BattleAimModifiers) -> Result<()> {
+    if aim.self_target {
+        return Ok(());
     }
-    let mut secondary =
-        super::map_optical_contact(world, shooter, target, pair.secondary, lit, false)?;
-    if !coordinate_spotting
-        && secondary.eligible
-        && matches!(
-            pair.secondary,
-            super::BattleSensorMode::Seismic | super::BattleSensorMode::Electromagnetic
-        )
-    {
-        secondary.aim_modifier += (dice.die(2)? - 1) as i16;
-    }
-    if !coordinate_spotting && secondary.eligible && pair.secondary.active_probe().is_some() {
-        secondary.aim_modifier += (dice.die(3)? - 1) as i16;
-    }
-    let modifier = if coordinate_spotting {
-        0
-    } else {
-        secondary.aim_modifier + 1
-    };
-    if secondary.eligible && best.is_none_or(|primary| modifier < primary.modifier) {
-        best = Some(BattleSensorAim {
-            sensor: pair.secondary,
-            secondary: true,
-            modifier,
-        });
-    }
-    Ok(best.or(unacquired))
+    let perception = aim
+        .perception
+        .context("Target is not a current acquired contact")?;
+    ensure!(
+        aim.indirect.is_some() || perception.direct_fire,
+        "That target is behind cover you cannot shoot through; use indirect fire."
+    );
+    Ok(())
 }
 
 /// Conventional single-target lock penalty; arc follows the selected target, even for another shot.
@@ -573,7 +547,8 @@ pub fn aim_modifiers(
     aim_modifiers_for_source(world, shooter.into(), target, weapon_index, gunnery, rules)
 }
 
-/// Preview shared aim with independently owned targeting and no committed random draws.
+/// Shared aim arithmetic for both cockpit and separately owned station selections.
+/// Inspection only: no dice are drawn and no firing permission is implied.
 pub(super) fn aim_modifiers_for_source(
     world: &World,
     source: super::fire_target::TargetSource,
@@ -583,49 +558,8 @@ pub(super) fn aim_modifiers_for_source(
     rules: BattleAimRules,
 ) -> Result<BattleAimModifiers> {
     let shooter = source.unit;
-    let mut dice = if let Some(vehicle) = world.btech.vehicles().get(&shooter) {
-        vehicle.dice.clone()
-    } else {
-        world
-            .btech
-            .constructed_units()
-            .get(&shooter)
-            .context("Shooter construction is unavailable")?
-            .dice
-            .clone()
-    };
-    aim_modifiers_for_source_with_dice(
-        world,
-        source,
-        target,
-        weapon_index,
-        gunnery,
-        rules,
-        &mut dice,
-    )
-}
-
-/// Shared aim arithmetic for both cockpit and separately owned station selections.
-pub(super) fn aim_modifiers_for_source_with_dice(
-    world: &World,
-    source: super::fire_target::TargetSource,
-    target: ObjectId,
-    weapon_index: usize,
-    gunnery: i16,
-    rules: BattleAimRules,
-    dice: &mut super::BattleDice,
-) -> Result<BattleAimModifiers> {
-    let shooter = source.unit;
     if world.btech.vehicles().contains_key(&shooter) {
-        return super::vehicle_aim::modifiers(
-            world,
-            source,
-            target,
-            weapon_index,
-            gunnery,
-            rules,
-            dice,
-        );
+        return super::vehicle_aim::modifiers(world, source, target, weapon_index, gunnery, rules);
     }
     for id in [shooter, target] {
         ensure!(
@@ -696,11 +630,10 @@ pub(super) fn aim_modifiers_for_source_with_dice(
     } else {
         lock_modifier(world, source, target, rules.override_weapon_arcs)?
     };
-    modifiers.optical = optical_aim(
+    modifiers.perception = perception_aim(
         world,
         indirect.map_or(shooter, |aim| aim.spotter),
         target,
-        dice,
         indirect.is_some_and(|aim| super::spotter::coordinate_target(world, aim.spotter)),
     )?;
     super::targeting_mode::apply(
@@ -802,7 +735,7 @@ pub(super) fn weapon_base(
         targeting_mode: 0,
         aimed_section: 0,
         target_lock: 0,
-        optical: None,
+        perception: None,
     })
 }
 

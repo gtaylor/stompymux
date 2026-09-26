@@ -100,7 +100,6 @@ pub(super) fn advance(world: &mut World) -> Vec<BattleNotice> {
             .expect("validated tactical recovery");
         if let Some(check) = recovery_mut(world, id).advance(target)
             && check.conscious
-            && !super::battle_unit_blinded(world, id)
         {
             notices.push(BattleNotice {
                 unit: id,

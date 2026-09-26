@@ -18,15 +18,15 @@ test target:
 
 ```sh
 cargo test btech_los
-cargo test --test btech_los_range
-cargo test --test btech_visibility
+cargo test btech_los_range
+cargo test btech_visibility
 ```
 
 The BattleTech LOS scenarios are Rust tests, including `btech_los_range`,
-`btech_visibility`, `btech_vehicle_los`, and sensor and contact tests. Focused
+`btech_visibility`, `btech_vehicle_los`, and perception and contact tests. Focused
 unit tests cover rules close to their implementations. Prefer small synthetic
 maps and deterministic inputs when adding a LOS case; assert terrain tracing
-and sensor acquisition separately where the rule distinguishes them.
+and perception separately where the rule distinguishes them.
 
 Integration tests use isolated game fixtures under `tests/fixtures/game` and
 helpers under `tests/support/`. They exercise the Rust server, Lua APIs,

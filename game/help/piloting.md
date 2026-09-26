@@ -68,7 +68,9 @@ Only AutoFall is currently supported by `mechprefs`.
 
 An unconscious pilot cannot take a cockpit or operate its controls. Recovery
 attempts occur every 30 simulation seconds, and the countdown survives restart.
-Releasing the cockpit does not clear unconsciousness.
+Releasing the cockpit does not clear unconsciousness. Piloting checks fail
+without rolling while the pilot is unconscious; an already prone Mech retains
+its automatic-success exception.
 
 Use `jump <bearing> <range>` to engage jump jets toward a hex center. Grassland, roads,
 forests, rough ground, mountains, snow, smoke, fire, water, high water, ice, bridges,
@@ -115,21 +117,17 @@ facing on chassis that support it. Both require a running unit and its conscious
 pilot. Facing survives restart; leg weapons follow the body heading. These
 commands take no switches, and `fliparms` takes no arguments.
 
-Use `sensor` to inspect active modes and any pending change. Any single argument,
-such as `sensor verbose`, expands the active modes' range, blocking and notes.
-Matching modes appear on one line; mixed modes use Primary/Secondary rows.
-Pending changes appear under Wanted with compact range descriptions.
-Lua `btech.unit.sensor_report(unit, verbose)` returns the same read-only text.
-`sensor V L` selects visual primary and
-light-amplification secondary. `V V` and `L L` select the same mode for both.
-Changes require the running unit's conscious pilot and take ten simulation seconds;
-the old modes remain active during the countdown. `L` is available only at night
-or twilight. A map change to daylight rechecks active sensors and warns running
-cockpits when amplification becomes unavailable. It preserves locks and pending
-requests. The recheck handles identical modes once: `L L` becomes `V L`;
-`L V` and `V L` become `V V`. Changing your request restarts the
-ten-second countdown; requesting the already-active pair leaves a pending change
-alone. `sensor` takes no switches.
+Sensors are automatic; there is nothing to switch. `sensor` shows how far and by
+what means your unit can perceive right now:
+
+- Sensors: within fifteen hexes you detect anything with a clear line, whatever
+  the darkness or weather.
+- Sight: beyond that, weather visibility sets how far you see. At night an unlit
+  target costs +1 to hit, and a lit one can be seen three times as far.
+- Probe and radar: special equipment, if your unit carries it.
+
+See `help line of sight` for the full rules. `sensor` takes no arguments or
+switches. Lua `btech.unit.perception(unit)` returns the same report as a table.
 
 `contacts` lists acquired targets that are currently visible, nearest first, with
 unit number, chassis, friendly/hostile relation, range, bearing, heading and speed.
@@ -141,7 +139,7 @@ Use `lock #unit` to select a currently visible contact from `contacts`, or `lock
 to clear your target. Selection requires the running unit's conscious assigned
 pilot. Sensors take eight simulation seconds to settle; selecting again restarts
 that delay. A scanner update reporting your selected contact lost clears the lock.
-Shutdown, sensor changes and battlefield removal clear selection. `lock` takes no
+Shutdown and battlefield removal clear selection. `lock` takes no
 switches. Aimed-section commands are not yet available.
 
 Use `lock x y` to select the unit currently occupying a coordinate. If it is empty
@@ -630,7 +628,8 @@ conscious pilot must be in a running, placed unit with working Guardian ECM.
 Repeated requests leave the current transition unchanged.
 
 Active armor produces ten additional heat and disrupts your own electronic
-guidance. Enemies firing at you take range penalties of 3 at medium range, 6 at
+guidance. Enemy sensors cannot detect you, so enemies must see you or
+probe you with a Bloodhound; your own sensor band and probe are jammed too. Enemies firing at you take range penalties of 3 at medium range, 6 at
 long range and 12 at extreme range. Short and minimum range are unchanged.
 Shutdown or Guardian damage disables active armor. A pending switch only completes
 if the unit is running and Guardian equipment works when the delay expires.
@@ -649,7 +648,8 @@ requires the assigned conscious pilot, a running placed unit, and intact devices
 A repeated request does not restart a pending switch.
 
 Active NSS adds ten heat and raises enemy range penalties to 3 at medium range,
-6 at long range and 12 at extreme range. It does not create ECM interference or
+6 at long range and 12 at extreme range. Enemy sensors and probes other than
+the Bloodhound cannot detect you. It does not create ECM interference or
 require enemies to settle a firing lock. If stealth armor is also active, the
 range penalty applies once and the two systems' heat adds together.
 
@@ -657,66 +657,32 @@ Shutdown or device loss disables NSS. Pending switches only take effect if power
 and devices are available at expiry. Lua uses `btech.unit.nss(unit, pilot)`; unit
 inspection includes `null_signature` and its pending destination/countdown.
 
-### Infrared sensors
+### Active probes
 
-Use `sensor I I` for infrared in both sensor slots, or combine `I` with `V` or `L`.
-Infrared works in daylight and darkness, reaches fifteen hexes, and sees through
-smoke. Fire, blocked terrain and six intervening woods prevent detection.
+A working Beagle, Light or Bloodhound Active Probe works automatically out to six,
+three or eight hexes; fixed installations reach eight, four and eleven. Probes
+see through hills, buildings, woods, smoke and darkness, and they find hidden
+units. Aiming through a probe ignores woods and darkness; partial cover still
+counts.
 
-Hot targets can be easier to hit; woods and partial cover still make aiming
-harder. Weapon heat and heat from active stealth or null signature systems count.
-Maps may independently disable infrared sensors.
+A probe contact behind blocking terrain shows a lowercase `p` in `contacts`. You
+can lock it, spot it for indirect fire and share it over C3, but you cannot fire
+at it directly or scan it until you have a clear line.
 
-Lua selects the mode with `btech.unit.sensors(unit, pilot, "infrared", "infrared")`.
+Hostile ECM on your unit, or Angel ECM protecting the target, blocks probes. Only
+the Bloodhound sees through stealth armor and null signature systems. A damaged
+probe stops working; `sensor` shows its condition.
 
-### Seismic sensors
+### Radar
 
-Use `sensor S S` for seismic sensing, or mix `S` with another sensor letter.
-Seismic range varies from four to eight hexes with the scanner's signal strength.
-It detects running, non-jumping targets while your unit is not jumping. By default
-a target must move faster than one MP; the server can allow stopped targets.
-
-Smoke, fire and intervening terrain do not block seismic detection. Heavy and
-moving targets are easier to hit; partial cover still applies and aim varies by
-one point. Signal strength changes while your unit runs and survives restarts.
-
-Lua uses `btech.unit.sensors(unit, pilot, "seismic", "seismic")`. Unit inspection
-includes `sensor_signal` from zero to one hundred.
-
-### Electromagnetic sensors
-
-Use `sensor E E` for electromagnetic sensing, or combine `E` with another mode.
-Its range varies from sixteen to twenty-four hexes with signal strength. Mountains,
-blocked terrain, eight intervening woods points and ECM disturbance on your unit
-prevent detection. Smoke and fire do not block this mode by themselves.
-
-Heavy and recently firing targets are easier to hit. Moving targets are harder
-to hit, and the sensor adds a random zero or one to aim. The recent-firing benefit
-lasts until the next simulation heartbeat. Lua uses
-`btech.unit.sensors(unit, pilot, "electromagnetic", "electromagnetic")`.
-
-
-Use `sensor R R` for radar when your chassis has AntiAircraft equipment. Radar
-needs a target above altitude two and more than one level above its local sensor
+Units with AntiAircraft equipment track airborne targets automatically. Radar
+needs a target above altitude two and more than one level above its local
 surface. Below altitude ten its range is less than altitude squared; higher
-targets permit up to 180 hexes. Going beyond the map's ordinary scan limit also
-requires either unit to reach altitude eleven. Radar ignores smoke, fire and ECM,
-but terrain can still block it. VTOL targets and targets at altitude ten or higher
-give a three-point aiming bonus;
-woods and partial cover add penalties. Switching uses the normal ten-second delay.
-Lua accepts `btech.unit.sensors(unit, pilot, "radar", "radar")`.
-
-
-Use `sensor B B` for a Beagle probe, `sensor A A` for a light probe, or `sensor H H`
-for Bloodhound. Your unit must have the working components installed. Their ranges
-are six, three and eight hexes. Fixed installations extend these to eight, four
-and eleven hexes; merely stopping a mobile unit gives no bonus. Probes see through terrain and ignore cover and
-woods when aiming, with a varying zero-to-two aiming modifier. They bypass normal
-hidden-target penalties but still depend on direction and primary/secondary weighting.
-ECM disturbance on your unit or Angel protection on the target blocks all probes.
-Bloodhound penetrates stealth armor and null signature; the other probes do not.
-Damaged probes switch their active sensor slots to visual. Lua mode names are
-`beagle_probe`, `light_probe` and `bloodhound_probe`.
+targets permit up to 180 hexes. Going beyond the map's ordinary visibility limit
+also requires either unit to reach altitude eleven. Radar ignores darkness, smoke,
+fire and ECM, but terrain can still block it. VTOL targets and targets at altitude
+ten or higher give a three-point aiming bonus; woods and partial cover add
+penalties.
 
 Use `tag ID` or `tag #unit` to illuminate an enemy within fifteen hexes with
 working TAG hardware and an unobstructed line of sight. Mechs and vehicles
@@ -963,12 +929,12 @@ or standing transition (f); shutdown (S), starting (s), excess heat (+) or infer
 or interference (e). A higher-priority condition in a column hides the others.
 
 
-Contact rows begin with P when the primary sensor can currently detect the contact,
-and S when the secondary sensor can. A blank means that sensor cannot currently
-see it. These indicators describe an already acquired contact.
+Contact rows begin with how you currently perceive the contact: `S` sensors, `V`
+sight, `R` radar or `P` probe. A lowercase `p` is a probe contact behind blocking
+terrain, which you can lock and spot but not fire at directly.
 
 
-After the sensor letters, `*` means the contact is in your forward torso arc,
+After that letter, `*` means the contact is in your forward torso arc,
 `r` right, `l` left, and `v` rear. Buildings use the same symbols. Torso twists
 change this indicator. Individual weapons can have different arcs, so the symbol
 does not guarantee that every weapon can fire.
@@ -980,7 +946,7 @@ red and losses yellow when your terminal supports color; A4/A5 use no color.
 A2/A3/A5 show enemies only, and A6 disables routine notices.
 
 
-A sensor contact behind blocking terrain may appear as "something". Its condition
+A probe contact behind blocking terrain appears as "something". Its condition
 columns stay blank, and it is not classified as friendly until identified.
 
 
@@ -994,7 +960,7 @@ The columns show x/y/z position, r range, b bearing, s speed, h heading, and S s
 Names are shortened to fit the row; friendly labels use lowercase letters.
 
 
-Building rows show terrain sensor letters and arc, the building name, x/y/z,
+Building rows show `S` or `V` for how you see the entrance, the arc, the building name, x/y/z,
 r range, b bearing, CF current/maximum construction integrity, and S status.
 Names are shortened to 23 characters for alignment.
 
@@ -1150,9 +1116,8 @@ maximum chassis speed. Finish standing or jump stabilization first. Lowering
 requests a stop. Speed, heading, standing and jumping controls are blocked while
 lowered or changing posture.
 
-Hull-down adds protection when terrain already gives partial cover. Visual,
-light-amplification, electromagnetic, seismic and radar aiming receive an extra
-+2 penalty; infrared and active probes do not. Shutdown cancels a pending change
+Hull-down adds protection when terrain already gives partial cover: aiming at a
+hull-down unit behind partial cover costs an extra +2, however it is perceived. Shutdown cancels a pending change
 and retains the completed posture. Falling, pickup and administrative placement
 clear it. `status info` shows the completed stance; `status S` uses `h` for a
 pending change and `H` for the completed stance.
@@ -1213,16 +1178,6 @@ Shots try the selected section first, then the weapon's section, then other
 compatible bins. Empty, damaged or incompatible bins are skipped. The preference
 survives shutdown and restart and is shown by `weapons` and `listtic`.
 Automatic missile defense retains its own mount-first ammunition selection.
-
-## Reactor flashes
-
-A nearby reactor explosion can blind infrared or light-amplification sensors for
-four seconds when that mode is selected as your primary sensor. During recovery,
-cockpit controls and displays are unavailable, spotting and automatic turret
-tracking pause, and visual battlefield notices are suppressed. Motion continues.
-Piloting checks fail without rolling while blinded or unconscious; an already
-prone Mech retains its automatic-success exception.
-Your sight recovers automatically, including while the unit is shut down.
 
 ## Self-destruction
 

@@ -23,7 +23,7 @@ retain their remaining time across restarts.
 Use `weaponspecs` to inspect the parent’s weapon specifications, `weaponstatus`
 for weapon condition, and `critstatus <section>` for installed critical slots.
 These reports require a claimed station. Weapon condition requires a placed
-parent; condition and critical reports require conscious, unblinded observation.
+parent; condition and critical reports require a conscious operator.
 
 Use `weapons` to see weapon numbers, ammunition and recycle times.
 

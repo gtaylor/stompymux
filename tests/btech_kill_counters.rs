@@ -258,7 +258,7 @@ async fn shot_induced_water_and_vacuum_exposure_use_distinct_attribution() {
             firing::edit(&mut base, id, |state| {
                 state["dice"] = serde_json::to_value(BattleDice::seeded([hit_seed; 32])).unwrap()
             });
-            refresh_optical_scanners(&mut base, &[id]).unwrap();
+            refresh_battle_contacts(&mut base, &[id]).unwrap();
             select_battle_target(&mut base, id, ObjectId(1), Some(target)).unwrap();
             let command = format!("btech.unit.fire({},1,{index},{})", id.0, target.0);
             let mut chosen = None;

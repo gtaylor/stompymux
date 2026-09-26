@@ -70,7 +70,6 @@ const FIELDS: &[&str] = &[
     "mechdamage",
     "centdist",
     "centbearing",
-    "sensors",
     "mechref",
     "fuel",
     "fuel_orig",
@@ -280,13 +279,6 @@ fn value(world: &World, config: &Config, id: ObjectId, field: &str) -> Result<Op
                 None
             }
         }
-        "sensors" => Some(
-            mech.map_or_else(
-                || vehicle.unwrap().sensor_selection(),
-                BattleUnit::sensor_selection,
-            )
-            .field_text(),
-        ),
         "cargospace" => integer(i64::from(super::load::cargo_capacity(world, id))),
         "C3iNetworkSize" => integer(
             super::command_network::members(world, id)?
@@ -491,7 +483,6 @@ pub fn set_unit_field_action(
                 "id",
                 "centdist",
                 "centbearing",
-                "sensors",
                 "bv",
                 "numseen"
             ]
@@ -754,7 +745,7 @@ pub fn set_unit_field_action(
                     .trim()
                     .parse::<i32>()
                     .context("Expected a signed 32-bit integer")?;
-                super::set_sensor_signature(&mut scripts.world_mut(), id, signature)?;
+                super::set_unit_signature(&mut scripts.world_mut(), id, signature)?;
             }
             "fuel" => {
                 let amount = value

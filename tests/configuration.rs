@@ -41,7 +41,7 @@ async fn complete_legacy_catalog_and_compiled_defaults() {
     let (_d, c) = config("");
     let inventory: Vec<serde_json::Value> =
         serde_json::from_str(include_str!("fixtures/config/legacy-catalog.json")).unwrap();
-    assert_eq!(inventory.len(), 176);
+    assert_eq!(inventory.len(), 175);
     let expected: BTreeSet<_> = inventory
         .iter()
         .map(|v| v["path"].as_str().unwrap())

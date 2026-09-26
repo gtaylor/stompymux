@@ -436,12 +436,6 @@ pub const KEYS: &[KeySpec] = &[
         bounds: Some((-2147483648.0, 2147483647.0)),
     },
     KeySpec {
-        path: "battletech.seismic_see_stopped",
-        legacy: "btech_seismic_see_stopped",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
         path: "battletech.limitedrepairs",
         legacy: "btech_limitedrepairs",
         kind: "i64",
@@ -1190,5 +1184,11 @@ pub const KEYS: &[KeySpec] = &[
         legacy: "",
         kind: "u64",
         bounds: Some((1.0, 2147483647.0)),
+    },
+    KeySpec {
+        path: "battletech.sensor_range",
+        legacy: "",
+        kind: "i64",
+        bounds: Some((0.0, 60.0)),
     },
 ];

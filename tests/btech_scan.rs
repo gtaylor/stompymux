@@ -59,11 +59,23 @@ async fn fixture_with_ranges(
     (dir, config, world, map, source, target)
 }
 
+/// Leave no channel that reaches anything: the sensor band switched off and no visibility.
+fn blind(world: &mut World, map: ObjectId) {
+    set_battle_map_perception(world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
+    set_battle_map_visibility(world, map, BattleLight::Day, 0).unwrap();
+}
+
+/// Restore the fixture's clear day with the sensor band switched back on.
+fn unblind(world: &mut World, map: ObjectId) {
+    set_battle_map_perception(world, map, BattleMapPerceptionFlag::Sensors, true).unwrap();
+    set_battle_map_visibility(world, map, BattleLight::Day, 30).unwrap();
+}
+
 /// Save a known contact without consuming acquisition dice.
 fn acquire(world: &mut World, source: ObjectId, target: ObjectId) {
     let mut value = serde_json::to_value(&world.btech).unwrap();
     value["constructed"][source.0.to_string()]["contacts"][target.0.to_string()] =
-        serde_json::json!({"primary": true, "secondary": false});
+        serde_json::json!({"identified": false});
     world.btech = serde_json::from_value(value).unwrap();
 }
 
@@ -291,6 +303,7 @@ async fn scan_warnings_follow_target_visibility_and_rollback_with_lua() {
     }
 }
 
+/// Coordinate scans pick acquired occupants in saved order and fail once nothing reaches the hex.
 #[tokio::test]
 async fn coordinate_scan_selects_visible_occupants_in_saved_order() {
     let (_dir, config, mut world, map, source, target) = fixture().await;
@@ -377,7 +390,7 @@ async fn coordinate_scan_selects_visible_occupants_in_saved_order() {
         );
     }
     assert!(scan_battle_hex_unit_action(&scripts, source, ObjectId(2), coordinate, "").is_err());
-    set_battle_map_visibility(&mut shared.borrow_mut(), map, BattleLight::Day, 0).unwrap();
+    blind(&mut shared.borrow_mut(), map);
     assert!(scan_battle_hex_unit_action(&scripts, source, ObjectId(1), coordinate, "").is_err());
 }
 
@@ -1363,9 +1376,9 @@ async fn long_range_maps_render_overlays_and_visible_contacts_without_mutation()
         .unwrap(),
         units
     );
-    let mut signature = world.btech.constructed_units()[&target].sensor_signature();
+    let mut signature = world.btech.constructed_units()[&target].signature();
     signature.team = 2;
-    set_battle_sensor_signature(&mut world, target, signature).unwrap();
+    set_battle_unit_signature(&mut world, target, signature).unwrap();
     let enemy = battle_long_range_map(
         &world,
         source,
@@ -1492,6 +1505,7 @@ async fn long_range_stacked_markers_share_native_lua_and_restart_order() {
     }
 }
 
+/// Long-range maps mask unreachable terrain and unacquired units; observers see projected centers.
 #[tokio::test]
 async fn long_range_maps_mask_dark_terrain_and_unacquired_units() {
     let (_dir, _config, mut world, map, source, _) = fixture().await;
@@ -1499,7 +1513,7 @@ async fn long_range_maps_mask_dark_terrain_and_unacquired_units() {
     state["constructed"][source.0.to_string()]["contacts"] = serde_json::json!({});
     state["maps"][map.0.to_string()]["flags"] = 32.into();
     world.btech = serde_json::from_value(state).unwrap();
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
+    blind(&mut world, map);
     let units = battle_long_range_map(
         &world,
         source,
@@ -1708,10 +1722,11 @@ async fn long_range_colors_follow_ansi_and_keep_labels_outside_styles() {
     );
 }
 
+/// Explicit visible-only long-range modes mask unreachable terrain in native, Lua and restart.
 #[tokio::test]
 async fn explicit_long_range_visibility_modes_filter_ordinary_maps() {
     let (_dir, config, mut world, map, source, _) = fixture().await;
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
+    blind(&mut world, map);
     let before = world.btech.clone();
     let terrain = battle_long_range_map(
         &world,
@@ -1785,7 +1800,7 @@ async fn explicit_long_range_visibility_modes_filter_ordinary_maps() {
         .unwrap(),
         limited
     );
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, 30).unwrap();
+    unblind(&mut world, map);
     let clear = battle_long_range_map(
         &world,
         source,
@@ -1798,10 +1813,13 @@ async fn explicit_long_range_visibility_modes_filter_ordinary_maps() {
     assert_eq!(clear.text, terrain.text);
 }
 
+/// Terrain fires and inferno burns light hexes at night so sight reaches them beyond visibility.
 #[tokio::test]
 async fn terrain_fire_and_inferno_illumination_follow_live_sources_without_acquisition() {
     let (_dir, config, mut world, map, source, target) = fixture().await;
     set_battle_map_visibility(&mut world, map, BattleLight::Night, 3).unwrap();
+    // Without the sensor band, only sight (and therefore illumination) reaches past three hexes.
+    set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
     let coordinate = BattleHexCoordinate { x: 1, y: 7 };
     let fire = BattleHexCoordinate { x: 1, y: 8 };
     assert!(!battle_hex_visible(&world, source, coordinate).unwrap());
@@ -1964,9 +1982,9 @@ async fn tactical_maps_render_contacts_and_underlying_terrain_with_native_lua_pa
     .unwrap();
     assert_eq!(text::plain(&monochrome.text), plain);
     assert!(!monochrome.text.contains("[fg="));
-    let mut signature = world.btech.constructed_units()[&target].sensor_signature();
+    let mut signature = world.btech.constructed_units()[&target].signature();
     signature.team = 2;
-    set_battle_sensor_signature(&mut world, target, signature).unwrap();
+    set_battle_unit_signature(&mut world, target, signature).unwrap();
     let enemy = battle_tactical_map(
         &world,
         source,
@@ -1981,10 +1999,11 @@ async fn tactical_maps_render_contacts_and_underlying_terrain_with_native_lua_pa
     );
 }
 
+/// Tactical maps mask hexes no channel reaches and share display admission with other views.
 #[tokio::test]
 async fn tactical_maps_mask_unseen_hexes_and_reuse_display_admission() {
     let (_dir, _config, mut world, map, source, _target) = fixture().await;
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
+    blind(&mut world, map);
     let before = world.btech.clone();
     let ordinary = battle_tactical_map(
         &world,
@@ -2381,9 +2400,9 @@ async fn landing_overlays_honor_saved_team_exclusions_and_terrain() {
         .unwrap(),
         report
     );
-    let mut signature = world.btech.constructed_units()[&source].sensor_signature();
+    let mut signature = world.btech.constructed_units()[&source].signature();
     signature.team = 2;
-    set_battle_sensor_signature(&mut world, source, signature).unwrap();
+    set_battle_unit_signature(&mut world, source, signature).unwrap();
     let exempt = battle_tactical_map(
         &world,
         source,
@@ -2473,6 +2492,7 @@ async fn landing_suitability_checks_full_hex_neighborhood_and_base_terrain() {
     }
 }
 
+/// Tactical mine overlays follow trigger fields and hex visibility without recognition rolls.
 #[tokio::test]
 async fn tactical_mines_filter_trigger_fields_and_visibility_without_recognition() {
     let (_dir, config, mut world, map, source, _target) = fixture().await;
@@ -2550,7 +2570,7 @@ async fn tactical_mines_filter_trigger_fields_and_visibility_without_recognition
     .unwrap();
     assert!(!text::plain(&trigger.text).contains("<>"));
     set_minefield(&mut world, map, 0, None).unwrap();
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
+    blind(&mut world, map);
     let hidden = battle_tactical_map(
         &world,
         source,
@@ -2686,9 +2706,9 @@ async fn navigation_combines_local_map_continuous_plot_and_readouts_without_muta
         battle_navigate(&world, source, ObjectId(1), "ab").unwrap(),
         report
     );
-    let mut signature = world.btech.constructed_units()[&target].sensor_signature();
+    let mut signature = world.btech.constructed_units()[&target].signature();
     signature.team = 2;
-    set_battle_sensor_signature(&mut world, target, signature).unwrap();
+    set_battle_unit_signature(&mut world, target, signature).unwrap();
     assert_eq!(
         text::plain(
             &battle_navigate(&world, source, ObjectId(1), "")
@@ -2997,6 +3017,7 @@ async fn mapdisplay_edits_only_its_player_and_survives_restart() {
     assert!(restarted.drain_outbox().is_empty());
 }
 
+/// Saved contact preferences filter lists but never show targets that are no longer perceived.
 #[tokio::test]
 async fn contact_preferences_filter_lists_without_bypassing_acquisition() {
     let (_dir, config, mut world, map, source, target) = fixture().await;
@@ -3047,9 +3068,9 @@ async fn contact_preferences_filter_lists_without_bypassing_acquisition() {
             .is_err()
     );
     assert_eq!(scripts.world().btech, before);
-    let mut signature = world.btech.constructed_units()[&target].sensor_signature();
+    let mut signature = world.btech.constructed_units()[&target].signature();
     signature.team = 2;
-    set_battle_sensor_signature(&mut world, target, signature).unwrap();
+    set_battle_unit_signature(&mut world, target, signature).unwrap();
     let enemies = BattleContactPreferences {
         include_allies: false,
         include_target: false,
@@ -3136,7 +3157,7 @@ async fn contact_preferences_filter_lists_without_bypassing_acquisition() {
         battle_view_dimensions(&restored, ObjectId(1)).unwrap(),
         dimensions
     );
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
+    blind(&mut world, map);
     assert!(
         filtered_battle_contacts(&world, source, selected)
             .unwrap()
@@ -3144,6 +3165,7 @@ async fn contact_preferences_filter_lists_without_bypassing_acquisition() {
     );
 }
 
+/// Contact option strings filter one listing without saving preferences, matching Lua filters.
 #[tokio::test]
 async fn contact_option_strings_are_transient_and_match_lua_filtering() {
     let (_dir, config, mut world, map, source, target) = fixture().await;
@@ -3215,7 +3237,7 @@ async fn contact_option_strings_are_transient_and_match_lua_filtering() {
             == 1
     );
     let mut saved = selected.world().clone();
-    set_battle_map_visibility(&mut saved, map, BattleLight::Day, 0).unwrap();
+    blind(&mut saved, map);
     assert!(
         filtered_battle_contacts(
             &saved,
@@ -3233,6 +3255,7 @@ async fn contact_option_strings_are_transient_and_match_lua_filtering() {
     );
 }
 
+/// Building contacts identify concealed structures, roll back failed locks and need perception.
 #[tokio::test]
 async fn building_contacts_identify_concealed_structures_and_rollback_failed_locks() {
     let (_dir, config, mut world, map, source, _target) = fixture().await;
@@ -3334,13 +3357,13 @@ async fn building_contacts_identify_concealed_structures_and_rollback_failed_loc
             "_parents['default_room.lua'].locks.identify_building=function(ctx) return true end",
         )
         .unwrap();
-    set_battle_map_visibility(&mut shared.borrow_mut(), map, BattleLight::Day, 0).unwrap();
+    blind(&mut shared.borrow_mut(), map);
     assert!(
         battle_building_contacts(&scripts, source, ObjectId(1))
             .unwrap()
             .is_empty()
     );
-    set_battle_map_visibility(&mut shared.borrow_mut(), map, BattleLight::Day, 30).unwrap();
+    unblind(&mut shared.borrow_mut(), map);
     let saved = scripts.world().clone();
     persistence::save(&config.database(), &saved).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
@@ -3538,9 +3561,9 @@ async fn brief_modes_are_unit_owned_and_control_buildings_and_notices() {
             !matches!(mode, 2 | 3 | 5 | 6)
         );
         let mut hostile = scripts.world().clone();
-        let mut signature = hostile.btech.constructed_units()[&target].sensor_signature();
+        let mut signature = hostile.btech.constructed_units()[&target].signature();
         signature.team = 99;
-        set_battle_sensor_signature(&mut hostile, target, signature).unwrap();
+        set_battle_unit_signature(&mut hostile, target, signature).unwrap();
         assert_eq!(event.notice(&hostile).is_some(), mode != 6);
         let warning = BattleContactEvent {
             acquired: false,
@@ -3682,6 +3705,7 @@ async fn contact_modes_order_buildings_wrecks_and_units_without_changing_lua_que
     );
 }
 
+/// Contact status columns share precedence in native rows and Lua, and vanish when unperceived.
 #[tokio::test]
 async fn contact_status_columns_share_precedence_with_native_and_lua() {
     let (_dir, config, world, map, source, target) = fixture().await;
@@ -3713,7 +3737,7 @@ async fn contact_status_columns_share_precedence_with_native_and_lua() {
             "   Sn",
         ),
         (
-            serde_json::json!({"beacons":{"CenterTorso":["homing"]},"sensor_signature":{"team":99,"hidden":false,"illuminated":false}}),
+            serde_json::json!({"beacons":{"CenterTorso":["homing"]},"signature":{"team":99,"hidden":false,"illuminated":false}}),
             "   SN",
         ),
         (
@@ -3769,7 +3793,7 @@ async fn contact_status_columns_share_precedence_with_native_and_lua() {
             .status,
         "   S "
     );
-    set_battle_map_visibility(&mut shared.borrow_mut(), map, BattleLight::Day, 0).unwrap();
+    blind(&mut shared.borrow_mut(), map);
     assert!(
         visible_battle_contact(&scripts.world(), source, target)
             .unwrap()
@@ -3777,44 +3801,35 @@ async fn contact_status_columns_share_precedence_with_native_and_lua() {
     );
 }
 
+/// Contact views recheck which channel reaches the target from current map conditions without
+/// rewriting the saved acquisition, and native rows, Lua and restart agree on the channel.
 #[tokio::test]
-async fn contact_sensor_roles_recheck_visibility_without_rewriting_acquisition() {
-    let (_dir, config, world, _map, source, target) = fixture().await;
-    let mut baseline = serde_json::to_value(&world.btech).unwrap();
-    baseline["seismic_detect_stopped"] = serde_json::json!(false);
+async fn contact_detection_rechecks_channels_without_rewriting_acquisition() {
+    let (_dir, config, world, map, source, target) = fixture().await;
+    let baseline = world.btech.clone();
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
-    for (primary, secondary, expected) in [
-        (
-            BattleSensorMode::Visual,
-            BattleSensorMode::Visual,
-            Some((true, true)),
-        ),
-        (
-            BattleSensorMode::Visual,
-            BattleSensorMode::Seismic,
-            Some((true, false)),
-        ),
-        (
-            BattleSensorMode::Seismic,
-            BattleSensorMode::Visual,
-            Some((false, true)),
-        ),
-        (BattleSensorMode::Seismic, BattleSensorMode::Seismic, None),
+    for (sensors, visibility, expected) in [
+        (true, 30, Some(BattleDetectionChannel::Sensors)),
+        (true, 0, Some(BattleDetectionChannel::Sensors)),
+        (false, 30, Some(BattleDetectionChannel::Sight)),
+        (false, 0, None),
     ] {
-        let mut state = baseline.clone();
-        state["constructed"][source.0.to_string()]["sensor_selection"]["active"] =
-            serde_json::to_value(BattleSensorPair { primary, secondary }).unwrap();
-        shared.borrow_mut().btech = serde_json::from_value(state).unwrap();
+        shared.borrow_mut().btech = baseline.clone();
+        set_battle_map_perception(
+            &mut shared.borrow_mut(),
+            map,
+            BattleMapPerceptionFlag::Sensors,
+            sensors,
+        )
+        .unwrap();
+        set_battle_map_visibility(&mut shared.borrow_mut(), map, BattleLight::Day, visibility)
+            .unwrap();
         let before = scripts.world().btech.clone();
         let contact = visible_battle_contact(&scripts.world(), source, target).unwrap();
-        assert_eq!(
-            contact
-                .as_ref()
-                .map(|c| (c.sensors.primary, c.sensors.secondary)),
-            expected
-        );
-        if let Some((p, s)) = expected {
+        assert_eq!(contact.as_ref().map(|c| c.detection), expected.map(Some));
+        if let Some(channel) = expected {
+            let contact = contact.unwrap();
             let text = support::run_text(
                 &scripts,
                 &config,
@@ -3824,28 +3839,29 @@ async fn contact_sensor_roles_recheck_visibility_without_rewriting_acquisition()
             );
             assert!(
                 text::plain(&text).contains(&format!(
-                    "{}{}{}[{}]",
-                    if p { 'P' } else { ' ' },
-                    if s { 'S' } else { ' ' },
-                    contact.as_ref().unwrap().weapon_arc.symbol(),
-                    contact.as_ref().unwrap().label
+                    "{} {}[{}]",
+                    channel.code(true),
+                    contact.weapon_arc.symbol(),
+                    contact.label
                 )),
                 "{text}"
             );
-            let lua: mlua::Table = scripts
+            let lua: String = scripts
                 .eval_callback(&format!(
-                    "return btech.unit.contacts({})[1].sensors",
+                    "return btech.unit.contacts({})[1].detection",
                     source.0
                 ))
                 .unwrap();
-            assert_eq!(
-                serde_json::to_value(lua).unwrap(),
-                serde_json::to_value(contact.unwrap().sensors).unwrap()
-            );
+            assert_eq!(lua, channel.name());
         }
         assert_eq!(scripts.world().btech, before);
+        assert!(
+            scripts.world().btech.constructed_units()[&source]
+                .contacts()
+                .contains_key(&target)
+        );
     }
-    shared.borrow_mut().btech = serde_json::from_value(baseline).unwrap();
+    shared.borrow_mut().btech = baseline;
     let saved = scripts.world().clone();
     persistence::save(&config.database(), &saved).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
@@ -3853,11 +3869,8 @@ async fn contact_sensor_roles_recheck_visibility_without_rewriting_acquisition()
         visible_battle_contact(&restored, source, target)
             .unwrap()
             .unwrap()
-            .sensors,
-        BattleContactSensors {
-            primary: true,
-            secondary: true
-        }
+            .detection,
+        Some(BattleDetectionChannel::Sensors)
     );
     let mut state = serde_json::to_value(&restored.btech).unwrap();
     state["constructed"][source.0.to_string()]["contacts"] = serde_json::json!({});
@@ -3869,6 +3882,7 @@ async fn contact_sensor_roles_recheck_visibility_without_rewriting_acquisition()
     );
 }
 
+/// Contact weapon arcs follow observer heading and torso twist in native rows, Lua and restart.
 #[tokio::test]
 async fn contact_weapon_arc_tracks_observer_pose_in_native_lua_and_restart() {
     let (_dir, config, world, _map, source, target) = fixture().await;
@@ -3906,7 +3920,7 @@ async fn contact_weapon_arc_tracks_observer_pose_in_native_lua_and_restart() {
             &format!("contacts #{}", target.0),
         );
         assert!(
-            text::plain(&text).contains(&format!("PS{}[{}]", expected.symbol(), contact.label)),
+            text::plain(&text).contains(&format!("S {}[{}]", expected.symbol(), contact.label)),
             "{text}"
         );
         let arc: String = scripts
@@ -3953,7 +3967,7 @@ async fn automatic_contact_modes_control_detail_color_and_escaping() {
             let mut state = baseline.clone();
             state["constructed"][source.0.to_string()]["brief"]["automatic"] =
                 serde_json::json!(mode);
-            state["constructed"][target.0.to_string()]["sensor_signature"]["team"] =
+            state["constructed"][target.0.to_string()]["signature"]["team"] =
                 serde_json::json!(if friendly { 0 } else { 99 });
             shared.borrow_mut().btech = serde_json::from_value(state).unwrap();
             let before = scripts.world().btech.clone();
@@ -4016,11 +4030,12 @@ async fn automatic_contact_modes_control_detail_color_and_escaping() {
     assert!(!notice.text.contains("[fg=red]"));
 }
 
+/// Loss notices name the target only when the saved contact was identified before removal.
 #[tokio::test]
 async fn loss_notices_preserve_saved_identification_before_contact_removal() {
     let (_dir, config, mut world, map, source, target) = fixture().await;
     set_battle_autocon_shutdown(&mut world, source, ObjectId(1), true).unwrap();
-    let _ = refresh_optical_scanners(&mut world, &[source]).unwrap();
+    let _ = refresh_battle_contacts(&mut world, &[source]).unwrap();
     assert!(world.btech.constructed_units()[&source].contacts()[&target].identified);
     persistence::save(&config.database(), &world).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
@@ -4031,8 +4046,8 @@ async fn loss_notices_preserve_saved_identification_before_contact_removal() {
             serde_json::json!(identified);
         let mut loss = restored.clone();
         loss.btech = serde_json::from_value(state).unwrap();
-        set_battle_map_visibility(&mut loss, map, BattleLight::Day, 0).unwrap();
-        let events = refresh_optical_scanners(&mut loss, &[source]).unwrap();
+        blind(&mut loss, map);
+        let events = refresh_battle_contacts(&mut loss, &[source]).unwrap();
         let event = events.iter().find(|event| event.target == target).unwrap();
         assert!(!event.acquired);
         assert_eq!(event.identified, identified);
@@ -4048,25 +4063,18 @@ async fn loss_notices_preserve_saved_identification_before_contact_removal() {
             identified
         );
         assert!(
-            refresh_optical_scanners(&mut loss, &[source])
+            refresh_battle_contacts(&mut loss, &[source])
                 .unwrap()
                 .is_empty()
         );
     }
 }
 
+/// A probe contact behind a ridge stays unidentified: its identity, status and friendly
+/// category are hidden in native rows, Lua and after restart.
 #[tokio::test]
-async fn seismic_contacts_through_terrain_hide_identity_and_friendly_categories() {
-    let (dir, _config, mut world, _old_map, source, target) = fixture().await;
-    let path = dir.path().join("stompymux.toml");
-    let mut configuration: toml::Value =
-        toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-    configuration["battletech"]
-        .as_table_mut()
-        .unwrap()
-        .insert("seismic_see_stopped".into(), 1.into());
-    std::fs::write(&path, toml::to_string(&configuration).unwrap()).unwrap();
-    let config = Config::load(dir.path()).unwrap();
+async fn probe_contacts_through_terrain_hide_identity_and_friendly_categories() {
+    let (_dir, config, mut world, _old_map, source, target) = fixture().await;
     let map = world.create(&config, "Ridge field".into(), Kind::Room);
     create_battle_map(
         &mut world,
@@ -4092,17 +4100,17 @@ async fn seismic_contacts_through_terrain_hide_identity_and_friendly_categories(
     for _ in 0..5 {
         let _ = advance_battle_units(&mut world, 0);
     }
-    configure_battle_sensor_policy(&mut world, true);
     let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][source.0.to_string()]["sensor_selection"]["active"] =
-        serde_json::to_value(BattleSensorPair {
-            primary: BattleSensorMode::Seismic,
-            secondary: BattleSensorMode::Visual,
-        })
-        .unwrap();
+    state["constructed"][source.0.to_string()]["definition"]["sections"]["LeftTorso"]["criticals"]
+        ["8"] = serde_json::json!({"equipment":"BeagleProbe","data":"-","modes":[],"brand":null});
     world.btech = serde_json::from_value(state).unwrap();
+    assert!(
+        battle_unit_terrain_los(&world, source, target)
+            .unwrap()
+            .blocked
+    );
     acquire(&mut world, source, target);
-    let _ = refresh_optical_scanners(&mut world, &[source]).unwrap();
+    let _ = refresh_battle_contacts(&mut world, &[source]).unwrap();
     assert!(!world.btech.constructed_units()[&source].contacts()[&target].identified);
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let before = scripts.world().btech.clone();
@@ -4112,7 +4120,8 @@ async fn seismic_contacts_through_terrain_hide_identity_and_friendly_categories(
     assert!(!view.identified && !view.friendly);
     assert_eq!(view.name, "something");
     assert_eq!(view.status, "     ");
-    assert!(view.sensors.primary && !view.sensors.secondary);
+    assert_eq!(view.detection, Some(BattleDetectionChannel::Probe));
+    assert!(view.short_text.starts_with("p "), "{}", view.short_text);
     let native = support::run_text(&scripts, &config, ObjectId(1), 1, "contacts");
     assert!(native.contains("something"));
     assert!(
@@ -4136,6 +4145,10 @@ async fn seismic_contacts_through_terrain_hide_identity_and_friendly_categories(
     assert_eq!(lua.get::<bool>("friendly").unwrap(), view.friendly);
     assert_eq!(lua.get::<String>("name").unwrap(), view.name);
     assert_eq!(lua.get::<String>("status").unwrap(), view.status);
+    assert_eq!(
+        lua.get::<String>("detection").unwrap(),
+        BattleDetectionChannel::Probe.name()
+    );
     let range: mlua::Table = lua.get("range").unwrap();
     assert_eq!(range.get::<f64>("spatial").unwrap(), view.range.spatial);
     assert_eq!(scripts.world().btech, before);
@@ -4235,6 +4248,7 @@ async fn shutdown_contact_notice_preference_is_independent_and_durable() {
     );
 }
 
+/// Compact contact rows lead with the detection code and keep fixed columns and bounded names.
 #[tokio::test]
 async fn compact_contact_rows_have_fixed_columns_and_bounded_names() {
     let (_dir, config, world, _map, source, target) = fixture().await;
@@ -4243,7 +4257,7 @@ async fn compact_contact_rows_have_fixed_columns_and_bounded_names() {
     let row = visible_battle_contact(&scripts.world(), source, target)
         .unwrap()
         .unwrap();
-    let expected = "PSv[ab]B Jenner       x:  1 y:  2 z:  0 r: 1.0 b:180 s:  0.0 h:  0 S:   S ";
+    let expected = "S v[ab]B Jenner       x:  1 y:  2 z:  0 r: 1.0 b:180 s:  0.0 h:  0 S:   S ";
     assert_eq!(row.short_text, expected);
     assert_eq!(row.label, "ab");
     assert_eq!(row.coordinate, BattleHexCoordinate { x: 1, y: 2 });
@@ -4286,18 +4300,20 @@ async fn compact_contact_rows_have_fixed_columns_and_bounded_names() {
     let row = visible_battle_contact(&scripts.world(), source, target)
         .unwrap()
         .unwrap();
-    assert!(row.short_text.starts_with("PSv[ab]B Very Long Un x:"));
+    assert!(row.short_text.starts_with("S v[ab]B Very Long Un x:"));
     assert!(!row.short_text.contains("[fg="));
 }
 
+/// Building rows lead with the channel that reaches the entrance hex, shared by native, Lua and
+/// restart, and disappear once neither the sensor band nor sight reaches it.
 #[tokio::test]
-async fn compact_building_rows_share_terrain_sensor_roles() {
+async fn compact_building_rows_share_terrain_detection_channels() {
     let (_dir, config, mut world, map, source, _target) = fixture().await;
     let _ = scan_structure(&mut world, &config, map);
-    let baseline = serde_json::to_value(&world.btech).unwrap();
+    let baseline = world.btech.clone();
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
-    let expected = "PSv Hangar                  x:  1 y:  2 z: 1 r: 1.0 b:180 CF:  31 /  50 S:  ";
+    let expected = "S v Hangar                  x:  1 y:  2 z: 1 r: 1.0 b:180 CF:  31 /  50 S:  ";
     let contacts = battle_building_contacts(&scripts, source, ObjectId(1)).unwrap();
     assert_eq!(contacts[0].short_text, expected);
     assert_eq!(contacts[0].text(), expected);
@@ -4309,48 +4325,39 @@ async fn compact_building_rows_share_terrain_sensor_roles() {
         ))
         .unwrap();
     assert_eq!(lua, expected);
-    for (primary, secondary, flags) in [
-        (
-            BattleSensorMode::Visual,
-            BattleSensorMode::Seismic,
-            (true, false),
-        ),
-        (
-            BattleSensorMode::Seismic,
-            BattleSensorMode::Visual,
-            (false, true),
-        ),
-        (
-            BattleSensorMode::Seismic,
-            BattleSensorMode::Seismic,
-            (false, false),
-        ),
+    for (sensors, visibility, expected) in [
+        (true, 0, Some(BattleDetectionChannel::Sensors)),
+        (false, 30, Some(BattleDetectionChannel::Sight)),
+        (false, 0, None),
     ] {
-        let mut state = baseline.clone();
-        state["constructed"][source.0.to_string()]["sensor_selection"]["active"] =
-            serde_json::to_value(BattleSensorPair { primary, secondary }).unwrap();
-        shared.borrow_mut().btech = serde_json::from_value(state).unwrap();
-        let before = scripts.world().btech.clone();
-        let roles = battle_hex_sensor_visibility(
-            &scripts.world(),
-            source,
-            BattleHexCoordinate { x: 1, y: 2 },
+        shared.borrow_mut().btech = baseline.clone();
+        set_battle_map_perception(
+            &mut shared.borrow_mut(),
+            map,
+            BattleMapPerceptionFlag::Sensors,
+            sensors,
         )
         .unwrap();
-        assert_eq!((roles.primary, roles.secondary), flags);
+        set_battle_map_visibility(&mut shared.borrow_mut(), map, BattleLight::Day, visibility)
+            .unwrap();
+        let before = scripts.world().btech.clone();
+        let detection =
+            battle_hex_perception(&scripts.world(), source, BattleHexCoordinate { x: 1, y: 2 })
+                .unwrap();
+        assert_eq!(detection, expected);
         let contacts = battle_building_contacts(&scripts, source, ObjectId(1)).unwrap();
-        assert_eq!(contacts.is_empty(), !flags.0 && !flags.1);
+        assert_eq!(contacts.is_empty(), expected.is_none());
         if let Some(contact) = contacts.first() {
-            assert_eq!(contact.sensors, roles);
-            assert!(contact.short_text.starts_with(&format!(
-                "{}{}v ",
-                if flags.0 { 'P' } else { ' ' },
-                if flags.1 { 'S' } else { ' ' }
-            )));
+            assert_eq!(contact.detection, detection);
+            assert!(
+                contact
+                    .short_text
+                    .starts_with(&format!("{} v ", detection.unwrap().code(true)))
+            );
         }
         assert_eq!(scripts.world().btech, before);
     }
-    shared.borrow_mut().btech = serde_json::from_value(baseline).unwrap();
+    shared.borrow_mut().btech = baseline;
     let saved = scripts.world().clone();
     persistence::save(&config.database(), &saved).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
@@ -4381,9 +4388,9 @@ async fn contact_colors_prioritize_selection_and_escape_row_data() {
     let selected = support::run_text(&scripts, &config, ObjectId(1), 1, "contacts");
     assert!(selected.contains(&view.styled_short_text(true)));
     assert!(view.styled_short_text(true).starts_with("[fg=red bold]"));
-    let mut signature = scripts.world().btech.constructed_units()[&target].sensor_signature();
+    let mut signature = scripts.world().btech.constructed_units()[&target].signature();
     signature.team = 99;
-    set_battle_sensor_signature(&mut shared.borrow_mut(), target, signature).unwrap();
+    set_battle_unit_signature(&mut shared.borrow_mut(), target, signature).unwrap();
     let hostile = visible_battle_contact(&scripts.world(), source, target)
         .unwrap()
         .unwrap();
@@ -5149,6 +5156,7 @@ async fn eta_uses_horizontal_range_absolute_speed_and_only_plain_hex_defaults() 
     );
 }
 
+/// Bearing queries share defaults and bounds and require a live view of the target.
 #[tokio::test]
 async fn bearing_queries_share_defaults_bounds_and_live_visibility_without_mutation() {
     let (_dir, config, mut world, map, source, target) = fixture().await;
@@ -5214,7 +5222,7 @@ async fn bearing_queries_share_defaults_bounds_and_live_visibility_without_mutat
         battle_bearing(&restored, source, ObjectId(1), "").unwrap(),
         battle_bearing(&scripts.world(), source, ObjectId(1), "").unwrap()
     );
-    set_battle_map_visibility(&mut shared.borrow_mut(), map, BattleLight::Day, 0).unwrap();
+    blind(&mut shared.borrow_mut(), map);
     assert!(
         battle_bearing(&scripts.world(), source, ObjectId(1), "")
             .unwrap_err()
@@ -5266,6 +5274,7 @@ async fn bearing_queries_share_defaults_bounds_and_live_visibility_without_mutat
     );
 }
 
+/// Range reports refuse unperceived targets but keep live target elevation otherwise.
 #[tokio::test]
 async fn range_reports_mask_dark_terrain_but_preserve_live_target_elevation() {
     let (_dir, config, world, map, source, target) = fixture().await;
@@ -5350,7 +5359,7 @@ async fn range_reports_mask_dark_terrain_but_preserve_live_target_elevation() {
         ))
         .unwrap();
     assert_eq!(spatial, report.spatial);
-    set_battle_map_visibility(&mut shared.borrow_mut(), map, BattleLight::Day, 0).unwrap();
+    blind(&mut shared.borrow_mut(), map);
     assert!(battle_range_report(&scripts.world(), source, ObjectId(1), "").is_err());
     assert!(battle_range_report(&scripts.world(), source, ObjectId(1), "1 2").is_ok());
     shared.borrow_mut().btech = serde_json::from_value(baseline).unwrap();
@@ -5363,6 +5372,7 @@ async fn range_reports_mask_dark_terrain_but_preserve_live_target_elevation() {
     );
 }
 
+/// Vector reports combine signed heights and bearings for every coordinate form.
 #[tokio::test]
 async fn vector_reports_combine_signed_heights_bearings_and_all_coordinate_forms() {
     let (_dir, config, mut world, map, source, target) = fixture().await;
@@ -5469,7 +5479,7 @@ async fn vector_reports_combine_signed_heights_bearings_and_all_coordinate_forms
             .spatial,
         1.0
     );
-    set_battle_map_visibility(&mut shared.borrow_mut(), map, BattleLight::Day, 0).unwrap();
+    blind(&mut shared.borrow_mut(), map);
     assert!(battle_vector_report(&scripts.world(), source, ObjectId(1), "").is_err());
     assert!(battle_vector_report(&scripts.world(), source, ObjectId(1), "1 2 5").is_ok());
 }

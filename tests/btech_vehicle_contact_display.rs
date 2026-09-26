@@ -69,16 +69,16 @@ async fn vehicle_contact_rows_use_movement_labels_and_match_native_lua() {
             place_battle_unit(&mut world, id, map, 0, 0).unwrap();
         }
         power(&mut world, &ids, BattlePower::Running);
-        set_battle_sensor_signature(
+        set_battle_unit_signature(
             &mut world,
             d,
-            BattleSensorSignature {
+            BattleUnitSignature {
                 team: 17,
                 ..Default::default()
             },
         )
         .unwrap();
-        refresh_optical_scanners(&mut world, &ids).unwrap();
+        refresh_battle_contacts(&mut world, &ids).unwrap();
         let before = world.btech.clone();
         for observer in [a, c] {
             let contacts = visible_battle_contacts(&world, observer).unwrap();
@@ -136,6 +136,8 @@ async fn vehicle_contact_rows_use_movement_labels_and_match_native_lua() {
     }
 }
 
+/// Shutdown, destruction and preferences filter views; live views recheck perception without
+/// rerolls or dropping stored contacts.
 #[tokio::test]
 async fn vehicle_contact_views_filter_conditions_and_recheck_visibility_without_rerolls() {
     let (_dir, _config, mut world, map, ids) = fixture(
@@ -148,7 +150,7 @@ async fn vehicle_contact_views_filter_conditions_and_recheck_visibility_without_
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     }
     power(&mut world, &ids, BattlePower::Running);
-    refresh_optical_scanners(&mut world, &ids).unwrap();
+    refresh_battle_contacts(&mut world, &ids).unwrap();
     power(&mut world, &[d], BattlePower::Off);
     assert_eq!(
         visible_battle_contact(&world, c, d)
@@ -201,9 +203,18 @@ async fn vehicle_contact_views_filter_conditions_and_recheck_visibility_without_
         .iter()
         .any(|v| v.target == d)
     );
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["maps"][map.0.to_string()]["sensor_flags"] = serde_json::json!(1);
-    world.btech = serde_json::from_value(saved).unwrap();
+    // Units sharing one hex always see each other, so hide the targets by operator flag instead.
+    for id in [a, ids[1], d] {
+        set_battle_visibility(
+            &mut world,
+            id,
+            BattleVisibility {
+                invisible: true,
+                clairvoyant: false,
+            },
+        )
+        .unwrap();
+    }
     let before = world.btech.clone();
     assert!(visible_battle_contacts(&world, c).unwrap().is_empty());
     assert!(visible_battle_contact(&world, a, d).unwrap().is_none());
@@ -223,7 +234,7 @@ async fn newly_visible_vehicle_targets_do_not_panic_in_mech_consumers() {
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     }
     power(&mut world, &ids, BattlePower::Running);
-    refresh_optical_scanners(&mut world, &ids).unwrap();
+    refresh_battle_contacts(&mut world, &ids).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(a);
     assign_battle_pilot(&mut world, a, ObjectId(1)).unwrap();
     let before = world.btech.clone();

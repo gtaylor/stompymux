@@ -93,7 +93,7 @@ async fn streak_lrm_matrix(weapon: BattleWeapon) {
             state["motion"]["point"] =
                 serde_json::to_value(BattleHexCoordinate { x: 0, y: 4 }.center()).unwrap();
         });
-        refresh_optical_scanners(&mut base, &[shooter]).unwrap();
+        refresh_battle_contacts(&mut base, &[shooter]).unwrap();
         for (shape, roll) in [2u8, 12].into_iter().enumerate() {
             support::restore_database(&config, &pristine_db);
             let mut world = base.clone();
@@ -201,7 +201,7 @@ async fn streak_lrm_automatic_defense_across_chassis() {
             firing::edit(&mut world, shooter, |state| {
                 state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
             });
-            refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+            refresh_battle_contacts(&mut world, &[shooter]).unwrap();
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
             let report: mlua::Table = scripts
                 .eval_callback(&format!(

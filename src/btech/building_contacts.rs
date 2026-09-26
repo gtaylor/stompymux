@@ -7,7 +7,8 @@ use serde::Serialize;
 /// One identified or restricted visible entrance, without mine or character-skill disclosure.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct BattleBuildingContact {
-    pub sensors: super::BattleContactSensors,
+    /// Whether the sensor band or sight reaches the entrance hex.
+    pub detection: Option<super::BattleDetectionChannel>,
     /// Plain compact building row after lock evaluation.
     pub short_text: String,
     /// General observer torso direction toward the entrance.
@@ -36,8 +37,8 @@ impl BattleBuildingContact {
         let name: String = crate::text::plain(&self.name).chars().take(23).collect();
         format!(
             "{}{}{} {:<23} x:{:>3} y:{:>3} z:{:>2} r:{:>4.1} b:{:>3} CF:{:>4} /{:>4} S:{}{}",
-            if self.sensors.primary { 'P' } else { ' ' },
-            if self.sensors.secondary { 'S' } else { ' ' },
+            super::contacts::detection_code(self.detection, true),
+            ' ',
             self.weapon_arc.symbol(),
             name,
             self.coordinate.x,
@@ -165,9 +166,8 @@ fn candidate(
     if interior.building.is_invisible() {
         return Ok(None);
     }
-    let observation = super::hex_visibility::observation(world, observer, entrance.coordinate)?;
-    let sensors = observation.sensors;
-    if !observation.visible
+    let detection = super::hex_detection(world, observer, entrance.coordinate)?;
+    if detection.is_none()
         || !super::visibility::hex_unblocked(world, observer, entrance.coordinate)?
     {
         return Ok(None);
@@ -187,7 +187,7 @@ fn candidate(
     let heading = unit.heading.context("Unit has no heading")?;
     let bearing = point.bearing(center)?.unwrap_or(180.0);
     Ok(Some(BattleBuildingContact {
-        sensors,
+        detection,
         short_text: String::new(),
         weapon_arc: unit.facing.contact_arc(
             if unit.vehicle {

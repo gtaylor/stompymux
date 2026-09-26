@@ -12,6 +12,22 @@ async fn field_with_classic(
     master_counts: &[usize],
     slaves: bool,
 ) -> (tempfile::TempDir, Config, World, Vec<(ObjectId, ObjectId)>) {
+    field_with_equipment(master_counts, slaves, &[]).await
+}
+
+/// Seven C3i units where the listed indices also carry a Beagle active probe.
+async fn field_with_probes(
+    probes: &[usize],
+) -> (tempfile::TempDir, Config, World, Vec<(ObjectId, ObjectId)>) {
+    field_with_equipment(&[0; 7], false, probes).await
+}
+
+/// Build the network field with the requested classic computers, slaves and active probes.
+async fn field_with_equipment(
+    master_counts: &[usize],
+    slaves: bool,
+    probes: &[usize],
+) -> (tempfile::TempDir, Config, World, Vec<(ObjectId, ObjectId)>) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Network field".into(), Kind::Room);
     create_battle_map(
@@ -78,6 +94,22 @@ async fn field_with_classic(
                     );
             }
         }
+        if probes.contains(&i) {
+            template
+                .sections
+                .get_mut(&BattleSection::RightArm)
+                .unwrap()
+                .criticals
+                .insert(
+                    8,
+                    CriticalDefinition {
+                        equipment: "BeagleProbe".into(),
+                        data: "-".into(),
+                        modes: vec![],
+                        brand: None,
+                    },
+                );
+        }
         if i == 6 {
             template
                 .sections
@@ -127,7 +159,7 @@ async fn field_with_classic(
         for &(other, _) in &units {
             if id != other {
                 encoded["constructed"][id.0.to_string()]["contacts"][other.0.to_string()] =
-                    serde_json::json!({"primary":true,"secondary":false,"identified":true});
+                    serde_json::json!({"identified":true});
             }
         }
     }
@@ -237,10 +269,10 @@ async fn interference_is_temporary_but_hardware_team_and_map_loss_disconnect() {
     join_leave_battle_c3i(&mut world, first, pilot, Some(units[1].0)).unwrap();
     let connected = world.clone();
     let (jammer, jammer_pilot) = units[6];
-    set_battle_sensor_signature(
+    set_battle_unit_signature(
         &mut world,
         jammer,
-        BattleSensorSignature {
+        BattleUnitSignature {
             team: 2,
             ..Default::default()
         },
@@ -290,16 +322,16 @@ async fn interference_is_temporary_but_hardware_team_and_map_loss_disconnect() {
     world.validate(&config).unwrap();
 
     let mut world = connected.clone();
-    set_battle_sensor_signature(
+    set_battle_unit_signature(
         &mut world,
         first,
-        BattleSensorSignature {
+        BattleUnitSignature {
             team: 1,
             ..Default::default()
         },
     )
     .unwrap();
-    set_battle_sensor_signature(&mut world, first, BattleSensorSignature::default()).unwrap();
+    set_battle_unit_signature(&mut world, first, BattleUnitSignature::default()).unwrap();
     assert!(battle_c3i_members(&world, first).unwrap().is_empty());
     world.validate(&config).unwrap();
 
@@ -329,10 +361,10 @@ async fn interference_is_temporary_but_hardware_team_and_map_loss_disconnect() {
 async fn invalid_saved_networks_and_unfriendly_admission_are_rejected() {
     let (_dir, config, mut world, units) = field().await;
     let (first, pilot) = units[0];
-    set_battle_sensor_signature(
+    set_battle_unit_signature(
         &mut world,
         units[1].0,
-        BattleSensorSignature {
+        BattleUnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -357,16 +389,16 @@ async fn invalid_saved_networks_and_unfriendly_admission_are_rejected() {
     }
 }
 
+/// A friendly unit found only by an active probe through a hill joins without revealing its name.
 #[tokio::test]
 async fn unidentified_friendly_contact_can_join_without_disclosing_its_name() {
-    let (_dir, _config, mut world, units) = field().await;
+    let (_dir, _config, mut world, units) = field_with_probes(&[0]).await;
     let (first, pilot) = units[0];
     let target = units[2].0;
     let map = world.btech.constructed_units()[&first]
         .position()
         .unwrap()
         .map;
-    configure_battle_sensor_policy(&mut world, true);
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     for x in 0..20 {
         encoded["maps"][map.0.to_string()]["terrain"][11 * 20 + x] =
@@ -376,17 +408,17 @@ async fn unidentified_friendly_contact_can_join_without_disclosing_its_name() {
             })
             .unwrap();
     }
-    encoded["constructed"][first.0.to_string()]["sensor_selection"]["active"] =
-        serde_json::to_value(BattleSensorPair {
-            primary: BattleSensorMode::Seismic,
-            secondary: BattleSensorMode::Visual,
-        })
-        .unwrap();
     world.btech = serde_json::from_value(encoded).unwrap();
     let contact = visible_battle_contact(&world, first, target)
         .unwrap()
         .unwrap();
     assert!(!contact.identified && !contact.friendly);
+    assert_eq!(contact.detection, Some(BattleDetectionChannel::Probe));
+    assert!(
+        contact.short_text.starts_with("p "),
+        "{}",
+        contact.short_text
+    );
     let notices = join_leave_battle_c3i(&mut world, first, pilot, Some(target)).unwrap();
     assert!(
         notices
@@ -450,10 +482,10 @@ async fn shared_range_preserves_physical_minimum_maximum_and_extended_rules() {
     let peer = units[5].0;
     let target = units[6].0;
     join_leave_battle_c3i(&mut world, first, pilot, Some(peer)).unwrap();
-    set_battle_sensor_signature(
+    set_battle_unit_signature(
         &mut world,
         target,
-        BattleSensorSignature {
+        BattleUnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -551,10 +583,10 @@ async fn shared_range_ignores_unavailable_peers_and_does_not_grant_firing_visibi
     let (peer, peer_pilot) = units[5];
     let (target, target_pilot) = units[6];
     join_leave_battle_c3i(&mut world, first, pilot, Some(peer)).unwrap();
-    set_battle_sensor_signature(
+    set_battle_unit_signature(
         &mut world,
         target,
-        BattleSensorSignature {
+        BattleUnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -607,7 +639,7 @@ async fn shared_range_ignores_unavailable_peers_and_does_not_grant_firing_visibi
     let unseen = battle_aim_modifiers(&world, first, target, index, 4, aim_rules()).unwrap();
     assert_eq!(unseen.network_range.unwrap().source, Some(peer));
     assert_eq!(unseen.range.unwrap().modifier, 0);
-    assert!(unseen.optical.is_none() && unseen.subtotal().is_none());
+    assert!(unseen.perception.is_none() && unseen.subtotal().is_none());
 }
 
 #[tokio::test]
@@ -617,10 +649,10 @@ async fn shared_range_applies_to_hex_aim_and_replays_in_actual_shots() {
     let peer = units[5].0;
     let target = units[6].0;
     join_leave_battle_c3i(&mut world, first, pilot, Some(peer)).unwrap();
-    set_battle_sensor_signature(
+    set_battle_unit_signature(
         &mut world,
         target,
-        BattleSensorSignature {
+        BattleUnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -699,10 +731,10 @@ async fn network_messages_filter_receivers_without_changing_membership_or_dice()
     }
     world.btech = serde_json::from_value(encoded).unwrap();
     let (jammer, jammer_pilot) = units[6];
-    set_battle_sensor_signature(
+    set_battle_unit_signature(
         &mut world,
         jammer,
-        BattleSensorSignature {
+        BattleUnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -914,10 +946,10 @@ async fn status_excludes_shutdown_and_jammed_peers_but_reports_unconscious_pilot
     });
     world.btech = serde_json::from_value(encoded).unwrap();
     let (jammer, jammer_pilot) = units[6];
-    set_battle_sensor_signature(
+    set_battle_unit_signature(
         &mut world,
         jammer,
-        BattleSensorSignature {
+        BattleUnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -968,10 +1000,10 @@ async fn network_targets_share_identification_and_range_without_acquiring_contac
     let (peer, peer_pilot) = units[5];
     let target = units[6].0;
     join_leave_battle_c3i(&mut world, first, pilot, Some(peer)).unwrap();
-    set_battle_sensor_signature(
+    set_battle_unit_signature(
         &mut world,
         target,
-        BattleSensorSignature {
+        BattleUnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -985,7 +1017,7 @@ async fn network_targets_share_identification_and_range_without_acquiring_contac
         encoded["constructed"][id.0.to_string()]["contacts"] = serde_json::json!({});
     }
     encoded["constructed"][peer.0.to_string()]["contacts"][target.0.to_string()] =
-        serde_json::json!({"primary":true,"secondary":false});
+        serde_json::json!({"identified":false});
     world.btech = serde_json::from_value(encoded).unwrap();
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(first);
     let before = world.btech.clone();
@@ -994,7 +1026,7 @@ async fn network_targets_share_identification_and_range_without_acquiring_contac
     let row = &report.rows[0];
     assert!(row.identified && !row.friendly);
     assert_eq!(row.name, "Atlas");
-    assert!(!row.sensors.primary && !row.sensors.secondary);
+    assert_eq!(row.detection, None);
     assert!((row.range - 16.0).abs() < 1e-8);
     assert!((row.network_range.distance - 1.0).abs() < 1e-8);
     assert_eq!(row.network_range.source, Some(peer));
@@ -1037,9 +1069,10 @@ async fn network_targets_share_identification_and_range_without_acquiring_contac
     assert_eq!(empty.text, "C3i Contacts:\r\nEnd C3i Contact List");
 }
 
+/// Each row is recomputed from current sightings; a peer's probe contact behind a hill stays unidentified.
 #[tokio::test]
 async fn network_target_visibility_is_recomputed_for_every_row() {
-    let (_dir, _config, mut world, units) = field().await;
+    let (_dir, _config, mut world, units) = field_with_probes(&[1]).await;
     let (first, pilot) = units[0];
     let peer = units[1].0;
     let known = units[2].0;
@@ -1053,21 +1086,14 @@ async fn network_target_visibility_is_recomputed_for_every_row() {
         .position()
         .unwrap()
         .map;
-    configure_battle_sensor_policy(&mut world, true);
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     for &(id, _) in &units {
         encoded["constructed"][id.0.to_string()]["contacts"] = serde_json::json!({});
     }
     for target in [known, unknown] {
         encoded["constructed"][peer.0.to_string()]["contacts"][target.0.to_string()] =
-            serde_json::json!({"primary":true,"secondary":false});
+            serde_json::json!({"identified":false});
     }
-    encoded["constructed"][peer.0.to_string()]["sensor_selection"]["active"] =
-        serde_json::to_value(BattleSensorPair {
-            primary: BattleSensorMode::Seismic,
-            secondary: BattleSensorMode::Visual,
-        })
-        .unwrap();
     for x in 0..20 {
         encoded["maps"][map.0.to_string()]["terrain"][5 * 20 + x] =
             serde_json::to_value(BattleHex {
@@ -1112,7 +1138,7 @@ async fn direct_network_targets_keep_sensor_markers_selection_and_destroyed_firs
     }
     for target in [wreck, near, far] {
         encoded["constructed"][first.0.to_string()]["contacts"][target.0.to_string()] =
-            serde_json::json!({"primary":true,"secondary":false});
+            serde_json::json!({"identified":false});
     }
     let head = serde_json::to_value(BattleSection::Head).unwrap();
     encoded["constructed"][wreck.0.to_string()]["sections"][head.as_str().unwrap()]["internal"] =
@@ -1130,7 +1156,19 @@ async fn direct_network_targets_keep_sensor_markers_selection_and_destroyed_firs
     );
     assert!(report.rows[0].destroyed);
     assert_eq!(report.rows[0].status.chars().nth(1), Some('D'));
-    assert!(report.rows.iter().all(|r| r.sensors.primary));
+    assert!(
+        report
+            .rows
+            .iter()
+            .all(|r| r.detection == Some(BattleDetectionChannel::Sensors))
+    );
+    assert!(
+        text::plain(&report.text)
+            .lines()
+            .skip(1)
+            .take(3)
+            .all(|line| line.starts_with("S "))
+    );
     assert!(report.rows[2].selected);
     assert!(report.text.contains("[fg=red bold]"));
     assert_eq!(report.rows[2].network_range.source, None);
@@ -1273,10 +1311,10 @@ async fn classic_native_lua_rollback_and_lifecycle_use_the_shared_membership_eng
         .map;
     place_battle_unit(&mut scripts.world_mut(), first, map, 9, 9).unwrap();
     assert_eq!(battle_c3_members(&scripts.world(), first).unwrap().len(), 2);
-    set_battle_sensor_signature(
+    set_battle_unit_signature(
         &mut scripts.world_mut(),
         first,
-        BattleSensorSignature {
+        BattleUnitSignature {
             team: 2,
             ..Default::default()
         },
@@ -1304,10 +1342,10 @@ async fn classic_range_has_priority_and_falls_back_to_c3i_only_after_disconnecti
     let target = units[6].0;
     join_leave_battle_c3(&mut world, first, pilot, Some(peer)).unwrap();
     join_leave_battle_c3i(&mut world, first, pilot, Some(c3i_peer)).unwrap();
-    set_battle_sensor_signature(
+    set_battle_unit_signature(
         &mut world,
         target,
-        BattleSensorSignature {
+        BattleUnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -1383,10 +1421,10 @@ async fn inactive_master_reduces_temporary_capacity_without_erasing_membership()
     for (index, y) in [(0, 3), (1, 8), (2, 9), (3, 17), (4, 2), (5, 4), (6, 18)] {
         relocate(&mut world, units[index].0, y);
     }
-    set_battle_sensor_signature(
+    set_battle_unit_signature(
         &mut world,
         target,
-        BattleSensorSignature {
+        BattleUnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -1417,10 +1455,10 @@ async fn classic_assisted_unit_and_hex_shots_share_limits_and_restart_replay() {
     let peer = units[5].0;
     let target = units[6].0;
     join_leave_battle_c3(&mut world, first, pilot, Some(peer)).unwrap();
-    set_battle_sensor_signature(
+    set_battle_unit_signature(
         &mut world,
         target,
-        BattleSensorSignature {
+        BattleUnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -1603,7 +1641,7 @@ async fn classic_reports_apply_active_capacity_and_keep_unconscious_masters() {
         encoded["constructed"][id.0.to_string()]["contacts"] = serde_json::json!({});
     }
     encoded["constructed"][units[4].0.0.to_string()]["contacts"][target.0.to_string()] =
-        serde_json::json!({"primary":true,"secondary":false});
+        serde_json::json!({"identified":false});
     encoded["recoveries"][units[5].1.0.to_string()] = serde_json::json!({"mode":{"kind":"tactical","injuries":1},"remaining":10,"pain_resistance":false,"toughness":false,"dice":BattleDice::seeded([64;32])});
     world.btech = serde_json::from_value(encoded).unwrap();
     let before = world.btech.clone();
@@ -1615,7 +1653,7 @@ async fn classic_reports_apply_active_capacity_and_keep_unconscious_masters() {
     assert_eq!(targets.rows[0].unit, target);
     assert_eq!(targets.rows[0].network_range.kind, BattleCommandNetwork::C3);
     assert_eq!(targets.rows[0].network_range.source, Some(units[4].0));
-    assert!(!targets.rows[0].sensors.primary);
+    assert_eq!(targets.rows[0].detection, None);
     assert_eq!(world.btech, before);
     persistence::save(&config.database(), &world).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
@@ -1724,7 +1762,7 @@ async fn underwater_network_aim_keeps_the_physical_water_limit() {
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     for (observer, subject) in [(shooter, peer), (shooter, target), (peer, target)] {
         encoded["constructed"][observer.0.to_string()]["contacts"][subject.0.to_string()] =
-            serde_json::json!({"primary":true,"secondary":false,"identified":true});
+            serde_json::json!({"identified":true});
     }
     world.btech = serde_json::from_value(encoded).unwrap();
     assert!(

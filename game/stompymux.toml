@@ -137,6 +137,9 @@ explode_time = 120
 erange = 0
 # Hit-arc rules: 0 for Total Warfare, 1 for classic BTMUX, 2 for BattleMech Manual.
 hit_arcs = 0
+# Hexes within which every unit detects anything with a clear line of sight, whatever
+# the darkness or weather; beyond it, weather visibility limits sight. 0 through 60.
+sensor_range = 15
 # Enable MechWarrior embark/disembark behavior and experience loss.
 ic = 0
 # Use the pilot's piloting skill for physical-attack to-hit rolls.

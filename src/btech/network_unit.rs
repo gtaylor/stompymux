@@ -30,7 +30,7 @@ impl NetworkUnit<'_> {
         self.scanner.power
     }
     /// Team and optical signature.
-    pub fn sensor_signature(&self) -> BattleSensorSignature {
+    pub fn signature(&self) -> BattleUnitSignature {
         self.scanner.signature
     }
     /// Current operator for message reception.

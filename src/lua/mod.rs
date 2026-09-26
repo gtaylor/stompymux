@@ -108,7 +108,7 @@ impl Scripts {
             world: &self.world,
             outbox: &self.outbox,
             effects: &self.effects,
-            config: config.clone(),
+            config: crate::communication::ServiceConfig::Borrowed(config),
             host: &self.lua,
         }
     }
@@ -160,8 +160,12 @@ impl Scripts {
 }
 
 /// Read one effective configuration snapshot at a Lua operation boundary.
-pub(crate) fn configuration(lua: &Lua) -> crate::config::Config {
-    lua.app_data_ref::<crate::config::Config>()
+///
+/// The snapshot is shared: cloning the handle is a reference-count increment, so hot paths
+/// such as per-message notification can take it freely. Reconfiguration installs a new
+/// snapshot rather than mutating this one.
+pub(crate) fn configuration(lua: &Lua) -> std::sync::Arc<crate::config::Config> {
+    lua.app_data_ref::<std::sync::Arc<crate::config::Config>>()
         .expect("configuration installed before packages")
         .clone()
 }
@@ -185,10 +189,10 @@ impl Scripts {
             .set_memory_limit(config.lua.memory_limit)
             .map_err(|e| anyhow::anyhow!("{e}"))?;
         self.commands = commands;
-        self.lua.set_app_data(config.clone());
-        crate::configure_battle_sensor_policy(
+        self.lua.set_app_data(std::sync::Arc::new(config.clone()));
+        crate::configure_battle_perception(
             &mut self.world.borrow_mut(),
-            config.battletech.seismic_see_stopped != 0,
+            config.battletech.sensor_range,
         );
         Ok(())
     }

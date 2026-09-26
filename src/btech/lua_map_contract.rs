@@ -154,7 +154,7 @@ pub fn battle_map_hex_los(
     })
 }
 
-/// Query current sensor visibility, retaining the C clear/blocked/none distinction.
+/// Query current perception, retaining the C clear/blocked/none distinction.
 pub fn battle_map_unit_los(
     world: &World,
     observer: ObjectId,
@@ -172,33 +172,8 @@ pub fn battle_map_unit_los(
         return Ok(BattleMapLos::None);
     }
     let terrain = super::unit_terrain_los(world, observer, target)?;
-    let map = &world.btech.maps()[&source_position.map];
-    let visible = if source.visibility.clairvoyant {
-        true
-    } else {
-        let lit = super::unit_illuminated(world, target);
-        let pair = source.pair;
-        let primary = super::map_optical_contact(
-            world,
-            observer,
-            target,
-            pair.primary,
-            lit,
-            map.optical_sensor_disabled(pair.primary),
-        )?
-        .eligible;
-        primary
-            || (pair.secondary != pair.primary
-                && super::map_optical_contact(
-                    world,
-                    observer,
-                    target,
-                    pair.secondary,
-                    lit,
-                    map.optical_sensor_disabled(pair.secondary),
-                )?
-                .eligible)
-    };
+    let visible =
+        source.visibility.clairvoyant || super::perceive(world, observer, target)?.is_some();
     Ok(if !visible {
         BattleMapLos::None
     } else if terrain.blocked {

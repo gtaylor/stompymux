@@ -69,26 +69,49 @@ async fn formation() -> (tempfile::TempDir, Config, World, [ObjectId; 4]) {
     (dir, config, world, ids)
 }
 
+/// Spread the fixture one hex apart so weather can hide every pair; sight always reaches a
+/// unit sharing the observer's hex.
+async fn spread() -> (tempfile::TempDir, Config, World, ObjectId, [ObjectId; 4]) {
+    let (dir, config, mut world, map, ids) = fixture(
+        ".0\n.0\n.0\n.0\n.0\n",
+        include_str!("../game/mechs/Demolisher"),
+    )
+    .await;
+    for (y, id) in ids.into_iter().enumerate() {
+        place_battle_unit(&mut world, id, map, 0, y as i64).unwrap();
+    }
+    power(&mut world, &ids, BattlePower::Running);
+    (dir, config, world, map, ids)
+}
+
+/// Silence the sensor band and drop weather visibility so no unit perceives another.
+fn blind_map(world: &mut World, map: ObjectId) {
+    set_battle_map_perception(world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
+    set_battle_map_visibility(world, map, BattleLight::Day, 0).unwrap();
+}
+
+/// Mixed scans acquire every unit at once, retain contacts, lose them together when no channel
+/// reaches, and share brief notification settings.
 #[tokio::test]
 async fn mixed_automatic_scans_retain_contacts_and_share_brief_notifications() {
-    let (_dir, config, mut world, ids) = formation().await;
+    let (_dir, config, mut world, map, ids) = spread().await;
     let [a, _b, c, d] = ids;
-    set_battle_sensor_signature(
+    set_battle_unit_signature(
         &mut world,
         d,
-        BattleSensorSignature {
+        BattleUnitSignature {
             team: 4,
             ..Default::default()
         },
     )
     .unwrap();
-    assert_eq!(optical_scanner_observers(&world), ids);
+    assert_eq!(battle_contact_observers(&world), ids);
     let mut duplicated = world.clone();
-    let events = refresh_optical_scanners(&mut world, &ids).unwrap();
+    let events = refresh_battle_contacts(&mut world, &ids).unwrap();
     let mut duplicate_ids = ids.to_vec();
     duplicate_ids.extend(ids);
     assert_eq!(
-        refresh_optical_scanners(&mut duplicated, &duplicate_ids).unwrap(),
+        refresh_battle_contacts(&mut duplicated, &duplicate_ids).unwrap(),
         events
     );
     assert_eq!(duplicated.btech, world.btech);
@@ -102,17 +125,14 @@ async fn mixed_automatic_scans_retain_contacts_and_share_brief_notifications() {
     assert_eq!(world.btech.constructed_units()[&a].contacts().len(), 3);
     let before = world.btech.clone();
     assert!(
-        refresh_optical_scanners(&mut world, &ids)
+        refresh_battle_contacts(&mut world, &ids)
             .unwrap()
             .is_empty()
     );
     assert_eq!(world.btech, before);
     let mut loss = world.clone();
-    let map = loss.btech.vehicles()[&c].position().unwrap().map;
-    let mut saved = serde_json::to_value(&loss.btech).unwrap();
-    saved["maps"][map.0.to_string()]["sensor_flags"] = serde_json::json!(1);
-    loss.btech = serde_json::from_value(saved).unwrap();
-    let lost = refresh_optical_scanners(&mut loss, &ids).unwrap();
+    blind_map(&mut loss, map);
+    let lost = refresh_battle_contacts(&mut loss, &ids).unwrap();
     assert_eq!(lost.len(), 12);
     assert!(lost.iter().all(|event| !event.acquired && event.identified));
     assert!(
@@ -190,8 +210,9 @@ async fn mixed_automatic_scans_retain_contacts_and_share_brief_notifications() {
     );
 }
 
+/// Units still starting up are skipped, then acquire every mixed contact on their first scan.
 #[tokio::test]
-async fn vehicle_scan_admission_skips_startup_and_uses_available_mixed_sensor_roles() {
+async fn vehicle_scan_admission_skips_startup_and_acquires_mixed_contacts() {
     let (_dir, config, mut world, [a, b, c, d]) = formation().await;
     power(&mut world, &[c], BattlePower::Starting { remaining: 1 });
     world
@@ -200,26 +221,18 @@ async fn vehicle_scan_admission_skips_startup_and_uses_available_mixed_sensor_ro
         .unwrap()
         .flags
         .insert(Flag::InCharacter);
-    let observers = optical_scanner_observers(&world);
+    let observers = battle_contact_observers(&world);
     assert_eq!(observers, [a, b, d]);
     advance_battle_units(&mut world, 0);
-    refresh_optical_scanners(&mut world, &observers).unwrap();
+    refresh_battle_contacts(&mut world, &observers).unwrap();
     assert!(world.btech.vehicles()[&c].contacts().is_empty());
-    assert!(optical_scanner_observers(&world).contains(&c));
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][c.0.to_string()]["sensor_selection"]["active"]["primary"] =
-        serde_json::json!("seismic");
-    world.btech = serde_json::from_value(saved).unwrap();
-    let observers = optical_scanner_observers(&world);
+    assert!(battle_contact_observers(&world).contains(&c));
+    let observers = battle_contact_observers(&world);
     assert_eq!(observers, [a, b, c, d]);
-    refresh_optical_scanners(&mut world, &observers).unwrap();
+    refresh_battle_contacts(&mut world, &observers).unwrap();
     let contacts = world.btech.vehicles()[&c].contacts();
     assert_eq!(contacts.len(), 3);
-    assert!(
-        contacts
-            .values()
-            .all(|contact| !contact.primary && contact.secondary)
-    );
+    assert!(contacts.values().all(|contact| contact.identified));
     assert_eq!(world.btech.vehicles()[&d].contacts().len(), 3);
     assert_eq!(world.btech.constructed_units()[&a].contacts().len(), 3);
     let mut saved = serde_json::to_value(&world.btech).unwrap();
@@ -261,14 +274,11 @@ async fn failed_server_saves_retry_the_entire_mixed_contact_update() {
     }).await;
 }
 
+/// In-character scanners commit the same acquisitions and losses as tactical ones and replay
+/// identically after a save.
 #[tokio::test]
 async fn character_scanners_share_cached_perception_and_durable_contact_transitions() {
-    let (_dir, config, mut tactical, map, ids) = fixture(
-        ".0\n.0\n.0\n.0\n.0\n",
-        include_str!("../game/mechs/Demolisher"),
-    )
-    .await;
-    power(&mut tactical, &ids, BattlePower::Running);
+    let (_dir, config, mut tactical, map, ids) = spread().await;
     let mut state = serde_json::to_value(&tactical.btech).unwrap();
     for (index, id) in ids.iter().enumerate() {
         let class = if index < 2 { "constructed" } else { "vehicles" };
@@ -286,9 +296,9 @@ async fn character_scanners_share_cached_perception_and_durable_contact_transiti
             .flags
             .insert(Flag::InCharacter);
     }
-    assert_eq!(optical_scanner_observers(&character), ids);
-    let expected = refresh_optical_scanners(&mut tactical, &ids).unwrap();
-    let acquired = refresh_optical_scanners(&mut character, &ids).unwrap();
+    assert_eq!(battle_contact_observers(&character), ids);
+    let expected = refresh_battle_contacts(&mut tactical, &ids).unwrap();
+    let acquired = refresh_battle_contacts(&mut character, &ids).unwrap();
     assert!(!acquired.is_empty());
     assert_eq!(acquired, expected);
     assert_eq!(character.btech, tactical.btech);
@@ -297,16 +307,14 @@ async fn character_scanners_share_cached_perception_and_durable_contact_transiti
         .unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
     assert_eq!(restored.btech, character.btech);
-    assert_eq!(optical_scanner_observers(&restored), ids);
+    assert_eq!(battle_contact_observers(&restored), ids);
     for world in [&mut character, &mut restored] {
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["maps"][map.0.to_string()]["sensor_flags"] = serde_json::json!(1);
-        world.btech = serde_json::from_value(state).unwrap();
+        blind_map(world, map);
     }
-    let lost = refresh_optical_scanners(&mut character, &ids).unwrap();
+    let lost = refresh_battle_contacts(&mut character, &ids).unwrap();
     assert_eq!(lost.len(), acquired.len());
     assert!(lost.iter().all(|event| !event.acquired));
-    assert_eq!(refresh_optical_scanners(&mut restored, &ids).unwrap(), lost);
+    assert_eq!(refresh_battle_contacts(&mut restored, &ids).unwrap(), lost);
     assert_eq!(restored.btech, character.btech);
 }
 
@@ -327,10 +335,10 @@ async fn hostile_character_acquisition_shares_perception_awards_and_exact_dice()
                     .flags
                     .insert(Flag::InCharacter);
             }
-            set_battle_sensor_signature(
+            set_battle_unit_signature(
                 &mut world,
                 target,
-                BattleSensorSignature {
+                BattleUnitSignature {
                     team: 1,
                     ..Default::default()
                 },
@@ -400,7 +408,7 @@ async fn hostile_character_acquisition_shares_perception_awards_and_exact_dice()
                 serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
             state[class][observer.0.to_string()]["scanner_perception"] = serde_json::json!(6);
             world.btech = serde_json::from_value(state).unwrap();
-            let events = refresh_optical_scanners(&mut world, &[observer]).unwrap();
+            let events = refresh_battle_contacts(&mut world, &[observer]).unwrap();
             assert_eq!(events.len(), 3);
             let messages: Vec<_> = events
                 .iter()
@@ -429,7 +437,7 @@ async fn hostile_character_acquisition_shares_perception_awards_and_exact_dice()
             );
             let before = world.btech.clone();
             assert!(
-                refresh_optical_scanners(&mut world, &[observer])
+                refresh_battle_contacts(&mut world, &[observer])
                     .unwrap()
                     .is_empty()
             );

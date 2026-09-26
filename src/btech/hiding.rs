@@ -42,12 +42,12 @@ fn state_mut(world: &mut World, id: ObjectId) -> (&mut Option<u16>, &mut bool) {
         let unit = Arc::make_mut(&mut world.btech.vehicles)
             .get_mut(&id)
             .unwrap();
-        return (&mut unit.hide_elapsed, &mut unit.sensor_signature.hidden);
+        return (&mut unit.hide_elapsed, &mut unit.signature.hidden);
     }
     let unit = Arc::make_mut(&mut world.btech.constructed)
         .get_mut(&id)
         .unwrap();
-    (&mut unit.hide_elapsed, &mut unit.sensor_signature.hidden)
+    (&mut unit.hide_elapsed, &mut unit.signature.hidden)
 }
 
 /// Begin hiding with wizard authority or installed camouflage, without acquiring any contacts.
@@ -148,11 +148,7 @@ fn exposed(world: &World, id: ObjectId) -> Result<bool> {
         {
             continue;
         }
-        if other
-            .contacts
-            .get(&id)
-            .is_some_and(|contact| contact.primary || contact.secondary)
-        {
+        if other.contacts.contains_key(&id) {
             return Ok(true);
         }
     }

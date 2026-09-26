@@ -93,7 +93,7 @@ pub fn members_for(
         if kind.link(&peer) == Some(network)
             && eligible(world, other, kind)
             && peer.position().map(|p| p.map) == unit.position().map(|p| p.map)
-            && peer.sensor_signature().team == unit.sensor_signature().team
+            && peer.signature().team == unit.signature().team
         {
             result.push(other);
         }
@@ -172,7 +172,7 @@ pub(super) fn validate(world: &World) -> Result<()> {
             ensure!(
                 group.iter().all(|unit| unit.position().map(|p| p.map)
                     == first.position().map(|p| p.map)
-                    && unit.sensor_signature().team == first.sensor_signature().team),
+                    && unit.signature().team == first.signature().team),
                 "{} network crosses maps or teams",
                 kind.name()
             );
@@ -218,7 +218,7 @@ pub fn join_leave_for(
         .context("That is not a valid targetID. Try again.")?;
     let peer = network_unit(&candidate, target)?;
     ensure!(
-        peer.sensor_signature().team == unit.sensor_signature().team,
+        peer.signature().team == unit.signature().team,
         "You can't use the {name} network of unfriendly units!"
     );
     ensure!(
@@ -346,9 +346,7 @@ pub(super) fn display_id(world: &World, observer: ObjectId, subject: ObjectId) -
     let mut label = unit
         .battlefield_id()
         .context("Unit has no battlefield ID")?;
-    if clear
-        && unit.sensor_signature().team == network_unit(world, observer)?.sensor_signature().team
-    {
+    if clear && unit.signature().team == network_unit(world, observer)?.signature().team {
         label.make_ascii_lowercase();
     }
     Ok(format!(

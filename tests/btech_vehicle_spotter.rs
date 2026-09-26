@@ -82,10 +82,10 @@ async fn fixture_with_mml(
         ids.push(id);
     }
     let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["constructed"][ids[2].0.to_string()]["sensor_signature"]["team"] = 99.into();
+    saved["constructed"][ids[2].0.to_string()]["signature"]["team"] = 99.into();
     world.btech = serde_json::from_value(saved).unwrap();
     for _ in 0..10 {
-        refresh_optical_scanners(&mut world, &[ids[0], ids[1]]).unwrap();
+        refresh_battle_contacts(&mut world, &[ids[0], ids[1]]).unwrap();
     }
     select_battle_target(&mut world, ids[1], ObjectId(2), Some(ids[2])).unwrap();
     let weapon = if mml {
@@ -349,23 +349,10 @@ async fn occupied_spotter_hexes_share_mixed_firing_without_sensor_aim_dice() {
         } else {
             "constructed"
         };
-        let observer_class = if vehicle_observer {
-            "vehicles"
-        } else {
-            "constructed"
-        };
         saved[shooter_class][shooter.0.to_string()]["contacts"] = serde_json::json!({});
         saved[shooter_class][shooter.0.to_string()]["motion"]["heading"] = serde_json::json!(180.0);
         saved[shooter_class][shooter.0.to_string()]["dice"] =
             serde_json::to_value(BattleDice::seeded([42; 32])).unwrap();
-        saved[observer_class][observer.0.to_string()]["sensor_selection"]["active"] =
-            serde_json::to_value(BattleSensorPair {
-                primary: BattleSensorMode::Electromagnetic,
-                secondary: BattleSensorMode::Electromagnetic,
-            })
-            .unwrap();
-        saved[observer_class][observer.0.to_string()]["sensor_signal"] =
-            serde_json::to_value(BattleSensorSignal::seeded(100, [9; 32]).unwrap()).unwrap();
         world.btech = serde_json::from_value(saved).unwrap();
         let before = world.btech.clone();
         assert_eq!(
@@ -406,7 +393,7 @@ async fn occupied_spotter_hexes_share_mixed_firing_without_sensor_aim_dice() {
         assert_eq!(scripts.world().btech, world.btech);
         assert!(scripts.drain_outbox().is_empty());
         let code = format!(
-            "local r={call}; return r.target,r.aim.optical.modifier,r.aim.indirect.spotter,r.roll or r.launch.roll"
+            "local r={call}; return r.target,r.aim.perception.modifier,r.aim.indirect.spotter,r.roll or r.launch.roll"
         );
         let report: (i64, i16, i64, u8) = scripts.eval_callback(&code).unwrap();
         assert_eq!(
@@ -460,7 +447,7 @@ async fn empty_spotter_hexes_fire_through_blocked_firer_sightlines() {
             serde_json::to_value(BattlePower::Running).unwrap();
         world.btech = serde_json::from_value(saved).unwrap();
         for _ in 0..10 {
-            refresh_optical_scanners(&mut world, &[shooter, observer]).unwrap();
+            refresh_battle_contacts(&mut world, &[shooter, observer]).unwrap();
         }
 
         let hex = BattleHexCoordinate { x: 1, y: 0 };
@@ -559,7 +546,15 @@ async fn empty_spotter_hexes_fire_through_blocked_firer_sightlines() {
             .unwrap();
         assert_eq!(result, (true, 1, 0));
         let blind = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        // The observer's sensor band reaches the adjacent hex in any weather, so silence it too.
         set_battle_map_visibility(&mut blind.world_mut(), map, BattleLight::Day, 0).unwrap();
+        set_battle_map_perception(
+            &mut blind.world_mut(),
+            map,
+            BattleMapPerceptionFlag::Sensors,
+            false,
+        )
+        .unwrap();
         let before = blind.world().btech.clone();
         assert!(blind.eval_callback::<()>(&call).is_err());
         assert_eq!(blind.world().btech, before);

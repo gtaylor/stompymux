@@ -14,7 +14,7 @@ impl Server {
         mut metrics: Option<&mut super::heartbeat_harness::HeartbeatMetrics>,
     ) {
         self.scripts.record_battle_event_tick();
-        let mut scanner_observers = crate::optical_scanner_observers(&self.scripts.world.borrow());
+        let mut scanner_observers = crate::battle_contact_observers(&self.scripts.world.borrow());
         let starting_scanners: std::collections::BTreeSet<_> = {
             let world = self.scripts.world.borrow();
             world
@@ -132,7 +132,7 @@ impl Server {
             };
         if !building_arrivals.is_empty() {
             // New map membership changes eligible pairs; startup completion below still waits a tick.
-            scanner_observers.extend(crate::optical_scanner_observers(
+            scanner_observers.extend(crate::battle_contact_observers(
                 &self.scripts.world.borrow(),
             ));
         }
@@ -243,7 +243,7 @@ impl Server {
             Ok(arrivals) => {
                 if !arrivals.is_empty() {
                     scanner_observers.extend(
-                        crate::optical_scanner_observers(&self.scripts.world.borrow())
+                        crate::battle_contact_observers(&self.scripts.world.borrow())
                             .into_iter()
                             .filter(|id| !starting_scanners.contains(id)),
                     );
@@ -273,9 +273,6 @@ impl Server {
             &mut self.scripts.world.borrow_mut(),
         ));
         notices.extend(crate::advance_battle_searchlights(
-            &mut self.scripts.world.borrow_mut(),
-        ));
-        notices.extend(crate::advance_battle_sensor_selection(
             &mut self.scripts.world.borrow_mut(),
         ));
         notices.extend(crate::advance_battle_recycle(
@@ -402,7 +399,7 @@ impl Server {
             Ok(arrivals) => {
                 if !arrivals.is_empty() {
                     scanner_observers.extend(
-                        crate::optical_scanner_observers(&self.scripts.world.borrow())
+                        crate::battle_contact_observers(&self.scripts.world.borrow())
                             .into_iter()
                             .filter(|id| !starting_scanners.contains(id)),
                     );
@@ -550,7 +547,6 @@ impl Server {
             self.scripts.effects.rollback();
             return;
         }
-        crate::advance_battle_sensor_signals(&mut self.scripts.world.borrow_mut());
         let electronic_changes =
             crate::refresh_battle_electronic_fields(&mut self.scripts.world.borrow_mut());
         match electronic_changes {
@@ -596,9 +592,6 @@ impl Server {
         notices.extend(crate::refresh_battle_illumination(
             &mut self.scripts.world.borrow_mut(),
         ));
-        notices.extend(crate::advance_battle_sensor_flashes(
-            &mut self.scripts.world.borrow_mut(),
-        ));
         if let Err(error) = crate::advance_battle_self_destructs_action(&self.scripts, &self.config)
         {
             self.config.log(
@@ -614,7 +607,7 @@ impl Server {
             return;
         }
         crate::advance_battle_automatic_turrets(&mut self.scripts.world.borrow_mut());
-        let contact_events = crate::refresh_optical_scanners(
+        let contact_events = crate::refresh_battle_contacts(
             &mut self.scripts.world.borrow_mut(),
             &scanner_observers,
         );

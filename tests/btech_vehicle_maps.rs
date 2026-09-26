@@ -66,8 +66,7 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
         unit["power"] = serde_json::to_value(BattlePower::Running).unwrap();
         for &target in &ids {
             if target != id {
-                unit["contacts"][target.0.to_string()] =
-                    serde_json::json!({"primary": true, "secondary": false});
+                unit["contacts"][target.0.to_string()] = serde_json::json!({"identified": false});
             }
         }
     }
@@ -240,7 +239,7 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
                 );
             }
         }
-        for gate in ["pilot", "power", "vision", "hardware", "center", "mode"] {
+        for gate in ["pilot", "power", "hardware", "center", "mode"] {
             let mut candidate = world.clone();
             let (arguments, expected) = match gate {
                 "pilot" => {
@@ -257,17 +256,6 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
                     .unwrap();
                     assign_battle_pilot(&mut candidate, observer, ObjectId(1)).unwrap();
                     ("bogus", "Start the unit first")
-                }
-                "vision" => {
-                    let key = if candidate.btech.vehicles().contains_key(&observer) {
-                        "vehicles"
-                    } else {
-                        "constructed"
-                    };
-                    let mut state = serde_json::to_value(&candidate.btech).unwrap();
-                    state[key][observer.0.to_string()]["blinded_remaining"] = 1.into();
-                    candidate.btech = serde_json::from_value(state).unwrap();
-                    ("bogus", "blinded")
                 }
                 "hardware" => {
                     let Some(mut unit) =
@@ -335,10 +323,10 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
             .unwrap(),
             lrs
         );
-        set_battle_sensor_signature(
+        set_battle_unit_signature(
             &mut world,
             target,
-            BattleSensorSignature {
+            BattleUnitSignature {
                 team: 1,
                 ..Default::default()
             },

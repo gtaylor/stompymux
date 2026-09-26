@@ -158,7 +158,7 @@ fn experience_unit(world: &crate::World, id: crate::ObjectId) -> Option<Experien
     if let Some(unit) = world.btech.vehicles().get(&id) {
         return Some(ExperienceUnit {
             pilot: unit.pilot(),
-            team: unit.sensor_signature().team,
+            team: unit.signature().team,
             destroyed: unit.is_destroyed(),
             tons: unit.definition().tons,
             settings: unit.experience_settings(),
@@ -170,7 +170,7 @@ fn experience_unit(world: &crate::World, id: crate::ObjectId) -> Option<Experien
         .get(&id)
         .map(|unit| ExperienceUnit {
             pilot: unit.pilot(),
-            team: unit.sensor_signature().team,
+            team: unit.signature().team,
             destroyed: unit.is_destroyed(),
             tons: unit.definition().tons,
             settings: unit.experience_settings(),

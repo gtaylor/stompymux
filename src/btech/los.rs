@@ -4,7 +4,7 @@ use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
-/// Terrain observations; sensor selection, range and lighting decide actual visibility.
+/// Terrain observations; perception applies range, lighting and equipment to decide visibility.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct BattleTerrainLos {
     pub blocked: bool,
@@ -14,7 +14,6 @@ pub struct BattleTerrainLos {
     pub water: u8,
     pub smoke: bool,
     pub fire: bool,
-    pub mountain: bool,
     pub partial_cover: bool,
 }
 
@@ -152,7 +151,6 @@ fn terrain_los_with_endpoint(
                 }
                 Terrain::Smoke if intervening => report.smoke = true,
                 Terrain::Fire if intervening => report.fire = true,
-                Terrain::Mountains if intervening => report.mountain = true,
                 _ => {}
             }
         }
@@ -170,12 +168,11 @@ fn terrain_los_with_endpoint(
             && f64::from(preceding.surface_height()) == end_ground + 1.0)
             || (destination.terrain == Terrain::Water && end_ground == -1.0);
     }
-    report.mountain |= submerged > 2;
     report.fire |= submerged > 6;
     Ok(report)
 }
 
-/// Shared placed-unit geometry for terrain and optical queries.
+/// Shared placed-unit geometry for terrain and perception queries.
 pub(super) struct UnitSightPoint {
     pub position: super::BattlePosition,
     pub point: super::BattlePoint,
@@ -525,7 +522,7 @@ mod tests {
         ]);
         assert_eq!(report.woods, 3);
         assert_eq!(report.target_woods, 2);
-        assert!(report.smoke && report.fire && report.mountain);
+        assert!(report.smoke && report.fire);
         assert!(!report.blocked);
         let report = sight(&[(Fire, 0), (Grassland, 0), (Smoke, 0)]);
         assert!(!report.fire && !report.smoke);
@@ -553,7 +550,7 @@ mod tests {
         let report = sight(&[(Water, 3); 8]);
         assert!(!report.blocked);
         assert_eq!(report.water, 7);
-        assert!(report.mountain && report.fire);
+        assert!(report.fire);
         assert!(!sight(&[(Water, 3), (Ice, 3), (Water, 3)]).blocked);
         assert!(sight(&[(Water, 3), (HighWater, 0), (Water, 3)]).blocked);
         assert!(sight(&[(Water, 3), (Grassland, 0), (Water, 3)]).blocked);

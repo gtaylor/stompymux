@@ -116,7 +116,7 @@ async fn digging_alone_keeps_simulation_pending_until_completion() {
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);
         }
-        assert!(optical_scanner_observers(&world).is_empty());
+        assert!(battle_contact_observers(&world).is_empty());
         // Running vehicle computers need ticks independently of digging when parts are enabled.
         assert!(
             battle_runtime_stats(&world, &config, ObjectId(1))

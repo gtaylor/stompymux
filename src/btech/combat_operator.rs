@@ -47,7 +47,7 @@ fn controlled_by(world: &World, unit: ObjectId, actor: ControlActor) -> Result<C
         {
             let context = super::gunner_context(world, station, actor_id)?;
             ensure!(context.parent == unit, "Station does not control this unit");
-            super::power::control_health(world, unit, actor_id)?;
+            super::power::control_health(world, actor_id)?;
             return Ok(CombatOperator {
                 source: context.target_source(world)?,
                 station: Some(context),

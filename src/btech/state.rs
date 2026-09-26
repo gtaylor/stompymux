@@ -75,7 +75,7 @@ pub struct StoredBattleMap {
     pub maximum_visibility: i64,
     /// Cloud boundary in elevation levels; zero disables cloud obstruction.
     pub cloud_base: i16,
-    /// Disabled sensor bitfield; optical modes use bits zero and one.
+    /// Perception channels switched off for this battlefield; see `BattleMapPerceptionFlag`.
     pub sensor_flags: i64,
     /// Persisted wind bearing in degrees and strength used by terrain effects.
     #[serde(default)]
@@ -397,9 +397,9 @@ pub struct BtechState {
     pub(crate) player_configuration: Arc<BTreeMap<ObjectId, super::BattlePlayerConfiguration>>,
     #[serde(default)]
     pub(crate) unit_configuration: Arc<BTreeMap<ObjectId, super::BattleUnitConfiguration>>,
-    /// Runtime sensor policy supplied by the host configuration; not stored in database tables.
+    /// Runtime sensor band reach supplied by the host configuration; not stored in database tables.
     #[serde(default)]
-    pub(crate) seismic_detect_stopped: bool,
+    pub(crate) sensor_range: super::BattleSensorRange,
     /// Runtime skill threshold overrides; database reload starts with catalog defaults.
     #[serde(default)]
     pub(crate) skill_thresholds: Arc<BTreeMap<String, u32>>,
@@ -590,10 +590,6 @@ impl BtechState {
             vehicle.validate_flight_state()?;
             vehicle.validate_orbital_drop()?;
             vehicle.validate_dig()?;
-            ensure!(
-                vehicle.sensor_signal.strength <= 100,
-                "Invalid sensor signal"
-            );
             super::radio::validate_channels(&vehicle.radio)?;
             super::radio::validate_attributes(&vehicle.definition().attributes)?;
             ensure!(
@@ -893,11 +889,8 @@ impl BtechState {
         contacts: &BTreeMap<ObjectId, super::BattleContact>,
         positions: Option<&super::validation_contacts::Positions>,
     ) -> Result<()> {
-        for (target, contact) in contacts {
-            ensure!(
-                *target != observer && (contact.primary || contact.secondary),
-                "Invalid unit contact"
-            );
+        for target in contacts.keys() {
+            ensure!(*target != observer, "Invalid unit contact");
             let target_position = if let Some(positions) = positions {
                 positions
                     .get(*target)
@@ -1278,14 +1271,13 @@ pub fn register_empty_battle_unit(world: &mut World, id: ObjectId) -> Result<()>
     Ok(())
 }
 
-/// Change optical conditions without changing occupied terrain or unit placement.
-/// The caller publishes returned cockpit notices in the same transaction as the map change.
+/// Change light and weather visibility without changing occupied terrain or unit placement.
 pub fn set_map_visibility(
     world: &mut World,
     id: ObjectId,
     light: super::BattleLight,
     visibility: u8,
-) -> Result<Vec<super::BattleNotice>> {
+) -> Result<()> {
     map_target(world, id)?;
     ensure!(visibility <= 60, "Invalid battlefield visibility");
     let map = world.btech.maps.get(&id).context("Map not found")?;
@@ -1294,67 +1286,8 @@ pub fn set_map_visibility(
         "Map terrain is ambiguous; reload it first"
     );
     let map = Arc::make_mut(&mut world.btech.maps).get_mut(&id).unwrap();
-    let new_light = match light {
-        super::BattleLight::Night => 0,
-        super::BattleLight::Twilight => 1,
-        super::BattleLight::Day => 2,
-    };
-    let changed = map.light != new_light;
-    map.light = new_light;
+    map.light = light.stored();
     map.visibility = i64::from(visibility);
     map.maximum_visibility = (map.visibility * 3).clamp(24, 60);
-    Ok(if changed {
-        super::sensor_selection::reconcile_map_light(world, id)
-    } else {
-        Vec::new()
-    })
-}
-
-impl StoredBattleMap {
-    /// Whether a particular optical mode is disabled for this battlefield.
-    pub fn optical_sensor_disabled(&self, sensor: super::BattleSensorMode) -> bool {
-        let bit = match sensor {
-            super::BattleSensorMode::Infrared => 4,
-            super::BattleSensorMode::Seismic => 16,
-            super::BattleSensorMode::Electromagnetic => 8,
-            super::BattleSensorMode::Radar => 32,
-            super::BattleSensorMode::BeagleProbe | super::BattleSensorMode::LightProbe => 64,
-            super::BattleSensorMode::BloodhoundProbe => 256,
-            super::BattleSensorMode::Visual => 1,
-            super::BattleSensorMode::LightAmplification => 2,
-        };
-        self.sensor_flags & bit != 0
-    }
-}
-
-/// Change one optical availability bit without disturbing other sensor modes or terrain.
-pub fn set_map_optical_sensor(
-    world: &mut World,
-    id: ObjectId,
-    sensor: super::BattleSensorMode,
-    enabled: bool,
-) -> Result<()> {
-    map_target(world, id)?;
-    let map = world.btech.maps.get(&id).context("Map not found")?;
-    ensure!(
-        map.terrain_ready(),
-        "Map terrain is ambiguous; reload it first"
-    );
-    let bit = match sensor {
-        super::BattleSensorMode::Infrared => 4,
-        super::BattleSensorMode::Seismic => 16,
-        super::BattleSensorMode::Electromagnetic => 8,
-        super::BattleSensorMode::Radar => 32,
-        super::BattleSensorMode::BeagleProbe | super::BattleSensorMode::LightProbe => 64,
-        super::BattleSensorMode::BloodhoundProbe => 256,
-        super::BattleSensorMode::Visual => 1,
-        super::BattleSensorMode::LightAmplification => 2,
-    };
-    let map = Arc::make_mut(&mut world.btech.maps).get_mut(&id).unwrap();
-    if enabled {
-        map.sensor_flags &= !bit;
-    } else {
-        map.sensor_flags |= bit;
-    }
     Ok(())
 }

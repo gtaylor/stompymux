@@ -427,6 +427,7 @@ fn filtered_occupancy(
     let Some(moving_team) = team(world, moving) else {
         return BTreeMap::new();
     };
+    let reader = std::cell::OnceCell::new();
     let mut result = BTreeMap::new();
     for (id, position) in world
         .btech
@@ -444,7 +445,7 @@ fn filtered_occupancy(
         if id == moving
             || position.map != map
             || cells.is_some_and(|cells| !cells.contains(&(position.x, position.y)))
-            || !known_occupant_with_team(world, moving, moving_team, id)
+            || !known_occupant_with_team(world, &reader, moving, moving_team, id)
         {
             continue;
         }
@@ -461,11 +462,20 @@ pub(super) fn known_occupant(world: &World, moving: ObjectId, occupant: ObjectId
     let Some(moving_team) = team(world, moving) else {
         return false;
     };
-    known_occupant_with_team(world, moving, moving_team, occupant)
+    known_occupant_with_team(
+        world,
+        &std::cell::OnceCell::new(),
+        moving,
+        moving_team,
+        occupant,
+    )
 }
 
-fn known_occupant_with_team(
-    world: &World,
+/// Enemy occupants are checked through one lazily built contact reader, so an occupancy
+/// snapshot shares a single perception profile for the moving unit.
+fn known_occupant_with_team<'w>(
+    world: &'w World,
+    reader: &std::cell::OnceCell<Option<super::super::contacts::ContactReader<'w>>>,
     moving: ObjectId,
     moving_team: i32,
     occupant: ObjectId,
@@ -476,9 +486,10 @@ fn known_occupant_with_team(
     // Acquisition flags can outlive visibility until the next scanner update.
     // Use the same live facts as observations, including only observable
     // destruction, rather than reading an unseen enemy's current condition.
-    super::super::contact_facts(world, moving, occupant)
-        .ok()
-        .flatten()
+    reader
+        .get_or_init(|| super::super::contacts::ContactReader::new(world, moving).ok())
+        .as_ref()
+        .and_then(|reader| reader.facts(occupant).ok().flatten())
         .is_some_and(|contact| !contact.known_destroyed)
 }
 
@@ -498,13 +509,13 @@ fn team(world: &World, id: ObjectId) -> Option<i32> {
         .btech
         .constructed_units()
         .get(&id)
-        .map(|unit| unit.sensor_signature().team)
+        .map(|unit| unit.signature().team)
         .or_else(|| {
             world
                 .btech
                 .vehicles()
                 .get(&id)
-                .map(|unit| unit.sensor_signature().team)
+                .map(|unit| unit.signature().team)
         })
 }
 
@@ -594,10 +605,10 @@ mod tests {
                 .unwrap()
                 .power = BattlePower::Running;
         }
-        crate::set_battle_sensor_signature(
+        crate::set_battle_unit_signature(
             &mut world,
             target,
-            crate::BattleSensorSignature {
+            crate::BattleUnitSignature {
                 team: 1,
                 ..Default::default()
             },
@@ -607,14 +618,7 @@ mod tests {
             .get_mut(&observer)
             .unwrap()
             .contacts
-            .insert(
-                target,
-                BattleContact {
-                    identified: true,
-                    primary: true,
-                    secondary: false,
-                },
-            );
+            .insert(target, BattleContact { identified: true });
         assert_eq!(
             known_occupancy(&world, observer, map).get(&(0, 2)),
             Some(&(1, 0))

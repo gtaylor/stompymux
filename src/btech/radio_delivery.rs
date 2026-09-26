@@ -94,7 +94,7 @@ pub fn resolve_digital_radio(
         let unit = super::radio::unit(world, id)?;
         if unit.is_destroyed()
             || unit.power() != BattlePower::Running
-            || unit.sensor_signature().team != source.sensor_signature().team
+            || unit.signature().team != source.signature().team
             || !unit.radio_capabilities().digital
             || !unit.radio_capabilities().relay
         {

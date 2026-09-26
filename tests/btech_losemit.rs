@@ -81,7 +81,7 @@ async fn losemit_shares_all_chassis_observers_and_transactions() {
             1
         );
         assert_eq!(restarted.drain_outbox().len(), 2);
-        // Source power does not suppress an emote, but observer blindness does suppress delivery.
+        // Source power does not suppress an emote, but losing the contact suppresses delivery.
         firing::edit(&mut world, source, |state| {
             state["power"] = serde_json::to_value(BattlePower::Off).unwrap()
         });
@@ -90,19 +90,18 @@ async fn losemit_shares_all_chassis_observers_and_transactions() {
             battle_losemit_action(&stopped, actor, source, "waves.").unwrap(),
             1
         );
+        let mut contacts = serde_json::Value::Null;
         firing::edit(&mut world, observer, |state| {
-            state["blinded_remaining"] = 1.into()
+            contacts = state["contacts"].clone();
+            state["contacts"] = serde_json::json!({});
         });
-        let blinded = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
+        let unseen = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         assert_eq!(
-            battle_losemit_action(&blinded, actor, source, "waves.").unwrap(),
+            battle_losemit_action(&unseen, actor, source, "waves.").unwrap(),
             0
         );
-        assert_eq!(blinded.drain_outbox().len(), 1);
+        assert_eq!(unseen.drain_outbox().len(), 1);
         // One observer line succeeds, then confirmation exceeds capacity: no partial output survives.
-        firing::edit(&mut world, observer, |state| {
-            state["blinded_remaining"] = 0.into()
-        });
         let path = dir.path().join("stompymux.toml");
         let mut table: toml::Table = std::fs::read_to_string(&path).unwrap().parse().unwrap();
         table
@@ -114,12 +113,9 @@ async fn losemit_shares_all_chassis_observers_and_transactions() {
         std::fs::write(path, toml::to_string(&table).unwrap()).unwrap();
         let config = Config::load(dir.path()).unwrap();
         let limited = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        firing::edit(&mut limited.world_mut(), observer, |state| {
-            state["blinded_remaining"] = 1.into()
-        });
         battle_losemit_action(&limited, actor, source, "first").unwrap();
         firing::edit(&mut limited.world_mut(), observer, |state| {
-            state["blinded_remaining"] = 0.into()
+            state["contacts"] = contacts
         });
         let before = limited.world().btech.clone();
         let failure = battle_losemit_action(&limited, actor, source, "second").unwrap_err();

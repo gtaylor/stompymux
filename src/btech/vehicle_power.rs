@@ -25,7 +25,7 @@ pub(super) fn controlled_by_actor(
     let super::combat_operator::ControlActor::Player(pilot) = actor else {
         unreachable!()
     };
-    super::power::control_health(world, id, pilot)?;
+    super::power::control_health(world, pilot)?;
     ensure!(
         world
             .objects

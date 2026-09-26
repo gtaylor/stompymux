@@ -331,7 +331,7 @@ async fn offensive_value_and_experience_follow_runtime_overrides() {
         )
         .unwrap();
         firing::edit(&mut world, target, |state| {
-            state["sensor_signature"]["team"] = 1.into()
+            state["signature"]["team"] = 1.into()
         });
         set_battle_weapon_battle_value(&mut world, ObjectId(1), "IS.SmallLaser", 100).unwrap();
         set_battle_weapon_recycle(&mut world, ObjectId(1), "IS.SmallLaser", 30).unwrap();

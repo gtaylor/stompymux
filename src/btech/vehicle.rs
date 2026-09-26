@@ -41,8 +41,6 @@ pub struct BattleVehicle {
     #[serde(default)]
     pub(super) self_destruct_safe: bool,
     pub(super) self_destruct: Option<super::BattleSelfDestruct>,
-    /// Durable temporary sensor-flash recovery.
-    pub(super) blinded_remaining: u8,
     /// Elapsed one-second camouflage preparation checks.
     pub(super) hide_elapsed: Option<u16>,
     /// Scenario permission shared with Mechs for out-of-character pickup targets.
@@ -132,11 +130,10 @@ pub struct BattleVehicle {
     pub(super) lost_criticals: std::collections::BTreeSet<super::VehicleCriticalLocation>,
     pub(super) brief: super::BattleBriefSettings,
     pub(super) tics: super::BattleTics,
-    pub(super) sensor_signature: super::BattleSensorSignature,
+    pub(super) signature: super::BattleUnitSignature,
     pub(super) scanner_perception: i16,
     pub(super) radio: [super::BattleRadioChannel; 16],
     pub(super) radio_skill: i16,
-    pub(super) sensor_signal: super::BattleSensorSignal,
     pub(super) fired_recently: bool,
     pub(super) radio_experience_remaining: u8,
     pub(super) experience: super::BattleUnitExperience,
@@ -162,7 +159,6 @@ pub struct BattleVehicle {
     pub(super) spotter_events: super::BattleSpotterEvents,
     pub(super) tag: super::BattleTagState,
     pub(super) contacts: BTreeMap<crate::ObjectId, super::BattleContact>,
-    pub(super) sensor_selection: super::BattleSensorSelection,
     pub(super) fire_modes: BTreeMap<usize, super::BattleFireMode>,
     pub(super) ammunition_modes: BTreeMap<usize, super::BattleAmmunitionMode>,
     pub(super) ammunition_sections: BTreeMap<usize, BattleVehicleSection>,
@@ -227,8 +223,6 @@ struct VehicleRecord {
     self_destruct_safe: bool,
     #[serde(default)]
     self_destruct: Option<super::BattleSelfDestruct>,
-    #[serde(default)]
-    blinded_remaining: u8,
     #[serde(default)]
     hide_elapsed: Option<u16>,
     #[serde(default)]
@@ -308,14 +302,12 @@ struct VehicleRecord {
     brief: super::BattleBriefSettings,
     #[serde(default)]
     tics: super::BattleTics,
-    sensor_signature: super::BattleSensorSignature,
+    signature: super::BattleUnitSignature,
     scanner_perception: i16,
     #[serde(default)]
     radio: [super::BattleRadioChannel; 16],
     #[serde(default = "super::radio::default_skill")]
     radio_skill: i16,
-    #[serde(default)]
-    sensor_signal: super::BattleSensorSignal,
     #[serde(default)]
     fired_recently: bool,
     #[serde(default)]
@@ -344,7 +336,6 @@ struct VehicleRecord {
     #[serde(default)]
     tag: super::BattleTagState,
     contacts: BTreeMap<crate::ObjectId, super::BattleContact>,
-    sensor_selection: super::BattleSensorSelection,
     fire_modes: BTreeMap<usize, super::BattleFireMode>,
     ammunition_modes: BTreeMap<usize, super::BattleAmmunitionMode>,
     #[serde(default)]
@@ -779,7 +770,6 @@ impl BattleVehicle {
             vtol_fuel,
             vtol_flight,
             crew_killed: false,
-            blinded_remaining: 0,
             hide_elapsed: None,
             self_destruct: None,
             self_destruct_safe: false,
@@ -790,11 +780,10 @@ impl BattleVehicle {
             lost_criticals: std::collections::BTreeSet::new(),
             brief: Default::default(),
             tics: Default::default(),
-            sensor_signature: Default::default(),
+            signature: Default::default(),
             scanner_perception: super::scanner::default_perception(),
             radio: Default::default(),
             radio_skill: super::radio::default_skill(),
-            sensor_signal: Default::default(),
             fired_recently: false,
             radio_experience_remaining: 0,
             towable: false,
@@ -824,7 +813,6 @@ impl BattleVehicle {
             spotter_events: Default::default(),
             tag: Default::default(),
             contacts: Default::default(),
-            sensor_selection: Default::default(),
             fire_modes,
             ammunition_modes,
             ammunition_sections: BTreeMap::new(),
@@ -917,7 +905,6 @@ impl BattleVehicle {
     pub(super) fn finish_destruction(&mut self) {
         super::spotter_events::clear(&mut self.spotter_events);
         self.self_destruct = None;
-        self.blinded_remaining = 0;
         self.hide_elapsed = None;
         self.cancel_digging();
         self.lose_vtol_lift();
@@ -1482,16 +1469,11 @@ impl TryFrom<VehicleRecord> for BattleVehicle {
         vehicle.pilot_injuries = record.pilot_injuries;
         vehicle.pilot_killed = record.pilot_killed;
         vehicle.character_pilot = record.character_pilot;
-        ensure!(
-            record.blinded_remaining <= 4,
-            "Invalid sensor flash duration"
-        );
         if let Some(timer) = record.self_destruct {
             timer.validate()?;
         }
         vehicle.self_destruct = record.self_destruct;
         vehicle.self_destruct_safe = record.self_destruct_safe;
-        vehicle.blinded_remaining = record.blinded_remaining;
         ensure!(
             record.hide_elapsed.is_none_or(|elapsed| elapsed <= 100),
             "Invalid hiding timer"
@@ -1838,25 +1820,6 @@ impl TryFrom<VehicleRecord> for BattleVehicle {
         vehicle.powered_down_weapons = record.powered_down_weapons;
         vehicle.weapon_failures = record.weapon_failures;
         ensure!(
-            record
-                .sensor_selection
-                .pending
-                .is_none_or(|pending| (1..=10).contains(&pending.remaining)),
-            "Invalid vehicle sensor selection countdown"
-        );
-        ensure!(
-            record
-                .sensor_selection
-                .active
-                .supported_by_vehicle(&vehicle)
-                && record
-                    .sensor_selection
-                    .pending
-                    .is_none_or(|pending| pending.wanted.supported_by_vehicle(&vehicle)),
-            "Vehicle sensor selection requires unavailable equipment"
-        );
-        vehicle.sensor_selection = record.sensor_selection;
-        ensure!(
             record.target_lock.is_none_or(
                 |lock| lock.remaining() <= 8 && vehicle.power == super::BattlePower::Running
             ),
@@ -1895,7 +1858,7 @@ impl TryFrom<VehicleRecord> for BattleVehicle {
         record.brief.validate()?;
         vehicle.brief = record.brief;
         vehicle.tics = record.tics;
-        vehicle.sensor_signature = record.sensor_signature;
+        vehicle.signature = record.signature;
         vehicle.scanner_perception = record.scanner_perception;
         super::radio::validate_channels(&record.radio)?;
         super::radio::validate_attributes(&vehicle.definition().attributes)?;
@@ -1926,11 +1889,6 @@ impl TryFrom<VehicleRecord> for BattleVehicle {
         vehicle.illumination_observed = record.illumination_observed;
         vehicle.radio = record.radio;
         vehicle.radio_skill = record.radio_skill;
-        ensure!(
-            record.sensor_signal.strength <= 100,
-            "Invalid sensor signal"
-        );
-        vehicle.sensor_signal = record.sensor_signal;
         vehicle.fired_recently = record.fired_recently;
         vehicle.radio_experience_remaining = record.radio_experience_remaining;
         record.experience.validate()?;

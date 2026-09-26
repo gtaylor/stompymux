@@ -182,7 +182,7 @@ async fn field_with_classic(
                 } else {
                     "constructed"
                 }][id.0.to_string()]["contacts"][other.0.to_string()] =
-                    serde_json::json!({"primary":true,"secondary":false,"identified":true});
+                    serde_json::json!({"identified":true});
             }
         }
     }
@@ -374,10 +374,10 @@ async fn vehicle_network_native_lua_controls_and_lifecycle_agree() {
         assert!(battle_c3i_members(&moved, id).unwrap().is_empty());
         moved.validate(&config).unwrap();
         let mut changed = connected;
-        set_battle_sensor_signature(
+        set_battle_unit_signature(
             &mut changed,
             id,
-            BattleSensorSignature {
+            BattleUnitSignature {
                 team: 99,
                 ..Default::default()
             },
@@ -396,10 +396,10 @@ async fn vehicle_ecm_temporarily_blocks_mixed_network_without_erasing_links() {
     join_leave_battle_c3i(&mut world, first, pilot, Some(units[1].0)).unwrap();
     join_leave_battle_c3(&mut world, first, pilot, Some(units[1].0)).unwrap();
     let (jammer, operator) = units[2];
-    set_battle_sensor_signature(
+    set_battle_unit_signature(
         &mut world,
         jammer,
-        BattleSensorSignature {
+        BattleUnitSignature {
             team: 99,
             ..Default::default()
         },
@@ -504,7 +504,7 @@ async fn vehicle_hex_aim_reuses_weapon_terms_modes_and_read_only_lua() {
         assert_eq!(aim.modifiers.ammunition_accuracy, unit.ammunition_accuracy);
         assert_eq!(aim.modifiers.target_movement, 0);
         assert_eq!(aim.modifiers.target_lock, 0);
-        assert!(aim.modifiers.optical.is_none() && aim.modifiers.indirect.is_none());
+        assert!(aim.modifiers.perception.is_none() && aim.modifiers.indirect.is_none());
         assert_eq!(world.btech, before);
     }
     persistence::save(&config.database(), &world).await.unwrap();

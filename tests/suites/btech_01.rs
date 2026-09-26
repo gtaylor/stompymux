@@ -74,3 +74,6 @@ mod btech_weapon_reports;
 
 #[path = "../btech_autopilot_audit.rs"]
 mod btech_autopilot_audit;
+
+#[path = "../btech_perception.rs"]
+mod btech_perception;

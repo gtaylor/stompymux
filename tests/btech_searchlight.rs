@@ -236,24 +236,41 @@ async fn front_torso_damage_uses_lamp_state_and_exact_dice() {
     }
 }
 
+/// At night the sensor band ignores darkness, while sight needs light: an unlit target costs +1
+/// within visibility, and a searchlight beam lets sight reach three times as far without it.
 #[tokio::test]
-async fn searchlights_extend_night_visual_detection_and_disable_amplification() {
+async fn searchlights_extend_night_sight_to_lit_targets() {
     let (_dir, _config, mut world, lamp, target, map) = fixture().await;
     place_battle_unit(&mut world, target, map, 2, 31).unwrap();
     set_battle_map_visibility(&mut world, map, BattleLight::Night, 3).unwrap();
-    let eligible = |world: &World, sensor| {
-        battle_map_optical_contact(world, lamp, target, sensor, false, false)
+    let perceived = |world: &World| {
+        battle_perceive(world, lamp, target)
             .unwrap()
-            .eligible
+            .map(|perception| (perception.channel, perception.aim_modifier))
     };
-    assert!(!eligible(&world, BattleSensorMode::Visual));
-    assert!(eligible(&world, BattleSensorMode::LightAmplification));
+    assert_eq!(
+        perceived(&world),
+        Some((BattleDetectionChannel::Sensors, 0))
+    );
+    set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
+    assert_eq!(perceived(&world), None);
+    place_battle_unit(&mut world, target, map, 2, 33).unwrap();
+    assert_eq!(perceived(&world), Some((BattleDetectionChannel::Sight, 1)));
     toggle_battle_searchlight(&mut world, lamp, ObjectId(1)).unwrap();
     for _ in 0..5 {
         advance_battle_searchlights(&mut world);
     }
-    assert!(eligible(&world, BattleSensorMode::Visual));
-    assert!(!eligible(&world, BattleSensorMode::LightAmplification));
+    assert!(battle_unit_illuminated(&world, target));
+    assert_eq!(perceived(&world), Some((BattleDetectionChannel::Sight, 0)));
+    for (y, expected) in [
+        (31, Some((BattleDetectionChannel::Sight, 0))),
+        (26, Some((BattleDetectionChannel::Sight, 0))),
+        (25, None),
+    ] {
+        place_battle_unit(&mut world, target, map, 2, y).unwrap();
+        assert!(battle_unit_illuminated(&world, target));
+        assert_eq!(perceived(&world), expected, "y={y}");
+    }
 }
 
 #[tokio::test]

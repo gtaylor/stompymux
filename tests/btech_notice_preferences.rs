@@ -13,7 +13,7 @@ async fn notice_preferences_share_delivery_and_persistence_across_chassis() {
             firing::fixture_with_target(&source, None, &source).await;
         firing::edit(&mut world, target, |unit| {
             unit["power"] = serde_json::to_value(BattlePower::Off).unwrap();
-            unit["sensor_signature"]["team"] = serde_json::json!(2);
+            unit["signature"]["team"] = serde_json::json!(2);
         });
         let event = BattleContactEvent {
             experience_message: None,
@@ -64,7 +64,7 @@ async fn notice_preferences_share_delivery_and_persistence_across_chassis() {
         assert!(refresh_battle_illumination(&mut world).is_empty());
         let contacts = visible_battle_contacts(&world, id).unwrap();
         firing::edit(&mut world, id, |unit| {
-            unit["sensor_signature"]["illuminated"] = serde_json::json!(true)
+            unit["signature"]["illuminated"] = serde_json::json!(true)
         });
         assert!(battle_illumination_pending(&world));
         assert_eq!(
@@ -82,7 +82,7 @@ async fn notice_preferences_share_delivery_and_persistence_across_chassis() {
         assert_eq!(loaded.btech, world.btech);
         assert!(refresh_battle_illumination(&mut loaded).is_empty());
         firing::edit(&mut loaded, id, |unit| {
-            unit["sensor_signature"]["illuminated"] = serde_json::json!(false)
+            unit["signature"]["illuminated"] = serde_json::json!(false)
         });
         assert_eq!(
             refresh_battle_illumination(&mut loaded),
@@ -93,7 +93,7 @@ async fn notice_preferences_share_delivery_and_persistence_across_chassis() {
         );
         set_battle_searchlight_warning(&mut loaded, id, ObjectId(1), false).unwrap();
         firing::edit(&mut loaded, id, |unit| {
-            unit["sensor_signature"]["illuminated"] = serde_json::json!(true)
+            unit["signature"]["illuminated"] = serde_json::json!(true)
         });
         assert!(refresh_battle_illumination(&mut loaded).is_empty());
         assert!(!battle_illumination_pending(&loaded));

@@ -244,7 +244,7 @@ fn crowded_world(config: Config, mut world: World) -> (Config, World, Vec<Object
             .get_mut(&id)
             .unwrap();
         unit.power = BattlePower::Running;
-        unit.sensor_signature.team = 1;
+        unit.signature.team = 1;
         ids.push(id);
     }
     let mut controller = super::super::AutopilotController::new();
@@ -381,7 +381,7 @@ fn waiting_controller_polling_benchmark() {
             .get_mut(&id)
             .unwrap();
         unit.power = BattlePower::Running;
-        unit.sensor_signature.team = 1;
+        unit.signature.team = 1;
         Arc::make_mut(&mut base.btech.controllers).insert(id, controller.clone());
     }
     advance(&mut base, &config, 1).unwrap();

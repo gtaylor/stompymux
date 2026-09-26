@@ -539,7 +539,7 @@ async fn special_weapons_preserve_aim_preparation_and_normal_resolution() {
                             .map
                     };
                     place_battle_unit(&mut world, target, map, 0, 5).unwrap();
-                    refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+                    refresh_battle_contacts(&mut world, &[shooter]).unwrap();
                     select_battle_target(&mut world, shooter, ObjectId(1), Some(target)).unwrap();
                 }
                 edit(&mut world, shooter, |state| {
@@ -633,7 +633,7 @@ async fn changed_target_class_preserves_selection_and_numeric_immobile_hits() {
                     })))
                     .unwrap();
                 });
-                refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+                refresh_battle_contacts(&mut world, &[shooter]).unwrap();
                 edit(&mut world, shooter, |state| {
                     state["dice"] =
                         serde_json::to_value(BattleDice::seeded(seed_for(|roll| roll == 12)))

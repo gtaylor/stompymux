@@ -25,6 +25,28 @@ pub trait HostCallbacks {
     fn channel_leave(&self, world: &SharedWorld, object: ObjectId, who: ObjectId) -> Result<()>;
 }
 
+/// The policy snapshot for one communication operation.
+///
+/// Native callers lend their configuration; Lua bindings share the runtime's snapshot. Either
+/// way nothing is cloned per operation.
+pub enum ServiceConfig<'a> {
+    /// Borrowed from a native caller for the duration of the operation.
+    Borrowed(&'a Config),
+    /// Shared with the Lua runtime's installed configuration.
+    Shared(std::sync::Arc<Config>),
+}
+
+impl std::ops::Deref for ServiceConfig<'_> {
+    type Target = Config;
+
+    fn deref(&self) -> &Config {
+        match self {
+            Self::Borrowed(config) => config,
+            Self::Shared(config) => config,
+        }
+    }
+}
+
 /// Result of invoking a prepared channel lock callback.
 pub enum LockOutcome {
     /// The callback completed and returned its access decision.
@@ -42,7 +64,7 @@ pub struct Service<'a> {
     /// Runtime-owned transaction effects and typed savepoints.
     pub effects: &'a Effects,
     /// Effective communication policy and output limits.
-    pub config: Config,
+    pub config: ServiceConfig<'a>,
     /// Narrow host adapter for locks, sessions, and game callbacks.
     pub host: &'a dyn HostCallbacks,
 }
@@ -212,7 +234,7 @@ mod tests {
                 world: &self.world,
                 outbox: &self.outbox,
                 effects: &self.effects,
-                config: self.config.clone(),
+                config: ServiceConfig::Borrowed(&self.config),
                 host,
             }
         }

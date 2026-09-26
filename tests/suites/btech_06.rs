@@ -39,9 +39,6 @@ mod btech_map_fields;
 #[path = "../btech_map_save.rs"]
 mod btech_map_save;
 
-#[path = "../btech_mixed_sensors.rs"]
-mod btech_mixed_sensors;
-
 #[path = "../btech_notice_preferences.rs"]
 mod btech_notice_preferences;
 

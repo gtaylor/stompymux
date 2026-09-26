@@ -528,13 +528,6 @@
     "default": -1
   },
   {
-    "path": "battletech.seismic_see_stopped",
-    "legacy_name": "btech_seismic_see_stopped",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 0
-  },
-  {
     "path": "battletech.limitedrepairs",
     "legacy_name": "btech_limitedrepairs",
     "registry_type": "cf_int",

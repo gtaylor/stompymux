@@ -2,9 +2,9 @@
 use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::{
-    BattleMapAsset, BattlePower, BattleSensorSignature, BattleUnitTemplate, Config, Kind, ObjectId,
+    BattleMapAsset, BattlePower, BattleUnitSignature, BattleUnitTemplate, Config, Kind, ObjectId,
     Scripts, World, assign_battle_pilot, create_battle_map, persistence, place_battle_unit,
-    refresh_optical_scanners, set_battle_sensor_signature, set_battle_speed,
+    refresh_battle_contacts, set_battle_speed, set_battle_unit_signature,
 };
 
 #[allow(dead_code)]
@@ -205,17 +205,17 @@ async fn explicit_attack_uses_filtered_sensor_observation() {
     // Give the explicit target an opposing durable sensor signature so the order
     // admission path exercises hostile-contact filtering rather than a friendly
     // fire refusal.
-    set_battle_sensor_signature(
+    set_battle_unit_signature(
         &mut world,
         target,
-        BattleSensorSignature {
+        BattleUnitSignature {
             team: 1,
             hidden: false,
             illuminated: false,
         },
     )
     .unwrap();
-    refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+    refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let (contact_count, weapon_readiness, target_seen) = scripts
         .eval_callback::<(u32, bool, bool)>(&format!(

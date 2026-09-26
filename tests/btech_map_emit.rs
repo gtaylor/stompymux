@@ -28,7 +28,7 @@ fn listeners(world: &mut World, config: &Config, map: ObjectId, target: ObjectId
     actor
 }
 
-/// Every supported chassis shares running, blindness and consciousness admission, without acquiring contacts.
+/// Every supported chassis shares running and consciousness admission, without acquiring contacts.
 #[tokio::test]
 async fn map_broadcast_audience_native_lua_and_restart() {
     for source in firing::templates() {
@@ -37,7 +37,6 @@ async fn map_broadcast_audience_native_lua_and_restart() {
             "stunned",
             "off",
             "starting",
-            "blind",
             "pilot_recovery",
             "empty_recovery",
         ] {
@@ -66,9 +65,6 @@ async fn map_broadcast_audience_native_lua_and_restart() {
                         "stun_remaining"
                     };
                     state[field] = 5.into();
-                }
-                if mode == "blind" {
-                    state["blinded_remaining"] = 3.into();
                 }
                 if mode == "empty_recovery" {
                     state["pilot_injuries"] = 1.into();

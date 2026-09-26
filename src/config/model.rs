@@ -232,8 +232,8 @@ pub struct BattleTechConfig {
     pub techtime_multiplier: f64,
     /// Configuration value for `statengine_obj`; defaults are centralized below.
     pub statengine_obj: i64,
-    /// Configuration value for `seismic_see_stopped`; defaults are centralized below.
-    pub seismic_see_stopped: i64,
+    /// All-conditions sensor band reach in hexes; weather and darkness do not shorten it.
+    pub sensor_range: i64,
     /// Configuration value for `limitedrepairs`; defaults are centralized below.
     pub limitedrepairs: i64,
     /// Configuration value for `stackpole`; defaults are centralized below.
@@ -309,7 +309,7 @@ impl Default for BattleTechConfig {
             techtime_mod: 0,
             techtime_multiplier: 1.0,
             statengine_obj: -1,
-            seismic_see_stopped: 0,
+            sensor_range: 15,
             limitedrepairs: 0,
             stackpole: 1,
             phys_use_pskill: 1,

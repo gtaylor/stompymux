@@ -101,7 +101,7 @@ async fn engagement(template: &str) -> (tempfile::TempDir, Config, World, Object
     power(&mut world, &ids, BattlePower::Running);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ids[2]);
     assign_battle_pilot(&mut world, ids[2], ObjectId(1)).unwrap();
-    refresh_optical_scanners(&mut world, &[ids[2]]).unwrap();
+    refresh_battle_contacts(&mut world, &[ids[2]]).unwrap();
     (dir, config, world, map, ids)
 }
 
@@ -328,6 +328,7 @@ async fn vehicle_missiles_use_shooter_dice_for_mech_ams_only_on_admitted_hits() 
     }
 }
 
+/// A failed Streak lock spends nothing, and bad pilots, unperceived or in-character targets reject shots.
 #[tokio::test]
 async fn vehicle_shot_failures_and_failed_streak_locks_preserve_target_state() {
     let (_dir, _config, mut base, _map, [_, _, shooter, target]) =
@@ -363,9 +364,10 @@ async fn vehicle_shot_failures_and_failed_streak_locks_preserve_target_state() {
             ObjectId(1)
         };
         if case == "contact" {
-            let mut saved = serde_json::to_value(&world.btech).unwrap();
-            saved["maps"][map.0.to_string()]["sensor_flags"] = serde_json::json!(1);
-            world.btech = serde_json::from_value(saved).unwrap();
+            // Without the sensor band or any sight the target is no longer perceived.
+            set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false)
+                .unwrap();
+            set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
         }
         if case == "character" {
             world
@@ -417,8 +419,7 @@ async fn vehicle_shots_observe_existing_angel_fields_without_copying_field_rules
         let mut saved = serde_json::to_value(&base.btech).unwrap();
         saved["constructed"][emitter.0.to_string()]["definition"] =
             serde_json::to_value(definition).unwrap();
-        saved["constructed"][emitter.0.to_string()]["sensor_signature"]["team"] =
-            serde_json::json!(1);
+        saved["constructed"][emitter.0.to_string()]["signature"]["team"] = serde_json::json!(1);
         base.btech = serde_json::from_value(saved).unwrap();
         let value = (0..=255)
             .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 2)
@@ -540,7 +541,7 @@ async fn vehicle_occupied_hex_fire_preserves_selection_and_native_lua_parity() {
             place_battle_unit(&mut world, mech, map, 0, 4).unwrap();
         }
         power(&mut world, &[mech, other], BattlePower::Running);
-        refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+        refresh_battle_contacts(&mut world, &[shooter]).unwrap();
         assert_eq!(
             battle_hex_occupant(&world, shooter, hex).unwrap(),
             Some(target)
@@ -1730,7 +1731,7 @@ async fn shutdown_vehicle_pod_expiry_retries_failed_server_commit() {
         let mut saved = serde_json::to_value(&world.btech).unwrap();
         saved["vehicles"][shooter.0.to_string()]["pod_removal"] = 1.into();
         world.btech = serde_json::from_value(saved).unwrap();
-        assert!(optical_scanner_observers(&world).is_empty());
+        assert!(battle_contact_observers(&world).is_empty());
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER deny_pods BEFORE UPDATE ON btech_vehicles BEGIN SELECT RAISE(ABORT,'pod removal failure'); END;").execute(&mut sql).await.unwrap();
@@ -1766,7 +1767,7 @@ async fn mech_engagement() -> (tempfile::TempDir, Config, World, ObjectId, Objec
     power(&mut world, &[shooter], BattlePower::Running);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
     assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
-    refresh_optical_scanners(&mut world, &[shooter, target]).unwrap();
+    refresh_battle_contacts(&mut world, &[shooter, target]).unwrap();
     (dir, config, world, shooter, target)
 }
 
@@ -2097,7 +2098,7 @@ async fn mech_vehicle_admission_hex_selection_and_lock_cleanup() {
         power(&mut world, &[id], BattlePower::Off);
         place_battle_unit(&mut world, id, map, 0, 4).unwrap();
     }
-    refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+    refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     let hex = BattleHexCoordinate { x: 0, y: 0 };
     select_battle_hex_target(
         &mut world,
@@ -2407,7 +2408,7 @@ async fn vehicle_self_cooling_shares_host_selection_and_atomic_expenditure() {
         let recipient = if selection == 1 { target } else { shooter };
         let mut base = base.clone();
         if selection == 1 {
-            refresh_optical_scanners(&mut base, &[shooter]).unwrap();
+            refresh_battle_contacts(&mut base, &[shooter]).unwrap();
         }
         if selection == 2 {
             select_battle_hex_target(
@@ -2803,12 +2804,12 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                         serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
                     world.btech = serde_json::from_value(saved).unwrap();
                 }
-                refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+                refresh_battle_contacts(&mut world, &[shooter]).unwrap();
                 select_battle_target(&mut world, shooter, ObjectId(1), Some(target)).unwrap();
-                set_battle_sensor_signature(
+                set_battle_unit_signature(
                     &mut world,
                     target,
-                    BattleSensorSignature {
+                    BattleUnitSignature {
                         team: 1,
                         ..Default::default()
                     },
@@ -2919,7 +2920,7 @@ async fn vehicle_missile_packets_award_experience_inside_the_firing_transaction(
     let template = include_str!("../game/mechs/Demolisher").replace("IS.AC/20", "IS.LRM-20");
     let (_dir, config, mut world, _map, ids) = engagement(&template).await;
     let [_, _, shooter, target] = ids;
-    refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+    refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     for id in [shooter, target] {
         world
             .objects
@@ -2928,10 +2929,10 @@ async fn vehicle_missile_packets_award_experience_inside_the_firing_transaction(
             .flags
             .insert(Flag::InCharacter);
     }
-    set_battle_sensor_signature(
+    set_battle_unit_signature(
         &mut world,
         target,
-        BattleSensorSignature {
+        BattleUnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -3083,7 +3084,7 @@ async fn weapons_hold_vehicle_targets_preserve_damage_safety_and_restart() {
                 power(&mut base, &[shooter], BattlePower::Running);
                 base.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
                 assign_battle_pilot(&mut base, shooter, ObjectId(1)).unwrap();
-                refresh_optical_scanners(&mut base, &[shooter]).unwrap();
+                refresh_battle_contacts(&mut base, &[shooter]).unwrap();
                 let high = (0..=255)
                     .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
                     .unwrap();
@@ -3259,7 +3260,7 @@ async fn configured_energy_range_damage_is_shared_by_all_unit_pairings() {
                 power(&mut world, &ids, BattlePower::Running);
                 world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
                 assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
-                refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+                refresh_battle_contacts(&mut world, &[shooter]).unwrap();
                 let class = if world.btech.vehicles().contains_key(&shooter) {
                     "vehicles"
                 } else {
@@ -3356,7 +3357,7 @@ async fn weapon_fire_preserves_target_emergency_feedback() {
             section["internal"] = 30.into();
         }
         base.btech = serde_json::from_value(state).unwrap();
-        refresh_optical_scanners(&mut base, &[shooter]).unwrap();
+        refresh_battle_contacts(&mut base, &[shooter]).unwrap();
         select_battle_target(&mut base, shooter, ObjectId(1), Some(target)).unwrap();
         let call = format!("btech.unit.fire({},1,0)", shooter.0);
         let mut covered = false;

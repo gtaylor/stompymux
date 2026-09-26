@@ -135,17 +135,17 @@ async fn shared_sightings_do_not_grant_attack_acquisition_or_leak_hidden_changes
     let (_dir, _config, scripts, units, map) = fixture().await;
     {
         let mut world = scripts.world_mut();
-        set_battle_sensor_signature(
+        set_battle_unit_signature(
             &mut world,
             units[2],
-            BattleSensorSignature {
+            BattleUnitSignature {
                 team: 1,
                 hidden: false,
                 illuminated: false,
             },
         )
         .unwrap();
-        refresh_optical_scanners(&mut world, &[units[0]]).unwrap();
+        refresh_battle_contacts(&mut world, &[units[0]]).unwrap();
     }
     scripts.eval_callback::<()>(r#"
         local t,a=btech.tactical,btech.autopilot

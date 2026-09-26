@@ -182,19 +182,13 @@ Alias: `"normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary4"|"rotary6"|
 - `maximum_speed`: `number` — Damage-adjusted maximum kph before terrain, heat and cargo.
 - `piloting_modifier`: `integer` — Damage modifier for subsequent piloting checks.
 
-## BattleSensorMode
+## BattleDetectionChannel
 
-Alias: `"visual"|"light_amplification"|"infrared"|"seismic"|"electromagnetic"|"radar"|"beagle_probe"|"light_probe"|"bloodhound_probe"`
+Alias: `"sensors"|"sight"|"radar"|"probe" Values from btech.unit.detection_channels.`
 
-## BattleSensorPair
+## BattlePerceptionStatus
 
-- `primary`: `BattleSensorMode`
-- `secondary`: `BattleSensorMode`
-
-## BattleSensorSelection
-
-- `active`: `BattleSensorPair`
-- `pending`: `{wanted: BattleSensorPair, remaining: integer}|nil`
+Alias: `"ready"|"degraded"|"jammed"|"damaged"|"disabled"|"absent"`
 
 ## BattleTargetLock
 
@@ -312,20 +306,17 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `battlefield_id`: `string?` — Current battlefield identity; absent without map membership.
 - `searchlight`: `{on: boolean, destroyed: boolean, remaining: integer}` — Hardware and pending five-second switch.
 - `fired_recently`: `boolean` — Launched a weapon since the last heartbeat.
-- `sensor_signal`: `integer` — Current committed signal strength (0-100).
 - `spotter`: `integer?` — Self ID while spotting, otherwise the selected observer.
 - `artillery_adjustment`: `integer` — Saved correction for the current artillery target.
 - `spotter_events`: `BattleSpotterEvents` — Pending radio requests and periodic checks.
 - `tag`: `BattleTagState`
-- `sensor_selection`: `BattleSensorSelection`
-- `sensor_signature`: `{team: integer, hidden: boolean, illuminated: boolean}`
+- `signature`: `{team: integer, hidden: boolean, illuminated: boolean}` — Team, hiding and scenario lighting.
 - `scanner_perception`: `integer` — Perception captured at startup completion.
 - `facing`: `{torso: "left"|"center"|"right"|"both", arms_flipped: boolean}`
 - `stun_remaining`: `integer` — Remaining seconds of cockpit stun.
 - `pilot_injuries`: `integer` — Tactical injury count; six means scenario pilot loss.
 - `self_destruct`: `{remaining: integer, ammunition: boolean}|nil` — Admitted timer and its actual Mech detonation mode.
 - `self_destruct_safe`: `boolean` — Scenario protection from new ammunition self-destruct requests.
-- `blinded_remaining`: `integer` — Seconds until temporary sensor-flash blindness clears.
 - `hide_elapsed`: `integer|nil` — Elapsed camouflage checks; nil when no hide event is pending.
 - `crew_recovery_remaining`: `integer` — Empty-crew consciousness countdown; random state stays private.
 - `character_pilot`: `{injuries: integer, killed: boolean}?` — Saved character-mode injury status; character health determines death.
@@ -405,7 +396,6 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `cockpit_links`: `integer[]` — Three explicit cockpit destinations; unresolved references remain saved.
 - `preferred_id`: `string?` — Configured two-letter preference; separate from the currently assigned ID.
 - `fuel`: `BattleVtolFuelStatus|nil` — Live fuel projection for VTOLs only.
-- `sensor_signal`: `integer` — Current committed signal strength, 0 through 100.
 - `fired_recently`: `boolean` — A weapon launched since the last heartbeat.
 - `observer`: `boolean` — Administrator-assigned observer role.
 - `combat_safe`: `boolean` — Operator-imposed immunity to combat damage.
@@ -431,14 +421,12 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `crew_stunned`: `boolean` — Effective crew stun, independent of its timer.
 - `self_destruct`: `{remaining: integer, ammunition: boolean}|nil` — Admitted timer and its actual Mech detonation mode.
 - `self_destruct_safe`: `boolean` — Scenario protection from new ammunition self-destruct requests.
-- `blinded_remaining`: `integer` — Seconds until temporary sensor-flash blindness clears.
 - `hide_elapsed`: `integer|nil` — Elapsed camouflage checks; nil when no hide event is pending.
 - `crew_recovery_remaining`: `integer` — Empty-crew consciousness countdown, separate from crew stun.
 - `weapon_heat`: `number` — Passive weapon heat and coolant credit; ground vehicles do not overheat.
 - `gunnery_damage`: `integer` — Cumulative firing penalty from sensor and commander damage.
 - `lost_stabilizers`: `string[]` — Sections with destroyed weapon stabilizers.
-- `sensor_selection`: `BattleSensorSelection`
-- `sensor_signature`: `{team: integer, hidden: boolean, illuminated: boolean}`
+- `signature`: `{team: integer, hidden: boolean, illuminated: boolean}` — Team, hiding and scenario lighting.
 - `scanner_perception`: `integer` — Perception captured at startup completion.
 - `sensor_ranges`: `{tactical: integer, long_range: integer, scan: integer}` — Computer-derived hex limits.
 - `aimed_section`: `BattleAimSelection|nil` — Saved anatomy preference; independent of the current lock.
@@ -615,10 +603,21 @@ Alias: `{x: integer, y: integer, z?: integer}`
 - `origin`: `BattleHexCoordinate` — Filter anchor.
 - `range`: `number` — Nonnegative hex radius.
 
-## BattleContactSensors
+## BattlePerceptionReport
 
-- `primary`: `boolean` — Current primary sensor eligibility.
-- `secondary`: `boolean` — Current secondary sensor eligibility.
+- `light`: `"night"|"twilight"|"day"` — Current battlefield light.
+- `sight_range`: `integer` — Weather visibility in hexes, capped by the map ceiling.
+- `lit_sight_range`: `integer` — Reach to illuminated targets; triple sight at night.
+- `sensor_range`: `integer` — Effective all-conditions sensor band; zero while unavailable.
+- `sensors`: `BattlePerceptionStatus` — Condition of the sensor band.
+- `probe`: `{kind: BattleProbeKind, range: integer, status: BattlePerceptionStatus}|nil` — Best installed active probe.
+- `radar`: `{range: integer, status: BattlePerceptionStatus}|nil` — Anti-aircraft radar, if installed.
+- `running`: `boolean` — Stopped units perceive nothing.
+- `text`: `string` — The report printed by the sensor command.
+
+## BattleProbeKind
+
+Alias: `"beagle"|"light"|"bloodhound"`
 
 ## BattleContactArc
 
@@ -633,7 +632,7 @@ Alias: `"front" | "right" | "rear" | "left"`
 - `verbose_text`: `string` — Plain multiline C0 contact report.
 - `identified`: `boolean` — Current terrain permits identification.
 - `weapon_arc`: `BattleContactArc` — Observer torso direction; individual weapons may have different arcs.
-- `sensors`: `BattleContactSensors` — Live roles for an already acquired target.
+- `detection`: `BattleDetectionChannel|nil` — How the observer currently perceives this contact; nil for clairvoyant-only views.
 - `status`: `string` — Five visible condition columns; blank behind blocking terrain.
 - `target`: `integer` — Acquired unit dbref.
 - `name`: `string` — Chassis name, or "something" for unidentified signals.
@@ -689,7 +688,7 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 ## BattleAimModifiers
 
 - `self_target`: `boolean` — Coolant self-application bypasses contact acquisition.
-- `indirect`: `{spotter: integer, spotting: integer, movement: integer, target_lock: integer}|nil` — Observer contributions; optical describes the observer sensor when present.
+- `indirect`: `{spotter: integer, spotting: integer, movement: integer, target_lock: integer}|nil` — Observer contributions; perception then describes the spotter's view.
 - `gunnery`: `integer`
 - `distance`: `number`
 - `network_range`: `{kind: "c3"|"c3i", distance: number, source: integer|nil}|nil` — Active command-network range; physical limits and firing visibility remain separate.
@@ -712,7 +711,7 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 - `weapon_accuracy`: `integer` — Intrinsic accuracy adjustment; pulse lasers contribute -2, MRMs +1.
 - `weapon_damage`: `integer` — Penalty from damaged focusing, ranging and other weapon components.
 - `target_lock`: `integer`
-- `optical`: `{sensor: string, secondary: boolean, modifier: integer}|nil`
+- `perception`: `{channel: BattleDetectionChannel|nil, direct_fire: boolean, modifier: integer}|nil` — Nil without a current contact; direct_fire is false behind blocking terrain.
 
 ## BattleSectionExposureReport
 
@@ -1288,7 +1287,7 @@ Alias: `"follow_brief" | "include" | "exclude"`
 
 ## BattleBuildingContact
 
-- `sensors`: `BattleContactSensors` — Terrain sensor roles.
+- `detection`: `BattleDetectionChannel|nil` — Whether the sensor band or sight reaches the entrance.
 - `short_text`: `string` — Plain compact row after identification locks.
 - `weapon_arc`: `BattleContactArc` — Observer torso direction toward entrance.
 - `interior`: `integer`
@@ -1377,7 +1376,7 @@ Alias: `"follow_brief" | "include" | "exclude"`
 - `name`: `string`
 - `identified`: `boolean`
 - `friendly`: `boolean` — Actual team relationship; identification controls display color.
-- `sensors`: `{primary: boolean, secondary: boolean}` — Requester's own sensors only.
+- `detection`: `BattleDetectionChannel|nil` — How the requester itself perceives the target; nil for network-only sightings.
 - `weapon_arc`: `string`
 - `coordinate`: `BattleHexCoordinate`
 - `elevation`: `integer`

@@ -103,7 +103,6 @@ pub(super) fn secondary_criticals(world: &mut World, id: ObjectId, bits: u32) ->
                 "A light probe is not installed"
             );
             unit.critical_conditions.light_probe_failure = Some(bits & 2 != 0);
-            unit.reconcile_active_probes();
         }
     } else {
         ensure!(bits & 1 == 0, "Vehicles have no hardened gyro");
@@ -116,7 +115,6 @@ pub(super) fn secondary_criticals(world: &mut World, id: ObjectId, bits: u32) ->
                 "A light probe is not installed"
             );
             unit.critical_conditions.light_probe_failure = Some(bits & 2 != 0);
-            unit.reconcile_active_probes();
         }
     }
     ensure!(

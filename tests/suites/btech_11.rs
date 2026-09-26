@@ -30,9 +30,6 @@ mod btech_debug_dispatch;
 #[path = "../btech_equipment_names.rs"]
 mod btech_equipment_names;
 
-#[path = "../btech_infrared.rs"]
-mod btech_infrared;
-
 #[path = "../btech_jump_crew.rs"]
 mod btech_jump_crew;
 

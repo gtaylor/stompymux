@@ -142,7 +142,6 @@ pub(super) fn seed_unit(world: &mut World, id: ObjectId, seed: u8, role: u8) {
     bytes[31] = seed.wrapping_add(role);
     if let Some(u) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
         u.dice = crate::BattleDice::seeded(bytes);
-        u.sensor_signal = crate::BattleSensorSignal::seeded(100, bytes).expect("valid signal");
         let mut recovery = serde_json::to_value(&u.crew_recovery).expect("serialize recovery");
         recovery["dice"] =
             serde_json::to_value(crate::BattleDice::seeded(bytes)).expect("serialize dice");
@@ -150,7 +149,6 @@ pub(super) fn seed_unit(world: &mut World, id: ObjectId, seed: u8, role: u8) {
     }
     if let Some(u) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
         u.dice = crate::BattleDice::seeded(bytes);
-        u.sensor_signal = crate::BattleSensorSignal::seeded(100, bytes).expect("valid signal");
         let mut recovery = serde_json::to_value(&u.crew_recovery).expect("serialize recovery");
         recovery["dice"] =
             serde_json::to_value(crate::BattleDice::seeded(bytes)).expect("serialize dice");
@@ -422,10 +420,10 @@ pub async fn run_policy(
                         let id = world.create(&config, format!("ally {n}"), crate::Kind::Thing);
                         crate::BattleUnitTemplate::parse(&source)?.create(&mut world, id)?;
                         if let Some(u) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
-                            u.sensor_signature.team = 1;
+                            u.signature.team = 1;
                         }
                         if let Some(u) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
-                            u.sensor_signature.team = 1;
+                            u.signature.team = 1;
                         }
                         place(
                             &mut world,
@@ -467,7 +465,7 @@ pub async fn run_policy(
                     Arc::make_mut(&mut world.btech.constructed)
                         .get_mut(&target)
                         .unwrap()
-                        .sensor_signature
+                        .signature
                         .team = 1;
                 }
                 if scenario_name == "waiting_controllers" {
@@ -479,10 +477,10 @@ pub async fn run_policy(
                         );
                         crate::BattleUnitTemplate::parse(&source)?.create(&mut world, id)?;
                         if let Some(u) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
-                            u.sensor_signature.team = 1;
+                            u.signature.team = 1;
                         }
                         if let Some(u) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
-                            u.sensor_signature.team = 1;
+                            u.signature.team = 1;
                         }
                         place(&mut world, id, map, 2, row)?;
                         orders(
@@ -510,12 +508,12 @@ pub async fn run_policy(
                             if let Some(u) =
                                 Arc::make_mut(&mut world.btech.constructed).get_mut(&blocker)
                             {
-                                u.sensor_signature.team = 1;
+                                u.signature.team = 1;
                             }
                             if let Some(u) =
                                 Arc::make_mut(&mut world.btech.vehicles).get_mut(&blocker)
                             {
-                                u.sensor_signature.team = 1;
+                                u.signature.team = 1;
                             }
                             place(&mut world, blocker, map, 6, row)?;
                             orders(&mut world, blocker, vec![AutopilotOrder::Hold], false)?;
@@ -545,7 +543,7 @@ pub async fn run_policy(
                         motion.desired_heading = heading;
                     }
                 }
-                crate::btech::refresh_optical_scanners(
+                crate::btech::refresh_contacts(
                     &mut world,
                     &ids.iter().map(|(_, id, _)| *id).collect::<Vec<_>>(),
                 )?;

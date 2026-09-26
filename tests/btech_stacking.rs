@@ -24,9 +24,9 @@ async fn fixture(teams: &[i32]) -> (tempfile::TempDir, Config, World, Vec<Object
         )
         .unwrap();
         place_battle_unit(&mut world, id, map, 1, 1).unwrap();
-        let mut signature = world.btech.constructed_units()[&id].sensor_signature();
+        let mut signature = world.btech.constructed_units()[&id].signature();
         signature.team = team;
-        set_battle_sensor_signature(&mut world, id, signature).unwrap();
+        set_battle_unit_signature(&mut world, id, signature).unwrap();
         ids.push(id);
     }
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ids[0]);
@@ -484,7 +484,7 @@ async fn completed_landings_exclude_the_arriving_unit_and_replay_crowding() {
         for (mode, success) in [(0, true), (1, true), (1, false), (2, true)] {
             let (_dir, config, mut world, ids) = landing_fixture(neighbors).await;
             let id = ids[0];
-            refresh_optical_scanners(&mut world, &[ids[1]]).unwrap();
+            refresh_battle_contacts(&mut world, &[ids[1]]).unwrap();
             assert!(
                 visible_battle_contact(&world, ids[1], id)
                     .unwrap()
@@ -621,7 +621,7 @@ async fn early_landing_uses_configured_crowding_in_native_and_lua_transactions()
         state["constructed"][id.0.to_string()]["dice"] =
             serde_json::to_value(BattleDice::seeded([chosen; 32])).unwrap();
         world.btech = serde_json::from_value(state).unwrap();
-        refresh_optical_scanners(&mut world, &[ids[2]]).unwrap();
+        refresh_battle_contacts(&mut world, &[ids[2]]).unwrap();
         assert!(
             visible_battle_contact(&world, ids[2], id)
                 .unwrap()
@@ -1203,7 +1203,7 @@ async fn collision_observers_filter_each_participant_and_replay_all_entry_modes(
     base.btech = serde_json::from_value(state).unwrap();
     base.validate(&config).unwrap();
     for _ in 0..32 {
-        refresh_optical_scanners(&mut base, &[observer]).unwrap();
+        refresh_battle_contacts(&mut base, &[observer]).unwrap();
         if base.btech.constructed_units()[&observer]
             .contacts()
             .contains_key(&actor)

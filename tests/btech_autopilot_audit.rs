@@ -13,10 +13,10 @@ use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
 use stompymux_rs::btech::autopilot::observations;
 use stompymux_rs::btech::{AutopilotOrderState, AutopilotReason, AutopilotState, LastSighting};
 use stompymux_rs::{
-    BattleMapAsset, BattlePosition, BattlePower, BattleSensorSignature, BattleUnitTemplate,
+    BattleMapAsset, BattlePosition, BattlePower, BattleUnitSignature, BattleUnitTemplate,
     BattleVehicleTemplate, Config, HeartbeatHarness, Kind, ObjectId, Scripts, World,
     assign_battle_pilot, create_battle_map, create_battle_vehicle, persistence, place_battle_unit,
-    refresh_optical_scanners, set_battle_sensor_signature, set_battle_speed,
+    refresh_battle_contacts, set_battle_speed, set_battle_unit_signature,
 };
 
 #[allow(dead_code)]
@@ -342,17 +342,17 @@ async fn weapons_hold_and_heat_ceiling_admit_no_autonomous_shot() {
         include_str!("../game/mechs/JR7-D"),
     )
     .await;
-    set_battle_sensor_signature(
+    set_battle_unit_signature(
         &mut world,
         target,
-        BattleSensorSignature {
+        BattleUnitSignature {
             team: 1,
             hidden: false,
             illuminated: false,
         },
     )
     .unwrap();
-    refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+    refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     let heat_before = world.btech.constructed_units()[&shooter].heat().stored;
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     scripts
@@ -413,17 +413,17 @@ async fn autonomous_fire_rechecks_heat_between_multiple_mounts() {
         include_str!("../game/mechs/JR7-D"),
     )
     .await;
-    set_battle_sensor_signature(
+    set_battle_unit_signature(
         &mut world,
         target,
-        BattleSensorSignature {
+        BattleUnitSignature {
             team: 1,
             hidden: false,
             illuminated: false,
         },
     )
     .unwrap();
-    refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+    refresh_battle_contacts(&mut world, &[shooter]).unwrap();
 
     let ordinary_heats: Vec<_> = world.btech.constructed_units()[&shooter]
         .loadout()
@@ -566,17 +566,17 @@ async fn failed_firing_heartbeat_discards_shots_and_retries_identically() {
         include_str!("../game/mechs/JR7-D"),
     )
     .await;
-    set_battle_sensor_signature(
+    set_battle_unit_signature(
         &mut world,
         target,
-        BattleSensorSignature {
+        BattleUnitSignature {
             team: 1,
             hidden: false,
             illuminated: false,
         },
     )
     .unwrap();
-    refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+    refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     scripts
         .eval_callback::<()>(&format!(

@@ -242,7 +242,7 @@ async fn entry_feedback_uses_hex_visibility_and_captured_contacts() {
         for acquired in [false, true] {
             let mut observed = world.clone();
             if acquired {
-                refresh_optical_scanners(&mut observed, &[observer]).unwrap();
+                refresh_battle_contacts(&mut observed, &[observer]).unwrap();
                 assert!(
                     visible_battle_contact(&observed, observer, id)
                         .unwrap()
@@ -305,7 +305,7 @@ async fn interior_arrival_uses_normal_acquisition_without_extra_dice() {
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);
         }
-        assert!(!optical_scanner_observers(&world).contains(&observer));
+        assert!(!battle_contact_observers(&world).contains(&observer));
         let scripts = host(&config, world);
         begin_battle_building_entry_action(&scripts, id, ObjectId(1), None).unwrap();
         scripts.drain_outbox();
@@ -323,9 +323,9 @@ async fn interior_arrival_uses_normal_acquisition_without_extra_dice() {
         publish_battle_building_arrivals(&scripts, arrivals.clone()).unwrap();
         assert!(scripts.drain_outbox().is_empty());
         assert_eq!(scripts.world().btech, placed);
-        let observers = optical_scanner_observers(&scripts.world());
+        let observers = battle_contact_observers(&scripts.world());
         assert!(observers.contains(&observer));
-        let events = refresh_optical_scanners(&mut scripts.world_mut(), &observers).unwrap();
+        let events = refresh_battle_contacts(&mut scripts.world_mut(), &observers).unwrap();
         assert!(
             events
                 .iter()
@@ -571,8 +571,8 @@ async fn host_exits_share_teleport_policy_and_callback_rollback() {
                 .any(|(who, text)| *who == ObjectId(1)
                     && text.source().contains("You have left the Interior."))
         );
-        let observers = optical_scanner_observers(&scripts.world());
-        refresh_optical_scanners(&mut scripts.world_mut(), &observers).unwrap();
+        let observers = battle_contact_observers(&scripts.world());
+        refresh_battle_contacts(&mut scripts.world_mut(), &observers).unwrap();
         publish_battle_building_arrivals(&scripts, vec![arrival]).unwrap();
         assert!(
             scripts
@@ -1326,7 +1326,7 @@ fn cover(world: &mut World, ids: &[ObjectId]) {
         } else {
             "constructed"
         };
-        saved[key][id.0.to_string()]["sensor_signature"]["hidden"] = true.into();
+        saved[key][id.0.to_string()]["signature"]["hidden"] = true.into();
         saved[key][id.0.to_string()]["hide_elapsed"] = 7.into();
     }
     world.btech = serde_json::from_value(saved).unwrap();
@@ -1335,10 +1335,10 @@ fn cover(world: &mut World, ids: &[ObjectId]) {
 /// Observe the same cover facts for either chassis store.
 fn cover_state(world: &World, id: ObjectId) -> (bool, Option<u16>) {
     if let Some(unit) = world.btech.vehicles().get(&id) {
-        return (unit.sensor_signature().hidden, unit.hide_elapsed());
+        return (unit.signature().hidden, unit.hide_elapsed());
     }
     let unit = &world.btech.constructed_units()[&id];
-    (unit.sensor_signature().hidden, unit.hide_elapsed())
+    (unit.signature().hidden, unit.hide_elapsed())
 }
 
 /// Explicit entry preserves cover; edge movement reveals only the carrier, including after restart.

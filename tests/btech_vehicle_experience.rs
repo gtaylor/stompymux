@@ -61,10 +61,10 @@ async fn fixture_sources(
         },
     )
     .unwrap();
-    set_battle_sensor_signature(
+    set_battle_unit_signature(
         &mut world,
         target,
-        BattleSensorSignature {
+        BattleUnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -180,10 +180,10 @@ async fn classic_awards_share_the_formula_for_every_attacker_target_pair() {
                 let mut rejected = world.clone();
                 let mut request = request;
                 match case {
-                    "friendly" => set_battle_sensor_signature(
+                    "friendly" => set_battle_unit_signature(
                         &mut rejected,
                         target,
-                        BattleSensorSignature::default(),
+                        BattleUnitSignature::default(),
                     )
                     .unwrap(),
                     "tactical" => {

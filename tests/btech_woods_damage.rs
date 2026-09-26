@@ -34,7 +34,7 @@ fn prepare(world: &mut World, shooter: ObjectId, target: ObjectId, terrain: Terr
     firing::edit(world, shooter, |state| {
         state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
     });
-    refresh_optical_scanners(world, &[shooter]).unwrap();
+    refresh_battle_contacts(world, &[shooter]).unwrap();
 }
 
 /// Place authored woods and install an explicit dice stream, skipping the roll
@@ -57,7 +57,7 @@ fn prepare_seeded(
     firing::edit(world, shooter, |state| {
         state["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap()
     });
-    refresh_optical_scanners(world, &[shooter]).unwrap();
+    refresh_battle_contacts(world, &[shooter]).unwrap();
 }
 
 /// Detach the report returned by the normal Lua fire action.
@@ -88,7 +88,7 @@ fn missile_lane(world: &mut World, shooter: ObjectId, target: ObjectId) {
         state["motion"]["desired_heading"] = 180.0.into();
     });
     assign_battle_pilot(world, shooter, ObjectId(1)).unwrap();
-    refresh_optical_scanners(world, &[shooter]).unwrap();
+    refresh_battle_contacts(world, &[shooter]).unwrap();
     select_battle_target(world, shooter, ObjectId(1), Some(target)).unwrap();
 }
 

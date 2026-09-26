@@ -1,20 +1,21 @@
-//! Sensor visibility of terrain coordinates without acquiring or identifying their occupants.
-use super::*;
-use crate::{Flag, ObjectId, World};
-use anyhow::{Context, Result, ensure};
+//! Sight and sensor visibility of terrain coordinates without acquiring or identifying their occupants.
+use super::{BattleDetectionChannel, BattleHexCoordinate, BattlePerceptionProfile};
+use crate::{ObjectId, World};
+use anyhow::Result;
+use std::cell::OnceCell;
 
 /// Inspect an empty terrain target on the observer's map without contacts, randomness or mutation.
 pub fn hex_visible(world: &World, observer: ObjectId, target: BattleHexCoordinate) -> Result<bool> {
-    Ok(observation(world, observer, target)?.visible)
+    Ok(hex_detection(world, observer, target)?.is_some())
 }
 
-/// Report eligible terrain sensor roles without acquiring or identifying occupants.
-pub fn hex_sensor_visibility(
+/// Report which channel reaches a terrain coordinate: the sensor band or sight.
+pub fn hex_detection(
     world: &World,
     observer: ObjectId,
     target: BattleHexCoordinate,
-) -> Result<BattleContactSensors> {
-    Ok(observation(world, observer, target)?.sensors)
+) -> Result<Option<BattleDetectionChannel>> {
+    super::hex_perception(world, observer, target)
 }
 
 /// Artillery selects an observer by sight before applying its separate power-state check.
@@ -23,122 +24,46 @@ pub(super) fn observation_visible(
     observer: ObjectId,
     target: BattleHexCoordinate,
 ) -> Result<bool> {
-    Ok(sensor_visibility(world, observer, target, false)?.visible)
+    let profile = super::perception_profile(world, observer)?;
+    Ok(
+        super::perception::hex_perception_prepared(world, observer, &profile, target, false)?
+            .is_some(),
+    )
 }
 
-/// Visibility can be granted without assigning a sensor role to an operator observation.
-#[derive(Default)]
-pub(super) struct HexObservation {
-    pub visible: bool,
-    pub sensors: BattleContactSensors,
-}
-
-/// Shared terrain observation for displays that also report primary and secondary roles.
-pub(super) fn observation(
-    world: &World,
+/// One observer's reach, computed once and reused while drawing many hexes of one map view.
+pub(super) struct HexViewer<'w> {
+    world: &'w World,
     observer: ObjectId,
-    target: BattleHexCoordinate,
-) -> Result<HexObservation> {
-    sensor_visibility(world, observer, target, true)
+    profile: OnceCell<BattlePerceptionProfile>,
 }
 
-/// Evaluate the same optics while leaving observer-selection order to the caller.
-fn sensor_visibility(
-    world: &World,
-    observer: ObjectId,
-    target: BattleHexCoordinate,
-    require_running: bool,
-) -> Result<HexObservation> {
-    ensure!(
-        world
-            .objects
-            .get(&observer)
-            .is_some_and(|object| !object.flags.contains(Flag::Going)),
-        "Observer is unavailable"
-    );
-    let unit =
-        super::scanner::scanner_unit(world, observer).context("Observer is not constructed")?;
-    let position = unit.position.context("Observer is not placed")?;
-    let map = &world.btech.maps()[&position.map];
-    let (terrain, distance) = super::los::unit_hex_los(world, observer, target)?;
-    if require_running && unit.power != BattlePower::Running {
-        return Ok(HexObservation::default());
-    }
-    if unit.visibility.clairvoyant {
-        return Ok(HexObservation {
-            visible: true,
-            sensors: BattleContactSensors::default(),
-        });
-    }
-    if distance > map.maximum_visibility as f64 {
-        return Ok(HexObservation::default());
-    }
-    if super::clouds::blocks_terrain(
-        map.cloud_base,
-        super::los::unit_sight_point(world, observer)?.level,
-        unit.pair,
-    ) {
-        return Ok(HexObservation::default());
-    }
-    let light = match map.light {
-        0 => BattleLight::Night,
-        1 => BattleLight::Twilight,
-        2 => BattleLight::Day,
-        _ => anyhow::bail!("Invalid battlefield light"),
-    };
-    let target_lit = super::hex_illuminated(world, position.map, target)?;
-    let pair = unit.pair;
-    let mut sensors = BattleContactSensors::default();
-    for (index, sensor) in [pair.primary, pair.secondary].into_iter().enumerate() {
-        if index == 1 && pair.primary == pair.secondary {
-            sensors.secondary = sensors.primary;
-            continue;
+impl<'w> HexViewer<'w> {
+    /// Defer the profile until a hex actually needs it.
+    pub(super) fn new(world: &'w World, observer: ObjectId) -> Self {
+        Self {
+            world,
+            observer,
+            profile: OnceCell::new(),
         }
-        let disabled = map.optical_sensor_disabled(sensor);
-        let eligible = match sensor {
-            BattleSensorMode::Visual
-            | BattleSensorMode::LightAmplification
-            | BattleSensorMode::Infrared => {
-                sensor
-                    .evaluate_with_ceiling(
-                        terrain,
-                        distance,
-                        false,
-                        BattleSensorConditions {
-                            light,
-                            visibility: u8::try_from(map.visibility)?,
-                            target_lit,
-                            disabled,
-                        },
-                        u16::try_from(map.maximum_visibility)?,
-                        super::sensors::sensor_maximum(world, observer, 15),
-                    )?
-                    .eligible
+    }
+
+    /// Whether the observer's sensor band or sight currently reaches this hex.
+    pub(super) fn visible(&self, target: BattleHexCoordinate) -> Result<bool> {
+        let profile = match self.profile.get() {
+            Some(profile) => profile,
+            None => {
+                let profile = super::perception_profile(self.world, self.observer)?;
+                self.profile.get_or_init(|| profile)
             }
-            BattleSensorMode::Electromagnetic => BattleElectromagneticRules {
-                signal_strength: super::scanner::scanner_unit(world, observer)
-                    .context("Observer is unavailable")?
-                    .sensor_signal,
-                aim_adjustment: 0,
-            }
-            .eligible(
-                terrain,
-                distance,
-                electronic_field(world, observer)?.disturbed,
-                disabled,
-                super::sensors::sensor_maximum(world, observer, 24),
-            ),
-            // These devices require a unit signature and cannot observe an empty terrain target.
-            _ => false,
         };
-        if index == 0 {
-            sensors.primary = eligible;
-        } else {
-            sensors.secondary = eligible;
-        }
+        Ok(super::perception::hex_perception_prepared(
+            self.world,
+            self.observer,
+            profile,
+            target,
+            true,
+        )?
+        .is_some())
     }
-    Ok(HexObservation {
-        visible: sensors.primary || sensors.secondary,
-        sensors,
-    })
 }

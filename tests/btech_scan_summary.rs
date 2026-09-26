@@ -249,8 +249,7 @@ async fn scan_info_towing_uses_shared_relationship_and_literal_names() {
             state["display_name"] = format!("[bold]{name}").into()
         });
         firing::edit(&mut world, target, |state| {
-            state["contacts"][tow.0.to_string()] =
-                serde_json::json!({"primary":true,"secondary":false,"identified":true});
+            state["contacts"][tow.0.to_string()] = serde_json::json!({"identified":true});
         });
         let before = serde_json::to_value(&world.btech).unwrap();
         let report = report_battle_unit(&world, scanner, ObjectId(1), target).unwrap();

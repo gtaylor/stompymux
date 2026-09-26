@@ -57,8 +57,7 @@ async fn targeted_radio_mixed_pairs_share_visibility_delivery_and_restart() {
             let (sender, target) = (ids[0], ids[1]);
             assert!(resolve_targeted_radio(&world, sender, ObjectId(1), target, "unseen").is_err());
             fact(&mut world, sender, |state| {
-                state["contacts"][target.0.to_string()] =
-                    serde_json::json!({"primary": true, "secondary": false})
+                state["contacts"][target.0.to_string()] = serde_json::json!({"identified": false})
             });
             let one_way =
                 resolve_targeted_radio(&world, sender, ObjectId(1), target, "Hello").unwrap();
@@ -68,8 +67,7 @@ async fn targeted_radio_mixed_pairs_share_visibility_delivery_and_restart() {
                 "something [AA] radios you with, 'Hello'"
             );
             fact(&mut world, target, |state| {
-                state["contacts"][sender.0.to_string()] =
-                    serde_json::json!({"primary": true, "secondary": false})
+                state["contacts"][sender.0.to_string()] = serde_json::json!({"identified": false})
             });
             let report =
                 resolve_targeted_radio(&world, sender, ObjectId(1), target, "Hello").unwrap();

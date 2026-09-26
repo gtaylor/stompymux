@@ -392,8 +392,7 @@ async fn spotter_correction_resets_follow_selection_scope() {
         select_battle_spotter(&mut world, observer, ObjectId(2), Some(observer)).unwrap();
         firing::edit(&mut world, source, |state| {
             state["artillery_adjustment"] = 2.into();
-            state["contacts"][observer.0.to_string()] =
-                serde_json::json!({"primary":true,"secondary":false,"identified":true});
+            state["contacts"][observer.0.to_string()] = serde_json::json!({"identified":true});
         });
         assert!(
             visible_battle_contact(&world, source, observer)

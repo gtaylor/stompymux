@@ -124,6 +124,7 @@ fn display(
     }
     // Stable map order resolves stacked contacts. The scanner's own marker has final priority.
     let mut occupied = std::collections::BTreeSet::new();
+    let mut reader = None;
     for id in super::map_slots::all_unit_order(world, viewport.map)?
         .into_iter()
         .filter(|id| *id != observer)
@@ -144,7 +145,10 @@ fn display(
         let (label, friendly) = if id == observer {
             ("**".to_owned(), true)
         } else {
-            let Some(view) = super::visible_contact(world, observer, id)? else {
+            if reader.is_none() {
+                reader = Some(super::contacts::ContactReader::new(world, observer)?);
+            }
+            let Some(view) = reader.as_ref().expect("reader built").view(id)? else {
                 continue;
             };
             let mut label = unit.label().expect("placed contact");
@@ -235,6 +239,7 @@ fn terrain_canvas(
             *pixel = Pixel::plain(pattern[column % 6]);
         }
     }
+    let viewer = observer.map(|observer| super::hex_visibility::HexViewer::new(world, observer));
     for y in 0..height {
         for x in 0..width {
             let coordinate = BattleHexCoordinate {
@@ -250,11 +255,8 @@ fn terrain_canvas(
             }
             let row = y * 2 + usize::from(coordinate.x.rem_euclid(2) == 0);
             let column = x * 3 + 1;
-            let seen = match observer {
-                Some(observer) => {
-                    !(visible || map.flags & 32 != 0)
-                        || super::hex_visible(world, observer, coordinate)?
-                }
+            let seen = match &viewer {
+                Some(viewer) => !(visible || map.flags & 32 != 0) || viewer.visible(coordinate)?,
                 None => true,
             };
             let pixels = if !seen {
@@ -392,6 +394,7 @@ fn draw_mines(
             .entry((mine.coordinate.x, mine.coordinate.y))
             .or_insert(mine.kind);
     }
+    let viewer = super::hex_visibility::HexViewer::new(world, observer);
     for y in 0..usize::from(viewport.height) {
         for x in 0..usize::from(viewport.width) {
             let coordinate = BattleHexCoordinate {
@@ -409,7 +412,7 @@ fn draw_mines(
                 continue;
             };
             if *kind == super::BattleMineKind::Trigger
-                || !super::hex_visible(world, observer, coordinate)?
+                || !viewer.visible(coordinate)?
                 || !super::visibility::hex_unblocked(world, observer, coordinate)?
             {
                 continue;

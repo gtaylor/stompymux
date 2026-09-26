@@ -1,4 +1,4 @@
-//! Wizard team changes reuse sensor signatures and shared network invalidation across unit types.
+//! Wizard team changes reuse unit signatures and shared network invalidation across unit types.
 use crate::{Config, ObjectId, Scripts};
 use anyhow::{Context, Result, ensure};
 
@@ -29,7 +29,7 @@ pub fn set_team_action(
         let team = team.max(0);
         let mut signature = scanner.signature;
         signature.team = team;
-        super::set_sensor_signature(&mut scripts.world_mut(), unit, signature)?;
+        super::set_unit_signature(&mut scripts.world_mut(), unit, signature)?;
         scripts.world().validate(config)?;
         super::notify_message(
             scripts,

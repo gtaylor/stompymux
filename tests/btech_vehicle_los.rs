@@ -1,4 +1,4 @@
-//! Mixed-unit terrain sight lines, optical queries and external illumination use live vehicle height.
+//! Mixed-unit terrain sight lines, perception, illumination and hidden-unit searches use live vehicle height.
 use crate::support;
 use stompymux_rs::*;
 
@@ -41,6 +41,21 @@ async fn fixture(
     (dir, config, world, map, ids.try_into().unwrap())
 }
 
+/// Mark units running through their saved state so contact updates may run without crews.
+fn running(world: &mut World, ids: &[ObjectId]) {
+    let mut state = serde_json::to_value(&world.btech).unwrap();
+    for id in ids {
+        let key = if world.btech.vehicles().contains_key(id) {
+            "vehicles"
+        } else {
+            "constructed"
+        };
+        state[key][id.0.to_string()]["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+    }
+    world.btech = serde_json::from_value(state).unwrap();
+}
+
+/// Low vehicles lose sight over a one-level ridge that Mechs and tall installations see across.
 #[tokio::test]
 async fn vehicle_eye_height_changes_ridge_visibility_and_stationary_units_remain_tall() {
     for (template, tall) in [
@@ -81,8 +96,9 @@ async fn vehicle_eye_height_changes_ridge_visibility_and_stationary_units_remain
     }
 }
 
+/// Submerged vehicles are hidden from Mechs, hovercraft on the surface are not.
 #[tokio::test]
-async fn vehicle_water_height_and_visual_queries_use_actual_surface_position() {
+async fn vehicle_water_height_and_perception_use_actual_surface_position() {
     for (template, hover) in [
         (include_str!("../game/mechs/Demolisher"), false),
         (include_str!("../game/mechs/Fulcrum"), true),
@@ -111,52 +127,24 @@ async fn vehicle_water_height_and_visual_queries_use_actual_surface_position() {
             battle_unit_elevation(&world, vehicle_a).unwrap(),
             Some(if hover { 0 } else { -1 })
         );
-        let conditions = BattleSensorConditions {
-            light: BattleLight::Day,
-            visibility: 60,
-            target_lit: false,
-            disabled: false,
-        };
         assert!(
-            battle_optical_contact(
-                &world,
-                vehicle_a,
-                vehicle_b,
-                BattleSensorMode::Visual,
-                conditions
-            )
-            .unwrap()
-            .eligible
+            battle_perceive(&world, vehicle_a, vehicle_b)
+                .unwrap()
+                .is_some()
         );
         assert_eq!(
-            battle_optical_contact(
-                &world,
-                mech_a,
-                vehicle_b,
-                BattleSensorMode::Visual,
-                conditions
-            )
-            .unwrap()
-            .eligible,
+            battle_perceive(&world, mech_a, vehicle_b)
+                .unwrap()
+                .is_some(),
             hover
-        );
-        assert!(
-            battle_optical_contact(
-                &world,
-                vehicle_a,
-                vehicle_b,
-                BattleSensorMode::Infrared,
-                conditions
-            )
-            .unwrap()
-            .eligible
         );
         assert_eq!(world.btech, before);
     }
 }
 
+/// Beyond the sensor band, darkness costs +1 unless a Mech searchlight lights the vehicle target.
 #[tokio::test]
-async fn mech_searchlights_illuminate_vehicle_targets_and_replay_optical_queries() {
+async fn mech_searchlights_illuminate_vehicle_targets_and_replay_perception() {
     let (_dir, config, mut world, map, [lamp, _, observer, target]) = fixture(
         ".0\n.0\n.0\n.0\n.0\n",
         include_str!("../game/mechs/Demolisher"),
@@ -165,30 +153,18 @@ async fn mech_searchlights_illuminate_vehicle_targets_and_replay_optical_queries
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["maps"][map.0.to_string()]["light"] = 0.into();
     world.btech = serde_json::from_value(state).unwrap();
+    // Without the all-conditions band, only sight reaches the target four hexes away.
+    set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
     let before = world.btech.clone();
-    let dark = battle_map_optical_contact(
-        &world,
-        observer,
-        target,
-        BattleSensorMode::Visual,
-        false,
-        false,
-    )
-    .unwrap();
-    assert!(dark.eligible);
-    assert_eq!(dark.aim_modifier, 2);
-    assert!(
-        battle_map_optical_contact(
-            &world,
-            observer,
-            target,
-            BattleSensorMode::LightAmplification,
-            false,
-            false
-        )
-        .unwrap()
-        .eligible
-    );
+    let sight = |world: &World| {
+        battle_perceive(world, observer, target)
+            .unwrap()
+            .map(|perception| (perception.channel, perception.aim_modifier))
+    };
+    assert_eq!(sight(&world), Some((BattleDetectionChannel::Sight, 1)));
+    let mut short = world.clone();
+    set_battle_map_visibility(&mut short, map, BattleLight::Night, 2).unwrap();
+    assert_eq!(sight(&short), None);
     assert_eq!(world.btech, before);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(lamp);
     assign_battle_pilot(&mut world, lamp, ObjectId(1)).unwrap();
@@ -201,55 +177,16 @@ async fn mech_searchlights_illuminate_vehicle_targets_and_replay_optical_queries
         advance_battle_searchlights(&mut world);
     }
     assert!(battle_unit_illuminated(&world, target));
-    let lit = battle_map_optical_contact(
-        &world,
-        observer,
-        target,
-        BattleSensorMode::Visual,
-        false,
-        false,
-    )
-    .unwrap();
-    assert_eq!(lit.aim_modifier, 0);
-    assert!(
-        !battle_map_optical_contact(
-            &world,
-            observer,
-            target,
-            BattleSensorMode::LightAmplification,
-            false,
-            false
-        )
-        .unwrap()
-        .eligible
-    );
-    assert!(
-        !battle_map_optical_contact(
-            &world,
-            observer,
-            target,
-            BattleSensorMode::Visual,
-            false,
-            true
-        )
-        .unwrap()
-        .eligible
-    );
+    let lit = sight(&world);
+    assert_eq!(lit, Some((BattleDetectionChannel::Sight, 0)));
+    // A lit target stays visible out to three times the night visibility.
+    let mut short = world.clone();
+    set_battle_map_visibility(&mut short, map, BattleLight::Night, 2).unwrap();
+    assert_eq!(sight(&short), lit);
     persistence::save(&config.database(), &world).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
     assert!(battle_unit_illuminated(&restored, target));
-    assert_eq!(
-        lit,
-        battle_map_optical_contact(
-            &restored,
-            observer,
-            target,
-            BattleSensorMode::Visual,
-            false,
-            false
-        )
-        .unwrap()
-    );
+    assert_eq!(sight(&restored), lit);
     let other = world.create(&config, "Other map".into(), Kind::Room);
     create_battle_map(
         &mut world,
@@ -263,6 +200,7 @@ async fn mech_searchlights_illuminate_vehicle_targets_and_replay_optical_queries
     assert!(!battle_unit_illuminated(&world, target));
 }
 
+/// Hovercraft under a bridge lose the sight line, and the posture survives restart.
 #[tokio::test]
 async fn hovercraft_sight_lines_retain_under_bridge_height_after_restart() {
     let (_dir, config, mut world, _map, [_, _, observer, target]) = fixture(
@@ -291,22 +229,15 @@ async fn hovercraft_sight_lines_retain_under_bridge_height_after_restart() {
     );
 }
 
-/// Scenario scan inputs stay explicit until vehicle teams and contact cadence are owned.
-fn vehicle_scan() -> BattleSensorScan {
-    BattleSensorScan {
-        primary: BattleSensorMode::Visual,
-        secondary: BattleSensorMode::Visual,
-        visual_disabled: false,
-        amplification_disabled: false,
-        perception: 7,
-        target: BattleScanTarget {
-            lit: false,
-            hostile: false,
-            hidden: false,
-        },
-    }
-}
+/// A hidden hostile target searched for by a pilot with perception skill seven.
+const HIDDEN: BattleContactRules = BattleContactRules {
+    hostile: true,
+    hidden: true,
+    perception: 7,
+    acquire: true,
+};
 
+/// Hidden-unit searches weight the vehicle hull arc, add the turret bonus and save exact dice.
 #[tokio::test]
 async fn vehicle_acquisition_uses_hull_and_turret_weights_and_saves_exact_dice() {
     let (_dir, config, mut world, map, [_mech_a, mech_b, vehicle_a, vehicle_b]) = fixture(
@@ -315,14 +246,28 @@ async fn vehicle_acquisition_uses_hull_and_turret_weights_and_saves_exact_dice()
     )
     .await;
     set_battle_map_visibility(&mut world, map, BattleLight::Day, 30).unwrap();
+    running(&mut world, &[vehicle_a]);
+    assert_eq!(battle_perception_factor(HIDDEN.perception), 79);
     for target in [mech_b, vehicle_b] {
-        for (heading, offset, base, arc) in [
-            (0.0, 0.0, 115, BattleSensorArc::Front),
-            (0.0, 90.0, 100, BattleSensorArc::Front),
-            (90.0, 0.0, 80, BattleSensorArc::Side),
-            (90.0, 270.0, 95, BattleSensorArc::Side),
-            (180.0, 0.0, 50, BattleSensorArc::Rear),
-            (180.0, 180.0, 65, BattleSensorArc::Rear),
+        // Four hexes lies between the automatic and maximum search ranges: trunc(100 - 4/3) = 98.
+        let distance = battle_perceive(&world, vehicle_a, target)
+            .unwrap()
+            .unwrap()
+            .range
+            .spatial;
+        assert!(
+            (AUTOMATIC_DETECTION_RANGE..=HIDDEN_DETECTION_RANGE).contains(&distance),
+            "{distance}"
+        );
+        assert_eq!((100.0 - distance / 3.0) as u16, 98);
+        // Threshold = hull arc (+15 turret) * 79 / 100 / 4 * 98.
+        for (heading, offset, threshold, arc) in [
+            (0.0, 0.0, 2156, BattleSensorArc::Front),
+            (0.0, 90.0, 1862, BattleSensorArc::Front),
+            (90.0, 0.0, 1470, BattleSensorArc::Side),
+            (90.0, 270.0, 1764, BattleSensorArc::Side),
+            (180.0, 0.0, 882, BattleSensorArc::Rear),
+            (180.0, 180.0, 1176, BattleSensorArc::Rear),
         ] {
             let mut saved = serde_json::to_value(&world.btech).unwrap();
             let vehicle = &mut saved["vehicles"][vehicle_a.0.to_string()];
@@ -330,49 +275,27 @@ async fn vehicle_acquisition_uses_hull_and_turret_weights_and_saves_exact_dice()
             vehicle["motion"]["desired_heading"] = serde_json::json!(heading);
             vehicle["turret_offset"] = serde_json::json!(offset);
             vehicle["dice"] = serde_json::to_value(BattleDice::seeded([43; 32])).unwrap();
+            vehicle["contacts"] = serde_json::json!({});
             world.btech = serde_json::from_value(saved).unwrap();
+            assert_eq!(
+                BattleSensorArc::from_bearing(0.0, heading, BattleFacing::default()).unwrap(),
+                arc
+            );
             let before = world.clone();
-            let factor = battle_map_optical_contact(
-                &world,
-                vehicle_a,
-                target,
-                BattleSensorMode::Visual,
-                false,
-                false,
-            )
-            .unwrap()
-            .acquisition_factor;
             let mut expected = BattleDice::seeded([43; 32]);
             let roll = expected.die(10_000).unwrap();
-            let report =
-                scan_battle_optical_target(&mut world, vehicle_a, target, vehicle_scan()).unwrap();
-            assert_eq!(report.primary.threshold, base * u16::from(factor));
-            assert_eq!(report.primary.roll, Some(roll));
-            assert_eq!(report.primary.detected, roll < report.primary.threshold);
-            assert_eq!(report.secondary, None);
-            let mut single = before.clone();
+            let detection = update_battle_contact(&mut world, vehicle_a, target, HIDDEN)
+                .unwrap()
+                .detection
+                .unwrap();
             assert_eq!(
-                roll_battle_optical_detection(
-                    &mut single,
-                    vehicle_a,
-                    target,
-                    BattleSensorAttempt {
-                        sensor: BattleSensorMode::Visual,
-                        target_lit: false,
-                        disabled: false,
-                        rules: BattleDetectionRules {
-                            arc,
-                            perception: 7,
-                            hostile: false,
-                            hidden: false,
-                            secondary: false
-                        },
-                    }
-                )
-                .unwrap(),
-                report.primary
+                detection,
+                BattleDetection {
+                    detected: roll < threshold,
+                    threshold,
+                    roll: Some(roll)
+                }
             );
-            assert_eq!(single.btech, world.btech);
             persistence::save(&config.database(), &world).await.unwrap();
             let mut restored = persistence::load(&config.database()).await.unwrap();
             assert_eq!(
@@ -387,86 +310,72 @@ async fn vehicle_acquisition_uses_hull_and_turret_weights_and_saves_exact_dice()
     }
 }
 
+/// Only hidden hostile targets between the automatic and maximum search ranges consume dice.
 #[tokio::test]
-async fn vehicle_acquisition_secondary_failures_and_close_contacts_preserve_roll_order() {
+async fn vehicle_acquisition_rolls_only_for_hidden_hostiles_beyond_automatic_range() {
     let (_dir, _config, mut world, map, [_mech_a, _mech_b, vehicle_a, vehicle_b]) = fixture(
         ".0\n.0\n.0\n.0\n.0\n",
         include_str!("../game/mechs/Demolisher"),
     )
     .await;
     set_battle_map_visibility(&mut world, map, BattleLight::Night, 30).unwrap();
+    running(&mut world, &[vehicle_a]);
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     saved["vehicles"][vehicle_a.0.to_string()]["dice"] =
         serde_json::to_value(BattleDice::seeded([77; 32])).unwrap();
     world.btech = serde_json::from_value(saved).unwrap();
     let before = world.btech.clone();
-    let scan = BattleSensorScan {
-        secondary: BattleSensorMode::Infrared,
-        visual_disabled: true,
-        ..vehicle_scan()
-    };
-    let mut infrared = world.clone();
-    let report = scan_battle_optical_target(&mut infrared, vehicle_a, vehicle_b, scan).unwrap();
+    for (hostile, hidden) in [(false, false), (true, false), (false, true)] {
+        let mut trial = world.clone();
+        let update = update_battle_contact(
+            &mut trial,
+            vehicle_a,
+            vehicle_b,
+            BattleContactRules {
+                hostile,
+                hidden,
+                ..HIDDEN
+            },
+        )
+        .unwrap();
+        assert_eq!(update.transition, BattleContactTransition::Acquired);
+        assert_eq!(
+            update.detection,
+            Some(BattleDetection {
+                detected: true,
+                threshold: 0,
+                roll: None
+            })
+        );
+        assert_eq!(
+            roll_unit_dice(&mut trial, vehicle_a, 1).unwrap(),
+            vec![BattleDice::seeded([77; 32]).d6()]
+        );
+    }
+    let mut searched = world.clone();
     let mut expected = BattleDice::seeded([77; 32]);
-    assert_eq!(report.primary.roll, None);
+    let update = update_battle_contact(&mut searched, vehicle_a, vehicle_b, HIDDEN).unwrap();
     assert_eq!(
-        report.secondary.unwrap().roll,
+        update.detection.unwrap().roll,
         Some(expected.die(10_000).unwrap())
     );
     assert_eq!(
-        roll_unit_dice(&mut infrared, vehicle_a, 1).unwrap(),
+        roll_unit_dice(&mut searched, vehicle_a, 1).unwrap(),
         vec![expected.d6()]
     );
     assert_eq!(world.btech, before);
-    let scan = BattleSensorScan {
-        secondary: BattleSensorMode::LightAmplification,
-        visual_disabled: true,
-        ..vehicle_scan()
-    };
-    let report = scan_battle_optical_target(&mut world, vehicle_a, vehicle_b, scan).unwrap();
-    assert_eq!(report.primary.roll, None);
-    let mut expected = BattleDice::seeded([77; 32]);
-    assert_eq!(
-        report.secondary.unwrap().roll,
-        Some(expected.die(10_000).unwrap())
-    );
-    let factor = battle_map_optical_contact(
-        &world,
-        vehicle_a,
-        vehicle_b,
-        BattleSensorMode::LightAmplification,
-        false,
-        false,
-    )
-    .unwrap()
-    .acquisition_factor;
-    assert_eq!(
-        report.secondary.unwrap().threshold,
-        115 * u16::from(factor) / 2
-    );
-    assert_eq!(
-        roll_unit_dice(&mut world.clone(), vehicle_a, 1).unwrap(),
-        vec![expected.d6()]
-    );
 
     place_battle_unit(&mut world, vehicle_b, map, 0, 3).unwrap();
-    let before = world.btech.clone();
-    let report =
-        scan_battle_optical_target(&mut world, vehicle_a, vehicle_b, vehicle_scan()).unwrap();
-    assert!(report.primary.detected);
-    assert_eq!(report.primary.roll, None);
-    assert_eq!(world.btech, before);
-    let disabled = BattleSensorScan {
-        visual_disabled: true,
-        ..vehicle_scan()
-    };
-    assert!(
-        scan_battle_optical_target(&mut world, vehicle_a, vehicle_b, disabled)
-            .unwrap()
-            .detected_by
-            .is_none()
+    let update = update_battle_contact(&mut world, vehicle_a, vehicle_b, HIDDEN).unwrap();
+    let detection = update.detection.unwrap();
+    assert!(detection.detected);
+    assert!(detection.threshold > 0);
+    assert_eq!(detection.roll, None);
+    assert_eq!(update.transition, BattleContactTransition::Acquired);
+    assert_eq!(
+        roll_unit_dice(&mut world, vehicle_a, 1).unwrap(),
+        vec![BattleDice::seeded([77; 32]).d6()]
     );
-    assert_eq!(world.btech, before);
 }
 
 /// Burrowing lowers a moving chassis enough for a shallow intervening ridge to hide it.

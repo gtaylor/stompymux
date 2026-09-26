@@ -37,7 +37,7 @@ async fn sight_all_chassis_targets_preserve_state_and_replay() {
                         *count = 0.into();
                     }
                 }
-                "hidden" => state["sensor_signature"]["hidden"] = true.into(),
+                "hidden" => state["signature"]["hidden"] = true.into(),
                 "hiding" => state["hide_elapsed"] = 0.into(),
                 "hold" => state["weapons_hold"] = true.into(),
                 _ => (),
@@ -261,7 +261,7 @@ async fn stinger_sight_and_fire_share_vtol_admission() {
                     .unwrap()
                 });
             }
-            refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+            refresh_battle_contacts(&mut world, &[shooter]).unwrap();
             let scripts = scripts(&config, &world);
             let before = scripts.world().btech.clone();
             let result = scripts.eval_callback::<mlua::Table>(&format!(

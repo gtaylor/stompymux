@@ -135,7 +135,6 @@ pub(super) fn mech_immobile(world: &World, unit: &BattleUnit) -> bool {
     unit.fortified
         || unit.crew_recovery().remaining > 0
         || unit.power() != BattlePower::Running
-        || unit.blinded_remaining() > 0
         || unit
             .pilot()
             .is_some_and(|pilot| world.btech.unconscious(pilot))
@@ -147,7 +146,6 @@ pub(super) fn immobile(world: &World, target: ObjectId) -> Result<bool> {
         return Ok(unit.fortified
             || unit.crew_recovery().remaining > 0
             || unit.power() != BattlePower::Running
-            || unit.blinded_remaining() > 0
             || unit.immobilized()
             || unit.definition().movement == BattleVehicleMovement::Stationary
             || unit

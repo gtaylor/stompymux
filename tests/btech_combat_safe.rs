@@ -63,8 +63,6 @@ async fn fixture(
         edit(&mut world, id, |state| {
             state["power"] = serde_json::to_value(BattlePower::Running).unwrap();
             state["dice"] = serde_json::to_value(BattleDice::seeded([19; 32])).unwrap();
-            state["sensor_signal"] =
-                serde_json::to_value(BattleSensorSignal::seeded(100, [27; 32]).unwrap()).unwrap();
         });
         ids.push(id);
     }
@@ -204,7 +202,7 @@ async fn immunity_covers_all_chassis_pairs_and_replays() {
                         "lost_criticals",
                         "pilot_injuries",
                         "stagger",
-                        "sensor_signature",
+                        "signature",
                     ] {
                         if case == "map"
                             && field == "sections"
@@ -337,7 +335,7 @@ async fn immunity_preserves_hit_routing_and_internal_damage_boundaries() {
         let (_dir, config, mut world, id, _) = fixture(&source, &source, false).await;
         set_battle_combat_safe(&mut world, id, true).unwrap();
         edit(&mut world, id, |unit| {
-            unit["sensor_signature"]["hidden"] = true.into()
+            unit["signature"]["hidden"] = true.into()
         });
         let before = state(&world, id);
         if world.btech.vehicles().contains_key(&id) {
@@ -398,7 +396,7 @@ async fn immunity_preserves_hit_routing_and_internal_damage_boundaries() {
         }
         let after = state(&world, id);
         assert_eq!(before["sections"], after["sections"]);
-        assert_eq!(before["sensor_signature"], after["sensor_signature"]);
+        assert_eq!(before["signature"], after["signature"]);
         assert_ne!(before["dice"], after["dice"]);
         world.validate(&config).unwrap();
     }
@@ -503,19 +501,13 @@ async fn immunity_blocks_flooding_until_the_unit_flag_is_removed() {
     }
 }
 
-/// Establish a contact with a reproducible sensor stream before setting attack dice.
+/// Acquire the perceived target before attack dice are set; ordinary acquisition rolls no dice.
 fn acquire(world: &mut World, shooter: ObjectId, target: ObjectId) {
-    for scan_seed in 0..=255 {
-        edit(world, shooter, |unit| {
-            unit["dice"] = serde_json::to_value(BattleDice::seeded([scan_seed; 32])).unwrap()
-        });
-        refresh_optical_scanners(world, &[shooter]).unwrap();
-        if visible_battle_contact(world, shooter, target)
+    refresh_battle_contacts(world, &[shooter]).unwrap();
+    assert!(
+        visible_battle_contact(world, shooter, target)
             .unwrap()
-            .is_some()
-        {
-            return;
-        }
-    }
-    panic!("Fixture target could not be acquired");
+            .is_some(),
+        "Fixture target could not be acquired"
+    );
 }

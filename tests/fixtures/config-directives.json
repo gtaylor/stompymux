@@ -380,11 +380,6 @@
     "permission": "CA_GOD"
   },
   {
-    "name": "btech_seismic_see_stopped",
-    "parser": "cf_int",
-    "permission": "CA_GOD"
-  },
-  {
     "name": "btech_limitedrepairs",
     "parser": "cf_int",
     "permission": "CA_GOD"

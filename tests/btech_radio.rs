@@ -409,7 +409,7 @@ async fn digital_radio_relay_lifecycle_team_and_direction() {
                 u["power"] = serde_json::to_value(BattlePower::Off).unwrap()
             }),
             "enemy" => radio_fact(&mut changed, units[3], |u| {
-                u["sensor_signature"]["team"] = 17.into()
+                u["signature"]["team"] = 17.into()
             }),
             "going" => {
                 changed
@@ -434,9 +434,7 @@ async fn digital_radio_relay_lifecycle_team_and_direction() {
     }
     // An enemy can receive directly, but cannot forward the source team's transmission.
     let mut enemy = world.clone();
-    radio_fact(&mut enemy, units[1], |u| {
-        u["sensor_signature"]["team"] = 17.into()
-    });
+    radio_fact(&mut enemy, units[1], |u| u["signature"]["team"] = 17.into());
     assert!(
         resolve_digital_radio(&enemy, source, 0, "test")
             .unwrap()
@@ -453,7 +451,7 @@ async fn digital_radio_endpoint_ecm_self_monitor_and_invalid_input() {
     let jammer = units[2];
     // A hostile nearby emission blocks the source, while preserving its self-monitor reception.
     radio_fact(&mut world, jammer, |u| {
-        u["sensor_signature"]["team"] = 17.into();
+        u["signature"]["team"] = 17.into();
         u["electronics"]["guardian"] = "ecm".into();
     });
     relocate_radio_unit(&mut world, jammer, map, 1, 2).unwrap();
@@ -592,7 +590,7 @@ async fn analog_radio_ecm_muting_zero_frequency_and_saved_skill() {
         u["radio"][0]["mode"]["digital"] = false.into()
     });
     radio_fact(&mut world, jammer, |u| {
-        u["sensor_signature"]["team"] = 17.into();
+        u["signature"]["team"] = 17.into();
         u["electronics"]["guardian"] = "ecm".into();
         u["radio"][0]["mode"]["muted"] = true.into();
     });
@@ -868,7 +866,7 @@ async fn radio_frequency_audits_match_each_enemy_channel_with_native_lua_parity(
     radio_sender(&mut world, source);
     radio_audit_channels(&mut world);
     radio_fact(&mut world, units[1], |u| {
-        u["sensor_signature"]["team"] = 7.into();
+        u["signature"]["team"] = 7.into();
         u["radio"][1]["frequency"] = 42.into();
         u["radio"][1]["mode"]["muted"] = true.into();
         u["power"] = serde_json::to_value(BattlePower::Off).unwrap();
@@ -1247,9 +1245,7 @@ async fn observer_radio_bypasses_tuning_range_and_ecm_with_identified_clear_text
     let observer = units[4];
     let affiliation = world.create(&config, "Faction".into(), Kind::Thing);
     world.objects.get_mut(&source).unwrap().affiliation = Some(affiliation);
-    radio_fact(&mut world, source, |u| {
-        u["sensor_signature"]["team"] = 17.into()
-    });
+    radio_fact(&mut world, source, |u| u["signature"]["team"] = 17.into());
     set_battle_observer(&mut world, observer, true).unwrap();
     radio_fact(&mut world, observer, |u| {
         u["power"] = serde_json::to_value(BattlePower::Off).unwrap();
@@ -1257,7 +1253,7 @@ async fn observer_radio_bypasses_tuning_range_and_ecm_with_identified_clear_text
         u["radio"][1]["mode"]["color"] = "R".into();
     });
     radio_fact(&mut world, units[2], |u| {
-        u["sensor_signature"]["team"] = 18.into();
+        u["signature"]["team"] = 18.into();
         u["electronics"]["guardian"] = "ecm".into();
     });
     relocate_radio_unit(&mut world, units[2], map, 1, 2).unwrap();
@@ -1397,8 +1393,7 @@ async fn observer_role_is_saved_and_battlefield_labels_follow_saved_slots() {
 /// Acquire a fixture contact without spending scanner dice or changing radio settings.
 fn radio_contact(world: &mut World, observer: ObjectId, target: ObjectId) {
     radio_fact(world, observer, |u| {
-        u["contacts"][target.0.to_string()] =
-            serde_json::json!({"primary": true, "secondary": false})
+        u["contacts"][target.0.to_string()] = serde_json::json!({"identified": false})
     });
 }
 
@@ -1519,6 +1514,8 @@ async fn targeted_radio_power_observer_contact_and_message_guards() {
     );
 }
 
+/// Observer mode silences routine contact notices but still reports acquisition and lock loss
+/// once neither the sensor band nor sight reaches the target.
 #[tokio::test]
 async fn observer_scans_keep_acquisition_and_lock_loss_without_routine_chatter() {
     let (_dir, config, mut normal, map, units) = relay_fixture().await;
@@ -1529,8 +1526,8 @@ async fn observer_scans_keep_acquisition_and_lock_loss_without_routine_chatter()
     set_battle_autocon_shutdown(&mut normal, observer, ObjectId(1), true).unwrap();
     let mut observing = normal.clone();
     set_battle_observer(&mut observing, observer, true).unwrap();
-    let normal_events = refresh_optical_scanners(&mut normal, &[observer]).unwrap();
-    let events = refresh_optical_scanners(&mut observing, &[observer]).unwrap();
+    let normal_events = refresh_battle_contacts(&mut normal, &[observer]).unwrap();
+    let events = refresh_battle_contacts(&mut observing, &[observer]).unwrap();
     assert_eq!(events, normal_events);
     assert!(events.iter().any(|e| e.target == target && e.acquired));
     assert!(events.iter().all(|e| e.notice(&observing).is_none()));
@@ -1542,9 +1539,10 @@ async fn observer_scans_keep_acquisition_and_lock_loss_without_routine_chatter()
     let _ = select_battle_target(&mut normal, observer, ObjectId(1), Some(target)).unwrap();
     for world in [&mut normal, &mut observing] {
         set_battle_map_visibility(world, map, BattleLight::Day, 0).unwrap();
+        set_battle_map_perception(world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
     }
-    let normal_events = refresh_optical_scanners(&mut normal, &[observer]).unwrap();
-    let events = refresh_optical_scanners(&mut observing, &[observer]).unwrap();
+    let normal_events = refresh_battle_contacts(&mut normal, &[observer]).unwrap();
+    let events = refresh_battle_contacts(&mut observing, &[observer]).unwrap();
     assert_eq!(events, normal_events);
     let lost = events.iter().find(|e| e.target == target).unwrap();
     assert!(lost.lock_lost);

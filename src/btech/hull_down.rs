@@ -212,7 +212,7 @@ pub(super) fn advance(world: &mut World) -> Vec<BattleNotice> {
         .collect()
 }
 
-/// Hull-down adds two only to sensor modes that benefit from existing terrain cover.
+/// Hull-down adds two to any aim that must clear existing partial cover.
 pub(super) fn cover_modifier(world: &World, target: ObjectId, partial_cover: bool) -> i16 {
     if partial_cover
         && world

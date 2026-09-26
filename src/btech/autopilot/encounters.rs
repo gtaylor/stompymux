@@ -441,8 +441,7 @@ pub(super) fn fixture_with_target(
         if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
             unit.power = BattlePower::Running;
             unit.dice = crate::BattleDice::seeded([seed; 32]);
-            unit.sensor_signal = crate::BattleSensorSignal::seeded(100, [seed; 32])?;
-            unit.sensor_signature.team = team;
+            unit.signature.team = team;
             let mut recovery = serde_json::to_value(&unit.crew_recovery)?;
             recovery["dice"] = serde_json::to_value(crate::BattleDice::seeded([seed; 32]))?;
             unit.crew_recovery = serde_json::from_value(recovery)?;
@@ -452,8 +451,7 @@ pub(super) fn fixture_with_target(
                 .unwrap();
             unit.power = BattlePower::Running;
             unit.dice = crate::BattleDice::seeded([seed; 32]);
-            unit.sensor_signal = crate::BattleSensorSignal::seeded(100, [seed; 32])?;
-            unit.sensor_signature.team = team;
+            unit.signature.team = team;
             let mut recovery = serde_json::to_value(&unit.crew_recovery)?;
             recovery["dice"] = serde_json::to_value(crate::BattleDice::seeded([seed; 32]))?;
             unit.crew_recovery = serde_json::from_value(recovery)?;
@@ -474,7 +472,7 @@ pub(super) fn fixture_with_target(
             }
         }
     }
-    crate::btech::refresh_optical_scanners(&mut world, &[shooter])?;
+    crate::btech::refresh_contacts(&mut world, &[shooter])?;
     let band = AutopilotRangeBand {
         minimum: if scenario == "fallback" {
             20

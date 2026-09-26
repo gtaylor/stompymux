@@ -774,9 +774,8 @@ async fn thermal_edits_share_native_lua_validation_and_preserve_stored_heat_scen
     }
 }
 
-async fn navigation_and_sensor_fields_share_live_services_without_advancing_them_scenario(
-    f: &UnitFields,
-) {
+/// Hex-center navigation fields share live services with Lua and survive restart unchanged.
+async fn navigation_fields_share_live_services_without_advancing_them_scenario(f: &UnitFields) {
     let config = &f.config;
     for source in firing::templates() {
         let (mut world, id, _, _) = f.pair(&source, &source);
@@ -786,16 +785,6 @@ async fn navigation_and_sensor_fields_share_live_services_without_advancing_them
                 serde_json::to_value(center.project(270.0, 0.2).unwrap()).unwrap();
         });
         let navigation = find_battle_hex_center(&world, id, ObjectId(1)).unwrap();
-        select_battle_optical_sensors(
-            &mut world,
-            id,
-            ObjectId(1),
-            BattleSensorPair {
-                primary: BattleSensorMode::Infrared,
-                secondary: BattleSensorMode::Electromagnetic,
-            },
-        )
-        .unwrap();
         let scripts = &f.native;
         support::install(scripts, world.clone());
         let before = scripts.world().btech.clone();
@@ -811,7 +800,6 @@ async fn navigation_and_sensor_fields_share_live_services_without_advancing_them
         );
         assert_eq!(field(&report, "centdist"), Some("0.20"));
         assert_eq!(field(&report, "centbearing"), Some("90"));
-        assert_eq!(field(&report, "sensors"), Some("vvIE"));
         let lua: mlua::Table = scripts
             .eval_callback(&format!("return btech.unit.fields(1,{})", id.0))
             .unwrap();
@@ -822,15 +810,12 @@ async fn navigation_and_sensor_fields_share_live_services_without_advancing_them
         assert_eq!(scripts.world().btech, before);
         let saved = scripts.world().clone();
         persistence::save(&config.database(), &saved).await.unwrap();
-        let mut restored = persistence::load(&config.database()).await.unwrap();
+        let restored = persistence::load(&config.database()).await.unwrap();
         assert_eq!(restored.btech, before);
-        for _ in 0..10 {
-            advance_battle_sensor_selection(&mut restored);
-        }
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(restored))).unwrap();
         let report =
-            view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "sensors").unwrap();
-        assert_eq!(field(&report, "sensors"), Some("ie"));
+            view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "centdist").unwrap();
+        assert_eq!(field(&report, "centdist"), Some("0.20"));
     }
 }
 
@@ -1734,7 +1719,6 @@ async fn readonly_unit_fields_reject_native_and_lua_writes_on_every_chassis_scen
             "id",
             "centdist",
             "centbearing",
-            "sensors",
             "bv",
             "numseen",
         ] {
@@ -3428,10 +3412,11 @@ async fn unit_fields_hardware_identity_and_thermal_harness() {
     thermal_edits_share_native_lua_validation_and_preserve_stored_heat_scenario(&f).await;
 }
 
+/// Navigation, metadata, contact counts, cockpit links, names and startup history scenarios.
 #[tokio::test]
-async fn unit_fields_sensors_metadata_and_history_harness() {
+async fn unit_fields_navigation_metadata_and_history_harness() {
     let f = UnitFields::new().await;
-    navigation_and_sensor_fields_share_live_services_without_advancing_them_scenario(&f).await;
+    navigation_fields_share_live_services_without_advancing_them_scenario(&f).await;
     authored_and_edited_metadata_share_validation_across_chassis_and_restart_scenario(&f).await;
     enemy_contact_count_follows_acquisition_and_teams_without_rescanning_scenario(&f).await;
     explicit_cockpit_links_share_named_edits_and_preserve_deferred_references_scenario(&f).await;

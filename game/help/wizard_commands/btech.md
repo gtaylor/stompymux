@@ -130,8 +130,9 @@ adjacent hex steps. It does not perform line-of-sight or weapon checks.
 lighting and weather visibility (0–60 hexes). For example,
 `@btech map-conditions #43=night,15`. This requires Wizard authority and control
 of the map. Units may remain on the map; terrain is unchanged. `inspect` displays
-light as 0 (night), 1 (twilight), or 2 (day), plus visibility and the sensor range
-ceiling. Failed saves leave the previous conditions in effect.
+light as 0 (night), 1 (twilight), or 2 (day), plus visibility and the line-of-sight
+ceiling. Sensors reach fifteen hexes in any conditions; beyond that, visibility
+sets how far units see (see `help line of sight`). Failed saves leave the previous conditions in effect.
 
 `@btech inspect` includes a placed unit's signed elevation. This follows its
 current altitude, including jumping and height retained after terrain collapses.
@@ -248,8 +249,8 @@ terrain visibility still apply; this is not a general visibility bypass.
 ## Reactor explosion scenario action
 
 A trusted Lua callback can use `btech.unit.reactor_explode(unit)` to detonate a
-constructed Mech. It returns the ordered blast hits, blinded observers, ignited
-hexes and notices. An optional `section_explosion` records an earlier instability
+constructed Mech. It returns the ordered blast hits, ignited hexes and
+notices. An optional `section_explosion` records an earlier instability
 blast caused by destroying the reactor itself. Damage, crew evacuation and notifications roll back together
 if the callback fails. This scenario action bypasses cockpit self-destruct
 permission and countdown settings. Pilot-owned sequences use
@@ -464,18 +465,12 @@ retaining stored ammunition. Leaving vacuum does not restore breached equipment.
 
 Use `@btech map-cloud <map>=<altitude>` to set the cloud boundary. Its initial
 altitude is 200; zero disables cloud obstruction. Values range from -32768 to
-32767 elevation levels. Visual, light-amplification and infrared sensors cannot
-see a unit across this boundary. A unit exactly at the boundary is on its upper
-side. Radar and other non-optical modes retain their own visibility rules.
+32767 elevation levels. Neither sensors nor sight cross this boundary, for units or
+terrain. A unit exactly at the boundary is on its upper side. Radar and active
+probes ignore clouds.
 Lua callbacks use `btech.map.cloud_base(actor, map, altitude)`. The value is saved
 with the map and survives restart.
 
-
-Terrain targets follow a separate cloud rule: when two different sensor modes
-are selected, an observer strictly above the cloud base cannot see terrain
-coordinates. At the cloud base, below it, or with the same mode selected twice,
-cloud cover does not obstruct terrain visibility. This applies to terrain
-firing, maps, scans and spotting; the other visibility requirements still apply.
 
 `ADDICE <percentage>` grows ice on the map containing the wizard. Only ordinary
 water freezes, with an additional shoreline check; newly frozen hexes do not
@@ -499,8 +494,8 @@ and resulting tiles. Occupied maps can be edited and saved without reloading
 their source assets.
 
 `@MAPEMIT <message>` broadcasts to the occupants of running units on the wizard's
-current map and privately confirms `Message sent!`. Unconscious crews and units
-with temporary sensor blindness do not receive the message. No sensor contact
+current map and privately confirms `Message sent!`. Unconscious crews do not receive
+the message. No sensor contact
 or line of sight is required. Players standing directly in the map room are
 outside this cockpit audience. Lua provides `btech.map.emit(actor, map, text)`,
 returning eligible unit dbrefs in battlefield slot order. If delivery fails, all
@@ -631,13 +626,16 @@ state. Coordinates outside the map select the nearest edge.
 ## Edit map fields
 
 `@SETMAP field value` edits a field on the current map without a confirmation reply.
-Light changes can notify affected cockpits. Field names
+Field names
 match in full without regard to case. Lua uses
 `btech.map.set_field(actor, map, field, value)` with the same wizard authority.
 
 Writable fields are `cf`, `cfmax`, `regen_factor`, `gravity`, `temperature`,
 `maplight`, `mapname`, `mapvis`, `winddir`, `windspeed`, `cloudbase`, `flags`
 and `sensorflags`. Dimensions, `maxvis`, `buildonmap` and `firstfree` are read-only.
+`sensorflags` switches perception off for everyone on the map: bit 0 (`a`, value 1)
+disables the sensor band, bit 5 (`f`, 32) radar and bit 6 (`g`, 64) active probes.
+Other bits have no effect.
 Light accepts 0–2 and visibility 0–60. Wind direction must be 0–359 and speed
 nonnegative. Integrity must stay between zero and its maximum; set the maximum
 first when creating a structure. Numeric input must fit a signed 32-bit integer.
@@ -752,8 +750,8 @@ All three operations require wizard authority.
 
 Inside a physical unit, `setteam <number>` changes its team. The unit must be on a
 map; the value is a signed 32-bit integer, with negatives normalized to zero.
-Changing teams clears its C3/C3i network assignment. Other sensor-signature facts
-are preserved. Lua uses `btech.unit.set_team(actor, unit, team)`.
+Changing teams clears its C3/C3i network assignment. The unit's hiding and
+scenario-lighting state are preserved. Lua uses `btech.unit.set_team(actor, unit, team)`.
 
 Inside a physical unit, `@losemit <message>` broadcasts an emote to running units
 that currently see it. The source cockpit is excluded; you receive “Broadcast
@@ -933,11 +931,7 @@ use the heat-cutoff controls to regulate cooling. The next thermal heartbeat res
 and regulation. These edits do not trigger heat damage or consume dice.
 
 `centdist` and `centbearing` report horizontal distance and bearing to the
-current hex center using the same geometry as `findcenter`. `sensors` shows
-the active pair in lowercase, followed by a pending pair in uppercase while
-switching. For example, `vvIE` means visual sensors are active while infrared
-and electromagnetic sensors are being selected. Inspection does not advance
-the switch timer.
+current hex center using the same geometry as `findcenter`.
 
 `cargospace` reports authored cargo capacity, independently of cargo-installation
 mass and carried stock. `C3iNetworkSize` reports the number of other eligible

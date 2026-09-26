@@ -17,7 +17,7 @@ pub struct BattleReactorBlastHit {
     pub vehicle_heat: Option<BattleVehicleHeatExposure>,
 }
 
-/// Destruction, sensory effects and neighboring material damage from one reactor.
+/// Destruction and neighboring material damage from one reactor.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BattleReactorExplosion {
     /// An instability blast caused by dismantling this reactor, completed before its own blast.
@@ -25,7 +25,6 @@ pub struct BattleReactorExplosion {
     pub unit: ObjectId,
     pub map: ObjectId,
     pub hits: Vec<BattleReactorBlastHit>,
-    pub blinded: Vec<ObjectId>,
     pub ignited: Vec<BattleHexCoordinate>,
     /// Final unit-owned injury, applied after all radial blast effects.
     pub crew_injury: Option<BattlePilotInjury>,
@@ -109,8 +108,8 @@ pub(super) fn detonate(
         "Map is unavailable"
     );
     map.validate()?;
-    let source_tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
-    let flash_elevation = f64::from(unit.elevation_level(source_tile)) + 6.0;
+    // The reactor must stand on a valid map hex before any blast cells are resolved.
+    map.base_hex(i64::from(position.x), i64::from(position.y))?;
     let definition = unit.definition();
     let rating = super::engine::rated_output(definition.tons, definition.max_speed)?;
     let damage = u16::try_from((u32::from(definition.tons) / 5).max(rating / 10))?;
@@ -131,7 +130,6 @@ pub(super) fn detonate(
         unit: id,
         map: position.map,
         hits: Vec::new(),
-        blinded: Vec::new(),
         ignited: Vec::new(),
         crew_injury: None,
         notices: super::broadcast::observer_notices(world, id, "suddenly explodes!"),
@@ -169,18 +167,6 @@ pub(super) fn detonate(
             report.section_explosion = Some(Box::new(blast));
         }
     }
-    // Raising the event source affects visibility only; retain the wreck's actual position.
-    let mut visibility = world.clone();
-    let source = Arc::make_mut(&mut visibility.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
-    source.ground_elevation = Some(flash_elevation);
-    source.free_fall = None;
-    let flashes = super::sensor_flash::scramble(world, id, &visibility);
-    report
-        .blinded
-        .extend(flashes.iter().map(|notice| notice.unit));
-    report.notices.extend(flashes);
     for (coordinate, divisor) in cells {
         if damage / divisor == 0 {
             continue;

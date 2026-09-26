@@ -20,8 +20,8 @@ that hex first. A hidden loading point does not disclose its coordinates.
 It also works while shut down or moving, and does not require the loading point
 or a hangar map. Both transfer commands require you to be inside the unit,
 with the unit physically on its assigned map. In an InCharacter unit, only its
-assigned pilot or a Wizard can transfer cargo. Blinded units cannot transfer;
-an unconscious pilot cannot operate the controls.
+assigned pilot or a Wizard can transfer cargo. An unconscious pilot cannot
+operate the controls.
 
 Names ignore case. Use `*` for any sequence of characters and `?` for one
 character, for example `loadcargo Gold 10` or `loadcargo Ammo_* 5`.

@@ -188,12 +188,9 @@ async fn station_measurements_use_parent_sensors_and_health() {
         assert!(battle_range_report(&world, station, gunner, "").is_ok());
         assert!(battle_eta(&world, station, gunner, "").is_err());
         let baseline = world.clone();
-        for condition in ["blind", "unconscious", "parent_removed"] {
+        for condition in ["unconscious", "parent_removed"] {
             let mut world = baseline.clone();
             match condition {
-                "blind" => firing::edit(&mut world, parent, |state| {
-                    state["blinded_remaining"] = 1.into()
-                }),
                 "unconscious" => {
                     let mut state = serde_json::to_value(&world.btech).unwrap();
                     state["recoveries"][gunner.0.to_string()] = serde_json::json!({"remaining":1,"pain_resistance":false,"toughness":false,"dice":BattleDice::seeded([34;32])});
@@ -447,19 +444,6 @@ async fn station_maps_preserve_hardware_and_control_guards() {
                 .contains("inoperational")
         );
     }
-    firing::edit(&mut scripts.world_mut(), parent, |state| {
-        state["blinded_remaining"] = 1.into()
-    });
-    assert!(
-        scripts
-            .eval_callback::<()>(&navigation)
-            .unwrap_err()
-            .to_string()
-            .contains("blinded")
-    );
-    firing::edit(&mut scripts.world_mut(), parent, |state| {
-        state["blinded_remaining"] = 0.into()
-    });
     gunner_station_action(&scripts, station, gunner, false).unwrap();
     assert!(
         scripts

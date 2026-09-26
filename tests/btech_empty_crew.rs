@@ -196,7 +196,7 @@ async fn empty_crew_server_recovery_retries_without_spending_unsaved_dice() {
         saved["vehicles"][id.0.to_string()]["power"] = serde_json::to_value(BattlePower::Off).unwrap();
         saved["vehicles"][id.0.to_string()]["crew_recovery"]["remaining"] = 1.into();
         world.btech = serde_json::from_value(saved).unwrap();
-        assert!(optical_scanner_observers(&world).is_empty());
+        assert!(battle_contact_observers(&world).is_empty());
         let before = recovery(&world,id).clone();
         let mut expected = world.clone();
         advance_battle_units(&mut expected, 0);

@@ -37,7 +37,6 @@ pub(crate) fn pending(world: &World, config: &Config, has_scanner_observers: boo
                     .target_selection()
                     .is_some_and(|lock| lock.remaining() > 0)
                 || !unit.turret_repairs().is_empty()
-                || unit.sensor_selection().pending.is_some()
                 || unit.dig_state().remaining() > 0
                 || unit.crew_stun_remaining() > 0
                 || matches!(unit.power(), crate::BattlePower::Starting { .. })
@@ -46,7 +45,6 @@ pub(crate) fn pending(world: &World, config: &Config, has_scanner_observers: boo
                         || !unit.weapon_recycle().is_empty())
         })
         || crate::battle_automatic_turrets_pending(world)
-        || crate::battle_sensor_flashes_pending(world)
         || crate::battle_hiding_pending(world)
         || crate::battle_self_destructs_pending(world)
         || crate::battle_reactor_windows_pending(world)
@@ -88,7 +86,6 @@ pub(crate) fn pending(world: &World, config: &Config, has_scanner_observers: boo
                 || unit
                     .target_selection()
                     .is_some_and(|lock| lock.remaining() > 0)
-                || unit.sensor_selection().pending.is_some()
                 || unit.searchlight().remaining > 0
                 || unit.stealth().pending.is_some()
                 || unit.null_signature().pending.is_some()

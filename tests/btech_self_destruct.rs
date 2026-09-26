@@ -216,11 +216,7 @@ async fn self_destruct_cross_chassis_native_lua_and_restart() {
             &second[..],
             [BattleSelfDestructOutcome::Countdown { remaining: 1, .. }]
         ));
-        edit(&mut scripts.world_mut(), id, |state| {
-            state["blinded_remaining"] = 4.into()
-        });
         let reports = advance_battle_self_destructs_action(&scripts, &config).unwrap();
-        assert!(!battle_unit_blinded(&scripts.world(), id));
         assert_eq!(reports.len(), 1);
         if chassis == "biped" || chassis == "quad" {
             let BattleSelfDestructOutcome::Reactor { report } = &reports[0] else {

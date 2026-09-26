@@ -20,7 +20,7 @@ pub(super) fn observer_notices(
         .collect()
 }
 
-/// Snapshot running observers with an acquired contact still visible under current optical rules.
+/// Snapshot running observers with an acquired contact they still perceive.
 /// The subject never receives its own broadcast. This neither acquires contacts nor consumes dice.
 pub fn observer_messages(world: &World, subject: ObjectId, text: &str) -> Vec<(ObjectId, String)> {
     let Some(unit) = super::scanner::scanner_unit(world, subject) else {
@@ -40,8 +40,7 @@ pub fn observer_messages(world: &World, subject: ObjectId, text: &str) -> Vec<(O
         .into_iter()
         .filter_map(|observer| {
             let unit = super::scanner::scanner_unit(world, observer)?;
-            if super::battle_unit_blinded(world, observer)
-                || observer == subject
+            if observer == subject
                 || !unit.position.is_some_and(|p| p.map == position.map)
                 || (!unit.visibility.clairvoyant && !unit.contacts.contains_key(&subject))
                 || world
@@ -105,8 +104,7 @@ pub(super) fn interaction_observers(
         .into_iter()
         .filter_map(|id| {
             let unit = super::scanner::scanner_unit(world, id)?;
-            if super::battle_unit_blinded(world, id)
-                || id == actor
+            if id == actor
                 || id == target
                 || world
                     .objects
@@ -167,8 +165,7 @@ pub(super) fn hex_fire_messages(
         .into_iter()
         .filter_map(|id| {
             let unit = super::scanner::scanner_unit(world, id)?;
-            if super::battle_unit_blinded(world, id)
-                || id == actor
+            if id == actor
                 || unit.power != super::BattlePower::Running
                 || !unit.position.is_some_and(|p| p.map == position.map)
             {
@@ -206,8 +203,7 @@ pub(super) fn hex_notices(
         let Some(unit) = super::scanner::scanner_unit(world, id) else {
             continue;
         };
-        if super::battle_unit_blinded(world, id)
-            || unit.power != super::BattlePower::Running
+        if unit.power != super::BattlePower::Running
             || world
                 .objects
                 .get(&id)

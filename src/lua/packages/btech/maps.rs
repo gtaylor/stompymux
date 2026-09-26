@@ -314,22 +314,20 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         "map_environment",
         error::wrap(lua, environment, "btech.operation.failed")?,
     )?;
-    let conditions = lua.create_function(|lua, (id, light, visibility): (i64, String, i64)| {
+    let conditions = lua.create_function(|lua, (id, light, visibility): (i64, Value, i64)| {
         crate::lua::transactions::require(lua)?;
+        let light = constants::require(light, 2, "light", &constants::LIGHT_LEVELS)?;
         let scripts = crate::Scripts::services(lua)?;
         crate::lua::transactions::run(lua, &scripts.world, || {
-            let notices = (|| -> anyhow::Result<_> {
+            (|| -> anyhow::Result<_> {
                 crate::set_battle_map_visibility(
                     &mut scripts.world_mut(),
                     ObjectId(id),
-                    light.parse()?,
+                    crate::BattleLight::from_stored(i64::from(light))?,
                     u8::try_from(visibility)?,
                 )
             })()
             .map_err(|e| error::failure("btech.operation.failed", e))?;
-            for notice in notices {
-                crate::btech::notify_unit(&scripts, notice).map_err(mlua::Error::external)?;
-            }
             Ok(true)
         })
     })?;

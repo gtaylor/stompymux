@@ -1,44 +1,18 @@
-//! Sensor and contact commands: sensor selection, sensor reports, contact lists, and scan actions.
+//! Perception and contact commands: the perception report, contact lists, and scan actions.
 
 use super::super::*;
 
 /// Register this package slice on the private native table.
 pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::Result<()> {
-    let shared = world.clone();
-    let sensors = lua.create_function(
-        move |lua, (unit, pilot, primary, secondary): (i64, i64, String, String)| {
-            crate::lua::transactions::require(lua)?;
-            let result = (|| -> anyhow::Result<()> {
-                crate::select_battle_optical_sensors(
-                    &mut shared.borrow_mut(),
-                    ObjectId(unit),
-                    ObjectId(pilot),
-                    crate::BattleSensorPair {
-                        primary: primary.parse()?,
-                        secondary: secondary.parse()?,
-                    },
-                )
-            })();
-            result.map_err(|e| error::failure("btech.operation.failed", e))?;
-            Ok(true)
-        },
-    )?;
-    native.set(
-        "unit_sensors",
-        error::wrap(lua, sensors, "btech.operation.failed")?,
-    )?;
     let report_world = world.clone();
-    let sensor_report = lua.create_function(move |_, (unit, verbose): (i64, Option<bool>)| {
-        crate::battle_sensor_report(
-            &report_world.borrow(),
-            ObjectId(unit),
-            verbose.unwrap_or(false),
-        )
-        .map_err(mlua::Error::external)
+    let perception = lua.create_function(move |lua, unit: i64| {
+        let report = crate::battle_perception_report(&report_world.borrow(), ObjectId(unit))
+            .map_err(|e| error::failure("btech.operation.failed", e))?;
+        detached(lua, &report)
     })?;
     native.set(
-        "unit_sensor_report",
-        error::wrap(lua, sensor_report, "btech.operation.failed")?,
+        "unit_perception",
+        error::wrap(lua, perception, "btech.operation.failed")?,
     )?;
     let shared = world.clone();
     let contacts = lua.create_function(move |lua, (unit, preferences): (i64, Option<Table>)| {

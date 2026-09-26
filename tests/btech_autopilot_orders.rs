@@ -10,10 +10,9 @@ use crate::{
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::btech::{AutopilotOrder, AutopilotOrderState, AutopilotReason, AutopilotState};
 use stompymux_rs::{
-    BattleMapAsset, BattlePower, BattleSensorSignature, BattleUnitTemplate, BattleVehicleTemplate,
+    BattleMapAsset, BattlePower, BattleUnitSignature, BattleUnitTemplate, BattleVehicleTemplate,
     Config, Kind, ObjectId, Scripts, World, assign_battle_pilot, create_battle_map,
-    create_battle_vehicle, place_battle_unit, refresh_optical_scanners,
-    set_battle_sensor_signature,
+    create_battle_vehicle, place_battle_unit, refresh_battle_contacts, set_battle_unit_signature,
 };
 
 struct GroundFixture {
@@ -304,17 +303,17 @@ async fn attack_move_pursues_a_visible_contact_then_resumes_destination() {
             let mut fixture = ground_fixture(&[(0, 11), (2, 6)], true).await;
             let shooter = fixture.units[0];
             let target = fixture.units[1];
-            set_battle_sensor_signature(
+            set_battle_unit_signature(
                 &mut fixture.world,
                 target,
-                BattleSensorSignature {
+                BattleUnitSignature {
                     team: 1,
                     hidden: false,
                     illuminated: false,
                 },
             )
             .unwrap();
-            refresh_optical_scanners(&mut fixture.world, &[shooter]).unwrap();
+            refresh_battle_contacts(&mut fixture.world, &[shooter]).unwrap();
 
             let scripts = Scripts::new(
                 &fixture.config,
@@ -344,7 +343,7 @@ async fn attack_move_pursues_a_visible_contact_then_resumes_destination() {
             }).await;
             let mut resumed_world=snapshots.last().unwrap().clone();
             stompymux_rs::transfer_battle_unit(&mut resumed_world,target,stompymux_rs::BattlePosition{map:fixture.map,x:2,y:0}).unwrap();
-            refresh_optical_scanners(&mut resumed_world,&[shooter]).unwrap();
+            refresh_battle_contacts(&mut resumed_world,&[shooter]).unwrap();
             snapshots.extend(heartbeat_snapshots_until(&fixture.config,&resumed_world,200,|world| {
                 world.btech.controllers()[&shooter].feedback_records().iter().any(|feedback|feedback.event==stompymux_rs::btech::AutopilotFeedbackEvent::OrderSucceeded)
             }).await);
@@ -445,17 +444,17 @@ async fn opportunistic_fire_changes_hostile_target_armor() {
             let mut fixture = ground_fixture(&[(0, 11), (0, 10)], true).await;
             let shooter = fixture.units[0];
             let target = fixture.units[1];
-            set_battle_sensor_signature(
+            set_battle_unit_signature(
                 &mut fixture.world,
                 target,
-                BattleSensorSignature {
+                BattleUnitSignature {
                     team: 1,
                     hidden: false,
                     illuminated: false,
                 },
             )
             .unwrap();
-            refresh_optical_scanners(&mut fixture.world, &[shooter]).unwrap();
+            refresh_battle_contacts(&mut fixture.world, &[shooter]).unwrap();
             let armor_before = unit_armor(&fixture.world, target);
             let heat_before = fixture.world.btech.constructed_units()[&shooter]
                 .heat()

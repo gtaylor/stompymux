@@ -335,7 +335,7 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId, O
     set_battle_observer(&mut world, observer, true).unwrap();
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     encoded["constructed"][observer.0.to_string()]["contacts"][id.0.to_string()] =
-        serde_json::json!({"primary":true,"secondary":false});
+        serde_json::json!({"identified": true});
     world.btech = serde_json::from_value(encoded).unwrap();
     (dir, config, world, id, observer)
 }

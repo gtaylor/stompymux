@@ -53,7 +53,7 @@ async fn water_modifier_is_attacker_owned_and_shared_by_supported_chassis() {
                     state["power"] = serde_json::to_value(BattlePower::Running).unwrap()
                 });
             }
-            refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+            refresh_battle_contacts(&mut world, &[shooter]).unwrap();
             let expected = u8::from(
                 shooter_tile == "~1"
                     && battle_unit_elevation(&world, shooter).unwrap().unwrap() < 0,

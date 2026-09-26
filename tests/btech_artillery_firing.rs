@@ -79,7 +79,7 @@ async fn fixture_source(
         }
         ids.push(id);
     }
-    refresh_optical_scanners(&mut world, &ids).unwrap();
+    refresh_battle_contacts(&mut world, &ids).unwrap();
     let shooter = ids[0];
     select_battle_hex_target(
         &mut world,

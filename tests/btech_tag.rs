@@ -45,9 +45,9 @@ async fn fixture(
     let (dir, config, mut world, id, target, _) = fixture_with_target(source, None, target).await;
     install(&mut world, id, computer);
     edit(&mut world, target, |state| {
-        state["sensor_signature"]["team"] = 2.into()
+        state["signature"]["team"] = 2.into()
     });
-    refresh_optical_scanners(&mut world, &[id]).unwrap();
+    refresh_battle_contacts(&mut world, &[id]).unwrap();
     world.validate(&config).unwrap();
     (dir, config, world, id, target)
 }
@@ -148,7 +148,7 @@ async fn tag_equipment_and_damage_have_distinct_replies() {
         assert_eq!(scripts.world().btech, world.btech);
         install(&mut world, id, true);
         edit(&mut world, target, |state| {
-            state["sensor_signature"]["team"] = 2.into()
+            state["signature"]["team"] = 2.into()
         });
         select_battle_tag(&mut world, id, ObjectId(1), Some(target)).unwrap();
         assert_eq!(battle_tagged_by(&world, target), Some(id));
@@ -215,11 +215,11 @@ async fn tag_range_visibility_and_syntax_fail_without_mutation() {
         relocate(&mut world, id, map, 17);
         relocate(&mut world, target, map, 1);
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
-        // Isolate the TAG range gate from the source design's shorter optical reach.
+        // Isolate the TAG range gate from the observer's perception reach.
         edit(&mut world, id, |state| {
             state["visibility"]["clairvoyant"] = true.into()
         });
-        refresh_optical_scanners(&mut world, &[id]).unwrap();
+        refresh_battle_contacts(&mut world, &[id]).unwrap();
         assert!(battle_unit_range(&world, id, target).unwrap().spatial > 15.0);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         for (command, expected) in [
@@ -242,7 +242,7 @@ async fn tag_range_visibility_and_syntax_fail_without_mutation() {
             assert_eq!(scripts.world().btech, world.btech);
         }
         relocate(&mut world, target, map, 2);
-        refresh_optical_scanners(&mut world, &[id]).unwrap();
+        refresh_battle_contacts(&mut world, &[id]).unwrap();
         assert_eq!(battle_unit_range(&world, id, target).unwrap().spatial, 15.0);
         let mut beyond = world.clone();
         edit(&mut beyond, target, |state| {
@@ -283,7 +283,7 @@ async fn tag_takeover_crosses_chassis_and_rejects_corrupt_saved_ownership() {
         release_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(other);
         assign_battle_pilot(&mut world, other, ObjectId(1)).unwrap();
-        refresh_optical_scanners(&mut world, &[other]).unwrap();
+        refresh_battle_contacts(&mut world, &[other]).unwrap();
         let notices = select_battle_tag(&mut world, other, ObjectId(1), Some(target)).unwrap();
         assert_eq!(notices.len(), 2);
         assert_eq!(
@@ -371,7 +371,7 @@ async fn vehicle_tag_guides_mech_and_vehicle_missiles() {
         )
         .await;
         edit(&mut world, target, |state| {
-            state["sensor_signature"]["team"] = 2.into();
+            state["signature"]["team"] = 2.into();
             state["motion"]["speed"] = 43.0.into();
             state["motion"]["desired_speed"] = 43.0.into();
         });
@@ -406,7 +406,7 @@ async fn vehicle_tag_guides_mech_and_vehicle_missiles() {
         release_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(tagger);
         assign_battle_pilot(&mut world, tagger, ObjectId(1)).unwrap();
-        refresh_optical_scanners(&mut world, &[tagger]).unwrap();
+        refresh_battle_contacts(&mut world, &[tagger]).unwrap();
         select_battle_tag(&mut world, tagger, ObjectId(1), Some(target)).unwrap();
         release_battle_pilot(&mut world, tagger, ObjectId(1)).unwrap();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);

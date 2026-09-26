@@ -415,19 +415,17 @@ fn resolve_shot_inner(
     let mut aim_dice = attacker.dice.clone();
     let prepared = super::gatling::prepare(world, shooter, weapon_index, &mut aim_dice)?;
     let gunnery = operator.gunnery(world, weapon_index, rules.extended_gunnery)?;
-    let mut aim = super::aim::aim_modifiers_for_source_with_dice(
+    let mut aim = super::aim::aim_modifiers_for_source(
         world,
         operator.source,
         target,
         weapon_index,
         gunnery,
         rules.aim,
-        &mut aim_dice,
     )?;
-    ensure!(
-        self_cooling || aim.optical.is_some(),
-        "Target is not a current acquired contact"
-    );
+    if !self_cooling {
+        super::aim::ensure_perceived(&aim)?;
+    }
     super::hit_direction::HitDirection::Direct {
         shooter,
         mode: rules.hit_arc_mode,

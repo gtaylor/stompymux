@@ -16,7 +16,7 @@ async fn cargo_jump_admission_matches_native_lua_and_restart_at_one_mp() {
     ] {
         let (_dir, config, mut world, id) = runtime_fixture().await;
         let (target, _) = jump_observer(&mut world, &config, id);
-        refresh_optical_scanners(&mut world, &[id]).unwrap();
+        refresh_battle_contacts(&mut world, &[id]).unwrap();
         select_battle_target(&mut world, id, ObjectId(1), Some(target)).unwrap();
         let mut encoded = serde_json::to_value(&world.btech).unwrap();
         let unit = &mut encoded["constructed"][id.0.to_string()];
@@ -1628,7 +1628,7 @@ async fn airborne_fire_uses_shared_native_lua_transactions_and_saved_trajectorie
             )
             .unwrap();
         }
-        refresh_optical_scanners(&mut world, &[id]).unwrap();
+        refresh_battle_contacts(&mut world, &[id]).unwrap();
         assert!(
             world.btech.constructed_units()[&id]
                 .contacts()
@@ -2521,7 +2521,7 @@ async fn shallow_water_launches_and_airborne_fire_above_deep_water_are_supported
         )
         .unwrap();
     }
-    refresh_optical_scanners(&mut world, &[id]).unwrap();
+    refresh_battle_contacts(&mut world, &[id]).unwrap();
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let text = support::run_text(
         &scripts,
@@ -3197,7 +3197,7 @@ fn jump_observer(
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["constructed"][observer.0.to_string()]["power"] = serde_json::json!({"state":"running"});
     world.btech = serde_json::from_value(state).unwrap();
-    refresh_optical_scanners(world, &[observer]).unwrap();
+    refresh_battle_contacts(world, &[observer]).unwrap();
     assert!(
         visible_battle_contact(world, observer, subject)
             .unwrap()
@@ -3655,7 +3655,7 @@ async fn airborne_charge_timer_and_saved_replay() {
     use stompymux_rs::*;
     let (_dir, config, mut base, id) = runtime_fixture().await;
     let (target, _) = jump_observer(&mut base, &config, id);
-    refresh_optical_scanners(&mut base, &[id]).unwrap();
+    refresh_battle_contacts(&mut base, &[id]).unwrap();
     select_battle_charge(
         &mut base,
         id,
@@ -3717,7 +3717,7 @@ async fn airborne_charge_rejection_clears_one_or_both_selections() {
     state["constructed"][target.0.to_string()]["power"] = serde_json::json!({"state":"off"});
     base.btech = serde_json::from_value(state).unwrap();
     place_battle_unit(&mut base, target, map, 5, 5).unwrap();
-    refresh_optical_scanners(&mut base, &[id]).unwrap();
+    refresh_battle_contacts(&mut base, &[id]).unwrap();
     launch_battle_jump(&mut base, id, ObjectId(1), 0, 2.0).unwrap();
     select_battle_charge(
         &mut base,
@@ -3800,7 +3800,7 @@ async fn airborne_charge_landing_checks_ground_eligibility() {
         }
         advance_battle_jumps(&mut world, rules).unwrap();
     }
-    refresh_optical_scanners(&mut world, &[id]).unwrap();
+    refresh_battle_contacts(&mut world, &[id]).unwrap();
     select_battle_charge(
         &mut world,
         id,
@@ -3873,7 +3873,7 @@ async fn dfa_launch_fixed_destination_and_saved_intent() {
         })
         .unwrap();
     world.btech = serde_json::from_value(state).unwrap();
-    refresh_optical_scanners(&mut world, &[id]).unwrap();
+    refresh_battle_contacts(&mut world, &[id]).unwrap();
     select_battle_target(&mut world, id, ObjectId(1), Some(target)).unwrap();
     let before = serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap();
     let notices = launch_battle_dfa(&mut world, id, ObjectId(1), None).unwrap();
@@ -3932,7 +3932,7 @@ async fn dfa_launch_rejection_and_shutdown() {
         assert!(launch_battle_dfa(&mut world, id, ObjectId(1), selected).is_err());
         assert_eq!(world.btech, before);
     }
-    refresh_optical_scanners(&mut world, &[id]).unwrap();
+    refresh_battle_contacts(&mut world, &[id]).unwrap();
     launch_battle_dfa(&mut world, id, ObjectId(1), Some(target)).unwrap();
     assert_eq!(
         world.btech.constructed_units()[&id]
@@ -4012,7 +4012,7 @@ async fn dfa_landing_dispatch_and_saved_replay() {
         },
     )
     .unwrap();
-    refresh_optical_scanners(&mut world, &[id]).unwrap();
+    refresh_battle_contacts(&mut world, &[id]).unwrap();
     launch_battle_dfa(&mut world, id, ObjectId(1), Some(target)).unwrap();
     let rules = BattleMovementRules {
         physical_pilot_skill: false,
@@ -4089,7 +4089,7 @@ async fn dfa_landing_moved_target_falls_back() {
         .unwrap()
         .flags
         .insert(Flag::Connected);
-    refresh_optical_scanners(&mut world, &[id]).unwrap();
+    refresh_battle_contacts(&mut world, &[id]).unwrap();
     launch_battle_dfa(&mut world, id, ObjectId(1), Some(target)).unwrap();
     let map = world.btech.constructed_units()[&target]
         .position()
@@ -4134,7 +4134,7 @@ async fn dfa_landing_commands_and_rollback() {
     use stompymux_rs::*;
     let (_dir, config, mut base, id) = runtime_fixture().await;
     let (target, _) = jump_observer(&mut base, &config, id);
-    refresh_optical_scanners(&mut base, &[id]).unwrap();
+    refresh_battle_contacts(&mut base, &[id]).unwrap();
     select_battle_target(&mut base, id, ObjectId(1), Some(target)).unwrap();
     for explicit in [false, true] {
         let native = Scripts::new(
@@ -4234,7 +4234,7 @@ async fn dfa_landing_early_attack_uses_shared_policy() {
         },
     )
     .unwrap();
-    refresh_optical_scanners(&mut world, &[id]).unwrap();
+    refresh_battle_contacts(&mut world, &[id]).unwrap();
     launch_battle_dfa(&mut world, id, ObjectId(1), Some(target)).unwrap();
     let rules = BattleMovementRules {
         physical_pilot_skill: true,
@@ -4502,7 +4502,7 @@ async fn character_dfa_landing_dispatch_rolls_back_and_replays() {
         },
     )
     .unwrap();
-    refresh_optical_scanners(&mut world, &[id]).unwrap();
+    refresh_battle_contacts(&mut world, &[id]).unwrap();
     launch_battle_dfa(&mut world, id, ObjectId(1), Some(target)).unwrap();
     let rules = BattleMovementRules {
         physical_pilot_skill: false,
@@ -4633,7 +4633,7 @@ async fn character_jump_commands_land_and_rollback() {
     use stompymux_rs::*;
     let (_dir, config, mut base, id) = runtime_fixture().await;
     let (target, _) = jump_observer(&mut base, &config, id);
-    refresh_optical_scanners(&mut base, &[id]).unwrap();
+    refresh_battle_contacts(&mut base, &[id]).unwrap();
     select_battle_target(&mut base, id, ObjectId(1), Some(target)).unwrap();
     for (unit, pilot) in [(id, ObjectId(1)), (target, ObjectId(2))] {
         base.objects
@@ -5412,7 +5412,7 @@ async fn jump_fields_keep_dfa_intent_without_chasing_the_target() {
     use stompymux_rs::*;
     let (_dir, config, mut world, id) = runtime_fixture().await;
     let (target, _) = jump_observer(&mut world, &config, id);
-    refresh_optical_scanners(&mut world, &[id]).unwrap();
+    refresh_battle_contacts(&mut world, &[id]).unwrap();
     launch_battle_dfa(&mut world, id, ObjectId(1), Some(target)).unwrap();
     let rules = BattleMovementRules {
         fall: jump_rules(),

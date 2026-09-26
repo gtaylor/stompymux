@@ -252,7 +252,7 @@ async fn vehicle_artillery_correction_uses_mixed_observers_and_replays_aim() {
             if !friendly {
                 let mut encoded = serde_json::to_value(&world.btech).unwrap();
                 encoded[if vehicle { "vehicles" } else { "constructed" }][observer.0.to_string()]
-                    ["sensor_signature"]["team"] = 99.into();
+                    ["signature"]["team"] = 99.into();
                 world.btech = serde_json::from_value(encoded).unwrap();
             }
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -359,7 +359,7 @@ async fn vehicle_artillery_explicit_mixed_spotters_share_targets_and_correction_
             advance_battle_units(&mut world, 0);
         }
         for _ in 0..10 {
-            refresh_optical_scanners(&mut world, &[shooter, observer]).unwrap();
+            refresh_battle_contacts(&mut world, &[shooter, observer]).unwrap();
         }
         select_battle_hex_target(
             &mut world,

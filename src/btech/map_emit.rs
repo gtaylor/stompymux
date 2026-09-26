@@ -12,7 +12,6 @@ fn recipients(world: &World, map: ObjectId) -> Result<Vec<ObjectId>> {
             }) && super::scanner::scanner_unit(world, id)
                 .is_some_and(|unit| unit.power == super::BattlePower::Running)
                 && !super::crew::unit_unconscious(world, id)
-                && !super::battle_unit_blinded(world, id)
         })
         .collect())
 }

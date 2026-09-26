@@ -59,8 +59,8 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
         ids.push(id);
     }
     let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["constructed"][ids[1].0.to_string()]["sensor_signature"]["team"] = 99.into();
-    saved["vehicles"][ids[2].0.to_string()]["sensor_signature"]["team"] = 99.into();
+    saved["constructed"][ids[1].0.to_string()]["signature"]["team"] = 99.into();
+    saved["vehicles"][ids[2].0.to_string()]["signature"]["team"] = 99.into();
     world.btech = serde_json::from_value(saved).unwrap();
     (dir, config, world, ids.try_into().unwrap())
 }

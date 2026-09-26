@@ -80,7 +80,7 @@ pub fn observe_with_memory(
 ) -> Result<AutopilotObservation> {
     let own = super::super::scanner::scanner_unit(world, unit).context("Unit is unavailable")?;
     // The ordinary contact display requires a running, placed observer because
-    // it performs optical geometry.  An attached controller is also observable
+    // it performs perception geometry.  An attached controller is also observable
     // while it is starting, shut down, or being restored before placement.  In
     // those states expose the own-unit readiness below and no current contacts;
     // never turn a display precondition failure into a controller failure.

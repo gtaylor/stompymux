@@ -179,28 +179,17 @@ async fn critical_report_native_access_and_anatomy() {
             support::run_text(&scripts, &config, ObjectId(1), 1, "critstatus/bad h")
                 .contains("takes no switches")
         );
-        for blind in [false, true] {
-            let mut impaired = world.clone();
-            let mut state = serde_json::to_value(&impaired.btech).unwrap();
-            if blind {
-                let group = if impaired.btech.vehicles().contains_key(&id) {
-                    "vehicles"
-                } else {
-                    "constructed"
-                };
-                state[group][id.0.to_string()]["blinded_remaining"] = 1.into();
-            } else {
-                state["recoveries"]["1"] = serde_json::json!({"remaining":1,"pain_resistance":false,"toughness":false,"dice":BattleDice::seeded([12;32])});
-            }
-            impaired.btech = serde_json::from_value(state).unwrap();
-            let scripts = Scripts::new(&config, Rc::new(RefCell::new(impaired))).unwrap();
-            let before = scripts.world().btech.clone();
-            assert!(
-                support::run_text(&scripts, &config, ObjectId(1), 1, "critstatus invalid")
-                    .contains(if blind { "blinded" } else { "unconscious" })
-            );
-            assert_eq!(scripts.world().btech, before);
-        }
+        let mut impaired = world.clone();
+        let mut state = serde_json::to_value(&impaired.btech).unwrap();
+        state["recoveries"]["1"] = serde_json::json!({"remaining":1,"pain_resistance":false,"toughness":false,"dice":BattleDice::seeded([12;32])});
+        impaired.btech = serde_json::from_value(state).unwrap();
+        let scripts = Scripts::new(&config, Rc::new(RefCell::new(impaired))).unwrap();
+        let before = scripts.world().btech.clone();
+        assert!(
+            support::run_text(&scripts, &config, ObjectId(1), 1, "critstatus invalid")
+                .contains("unconscious")
+        );
+        assert_eq!(scripts.world().btech, before);
     }
     let (_dir, _config, world, id) =
         fixture(BattleUnitTemplate::parse(include_str!("../game/mechs/GOL-1H")).unwrap()).await;

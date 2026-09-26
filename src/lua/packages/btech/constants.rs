@@ -941,6 +941,48 @@ pub(super) static AUTOPILOT_FIRE_MODES: Catalog = Catalog {
     ],
 };
 
+/// Battlefield light levels accepted by map condition changes; values match the saved map column.
+pub(super) static LIGHT_LEVELS: Catalog = Catalog {
+    qualified_name: "btech.map.light_levels",
+    entries: &[
+        Entry {
+            name: "NIGHT",
+            value: 0,
+        },
+        Entry {
+            name: "TWILIGHT",
+            value: 1,
+        },
+        Entry {
+            name: "DAY",
+            value: 2,
+        },
+    ],
+};
+
+/// How a unit currently perceives a contact, as reported on contact rows and aim breakdowns.
+pub(super) static DETECTION_CHANNELS: StringCatalog = StringCatalog {
+    qualified_name: "btech.unit.detection_channels",
+    entries: &[
+        StringEntry {
+            name: "SENSORS",
+            value: "sensors",
+        },
+        StringEntry {
+            name: "SIGHT",
+            value: "sight",
+        },
+        StringEntry {
+            name: "RADAR",
+            value: "radar",
+        },
+        StringEntry {
+            name: "PROBE",
+            value: "probe",
+        },
+    ],
+};
+
 pub(super) static AUTOPILOT_STATES: StringCatalog = StringCatalog {
     qualified_name: "btech.autopilot.states",
     entries: &[
@@ -1235,6 +1277,10 @@ pub(super) fn install(lua: &Lua, package: &Table) -> mlua::Result<()> {
     ] {
         unit.raw_set(name, namespace(lua, catalog)?)?;
     }
+    unit.raw_set(
+        "detection_channels",
+        string_namespace(lua, &DETECTION_CHANNELS)?,
+    )?;
     package.raw_set("unit", unit)?;
 
     let autopilot = table(lua, package, "autopilot")?;
@@ -1254,7 +1300,51 @@ pub(super) fn install(lua: &Lua, package: &Table) -> mlua::Result<()> {
     }
     package.raw_set("autopilot", autopilot)?;
 
+    let map = table(lua, package, "map")?;
+    map.raw_set("light_levels", namespace(lua, &LIGHT_LEVELS)?)?;
+    package.raw_set("map", map)?;
+
     let repair = table(lua, package, "repair")?;
     repair.raw_set("operations", namespace(lua, &REPAIR_OPERATIONS)?)?;
     package.raw_set("repair", repair)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The Lua catalog spells every perception channel exactly as serialization does.
+    #[test]
+    fn detection_channel_catalog_matches_serialization() {
+        let values: Vec<_> = DETECTION_CHANNELS
+            .entries
+            .iter()
+            .map(|entry| entry.value)
+            .collect();
+        assert_eq!(
+            values,
+            crate::BattleDetectionChannel::ALL.map(|channel| channel.name())
+        );
+        for entry in DETECTION_CHANNELS.entries {
+            assert_eq!(entry.name, entry.value.to_ascii_uppercase());
+        }
+    }
+
+    /// Light constants decode to the matching battlefield light level.
+    #[test]
+    fn light_level_catalog_matches_battlefield_light() {
+        for entry in LIGHT_LEVELS.entries {
+            let light = crate::BattleLight::from_stored(i64::from(entry.value)).unwrap();
+            assert_eq!(light.stored(), i64::from(entry.value));
+            assert_eq!(
+                entry
+                    .name
+                    .to_ascii_lowercase()
+                    .parse::<crate::BattleLight>()
+                    .unwrap(),
+                light
+            );
+        }
+        assert_eq!(LIGHT_LEVELS.entries.len(), 3);
+    }
 }

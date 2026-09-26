@@ -169,7 +169,7 @@ pub fn supply_fixture_on(
     }
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
     assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
-    refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+    refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     select_battle_target(&mut world, shooter, ObjectId(1), Some(target)).unwrap();
     let index = if let Some(weapon) = weapon {
         if let Some(unit) = world.btech.vehicles().get(&shooter) {

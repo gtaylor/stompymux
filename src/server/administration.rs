@@ -645,7 +645,7 @@ mod tests {
             server
                 .scripts
                 .lua
-                .app_data_ref::<Config>()
+                .app_data_ref::<std::sync::Arc<Config>>()
                 .unwrap()
                 .mux
                 .check_interval,

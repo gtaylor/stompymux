@@ -90,9 +90,6 @@ pub struct BattleUnit {
     pub(super) self_destruct_safe: bool,
     #[serde(default)]
     pub(super) self_destruct: Option<super::BattleSelfDestruct>,
-    /// Durable temporary sensor-flash recovery.
-    #[serde(default)]
-    pub(super) blinded_remaining: u8,
     /// Elapsed one-second camouflage preparation checks.
     #[serde(default)]
     pub(super) hide_elapsed: Option<u16>,
@@ -164,9 +161,6 @@ pub struct BattleUnit {
     /// Recent weapon emission, cleared by the next committed heartbeat.
     #[serde(default)]
     pub(super) fired_recently: bool,
-    /// Durable signal fluctuation independent of combat dice.
-    #[serde(default)]
-    pub(super) sensor_signal: super::BattleSensorSignal,
     /// Null signature controls and persisted switch destination.
     #[serde(default)]
     pub(super) null_signature: super::BattleSignatureState,
@@ -238,7 +232,7 @@ pub struct BattleUnit {
     #[serde(default)]
     pub(super) stand_timer: Option<super::BattleStandTimer>,
     #[serde(default)]
-    pub(super) sensor_signature: super::BattleSensorSignature,
+    pub(super) signature: super::BattleUnitSignature,
     #[serde(default = "super::scanner::default_perception")]
     pub(super) scanner_perception: i16,
     #[serde(default)]
@@ -247,8 +241,6 @@ pub struct BattleUnit {
     pub(super) target_lock: Option<super::BattleTargetSelection>,
     #[serde(default)]
     pub(super) aimed_section: Option<super::BattleAimSelection>,
-    #[serde(default)]
-    pub(super) sensor_selection: super::BattleSensorSelection,
     #[serde(default)]
     pub(super) searchlight: super::BattleSearchlight,
     #[serde(default)]
@@ -789,7 +781,6 @@ impl BattleUnit {
             combat_safe: false,
             visibility: super::BattleVisibility::default(),
             fired_recently: false,
-            sensor_signal: Default::default(),
             null_signature: Default::default(),
             stealth: Default::default(),
             electronics: Default::default(),
@@ -818,7 +809,7 @@ impl BattleUnit {
             spotter: None,
             spotter_events: Default::default(),
             artillery_adjustment: 0,
-            sensor_signature: Default::default(),
+            signature: Default::default(),
             scanner_perception: super::scanner::default_perception(),
             posture: Default::default(),
             stand_timer: None,
@@ -826,7 +817,6 @@ impl BattleUnit {
             contacts: Default::default(),
             target_lock: None,
             aimed_section: None,
-            sensor_selection: Default::default(),
             searchlight: Default::default(),
             facing: Default::default(),
             stun_remaining: 0,
@@ -842,7 +832,6 @@ impl BattleUnit {
             heat_sample: Default::default(),
             heat_cutoff: Default::default(),
             reconstructed_cooling: None,
-            blinded_remaining: 0,
             hide_elapsed: None,
             self_destruct: None,
             reactor_instability_remaining: None,
@@ -1029,7 +1018,6 @@ impl BattleUnit {
             !self.detached || self.position.is_some(),
             "Detached unit lacks retained coordinates"
         );
-        ensure!(self.sensor_signal.strength <= 100, "Invalid sensor signal");
         self.validate_stealth()?;
         self.validate_null_signature()?;
         for (suite, mode) in [
@@ -1069,7 +1057,6 @@ impl BattleUnit {
             self.reconstructed_cooling
                 .unwrap_or(self.definition.heat_sinks),
         )?;
-        ensure!(self.blinded_remaining <= 4, "Invalid sensor flash duration");
         ensure!(
             self.hide_elapsed.is_none_or(|elapsed| elapsed <= 100),
             "Invalid hiding timer"
@@ -1193,20 +1180,6 @@ impl BattleUnit {
                 |lock| lock.remaining() <= 8 && self.power == super::BattlePower::Running
             ),
             "Invalid target lock countdown or power state"
-        );
-        ensure!(
-            self.sensor_selection
-                .pending
-                .is_none_or(|change| (1..=10).contains(&change.remaining)),
-            "Invalid sensor selection countdown"
-        );
-        ensure!(
-            self.sensor_selection.active.supported_by(self)
-                && self
-                    .sensor_selection
-                    .pending
-                    .is_none_or(|change| change.wanted.supported_by(self)),
-            "Sensor selection requires unavailable equipment"
         );
         ensure!(self.stun_remaining <= 10, "Invalid crew stun countdown");
         super::crew_recovery::validate(&self.crew_recovery, self.pilot(), self.pilot_injuries())?;

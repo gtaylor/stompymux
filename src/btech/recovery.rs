@@ -125,8 +125,6 @@ pub struct BattleCharacterNotice {
     pub check: BattleConsciousnessCheck,
     /// Occupied, living cockpit at the time of the recovery check.
     pub unit: Option<ObjectId>,
-    /// Cockpit flashes suppress reference pilot and occupant messages.
-    pub muted: bool,
 }
 
 /// Initialize a player's private dice before the gameplay checkpoint that may injure them.
@@ -251,7 +249,6 @@ pub fn advance_recovery(world: &mut World) -> Vec<BattleCharacterNotice> {
             player,
             check,
             unit,
-            muted: unit.is_some_and(|id| super::battle_unit_blinded(world, id)),
         });
     }
     notices

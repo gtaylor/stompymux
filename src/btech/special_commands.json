@@ -492,8 +492,8 @@
     },
     {
       "class_mask": 0,
-      "syntax": "SENSOR [LONG | [<V|L|I|E|S> <V|L|I|E|S>]]",
-      "description": "Shows/Changes your sensor mode (1 argument: Long, otherwise Short description about sensor mode)",
+      "syntax": "SENSOR",
+      "description": "Shows how far and by what means your unit can perceive: sensor band, sight, active probe and radar",
       "restricted": false,
       "category": false
     },

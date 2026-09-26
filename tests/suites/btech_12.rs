@@ -60,9 +60,6 @@ mod btech_placement;
 #[path = "../btech_plasma.rs"]
 mod btech_plasma;
 
-#[path = "../btech_sensor_report.rs"]
-mod btech_sensor_report;
-
 #[path = "../btech_shutdown.rs"]
 mod btech_shutdown;
 

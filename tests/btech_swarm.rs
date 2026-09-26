@@ -66,8 +66,6 @@ async fn fixture(
         edit(&mut world, id, |state| {
             state["power"] = serde_json::to_value(BattlePower::Running).unwrap();
             state["dice"] = serde_json::to_value(BattleDice::seeded([19; 32])).unwrap();
-            state["sensor_signal"] =
-                serde_json::to_value(BattleSensorSignal::seeded(100, [27; 32]).unwrap()).unwrap();
         });
         ids.push(id);
     }
@@ -181,7 +179,7 @@ fn acquire(world: &mut World, shooter: ObjectId, target: ObjectId) {
         edit(world, shooter, |unit| {
             unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
         });
-        refresh_optical_scanners(world, &[shooter]).unwrap();
+        refresh_battle_contacts(world, &[shooter]).unwrap();
         if visible_battle_contact(world, shooter, target)
             .unwrap()
             .is_some()
@@ -332,7 +330,7 @@ fn candidate(
         .unwrap();
     place_battle_unit(world, id, map, 0, 0).unwrap();
     edit(world, id, |unit| {
-        unit["sensor_signature"]["team"] = team.into();
+        unit["signature"]["team"] = team.into();
     });
     dice(world, id, 12);
     id

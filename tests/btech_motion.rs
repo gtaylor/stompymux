@@ -1058,7 +1058,7 @@ async fn aim_breakdown_tracks_turning_equipment_and_heat_without_mutation() {
         hotload_half_minimum: false,
         override_weapon_arcs: false,
     };
-    stompymux_rs::refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+    stompymux_rs::refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     let base = battle_aim_modifiers(&world, shooter, target, 0, 4, rules).unwrap();
     assert_eq!(base.distance, 2.0);
     assert_eq!(base.target_movement, -4);
@@ -1267,13 +1267,15 @@ async fn terrain_los_queries_follow_placement_and_leave_world_unchanged() {
     assert!(stompymux_rs::battle_unit_terrain_los(&world, id, target).is_err());
 }
 
+/// Perception traces live terrain and spatial range, and a query never acquires contacts.
 #[tokio::test]
-async fn optical_query_composes_live_terrain_and_spatial_range_without_acquiring_contacts() {
+async fn perception_query_composes_live_terrain_and_spatial_range_without_acquiring_contacts() {
     use stompymux_rs::{
-        BattleLight, BattleSensorConditions, BattleSensorMode, battle_optical_contact,
+        BattleDetectionChannel, BattleLight, battle_perceive, configure_battle_perception,
+        set_battle_map_visibility,
     };
     let (_dir, config, mut world, id) = fixture('.').await;
-    let target = world.create(&config, "Optical target".into(), Kind::Thing);
+    let target = world.create(&config, "Perceived target".into(), Kind::Thing);
     create_battle_unit(
         &mut world,
         target,
@@ -1282,43 +1284,28 @@ async fn optical_query_composes_live_terrain_and_spatial_range_without_acquiring
     .unwrap();
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
     place_battle_unit(&mut world, target, map, 5, 9).unwrap();
-    let conditions = BattleSensorConditions {
-        light: BattleLight::Night,
-        visibility: 3,
-        disabled: false,
-        target_lit: false,
-    };
+    set_battle_map_visibility(&mut world, map, BattleLight::Night, 3).unwrap();
     let before = world.btech.clone();
-    assert!(
-        !battle_optical_contact(&world, id, target, BattleSensorMode::Visual, conditions)
-            .unwrap()
-            .eligible
+    // Four hexes away is inside the sensor band, where darkness does not matter.
+    let perceived = battle_perceive(&world, id, target).unwrap().unwrap();
+    assert_eq!(perceived.channel, BattleDetectionChannel::Sensors);
+    assert!(perceived.identified);
+    assert!(!perceived.probed);
+    assert_eq!(perceived.aim_modifier, 0);
+    assert_eq!(
+        perceived.range,
+        stompymux_rs::battle_unit_range(&world, id, target).unwrap()
     );
-    assert!(
-        battle_optical_contact(
-            &world,
-            id,
-            target,
-            BattleSensorMode::LightAmplification,
-            conditions
-        )
-        .unwrap()
-        .eligible
-    );
-    assert!(
-        !battle_optical_contact(
-            &world,
-            id,
-            target,
-            BattleSensorMode::LightAmplification,
-            BattleSensorConditions {
-                disabled: true,
-                ..conditions
-            }
-        )
-        .unwrap()
-        .eligible
-    );
+    // Without the band, an unlit target beyond night visibility is not seen at all.
+    let mut sight = world.clone();
+    configure_battle_perception(&mut sight, 0);
+    assert_eq!(battle_perceive(&sight, id, target).unwrap(), None);
+    // Within night visibility sight reaches it, at +1 for darkness.
+    set_battle_map_visibility(&mut sight, map, BattleLight::Night, 4).unwrap();
+    let seen = battle_perceive(&sight, id, target).unwrap().unwrap();
+    assert_eq!(seen.channel, BattleDetectionChannel::Sight);
+    assert_eq!(seen.aim_modifier, 1);
+    assert!(sight.btech.constructed_units()[&id].contacts().is_empty());
     assert_eq!(world.btech, before);
     stop_battle_unit(
         &mut world,
@@ -1343,27 +1330,24 @@ async fn optical_query_composes_live_terrain_and_spatial_range_without_acquiring
     .unwrap();
     place_battle_unit(&mut world, id, map, 5, 5).unwrap();
     place_battle_unit(&mut world, target, map, 5, 9).unwrap();
+    set_battle_map_visibility(&mut world, map, BattleLight::Day, 60).unwrap();
+    // Three intervening light-forest hexes break the clear line for both sensors and sight.
     assert!(
-        !battle_optical_contact(
-            &world,
-            id,
-            target,
-            BattleSensorMode::Visual,
-            BattleSensorConditions {
-                visibility: 60,
-                ..conditions
-            }
-        )
-        .unwrap()
-        .eligible
+        stompymux_rs::battle_unit_terrain_los(&world, id, target)
+            .unwrap()
+            .woods
+            >= 3
     );
+    assert_eq!(battle_perceive(&world, id, target).unwrap(), None);
 }
 
+/// Saved light and visibility change an occupied battlefield's perception without touching terrain.
 #[tokio::test]
-async fn saved_map_visibility_changes_occupied_battlefields_and_sensor_queries() {
+async fn saved_map_visibility_changes_occupied_battlefields_and_perception_queries() {
     use sqlx::{Connection, SqliteConnection};
     use stompymux_rs::{
-        BattleLight, BattleSensorMode, battle_map_optical_contact, set_battle_map_visibility,
+        BattleDetectionChannel, BattleLight, battle_perceive, configure_battle_perception,
+        set_battle_map_visibility,
     };
     let (_dir, config, mut world, id) = fixture('.').await;
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
@@ -1383,23 +1367,17 @@ async fn saved_map_visibility_changes_occupied_battlefields_and_sensor_queries()
     .unwrap();
     sqlx::query("CREATE TRIGGER prevent_terrain_change BEFORE DELETE ON btech_map_hexes BEGIN SELECT RAISE(ABORT,'terrain must not change'); END").execute(&mut sql).await.unwrap();
     set_battle_map_visibility(&mut world, map, BattleLight::Night, 3).unwrap();
-    assert!(
-        !battle_map_optical_contact(&world, id, target, BattleSensorMode::Visual, false, false)
+    assert_eq!(
+        battle_perceive(&world, id, target)
             .unwrap()
-            .eligible
+            .unwrap()
+            .channel,
+        BattleDetectionChannel::Sensors
     );
-    assert!(
-        battle_map_optical_contact(
-            &world,
-            id,
-            target,
-            BattleSensorMode::LightAmplification,
-            false,
-            false
-        )
-        .unwrap()
-        .eligible
-    );
+    // Sight alone cannot reach an unlit target four hexes away in three hexes of night visibility.
+    let mut sight = world.clone();
+    configure_battle_perception(&mut sight, 0);
+    assert_eq!(battle_perceive(&sight, id, target).unwrap(), None);
     persistence::save(&config.database(), &world).await.unwrap();
     let loaded = persistence::load(&config.database()).await.unwrap();
     assert_eq!(loaded.btech, world.btech);
@@ -1414,18 +1392,8 @@ async fn saved_map_visibility_changes_occupied_battlefields_and_sensor_queries()
         .await
         .unwrap();
     let loaded = persistence::load(&config.database()).await.unwrap();
-    assert!(
-        !battle_map_optical_contact(
-            &loaded,
-            id,
-            target,
-            BattleSensorMode::LightAmplification,
-            false,
-            false
-        )
-        .unwrap()
-        .eligible
-    );
+    // Even the sensor band needs a clear line inside the battlefield ceiling.
+    assert_eq!(battle_perceive(&loaded, id, target).unwrap(), None);
     sqlx::query("UPDATE btech_maps SET light=3 WHERE dbref=?")
         .bind(map.0)
         .execute(&mut sql)
@@ -1434,11 +1402,13 @@ async fn saved_map_visibility_changes_occupied_battlefields_and_sensor_queries()
     assert!(persistence::load(&config.database()).await.is_err());
 }
 
+/// Hidden hostile searches roll the observer's saved dice and resume them after a restart;
+/// missing targets are rejected, and ordinary, distant or close targets consume no dice.
 #[tokio::test]
-async fn optical_detection_resumes_observer_dice_after_restart_and_rejects_missing_targets() {
+async fn hidden_contact_search_resumes_observer_dice_after_restart_and_rejects_missing_targets() {
     use stompymux_rs::{
-        BattleDetectionRules, BattleSensorArc, BattleSensorAttempt, BattleSensorMode,
-        roll_battle_optical_detection,
+        BattleContactRules, BattleContactTransition as Transition, BattleDetection, BattleDice,
+        battle_perception_factor, update_battle_contact,
     };
     let (_dir, config, mut world, id) = fixture('.').await;
     let target = world.create(&config, "Detection target".into(), Kind::Thing);
@@ -1449,291 +1419,117 @@ async fn optical_detection_resumes_observer_dice_after_restart_and_rejects_missi
     )
     .unwrap();
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
-    place_battle_unit(&mut world, target, map, 5, 9).unwrap();
-    let attempt = BattleSensorAttempt {
-        sensor: BattleSensorMode::Visual,
-        target_lit: false,
-        disabled: false,
-        rules: BattleDetectionRules {
-            arc: BattleSensorArc::Front,
-            perception: 7,
-            hostile: true,
-            hidden: false,
-            secondary: false,
-        },
+    let dice = |world: &stompymux_rs::World| {
+        serde_json::to_value(&world.btech).unwrap()["constructed"][id.0.to_string()]["dice"].clone()
+    };
+    let rules = BattleContactRules {
+        hostile: true,
+        hidden: true,
+        perception: 7,
+        acquire: true,
     };
     let before = world.btech.clone();
-    assert!(roll_battle_optical_detection(&mut world, id, ObjectId(i64::MAX), attempt).is_err());
+    assert!(update_battle_contact(&mut world, id, ObjectId(i64::MAX), rules).is_err());
     assert_eq!(world.btech, before);
-    let rejected = roll_battle_optical_detection(
-        &mut world,
+    // Beyond five hexes a hidden hostile unit cannot be found without a probe.
+    place_battle_unit(&mut world, target, map, 5, 11).unwrap();
+    let before = world.btech.clone();
+    let distant = update_battle_contact(&mut world, id, target, rules).unwrap();
+    assert_eq!(distant.transition, Transition::Unseen);
+    assert_eq!(
+        distant.detection,
+        Some(BattleDetection {
+            detected: false,
+            threshold: 0,
+            roll: None,
+        })
+    );
+    assert_eq!(world.btech, before);
+    // Ordinary targets are acquired at once without a search.
+    place_battle_unit(&mut world, target, map, 5, 9).unwrap();
+    let mut ordinary = world.clone();
+    let update = update_battle_contact(
+        &mut ordinary,
         id,
         target,
-        BattleSensorAttempt {
-            disabled: true,
-            ..attempt
+        BattleContactRules {
+            hidden: false,
+            ..rules
         },
     )
     .unwrap();
-    assert!(!rejected.detected);
-    assert_eq!(rejected.roll, None);
-    assert_eq!(world.btech, before);
-    let first = roll_battle_optical_detection(&mut world, id, target, attempt).unwrap();
-    assert!(first.roll.is_some());
+    assert_eq!(update.transition, Transition::Acquired);
+    assert_eq!(
+        update.detection,
+        Some(BattleDetection {
+            detected: true,
+            threshold: 0,
+            roll: None,
+        })
+    );
+    assert_eq!(dice(&ordinary), dice(&world));
+    // Four hexes behind the observer: rear weight 40, quartered perception factor, 98% proximity.
+    let threshold = 40 * battle_perception_factor(7) / 100 / 4 * 98;
+    assert_eq!(threshold, 686);
+    let seed = (0..=255)
+        .find(|seed| BattleDice::seeded([*seed; 32]).die(10_000).unwrap() >= threshold)
+        .unwrap();
+    shot_seed(&mut world, id, seed);
+    let mut stream = BattleDice::seeded([seed; 32]);
+    let before = world.btech.clone();
+    let first = update_battle_contact(&mut world, id, target, rules).unwrap();
+    assert_eq!(first.transition, Transition::Unseen);
+    assert_eq!(
+        first.detection,
+        Some(BattleDetection {
+            detected: false,
+            threshold,
+            roll: Some(stream.die(10_000).unwrap()),
+        })
+    );
+    assert_eq!(dice(&world), serde_json::to_value(&stream).unwrap());
     assert_eq!(
         world.btech.constructed_units()[&target],
         before.constructed_units()[&target]
     );
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
-    let expected = roll_battle_optical_detection(&mut world, id, target, attempt).unwrap();
-    let resumed = roll_battle_optical_detection(&mut loaded, id, target, attempt).unwrap();
+    let expected = update_battle_contact(&mut world, id, target, rules).unwrap();
+    let resumed = update_battle_contact(&mut loaded, id, target, rules).unwrap();
     assert_eq!(resumed, expected);
+    let roll = stream.die(10_000).unwrap();
+    assert_eq!(
+        expected.detection,
+        Some(BattleDetection {
+            detected: roll < threshold,
+            threshold,
+            roll: Some(roll),
+        })
+    );
     assert_eq!(loaded.btech, world.btech);
+    // Inside three hexes the search succeeds automatically without consuming dice.
+    place_battle_unit(&mut world, target, map, 5, 7).unwrap();
+    let before = dice(&world);
+    let close = update_battle_contact(&mut world, id, target, rules).unwrap();
+    assert_eq!(close.transition, Transition::Acquired);
+    assert_eq!(
+        close.detection,
+        Some(BattleDetection {
+            detected: true,
+            threshold: 7 * 99,
+            roll: None,
+        })
+    );
+    assert_eq!(dice(&world), before);
 }
 
+/// The sensor command and Lua share one read-only perception summary and refuse arguments.
 #[tokio::test]
-async fn paired_optical_scan_orders_attempts_and_skips_duplicate_or_unneeded_rolls() {
-    use stompymux_rs::{
-        BattleDetectionRules, BattleLight, BattleScanTarget, BattleSensorArc, BattleSensorAttempt,
-        BattleSensorMode as Sensor, BattleSensorScan, roll_battle_optical_detection,
-        scan_battle_optical_target, set_battle_map_visibility,
-    };
-    let (_dir, config, mut world, id) = fixture('.').await;
-    let target = world.create(&config, "Paired scan target".into(), Kind::Thing);
-    create_battle_unit(
-        &mut world,
-        target,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
-    )
-    .unwrap();
-    let map = world.btech.constructed_units()[&id].position().unwrap().map;
-    place_battle_unit(&mut world, target, map, 5, 9).unwrap();
-    set_battle_map_visibility(&mut world, map, BattleLight::Night, 3).unwrap();
-    let scan = BattleSensorScan {
-        primary: Sensor::Visual,
-        secondary: Sensor::LightAmplification,
-        visual_disabled: false,
-        amplification_disabled: false,
-        perception: 7,
-        target: BattleScanTarget {
-            lit: false,
-            hostile: true,
-            hidden: false,
-        },
-    };
-    let mut expected = world.clone();
-    let rules = BattleDetectionRules {
-        arc: BattleSensorArc::Rear,
-        perception: 7,
-        hostile: true,
-        hidden: false,
-        secondary: true,
-    };
-    let second = roll_battle_optical_detection(
-        &mut expected,
-        id,
-        target,
-        BattleSensorAttempt {
-            sensor: Sensor::LightAmplification,
-            target_lit: false,
-            disabled: false,
-            rules,
-        },
-    )
-    .unwrap();
-    let report = scan_battle_optical_target(&mut world, id, target, scan).unwrap();
-    assert!(!report.primary.detected);
-    assert_eq!(report.primary.roll, None);
-    assert_eq!(report.secondary, Some(second));
-    assert_eq!(world.btech, expected.btech);
-    // Repeated mode selection is exactly one primary attempt, even if it fails.
-    let mut expected = world.clone();
-    let single = roll_battle_optical_detection(
-        &mut expected,
-        id,
-        target,
-        BattleSensorAttempt {
-            sensor: Sensor::LightAmplification,
-            target_lit: false,
-            disabled: false,
-            rules: BattleDetectionRules {
-                secondary: false,
-                ..rules
-            },
-        },
-    )
-    .unwrap();
-    let report = scan_battle_optical_target(
-        &mut world,
-        id,
-        target,
-        BattleSensorScan {
-            primary: Sensor::LightAmplification,
-            ..scan
-        },
-    )
-    .unwrap();
-    assert_eq!(report.primary, single);
-    assert_eq!(report.secondary, None);
-    assert_eq!(world.btech, expected.btech);
-    // Close primary success consumes no dice and never attempts the secondary.
-    place_battle_unit(&mut world, target, map, 5, 6).unwrap();
-    let before = world.btech.clone();
-    let report = scan_battle_optical_target(&mut world, id, target, scan).unwrap();
-    assert_eq!(report.detected_by, Some(Sensor::Visual));
-    assert_eq!(report.secondary, None);
-    assert_eq!(world.btech, before);
-}
-
-#[tokio::test]
-async fn sensor_selection_preserves_active_modes_until_committed_countdown_and_handles_light_changes()
- {
-    use stompymux_rs::{
-        BattleLight, BattleSensorMode as Sensor, BattleSensorPair, advance_battle_sensor_selection,
-        select_battle_optical_sensors, set_battle_map_visibility,
-    };
+async fn sensor_command_and_lua_report_read_only_perception() {
+    use stompymux_rs::{BattleLight, set_battle_map_visibility};
     let (_dir, config, mut world, id) = fixture('.').await;
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
-    let wanted = BattleSensorPair {
-        primary: Sensor::Visual,
-        secondary: Sensor::LightAmplification,
-    };
-    let before = world.btech.clone();
-    assert!(select_battle_optical_sensors(&mut world, id, ObjectId(1), wanted).is_err());
-    assert_eq!(world.btech, before);
-    set_battle_map_visibility(&mut world, map, BattleLight::Night, 30).unwrap();
-    select_battle_optical_sensors(&mut world, id, ObjectId(1), wanted).unwrap();
-    for _ in 0..4 {
-        assert!(advance_battle_sensor_selection(&mut world).is_empty());
-    }
-    assert_eq!(
-        world.btech.constructed_units()[&id]
-            .sensor_selection()
-            .active,
-        BattleSensorPair::default()
-    );
-    let pending = world.btech.constructed_units()[&id]
-        .sensor_selection()
-        .pending
-        .unwrap();
-    assert_eq!(pending.remaining, 6);
-    // Asking for the already-active pair does not cancel or reset a pending switch.
-    select_battle_optical_sensors(&mut world, id, ObjectId(1), BattleSensorPair::default())
-        .unwrap();
-    assert_eq!(
-        world.btech.constructed_units()[&id]
-            .sensor_selection()
-            .pending
-            .unwrap(),
-        pending
-    );
-    persistence::save(&config.database(), &world).await.unwrap();
-    let mut world = persistence::load(&config.database()).await.unwrap();
-    for _ in 0..5 {
-        assert!(advance_battle_sensor_selection(&mut world).is_empty());
-    }
-    assert_eq!(advance_battle_sensor_selection(&mut world).len(), 1);
-    assert_eq!(
-        world.btech.constructed_units()[&id]
-            .sensor_selection()
-            .active,
-        wanted
-    );
-    assert!(
-        world.btech.constructed_units()[&id]
-            .sensor_selection()
-            .pending
-            .is_none()
-    );
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, 30).unwrap();
-    assert_eq!(
-        world.btech.constructed_units()[&id]
-            .sensor_selection()
-            .active,
-        BattleSensorPair::default()
-    );
-    set_battle_map_visibility(&mut world, map, BattleLight::Night, 30).unwrap();
-    select_battle_optical_sensors(&mut world, id, ObjectId(1), wanted).unwrap();
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, 30).unwrap();
-    for _ in 0..10 {
-        advance_battle_sensor_selection(&mut world);
-    }
-    assert_eq!(
-        world.btech.constructed_units()[&id]
-            .sensor_selection()
-            .active,
-        BattleSensorPair::default()
-    );
-    set_battle_map_visibility(&mut world, map, BattleLight::Night, 30).unwrap();
-    select_battle_optical_sensors(&mut world, id, ObjectId(1), wanted).unwrap();
-    stop_battle_unit(
-        &mut world,
-        id,
-        ObjectId(1),
-        stompymux_rs::BattleMovementRules::STANDARD.fall,
-    )
-    .unwrap();
-    for _ in 0..10 {
-        assert!(advance_battle_sensor_selection(&mut world).is_empty());
-    }
-    assert_eq!(
-        world.btech.constructed_units()[&id]
-            .sensor_selection()
-            .active,
-        BattleSensorPair::default()
-    );
-    assert!(
-        world.btech.constructed_units()[&id]
-            .sensor_selection()
-            .pending
-            .is_none()
-    );
-}
-
-#[tokio::test(flavor = "current_thread")]
-async fn stationary_sensor_change_retries_failed_server_saves() {
-    use sqlx::Connection;
-    use stompymux_rs::{
-        BattleLight, BattleSensorMode, BattleSensorPair, advance_battle_sensor_selection,
-        select_battle_optical_sensors, set_battle_map_visibility,
-    };
-    tokio::task::LocalSet::new().run_until(async {
-        let (_dir, config, mut world, id) = fixture('.').await;
-        let map = world.btech.constructed_units()[&id].position().unwrap().map;
-        set_battle_map_visibility(&mut world, map, BattleLight::Night, 30).unwrap();
-        let wanted = BattleSensorPair { primary: BattleSensorMode::LightAmplification, secondary: BattleSensorMode::Visual };
-        select_battle_optical_sensors(&mut world, id, ObjectId(1), wanted).unwrap();
-        for _ in 0..9 { advance_battle_sensor_selection(&mut world); }
-        persistence::save(&config.database(), &world).await.unwrap();
-        let before = world.btech.clone();
-        let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
-        sqlx::query("CREATE TRIGGER deny_selection BEFORE UPDATE ON btech_units BEGIN SELECT RAISE(ABORT,'selection failure'); END").execute(&mut sql).await.unwrap();
-        let (_address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        attempt_heartbeat().await;
-        assert_eq!(persistence::load(&config.database()).await.unwrap().btech, before);
-        sqlx::query("DROP TRIGGER deny_selection").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            loop {
-                if persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].sensor_selection().pending.is_none() { break; }
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
-        assert_eq!(persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].sensor_selection().active, wanted);
-        shutdown.send(stompymux_rs::ShutdownRequest::Sigterm).unwrap();
-        task.await.unwrap().unwrap();
-    }).await;
-}
-
-#[tokio::test]
-async fn sensor_command_and_lua_share_delayed_selection_guards_and_rollback() {
-    use stompymux_rs::{
-        BattleLight, BattleSensorMode as Sensor, BattleSensorPair, advance_battle_sensor_selection,
-        set_battle_map_visibility,
-    };
-    let (_dir, config, mut world, id) = fixture('.').await;
-    let map = world.btech.constructed_units()[&id].position().unwrap().map;
-    set_battle_map_visibility(&mut world, map, BattleLight::Night, 30).unwrap();
+    set_battle_map_visibility(&mut world, map, BattleLight::Night, 10).unwrap();
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(id);
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let run = |player, line| {
@@ -1745,71 +1541,52 @@ async fn sensor_command_and_lua_share_delayed_selection_guards_and_rollback() {
             line,
         )
     };
-    assert!(run(2, "sensor").contains("Sensors: Vislight in 360 degree scanning mode (R:Visual)"));
+    let expected = [
+        "Sensors: 15 hexes in any light or weather",
+        "Sight:   10 hexes at night, +1 to hit unless the target is lit; lit targets to 30",
+        "Probe:   none",
+        "Radar:   none",
+    ]
+    .join("\r\n");
     let before = scripts.world().btech.clone();
-    run(2, "sensor V L");
-    for invalid in ["sensor V", "sensor V L V", "sensor V X", "sensor/quiet V L"] {
-        run(1, invalid);
+    // Any occupant may read the summary.
+    for player in [2, 1] {
+        let text = run(player, "sensor");
+        assert!(text.contains(&expected), "{text}");
+    }
+    for invalid in ["sensor V L", "sensor v", "sensor verbose"] {
+        assert!(
+            run(1, invalid)
+                .contains("Sensors are automatic; the sensor command takes no arguments."),
+            "{invalid}"
+        );
     }
     assert_eq!(scripts.world().btech, before);
-    assert!(run(1, "sensor verbose").contains("Bad in night-fighting (BTH)"));
-    assert!(run(1, "sensor v l").contains("Wanted\r\n------"));
-    assert_eq!(
-        scripts.world().btech.constructed_units()[&id]
-            .sensor_selection()
-            .active,
-        BattleSensorPair::default()
-    );
-    let pending = scripts.world().btech.clone();
-    assert!(
-        scripts
-            .eval_callback::<()>(&format!(
-                "btech.unit.sensors({},1,'light_amplification','visual'); error('abort')",
-                id.0
-            ))
-            .is_err()
-    );
-    assert_eq!(scripts.world().btech, pending);
-    scripts
-        .eval_callback::<()>(&format!(
-            "btech.unit.sensors({},1,'light_amplification','visual')",
+    let (text, range, sensors, running): (String, u16, String, bool) = scripts
+        .eval_callback(&format!(
+            "local report = btech.unit.perception({}); return report.text, report.sensor_range, report.sensors, report.running",
             id.0
         ))
         .unwrap();
-    for _ in 0..10 {
-        advance_battle_sensor_selection(&mut scripts.world_mut());
-    }
-    assert_eq!(
-        scripts.world().btech.constructed_units()[&id]
-            .sensor_selection()
-            .active,
-        BattleSensorPair {
-            primary: Sensor::LightAmplification,
-            secondary: Sensor::Visual
-        }
-    );
-    assert!(
-        run(1, "sensor")
-            .contains("Primary:   Light-amplification in 120 degree scanning mode (Forward arc)")
-    );
-    let saved = scripts.world().clone();
-    persistence::save(&config.database(), &saved).await.unwrap();
-    assert_eq!(
-        persistence::load(&config.database()).await.unwrap().btech,
-        saved.btech
-    );
-    run(1, "shutdown");
-    let before = scripts.world().btech.clone();
-    run(1, "sensor V V");
+    assert_eq!(text, expected);
+    assert_eq!((range, sensors.as_str(), running), (15, "ready", true));
     assert_eq!(scripts.world().btech, before);
-    assert!(run(1, "sensor").contains("Light-amplification"));
+    run(1, "shutdown");
+    let text = run(1, "sensor");
+    assert!(
+        text.contains("Your unit is shut down; nothing is perceived until it starts."),
+        "{text}"
+    );
 }
 
+/// Contacts are acquired, retained while any channel reaches, lost when none does, and cleared
+/// by administrative placement or removal.
 #[tokio::test]
 async fn contacts_acquire_retain_lose_and_clear_on_administrative_placement() {
     use stompymux_rs::{
-        BattleContactRules, BattleContactTransition as Transition, BattleLight, BattleScanTarget,
-        set_battle_map_visibility, update_battle_optical_contact,
+        BattleContact, BattleContactRules, BattleContactTransition as Transition, BattleDetection,
+        BattleLight, BattleMapPerceptionFlag, set_battle_map_perception, set_battle_map_visibility,
+        update_battle_contact,
     };
     let (_dir, config, mut world, id) = fixture('.').await;
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
@@ -1822,18 +1599,13 @@ async fn contacts_acquire_retain_lose_and_clear_on_administrative_placement() {
     .unwrap();
     place_battle_unit(&mut world, target, map, 5, 7).unwrap();
     let rules = BattleContactRules {
-        target: BattleScanTarget {
-            lit: false,
-            hostile: true,
-            hidden: false,
-        },
+        hostile: true,
+        hidden: false,
         perception: 7,
-        visual_disabled: false,
-        amplification_disabled: false,
         acquire: true,
     };
     let before = world.btech.clone();
-    let update = update_battle_optical_contact(
+    let update = update_battle_contact(
         &mut world,
         id,
         target,
@@ -1844,43 +1616,57 @@ async fn contacts_acquire_retain_lose_and_clear_on_administrative_placement() {
     )
     .unwrap();
     assert_eq!(update.transition, Transition::Unseen);
+    assert_eq!(update.detection, None);
     assert_eq!(world.btech, before);
-    assert!(update_battle_optical_contact(&mut world, id, id, rules).is_err());
+    assert!(update_battle_contact(&mut world, id, id, rules).is_err());
     assert_eq!(world.btech, before);
-    let update = update_battle_optical_contact(&mut world, id, target, rules).unwrap();
+    let update = update_battle_contact(&mut world, id, target, rules).unwrap();
     assert_eq!(update.transition, Transition::Acquired);
-    assert_eq!(update.scan.unwrap().primary.roll, None);
-    let contact = world.btech.constructed_units()[&id].contacts()[&target];
-    assert!(contact.primary && contact.secondary);
+    assert_eq!(
+        update.detection,
+        Some(BattleDetection {
+            detected: true,
+            threshold: 0,
+            roll: None,
+        })
+    );
+    assert_eq!(
+        world.btech.constructed_units()[&id].contacts()[&target],
+        BattleContact { identified: true }
+    );
     persistence::save(&config.database(), &world).await.unwrap();
     world = persistence::load(&config.database()).await.unwrap();
     let before = world.btech.clone();
-    let update = update_battle_optical_contact(&mut world, id, target, rules).unwrap();
+    let update = update_battle_contact(&mut world, id, target, rules).unwrap();
     assert_eq!(update.transition, Transition::Retained);
-    assert!(update.scan.is_none());
+    assert!(update.detection.is_none());
     assert_eq!(world.btech, before);
     // References are checked before malformed contact state can be persisted.
     let mut corrupt = world.clone();
     let mut state = serde_json::to_value(&corrupt.btech).unwrap();
     state["constructed"][id.0.to_string()]["contacts"]["999999"] =
-        serde_json::json!({"primary":true,"secondary":false});
+        serde_json::json!({"identified":true});
     corrupt.btech = serde_json::from_value(state).unwrap();
     assert!(corrupt.validate(&config).is_err());
+    // Weather alone cannot hide a target inside the sensor band.
     set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
-    let update = update_battle_optical_contact(&mut world, id, target, rules).unwrap();
+    let update = update_battle_contact(&mut world, id, target, rules).unwrap();
+    assert_eq!(update.transition, Transition::Retained);
+    set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
+    let update = update_battle_contact(&mut world, id, target, rules).unwrap();
     assert_eq!(update.transition, Transition::Lost);
-    assert!(update.scan.is_none());
+    assert!(update.detection.is_none());
     assert!(world.btech.constructed_units()[&id].contacts().is_empty());
     set_battle_map_visibility(&mut world, map, BattleLight::Day, 30).unwrap();
     assert_eq!(
-        update_battle_optical_contact(&mut world, id, target, rules)
+        update_battle_contact(&mut world, id, target, rules)
             .unwrap()
             .transition,
         Transition::Acquired
     );
     place_battle_unit(&mut world, target, map, 5, 6).unwrap();
     assert!(world.btech.constructed_units()[&id].contacts().is_empty());
-    update_battle_optical_contact(&mut world, id, target, rules).unwrap();
+    update_battle_contact(&mut world, id, target, rules).unwrap();
     stompymux_rs::remove_battle_unit(&mut world, target, ObjectId(config.start())).unwrap();
     assert!(world.btech.constructed_units()[&id].contacts().is_empty());
     world.validate(&config).unwrap();
@@ -1891,12 +1677,14 @@ async fn contacts_acquire_retain_lose_and_clear_on_administrative_placement() {
     );
 }
 
+/// Saved perception switches gate contacts and leave unrelated sensor flag bits untouched.
 #[tokio::test]
-async fn saved_sensor_disable_flags_gate_contacts_and_preserve_other_sensor_bits() {
+async fn saved_perception_disable_flags_gate_contacts_and_preserve_other_sensor_bits() {
     use sqlx::Connection;
     use stompymux_rs::{
-        BattleContactRules, BattleContactTransition as Transition, BattleScanTarget,
-        BattleSensorMode as Sensor, set_battle_map_optical_sensor, update_battle_optical_contact,
+        BattleContactRules, BattleContactTransition as Transition, BattleLight,
+        BattleMapPerceptionFlag as Flag, set_battle_map_perception, set_battle_map_visibility,
+        update_battle_contact,
     };
     let (_dir, config, mut world, id) = fixture('.').await;
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
@@ -1908,6 +1696,7 @@ async fn saved_sensor_disable_flags_gate_contacts_and_preserve_other_sensor_bits
     )
     .unwrap();
     place_battle_unit(&mut world, target, map, 5, 7).unwrap();
+    set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut sql = sqlx::SqliteConnection::connect_with(
         &sqlx::sqlite::SqliteConnectOptions::new().filename(config.database()),
@@ -1921,47 +1710,49 @@ async fn saved_sensor_disable_flags_gate_contacts_and_preserve_other_sensor_bits
         .unwrap();
     world = persistence::load(&config.database()).await.unwrap();
     let rules = BattleContactRules {
-        target: BattleScanTarget {
-            lit: false,
-            hostile: true,
-            hidden: false,
-        },
+        hostile: true,
+        hidden: false,
         perception: 7,
-        visual_disabled: false,
-        amplification_disabled: false,
         acquire: true,
     };
     assert_eq!(
-        update_battle_optical_contact(&mut world, id, target, rules)
+        update_battle_contact(&mut world, id, target, rules)
             .unwrap()
             .transition,
         Transition::Acquired
     );
-    set_battle_map_optical_sensor(&mut world, map, Sensor::Visual, false).unwrap();
+    // With no visibility, only the sensor band reaches the target.
+    set_battle_map_perception(&mut world, map, Flag::Sensors, false).unwrap();
     assert_eq!(world.btech.maps()[&map].sensor_flags, 129);
-    assert!(world.btech.maps()[&map].optical_sensor_disabled(Sensor::Visual));
-    let lost = update_battle_optical_contact(&mut world, id, target, rules).unwrap();
+    assert!(world.btech.maps()[&map].perception_disabled(Flag::Sensors));
+    let lost = update_battle_contact(&mut world, id, target, rules).unwrap();
     assert_eq!(lost.transition, Transition::Lost);
-    assert!(lost.scan.is_none());
+    assert!(lost.detection.is_none());
     let before = world.btech.clone();
     assert_eq!(
-        update_battle_optical_contact(&mut world, id, target, rules)
+        update_battle_contact(&mut world, id, target, rules)
             .unwrap()
             .transition,
         Transition::Unseen
     );
     assert_eq!(world.btech, before);
-    set_battle_map_optical_sensor(&mut world, map, Sensor::LightAmplification, false).unwrap();
-    assert_eq!(world.btech.maps()[&map].sensor_flags, 131);
-    set_battle_map_optical_sensor(&mut world, map, Sensor::Visual, true).unwrap();
-    assert_eq!(world.btech.maps()[&map].sensor_flags, 130);
-    assert!(!world.btech.maps()[&map].optical_sensor_disabled(Sensor::Visual));
-    assert!(world.btech.maps()[&map].optical_sensor_disabled(Sensor::LightAmplification));
+    set_battle_map_perception(&mut world, map, Flag::Radar, false).unwrap();
+    assert_eq!(world.btech.maps()[&map].sensor_flags, 161);
+    set_battle_map_perception(&mut world, map, Flag::Probes, false).unwrap();
+    assert_eq!(world.btech.maps()[&map].sensor_flags, 225);
+    set_battle_map_perception(&mut world, map, Flag::Sensors, true).unwrap();
+    assert_eq!(world.btech.maps()[&map].sensor_flags, 224);
+    assert!(!world.btech.maps()[&map].perception_disabled(Flag::Sensors));
+    assert!(world.btech.maps()[&map].perception_disabled(Flag::Radar));
+    assert!(world.btech.maps()[&map].perception_disabled(Flag::Probes));
+    let before = world.btech.clone();
+    assert!(set_battle_map_perception(&mut world, id, Flag::Sensors, false).is_err());
+    assert_eq!(world.btech, before);
     persistence::save(&config.database(), &world).await.unwrap();
     world = persistence::load(&config.database()).await.unwrap();
-    assert_eq!(world.btech.maps()[&map].sensor_flags, 130);
+    assert_eq!(world.btech.maps()[&map].sensor_flags, 224);
     assert_eq!(
-        update_battle_optical_contact(&mut world, id, target, rules)
+        update_battle_contact(&mut world, id, target, rules)
             .unwrap()
             .transition,
         Transition::Acquired
@@ -1971,9 +1762,9 @@ async fn saved_sensor_disable_flags_gate_contacts_and_preserve_other_sensor_bits
 #[tokio::test]
 async fn tactical_scanners_use_saved_signatures_and_startup_perception() {
     use stompymux_rs::{
-        BattleCharacter, BattleCharacterValue, BattleSensorSignature, optical_scanner_observers,
-        refresh_optical_scanners, set_battle_character, set_battle_character_value,
-        set_battle_sensor_signature,
+        BattleCharacter, BattleCharacterValue, BattleUnitSignature, battle_contact_observers,
+        refresh_battle_contacts, set_battle_character, set_battle_character_value,
+        set_battle_unit_signature,
     };
     let (_dir, config, mut world, id) = fixture('.').await;
     assert_eq!(
@@ -2026,10 +1817,10 @@ async fn tactical_scanners_use_saved_signatures_and_startup_perception() {
     )
     .unwrap();
     place_battle_unit(&mut world, target, map, 5, 11).unwrap();
-    assert!(optical_scanner_observers(&world).is_empty());
+    assert!(battle_contact_observers(&world).is_empty());
     let before = world.btech.clone();
     assert!(
-        refresh_optical_scanners(&mut world, &[id])
+        refresh_battle_contacts(&mut world, &[id])
             .unwrap()
             .is_empty()
     );
@@ -2038,40 +1829,40 @@ async fn tactical_scanners_use_saved_signatures_and_startup_perception() {
         advance_battle_units(&mut world, 0);
     }
     assert_eq!(world.btech.constructed_units()[&id].scanner_perception(), 6);
-    set_battle_sensor_signature(
+    set_battle_unit_signature(
         &mut world,
         id,
-        BattleSensorSignature {
+        BattleUnitSignature {
             team: 1,
             ..Default::default()
         },
     )
     .unwrap();
-    set_battle_sensor_signature(
+    set_battle_unit_signature(
         &mut world,
         target,
-        BattleSensorSignature {
+        BattleUnitSignature {
             team: 2,
             hidden: true,
             illuminated: false,
         },
     )
     .unwrap();
-    let observers = optical_scanner_observers(&world);
+    let observers = battle_contact_observers(&world);
     assert_eq!(observers, vec![id]);
     let before = world.btech.clone();
     assert!(
-        refresh_optical_scanners(&mut world, &observers)
+        refresh_battle_contacts(&mut world, &observers)
             .unwrap()
             .is_empty()
     );
     assert_eq!(world.btech, before); // Hidden hostile beyond five hexes: no dice.
     place_battle_unit(&mut world, target, map, 5, 6).unwrap();
-    let events = refresh_optical_scanners(&mut world, &[id, id]).unwrap();
+    let events = refresh_battle_contacts(&mut world, &[id, id]).unwrap();
     assert_eq!(events.len(), 1);
     assert!(events[0].acquired);
     assert!(
-        refresh_optical_scanners(&mut world, &observers)
+        refresh_battle_contacts(&mut world, &observers)
             .unwrap()
             .is_empty()
     );
@@ -2086,10 +1877,10 @@ async fn tactical_scanners_use_saved_signatures_and_startup_perception() {
         .unwrap()
         .flags
         .insert(stompymux_rs::Flag::InCharacter);
-    assert_eq!(optical_scanner_observers(&world), vec![id]);
+    assert_eq!(battle_contact_observers(&world), vec![id]);
     let before = world.btech.clone();
     assert!(
-        refresh_optical_scanners(&mut world, &[id])
+        refresh_battle_contacts(&mut world, &[id])
             .unwrap()
             .is_empty()
     );
@@ -2125,11 +1916,12 @@ async fn automatic_stationary_contact_acquisition_retries_a_failed_save() {
     }).await;
 }
 
+/// The contacts display lists only acquired, currently perceived targets and never rerolls them.
 #[tokio::test]
 async fn contact_display_filters_unacquired_and_stale_targets_without_rerolls() {
     use stompymux_rs::{
-        BattleContactRules, BattleLight, BattleScanTarget, set_battle_map_visibility,
-        update_battle_optical_contact,
+        BattleContactRules, BattleLight, BattleMapPerceptionFlag, set_battle_map_perception,
+        set_battle_map_visibility, update_battle_contact,
     };
     let (_dir, config, mut world, id) = fixture('.').await;
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
@@ -2147,18 +1939,13 @@ async fn contact_display_filters_unacquired_and_stale_targets_without_rerolls() 
         targets.push(target);
     }
     let rules = BattleContactRules {
-        target: BattleScanTarget {
-            lit: false,
-            hostile: false,
-            hidden: false,
-        },
+        hostile: false,
+        hidden: false,
         perception: 7,
-        visual_disabled: false,
-        amplification_disabled: false,
         acquire: true,
     };
     for &target in &targets[..2] {
-        update_battle_optical_contact(&mut world, id, target, rules).unwrap();
+        update_battle_contact(&mut world, id, target, rules).unwrap();
     }
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let before = scripts.world().btech.clone();
@@ -2208,6 +1995,14 @@ async fn contact_display_filters_unacquired_and_stale_targets_without_rerolls() 
     let first: i64 = scripts.eval_callback(&format!("local c=btech.unit.contacts({}); c[1].target=999999; return btech.unit.contacts({})[1].target", id.0, id.0)).unwrap();
     assert_eq!(first, targets[1].0);
     assert_eq!(scripts.world().btech, before);
+    // Without the sensor band or any visibility, saved contacts are stale and hidden.
+    set_battle_map_perception(
+        &mut scripts.world_mut(),
+        map,
+        BattleMapPerceptionFlag::Sensors,
+        false,
+    )
+    .unwrap();
     set_battle_map_visibility(&mut scripts.world_mut(), map, BattleLight::Day, 0).unwrap();
     let stale = scripts.world().btech.clone();
     assert_eq!(
@@ -2252,14 +2047,16 @@ async fn lock_fixture() -> (
     )
     .unwrap();
     place_battle_unit(&mut world, target, map, 5, 6).unwrap();
-    stompymux_rs::refresh_optical_scanners(&mut world, &[id]).unwrap();
+    stompymux_rs::refresh_battle_contacts(&mut world, &[id]).unwrap();
     (dir, config, world, id, target)
 }
 
+/// Target selection settles across a restart and clears once the contact is lost.
 #[tokio::test]
 async fn target_selection_settles_after_restart_and_clears_on_contact_loss() {
     use stompymux_rs::{
-        BattleLight, advance_battle_target_locks, select_battle_target, set_battle_map_visibility,
+        BattleLight, BattleMapPerceptionFlag, advance_battle_target_locks, select_battle_target,
+        set_battle_map_perception, set_battle_map_visibility,
     };
     let (_dir, config, mut world, id, target) = lock_fixture().await;
     let before = world.btech.clone();
@@ -2298,6 +2095,7 @@ async fn target_selection_settles_after_restart_and_clears_on_contact_loss() {
     assert!(advance_battle_target_locks(&mut world).is_empty());
     select_battle_target(&mut world, id, ObjectId(1), Some(target)).unwrap();
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
+    set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
     set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
     // A read-only visibility check does not mutate selection or reroll acquisition.
     assert!(
@@ -2315,7 +2113,7 @@ async fn target_selection_settles_after_restart_and_clears_on_contact_loss() {
             .remaining,
         0
     );
-    let events = stompymux_rs::refresh_optical_scanners(&mut world, &[id]).unwrap();
+    let events = stompymux_rs::refresh_battle_contacts(&mut world, &[id]).unwrap();
     assert_eq!(events.len(), 1);
     assert!(events[0].lock_lost);
     assert!(world.btech.constructed_units()[&id].target_lock().is_none());
@@ -2327,51 +2125,33 @@ async fn target_selection_settles_after_restart_and_clears_on_contact_loss() {
         persistence::load(&config.database()).await.unwrap().btech,
         world.btech
     );
+    set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, true).unwrap();
     set_battle_map_visibility(&mut world, map, BattleLight::Day, 30).unwrap();
-    stompymux_rs::refresh_optical_scanners(&mut world, &[id]).unwrap();
+    stompymux_rs::refresh_battle_contacts(&mut world, &[id]).unwrap();
     select_battle_target(&mut world, id, ObjectId(1), Some(target)).unwrap();
     place_battle_unit(&mut world, target, map, 5, 7).unwrap();
     assert!(world.btech.constructed_units()[&id].target_lock().is_none());
 }
 
+/// Light changes leave a lock alone; explicit clearing and shutdown remove it.
 #[tokio::test]
-async fn target_selection_clears_on_sensor_change_shutdown_and_explicit_clear() {
-    use stompymux_rs::{
-        BattleLight, BattleSensorMode as S, BattleSensorPair, select_battle_target,
-        set_battle_map_visibility,
-    };
+async fn target_selection_survives_light_changes_and_clears_on_shutdown_and_explicit_clear() {
+    use stompymux_rs::{BattleLight, select_battle_target, set_battle_map_visibility};
     let (_dir, config, mut world, id, target) = lock_fixture().await;
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
     select_battle_target(&mut world, id, ObjectId(1), Some(target)).unwrap();
-    set_battle_map_visibility(&mut world, map, BattleLight::Night, 30).unwrap();
-    stompymux_rs::select_battle_optical_sensors(
-        &mut world,
-        id,
-        ObjectId(1),
-        BattleSensorPair {
-            primary: S::LightAmplification,
-            secondary: S::Visual,
-        },
-    )
-    .unwrap();
-    for _ in 0..9 {
-        stompymux_rs::advance_battle_sensor_selection(&mut world);
-    }
-    assert!(world.btech.constructed_units()[&id].target_lock().is_some());
-    stompymux_rs::advance_battle_sensor_selection(&mut world);
-    assert!(world.btech.constructed_units()[&id].target_lock().is_none());
-    select_battle_target(&mut world, id, ObjectId(1), Some(target)).unwrap();
     let selected = world.btech.constructed_units()[&id].target_lock();
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, 30).unwrap();
-    // Automatic light fallback preserves the lock; completing a deliberate switch above clears it.
-    assert_eq!(world.btech.constructed_units()[&id].target_lock(), selected);
-    assert_eq!(
-        world.btech.constructed_units()[&id]
-            .sensor_selection()
-            .active,
-        BattleSensorPair::default()
+    assert!(selected.is_some());
+    for light in [BattleLight::Night, BattleLight::Twilight, BattleLight::Day] {
+        set_battle_map_visibility(&mut world, map, light, 30).unwrap();
+        assert_eq!(world.btech.constructed_units()[&id].target_lock(), selected);
+    }
+    assert!(
+        stompymux_rs::refresh_battle_contacts(&mut world, &[id])
+            .unwrap()
+            .is_empty()
     );
-    select_battle_target(&mut world, id, ObjectId(1), Some(target)).unwrap();
+    assert_eq!(world.btech.constructed_units()[&id].target_lock(), selected);
     select_battle_target(&mut world, id, ObjectId(1), None).unwrap();
     assert!(world.btech.constructed_units()[&id].target_lock().is_none());
     select_battle_target(&mut world, id, ObjectId(1), Some(target)).unwrap();
@@ -2529,7 +2309,7 @@ async fn aim_lock_penalty_follows_selected_target_and_committed_settling() {
     )
     .unwrap();
     place_battle_unit(&mut world, front, map, 5, 4).unwrap();
-    stompymux_rs::refresh_optical_scanners(&mut world, &[id]).unwrap();
+    stompymux_rs::refresh_battle_contacts(&mut world, &[id]).unwrap();
     let penalty = |world: &stompymux_rs::World, target| {
         battle_aim_modifiers(world, id, target, 0, 4, optical_aim_rules())
             .unwrap()
@@ -2578,11 +2358,13 @@ async fn aim_lock_penalty_follows_selected_target_and_committed_settling() {
     );
 }
 
+/// Aim takes the best perceiving channel's modifier and never uses stale contacts.
 #[tokio::test]
-async fn optical_aim_chooses_eligible_modes_and_never_uses_stale_contacts() {
+async fn perception_aim_chooses_the_best_channel_and_never_uses_stale_contacts() {
     use stompymux_rs::{
-        BattleLight, BattleSensorMode as S, BattleSensorPair, battle_aim_modifiers,
-        set_battle_map_optical_sensor, set_battle_map_visibility,
+        BattleDetectionChannel as Channel, BattleLight, BattleMapPerceptionFlag,
+        BattlePerceptionAim, battle_aim_modifiers, set_battle_map_perception,
+        set_battle_map_visibility,
     };
     let (_dir, _config, mut world, id, target) = lock_fixture().await;
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
@@ -2590,70 +2372,49 @@ async fn optical_aim_chooses_eligible_modes_and_never_uses_stale_contacts() {
     let aim = |world: &stompymux_rs::World| {
         battle_aim_modifiers(world, id, target, 0, 4, optical_aim_rules()).unwrap()
     };
-    assert_eq!(aim(&world).optical.unwrap().modifier, 2);
-    // Equal modes receive no extra secondary penalty.
-    assert!(!aim(&world).optical.unwrap().secondary);
-    stompymux_rs::select_battle_optical_sensors(
-        &mut world,
-        id,
-        ObjectId(1),
-        BattleSensorPair {
-            primary: S::Visual,
-            secondary: S::LightAmplification,
-        },
-    )
-    .unwrap();
-    for _ in 0..10 {
-        stompymux_rs::advance_battle_sensor_selection(&mut world);
-    }
-    assert_eq!(aim(&world).optical.unwrap().sensor, S::Visual); // Primary wins a tie.
-    set_battle_map_optical_sensor(&mut world, map, S::Visual, false).unwrap();
-    let secondary = aim(&world).optical.unwrap();
-    assert_eq!(secondary.sensor, S::LightAmplification);
-    assert!(secondary.secondary);
-    assert_eq!(secondary.modifier, 2); // LA night modifier 1 + secondary 1.
-    set_battle_map_optical_sensor(&mut world, map, S::LightAmplification, false).unwrap();
-    let before = world.btech.clone();
-    assert!(aim(&world).optical.is_none());
-    assert!(aim(&world).subtotal().is_none());
-    assert_eq!(world.btech, before); // Reading stale saved observations cannot reroll them.
-    set_battle_map_optical_sensor(&mut world, map, S::Visual, true).unwrap();
-    set_battle_map_optical_sensor(&mut world, map, S::LightAmplification, true).unwrap();
-    stompymux_rs::select_battle_optical_sensors(
-        &mut world,
-        id,
-        ObjectId(1),
-        BattleSensorPair {
-            primary: S::LightAmplification,
-            secondary: S::Visual,
-        },
-    )
-    .unwrap();
-    for _ in 0..10 {
-        stompymux_rs::advance_battle_sensor_selection(&mut world);
-    }
-    assert_eq!(aim(&world).optical.unwrap().modifier, 1);
-    stompymux_rs::set_battle_sensor_signature(
+    let perceived = |channel, modifier| {
+        Some(BattlePerceptionAim {
+            channel: Some(channel),
+            direct_fire: true,
+            modifier,
+        })
+    };
+    // Darkness does not matter inside the sensor band.
+    assert_eq!(aim(&world).perception, perceived(Channel::Sensors, 0));
+    // Sight alone pays +1 at night for an unlit target.
+    set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
+    assert_eq!(aim(&world).perception, perceived(Channel::Sight, 1));
+    set_battle_map_visibility(&mut world, map, BattleLight::Twilight, 30).unwrap();
+    assert_eq!(aim(&world).perception, perceived(Channel::Sight, 0));
+    set_battle_map_visibility(&mut world, map, BattleLight::Night, 30).unwrap();
+    stompymux_rs::set_battle_unit_signature(
         &mut world,
         target,
-        stompymux_rs::BattleSensorSignature {
+        stompymux_rs::BattleUnitSignature {
             team: 0,
             hidden: false,
             illuminated: true,
         },
     )
     .unwrap();
-    let lit = aim(&world).optical.unwrap();
-    assert_eq!(lit.sensor, S::Visual);
-    assert!(lit.secondary);
-    assert_eq!(lit.modifier, 1);
+    assert_eq!(aim(&world).perception, perceived(Channel::Sight, 0));
+    // With nothing reaching the target, the saved contact is not used.
+    set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
+    let before = world.btech.clone();
+    assert!(aim(&world).perception.is_none());
+    assert!(aim(&world).subtotal().is_none());
+    assert_eq!(world.btech, before); // Reading stale saved observations cannot reroll them.
+    set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, true).unwrap();
+    assert_eq!(aim(&world).perception, perceived(Channel::Sensors, 0));
     place_battle_unit(&mut world, target, map, 5, 6).unwrap(); // Clears acquisition, despite geometric visibility.
+    assert!(aim(&world).perception.is_none());
     assert!(aim(&world).subtotal().is_none());
 }
 
+/// Perception aim includes woods in the target hex and partial cover from shallow water.
 #[tokio::test]
-async fn optical_aim_includes_target_woods_and_shallow_water_cover() {
-    for (tile, target_y, expected) in [("`0", 6, 3), ("~1", 6, 2), ("~1", 7, 5)] {
+async fn perception_aim_includes_target_woods_and_shallow_water_cover() {
+    for (tile, target_y, expected) in [("`0", 6, 1), ("~1", 6, 0), ("~1", 7, 3)] {
         let source = format!(
             "12 12\n{}",
             (0..12)
@@ -2682,11 +2443,25 @@ async fn optical_aim_includes_target_woods_and_shallow_water_cover() {
             30,
         )
         .unwrap();
-        stompymux_rs::refresh_optical_scanners(&mut world, &[id]).unwrap();
+        stompymux_rs::refresh_battle_contacts(&mut world, &[id]).unwrap();
+        let terrain = stompymux_rs::battle_unit_terrain_los(&world, id, target).unwrap();
+        // Sensor-band cover: path woods, target woods and three for partial cover.
+        assert_eq!(
+            i16::from(terrain.woods)
+                + i16::from(terrain.target_woods)
+                + if terrain.partial_cover { 3 } else { 0 },
+            expected,
+            "{tile}"
+        );
         let aim = stompymux_rs::battle_aim_modifiers(&world, id, target, 0, 4, optical_aim_rules())
             .unwrap();
-        assert_eq!(aim.optical.unwrap().modifier, expected, "{tile}");
-        // Gunnery 4 + off target -4 + no lock 2 + optical contribution.
+        let perception = aim.perception.unwrap();
+        assert_eq!(
+            perception.channel,
+            Some(stompymux_rs::BattleDetectionChannel::Sensors)
+        );
+        assert_eq!(perception.modifier, expected, "{tile}");
+        // Gunnery 4 + off target -4 + no lock 2 + perception contribution.
         assert_eq!(aim.subtotal(), Some(2 + i32::from(expected)));
     }
 }
@@ -2876,7 +2651,7 @@ async fn shot_fixture() -> (
     let (dir, config, mut world, id, target) = lock_fixture().await;
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
     place_battle_unit(&mut world, target, map, 5, 4).unwrap();
-    stompymux_rs::refresh_optical_scanners(&mut world, &[id]).unwrap();
+    stompymux_rs::refresh_battle_contacts(&mut world, &[id]).unwrap();
     world
         .objects
         .get_mut(&ObjectId(1))
@@ -3015,6 +2790,7 @@ async fn direct_shot_hit_threshold_and_expenditure_match_manual_composition() {
     }
 }
 
+/// Rejected direct shots leave both dice streams and all expenditure untouched.
 #[tokio::test]
 async fn direct_shot_rejections_preserve_both_dice_streams_and_all_expenditure() {
     use stompymux_rs::resolve_battle_shot;
@@ -3034,15 +2810,37 @@ async fn direct_shot_rejections_preserve_both_dice_streams_and_all_expenditure()
     assert!(resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, rules).is_err());
     assert_eq!(world.btech, before);
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
+    // With neither the sensor band nor sight reaching the target, the contact is not perceived.
+    stompymux_rs::set_battle_map_perception(
+        &mut world,
+        map,
+        stompymux_rs::BattleMapPerceptionFlag::Sensors,
+        false,
+    )
+    .unwrap();
     stompymux_rs::set_battle_map_visibility(&mut world, map, stompymux_rs::BattleLight::Day, 0)
         .unwrap();
     let before = world.btech.clone();
-    assert!(resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, shot_rules()).is_err());
+    let refused = format!(
+        "{:#}",
+        resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, shot_rules()).unwrap_err()
+    );
+    assert!(
+        refused.contains("Target is not a current acquired contact"),
+        "{refused}"
+    );
     assert_eq!(world.btech, before);
+    stompymux_rs::set_battle_map_perception(
+        &mut world,
+        map,
+        stompymux_rs::BattleMapPerceptionFlag::Sensors,
+        true,
+    )
+    .unwrap();
     stompymux_rs::set_battle_map_visibility(&mut world, map, stompymux_rs::BattleLight::Day, 30)
         .unwrap();
     place_battle_unit(&mut world, target, map, 5, 6).unwrap();
-    stompymux_rs::refresh_optical_scanners(&mut world, &[id]).unwrap();
+    stompymux_rs::refresh_battle_contacts(&mut world, &[id]).unwrap();
     let before = world.btech.clone();
     assert!(resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, shot_rules()).is_err());
     assert_eq!(world.btech, before);
@@ -3076,7 +2874,7 @@ async fn direct_shot_partial_cover_uses_one_upper_body_die_per_group() {
     )
     .unwrap();
     place_battle_unit(&mut world, target, map, 5, 3).unwrap();
-    stompymux_rs::refresh_optical_scanners(&mut world, &[id]).unwrap();
+    stompymux_rs::refresh_battle_contacts(&mut world, &[id]).unwrap();
     world
         .objects
         .get_mut(&ObjectId(1))
@@ -3096,7 +2894,7 @@ async fn direct_shot_partial_cover_uses_one_upper_body_die_per_group() {
     let report =
         stompymux_rs::resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, shot_rules())
             .unwrap();
-    assert_eq!(report.aim.optical.unwrap().modifier, 3);
+    assert_eq!(report.aim.perception.unwrap().modifier, 3);
     let salvo = report.salvo.unwrap().into_mech().unwrap();
     assert_eq!(salvo.groups.len(), 1);
     assert_eq!(salvo.groups[0].hit.section, location);
@@ -3178,7 +2976,7 @@ async fn direct_out_of_range_shot_still_rolls_and_spends_without_target_damage()
     place_battle_unit(&mut world, target, map, 5, 20).unwrap();
     shot_seed(&mut world, id, 23);
     for _ in 0..100 {
-        stompymux_rs::refresh_optical_scanners(&mut world, &[id]).unwrap();
+        stompymux_rs::refresh_battle_contacts(&mut world, &[id]).unwrap();
         if world.btech.constructed_units()[&id]
             .contacts()
             .contains_key(&target)
@@ -4670,7 +4468,7 @@ async fn prone_shot_fixture() -> (
     for _ in 0..30 {
         advance_battle_motion(&mut world, RULES).unwrap();
     }
-    stompymux_rs::refresh_optical_scanners(&mut world, &[id]).unwrap();
+    stompymux_rs::refresh_battle_contacts(&mut world, &[id]).unwrap();
     (dir, config, world, id, target)
 }
 
@@ -6695,7 +6493,7 @@ async fn lua_firing_misses_and_optional_state_use_nil_without_losing_expenditure
     shot_seed(&mut world, id, seed);
     let before_target = world.btech.constructed_units()[&target].clone();
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
-    let result: (bool, bool, bool, u8) = scripts.eval_callback(&format!("local shot=btech.unit.fire({},1,0,{}); local state=btech.unit.state({}); return shot.salvo==nil,#shot.expenditure.ammunition==0,state.target_lock==nil and state.stand_timer==nil and state.sensor_selection.pending==nil,shot.roll", id.0,target.0,id.0)).unwrap();
+    let result: (bool, bool, bool, u8) = scripts.eval_callback(&format!("local shot=btech.unit.fire({},1,0,{}); local state=btech.unit.state({}); return shot.salvo==nil,#shot.expenditure.ammunition==0,state.target_lock==nil and state.stand_timer==nil,shot.roll", id.0,target.0,id.0)).unwrap();
     assert_eq!(result, (true, true, true, 7));
     assert_eq!(
         scripts.world().btech.constructed_units()[&target],
@@ -7513,7 +7311,7 @@ async fn snub_ppc_range_damage_native_lua_and_restart() {
         state["constructed"][target.0.to_string()]["motion"]["point"]["y"] =
             (25.0 - distance).into();
         world.btech = serde_json::from_value(state).unwrap();
-        refresh_optical_scanners(&mut world, &[id]).unwrap();
+        refresh_battle_contacts(&mut world, &[id]).unwrap();
         world.validate(&config).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
@@ -8630,7 +8428,7 @@ async fn heavy_gauss_range_damage_native_lua_and_restart() {
         state["constructed"][target.0.to_string()]["motion"]["point"]["y"] =
             (25.0 - distance).into();
         world.btech = serde_json::from_value(state).unwrap();
-        refresh_optical_scanners(&mut world, &[id]).unwrap();
+        refresh_battle_contacts(&mut world, &[id]).unwrap();
         world.validate(&config).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
@@ -8713,7 +8511,7 @@ async fn relocated_cestus_engine_damage_native_lua_fire_and_restart() {
         },
     )
     .unwrap();
-    refresh_optical_scanners(&mut base, &[id]).unwrap();
+    refresh_battle_contacts(&mut base, &[id]).unwrap();
     shot_seed(&mut base, id, 1);
     shot_seed(&mut base, target, 1);
     let index = base.btech.constructed_units()[&id]
@@ -12971,7 +12769,7 @@ async fn check_caseless_failures(
         {
             break;
         }
-        refresh_optical_scanners(&mut shared, &[target]).unwrap();
+        refresh_battle_contacts(&mut shared, &[target]).unwrap();
     }
     assert!(!battle_observer_messages(&shared, id, "test").is_empty());
     for attack in [2, 3] {
@@ -13218,7 +13016,7 @@ fn check_incendiary_impact(
         {
             break;
         }
-        refresh_optical_scanners(&mut world, &[observer]).unwrap();
+        refresh_battle_contacts(&mut world, &[observer]).unwrap();
     }
     assert!(!battle_observer_messages(&world, id, "test").is_empty());
     let mut saved = serde_json::to_value(&world.btech).unwrap();
@@ -13353,15 +13151,9 @@ async fn observer_broadcasts_use_current_acquired_contacts_without_mutation() {
                 .position()
                 .unwrap()
                 .map;
-            set_battle_map_optical_sensor(&mut altered, map, BattleSensorMode::Visual, false)
+            set_battle_map_perception(&mut altered, map, BattleMapPerceptionFlag::Sensors, false)
                 .unwrap();
-            set_battle_map_optical_sensor(
-                &mut altered,
-                map,
-                BattleSensorMode::LightAmplification,
-                false,
-            )
-            .unwrap();
+            set_battle_map_visibility(&mut altered, map, BattleLight::Day, 0).unwrap();
         }
         if case == "shutdown" {
             assert!(visible_battle_contact(&altered, observer, subject).is_err());
@@ -13436,7 +13228,7 @@ async fn unjam_feedback_separates_pilot_cockpit_and_observers() {
         {
             break;
         }
-        refresh_optical_scanners(&mut base, &[observer]).unwrap();
+        refresh_battle_contacts(&mut base, &[observer]).unwrap();
     }
     assert!(!battle_observer_messages(&base, subject, "test").is_empty());
     for outcome in ["success", "failure", "empty", "prone", "no_pilot"] {
@@ -13571,7 +13363,7 @@ async fn firing_observers_hide_unseen_participants_and_replay_transactionally() 
                     if contacts.contains_key(&shooter) && contacts.contains_key(&target) {
                         break;
                     }
-                    refresh_optical_scanners(&mut world, &[observer]).unwrap();
+                    refresh_battle_contacts(&mut world, &[observer]).unwrap();
                 }
                 assert_eq!(visible_battle_contacts(&world, observer).unwrap().len(), 2);
                 let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -13708,7 +13500,7 @@ async fn power_observers_receive_completion_and_moving_shutdown_only() {
         {
             break;
         }
-        refresh_optical_scanners(&mut base, &[observer]).unwrap();
+        refresh_battle_contacts(&mut base, &[observer]).unwrap();
     }
     assert!(!battle_observer_messages(&base, subject, "test").is_empty());
     for remaining in [1, 5, 30] {
@@ -13970,7 +13762,7 @@ async fn stand_attempt_observers_share_native_lua_order_and_saved_replay() {
     let mut state = serde_json::to_value(&base.btech).unwrap();
     state["constructed"][observer.0.to_string()]["power"] = serde_json::json!({"state":"running"});
     base.btech = serde_json::from_value(state).unwrap();
-    refresh_optical_scanners(&mut base, &[observer]).unwrap();
+    refresh_battle_contacts(&mut base, &[observer]).unwrap();
     assert!(
         visible_battle_contact(&base, observer, subject)
             .unwrap()
@@ -14100,7 +13892,7 @@ async fn thermal_shutdown_observers_cover_speed_overrides_visibility_and_replay(
     let mut state = serde_json::to_value(&base.btech).unwrap();
     state["constructed"][observer.0.to_string()]["power"] = serde_json::json!({"state":"running"});
     base.btech = serde_json::from_value(state).unwrap();
-    refresh_optical_scanners(&mut base, &[observer]).unwrap();
+    refresh_battle_contacts(&mut base, &[observer]).unwrap();
     assert!(
         visible_battle_contact(&base, observer, subject)
             .unwrap()
@@ -14201,7 +13993,7 @@ async fn facing_native_lua_controls_replay_without_observer_messages() {
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["constructed"][observer.0.to_string()]["power"] = serde_json::json!({"state":"running"});
     world.btech = serde_json::from_value(state).unwrap();
-    refresh_optical_scanners(&mut world, &[observer]).unwrap();
+    refresh_battle_contacts(&mut world, &[observer]).unwrap();
     assert!(
         visible_battle_contact(&world, observer, subject)
             .unwrap()
@@ -14520,7 +14312,7 @@ async fn stagger_observers_matrix(modes: &[stompymux_rs::BattleStaggerMode]) {
     let mut state = serde_json::to_value(&base.btech).unwrap();
     state["constructed"][observer.0.to_string()]["power"] = serde_json::json!({"state":"running"});
     base.btech = serde_json::from_value(state).unwrap();
-    refresh_optical_scanners(&mut base, &[observer]).unwrap();
+    refresh_battle_contacts(&mut base, &[observer]).unwrap();
     assert!(
         visible_battle_contact(&base, observer, subject)
             .unwrap()
@@ -14656,7 +14448,7 @@ async fn critical_balance_observers_cover_ground_causes_and_saved_replay() {
     let mut state = serde_json::to_value(&base.btech).unwrap();
     state["constructed"][observer.0.to_string()]["power"] = serde_json::json!({"state":"running"});
     base.btech = serde_json::from_value(state).unwrap();
-    refresh_optical_scanners(&mut base, &[observer]).unwrap();
+    refresh_battle_contacts(&mut base, &[observer]).unwrap();
     assert!(
         visible_battle_contact(&base, observer, subject)
             .unwrap()
@@ -14851,7 +14643,7 @@ async fn engine_smoke_observers_preserve_fatal_hit_visibility_and_replay() {
     let mut state = serde_json::to_value(&base.btech).unwrap();
     state["constructed"][observer.0.to_string()]["power"] = serde_json::json!({"state":"running"});
     base.btech = serde_json::from_value(state).unwrap();
-    refresh_optical_scanners(&mut base, &[observer]).unwrap();
+    refresh_battle_contacts(&mut base, &[observer]).unwrap();
     assert!(
         visible_battle_contact(&base, observer, subject)
             .unwrap()
@@ -14952,7 +14744,7 @@ async fn actuator_observers_matrix(sections: &[stompymux_rs::BattleSection]) {
     let mut state = serde_json::to_value(&base.btech).unwrap();
     state["constructed"][observer.0.to_string()]["power"] = serde_json::json!({"state":"running"});
     base.btech = serde_json::from_value(state).unwrap();
-    refresh_optical_scanners(&mut base, &[observer]).unwrap();
+    refresh_battle_contacts(&mut base, &[observer]).unwrap();
     assert!(
         visible_battle_contact(&base, observer, subject)
             .unwrap()
@@ -15265,7 +15057,7 @@ async fn gyro_observers_cover_protection_power_and_saved_replay() {
     state["constructed"][observer.0.to_string()]["power"] = serde_json::json!({"state":"running"});
     state["constructed"][subject.0.to_string()]["posture"] = "prone".into();
     base.btech = serde_json::from_value(state).unwrap();
-    refresh_optical_scanners(&mut base, &[observer]).unwrap();
+    refresh_battle_contacts(&mut base, &[observer]).unwrap();
     assert!(
         visible_battle_contact(&base, observer, subject)
             .unwrap()
@@ -15383,7 +15175,7 @@ async fn cockpit_destruction_feedback_power_visibility_and_saved_replay() {
     let mut state = serde_json::to_value(&base.btech).unwrap();
     state["constructed"][observer.0.to_string()]["power"] = serde_json::json!({"state":"running"});
     base.btech = serde_json::from_value(state).unwrap();
-    refresh_optical_scanners(&mut base, &[observer]).unwrap();
+    refresh_battle_contacts(&mut base, &[observer]).unwrap();
     assert!(
         visible_battle_contact(&base, observer, subject)
             .unwrap()
@@ -15499,7 +15291,7 @@ async fn equipment_loss_feedback_and_saved_replay() {
     let mut state = serde_json::to_value(&base.btech).unwrap();
     state["constructed"][observer.0.to_string()]["power"] = serde_json::json!({"state":"running"});
     base.btech = serde_json::from_value(state).unwrap();
-    refresh_optical_scanners(&mut base, &[observer]).unwrap();
+    refresh_battle_contacts(&mut base, &[observer]).unwrap();
     for case in ["weapon", "broken_weapon", "sink", "double_sink", "jet"] {
         for running in [false, true] {
             for visible in [false, true] {
@@ -16381,8 +16173,8 @@ async fn friendly_fire_safety_native_lua_map_rules_and_restart() {
                 let mut base = baseline.clone();
                 set_battle_friendly_fire_safety(&mut base, id, ObjectId(1), preference).unwrap();
                 let mut state = serde_json::to_value(&base.btech).unwrap();
-                state["constructed"][id.0.to_string()]["sensor_signature"]["team"] = 7.into();
-                state["constructed"][target.0.to_string()]["sensor_signature"]["team"] =
+                state["constructed"][id.0.to_string()]["signature"]["team"] = 7.into();
+                state["constructed"][target.0.to_string()]["signature"]["team"] =
                     if same_team { 7 } else { 8 }.into();
                 state["maps"][map.0.to_string()]["flags"] =
                     if map_restriction { 256 } else { 0 }.into();
@@ -16673,7 +16465,7 @@ async fn kick_fixture() -> (
     shot_skill(&mut world, 0);
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
     place_battle_unit(&mut world, target, map, 5, 5).unwrap();
-    stompymux_rs::refresh_optical_scanners(&mut world, &[id]).unwrap();
+    stompymux_rs::refresh_battle_contacts(&mut world, &[id]).unwrap();
     (dir, config, world, id, target)
 }
 
@@ -21068,9 +20860,9 @@ async fn character_punch_native_lua_casualty_and_abort_parity() {
                 .unwrap()
                 .flags
                 .insert(Flag::InCharacter);
-            let mut signature = base.btech.constructed_units()[&target].sensor_signature();
+            let mut signature = base.btech.constructed_units()[&target].signature();
             signature.team = 1;
-            set_battle_sensor_signature(&mut base, target, signature).unwrap();
+            set_battle_unit_signature(&mut base, target, signature).unwrap();
             let pilot = ObjectId(2);
             base.objects
                 .get_mut(&pilot)
@@ -21343,9 +21135,9 @@ async fn physical_experience_eligibility_and_damage_awards() {
                 )
                 .unwrap();
             }
-            let mut signature = world.btech.constructed_units()[&target].sensor_signature();
+            let mut signature = world.btech.constructed_units()[&target].signature();
             signature.team = if mode == "friendly" { 0 } else { 1 };
-            set_battle_sensor_signature(&mut world, target, signature).unwrap();
+            set_battle_unit_signature(&mut world, target, signature).unwrap();
             if mode == "tactical_source" {
                 world
                     .objects
@@ -21461,9 +21253,9 @@ async fn physical_experience_rolls_back_with_fatal_evacuation() {
         )
         .unwrap();
     }
-    let mut signature = world.btech.constructed_units()[&target].sensor_signature();
+    let mut signature = world.btech.constructed_units()[&target].signature();
     signature.team = 1;
-    set_battle_sensor_signature(&mut world, target, signature).unwrap();
+    set_battle_unit_signature(&mut world, target, signature).unwrap();
     let hit = (0..=255)
         .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
         .unwrap();
@@ -21557,9 +21349,9 @@ async fn character_charge_action_packets_xp_and_casualty_rollback() {
                 )
                 .unwrap();
             }
-            let mut signature = world.btech.constructed_units()[&target].sensor_signature();
+            let mut signature = world.btech.constructed_units()[&target].signature();
             signature.team = 1;
-            set_battle_sensor_signature(&mut world, target, signature).unwrap();
+            set_battle_unit_signature(&mut world, target, signature).unwrap();
             let attacker_seed = (0..=255)
                 .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
                 .unwrap();
@@ -21765,9 +21557,9 @@ async fn character_mutual_charge_keeps_accepted_second_attack() {
         )
         .unwrap();
     }
-    let mut signature = world.btech.constructed_units()[&second].sensor_signature();
+    let mut signature = world.btech.constructed_units()[&second].signature();
     signature.team = 1;
-    set_battle_sensor_signature(&mut world, second, signature).unwrap();
+    set_battle_unit_signature(&mut world, second, signature).unwrap();
     let second_dice = (0..=u16::MAX)
         .find_map(|seed| {
             let mut bytes = [0; 32];
@@ -21932,9 +21724,9 @@ async fn character_charge_movement_dispatch_replays_and_rolls_back() {
             .unwrap()
             .flags
             .insert(Flag::InCharacter);
-        let mut signature = world.btech.constructed_units()[&second].sensor_signature();
+        let mut signature = world.btech.constructed_units()[&second].signature();
         signature.team = 1;
-        set_battle_sensor_signature(&mut world, second, signature).unwrap();
+        set_battle_unit_signature(&mut world, second, signature).unwrap();
         install_xp_channels(&mut world);
         let xp_before: Vec<_> = [ObjectId(1), pilot]
             .into_iter()
@@ -22142,9 +21934,9 @@ async fn character_dfa_action_hit_miss_and_casualty_rollback() {
                     .unwrap()
                     .flags
                     .insert(Flag::InCharacter);
-                let mut signature = world.btech.constructed_units()[&target].sensor_signature();
+                let mut signature = world.btech.constructed_units()[&target].signature();
                 signature.team = 1;
-                set_battle_sensor_signature(&mut world, target, signature).unwrap();
+                set_battle_unit_signature(&mut world, target, signature).unwrap();
             }
             let mut rules = kick_rules();
             rules.fall.extended_piloting = extended;
@@ -23118,7 +22910,7 @@ async fn character_shot_action_rolls_back_expenditure_and_replays() {
                     })
                     .unwrap();
                 let mut state = serde_json::to_value(&world.btech).unwrap();
-                state["constructed"][target.0.to_string()]["sensor_signature"]["team"] = 1.into();
+                state["constructed"][target.0.to_string()]["signature"]["team"] = 1.into();
                 state["constructed"][target.0.to_string()]["dice"] =
                     serde_json::to_value(dice).unwrap();
                 world.btech = serde_json::from_value(state).unwrap();
@@ -23364,7 +23156,7 @@ async fn character_firing_commands_match_and_rollback() {
                     })
                     .unwrap();
                 let mut state = serde_json::to_value(&world.btech).unwrap();
-                state["constructed"][target.0.to_string()]["sensor_signature"]["team"] = 1.into();
+                state["constructed"][target.0.to_string()]["signature"]["team"] = 1.into();
                 state["constructed"][target.0.to_string()]["dice"] =
                     serde_json::to_value(dice).unwrap();
                 world.btech = serde_json::from_value(state).unwrap();
@@ -23855,7 +23647,7 @@ async fn gunnery_experience_policy_persists_and_checks_eligibility() {
             .insert(Flag::InCharacter);
     }
     let mut state = serde_json::to_value(&base.btech).unwrap();
-    state["constructed"][target.0.to_string()]["sensor_signature"]["team"] = 1.into();
+    state["constructed"][target.0.to_string()]["signature"]["team"] = 1.into();
     base.btech = serde_json::from_value(state).unwrap();
     let pilot = ObjectId(1);
     assert_eq!(
@@ -23882,7 +23674,7 @@ async fn gunnery_experience_policy_persists_and_checks_eligibility() {
         match case {
             "friendly" => {
                 let mut state = serde_json::to_value(&world.btech).unwrap();
-                state["constructed"][target.0.to_string()]["sensor_signature"]["team"] = 0.into();
+                state["constructed"][target.0.to_string()]["signature"]["team"] = 0.into();
                 world.btech = serde_json::from_value(state).unwrap();
             }
             "tactical" => {
@@ -24095,7 +23887,7 @@ async fn classic_gunnery_awards_are_atomic_and_replayable() {
             .insert(Flag::InCharacter);
     }
     let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][target.0.to_string()]["sensor_signature"]["team"] = 1.into();
+    state["constructed"][target.0.to_string()]["signature"]["team"] = 1.into();
     world.btech = serde_json::from_value(state).unwrap();
     let request = BattleGunneryAwardRequest {
         tsm_tow_bonus: true,
@@ -24332,7 +24124,7 @@ async fn character_shot_xp_scaling_and_ineligible_hits() {
             .unwrap();
         shot_seed(&mut world, shooter, seed);
         let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][target.0.to_string()]["sensor_signature"]["team"] =
+        state["constructed"][target.0.to_string()]["signature"]["team"] =
             i64::from(!friendly).into();
         world.btech = serde_json::from_value(state).unwrap();
         let scripts =
@@ -24400,7 +24192,7 @@ async fn battle_value_gunnery_awards_are_atomic_without_dice() {
             .insert(Flag::InCharacter);
     }
     let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][target.0.to_string()]["sensor_signature"]["team"] = 1.into();
+    state["constructed"][target.0.to_string()]["signature"]["team"] = 1.into();
     world.btech = serde_json::from_value(state).unwrap();
     let request = BattleGunneryAwardRequest {
         tsm_tow_bonus: true,
@@ -24504,7 +24296,7 @@ async fn gunnery_xp_trivial_hit_diagnostics_obey_suppression() {
         .position(|mount| mount.weapon == BattleWeapon::MediumLaser)
         .unwrap();
     let mut state = serde_json::to_value(&base.btech).unwrap();
-    state["constructed"][target.0.to_string()]["sensor_signature"]["team"] = 1.into();
+    state["constructed"][target.0.to_string()]["signature"]["team"] = 1.into();
     base.btech = serde_json::from_value(state).unwrap();
     install_xp_channels(&mut base);
     for suppressed in [false, true] {
@@ -27694,8 +27486,8 @@ async fn electronics_modes_fields_damage_and_restart() {
             let (_dir, config, mut world, id, target) = shot_fixture().await;
             install_test_electronics(&mut world, id, suite);
             let mut state = serde_json::to_value(&world.btech).unwrap();
-            state["constructed"][id.0.to_string()]["sensor_signature"]["team"] = 1.into();
-            state["constructed"][target.0.to_string()]["sensor_signature"]["team"] = 2.into();
+            state["constructed"][id.0.to_string()]["signature"]["team"] = 1.into();
+            state["constructed"][target.0.to_string()]["signature"]["team"] = 2.into();
             world.btech = serde_json::from_value(state).unwrap();
             assert_eq!(
                 toggle_battle_electronics(
@@ -27949,8 +27741,8 @@ async fn electronics_suppress_narc_and_artemis_guidance() {
                 let mut state = serde_json::to_value(&world.btech).unwrap();
                 state["constructed"][id.0.to_string()]["definition"] =
                     serde_json::to_value(definition).unwrap();
-                state["constructed"][id.0.to_string()]["sensor_signature"]["team"] = 1.into();
-                state["constructed"][target.0.to_string()]["sensor_signature"]["team"] = 2.into();
+                state["constructed"][id.0.to_string()]["signature"]["team"] = 1.into();
+                state["constructed"][target.0.to_string()]["signature"]["team"] = 2.into();
                 state["constructed"][target.0.to_string()]["beacons"] =
                     serde_json::json!({"RightArm":["narc"]});
                 world.btech = serde_json::from_value(state).unwrap();
@@ -28109,8 +27901,8 @@ async fn electronics_angel_disables_streak_homing() {
                 let mut state = serde_json::to_value(&world.btech).unwrap();
                 state["constructed"][id.0.to_string()]["definition"] =
                     serde_json::to_value(definition).unwrap();
-                state["constructed"][id.0.to_string()]["sensor_signature"]["team"] = 1.into();
-                state["constructed"][target.0.to_string()]["sensor_signature"]["team"] = 2.into();
+                state["constructed"][id.0.to_string()]["signature"]["team"] = 1.into();
+                state["constructed"][target.0.to_string()]["signature"]["team"] = 2.into();
                 world.btech = serde_json::from_value(state).unwrap();
                 let index = world.btech.constructed_units()[&id]
                     .loadout()
@@ -28302,8 +28094,8 @@ async fn electronics_server_heartbeat_persists_field() {
             let (_dir, config, mut world, id, target) = shot_fixture().await;
             install_test_electronics(&mut world, id, BattleElectronicSuite::Angel);
             let mut state = serde_json::to_value(&world.btech).unwrap();
-            state["constructed"][id.0.to_string()]["sensor_signature"]["team"] = 1.into();
-            state["constructed"][target.0.to_string()]["sensor_signature"]["team"] = 2.into();
+            state["constructed"][id.0.to_string()]["signature"]["team"] = 1.into();
+            state["constructed"][target.0.to_string()]["signature"]["team"] = 2.into();
             world.btech = serde_json::from_value(state).unwrap();
             toggle_battle_electronics(
                 &mut world,
@@ -29584,400 +29376,31 @@ async fn nss_server_switch_persists_state() {
         .await;
 }
 
-/// Infrared selection survives daylight, observes stored weapon heat, and respects the map's independent disable bit.
+/// Recent firing is set by a committed shot, survives a restart, and clears at the heartbeat.
 #[tokio::test]
-async fn infrared_selection_heat_and_map_availability() {
-    use stompymux_rs::*;
-    let (_dir, config, mut world, id, target) = shot_fixture().await;
-    let pair = BattleSensorPair {
-        primary: BattleSensorMode::Infrared,
-        secondary: BattleSensorMode::Infrared,
-    };
-    select_battle_optical_sensors(&mut world, id, ObjectId(1), pair).unwrap();
-    for _ in 0..10 {
-        advance_battle_sensor_selection(&mut world);
-    }
-    assert_eq!(
-        world.btech.constructed_units()[&id]
-            .sensor_selection()
-            .active,
-        pair
-    );
-    let cold = battle_aim_modifiers(&world, id, target, 0, 4, optical_aim_rules()).unwrap();
-    assert_eq!(cold.optical.unwrap().modifier, 2);
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][target.0.to_string()]["heat"]["stored"] = 40.0.into();
-    world.btech = serde_json::from_value(state).unwrap();
-    let hot = battle_aim_modifiers(&world, id, target, 0, 4, optical_aim_rules()).unwrap();
-    assert_eq!(hot.optical.unwrap().modifier, -2);
-    assert_eq!(hot.subtotal().unwrap(), cold.subtotal().unwrap() - 4);
-    let map = world.btech.constructed_units()[&id].position().unwrap().map;
-    set_battle_map_optical_sensor(&mut world, map, BattleSensorMode::Infrared, false).unwrap();
-    assert!(
-        battle_aim_modifiers(&world, id, target, 0, 4, optical_aim_rules())
-            .unwrap()
-            .optical
-            .is_none()
-    );
-    assert!(!world.btech.maps()[&map].optical_sensor_disabled(BattleSensorMode::Visual));
-    persistence::save(&config.database(), &world).await.unwrap();
-    assert_eq!(
-        persistence::load(&config.database()).await.unwrap().btech,
-        world.btech
-    );
-}
-
-/// Native/Lua sensor controls share the infrared pair and rollback pending selection after callback errors.
-#[tokio::test]
-async fn infrared_native_lua_selection_rollback() {
-    use stompymux_rs::*;
-    let (_dir, config, world, id, _) = shot_fixture().await;
-    let native = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
-    )
-    .unwrap();
-    let lua = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
-    )
-    .unwrap();
-    let text = support::run_text(&native, &config, ObjectId(1), 1, "sensor I I");
-    assert!(
-        native.world().btech.constructed_units()[&id]
-            .sensor_selection()
-            .pending
-            .is_some(),
-        "{text}"
-    );
-    assert!(
-        lua.eval_callback::<()>(&format!(
-            "btech.unit.sensors({},1,'infrared','infrared'); error('abort')",
-            id.0
-        ))
-        .is_err()
-    );
-    assert_eq!(lua.world().btech, world.btech);
-    assert!(lua.drain_outbox().is_empty());
-    lua.eval_callback::<()>(&format!(
-        "btech.unit.sensors({},1,'infrared','infrared')",
-        id.0
-    ))
-    .unwrap();
-    assert_eq!(lua.world().btech, native.world().btech);
-}
-
-/// Seismic world inspection uses current physical facts and the independent map bit without consuming unit dice.
-#[tokio::test]
-async fn seismic_world_query_uses_mass_power_and_map_state() {
-    use stompymux_rs::*;
-    let (_dir, config, mut world, id, target) = shot_fixture().await;
-    let rules = BattleSeismicRules {
-        detect_stopped: true,
-        signal_strength: 80,
-        aim_adjustment: 1,
-    };
-    assert!(
-        !battle_seismic_contact(&world, id, target, rules)
-            .unwrap()
-            .eligible
-    );
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][target.0.to_string()]["power"] = serde_json::json!({"state":"running"});
-    world.btech = serde_json::from_value(state).unwrap();
-    let before = world.btech.clone();
-    let report = battle_seismic_contact(&world, id, target, rules).unwrap();
-    assert!(report.eligible);
-    let expected = rules
-        .evaluate(
-            battle_unit_range(&world, id, target).unwrap().spatial,
-            false,
-            BattleSeismicTarget {
-                running: true,
-                jumping: false,
-                speed: 0.0,
-                mass: world.btech.constructed_units()[&target]
-                    .mass()
-                    .unwrap()
-                    .total,
-            },
-            false,
-            false,
-        )
-        .unwrap();
-    assert_eq!(report, expected);
-    assert_eq!(world.btech, before);
-    let map = world.btech.constructed_units()[&id].position().unwrap().map;
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["sensor_flags"] = 16.into();
-    world.btech = serde_json::from_value(state).unwrap();
-    assert!(
-        !battle_seismic_contact(&world, id, target, rules)
-            .unwrap()
-            .eligible
-    );
-    assert!(!world.btech.maps()[&map].optical_sensor_disabled(BattleSensorMode::Visual));
-    persistence::save(&config.database(), &world).await.unwrap();
-    assert_eq!(
-        persistence::load(&config.database()).await.unwrap().btech,
-        world.btech
-    );
-}
-
-/// Install a seeded signal, settled seismic pair and running stationary target for isolated firing tests.
-fn prepare_seismic_runtime(world: &mut stompymux_rs::World, id: ObjectId, target: ObjectId) {
-    use stompymux_rs::*;
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["sensor_signal"] =
-        serde_json::to_value(BattleSensorSignal::seeded(80, [7; 32]).unwrap()).unwrap();
-    state["constructed"][id.0.to_string()]["sensor_selection"]["active"] =
-        serde_json::json!({"primary":"seismic","secondary":"seismic"});
-    state["constructed"][target.0.to_string()]["power"] = serde_json::json!({"state":"running"});
-    world.btech = serde_json::from_value(state).unwrap();
-    configure_battle_sensor_policy(world, true);
-    shot_skill(world, 30);
-}
-
-/// Signal replay is independent of combat dice and stops with power; saved random state resumes exactly.
-#[tokio::test]
-async fn seismic_signal_stream_replays_without_attack_dice_changes() {
-    use stompymux_rs::*;
-    let (_dir, config, mut world, id, _) = shot_fixture().await;
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["sensor_signal"] =
-        serde_json::to_value(BattleSensorSignal::seeded(95, [7; 32]).unwrap()).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
-    let attack_dice = serde_json::to_value(&world.btech).unwrap()["constructed"][id.0.to_string()]
-        ["dice"]
-        .clone();
-    let mut expected = BattleDice::seeded([7; 32]);
-    let mut strength = 95i16;
-    for _ in 0..20 {
-        strength = (strength + expected.die(81).unwrap() as i16 - 41).clamp(0, 100);
-        advance_battle_sensor_signals(&mut world);
-        assert_eq!(
-            world.btech.constructed_units()[&id].sensor_signal(),
-            strength as u8
-        );
-    }
-    assert_eq!(
-        serde_json::to_value(&world.btech).unwrap()["constructed"][id.0.to_string()]["dice"],
-        attack_dice
-    );
-    persistence::save(&config.database(), &world).await.unwrap();
-    let mut loaded = persistence::load(&config.database()).await.unwrap();
-    advance_battle_sensor_signals(&mut world);
-    advance_battle_sensor_signals(&mut loaded);
-    assert_eq!(world.btech, loaded.btech);
-    stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
-    let before = world.btech.clone();
-    advance_battle_sensor_signals(&mut world);
-    assert_eq!(world.btech, before);
-}
-
-/// Preview and shot use the same sampled sensor modifier; only a completed attack consumes the sensor roll.
-#[tokio::test]
-async fn seismic_runtime_aim_commits_randomness_atomically() {
-    use stompymux_rs::*;
-    for seed in [0, 7, 19, 80] {
-        let (_dir, _config, mut world, id, target) = shot_fixture().await;
-        prepare_seismic_runtime(&mut world, id, target);
-        shot_seed(&mut world, id, seed);
-        // Fix target-owned impact dice so a random through-armor critical cannot
-        // introduce explosion/fall dice into the sensor-stream assertion.
-        shot_seed(&mut world, target, 42);
-        let before = world.btech.clone();
-        let preview =
-            battle_pilot_aim_modifiers(&world, id, target, 0, true, shot_rules().aim).unwrap();
-        assert_eq!(world.btech, before);
-        let mut expected = BattleDice::seeded([seed; 32]);
-        let jitter = expected.die(2).unwrap() - 1;
-        let base = battle_seismic_contact(
-            &world,
-            id,
-            target,
-            BattleSeismicRules {
-                detect_stopped: true,
-                signal_strength: 80,
-                aim_adjustment: 0,
-            },
-        )
-        .unwrap();
-        assert_eq!(
-            preview.optical.unwrap().modifier,
-            base.aim_modifier + jitter as i16
-        );
-        let expected_roll = expected.two_d6();
-        let shot =
-            resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, shot_rules()).unwrap();
-        assert_eq!(shot.roll, expected_roll);
-        assert_eq!(shot.aim, preview);
-        assert_eq!(
-            serde_json::to_value(&world.btech).unwrap()["constructed"][id.0.to_string()]["dice"],
-            serde_json::to_value(expected).unwrap()
-        );
-    }
-}
-
-/// The configured stopped-target option reaches queries, native/Lua controls and failed-shot rollback consistently.
-#[tokio::test]
-async fn seismic_runtime_policy_and_lua_rollback() {
-    use stompymux_rs::*;
-    let (dir, _config, mut world, id, target) = shot_fixture().await;
-    let path = dir.path().join("stompymux.toml");
-    let mut source: toml::Value = toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-    source["battletech"]
-        .as_table_mut()
-        .unwrap()
-        .insert("seismic_see_stopped".into(), 1.into());
-    std::fs::write(path, toml::to_string(&source).unwrap()).unwrap();
-    let config = Config::load(dir.path()).unwrap();
-    prepare_seismic_runtime(&mut world, id, target);
-    let lua = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
-    )
-    .unwrap();
-    assert!(
-        lua.eval_callback::<()>(&format!(
-            "btech.unit.fire({},1,0,{}); error('abort')",
-            id.0, target.0
-        ))
-        .is_err()
-    );
-    assert_eq!(lua.world().btech, world.btech);
-    assert!(lua.drain_outbox().is_empty());
-    let mut direct = world.clone();
-    let _shot = resolve_battle_shot(&mut direct, id, ObjectId(1), target, 0, shot_rules()).unwrap();
-    lua.eval_callback::<mlua::Table>(&format!(
-        "return btech.unit.fire({},1,0,{})",
-        id.0, target.0
-    ))
-    .unwrap();
-    assert_eq!(lua.world().btech, direct.btech);
-    configure_battle_sensor_policy(&mut world, false);
-    let before = world.btech.clone();
-    assert!(resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, shot_rules()).is_err());
-    assert_eq!(world.btech, before);
-}
-
-/// Seismic selection uses the same ten-second native/Lua switch and is preserved in daylight.
-#[tokio::test]
-async fn seismic_native_lua_sensor_selection() {
-    use stompymux_rs::*;
-    let (_dir, config, world, id, _) = shot_fixture().await;
-    let native = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
-    )
-    .unwrap();
-    let lua = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
-    )
-    .unwrap();
-    support::run_text(&native, &config, ObjectId(1), 1, "sensor S S");
-    lua.eval_callback::<bool>(&format!(
-        "return btech.unit.sensors({},1,'seismic','seismic')",
-        id.0
-    ))
-    .unwrap();
-    assert_eq!(native.world().btech, lua.world().btech);
-    let mut selected = native.world().clone();
-    for _ in 0..10 {
-        advance_battle_sensor_selection(&mut selected);
-    }
-    assert_eq!(
-        selected.btech.constructed_units()[&id]
-            .sensor_selection()
-            .active,
-        BattleSensorPair {
-            primary: BattleSensorMode::Seismic,
-            secondary: BattleSensorMode::Seismic
-        }
-    );
-}
-
-/// A rejected heartbeat preserves signal and acquisition; retry commits the same first signal transition.
-#[tokio::test]
-async fn seismic_server_signal_and_contacts_retry_failed_save() {
-    use sqlx::Connection;
-    use stompymux_rs::*;
-    tokio::task::LocalSet::new().run_until(async {
-        let (_dir,config,mut world,id,target) = shot_fixture().await;
-        prepare_seismic_runtime(&mut world,id,target);
-        configure_battle_sensor_policy(&mut world,false);
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][id.0.to_string()]["contacts"] = serde_json::json!({});
-            state["constructed"][id.0.to_string()]["fired_recently"] = true.into();
-        state["constructed"][target.0.to_string()]["motion"]["speed"] = 21.5.into();
-        state["constructed"][target.0.to_string()]["motion"]["desired_speed"] = 21.5.into();
-        world.btech = serde_json::from_value(state).unwrap();
-        persistence::save(&config.database(),&world).await.unwrap();
-        let before = world.btech.clone();
-        let mut sql = sqlx::SqliteConnection::connect(&format!("sqlite://{}",config.database().display())).await.unwrap();
-        sqlx::raw_sql("CREATE TRIGGER reject_signal BEFORE UPDATE ON btech_units BEGIN SELECT RAISE(ABORT,'signal tick failure'); END;").execute(&mut sql).await.unwrap();
-        let scripts = Scripts::new(&config,std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let (shutdown,request) = tokio::sync::oneshot::channel();
-        let server_config = config.clone();
-        let task = tokio::task::spawn_local(async move {
-            run_with_schedule_clock(server_config,scripts,listener,async {request.await.unwrap()},||1).await
-        });
-        attempt_heartbeat().await;
-        assert_eq!(persistence::load(&config.database()).await.unwrap().btech,before);
-        sqlx::raw_sql("DROP TRIGGER reject_signal;").execute(&mut sql).await.unwrap();
-        let mut expected = BattleDice::seeded([7;32]);
-        let first = (80i16 + expected.die(81).unwrap() as i16 - 41).clamp(0,100) as u8;
-        tokio::time::timeout(std::time::Duration::from_secs(10),async {
-            loop {
-                let saved = persistence::load(&config.database()).await.unwrap();
-                let unit = &saved.btech.constructed_units()[&id];
-                if unit.contacts().contains_key(&target) {
-                    assert_eq!(unit.sensor_signal(),first);
-                    break;
-                }
-                tokio::time::sleep(std::time::Duration::from_millis(25)).await;
-            }
-        }).await.unwrap();
-        shutdown.send(ShutdownRequest::Sigterm).unwrap();
-        task.await.unwrap().unwrap();
-    }).await;
-}
-
-/// EM previews and committed fire share sensor jitter; recent firing is visible, durable and heartbeat-scoped.
-#[tokio::test]
-async fn electromagnetic_runtime_shot_signal_and_recent_fire() {
+async fn recent_fire_is_visible_durable_and_heartbeat_scoped() {
     use stompymux_rs::*;
     let (_dir, config, mut world, id, target) = shot_fixture().await;
     shot_skill(&mut world, 30);
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["sensor_selection"]["active"] =
-        serde_json::json!({"primary":"electromagnetic","secondary":"electromagnetic"});
-    world.btech = serde_json::from_value(state).unwrap();
     shot_seed(&mut world, id, 7);
-    let rules = BattleElectromagneticRules {
-        signal_strength: 100,
-        aim_adjustment: 0,
-    };
-    let before_emission = battle_electromagnetic_contact(&world, target, id, rules).unwrap();
+    assert!(!world.btech.constructed_units()[&id].fired_recently());
     let before = world.btech.clone();
     let preview =
         battle_pilot_aim_modifiers(&world, id, target, 0, true, shot_rules().aim).unwrap();
     assert_eq!(world.btech, before);
-    let mut dice = BattleDice::seeded([7; 32]);
-    let jitter = dice.die(2).unwrap() - 1;
-    assert_eq!(preview.optical.unwrap().modifier, 1 + jitter as i16);
+    assert_eq!(
+        preview.perception,
+        Some(BattlePerceptionAim {
+            channel: Some(BattleDetectionChannel::Sensors),
+            direct_fire: true,
+            modifier: 0,
+        })
+    );
     let report = resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, shot_rules()).unwrap();
     assert_eq!(report.aim, preview);
-    assert_eq!(report.roll, dice.two_d6());
+    // Perception consumes no dice, so the attack roll is the stream's first.
+    assert_eq!(report.roll, BattleDice::seeded([7; 32]).two_d6());
     assert!(world.btech.constructed_units()[&id].fired_recently());
-    assert_eq!(
-        battle_electromagnetic_contact(&world, target, id, rules)
-            .unwrap()
-            .aim_modifier,
-        before_emission.aim_modifier - 1
-    );
     persistence::save(&config.database(), &world).await.unwrap();
     assert_eq!(
         persistence::load(&config.database()).await.unwrap().btech,
@@ -29988,34 +29411,37 @@ async fn electromagnetic_runtime_shot_signal_and_recent_fire() {
     assert_eq!(world.btech, before);
     clear_battle_recent_fire(&mut world);
     assert!(!world.btech.constructed_units()[&id].fired_recently());
-    assert_eq!(
-        battle_electromagnetic_contact(&world, target, id, rules)
-            .unwrap()
-            .aim_modifier,
-        before_emission.aim_modifier
-    );
 }
 
-/// Active interference on the observer blocks EM immediately; loss of the source restores detection without waiting for cached fields.
+/// Hostile ECM jams the observer's sensor band at once; losing the source restores it without
+/// waiting for cached fields, and the map switch disables it independently.
 #[tokio::test]
-async fn electromagnetic_current_ecm_blocks_and_recovers() {
+async fn perception_current_ecm_jams_sensors_and_recovers() {
     use stompymux_rs::*;
     let (_dir, _config, mut world, id, target) = shot_fixture().await;
     install_test_electronics(&mut world, target, BattleElectronicSuite::Guardian);
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["constructed"][target.0.to_string()]["power"] = serde_json::json!({"state":"running"});
-    state["constructed"][target.0.to_string()]["sensor_signature"]["team"] = 2.into();
-    state["constructed"][id.0.to_string()]["sensor_signature"]["team"] = 1.into();
+    state["constructed"][target.0.to_string()]["signature"]["team"] = 2.into();
+    state["constructed"][id.0.to_string()]["signature"]["team"] = 1.into();
     state["constructed"][target.0.to_string()]["electronics"]["guardian"] = "ecm".into();
     world.btech = serde_json::from_value(state).unwrap();
-    let rules = BattleElectromagneticRules {
-        signal_strength: 100,
-        aim_adjustment: 0,
-    };
+    let profile = battle_perception_profile(&world, id).unwrap();
+    assert_eq!(profile.sensors, BattlePerceptionStatus::Jammed);
+    assert_eq!(profile.sensor_range, 0);
     assert!(
-        !battle_electromagnetic_contact(&world, id, target, rules)
+        battle_perception_report(&world, id)
             .unwrap()
-            .eligible
+            .text
+            .contains("Sensors: jammed by ECM, relying on sight")
+    );
+    // Daylight sight still reaches the adjacent target.
+    assert_eq!(
+        battle_perceive(&world, id, target)
+            .unwrap()
+            .unwrap()
+            .channel,
+        BattleDetectionChannel::Sight
     );
     destroy_battle_critical(
         &mut world,
@@ -30026,84 +29452,22 @@ async fn electromagnetic_current_ecm_blocks_and_recovers() {
         },
     )
     .unwrap();
-    assert!(
-        battle_electromagnetic_contact(&world, id, target, rules)
+    let profile = battle_perception_profile(&world, id).unwrap();
+    assert_eq!(profile.sensors, BattlePerceptionStatus::Ready);
+    assert_eq!(profile.sensor_range, DEFAULT_SENSOR_RANGE);
+    assert_eq!(
+        battle_perceive(&world, id, target)
             .unwrap()
-            .eligible
+            .unwrap()
+            .channel,
+        BattleDetectionChannel::Sensors
     );
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
-    set_battle_map_optical_sensor(&mut world, map, BattleSensorMode::Electromagnetic, false)
-        .unwrap();
-    assert!(
-        !battle_electromagnetic_contact(&world, id, target, rules)
-            .unwrap()
-            .eligible
-    );
-    assert!(!world.btech.maps()[&map].optical_sensor_disabled(BattleSensorMode::Seismic));
-}
-
-/// Native/Lua selection and firing share EM state; abort restores recent firing, sensor dice and expenditure.
-#[tokio::test]
-async fn electromagnetic_native_lua_selection_and_fire_rollback() {
-    use stompymux_rs::*;
-    let (_dir, config, mut world, id, target) = shot_fixture().await;
-    shot_skill(&mut world, 30);
-    shot_seed(&mut world, id, 7);
-    // Exercise the two-on-location critical branch with the host's actual critical-hit setting.
-    let critical_seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
-        .unwrap();
-    shot_seed(&mut world, target, critical_seed);
-    let native = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
-    )
-    .unwrap();
-    let lua = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
-    )
-    .unwrap();
-    support::run_text(&native, &config, ObjectId(1), 1, "sensor E E");
-    lua.eval_callback::<bool>(&format!(
-        "return btech.unit.sensors({},1,'electromagnetic','electromagnetic')",
-        id.0
-    ))
-    .unwrap();
-    assert_eq!(native.world().btech, lua.world().btech);
-    let mut selected = lua.world().clone();
-    for _ in 0..10 {
-        advance_battle_sensor_selection(&mut selected);
-    }
-    assert_eq!(
-        selected.btech.constructed_units()[&id]
-            .sensor_selection()
-            .active
-            .primary,
-        BattleSensorMode::Electromagnetic
-    );
-    let lua = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(selected.clone())),
-    )
-    .unwrap();
-    assert!(
-        lua.eval_callback::<()>(&format!(
-            "btech.unit.fire({},1,0,{}); error('abort')",
-            id.0, target.0
-        ))
-        .is_err()
-    );
-    assert_eq!(lua.world().btech, selected.btech);
-    assert!(lua.drain_outbox().is_empty());
-    lua.eval_callback::<mlua::Table>(&format!(
-        "return btech.unit.fire({},1,0,{})",
-        id.0, target.0
-    ))
-    .unwrap();
-    let rules = shot_rules();
-    let _shot = resolve_battle_shot(&mut selected, id, ObjectId(1), target, 0, rules).unwrap();
-    assert_eq!(lua.world().btech, selected.btech);
+    set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
+    let profile = battle_perception_profile(&world, id).unwrap();
+    assert_eq!(profile.sensors, BattlePerceptionStatus::Disabled);
+    assert_eq!(profile.sensor_range, 0);
+    assert!(!world.btech.maps()[&map].perception_disabled(BattleMapPerceptionFlag::Probes));
 }
 
 /// A radar-equipped observer and an unpowered falling target on a battlefield long enough for radar.
@@ -30144,33 +29508,38 @@ async fn radar_fixture() -> (
     (dir, config, world, id, target)
 }
 
-/// Equipment requirements apply to selection and restored active/pending pairs, before any mutation.
+/// Radar is available only with the AntiAircraft technology and reports its reach.
 #[tokio::test]
-async fn radar_equipment_selection_and_saved_validation() {
+async fn radar_requires_anti_aircraft_equipment() {
     use stompymux_rs::*;
-    let (_dir, config, mut world, id, target) = shot_fixture().await;
-    let pair = BattleSensorPair {
-        primary: BattleSensorMode::Visual,
-        secondary: BattleSensorMode::Radar,
-    };
-    let before = world.btech.clone();
-    assert!(select_battle_optical_sensors(&mut world, id, ObjectId(1), pair).is_err());
-    assert_eq!(world.btech, before);
-    assert!(!battle_radar_contact(&world, id, target).unwrap().eligible);
-    for field in ["active", "pending"] {
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][id.0.to_string()]["sensor_selection"][field] = if field == "active" {
-            serde_json::to_value(pair).unwrap()
-        } else {
-            serde_json::json!({"wanted": pair, "remaining": 10})
-        };
-        let mut invalid = world.clone();
-        invalid.btech = serde_json::from_value(state).unwrap();
-        assert!(invalid.validate(&config).is_err());
-    }
+    let (_plain_dir, _config, world, id, _target) = shot_fixture().await;
+    assert!(!world.btech.constructed_units()[&id].has_radar());
+    assert_eq!(battle_perception_profile(&world, id).unwrap().radar, None);
+    assert!(
+        battle_perception_report(&world, id)
+            .unwrap()
+            .text
+            .contains("Radar:   none")
+    );
+    let (_radar_dir, _config, world, id, _target) = radar_fixture().await;
+    assert!(world.btech.constructed_units()[&id].has_radar());
+    assert_eq!(
+        battle_perception_profile(&world, id).unwrap().radar,
+        Some(BattleRadarProfile {
+            range: RADAR_RANGE,
+            status: BattlePerceptionStatus::Ready,
+        })
+    );
+    assert!(
+        battle_perception_report(&world, id)
+            .unwrap()
+            .text
+            .contains("Radar:   180 hexes against airborne targets")
+    );
 }
 
-/// High contacts exceed ordinary map visibility; exact altitude eleven opens the extended scan range.
+/// High contacts beyond the ordinary map ceiling need radar, exact altitude eleven opens the
+/// extended range, radar contacts are acquired at once, and the map switch turns radar off.
 #[tokio::test]
 async fn radar_world_range_map_bits_and_restart() {
     use stompymux_rs::*;
@@ -30184,54 +29553,51 @@ async fn radar_world_range_map_bits_and_restart() {
             serde_json::to_value(BattleFreeFall::new(altitude)).unwrap();
         world.btech = serde_json::from_value(state).unwrap();
         let before = world.btech.clone();
-        let report = battle_radar_contact(&world, id, target).unwrap();
-        assert_eq!(report.eligible, expected);
-        assert_eq!(report.aim_modifier, -3);
+        let perceived = battle_perceive(&world, id, target).unwrap();
+        assert_eq!(perceived.is_some(), expected, "altitude {altitude}");
+        if let Some(perceived) = perceived {
+            assert_eq!(perceived.channel, BattleDetectionChannel::Radar);
+            assert_eq!(perceived.aim_modifier, -3);
+            assert!(perceived.identified);
+            assert!(!perceived.probed);
+        }
         assert_eq!(world.btech, before);
-        assert_eq!(
-            battle_map_optical_contact(&world, id, target, BattleSensorMode::Radar, false, false)
-                .unwrap(),
-            report
-        );
-    }
-    let pair = BattleSensorPair {
-        primary: BattleSensorMode::Radar,
-        secondary: BattleSensorMode::Radar,
-    };
-    select_battle_optical_sensors(&mut world, id, ObjectId(1), pair).unwrap();
-    for _ in 0..9 {
-        advance_battle_sensor_selection(&mut world);
     }
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     assert_eq!(world.btech, loaded.btech);
-    advance_battle_sensor_selection(&mut loaded);
+    let dice =
+        serde_json::to_value(&loaded.btech).unwrap()["constructed"][id.0.to_string()]["dice"]
+            .clone();
+    let events = refresh_battle_contacts(&mut loaded, &[id]).unwrap();
+    assert_eq!(events.len(), 1);
+    assert!(events[0].acquired);
     assert_eq!(
-        loaded.btech.constructed_units()[&id]
-            .sensor_selection()
-            .active,
-        pair
+        serde_json::to_value(&loaded.btech).unwrap()["constructed"][id.0.to_string()]["dice"],
+        dice
     );
-    assert!(battle_radar_contact(&loaded, id, target).unwrap().eligible);
-    shot_seed(&mut loaded, id, 7);
-    for _ in 0..100 {
-        refresh_optical_scanners(&mut loaded, &[id]).unwrap();
-        if !visible_battle_contacts(&loaded, id).unwrap().is_empty() {
-            break;
-        }
-    }
-    assert_eq!(visible_battle_contacts(&loaded, id).unwrap().len(), 1);
-    set_battle_map_optical_sensor(&mut loaded, map, BattleSensorMode::Radar, false).unwrap();
-    assert!(!battle_radar_contact(&loaded, id, target).unwrap().eligible);
-    assert!(!loaded.btech.maps()[&map].optical_sensor_disabled(BattleSensorMode::Electromagnetic));
+    let visible = visible_battle_contacts(&loaded, id).unwrap();
+    assert_eq!(visible.len(), 1);
+    assert_eq!(visible[0].detection, Some(BattleDetectionChannel::Radar));
+    set_battle_map_perception(&mut loaded, map, BattleMapPerceptionFlag::Radar, false).unwrap();
+    assert_eq!(battle_perceive(&loaded, id, target).unwrap(), None);
+    assert_eq!(
+        battle_perception_profile(&loaded, id)
+            .unwrap()
+            .radar
+            .unwrap()
+            .status,
+        BattlePerceptionStatus::Disabled
+    );
+    assert!(!loaded.btech.maps()[&map].perception_disabled(BattleMapPerceptionFlag::Sensors));
     assert!(visible_battle_contacts(&loaded, id).unwrap().is_empty());
-    set_battle_map_optical_sensor(&mut loaded, map, BattleSensorMode::Radar, true).unwrap();
-    assert!(battle_radar_contact(&loaded, id, target).unwrap().eligible);
+    set_battle_map_perception(&mut loaded, map, BattleMapPerceptionFlag::Radar, true).unwrap();
+    assert!(battle_perceive(&loaded, id, target).unwrap().is_some());
 }
 
-/// Radar shares native/Lua controls and shot transactions, including deterministic signed aim and rollback.
+/// Radar tracking gives signed aim, and a Lua shot matches the direct resolver and rolls back on error.
 #[tokio::test]
-async fn radar_native_lua_aim_and_shot_rollback() {
+async fn radar_lua_aim_and_shot_rollback() {
     use stompymux_rs::*;
     let (_dir, config, mut world, id, target) = radar_fixture().await;
     shot_skill(&mut world, 30);
@@ -30241,61 +29607,27 @@ async fn radar_native_lua_aim_and_shot_rollback() {
         .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
         .unwrap();
     shot_seed(&mut world, target, critical_seed);
-    let native = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
-    )
-    .unwrap();
-    let lua = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
-    )
-    .unwrap();
-    let text = support::run_text(&native, &config, ObjectId(1), 1, "sensor R R");
+    refresh_battle_contacts(&mut world, &[id]).unwrap();
     assert!(
-        native.world().btech.constructed_units()[&id]
-            .sensor_selection()
-            .pending
-            .is_some(),
-        "{text}"
-    );
-    assert!(
-        lua.eval_callback::<()>(&format!(
-            "btech.unit.sensors({},1,'radar','radar'); error('abort')",
-            id.0
-        ))
-        .is_err()
-    );
-    assert_eq!(lua.world().btech, world.btech);
-    lua.eval_callback::<()>(&format!("btech.unit.sensors({},1,'radar','radar')", id.0))
-        .unwrap();
-    assert_eq!(native.world().btech, lua.world().btech);
-    let mut selected = lua.world().clone();
-    for _ in 0..10 {
-        advance_battle_sensor_selection(&mut selected);
-    }
-    for _ in 0..100 {
-        refresh_optical_scanners(&mut selected, &[id]).unwrap();
-        if selected.btech.constructed_units()[&id]
-            .contacts()
-            .contains_key(&target)
-        {
-            break;
-        }
-    }
-    assert!(
-        selected.btech.constructed_units()[&id]
+        world.btech.constructed_units()[&id]
             .contacts()
             .contains_key(&target)
     );
-    let before = selected.btech.clone();
-    let aim = battle_aim_modifiers(&selected, id, target, 0, 4, optical_aim_rules()).unwrap();
-    assert_eq!(aim.optical.unwrap().modifier, -3);
-    assert_eq!(aim.optical.unwrap().sensor, BattleSensorMode::Radar);
-    assert_eq!(selected.btech, before);
+    let before = world.btech.clone();
+    let aim = battle_aim_modifiers(&world, id, target, 0, 4, optical_aim_rules()).unwrap();
+    // Radar's tracking bonus beats the sensor band's zero.
+    assert_eq!(
+        aim.perception,
+        Some(BattlePerceptionAim {
+            channel: Some(BattleDetectionChannel::Radar),
+            direct_fire: true,
+            modifier: -3,
+        })
+    );
+    assert_eq!(world.btech, before);
     let lua = Scripts::new(
         &config,
-        std::rc::Rc::new(std::cell::RefCell::new(selected.clone())),
+        std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
     )
     .unwrap();
     assert!(
@@ -30305,16 +29637,16 @@ async fn radar_native_lua_aim_and_shot_rollback() {
         ))
         .is_err()
     );
-    assert_eq!(lua.world().btech, selected.btech);
+    assert_eq!(lua.world().btech, world.btech);
     assert!(lua.drain_outbox().is_empty());
     lua.eval_callback::<mlua::Table>(&format!(
         "return btech.unit.fire({},1,0,{})",
         id.0, target.0
     ))
     .unwrap();
-    let rules = shot_rules();
-    let _shot = resolve_battle_shot(&mut selected, id, ObjectId(1), target, 0, rules).unwrap();
-    assert_eq!(lua.world().btech, selected.btech);
+    let shot = resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, shot_rules()).unwrap();
+    assert_eq!(shot.aim.perception, aim.perception);
+    assert_eq!(lua.world().btech, world.btech);
 }
 
 /// Install one complete probe in otherwise unused left-torso slots, preserving runtime state.
@@ -30353,31 +29685,26 @@ fn install_test_probe(
     world.btech = serde_json::from_value(state).unwrap();
 }
 
-/// Probe selection, component mass, map bits and critical-loss fallback share persistent unit state.
+/// Probe equipment adds mass and reach; the map switch and critical damage silence it, and the
+/// installed state survives a restart.
 #[tokio::test]
 async fn active_probe_equipment_damage_and_restart() {
     use stompymux_rs::*;
-    for (probe, mode, mass) in [
-        (
-            BattleActiveProbe::Beagle,
-            BattleSensorMode::BeagleProbe,
-            1536,
-        ),
-        (BattleActiveProbe::Light, BattleSensorMode::LightProbe, 512),
-        (
-            BattleActiveProbe::Bloodhound,
-            BattleSensorMode::BloodhoundProbe,
-            2046,
-        ),
+    for (probe, mass) in [
+        (BattleActiveProbe::Beagle, 1536),
+        (BattleActiveProbe::Light, 512),
+        (BattleActiveProbe::Bloodhound, 2046),
     ] {
         let (_dir, config, mut world, id, target) = shot_fixture().await;
-        let pair = BattleSensorPair {
-            primary: mode,
-            secondary: BattleSensorMode::Infrared,
+        let probed = |world: &World| battle_perceive(world, id, target).unwrap().unwrap().probed;
+        let status = |world: &World| {
+            battle_perception_profile(world, id)
+                .unwrap()
+                .probe
+                .map(|profile| profile.status)
         };
-        let before = world.btech.clone();
-        assert!(select_battle_optical_sensors(&mut world, id, ObjectId(1), pair).is_err());
-        assert_eq!(world.btech, before);
+        assert_eq!(battle_perception_profile(&world, id).unwrap().probe, None);
+        assert!(!probed(&world));
         let old_mass = world.btech.constructed_units()[&id]
             .mass()
             .unwrap()
@@ -30391,34 +29718,24 @@ async fn active_probe_equipment_damage_and_restart() {
                 - old_mass,
             mass
         );
-        select_battle_optical_sensors(&mut world, id, ObjectId(1), pair).unwrap();
-        for _ in 0..10 {
-            advance_battle_sensor_selection(&mut world);
-        }
-        assert!(
-            battle_active_probe_contact(&world, id, target, probe)
-                .unwrap()
-                .eligible
+        assert_eq!(
+            battle_perception_profile(&world, id).unwrap().probe,
+            Some(BattleProbeProfile {
+                kind: probe,
+                range: u16::from(probe.range()),
+                status: BattlePerceptionStatus::Ready,
+            })
         );
+        // The adjacent target is probed, though the sensor band wins the tie at equal aim.
+        let perceived = battle_perceive(&world, id, target).unwrap().unwrap();
+        assert!(perceived.probed);
+        assert_eq!(perceived.channel, BattleDetectionChannel::Sensors);
         let map = world.btech.constructed_units()[&id].position().unwrap().map;
-        set_battle_map_optical_sensor(&mut world, map, mode, false).unwrap();
-        assert!(
-            !battle_active_probe_contact(&world, id, target, probe)
-                .unwrap()
-                .eligible
-        );
-        set_battle_map_optical_sensor(&mut world, map, mode, true).unwrap();
-        // A pending switch to a damaged family must be discarded when its timer expires.
-        select_battle_optical_sensors(
-            &mut world,
-            id,
-            ObjectId(1),
-            BattleSensorPair {
-                primary: mode,
-                secondary: mode,
-            },
-        )
-        .unwrap();
+        set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Probes, false).unwrap();
+        assert_eq!(status(&world), Some(BattlePerceptionStatus::Disabled));
+        assert!(!probed(&world));
+        set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Probes, true).unwrap();
+        assert!(probed(&world));
         destroy_battle_critical(
             &mut world,
             id,
@@ -30433,49 +29750,17 @@ async fn active_probe_equipment_damage_and_restart() {
                 .active_probe_available(probe)
                 .unwrap()
         );
-        assert_eq!(
-            world.btech.constructed_units()[&id]
-                .sensor_selection()
-                .active
-                .primary,
-            BattleSensorMode::Visual
-        );
-        assert_eq!(
-            world.btech.constructed_units()[&id]
-                .sensor_selection()
-                .active
-                .secondary,
-            BattleSensorMode::Infrared
-        );
-        assert!(
-            !battle_active_probe_contact(&world, id, target, probe)
-                .unwrap()
-                .eligible
-        );
+        assert_eq!(status(&world), Some(BattlePerceptionStatus::Damaged));
+        assert!(!probed(&world));
         world.validate(&config).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
-        let mut loaded = persistence::load(&config.database()).await.unwrap();
+        let loaded = persistence::load(&config.database()).await.unwrap();
         assert_eq!(world.btech, loaded.btech);
-        for _ in 0..10 {
-            advance_battle_sensor_selection(&mut loaded);
-        }
-        assert!(
-            loaded.btech.constructed_units()[&id]
-                .sensor_selection()
-                .pending
-                .is_none()
-        );
-        assert_eq!(
-            loaded.btech.constructed_units()[&id]
-                .sensor_selection()
-                .active
-                .primary,
-            BattleSensorMode::Visual
-        );
+        assert_eq!(status(&loaded), Some(BattlePerceptionStatus::Damaged));
     }
 }
 
-/// Current ECM and null signature change probe eligibility without waiting for cached field updates.
+/// Current null signature and Angel ECM change probe reach without waiting for cached field updates.
 #[tokio::test]
 async fn active_probe_live_interference_and_concealment() {
     use stompymux_rs::*;
@@ -30494,12 +29779,11 @@ async fn active_probe_live_interference_and_concealment() {
             serde_json::json!({"enabled":true,"pending":null});
         world.btech = serde_json::from_value(state).unwrap();
         world.validate(&config).unwrap();
-        assert_eq!(
-            battle_active_probe_contact(&world, id, target, probe)
-                .unwrap()
-                .eligible,
-            probe == BattleActiveProbe::Bloodhound
-        );
+        // Null signature hides the target from the sensor band and from every probe but the
+        // Bloodhound; daylight sight still finds it.
+        let perceived = battle_perceive(&world, id, target).unwrap().unwrap();
+        assert_eq!(perceived.channel, BattleDetectionChannel::Sight);
+        assert_eq!(perceived.probed, probe == BattleActiveProbe::Bloodhound);
         let mut state = serde_json::to_value(&world.btech).unwrap();
         state["constructed"][target.0.to_string()]["null_signature"]["enabled"] = false.into();
         world.btech = serde_json::from_value(state).unwrap();
@@ -30509,11 +29793,15 @@ async fn active_probe_live_interference_and_concealment() {
         world.btech = serde_json::from_value(state).unwrap();
         // Same-team observer is not disturbed, but the target's Angel protection blocks probes.
         assert!(!battle_electronic_field(&world, id).unwrap().disturbed);
-        assert!(
-            !battle_active_probe_contact(&world, id, target, probe)
+        assert_eq!(
+            battle_perception_profile(&world, id)
                 .unwrap()
-                .eligible
+                .probe
+                .unwrap()
+                .status,
+            BattlePerceptionStatus::Ready
         );
+        assert!(!battle_perceive(&world, id, target).unwrap().unwrap().probed);
         destroy_battle_critical(
             &mut world,
             target,
@@ -30523,22 +29811,19 @@ async fn active_probe_live_interference_and_concealment() {
             },
         )
         .unwrap();
-        assert!(
-            battle_active_probe_contact(&world, id, target, probe)
-                .unwrap()
-                .eligible
-        );
+        assert!(battle_perceive(&world, id, target).unwrap().unwrap().probed);
     }
 }
 
-/// Native/Lua probe switching and aiming jitter commit with firing, and callbacks roll back every effect.
+/// A probe finds a unit behind a wall as an unidentified contact: it can be locked, but native
+/// and Lua direct fire are refused without consuming anything.
 #[tokio::test]
-async fn active_probe_native_lua_shot_and_jitter() {
+async fn active_probe_contacts_behind_walls_lock_but_refuse_direct_fire() {
     use stompymux_rs::*;
-    for (probe, letter, name) in [
-        (BattleActiveProbe::Beagle, "B", "beagle_probe"),
-        (BattleActiveProbe::Light, "A", "light_probe"),
-        (BattleActiveProbe::Bloodhound, "H", "bloodhound_probe"),
+    for probe in [
+        BattleActiveProbe::Beagle,
+        BattleActiveProbe::Light,
+        BattleActiveProbe::Bloodhound,
     ] {
         let (_dir, config, mut world, id, target) = shot_fixture().await;
         install_test_probe(&mut world, id, probe);
@@ -30552,97 +29837,117 @@ async fn active_probe_native_lua_shot_and_jitter() {
         shot_skill(&mut world, 30);
         shot_seed(&mut world, id, 7);
         shot_seed(&mut world, target, 7);
+        let perceived = battle_perceive(&world, id, target).unwrap().unwrap();
+        assert_eq!(perceived.channel, BattleDetectionChannel::Probe);
+        assert!(!perceived.identified);
+        assert!(perceived.probed);
+        let events = refresh_battle_contacts(&mut world, &[id]).unwrap();
+        assert_eq!(events.len(), 1);
+        assert!(events[0].acquired);
+        assert!(!events[0].identified);
+        assert_eq!(
+            world.btech.constructed_units()[&id].contacts()[&target],
+            BattleContact { identified: false }
+        );
+        let aim = battle_aim_modifiers(&world, id, target, 0, 4, optical_aim_rules()).unwrap();
+        assert_eq!(
+            aim.perception,
+            Some(BattlePerceptionAim {
+                channel: Some(BattleDetectionChannel::Probe),
+                direct_fire: false,
+                modifier: 0,
+            })
+        );
+        select_battle_target(&mut world, id, ObjectId(1), Some(target)).unwrap();
+        let before = world.btech.clone();
+        let refused = format!(
+            "{:#}",
+            resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, shot_rules()).unwrap_err()
+        );
+        assert!(
+            refused.contains(
+                "That target is behind cover you cannot shoot through; use indirect fire."
+            ),
+            "{refused}"
+        );
+        assert_eq!(world.btech, before);
         let native = Scripts::new(
             &config,
             std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
         )
         .unwrap();
+        // The contact row marks a probe contact behind blocking terrain with a lowercase code.
+        let contacts = stompymux_rs::text::plain(&support::run_text(
+            &native,
+            &config,
+            ObjectId(1),
+            1,
+            "contacts",
+        ));
+        assert!(
+            contacts.lines().any(|line| line.starts_with("p ")),
+            "{contacts}"
+        );
+        let text = support::run_text(&native, &config, ObjectId(1), 1, "fire 0");
+        assert!(text.contains("use indirect fire"), "{text}");
+        assert_eq!(native.world().btech, before);
         let lua = Scripts::new(
             &config,
             std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
         )
         .unwrap();
-        let text = support::run_text(
-            &native,
-            &config,
-            ObjectId(1),
-            1,
-            &format!("sensor {letter} {letter}"),
-        );
         assert!(
-            native.world().btech.constructed_units()[&id]
-                .sensor_selection()
-                .pending
-                .is_some(),
-            "{text}"
-        );
-        lua.eval_callback::<()>(&format!("btech.unit.sensors({},1,'{name}','{name}')", id.0))
-            .unwrap();
-        assert_eq!(native.world().btech, lua.world().btech);
-        let mut selected = lua.world().clone();
-        for _ in 0..10 {
-            advance_battle_sensor_selection(&mut selected);
-        }
-        refresh_optical_scanners(&mut selected, &[id]).unwrap();
-        shot_seed(&mut selected, id, 7);
-        let before = selected.btech.clone();
-        let mut dice = BattleDice::seeded([7; 32]);
-        let jitter = (dice.die(3).unwrap() - 1) as i16;
-        let attack_roll = dice.two_d6();
-        assert_eq!(
-            battle_aim_modifiers(&selected, id, target, 0, 4, optical_aim_rules())
-                .unwrap()
-                .optical
-                .unwrap()
-                .modifier,
-            jitter
-        );
-        assert_eq!(selected.btech, before);
-        let lua = Scripts::new(
-            &config,
-            std::rc::Rc::new(std::cell::RefCell::new(selected.clone())),
-        )
-        .unwrap();
-        assert!(
-            lua.eval_callback::<()>(&format!(
-                "btech.unit.fire({},1,0,{}); error('abort')",
+            lua.eval_callback::<mlua::Table>(&format!(
+                "return btech.unit.fire({},1,0,{})",
                 id.0, target.0
             ))
             .is_err()
         );
-        assert_eq!(lua.world().btech, selected.btech);
+        assert_eq!(lua.world().btech, before);
         assert!(lua.drain_outbox().is_empty());
-        lua.eval_callback::<mlua::Table>(&format!(
-            "return btech.unit.fire({},1,0,{})",
-            id.0, target.0
-        ))
-        .unwrap();
-        let rules = shot_rules();
-        let shot = resolve_battle_shot(&mut selected, id, ObjectId(1), target, 0, rules).unwrap();
-        assert_eq!(shot.roll, attack_roll);
-        assert_eq!(lua.world().btech, selected.btech);
     }
 }
 
-/// Target woods stop contributing above their two-level canopy for every sensor family using terrain aim.
+/// Target woods stop contributing above their two-level canopy for every channel that uses
+/// terrain cover.
 #[tokio::test]
-async fn airborne_target_woods_share_height_boundary_across_sensors() {
+async fn airborne_target_woods_share_height_boundary_across_channels() {
     use stompymux_rs::*;
     let (_dir, config, base, observer, target) = radar_fixture().await;
     for ground in [0, 4] {
-        for (mode, woods_penalty) in [
-            (BattleSensorMode::Visual, 2),
-            (BattleSensorMode::LightAmplification, 3),
-            (BattleSensorMode::Infrared, 2),
-            (BattleSensorMode::Electromagnetic, 1),
-            (BattleSensorMode::Radar, 2),
+        for channel in [
+            BattleDetectionChannel::Sensors,
+            BattleDetectionChannel::Sight,
+            BattleDetectionChannel::Radar,
         ] {
+            // Radar never sees a target at altitude two, so only raised ground can test it.
+            if channel == BattleDetectionChannel::Radar && ground == 0 {
+                continue;
+            }
             let mut world = base.clone();
             let map = world.btech.constructed_units()[&target]
                 .position()
                 .unwrap()
                 .map;
-            set_battle_map_visibility(&mut world, map, BattleLight::Night, 30).unwrap();
+            // Leave only the channel under test able to reach the target.
+            let visibility = if channel == BattleDetectionChannel::Radar {
+                0
+            } else {
+                30
+            };
+            set_battle_map_visibility(&mut world, map, BattleLight::Night, visibility).unwrap();
+            for (flag, enabled) in [
+                (
+                    BattleMapPerceptionFlag::Sensors,
+                    channel == BattleDetectionChannel::Sensors,
+                ),
+                (
+                    BattleMapPerceptionFlag::Radar,
+                    channel == BattleDetectionChannel::Radar,
+                ),
+            ] {
+                set_battle_map_perception(&mut world, map, flag, enabled).unwrap();
+            }
             let mut low = None;
             for clearance in [2, 3] {
                 let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -30655,18 +29960,18 @@ async fn airborne_target_woods_share_height_boundary_across_sensors() {
                 let before = world.btech.clone();
                 let terrain = battle_unit_terrain_los(&world, observer, target).unwrap();
                 assert_eq!(terrain.target_woods, if clearance == 2 { 2 } else { 0 });
-                let report =
-                    battle_map_optical_contact(&world, observer, target, mode, false, false)
-                        .unwrap();
+                let perceived = battle_perceive(&world, observer, target)
+                    .unwrap()
+                    .unwrap_or_else(|| panic!("{channel:?} at terrain {ground}"));
+                assert_eq!(perceived.channel, channel, "terrain {ground}");
                 if clearance == 2 {
-                    low = Some(report.aim_modifier);
+                    low = Some(perceived.aim_modifier);
                 } else {
                     assert_eq!(
-                        low.unwrap() - report.aim_modifier,
-                        woods_penalty,
-                        "{mode:?} at terrain {ground}"
+                        low.unwrap() - perceived.aim_modifier,
+                        2,
+                        "{channel:?} at terrain {ground}"
                     );
-                    assert!(report.eligible, "{mode:?} at terrain {ground}");
                 }
                 assert_eq!(world.btech, before);
             }
@@ -30696,9 +30001,9 @@ fn install_test_tag(world: &mut stompymux_rs::World, id: ObjectId, target: Objec
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["constructed"][id.0.to_string()]["definition"] =
         serde_json::to_value(definition).unwrap();
-    state["constructed"][target.0.to_string()]["sensor_signature"]["team"] = 2.into();
+    state["constructed"][target.0.to_string()]["signature"]["team"] = 2.into();
     world.btech = serde_json::from_value(state).unwrap();
-    refresh_optical_scanners(world, &[id]).unwrap();
+    refresh_battle_contacts(world, &[id]).unwrap();
 }
 
 /// TAG lock/recycle timing and unique ownership survive restart without consuming combat dice.
@@ -30716,7 +30021,7 @@ async fn tag_selection_timers_and_restart() {
     let before = world.btech.clone();
     assert!(select_battle_tag(&mut world, id, ObjectId(1), Some(target)).is_err());
     assert_eq!(world.btech, before);
-    refresh_optical_scanners(&mut world, &[id]).unwrap();
+    refresh_battle_contacts(&mut world, &[id]).unwrap();
 
     let dice = serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"].clone();
     select_battle_tag(&mut world, id, ObjectId(1), Some(target)).unwrap();
@@ -30760,14 +30065,15 @@ async fn tag_loss_geometry_damage_shutdown_and_validation() {
     use stompymux_rs::*;
     let (_dir, config, mut base, id, target) = shot_fixture().await;
     install_test_tag(&mut base, id, target);
-    for reason in ["wall", "damage", "shutdown", "missing", "sensor"] {
+    for reason in ["wall", "damage", "shutdown", "missing", "unseen"] {
         let mut world = base.clone();
         select_battle_tag(&mut world, id, ObjectId(1), Some(target)).unwrap();
         match reason {
-            "sensor" => {
+            "unseen" => {
                 let map = world.btech.constructed_units()[&id].position().unwrap().map;
-                set_battle_map_optical_sensor(&mut world, map, BattleSensorMode::Visual, false)
+                set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false)
                     .unwrap();
+                set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
             }
             "damage" => {
                 destroy_battle_critical(
@@ -30895,7 +30201,7 @@ async fn tag_takeover_and_rejected_targets() {
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
     }
-    refresh_optical_scanners(&mut world, &[other]).unwrap();
+    refresh_battle_contacts(&mut world, &[other]).unwrap();
     for rejected in [other, id, ObjectId(999999)] {
         let before = world.btech.clone();
         assert!(select_battle_tag(&mut world, other, ObjectId(1), Some(rejected)).is_err());
@@ -30986,7 +30292,7 @@ async fn semiguided_fixture() -> (
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
     }
-    refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+    refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     let index = world.btech.constructed_units()[&shooter]
         .loadout()
         .unwrap()
@@ -31042,8 +30348,7 @@ async fn semiguided_tag_aim_and_link_loss() {
             _ => {
                 let mut state = serde_json::to_value(&trial.btech).unwrap();
                 if case == "enemy" {
-                    state["constructed"][tagger.0.to_string()]["sensor_signature"]["team"] =
-                        3.into();
+                    state["constructed"][tagger.0.to_string()]["signature"]["team"] = 3.into();
                 } else if case == "negative" {
                     state["constructed"][target.0.to_string()]["power"] =
                         serde_json::json!({"state":"off"});
@@ -31185,7 +30490,7 @@ async fn spotter_fixture() -> (
     release_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
     assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
-    refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+    refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     select_battle_spotter(&mut world, shooter, ObjectId(1), Some(observer)).unwrap();
     (dir, config, world, shooter, target, observer, index)
 }
@@ -31281,9 +30586,7 @@ async fn spotter_target_persistence_and_live_revalidation() {
             "role" => {
                 state["constructed"][observer.0.to_string()]["spotter"] = serde_json::Value::Null
             }
-            "team" => {
-                state["constructed"][observer.0.to_string()]["sensor_signature"]["team"] = 9.into()
-            }
+            "team" => state["constructed"][observer.0.to_string()]["signature"]["team"] = 9.into(),
             "power" => {
                 state["constructed"][observer.0.to_string()]["power"] =
                     serde_json::json!({"state":"off"})
@@ -31374,7 +30677,7 @@ async fn indirect_spotter_aim_routing_and_rollback() {
     assert_eq!(indirect.spotting, 8);
     assert_eq!(indirect.target_lock, 2);
     assert_eq!(aim.target_lock, 0);
-    assert!(aim.optical.is_some());
+    assert!(aim.perception.is_some());
     assert!(aim.subtotal().is_some());
     assert_eq!(
         aim.distance,
@@ -31396,7 +30699,7 @@ async fn indirect_spotter_aim_routing_and_rollback() {
     let direct_aim =
         battle_aim_modifiers(&direct, shooter, target, index, 6, shot_rules().aim).unwrap();
     assert!(direct_aim.indirect.is_none());
-    assert!(direct_aim.optical.is_none());
+    assert!(direct_aim.perception.is_none());
     let mut rejected = world.clone();
     let mut state = serde_json::to_value(&rejected.btech).unwrap();
     state["constructed"][observer.0.to_string()]["contacts"] = serde_json::json!({});
@@ -31633,36 +30936,38 @@ async fn indirect_spotter_experience_eligibility_and_rollback() {
     }
 }
 
-/// Terrain visibility needs no acquired occupant; signature-only sensors cannot observe empty hexes.
+/// Terrain visibility needs no acquired occupant; only the sensor band and sight observe empty
+/// hexes, so a radar-only view sees none.
 #[tokio::test]
-async fn indirect_hex_visibility_uses_terrain_and_sensor_rules() {
+async fn indirect_hex_visibility_uses_terrain_and_perception_rules() {
     use stompymux_rs::*;
     let (_dir, config, mut world, id, _target) = radar_fixture().await;
     let point = BattleHexCoordinate { x: 5, y: 2 };
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
-    for sensor in [
-        BattleSensorMode::Visual,
-        BattleSensorMode::LightAmplification,
-        BattleSensorMode::Infrared,
-        BattleSensorMode::Electromagnetic,
-        BattleSensorMode::Seismic,
-        BattleSensorMode::Radar,
+    for (sensors, visibility, expected) in [
+        (true, 30, Some(BattleDetectionChannel::Sensors)),
+        (false, 30, Some(BattleDetectionChannel::Sight)),
+        (false, 0, None),
     ] {
         let mut state = serde_json::to_value(&world.btech).unwrap();
         state["constructed"][id.0.to_string()]["contacts"] = serde_json::json!({});
-        state["constructed"][id.0.to_string()]["sensor_selection"]["active"] =
-            serde_json::to_value(BattleSensorPair {
-                primary: sensor,
-                secondary: sensor,
-            })
-            .unwrap();
         state["maps"][map.0.to_string()]["light"] = 0.into();
+        state["maps"][map.0.to_string()]["visibility"] = visibility.into();
+        state["maps"][map.0.to_string()]["sensor_flags"] = if sensors {
+            0.into()
+        } else {
+            BattleMapPerceptionFlag::Sensors.bit().into()
+        };
         world.btech = serde_json::from_value(state).unwrap();
         let before = world.btech.clone();
         assert_eq!(
+            battle_hex_perception(&world, id, point).unwrap(),
+            expected,
+            "sensors {sensors}, visibility {visibility}"
+        );
+        assert_eq!(
             battle_hex_visible(&world, id, point).unwrap(),
-            !matches!(sensor, BattleSensorMode::Radar | BattleSensorMode::Seismic),
-            "{sensor:?}"
+            expected.is_some()
         );
         assert_eq!(world.btech, before);
         let mut blocked = world.clone();
@@ -31779,6 +31084,7 @@ async fn hex_target_selection_lifecycle_and_validation() {
     let point = BattleHexCoordinate { x: 9, y: 9 };
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["maps"][map.0.to_string()]["sensor_flags"] = 511.into();
+    state["maps"][map.0.to_string()]["visibility"] = 0.into();
     world.btech = serde_json::from_value(state).unwrap();
     assert!(!battle_hex_visible(&world, id, point).unwrap());
     for mode in [
@@ -32073,7 +31379,7 @@ async fn hex_aim_modes_visibility_and_neutral_target_terms() {
         unit.subtotal().unwrap()
             - i32::from(unit.target_movement)
             - i32::from(unit.target_lock)
-            - i32::from(unit.optical.unwrap().modifier)
+            - i32::from(unit.perception.unwrap().modifier)
     );
     for mode in [
         BattleHexTargetMode::UnitAtHex,
@@ -32097,7 +31403,7 @@ async fn hex_aim_modes_visibility_and_neutral_target_terms() {
         );
         assert_eq!(report.modifiers.target_movement, 0);
         assert_eq!(report.modifiers.target_lock, 0);
-        assert!(report.modifiers.optical.is_none());
+        assert!(report.modifiers.perception.is_none());
         assert!(report.modifiers.indirect.is_none());
         for _ in 0..8 {
             advance_battle_target_locks(&mut world);
@@ -32111,6 +31417,7 @@ async fn hex_aim_modes_visibility_and_neutral_target_terms() {
         battle_hex_aim_modifiers(&world, shooter, point, 0, 6, optical_aim_rules()).unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["maps"][map.0.to_string()]["sensor_flags"] = 511.into();
+    state["maps"][map.0.to_string()]["visibility"] = 0.into();
     world.btech = serde_json::from_value(state).unwrap();
     let hidden =
         battle_hex_aim_modifiers(&world, shooter, point, 0, 6, optical_aim_rules()).unwrap();
@@ -33896,7 +33203,7 @@ async fn quad_live_weapon_and_front_leg_combat() {
     for _ in 0..40 {
         advance_battle_motion(&mut world, RULES).unwrap();
     }
-    refresh_optical_scanners(&mut world, &[id]).unwrap();
+    refresh_battle_contacts(&mut world, &[id]).unwrap();
     let mut firing = world.clone();
     shot_seed(&mut firing, id, 3);
     shot_seed(&mut firing, target, 4);
@@ -34088,7 +33395,7 @@ async fn apod_live_fire_and_restart() {
         for _ in 0..40 {
             advance_battle_motion(&mut world, RULES).unwrap();
         }
-        refresh_optical_scanners(&mut world, &[id]).unwrap();
+        refresh_battle_contacts(&mut world, &[id]).unwrap();
         shot_skill(&mut world, 20);
         shot_seed(&mut world, id, 1);
         shot_seed(&mut world, target, 4);
@@ -34198,7 +33505,7 @@ async fn stinger_airborne_admission_and_shot_replay() {
         advance_battle_units(&mut world, 0);
     }
     launch_battle_jump(&mut world, target, ObjectId(2), 0, 2.0).unwrap();
-    refresh_optical_scanners(&mut world, &[id]).unwrap();
+    refresh_battle_contacts(&mut world, &[id]).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     let shot =

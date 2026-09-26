@@ -59,3 +59,7 @@ no_list: true
 - [`update_links_as`](update-links-as/)
 - [`view`](view/)
 - [`wrapping`](wrapping/)
+
+## Constants
+
+- [`btech.map.light_levels`](light_levels/)

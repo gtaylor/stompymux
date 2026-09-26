@@ -42,9 +42,6 @@ mod btech_salvo;
 #[path = "../btech_searchlight.rs"]
 mod btech_searchlight;
 
-#[path = "../btech_sensor_light.rs"]
-mod btech_sensor_light;
-
 #[path = "../btech_shot_counters.rs"]
 mod btech_shot_counters;
 

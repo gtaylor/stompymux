@@ -57,9 +57,9 @@
 
 // lua-types-begin btech 00099
 //|---Change saved light/weather conditions without reloading occupied terrain.
-//|---Changed light rechecks active sensors and publishes cockpit warnings transactionally; locks and pending requests remain.
+//|---Perception follows the new light and visibility on the next scan; contacts and locks remain until then.
 //|---@param dbref integer Map object dbref.
-//|---@param light "night"|"twilight"|"day"
+//|---@param light BattleLightLevel Typed constant from btech.map.light_levels.
 //|---@param visibility integer Weather range from 0 through 60.
 //|---@return boolean
 //|function btech_map.conditions(dbref, light, visibility) end
@@ -75,7 +75,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00103
-//|---Wizard broadcast to occupants of running, conscious, unblinded units in map-slot order.
+//|---Wizard broadcast to occupants of running, conscious units in map-slot order.
 //|---Does not require sensor contacts; all notices and the private confirmation roll back together.
 //|---Rust extension retained under its descriptive name; the canonical emit follows the C contract.
 //|---@param actor integer

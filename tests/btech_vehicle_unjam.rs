@@ -258,7 +258,7 @@ async fn idle_vehicle_feed_countdown_retries_failed_server_commits() {
         let (_dir, config, mut world, id) = fixture(include_str!("../game/mechs/Demolisher")).await;
         jam(&mut world, id);
         begin_battle_unjam(&mut world, id, ObjectId(1), 0).unwrap();
-        assert!(optical_scanner_observers(&world).is_empty());
+        assert!(battle_contact_observers(&world).is_empty());
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER deny_unjam BEFORE UPDATE ON btech_vehicles BEGIN SELECT RAISE(ABORT,'unjam failure'); END;").execute(&mut sql).await.unwrap();
@@ -297,7 +297,7 @@ async fn vehicle_feed_clearing_broadcasts_only_to_current_contacts() {
     saved["vehicles"][observer.0.to_string()]["power"] =
         serde_json::to_value(BattlePower::Running).unwrap();
     world.btech = serde_json::from_value(saved).unwrap();
-    refresh_optical_scanners(&mut world, &[observer]).unwrap();
+    refresh_battle_contacts(&mut world, &[observer]).unwrap();
     let value = (0..=255)
         .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
         .unwrap();

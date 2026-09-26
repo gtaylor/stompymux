@@ -127,6 +127,7 @@ no_list: true
 - [`observer`](observer/)
 - [`ood`](ood/)
 - [`payload`](payload/)
+- [`perception`](perception/)
 - [`pickup`](pickup/)
 - [`pilot`](pilot/)
 - [`piloting_check`](piloting-check/)
@@ -166,8 +167,6 @@ no_list: true
 - [`scan_terrain`](scan-terrain/)
 - [`searchlight_warning`](searchlight-warning/)
 - [`section_condition`](section-condition/)
-- [`sensor_report`](sensor-report/)
-- [`sensors`](sensors/)
 - [`set_armor`](set-armor/)
 - [`set_assigned_pilot`](set-assigned-pilot/)
 - [`set_cargo_capacity`](set-cargo-capacity/)
@@ -241,6 +240,7 @@ no_list: true
 ## Constants
 
 - [`btech.unit.ammunition_modes`](ammunition_modes/)
+- [`btech.unit.detection_channels`](detection_channels/)
 - [`btech.unit.fire_modes`](fire_modes/)
 - [`btech.unit.movement_types`](movement_types/)
 - [`btech.unit.sections`](sections/)

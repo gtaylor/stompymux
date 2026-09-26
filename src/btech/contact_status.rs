@@ -77,7 +77,7 @@ pub(super) fn known_status(world: &World, observer: ObjectId, target: ObjectId) 
     let modes = [electronics.guardian, electronics.angel];
     let fifth =
         if unit.has_beacon(BattleBeaconKind::Narc) || unit.has_beacon(BattleBeaconKind::Homing) {
-            if unit.sensor_signature().team == observer.signature.team {
+            if unit.signature().team == observer.signature.team {
                 'n'
             } else {
                 'N'

@@ -434,7 +434,7 @@ async fn hot_myomer_tow_discount_requires_hardware_heat_and_configuration() {
     set_battle_observer(&mut world, observer, true).unwrap();
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     encoded["constructed"][observer.0.to_string()]["contacts"][carrier.0.to_string()] =
-        serde_json::json!({"primary":true,"secondary":false});
+        serde_json::json!({"identified": true});
     world.btech = serde_json::from_value(encoded).unwrap();
     for heat in [8.0, 9.0] {
         let mut encoded = serde_json::to_value(&world.btech).unwrap();
@@ -932,7 +932,7 @@ fn prepare_pickup(world: &mut World, carrier: ObjectId, target: ObjectId) {
         "constructed"
     };
     saved[class][carrier.0.to_string()]["contacts"][target.0.to_string()] =
-        serde_json::json!({"primary":true,"secondary":false});
+        serde_json::json!({"identified": true});
     if class == "vehicles" {
         let old = saved[class][carrier.0.to_string()]["definition"]["attributes"]["specials"]
             .as_str()
@@ -1017,20 +1017,20 @@ async fn pickup_admission_rejects_motion_hidden_targets_enemies_and_overlap_with
             assert_eq!(case.btech, before);
         }
         let mut hidden = world.clone();
-        set_battle_sensor_signature(
+        set_battle_unit_signature(
             &mut hidden,
             target,
-            BattleSensorSignature {
+            BattleUnitSignature {
                 hidden: true,
                 ..Default::default()
             },
         )
         .unwrap();
         assert!(battle_pickup_admission(&hidden, carrier, ObjectId(1), target).is_err());
-        set_battle_sensor_signature(
+        set_battle_unit_signature(
             &mut hidden,
             target,
-            BattleSensorSignature {
+            BattleUnitSignature {
                 team: 1,
                 ..Default::default()
             },

@@ -16,7 +16,7 @@ pub use model::{
     ChannelId, ChannelMessage, HISTORY_LIMIT, Membership,
 };
 pub use policy::in_character;
-pub use service::{HostCallbacks, LockOutcome, Service};
+pub use service::{HostCallbacks, LockOutcome, Service, ServiceConfig};
 
 use crate::{
     config::Config,

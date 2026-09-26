@@ -62,7 +62,6 @@ impl BattleUnit {
 
     /// Shutdown clears both selections; damage disables only the affected suite family.
     pub(super) fn reconcile_electronics(&mut self) {
-        self.reconcile_active_probes();
         self.reconcile_stealth();
         self.reconcile_null_signature();
         let guardian = self
@@ -110,7 +109,6 @@ impl super::BattleVehicle {
 
     /// Reconcile equipment-dependent controls after damage or shutdown.
     pub(super) fn reconcile_electronics(&mut self) {
-        self.reconcile_active_probes();
         if !self.c3_operational().unwrap_or(false) {
             self.c3_network = None;
         }
@@ -219,7 +217,7 @@ pub fn electronic_field(world: &World, id: ObjectId) -> Result<BattleElectronicF
             (
                 vehicle.position(),
                 vehicle.electronics.field,
-                vehicle.sensor_signature().team,
+                vehicle.signature().team,
                 vehicle.has_beacon(super::BattleBeaconKind::Ecm),
             )
         } else {
@@ -231,7 +229,7 @@ pub fn electronic_field(world: &World, id: ObjectId) -> Result<BattleElectronicF
             (
                 unit.position(),
                 unit.electronics.field,
-                unit.sensor_signature().team,
+                unit.signature().team,
                 unit.stealth().enabled || unit.has_beacon(super::BattleBeaconKind::Ecm),
             )
         };
@@ -240,6 +238,11 @@ pub fn electronic_field(world: &World, id: ObjectId) -> Result<BattleElectronicF
     };
     let mut sources = Vec::new();
     for other in identities(world) {
+        // Most units carry no active suite; reading the switch first keeps this scan cheap.
+        let state = state(world, other)?;
+        if state.guardian == Mode::Off && state.angel == Mode::Off {
+            continue;
+        }
         let emitter = super::scanner::scanner_unit(world, other).unwrap();
         if emitter.position.is_none_or(|p| p.map != position.map)
             || emitter.power != BattlePower::Running
@@ -249,10 +252,6 @@ pub fn electronic_field(world: &World, id: ObjectId) -> Result<BattleElectronicF
                 .get(&other)
                 .is_none_or(|object| object.flags.contains(Flag::Going))
         {
-            continue;
-        }
-        let state = state(world, other)?;
-        if state.guardian == Mode::Off && state.angel == Mode::Off {
             continue;
         }
         let distance = super::unit_range(world, id, other)?.spatial;

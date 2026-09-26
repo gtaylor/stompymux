@@ -234,19 +234,15 @@ fn resolve(
             check_unit_target(world, operator.source, target, index, weapon, rules)?;
             let gunnery =
                 operator.gunnery(world, index, config.battletech.extended_gunnery != 0)?;
-            let aim = super::aim::aim_modifiers_for_source_with_dice(
+            let aim = super::aim::aim_modifiers_for_source(
                 world,
                 operator.source,
                 target,
                 index,
                 gunnery,
                 rules,
-                &mut dice,
             )?;
-            ensure!(
-                aim.self_target || aim.optical.is_some(),
-                "Target is not a current acquired contact"
-            );
+            super::aim::ensure_perceived(&aim)?;
             let partial_cover = super::unit_terrain_los(world, shooter, target)?.partial_cover;
             let number = aim.subtotal().filter(|number| {
                 if coordinate.is_some() {

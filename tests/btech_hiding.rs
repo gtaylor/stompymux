@@ -18,10 +18,10 @@ fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Va
 /// Observe common hiding state without exposing anatomy in assertions.
 fn hiding(world: &World, id: ObjectId) -> (Option<u16>, bool) {
     if let Some(unit) = world.btech.vehicles().get(&id) {
-        return (unit.hide_elapsed(), unit.sensor_signature().hidden);
+        return (unit.hide_elapsed(), unit.signature().hidden);
     }
     let unit = &world.btech.constructed_units()[&id];
-    (unit.hide_elapsed(), unit.sensor_signature().hidden)
+    (unit.hide_elapsed(), unit.signature().hidden)
 }
 
 /// One running wizard-piloted unit on forest cover, with deterministic owned dice.
@@ -195,8 +195,8 @@ async fn hiding_authority_and_cached_observer_rules() {
                 advance_battle_units(&mut world, 0);
             }
             edit(&mut world, observer, |unit| {
-                unit["sensor_signature"]["team"] = serde_json::json!(1);
-                unit["contacts"] = serde_json::json!({id.0.to_string(): {"identified":false,"primary":true,"secondary":false}});
+                unit["signature"]["team"] = serde_json::json!(1);
+                unit["contacts"] = serde_json::json!({id.0.to_string(): {"identified":false}});
             });
             for condition in [
                 "enemy",
@@ -218,7 +218,7 @@ async fn hiding_authority_and_cached_observer_rules() {
                 )
                 .unwrap();
                 edit(&mut test, observer, |unit| match condition {
-                    "friendly" => unit["sensor_signature"]["team"] = serde_json::json!(0),
+                    "friendly" => unit["signature"]["team"] = serde_json::json!(0),
                     "off" => unit["power"] = serde_json::to_value(BattlePower::Off).unwrap(),
                     "observer" => unit["observer"] = serde_json::json!(true),
                     "unacquired" => unit["contacts"] = serde_json::json!({}),
@@ -250,7 +250,7 @@ async fn hiding_fire_intent_survives_rejection_and_rolls_back_with_callbacks() {
     ] {
         let (_dir, config, mut world, _, id) = fixture(source, false).await;
         edit(&mut world, id, |unit| {
-            unit["sensor_signature"]["hidden"] = serde_json::json!(true);
+            unit["signature"]["hidden"] = serde_json::json!(true);
             unit["hide_elapsed"] = serde_json::json!(7);
         });
         edit_battle_tic(&mut world, id, ObjectId(1), 0, BattleTicEdit::Add(vec![0])).unwrap();
@@ -261,7 +261,7 @@ async fn hiding_fire_intent_survives_rejection_and_rolls_back_with_callbacks() {
             assert!(!text.contains("You fire"));
             let mut expected = world.clone();
             edit(&mut expected, id, |unit| {
-                unit["sensor_signature"]["hidden"] = serde_json::json!(false);
+                unit["signature"]["hidden"] = serde_json::json!(false);
                 unit["hide_elapsed"] = serde_json::Value::Null;
             });
             assert_eq!(native.world().btech, expected.btech);
@@ -291,7 +291,7 @@ async fn hiding_damage_and_shutdown_distinguish_cover_from_preparation() {
     ] {
         let (_dir, config, mut world, _, id) = fixture(source, false).await;
         edit(&mut world, id, |unit| {
-            unit["sensor_signature"]["hidden"] = serde_json::json!(true);
+            unit["signature"]["hidden"] = serde_json::json!(true);
             unit["hide_elapsed"] = serde_json::json!(3);
         });
         for amount in [0, 1] {
@@ -365,7 +365,7 @@ async fn hiding_movement_waits_for_a_hex_crossing() {
             .get(&id)
             .is_some_and(|unit| unit.definition().is_vtol());
         edit(&mut world, id, |unit| {
-            unit["sensor_signature"]["hidden"] = serde_json::json!(true);
+            unit["signature"]["hidden"] = serde_json::json!(true);
             unit["motion"]["speed"] = serde_json::json!(10.75);
             unit["motion"]["desired_speed"] = serde_json::json!(10.75);
             if vtol {
@@ -584,7 +584,7 @@ async fn hiding_aircraft_crash_orders_crossing_before_damage_and_replays() {
         .unwrap();
         world.btech = serde_json::from_value(state).unwrap();
         edit(&mut world, id, |unit| {
-            unit["sensor_signature"]["hidden"] = true.into();
+            unit["signature"]["hidden"] = true.into();
             unit["hide_elapsed"] = 7.into();
             unit["motion"]["speed"] = if crossed { 100.0 } else { 0.0 }.into();
             unit["motion"]["desired_speed"] = if crossed { 100.0 } else { 0.0 }.into();
@@ -689,7 +689,7 @@ async fn weapons_hold_controls_admission_cover_and_saved_state() {
     for source in chassis {
         let (_dir, config, mut world, _, id) = fixture(&source, false).await;
         edit(&mut world, id, |unit| {
-            unit["sensor_signature"]["hidden"] = true.into();
+            unit["signature"]["hidden"] = true.into();
             unit["hide_elapsed"] = 7.into();
         });
         edit_battle_tic(&mut world, id, ObjectId(1), 0, BattleTicEdit::Add(vec![0])).unwrap();

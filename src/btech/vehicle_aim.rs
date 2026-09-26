@@ -1,5 +1,5 @@
-//! Vehicle direct-weapon aim composes shared range, target, sensor and lock rules with vehicle controls.
-use super::{BattleAimModifiers, BattleAimRules, BattleDice, BattleSystem};
+//! Vehicle direct-weapon aim composes shared range, target, perception and lock rules with vehicle controls.
+use super::{BattleAimModifiers, BattleAimRules, BattleSystem};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
@@ -11,7 +11,6 @@ pub(super) fn modifiers(
     weapon_index: usize,
     gunnery: i16,
     rules: BattleAimRules,
-    dice: &mut BattleDice,
 ) -> Result<BattleAimModifiers> {
     let shooter = source.unit;
     for id in [shooter, target] {
@@ -62,11 +61,10 @@ pub(super) fn modifiers(
     } else {
         super::aim::lock_modifier(world, source, target, rules.override_weapon_arcs)?
     };
-    aim.optical = super::aim::optical_aim(
+    aim.perception = super::aim::perception_aim(
         world,
         indirect.map_or(shooter, |aim| aim.spotter),
         target,
-        dice,
         indirect.is_some_and(|aim| super::spotter::coordinate_target(world, aim.spotter)),
     )?;
     let submerged = super::weapon_geometry::apply_water_range(

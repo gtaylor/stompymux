@@ -1,4 +1,4 @@
-//! Cloud boundaries share optical policy across every supported unit pairing.
+//! Cloud boundaries cut sensors and sight across every supported unit pairing and terrain hex.
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
@@ -22,7 +22,7 @@ fn raised_target(world: &mut World, map: ObjectId, target: ObjectId) {
     world.btech = serde_json::from_value(state).unwrap();
 }
 
-/// Optical contact is obstructed across the boundary, including equality, independently of chassis.
+/// Sensors and sight are cut across the boundary, including equality, independently of chassis.
 #[tokio::test]
 async fn cloud_boundary_filters_all_supported_unit_pairs() {
     for source in firing::templates() {
@@ -31,59 +31,33 @@ async fn cloud_boundary_filters_all_supported_unit_pairs() {
                 firing::fixture_with_target(&source, None, &target).await;
             let map = world.btech.units()[&observer].map.unwrap();
             raised_target(&mut world, map, target);
-            for sensor in [
-                BattleSensorMode::Visual,
-                BattleSensorMode::LightAmplification,
-                BattleSensorMode::Infrared,
-            ] {
+            // With the band switched off, sight carries the same clear-line rule.
+            for sensors in [true, false] {
+                set_battle_map_perception(
+                    &mut world,
+                    map,
+                    BattleMapPerceptionFlag::Sensors,
+                    sensors,
+                )
+                .unwrap();
                 set_battle_map_cloud_base(&mut world, ObjectId(1), map, 0).unwrap();
-                let ordinary =
-                    battle_map_optical_contact(&world, observer, target, sensor, false, false)
-                        .unwrap();
-                assert!(ordinary.eligible, "{sensor:?}");
+                let ordinary = battle_perceive(&world, observer, target).unwrap();
+                assert_eq!(
+                    ordinary.map(|perception| perception.channel),
+                    Some(if sensors {
+                        BattleDetectionChannel::Sensors
+                    } else {
+                        BattleDetectionChannel::Sight
+                    })
+                );
                 set_battle_map_cloud_base(&mut world, ObjectId(1), map, 1).unwrap();
                 for (a, b) in [(observer, target), (target, observer)] {
-                    let blocked =
-                        battle_map_optical_contact(&world, a, b, sensor, false, false).unwrap();
-                    assert!(!blocked.eligible);
-                    assert_eq!(blocked.acquisition_factor, 0);
-                    assert!(
-                        !battle_optical_contact(
-                            &world,
-                            a,
-                            b,
-                            sensor,
-                            BattleSensorConditions {
-                                light: BattleLight::Day,
-                                visibility: 30,
-                                disabled: false,
-                                target_lit: false
-                            }
-                        )
-                        .unwrap()
-                        .eligible
-                    );
+                    assert_eq!(battle_perceive(&world, a, b).unwrap(), None);
                 }
                 for base in [-1, 0, 2, 200] {
                     set_battle_map_cloud_base(&mut world, ObjectId(1), map, base).unwrap();
-                    assert_eq!(
-                        battle_map_optical_contact(&world, observer, target, sensor, false, false)
-                            .unwrap(),
-                        ordinary
-                    );
+                    assert_eq!(battle_perceive(&world, observer, target).unwrap(), ordinary);
                 }
-            }
-            for sensor in [BattleSensorMode::Radar, BattleSensorMode::Electromagnetic] {
-                set_battle_map_cloud_base(&mut world, ObjectId(1), map, 0).unwrap();
-                let before =
-                    battle_map_optical_contact(&world, observer, target, sensor, false, false)
-                        .unwrap();
-                set_battle_map_cloud_base(&mut world, ObjectId(1), map, 1).unwrap();
-                assert_eq!(
-                    battle_map_optical_contact(&world, observer, target, sensor, false, false)
-                        .unwrap(),
-                    before
-                );
             }
             world.validate(&config).unwrap();
         }
@@ -158,76 +132,45 @@ async fn cloud_controls_persist_and_roll_back() {
     assert_eq!(lua.world().btech, before);
 }
 
-/// Terrain visibility preserves the distinct mixed-sensor cloud rule for every supported chassis.
+/// Raise one empty terrain hex a level above the flat lane.
+fn raised_hex(world: &mut World, map: ObjectId, index: usize) {
+    let mut state = serde_json::to_value(&world.btech).unwrap();
+    state["maps"][map.0.to_string()]["terrain"][index]["elevation"] = 1.into();
+    world.btech = serde_json::from_value(state).unwrap();
+}
+
+/// Terrain visibility is cut only when the boundary separates the observer and hex levels.
 #[tokio::test]
-async fn terrain_clouds_preserve_pair_and_equality_rules_without_consuming_dice() {
+async fn terrain_clouds_follow_level_and_equality_rules_without_consuming_dice() {
     for source in firing::templates() {
-        let (_dir, config, mut initial, id, _, _) =
+        let (_dir, config, mut world, id, _, _) =
             firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D")).await;
-        let map = initial.btech.units()[&id].map.unwrap();
-        // Both units stand at elevation two, so target terrain introduces no hill obstruction.
-        let mut state = serde_json::to_value(&initial.btech).unwrap();
-        for tile in state["maps"][map.0.to_string()]["terrain"]
-            .as_array_mut()
-            .unwrap()
-        {
-            tile["elevation"] = 2.into();
-        }
-        for class in ["constructed", "vehicles"] {
-            for unit in state[class].as_object_mut().unwrap().values_mut() {
-                unit["ground_elevation"] = serde_json::Value::Null;
-                if !unit["vtol_flight"].is_null() {
-                    unit["vtol_flight"]["altitude"] = 2.into();
-                }
-            }
-        }
-        initial.btech = serde_json::from_value(state).unwrap();
+        let map = world.btech.units()[&id].map.unwrap();
+        // The observer stands at level zero and looks at an empty hex raised to level one.
+        raised_hex(&mut world, map, 9);
         let target = BattleHexCoordinate { x: 0, y: 9 };
-        for pair in [
-            BattleSensorPair {
-                primary: BattleSensorMode::Visual,
-                secondary: BattleSensorMode::Visual,
-            },
-            BattleSensorPair {
-                primary: BattleSensorMode::Visual,
-                secondary: BattleSensorMode::Infrared,
-            },
-            BattleSensorPair {
-                primary: BattleSensorMode::Electromagnetic,
-                secondary: BattleSensorMode::Visual,
-            },
-        ] {
-            let mut world = initial.clone();
-            firing::edit(&mut world, id, |state| {
-                state["sensor_selection"]["active"] = serde_json::to_value(pair).unwrap()
-            });
-            set_battle_map_cloud_base(&mut world, ObjectId(1), map, 0).unwrap();
-            let ordinary = battle_hex_sensor_visibility(&world, id, target).unwrap();
-            assert!(ordinary.primary || ordinary.secondary);
-            for base in [-1, 0, 1, 2, 3] {
-                set_battle_map_cloud_base(&mut world, ObjectId(1), map, base).unwrap();
-                let before = world.btech.clone();
-                let sensors = battle_hex_sensor_visibility(&world, id, target).unwrap();
-                let blocked = base != 0 && base < 2 && pair.primary != pair.secondary;
-                assert_eq!(battle_hex_visible(&world, id, target).unwrap(), !blocked);
-                assert_eq!(
-                    sensors,
-                    if blocked {
-                        BattleContactSensors::default()
-                    } else {
-                        ordinary
-                    }
-                );
-                assert_eq!(world.btech, before);
-            }
-            world.validate(&config).unwrap();
-            persistence::save(&config.database(), &world).await.unwrap();
-            let restored = persistence::load(&config.database()).await.unwrap();
+        set_battle_map_cloud_base(&mut world, ObjectId(1), map, 0).unwrap();
+        let ordinary = battle_hex_perception(&world, id, target).unwrap();
+        assert_eq!(ordinary, Some(BattleDetectionChannel::Sensors));
+        for base in [-1, 0, 1, 2, 3] {
+            set_battle_map_cloud_base(&mut world, ObjectId(1), map, base).unwrap();
+            let before = world.btech.clone();
+            let blocked = base == 1;
+            assert_eq!(battle_hex_visible(&world, id, target).unwrap(), !blocked);
             assert_eq!(
-                battle_hex_sensor_visibility(&restored, id, target).unwrap(),
-                ordinary
+                battle_hex_perception(&world, id, target).unwrap(),
+                if blocked { None } else { ordinary },
+                "base {base}"
             );
+            assert_eq!(world.btech, before);
         }
+        world.validate(&config).unwrap();
+        persistence::save(&config.database(), &world).await.unwrap();
+        let restored = persistence::load(&config.database()).await.unwrap();
+        assert_eq!(
+            battle_hex_perception(&restored, id, target).unwrap(),
+            ordinary
+        );
     }
 }
 
@@ -242,14 +185,8 @@ async fn terrain_cloud_admission_matches_native_lua_and_preserves_failed_shots()
         )
         .await;
         let map = world.btech.units()[&id].map.unwrap();
-        firing::edit(&mut world, id, |state| {
-            state["sensor_selection"]["active"] = serde_json::to_value(BattleSensorPair {
-                primary: BattleSensorMode::Visual,
-                secondary: BattleSensorMode::Infrared,
-            })
-            .unwrap()
-        });
-        set_battle_map_cloud_base(&mut world, ObjectId(1), map, -1).unwrap();
+        raised_hex(&mut world, map, 9);
+        set_battle_map_cloud_base(&mut world, ObjectId(1), map, 1).unwrap();
         let lua = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let visible: bool = lua

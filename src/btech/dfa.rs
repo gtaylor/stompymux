@@ -128,7 +128,7 @@ fn dfa_profile_inner(
     );
     ensure!(
         !world.btech.maps()[&position.map].blocks_friendly_fire()
-            || source.sensor_signature().team != victim.sensor_signature().team,
+            || source.signature().team != victim.signature().team,
         "Friendly DFA? I don't think so...."
     );
     let specialist = source

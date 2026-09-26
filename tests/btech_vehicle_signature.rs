@@ -2,7 +2,8 @@
 use crate::support;
 use stompymux_rs::*;
 
-/// A running vehicle with a present pilot, initially disconnected from a session.
+/// A running vehicle with a present pilot at the end of a night lane, initially disconnected
+/// from a session.
 async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Test field".into(), Kind::Room);
@@ -10,7 +11,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
         &mut world,
         map,
         "test",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::parse(&format!("1 20\n{}", ".0\n".repeat(20))).unwrap(),
     )
     .unwrap();
     set_battle_map_visibility(&mut world, map, BattleLight::Night, 30).unwrap();
@@ -112,6 +113,8 @@ async fn vehicle_perception_captures_completion_and_replays_until_next_startup()
     assert_eq!(restored.btech.vehicles()[&id].scanner_perception(), 6);
 }
 
+/// Scenario illumination removes the night sight penalty beyond the sensor band and survives
+/// replay and detached Lua state.
 #[tokio::test]
 async fn vehicle_signature_drives_scenario_lighting_and_detached_lua_state() {
     let (_dir, config, mut world, observer) =
@@ -125,43 +128,29 @@ async fn vehicle_signature_drives_scenario_lighting_and_detached_lua_state() {
         BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap(),
     )
     .unwrap();
-    place_battle_unit(&mut world, target, map, 0, 0).unwrap();
+    // Beyond the fifteen-hex sensor band, only night sight reaches the target.
+    place_battle_unit(&mut world, target, map, 0, 17).unwrap();
     assert_eq!(
-        world.btech.vehicles()[&target].sensor_signature(),
-        BattleSensorSignature::default()
+        world.btech.vehicles()[&target].signature(),
+        BattleUnitSignature::default()
     );
     assert!(!battle_unit_illuminated(&world, target));
-    let signature = BattleSensorSignature {
+    let unlit = battle_perceive(&world, observer, target).unwrap().unwrap();
+    assert_eq!(
+        (unlit.channel, unlit.aim_modifier),
+        (BattleDetectionChannel::Sight, 1)
+    );
+    let signature = BattleUnitSignature {
         team: -17,
         hidden: true,
         illuminated: true,
     };
-    set_battle_sensor_signature(&mut world, target, signature).unwrap();
+    set_battle_unit_signature(&mut world, target, signature).unwrap();
     assert!(battle_unit_illuminated(&world, target));
+    let lit = battle_perceive(&world, observer, target).unwrap().unwrap();
     assert_eq!(
-        battle_map_optical_contact(
-            &world,
-            observer,
-            target,
-            BattleSensorMode::Visual,
-            false,
-            false
-        )
-        .unwrap()
-        .aim_modifier,
-        0
-    );
-    assert!(
-        !battle_map_optical_contact(
-            &world,
-            observer,
-            target,
-            BattleSensorMode::LightAmplification,
-            false,
-            false
-        )
-        .unwrap()
-        .eligible
+        (lit.channel, lit.aim_modifier),
+        (BattleDetectionChannel::Sight, 0)
     );
     persistence::save(&config.database(), &world).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
@@ -170,17 +159,17 @@ async fn vehicle_signature_drives_scenario_lighting_and_detached_lua_state() {
     let scripts =
         Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(restored))).unwrap();
     let (team, hidden, illuminated, perception): (i32, bool, bool, i16) = scripts.eval_callback(&format!(
-        "local s=btech.unit.state({}); local team=s.sensor_signature.team; s.sensor_signature.team=99; return team,s.sensor_signature.hidden,s.sensor_signature.illuminated,s.scanner_perception", target.0)).unwrap();
+        "local s=btech.unit.state({}); local team=s.signature.team; s.signature.team=99; return team,s.signature.hidden,s.signature.illuminated,s.scanner_perception", target.0)).unwrap();
     assert_eq!(
         (team, hidden, illuminated, perception),
         (-17, true, true, 6)
     );
     assert_eq!(
-        scripts.world().btech.vehicles()[&target].sensor_signature(),
+        scripts.world().btech.vehicles()[&target].signature(),
         signature
     );
     let before = world.btech.clone();
-    assert!(set_battle_sensor_signature(&mut world, ObjectId(1), signature).is_err());
+    assert!(set_battle_unit_signature(&mut world, ObjectId(1), signature).is_err());
     assert_eq!(world.btech, before);
     world
         .objects
@@ -188,9 +177,7 @@ async fn vehicle_signature_drives_scenario_lighting_and_detached_lua_state() {
         .unwrap()
         .flags
         .insert(Flag::Going);
-    assert!(
-        set_battle_sensor_signature(&mut world, target, BattleSensorSignature::default()).is_err()
-    );
+    assert!(set_battle_unit_signature(&mut world, target, BattleUnitSignature::default()).is_err());
     assert_eq!(world.btech, before);
     assert!(!battle_unit_illuminated(&world, target));
 }

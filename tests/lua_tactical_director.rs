@@ -2,9 +2,9 @@
 use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::{
-    BattleMapAsset, BattlePower, BattleSensorSignature, BattleUnitTemplate, Config,
-    HeartbeatHarness, Kind, ObjectId, Scripts, World, assign_battle_pilot, create_battle_map,
-    persistence, place_battle_unit, refresh_optical_scanners, set_battle_sensor_signature,
+    BattleMapAsset, BattlePower, BattleUnitSignature, BattleUnitTemplate, Config, HeartbeatHarness,
+    Kind, ObjectId, Scripts, World, assign_battle_pilot, create_battle_map, persistence,
+    place_battle_unit, refresh_battle_contacts, set_battle_unit_signature,
 };
 
 fn install_tactical_packages(config: &Config) {
@@ -173,13 +173,13 @@ async fn encounter_fixture() -> EncounterFixture {
         .unwrap()
         .create(&mut world, enemy)
         .unwrap();
-    // Keep the hostile inside the optical range of at least one friendly so
+    // Keep the hostile inside the perception range of at least one friendly so
     // this fixture exercises the production filtered-contact path.
     place_battle_unit(&mut world, enemy, map, 3, 3).unwrap();
-    set_battle_sensor_signature(
+    set_battle_unit_signature(
         &mut world,
         enemy,
-        BattleSensorSignature {
+        BattleUnitSignature {
             team: 1,
             hidden: false,
             illuminated: false,
@@ -192,7 +192,7 @@ async fn encounter_fixture() -> EncounterFixture {
             serde_json::to_value(BattlePower::Running).unwrap();
     }
     world.btech = serde_json::from_value(state).unwrap();
-    refresh_optical_scanners(&mut world, &units).unwrap();
+    refresh_battle_contacts(&mut world, &units).unwrap();
     world.validate(&config).unwrap();
 
     EncounterFixture {

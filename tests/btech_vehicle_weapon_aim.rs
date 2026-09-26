@@ -91,7 +91,7 @@ async fn vehicle_aim_combines_mixed_targets_controls_locks_and_saved_replay() {
         let mut world = initial.clone();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
         assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
-        refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+        refresh_battle_contacts(&mut world, &[shooter]).unwrap();
         let before = world.btech.clone();
         let aim = battle_pilot_aim_modifiers(&world, shooter, target, 0, false, rules()).unwrap();
         assert_eq!(aim.gunnery, 6);
@@ -101,7 +101,14 @@ async fn vehicle_aim_combines_mixed_targets_controls_locks_and_saved_replay() {
         assert_eq!(aim.attacker_movement, 0);
         assert_eq!(aim.sensors, 0);
         assert_eq!(aim.control_damage, 0);
-        assert!(aim.optical.is_some());
+        assert_eq!(
+            aim.perception,
+            Some(BattlePerceptionAim {
+                channel: Some(BattleDetectionChannel::Sensors),
+                direct_fire: true,
+                modifier: 0,
+            })
+        );
         assert!(aim.subtotal().is_some());
         assert_eq!(world.btech, before);
         let supplied = battle_aim_modifiers(&world, shooter, target, 0, 3, rules()).unwrap();
@@ -144,9 +151,15 @@ async fn vehicle_aim_combines_mixed_targets_controls_locks_and_saved_replay() {
     }
 }
 
+/// Aim perceives an acquired contact afresh each time: silenced channels remove the shot and a
+/// restored channel returns it, without reacquisition or dice.
 #[tokio::test]
 async fn vehicle_aim_rechecks_contact_sensors_and_does_not_spend_candidate_dice() {
     let (_dir, _config, mut world, [target, _, shooter, _]) = formation().await;
+    let map = world.btech.vehicles()[&shooter].position().unwrap().map;
+    power(&mut world, &[target], BattlePower::Off);
+    place_battle_unit(&mut world, target, map, 0, 4).unwrap();
+    power(&mut world, &[target], BattlePower::Running);
     let before = world.btech.clone();
     assert!(
         battle_aim_modifiers(&world, shooter, target, 0, 6, rules())
@@ -155,31 +168,27 @@ async fn vehicle_aim_rechecks_contact_sensors_and_does_not_spend_candidate_dice(
             .is_none()
     );
     assert_eq!(world.btech, before);
-    refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+    refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     let before = world.btech.clone();
     assert!(battle_aim_modifiers(&world, shooter, target, 99, 6, rules()).is_err());
     assert_eq!(world.btech, before);
-    let map = world.btech.vehicles()[&shooter].position().unwrap().map;
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["maps"][map.0.to_string()]["sensor_flags"] = serde_json::json!(1);
-    world.btech = serde_json::from_value(saved).unwrap();
+    set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
+    set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
     let before = world.btech.clone();
-    assert!(
-        battle_aim_modifiers(&world, shooter, target, 0, 6, rules())
-            .unwrap()
-            .subtotal()
-            .is_none()
-    );
+    let unseen = battle_aim_modifiers(&world, shooter, target, 0, 6, rules()).unwrap();
+    assert!(unseen.perception.is_none() && unseen.subtotal().is_none());
     assert_eq!(world.btech, before);
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][shooter.0.to_string()]["sensor_selection"]["active"]["secondary"] =
-        serde_json::json!("electromagnetic");
-    world.btech = serde_json::from_value(saved).unwrap();
+    set_battle_map_visibility(&mut world, map, BattleLight::Day, 30).unwrap();
     let before = world.btech.clone();
     let aim = battle_aim_modifiers(&world, shooter, target, 0, 6, rules()).unwrap();
-    let optical = aim.optical.unwrap();
-    assert_eq!(optical.sensor, BattleSensorMode::Electromagnetic);
-    assert!(optical.secondary);
+    assert_eq!(
+        aim.perception,
+        Some(BattlePerceptionAim {
+            channel: Some(BattleDetectionChannel::Sight),
+            direct_fire: true,
+            modifier: 0,
+        })
+    );
     assert!(aim.subtotal().is_some());
     assert_eq!(world.btech, before);
 }
@@ -196,7 +205,7 @@ async fn vehicle_aim_applies_computer_and_ammunition_accuracy_without_fire_admis
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     }
     power(&mut world, &ids, BattlePower::Running);
-    refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+    refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     let equipped = battle_aim_modifiers(&world, shooter, target, 0, 6, rules()).unwrap();
     assert_eq!(equipped.targeting_computer, -1);
     let mut saved = serde_json::to_value(&world.btech).unwrap();
@@ -242,7 +251,7 @@ async fn mech_and_vehicle_aim_share_vehicle_target_terms_without_spending_dice()
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     }
     power(&mut world, &ids, BattlePower::Running);
-    refresh_optical_scanners(&mut world, &[mech, vehicle]).unwrap();
+    refresh_battle_contacts(&mut world, &[mech, vehicle]).unwrap();
     let mech_mount = world.btech.constructed_units()[&mech]
         .loadout()
         .unwrap()
@@ -282,7 +291,7 @@ async fn mech_and_vehicle_aim_share_vehicle_target_terms_without_spending_dice()
                 let aim = battle_aim_modifiers(&world, shooter, target, index, 6, rules()).unwrap();
                 assert_eq!(aim.target_movement, expected_movement);
                 assert_eq!(aim.beacon_accuracy, -i8::from(homing));
-                assert!(aim.optical.is_some());
+                assert!(aim.perception.is_some());
                 assert!(aim.subtotal().is_some());
             }
             assert_eq!(world.btech, before);
@@ -303,48 +312,6 @@ async fn mech_and_vehicle_aim_share_vehicle_target_terms_without_spending_dice()
     let before = world.btech.clone();
     assert!(battle_aim_modifiers(&world, mech, target, mech_mount, 6, rules()).is_err());
     assert_eq!(world.btech, before);
-}
-
-/// Infrared aims at both chassis through the same rules and ignores vehicle weapon-heat storage.
-#[tokio::test]
-async fn infrared_aim_uses_mixed_targets_without_spending_dice() {
-    let (_dir, config, mut world, [mech, _, vehicle, _]) = formation().await;
-    refresh_optical_scanners(&mut world, &[mech, vehicle]).unwrap();
-    for shooter in [mech, vehicle] {
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        let class = if shooter == mech {
-            "constructed"
-        } else {
-            "vehicles"
-        };
-        saved[class][shooter.0.to_string()]["sensor_selection"]["active"] =
-            serde_json::to_value(BattleSensorPair {
-                primary: BattleSensorMode::Infrared,
-                secondary: BattleSensorMode::Infrared,
-            })
-            .unwrap();
-        // This expenditure reservoir is distinct from production and cooling rates.
-        saved["vehicles"][vehicle.0.to_string()]["weapon_heat"] = serde_json::json!(100.0);
-        world.btech = serde_json::from_value(saved).unwrap();
-    }
-    let before = world.btech.clone();
-    for (shooter, target) in [(mech, vehicle), (vehicle, mech)] {
-        let aim = battle_aim_modifiers(&world, shooter, target, 0, 6, rules()).unwrap();
-        let optical = aim.optical.unwrap();
-        assert_eq!(optical.sensor, BattleSensorMode::Infrared);
-        assert!(!optical.secondary);
-        assert_eq!(optical.modifier, 2);
-        assert!(aim.subtotal().is_some());
-    }
-    assert_eq!(world.btech, before);
-    persistence::save(&config.database(), &world).await.unwrap();
-    let restored = persistence::load(&config.database()).await.unwrap();
-    for (shooter, target) in [(mech, vehicle), (vehicle, mech)] {
-        assert_eq!(
-            battle_aim_modifiers(&restored, shooter, target, 0, 6, rules()).unwrap(),
-            battle_aim_modifiers(&world, shooter, target, 0, 6, rules()).unwrap()
-        );
-    }
 }
 
 /// Ammunition-fed flamer variants receive the same computer assistance on either target chassis.
@@ -370,7 +337,7 @@ async fn explicit_vehicle_links_share_targeting_computer_aim_and_critical_loss()
             place_battle_unit(&mut world, id, map, 0, 0).unwrap();
         }
         power(&mut world, &ids, BattlePower::Running);
-        refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+        refresh_battle_contacts(&mut world, &[shooter]).unwrap();
         for target in [ids[0], ids[3]] {
             let before = world.btech.clone();
             let assisted = battle_aim_modifiers(&world, shooter, target, 0, 6, rules()).unwrap();

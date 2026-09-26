@@ -458,7 +458,7 @@ async fn automatic_turret_tracks_moving_units_and_hexes() {
     )
     .unwrap();
     place_battle_unit(&mut world, target, map, 1, 0).unwrap();
-    refresh_optical_scanners(&mut world, &[id]).unwrap();
+    refresh_battle_contacts(&mut world, &[id]).unwrap();
     select_battle_target(&mut world, id, ObjectId(1), Some(target)).unwrap();
     toggle_battle_automatic_turret(&mut world, id, ObjectId(1)).unwrap();
     set_battle_turret(&mut world, id, ObjectId(1), 90.0).unwrap();

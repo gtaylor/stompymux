@@ -332,14 +332,10 @@ async fn station_scan_publication_and_authority_failures_are_atomic() {
                 .eval_callback::<()>(&format!("btech.gunner.scan({},1,{})", parent.0, target.0))
                 .is_err()
         );
-        for condition in ["blind", "stopped"] {
+        for condition in ["stopped"] {
             let mut rejected = world.clone();
             firing::edit(&mut rejected, parent, |state| {
-                if condition == "blind" {
-                    state["blinded_remaining"] = 1.into();
-                } else {
-                    state["power"] = serde_json::to_value(BattlePower::Off).unwrap();
-                }
+                state["power"] = serde_json::to_value(BattlePower::Off).unwrap();
             });
             let guarded = Scripts::new(&config, Rc::new(RefCell::new(rejected.clone()))).unwrap();
             for (method, args) in [

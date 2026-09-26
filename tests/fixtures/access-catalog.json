@@ -1072,7 +1072,7 @@
     "weapons": "Everyone; conscious occupant of a constructed unit required",
     "lock": "Everyone; running unit and conscious assigned pilot required",
     "contacts": "Everyone; conscious occupant and running unit required",
-    "sensor": "Everyone; local unit inspection, running unit and assigned pilot required for changes",
+    "sensor": "Everyone; local unit inspection only",
     "nss": "Everyone; assigned conscious pilot, running placed unit and intact installed null signature equipment required",
     "stealth": "Everyone; assigned conscious pilot, running placed unit, complete stealth armor and working Guardian ECM required",
     "snipe": "Everyone dispatch; wizard and assigned pilot admission inside action; no switches",

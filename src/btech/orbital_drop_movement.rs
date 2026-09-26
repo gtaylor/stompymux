@@ -235,8 +235,7 @@ fn landing_input(
         && pilot
             .and_then(|pilot| world.objects.get(&pilot))
             .is_none_or(|pilot| pilot.location != Some(id));
-    let incapacitated = pilot.is_some_and(|pilot| world.btech.unconscious(pilot))
-        || super::battle_unit_blinded(world, id);
+    let incapacitated = pilot.is_some_and(|pilot| world.btech.unconscious(pilot));
     let roll = if safe {
         None
     } else if mech {

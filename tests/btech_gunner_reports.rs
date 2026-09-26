@@ -80,36 +80,22 @@ async fn station_observation_guards_use_physical_parent() {
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         gunner_station_action(&scripts, station, gunner, true).unwrap();
         let original = scripts.world().btech.clone();
-        for blind in [false, true] {
-            let mut state = serde_json::to_value(&original).unwrap();
-            if blind {
-                let group = if original.vehicles().contains_key(&parent) {
-                    "vehicles"
-                } else {
-                    "constructed"
-                };
-                state[group][parent.0.to_string()]["blinded_remaining"] = serde_json::json!(1);
-            } else {
-                state["recoveries"][gunner.0.to_string()] = serde_json::json!({
-                    "remaining": 1, "pain_resistance": false, "toughness": false,
-                    "dice": BattleDice::seeded([34;32])
-                });
-            }
-            scripts.world_mut().btech = serde_json::from_value(state).unwrap();
-            let before = scripts.world().btech.clone();
-            for command in ["weaponstatus", "critstatus invalid", "status", "contacts"] {
-                let text = support::run_text(&scripts, &config, gunner, 1, command);
-                assert!(
-                    text.contains(if blind { "blinded" } else { "unconscious" }),
-                    "{text}"
-                );
-            }
-            assert!(
-                support::run_text(&scripts, &config, gunner, 1, "weaponspecs")
-                    .contains("Weapons statistics for")
-            );
-            assert_eq!(scripts.world().btech, before);
+        let mut state = serde_json::to_value(&original).unwrap();
+        state["recoveries"][gunner.0.to_string()] = serde_json::json!({
+            "remaining": 1, "pain_resistance": false, "toughness": false,
+            "dice": BattleDice::seeded([34;32])
+        });
+        scripts.world_mut().btech = serde_json::from_value(state).unwrap();
+        let before = scripts.world().btech.clone();
+        for command in ["weaponstatus", "critstatus invalid", "status", "contacts"] {
+            let text = support::run_text(&scripts, &config, gunner, 1, command);
+            assert!(text.contains("unconscious"), "{text}");
         }
+        assert!(
+            support::run_text(&scripts, &config, gunner, 1, "weaponspecs")
+                .contains("Weapons statistics for")
+        );
+        assert_eq!(scripts.world().btech, before);
     }
 }
 

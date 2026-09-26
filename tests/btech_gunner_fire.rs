@@ -284,10 +284,10 @@ async fn station_gunnery_experience_belongs_to_the_gunner() {
                 .unwrap()
                 .flags
                 .insert(Flag::InCharacter);
-            set_battle_sensor_signature(
+            set_battle_unit_signature(
                 &mut world,
                 id,
-                BattleSensorSignature {
+                BattleUnitSignature {
                     team,
                     hidden: false,
                     illuminated: false,
@@ -425,38 +425,22 @@ async fn station_arc_masks_follow_parent_heading() {
 #[tokio::test]
 async fn gunner_firing_health_guards_precede_expenditure() {
     for template in firing::templates() {
-        let (_dir, config, world, parent, _, station, gunner, index) =
+        let (_dir, config, world, _, _, station, gunner, index) =
             fixture(&template, BattleWeapon::MediumLaser, 1).await;
-        for blind in [false, true] {
-            let mut candidate = world.clone();
-            let mut state = serde_json::to_value(&candidate.btech).unwrap();
-            if blind {
-                let class = if candidate.btech.vehicles().contains_key(&parent) {
-                    "vehicles"
-                } else {
-                    "constructed"
-                };
-                state[class][parent.0.to_string()]["blinded_remaining"] = 1.into();
-            } else {
-                state["recoveries"][gunner.0.to_string()] = serde_json::json!({"remaining":1,"pain_resistance":false,"toughness":false,"dice":BattleDice::seeded([34;32])});
-            }
-            candidate.btech = serde_json::from_value(state).unwrap();
-            let scripts = Scripts::new(&config, Rc::new(RefCell::new(candidate.clone()))).unwrap();
-            let error = scripts
-                .eval_callback::<()>(&format!(
-                    "btech.gunner.fire({},{},{index})",
-                    station.0, gunner.0
-                ))
-                .unwrap_err();
-            assert!(
-                error
-                    .to_string()
-                    .contains(if blind { "blinded" } else { "unconscious" }),
-                "{error}"
-            );
-            assert_eq!(scripts.world().btech, candidate.btech);
-            assert!(scripts.drain_outbox().is_empty());
-        }
+        let mut candidate = world.clone();
+        let mut state = serde_json::to_value(&candidate.btech).unwrap();
+        state["recoveries"][gunner.0.to_string()] = serde_json::json!({"remaining":1,"pain_resistance":false,"toughness":false,"dice":BattleDice::seeded([34;32])});
+        candidate.btech = serde_json::from_value(state).unwrap();
+        let scripts = Scripts::new(&config, Rc::new(RefCell::new(candidate.clone()))).unwrap();
+        let error = scripts
+            .eval_callback::<()>(&format!(
+                "btech.gunner.fire({},{},{index})",
+                station.0, gunner.0
+            ))
+            .unwrap_err();
+        assert!(error.to_string().contains("unconscious"), "{error}");
+        assert_eq!(scripts.world().btech, candidate.btech);
+        assert!(scripts.drain_outbox().is_empty());
     }
 }
 
@@ -497,10 +481,10 @@ async fn live_station_damage_awards_gunner_experience() {
                 .unwrap()
                 .flags
                 .insert(Flag::InCharacter);
-            set_battle_sensor_signature(
+            set_battle_unit_signature(
                 &mut world,
                 id,
-                BattleSensorSignature {
+                BattleUnitSignature {
                     team,
                     hidden: false,
                     illuminated: false,
@@ -664,7 +648,7 @@ async fn station_sight_shares_chassis_targets_and_preserves_combat_state() {
             firing::edit(&mut world, parent, |state| {
                 state["weapons_hold"] = true.into();
                 state["weapon_recycle"][index.to_string()] = 30.into();
-                state["sensor_signature"]["hidden"] = true.into();
+                state["signature"]["hidden"] = true.into();
                 for count in state["ammunition"].as_array_mut().unwrap() {
                     *count = 0.into();
                 }

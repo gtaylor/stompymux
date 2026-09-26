@@ -1,6 +1,6 @@
 //! Network contact reports combine sightings without granting the requester acquired contacts.
 use super::network_unit::unit as network_unit;
-use super::{BattleContactArc, BattleContactSensors, BattleHexCoordinate, BattleNetworkRange};
+use super::{BattleContactArc, BattleDetectionChannel, BattleHexCoordinate, BattleNetworkRange};
 use crate::{BattleCommandNetwork, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -12,8 +12,8 @@ pub struct BattleNetworkTargetRow {
     pub label: String,
     pub name: String,
     pub identified: bool,
-    /// Sensor indicators belong to the requesting unit, even when a peer identifies the target.
-    pub sensors: BattleContactSensors,
+    /// How this unit itself perceives the target; absent for network-only sightings.
+    pub detection: Option<BattleDetectionChannel>,
     pub weapon_arc: BattleContactArc,
     pub coordinate: BattleHexCoordinate,
     pub elevation: i32,
@@ -67,18 +67,20 @@ fn report(
     let map = observer.position().context("Unit is not placed")?.map;
     let peers: Vec<_> = members.into_iter().filter(|peer| *peer != id).collect();
     let mut rows = Vec::new();
+    // One lazily built reader per observer shares its perception profile across every target.
+    let mut readers = std::collections::BTreeMap::new();
     for target in super::map_slots::all_unit_order(world, map)? {
         if target == id {
             continue;
         }
-        let direct = super::visible_contact(world, id, target)?;
+        let direct = contact_view(world, &mut readers, id, target)?;
         let mut seen = direct.is_some();
         let mut identified = direct.as_ref().is_some_and(|c| c.identified);
         for &peer in &peers {
             if peer == target {
                 continue;
             }
-            if let Some(contact) = super::visible_contact(world, peer, target)? {
+            if let Some(contact) = contact_view(world, &mut readers, peer, target)? {
                 seen = true;
                 identified |= contact.identified;
             }
@@ -90,7 +92,7 @@ fn report(
         let position = unit.position().context("Target is not placed")?;
         let motion = unit.motion().context("Target has no motion")?;
         let range = super::unit_range(world, id, target)?;
-        let friendly = unit.sensor_signature().team == observer.sensor_signature().team;
+        let friendly = unit.signature().team == observer.signature().team;
         let mut label = unit
             .battlefield_id()
             .context("Target has no battlefield ID")?;
@@ -107,7 +109,7 @@ fn report(
             },
             identified,
             friendly,
-            sensors: direct.map_or_else(Default::default, |c| c.sensors),
+            detection: direct.as_ref().and_then(|contact| contact.detection),
             weapon_arc: observer.facing().contact_arc(
                 observer.motion().context("Observer has no motion")?.heading,
                 range.bearing.unwrap_or(180.0),
@@ -147,8 +149,8 @@ fn report(
         let name: String = row.name.chars().take(11).collect();
         let line = format!(
             "{}{}{}[{}]{} {name:<11} x:{:>3} y:{:>3} z:{:>3} r:{:>4.1} c:{:>4.1} b:{:>3} s:{:>5.1} h:{:>3} S:{}",
-            if row.sensors.primary { 'P' } else { ' ' },
-            if row.sensors.secondary { 'S' } else { ' ' },
+            super::contacts::detection_code(row.detection, row.identified),
+            ' ',
             row.weapon_arc.symbol(),
             row.label,
             super::contacts::movement_type(world, row.unit)
@@ -218,4 +220,20 @@ fn command_for(
             Err(error) => format!("{error:#}"),
         },
     )))
+}
+
+/// Read `observer`'s view of `target`, building that observer's contact reader on first use.
+fn contact_view<'w>(
+    world: &'w World,
+    readers: &mut std::collections::BTreeMap<ObjectId, super::contacts::ContactReader<'w>>,
+    observer: ObjectId,
+    target: ObjectId,
+) -> Result<Option<super::BattleContactView>> {
+    let reader = match readers.entry(observer) {
+        std::collections::btree_map::Entry::Occupied(entry) => entry.into_mut(),
+        std::collections::btree_map::Entry::Vacant(entry) => {
+            entry.insert(super::contacts::ContactReader::new(world, observer)?)
+        }
+    };
+    reader.view(target)
 }

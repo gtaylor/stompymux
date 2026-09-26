@@ -90,7 +90,7 @@ mod aim;
 mod arcs;
 mod assets;
 pub use aim::{
-    BattleAimModifiers, BattleAimRules, BattleIndirectAim, BattleRangeBracket, BattleSensorAim,
+    BattleAimModifiers, BattleAimRules, BattleIndirectAim, BattlePerceptionAim, BattleRangeBracket,
     BattleWeaponRange, aim_modifiers, pilot_aim_modifiers, unit_target_movement_modifier,
 };
 pub use arcs::{
@@ -190,7 +190,7 @@ mod unit_template;
 pub use map::{BattleHex, BattleMapAsset, Terrain};
 pub use state::{
     BtechState, StoredBattleMap, StoredBattleUnit, create_map, create_unit,
-    register_empty_battle_unit, reload_map, set_map_optical_sensor, set_map_visibility,
+    register_empty_battle_unit, reload_map, set_map_visibility,
 };
 pub use unit_template::BattleUnitTemplate;
 mod vehicle;
@@ -291,30 +291,23 @@ mod los;
 mod los_trace;
 pub use los::{BattleTerrainLos, ground_terrain_los, unit_terrain_los};
 
-mod sensors;
-pub use sensors::{
-    BattleLight, BattleSensorConditions, BattleSensorMode, BattleSensorReport, map_optical_contact,
-    optical_contact,
-};
+mod map_light;
+pub use map_light::BattleLight;
 
-mod detection;
-pub use detection::{
-    BattleDetection, BattleDetectionRules, BattleScanTarget, BattleSensorArc, BattleSensorAttempt,
-    BattleSensorScan, BattleSensorScanReport, roll_optical_detection, scan_optical_target,
-};
-
-mod sensor_selection;
-pub use sensor_selection::{
-    BattleSensorChange, BattleSensorPair, BattleSensorSelection, advance_sensor_selection,
-    select_optical_sensors,
+mod perception;
+pub use perception::{
+    AUTOMATIC_DETECTION_RANGE, BattleAcquisitionRules, BattleActiveProbe, BattleDetection,
+    BattleDetectionChannel, BattleMapPerceptionFlag, BattlePerception, BattlePerceptionProfile,
+    BattlePerceptionReport, BattlePerceptionStatus, BattleProbeProfile, BattleRadarProfile,
+    BattleRadarTarget, BattleSensorArc, BattleSensorRange, DEFAULT_SENSOR_RANGE,
+    HIDDEN_DETECTION_RANGE, RADAR_RANGE, configure_perception, hex_perception, perceive,
+    perception_factor, perception_profile, perception_report, set_map_perception,
 };
 
 mod contacts;
-pub(crate) use contacts::contact_facts;
 pub use contacts::{
-    BattleContact, BattleContactRules, BattleContactSensors, BattleContactTransition,
-    BattleContactUpdate, BattleContactView, update_optical_contact, visible_contact,
-    visible_contacts,
+    BattleContact, BattleContactRules, BattleContactTransition, BattleContactUpdate,
+    BattleContactView, update_contact, visible_contact, visible_contacts,
 };
 
 mod skills;
@@ -326,8 +319,8 @@ pub use skills::{
 mod scanner;
 pub(crate) use scanner::notify_contact;
 pub use scanner::{
-    BattleContactEvent, BattleSensorSignature, optical_scanner_observers, refresh_optical_scanners,
-    set_sensor_signature,
+    BattleContactEvent, BattleUnitSignature, contact_observers, refresh_contacts,
+    set_unit_signature,
 };
 
 mod targeting;
@@ -585,24 +578,8 @@ pub use signature::{
     BattleSignatureState, BattleSignatureTransition, advance_null_signature, toggle_null_signature,
 };
 
-pub use sensors::infrared_heat_modifier;
-
-mod seismic;
-pub use seismic::{BattleSeismicRules, BattleSeismicTarget, seismic_contact};
-
-pub use seismic::{BattleSensorSignal, advance_sensor_signals, configure_sensor_policy};
-
-mod electromagnetic;
-pub use electromagnetic::{
-    BattleElectromagneticRules, BattleElectromagneticTarget, clear_recent_fire,
-    electromagnetic_contact,
-};
-
-mod radar;
-pub use radar::{BattleRadarTarget, radar_contact};
-
-mod active_probe;
-pub use active_probe::{BattleActiveProbe, active_probe_contact};
+mod recent_fire;
+pub use recent_fire::clear_recent_fire;
 
 mod tag;
 pub use tag::{BattleTagState, advance_tags, select_tag, tagged_by};
@@ -616,7 +593,7 @@ mod spotter;
 pub use spotter::{BattleSpotterTarget, select_spotter, spotter_target};
 
 mod hex_visibility;
-pub use hex_visibility::{hex_sensor_visibility, hex_visible};
+pub use hex_visibility::{hex_detection, hex_visible};
 
 pub use targeting::{BattleHexLock, BattleHexTargetMode, BattleTargetSelection, select_hex_target};
 
@@ -1163,11 +1140,6 @@ pub use automatic_turret::{
     toggle_battle_automatic_turret,
 };
 
-mod sensor_flash;
-pub use sensor_flash::{
-    advance_battle_sensor_flashes, battle_sensor_flashes_pending, battle_unit_blinded,
-};
-
 mod reactor_explosion;
 pub use reactor_explosion::{
     BattleReactorBlastHit, BattleReactorExplosion, reactor_explosion_action,
@@ -1502,9 +1474,6 @@ pub use markings::{set_unit_markings, unit_markings, view_unit_markings};
 
 mod sixth_sense;
 pub use sixth_sense::{advance_sixth_sense, advance_sixth_sense_action};
-
-mod sensor_report;
-pub use sensor_report::sensor_report;
 
 pub(crate) mod turn_clock;
 

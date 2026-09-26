@@ -33,7 +33,7 @@ async fn field(
         });
     }
     assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
-    refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+    refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     select_battle_target(&mut world, shooter, ObjectId(1), Some(target)).unwrap();
     let seed = (0..=255)
         .find(|n| BattleDice::seeded([*n; 32]).two_d6() == 12)
@@ -213,7 +213,7 @@ async fn underwater_fire_does_not_bypass_waterline_visibility() {
     })
     .unwrap();
     world.btech = serde_json::from_value(encoded).unwrap();
-    refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+    refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     let before = world.btech.clone();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     assert!(

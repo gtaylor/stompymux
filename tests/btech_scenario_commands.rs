@@ -42,10 +42,10 @@ async fn native_team_control_matches_lua_and_restart() {
             firing::fixture_with_target(&template, Some(BattleWeapon::MediumLaser), &template)
                 .await;
         let visitor = world.create(&config, "Visitor".into(), Kind::Player);
-        set_battle_sensor_signature(
+        set_battle_unit_signature(
             &mut world,
             unit,
-            BattleSensorSignature {
+            BattleUnitSignature {
                 team: 9,
                 hidden: true,
                 illuminated: true,
@@ -72,18 +72,18 @@ async fn native_team_control_matches_lua_and_restart() {
                 .btech
                 .constructed_units()
                 .get(&unit)
-                .map(|unit| unit.sensor_signature())
+                .map(|unit| unit.signature())
                 .or_else(|| {
                     current
                         .btech
                         .vehicles()
                         .get(&unit)
-                        .map(|unit| unit.sensor_signature())
+                        .map(|unit| unit.signature())
                 })
                 .unwrap();
             assert_eq!(
                 signature,
-                BattleSensorSignature {
+                BattleUnitSignature {
                     team: team.max(0),
                     hidden: true,
                     illuminated: true

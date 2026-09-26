@@ -390,11 +390,6 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "btech_seismic_see_stopped",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
         name: "btech_limitedrepairs",
         parser: "cf_int",
         permission: P::GOD,

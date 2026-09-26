@@ -176,7 +176,7 @@ fn controlled_source_by_actor(
             anyhow::bail!("Autopilot cannot operate an independent gunner station")
         };
         let context = super::gunner_context(world, owner, actor)?;
-        super::power::control_health(world, context.parent, actor)?;
+        super::power::control_health(world, actor)?;
         let source =
             super::scanner::scanner_unit(world, context.parent).context("Unit is unavailable")?;
         ensure!(

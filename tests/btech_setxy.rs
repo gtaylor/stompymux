@@ -13,7 +13,7 @@ async fn setxy_native_lua_geometry_guards_and_restart() {
             firing::fixture_with_target(&source, None, &source).await;
         world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(other);
         assign_battle_pilot(&mut world, other, ObjectId(2)).unwrap();
-        refresh_optical_scanners(&mut world, &[other]).unwrap();
+        refresh_battle_contacts(&mut world, &[other]).unwrap();
         select_battle_target(&mut world, other, ObjectId(2), Some(unit)).unwrap();
         let fixed =
             world.btech.vehicles().get(&unit).is_some_and(|unit| {
@@ -295,7 +295,7 @@ async fn setxy_vtol_flight_and_atomic_notification_failure() {
     // Create an incoming lock so its publication succeeds before the confirmation fails.
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(other);
     assign_battle_pilot(&mut world, other, ObjectId(2)).unwrap();
-    refresh_optical_scanners(&mut world, &[other]).unwrap();
+    refresh_battle_contacts(&mut world, &[other]).unwrap();
     select_battle_target(&mut world, other, ObjectId(2), Some(unit)).unwrap();
     let path = dir.path().join("stompymux.toml");
     let mut table: toml::Table = std::fs::read_to_string(&path).unwrap().parse().unwrap();
@@ -308,12 +308,15 @@ async fn setxy_vtol_flight_and_atomic_notification_failure() {
     std::fs::write(path, toml::to_string(&table).unwrap()).unwrap();
     let config = Config::load(dir.path()).unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+    // Without a contact the observer hears nothing, so only the confirmation is published.
+    let mut contacts = serde_json::Value::Null;
     firing::edit(&mut scripts.world_mut(), other, |state| {
-        state["blinded_remaining"] = 1.into()
+        contacts = state["contacts"].clone();
+        state["contacts"] = serde_json::json!({});
     });
     battle_losemit_action(&scripts, ObjectId(1), unit, "first").unwrap();
     firing::edit(&mut scripts.world_mut(), other, |state| {
-        state["blinded_remaining"] = 0.into()
+        state["contacts"] = contacts
     });
     let before = scripts.world().btech.clone();
     let error = set_battle_coordinates_action(

@@ -40,8 +40,7 @@ pub fn toggle_battle_automatic_turret(
 /// Compute only a desired change, allowing idle heartbeat admission to stay read-only.
 fn desired(world: &World, id: ObjectId) -> Option<f64> {
     let unit = world.btech.vehicles().get(&id)?;
-    if super::battle_unit_blinded(world, id)
-        || !unit.automatic_turret
+    if !unit.automatic_turret
         || unit.power() != super::BattlePower::Running
         || unit.is_destroyed()
         || unit.turret_locked()

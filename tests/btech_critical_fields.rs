@@ -381,7 +381,6 @@ async fn main_status_projects_matrix(index: usize, source: &str) {
         unit["self_destruct_safe"] = true.into();
         unit["combat_safe"] = true.into();
         unit["autocon_shutdown"] = true.into();
-        unit["blinded_remaining"] = 3.into();
         unit["fired_recently"] = true.into();
         unit["crew_recovery"]["remaining"] = 5.into();
         unit["crew_recovery"]["mode"] = serde_json::json!({"kind":"tactical","injuries":1});
@@ -389,7 +388,7 @@ async fn main_status_projects_matrix(index: usize, source: &str) {
         unit["pilot"] = serde_json::Value::Null;
     });
     fields
-        .verify(candidate, id, "status", &format!("{prefix}mnpvwxy"))
+        .verify(candidate, id, "status", &format!("{prefix}mnpwxy"))
         .await;
     let map = if index < 2 {
         world.btech.constructed_units()[&id].position().unwrap().map
@@ -567,7 +566,7 @@ async fn primary_critical_fields_project_shared_conditions_and_mech_damage() {
         });
         fields.verify(damaged_lamp, id, "critstatus", "k").await;
         firing::edit(&mut world, id, |unit| {
-            unit["sensor_signature"]["hidden"] = true.into();
+            unit["signature"]["hidden"] = true.into();
             unit["towable"] = true.into();
             unit["illumination_observed"] = true.into();
             unit["inferno_remaining"] = 30.into();

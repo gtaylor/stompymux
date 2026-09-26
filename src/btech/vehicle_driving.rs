@@ -36,10 +36,6 @@ pub(super) fn readout_by_actor(
         super::power::autopilot_controlled_vehicle(world, id)?;
     }
     ensure!(
-        !super::battle_unit_blinded(world, id),
-        "You are momentarily blinded!"
-    );
-    ensure!(
         world
             .objects
             .get(&id)

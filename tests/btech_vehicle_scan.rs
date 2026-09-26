@@ -74,7 +74,7 @@ async fn mixed_unit_scans_match_native_lua_and_preserve_ordinary_disclosure() {
     let (_dir, config, initial, [a, b, c, d]) = formation().await;
     for (observer, target, kind) in [(a, d, "VEHICLE"), (c, b, "MECH"), (c, d, "VEHICLE")] {
         let mut world = initial.clone();
-        refresh_optical_scanners(&mut world, &[a, b, c, d]).unwrap();
+        refresh_battle_contacts(&mut world, &[a, b, c, d]).unwrap();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
         assign_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
         let before = world.btech.clone();
@@ -156,7 +156,7 @@ async fn mixed_unit_scans_match_native_lua_and_preserve_ordinary_disclosure() {
 #[tokio::test]
 async fn vehicle_scan_ranges_and_observer_disclosure_follow_current_state() {
     let (_dir, _config, mut world, [a, b, c, d]) = formation().await;
-    refresh_optical_scanners(&mut world, &[a, b, c, d]).unwrap();
+    refresh_battle_contacts(&mut world, &[a, b, c, d]).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(a);
     assign_battle_pilot(&mut world, a, ObjectId(1)).unwrap();
     set_battle_observer(&mut world, a, true).unwrap();
@@ -177,7 +177,7 @@ async fn vehicle_scan_ranges_and_observer_disclosure_follow_current_state() {
     set_battle_map_visibility(&mut world, map, BattleLight::Day, 30).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(c);
     assign_battle_pilot(&mut world, c, ObjectId(1)).unwrap();
-    refresh_optical_scanners(&mut world, &[c]).unwrap();
+    refresh_battle_contacts(&mut world, &[c]).unwrap();
     assert!(world.btech.vehicles()[&c].contacts().contains_key(&d));
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     saved["vehicles"][c.0.to_string()]["definition"]["attributes"]["scan_range"] =
@@ -217,7 +217,7 @@ async fn coordinate_scans_choose_visible_mixed_occupants_in_battlefield_order() 
     initial.btech = serde_json::from_value(saved).unwrap();
     initial.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
     assign_battle_pilot(&mut initial, observer, ObjectId(1)).unwrap();
-    refresh_optical_scanners(&mut initial, &[observer]).unwrap();
+    refresh_battle_contacts(&mut initial, &[observer]).unwrap();
     initial.validate(&config).unwrap();
     for selected in [Some(vehicle), Some(mech), None] {
         let mut world = initial.clone();
@@ -318,6 +318,8 @@ fn terrain_targets(world: &mut World, config: &Config, map: ObjectId) -> ObjectI
     interior
 }
 
+/// Coordinate, structure and minefield scans share admission across native and Lua callers,
+/// and need the hex to be perceived.
 #[tokio::test]
 async fn vehicle_coordinate_and_structure_scans_share_native_lua_admission() {
     let (_dir, config, mut world, [mech, _, observer, _]) = formation().await;
@@ -325,7 +327,7 @@ async fn vehicle_coordinate_and_structure_scans_share_native_lua_admission() {
     terrain_targets(&mut world, &config, map);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
     assign_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
-    refresh_optical_scanners(&mut world, &[observer]).unwrap();
+    refresh_battle_contacts(&mut world, &[observer]).unwrap();
     let coordinate = BattleHexCoordinate { x: 0, y: 1 };
     assert!(battle_hex_visible(&world, observer, coordinate).unwrap());
     let expected = scan_battle_unit(&world, observer, ObjectId(1), mech, "").unwrap();
@@ -382,25 +384,13 @@ async fn vehicle_coordinate_and_structure_scans_share_native_lua_admission() {
         .contains("out of scanner range")
     );
     assert_eq!(world.btech, limited);
-    for mode in [
-        BattleSensorMode::Infrared,
-        BattleSensorMode::Electromagnetic,
-    ] {
-        let mut candidate = world.clone();
-        let mut saved = serde_json::to_value(&candidate.btech).unwrap();
-        saved["vehicles"][observer.0.to_string()]["sensor_selection"]["active"] =
-            serde_json::to_value(BattleSensorPair {
-                primary: BattleSensorMode::Visual,
-                secondary: mode,
-            })
-            .unwrap();
-        candidate.btech = serde_json::from_value(saved).unwrap();
-        let before = candidate.btech.clone();
-        let result = scan_battle_building(&mut candidate, observer, ObjectId(1), coordinate, 1000);
-        assert_eq!(result.unwrap().text, "The Hangar's CF is 31.");
-        assert_eq!(candidate.btech, before);
-    }
+    // The sensor band sees the adjacent hex in any weather until the battlefield disables it.
     set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
+    assert_eq!(
+        battle_hex_detection(&world, observer, coordinate).unwrap(),
+        Some(BattleDetectionChannel::Sensors)
+    );
+    set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
     assert!(!battle_hex_visible(&world, observer, coordinate).unwrap());
     let disabled = world.btech.clone();
     assert!(scan_battle_mines(&mut world, observer, ObjectId(1), coordinate, 1000).is_err());
@@ -531,6 +521,8 @@ async fn vehicle_terrain_perception_owns_dice_and_rolls_back_experience() {
     assert!(found);
 }
 
+/// Building contacts admit passengers, follow display preferences and consult identification
+/// locks only for buildings the unit currently perceives.
 #[tokio::test]
 async fn vehicle_building_contacts_honor_passengers_preferences_and_identification_locks() {
     let (_dir, config, mut world, [_, _, observer, _]) = formation().await;
@@ -641,8 +633,16 @@ async fn vehicle_building_contacts_honor_passengers_preferences_and_identificati
     assert!(battle_building_contacts(&scripts, observer, ObjectId(1)).is_err());
     assert_eq!(scripts.world().btech, before);
     assert!(scripts.drain_outbox().is_empty());
+    // Only sight can lose the adjacent building, so leave it to weather.
+    set_battle_map_perception(
+        &mut shared.borrow_mut(),
+        map,
+        BattleMapPerceptionFlag::Sensors,
+        false,
+    )
+    .unwrap();
     scripts.eval_callback::<()>(&format!(
-        "_parents['default_room.lua'].locks.identify_building=function(ctx) btech.map.conditions({},'day',0); return true end", map.0
+        "_parents['default_room.lua'].locks.identify_building=function(ctx) btech.map.conditions({},btech.map.light_levels.DAY,0); return true end", map.0
     )).unwrap();
     assert!(
         battle_building_contacts(&scripts, observer, ObjectId(1))

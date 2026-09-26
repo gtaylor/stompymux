@@ -114,6 +114,7 @@ fn render_viewport(
         mode,
         BattleLongRangeMode::Units | BattleLongRangeMode::VisibleUnits
     ) {
+        let mut reader = None;
         for id in super::map_slots::all_unit_order(world, viewport.map)? {
             let unit = super::scanner::scanner_unit(world, id).expect("placed map unit");
             let Some(position) = unit.position else {
@@ -131,7 +132,10 @@ fn render_viewport(
                 {
                     continue;
                 }
-                let Some(view) = super::visible_contact(world, observer, id)? else {
+                if reader.is_none() {
+                    reader = Some(super::contacts::ContactReader::new(world, observer)?);
+                }
+                let Some(view) = reader.as_ref().expect("reader built").view(id)? else {
                     continue;
                 };
                 let glyph = unit_glyph(world, id);
@@ -155,6 +159,7 @@ fn render_viewport(
         }
     }
     let units = stack_markers(occupants);
+    let viewer = super::hex_visibility::HexViewer::new(world, observer);
     let mut cells = Vec::with_capacity(usize::from(viewport.width) * usize::from(viewport.height));
     for y in viewport.origin.y..viewport.origin.y + i32::from(viewport.height) {
         for x in viewport.origin.x..viewport.origin.x + i32::from(viewport.width) {
@@ -169,7 +174,7 @@ fn render_viewport(
                         | BattleLongRangeMode::VisibleElevation
                         | BattleLongRangeMode::VisibleUnits
                 ))
-                && !super::hex_visible(world, observer, super::BattleHexCoordinate { x, y })?
+                && !viewer.visible(super::BattleHexCoordinate { x, y })?
             {
                 cells.push(Cell {
                     glyph: '?',

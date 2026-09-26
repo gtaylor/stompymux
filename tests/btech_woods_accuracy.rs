@@ -50,7 +50,7 @@ async fn occupied_woods_accuracy_is_shared_across_shooter_and_target_chassis() {
             ] {
                 let mut world = base.clone();
                 terrain(&mut world, target, kind);
-                refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+                refresh_battle_contacts(&mut world, &[shooter]).unwrap();
                 let before = world.btech.clone();
                 let disabled =
                     battle_pilot_aim_modifiers(&world, shooter, target, index, false, rules(false))
@@ -130,7 +130,7 @@ async fn configured_sighting_uses_woods_accuracy_for_every_shooter() {
         )
         .await;
         terrain(&mut world, target, Terrain::HeavyForest);
-        refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+        refresh_battle_contacts(&mut world, &[shooter]).unwrap();
         let path = dir.path().join("stompymux.toml");
         let original = std::fs::read_to_string(&path).unwrap();
         for enabled in [false, true] {

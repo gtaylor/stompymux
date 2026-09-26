@@ -56,7 +56,7 @@ impl Scripts {
         let palette = std::sync::Arc::new(text::Palette::from_config(config)?);
         world.borrow_mut().palette = palette.clone();
         let (lua, budget) = sandbox::create(config)?;
-        lua.set_app_data(config.clone());
+        lua.set_app_data(std::sync::Arc::new(config.clone()));
         lua.set_app_data(mode);
         let event_telemetry = std::rc::Rc::new(std::cell::Cell::new(crate::BattleEventTelemetry {
             process_start: crate::clock::wall_time(),
@@ -109,9 +109,9 @@ impl Scripts {
         }
         scripts.publish_services();
         scripts.flows.ready();
-        crate::configure_battle_sensor_policy(
+        crate::configure_battle_perception(
             &mut scripts.world.borrow_mut(),
-            config.battletech.seismic_see_stopped != 0,
+            config.battletech.sensor_range,
         );
         crate::configure_battle_reactor_policy(
             &mut scripts.world.borrow_mut(),

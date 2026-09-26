@@ -244,37 +244,22 @@ async fn damage_and_vehicle_failures_are_distinct_from_readiness() {
 #[tokio::test]
 async fn report_observation_guards_preserve_state() {
     for source in templates() {
-        let (_dir, config, original, id) = fixture(&source, true).await;
-        for blind in [false, true] {
-            let mut world = original.clone();
-            let mut state = serde_json::to_value(&world.btech).unwrap();
-            if blind {
-                let group = if world.btech.vehicles().contains_key(&id) {
-                    "vehicles"
-                } else {
-                    "constructed"
-                };
-                state[group][id.0.to_string()]["blinded_remaining"] = serde_json::json!(1);
-            } else {
-                state["recoveries"]["1"] = serde_json::json!({
-                    "remaining": 1, "pain_resistance": false, "toughness": false,
-                    "dice": BattleDice::seeded([34;32])
-                });
-            }
-            world.btech = serde_json::from_value(state).unwrap();
-            let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-            let before = scripts.world().btech.clone();
-            let failure = support::run_text(&scripts, &config, ObjectId(1), 1, "weaponstatus");
-            assert!(
-                failure.contains(if blind { "blinded" } else { "unconscious" }),
-                "{failure}"
-            );
-            assert!(
-                support::run_text(&scripts, &config, ObjectId(1), 1, "weaponspecs")
-                    .contains("Weapons statistics for")
-            );
-            assert_eq!(scripts.world().btech, before);
-        }
+        let (_dir, config, mut world, _) = fixture(&source, true).await;
+        let mut state = serde_json::to_value(&world.btech).unwrap();
+        state["recoveries"]["1"] = serde_json::json!({
+            "remaining": 1, "pain_resistance": false, "toughness": false,
+            "dice": BattleDice::seeded([34;32])
+        });
+        world.btech = serde_json::from_value(state).unwrap();
+        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let before = scripts.world().btech.clone();
+        let failure = support::run_text(&scripts, &config, ObjectId(1), 1, "weaponstatus");
+        assert!(failure.contains("unconscious"), "{failure}");
+        assert!(
+            support::run_text(&scripts, &config, ObjectId(1), 1, "weaponspecs")
+                .contains("Weapons statistics for")
+        );
+        assert_eq!(scripts.world().btech, before);
     }
 }
 

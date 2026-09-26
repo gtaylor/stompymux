@@ -407,7 +407,7 @@ async fn shutdown_vehicle_fire_retries_failed_server_commit() {
             unit["burning_sections"] = serde_json::json!({"front":1});
             unit["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
         });
-        assert!(optical_scanner_observers(&world).is_empty());
+        assert!(battle_contact_observers(&world).is_empty());
         let mut expected = world.clone();
         let _ = advance_battle_vehicle_fires(&mut expected, &config).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();

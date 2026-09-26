@@ -389,10 +389,6 @@ pub(super) fn cockpit(
     };
     if conscious {
         ensure!(!world.btech.unconscious(ctx.player), "You are unconscious");
-        ensure!(
-            !super::battle_unit_blinded(&world, id),
-            "You are momentarily blinded!"
-        );
     }
     ensure!(
         super::scanner::scanner_unit(&world, id).is_some(),

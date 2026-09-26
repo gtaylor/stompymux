@@ -31,7 +31,7 @@ pub(super) fn award(
     let source = &world.btech.constructed_units()[&attacker];
     let victim = &world.btech.constructed_units()[&target];
     if victim.is_destroyed()
-        || source.sensor_signature().team == victim.sensor_signature().team
+        || source.signature().team == victim.signature().team
         || source.pilot() != Some(pilot)
         || world.objects.get(&pilot).is_none_or(|object| {
             object.location != Some(attacker)

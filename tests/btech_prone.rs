@@ -317,15 +317,14 @@ async fn prone_water_and_mine_callback_rollback() {
     }
 }
 
-/// Admission never consumes dice for absent pilots, shutdown, blindness, airborne motion or pending standing.
+/// Admission never consumes dice for absent pilots, shutdown, airborne motion or pending standing.
 #[tokio::test]
 async fn prone_admission_rejects_without_mutation() {
     let (_dir, config, base, id, _) = fixture(false, ".0").await;
-    for case in ["off", "blind", "standing", "falling", "pilot"] {
+    for case in ["off", "standing", "falling", "pilot"] {
         let mut world = base.clone();
         edit(&mut world, id, |unit| match case {
             "off" => unit["power"] = serde_json::to_value(BattlePower::Off).unwrap(),
-            "blind" => unit["blinded_remaining"] = 1.into(),
             "standing" => {
                 unit["stand_timer"] =
                     serde_json::to_value(BattleStandTimer::Rising { remaining: 5 }).unwrap()

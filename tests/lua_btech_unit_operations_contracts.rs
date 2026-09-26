@@ -255,7 +255,7 @@ async fn vehicle_operations_cover_live_damage_falls_templates_and_equipment() {
         .flags
         .insert(Flag::Connected);
     assign_battle_pilot(&mut world, target, observer).unwrap();
-    refresh_optical_scanners(&mut world, &[target]).unwrap();
+    refresh_battle_contacts(&mut world, &[target]).unwrap();
     let root = config.path(&config.database.mech_database);
     std::fs::create_dir_all(&root).unwrap();
     std::fs::write(

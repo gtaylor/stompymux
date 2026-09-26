@@ -294,7 +294,7 @@ async fn idle_server_settles_station_lock_after_parent_shutdown() {
                 stop_battle_unit(&mut world, unit, pilot, BattleMovementRules::STANDARD.fall)
                     .unwrap();
             }
-            assert!(optical_scanner_observers(&world).is_empty());
+            assert!(battle_contact_observers(&world).is_empty());
             world.accounts.entry(gunner).or_default().hash =
                 Some(accounts::hash("secret", &config).unwrap());
             persistence::save(&config.database(), &world).await.unwrap();

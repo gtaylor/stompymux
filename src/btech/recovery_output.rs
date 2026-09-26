@@ -15,11 +15,8 @@ pub(super) fn publish(scripts: &Scripts, notice: BattleCharacterNotice) -> Resul
     result
 }
 
-/// A blinded cockpit suppresses feedback, but never changes the resolved recovery check.
+/// Build pilot and cockpit feedback from the resolved recovery check.
 fn messages(notice: BattleCharacterNotice) -> Vec<(BattleMessageTarget, String)> {
-    if notice.muted {
-        return Vec::new();
-    }
     let pilot = BattleMessageTarget::Player(notice.player);
     let mut messages = vec![
         (pilot, "You attempt to regain consciousness!".into()),
@@ -63,7 +60,6 @@ mod tests {
         let notice = BattleCharacterNotice {
             player: ObjectId(1),
             unit: Some(ObjectId(9)),
-            muted: false,
             check: BattleConsciousnessCheck {
                 target: 7,
                 roll: 8,
@@ -103,9 +99,6 @@ mod tests {
             messages(failed).last().unwrap().1,
             "You fail to regain consciousness."
         );
-        let mut muted = notice;
-        muted.muted = true;
-        assert!(messages(muted).is_empty());
     }
 }
 
@@ -133,7 +126,6 @@ mod delivery_tests {
         let notice = BattleCharacterNotice {
             player: ObjectId(1),
             unit: Some(unit),
-            muted: false,
             check: BattleConsciousnessCheck {
                 target: 7,
                 roll: 8,

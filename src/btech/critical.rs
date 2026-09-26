@@ -518,7 +518,6 @@ impl BattleUnit {
         if self.is_destroyed() {
             super::spotter_events::clear(&mut self.spotter_events);
             self.self_destruct = None;
-            self.blinded_remaining = 0;
             self.crew_recovery.clear();
             self.stagger = Default::default();
             self.overheat_clock = Default::default();

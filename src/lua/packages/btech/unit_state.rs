@@ -85,7 +85,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     .map_err(mlua::Error::external)?;
                 state.set("fuel", detached(lua, &fuel)?)?;
             }
-            state.set("sensor_signal", vehicle.sensor_signal())?;
             state.set("fired_recently", vehicle.fired_recently())?;
             state.set("radio", detached(lua, &vehicle.radio_channels())?)?;
             state.set(
@@ -132,10 +131,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             state.set("sections", detached(lua, vehicle.sections())?)?;
             state.set("ammunition", detached(lua, vehicle.ammunition())?)?;
             state.set("fire_modes", detached(lua, vehicle.fire_modes())?)?;
-            state.set(
-                "sensor_signature",
-                detached(lua, &vehicle.sensor_signature())?,
-            )?;
+            state.set("signature", detached(lua, &vehicle.signature())?)?;
             state.set("hide_elapsed", vehicle.hide_elapsed())?;
             state.set("scanner_perception", vehicle.scanner_perception())?;
             state.set("sensor_ranges", detached(lua, &vehicle.sensor_ranges())?)?;
@@ -185,10 +181,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 )?,
             )?;
             state.set("brief", detached(lua, &vehicle.brief_settings())?)?;
-            state.set(
-                "sensor_selection",
-                detached(lua, &vehicle.sensor_selection())?,
-            )?;
             state.set("weapon_recycle", detached(lua, vehicle.weapon_recycle())?)?;
             state.set(
                 "component_failures",
@@ -201,7 +193,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             state.set("piloting_damage", vehicle.piloting_damage())?;
             state.set("pilot_injuries", vehicle.pilot_injuries())?;
             state.set("crew_recovery_remaining", vehicle.crew_recovery().remaining)?;
-            state.set("blinded_remaining", vehicle.blinded_remaining())?;
             state.set("self_destruct", detached(lua, &vehicle.self_destruct())?)?;
             state.set("self_destruct_safe", vehicle.self_destruct_safe())?;
             state.set("weapon_heat", vehicle.weapon_heat())?;
@@ -263,7 +254,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         state.set("ams_enabled", unit.ams_enabled())?;
         state.set("null_signature", detached(lua, &unit.null_signature())?)?;
         state.set("fired_recently", unit.fired_recently())?;
-        state.set("sensor_signal", unit.sensor_signal())?;
         state.set("stealth", detached(lua, &unit.stealth())?)?;
         state.set("electronics", detached(lua, &unit.electronics())?)?;
         state.set("auto_fall", unit.auto_fall())?;
@@ -308,7 +298,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         state.set("spotter_events", detached(lua, unit.spotter_events())?)?;
         state.set("artillery_adjustment", unit.artillery_adjustment())?;
         state.set("tag", detached(lua, &unit.tag())?)?;
-        state.set("sensor_selection", detached(lua, &unit.sensor_selection())?)?;
         state.set(
             "radio_experience_remaining",
             unit.radio_experience_remaining(),
@@ -327,12 +316,11 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             detached(lua, &unit.radio_capabilities())?,
         )?;
         state.set("searchlight", detached(lua, &unit.searchlight())?)?;
-        state.set("sensor_signature", detached(lua, &unit.sensor_signature())?)?;
+        state.set("signature", detached(lua, &unit.signature())?)?;
         state.set("scanner_perception", unit.scanner_perception())?;
         state.set("stun_remaining", unit.stun_remaining())?;
         state.set("pilot_injuries", unit.pilot_injuries())?;
         state.set("crew_recovery_remaining", unit.crew_recovery().remaining)?;
-        state.set("blinded_remaining", unit.blinded_remaining())?;
         state.set(
             "reactor_instability_remaining",
             unit.reactor_instability_remaining(),

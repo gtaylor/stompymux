@@ -55,7 +55,7 @@ async fn rotorcraft_modifiers_match_preview_and_firing_for_every_shooter() {
                     state["vtol_flight"]["vertical_speed"] = serde_json::json!(vertical);
                     state["motion"]["speed"] = serde_json::json!(horizontal);
                 });
-                refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+                refresh_battle_contacts(&mut world, &[shooter]).unwrap();
                 let before = world.btech.clone();
                 let aim =
                     battle_pilot_aim_modifiers(&world, shooter, target, index, false, rules())
@@ -143,7 +143,7 @@ async fn stinger_fire_admits_orbitally_dropped_ground_vehicles() {
                 serde_json::to_value(BattleOrbitalDrop::new(80, 2).unwrap()).unwrap();
             state["ground_elevation"] = serde_json::Value::Null;
         });
-        refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+        refresh_battle_contacts(&mut world, &[shooter]).unwrap();
         let scripts =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
         let bonus: i8 = scripts

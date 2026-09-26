@@ -48,7 +48,7 @@ fn frequency_matches(
     if frequency == 0 {
         return Ok(Vec::new());
     }
-    let team = source.sensor_signature().team;
+    let team = source.signature().team;
     let mut messages = Vec::new();
     for id in all_unit_order(world, position.map)? {
         if id == sender
@@ -60,7 +60,7 @@ fn frequency_matches(
             continue;
         }
         let other = super::radio::unit(world, id)?;
-        let other_team = other.sensor_signature().team;
+        let other_team = other.signature().team;
         if other_team == team {
             continue;
         }

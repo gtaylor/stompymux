@@ -708,7 +708,7 @@ fn mutate_object(ctx: &CommandContext<'_>, operation: &str, argument: &str) -> R
         let (light, visibility) = name
             .split_once(',')
             .context("Usage: @btech map-conditions <map>=<night|twilight|day>,<visibility 0-60>")?;
-        let notices = super::set_map_visibility(
+        super::set_map_visibility(
             &mut ctx.scripts.world.borrow_mut(),
             id,
             light.parse()?,
@@ -717,9 +717,6 @@ fn mutate_object(ctx: &CommandContext<'_>, operation: &str, argument: &str) -> R
                 .parse()
                 .context("Expected visibility from 0 through 60")?,
         )?;
-        for notice in notices {
-            super::notify_unit(ctx.scripts, notice)?;
-        }
         return Ok(format!(
             "Map #{} conditions saved: {}, visibility {} hexes.",
             id.0,
@@ -1052,13 +1049,17 @@ pub(crate) fn facing_command(
     })
 }
 
-/// Inspect the local unit's scanners or request a guarded primary/secondary change.
+/// Show how far and by what means the local unit can currently perceive; takes no arguments.
 pub(crate) fn sensor_command(
     ctx: &CommandContext<'_>,
     input: &CommandInput,
 ) -> Result<CommandAction> {
-    let result = (|| -> Result<(String, bool)> {
-        let mut world = ctx.scripts.world.borrow_mut();
+    let result = (|| -> Result<String> {
+        ensure!(
+            input.args.trim().is_empty(),
+            "Sensors are automatic; the sensor command takes no arguments."
+        );
+        let world = ctx.scripts.world.borrow();
         let unit = world
             .objects
             .get(&ctx.player)
@@ -1069,30 +1070,10 @@ pub(crate) fn sensor_command(
                 || world.btech.vehicles().contains_key(&unit),
             "Enter a constructed unit first"
         );
-        let arguments: Vec<_> = input.args.split_whitespace().collect();
-        let changed = match arguments.as_slice() {
-            [] => false,
-            [_] => false,
-            [primary, secondary] => {
-                super::select_optical_sensors(
-                    &mut world,
-                    unit,
-                    ctx.player,
-                    super::BattleSensorPair {
-                        primary: primary.parse()?,
-                        secondary: secondary.parse()?,
-                    },
-                )?;
-                true
-            }
-            _ => bail!("Invalid number of arguments!"),
-        };
-        let text = super::sensor_report(&world, unit, arguments.len() == 1)?;
-        Ok((text, changed))
+        Ok(super::perception_report(&world, unit)?.text)
     })();
     Ok(match result {
-        Ok((text, true)) => CommandAction::CommitReply(text),
-        Ok((text, false)) => CommandAction::Report(CommandReport::Inspection(text)),
+        Ok(text) => CommandAction::Report(CommandReport::Inspection(text)),
         Err(error) => CommandAction::Report(CommandReport::Reply(format!("{error:#}"))),
     })
 }

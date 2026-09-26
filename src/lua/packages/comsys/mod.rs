@@ -23,7 +23,7 @@ impl Bindings {
             world: &self.world,
             outbox: &self.outbox,
             effects: &self.effects,
-            config: crate::lua::configuration(lua),
+            config: crate::communication::ServiceConfig::Shared(crate::lua::configuration(lua)),
             host: lua,
         }
     }

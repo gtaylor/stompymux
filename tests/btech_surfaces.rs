@@ -703,7 +703,7 @@ async fn ice_surface_contacts_and_fire_match_native_lua_after_restart() {
                 .unwrap();
             }
         }
-        refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+        refresh_battle_contacts(&mut world, &[shooter]).unwrap();
         assert!(
             world.btech.constructed_units()[&shooter]
                 .contacts()
@@ -888,6 +888,8 @@ async fn ice_standing_native_lua_and_restart_cover_success_failure_and_fracture(
     }
 }
 
+/// Six water hexes break the clear line only once the target settles below the waterline,
+/// using the retained altitude before and after a restart.
 #[tokio::test]
 async fn optical_water_attenuation_uses_retained_altitude_after_restart() {
     let (_dir, config, mut world, map, units) = fixture_field(Terrain::Bridge, 0, 7).await;
@@ -914,35 +916,15 @@ async fn optical_water_attenuation_uses_retained_altitude_after_restart() {
     }
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
-    let conditions = BattleSensorConditions {
-        light: BattleLight::Day,
-        visibility: 30,
-        target_lit: false,
-        disabled: false,
-    };
-    let check = |world: &World, eligible: bool| {
+    let check = |world: &World, perceived: bool| {
         let terrain = battle_unit_terrain_los(world, units[0], units[1]).unwrap();
         assert!(!terrain.blocked);
         assert_eq!(terrain.water, 6);
-        let explicit = battle_optical_contact(
-            world,
-            units[0],
-            units[1],
-            BattleSensorMode::Visual,
-            conditions,
-        )
-        .unwrap();
-        let configured = battle_map_optical_contact(
-            world,
-            units[0],
-            units[1],
-            BattleSensorMode::Visual,
-            false,
-            false,
-        )
-        .unwrap();
-        assert_eq!(explicit.eligible, eligible);
-        assert_eq!(configured.eligible, eligible);
+        let perception = battle_perceive(world, units[0], units[1]).unwrap();
+        assert_eq!(
+            perception.map(|perception| perception.channel),
+            perceived.then_some(BattleDetectionChannel::Sensors)
+        );
     };
     check(&world, true);
     check(&loaded, true);
@@ -973,8 +955,8 @@ async fn bridge_deck_contacts_refresh_after_collapse_and_restart() {
                 serde_json::to_value(BattleDice::seeded([index as u8; 32])).unwrap();
         }
         world.btech = serde_json::from_value(state).unwrap();
-        assert!(optical_scanner_observers(&world).contains(&observer));
-        let events = refresh_optical_scanners(&mut world, &[observer]).unwrap();
+        assert!(battle_contact_observers(&world).contains(&observer));
+        let events = refresh_battle_contacts(&mut world, &[observer]).unwrap();
         assert_eq!(events.len(), 1);
         assert!(events[0].acquired);
         let scripts = Scripts::new(
@@ -1007,9 +989,9 @@ async fn bridge_deck_contacts_refresh_after_collapse_and_restart() {
         assert_eq!(collapse.falls.len(), usize::from(height == 1));
         persistence::save(&config.database(), &world).await.unwrap();
         let mut loaded = persistence::load(&config.database()).await.unwrap();
-        let expected = refresh_optical_scanners(&mut world, &[observer]).unwrap();
+        let expected = refresh_battle_contacts(&mut world, &[observer]).unwrap();
         assert_eq!(
-            refresh_optical_scanners(&mut loaded, &[observer]).unwrap(),
+            refresh_battle_contacts(&mut loaded, &[observer]).unwrap(),
             expected
         );
         assert_eq!(world.btech, loaded.btech);
@@ -1209,7 +1191,7 @@ async fn bridge_deck_fire_and_standing_share_native_lua_transactions() {
     state["constructed"][id.0.to_string()]["dice"] =
         serde_json::to_value(BattleDice::seeded([0; 32])).unwrap();
     world.btech = serde_json::from_value(state).unwrap();
-    refresh_optical_scanners(&mut world, &[id]).unwrap();
+    refresh_battle_contacts(&mut world, &[id]).unwrap();
     let native = Scripts::new(
         &config,
         std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
@@ -3905,8 +3887,7 @@ fn fracture_observer(
     let viewer = &mut state["constructed"][observer.0.to_string()];
     viewer["power"] = serde_json::json!({"state":"running"});
     for unit in units {
-        viewer["contacts"][unit.0.to_string()] =
-            serde_json::json!({"primary":true,"secondary":true});
+        viewer["contacts"][unit.0.to_string()] = serde_json::json!({"identified":false});
     }
     world.btech = serde_json::from_value(state).unwrap();
     observer
@@ -6202,19 +6183,14 @@ async fn inferno_water_extinction_and_fall_publish_saved_steam() {
 async fn inferno_missile_exposure_rounds_pairs_and_replays_without_damage_or_dice() {
     let (_dir, config, mut base, _map, units) = fixture_field(Terrain::Grassland, 0, 3).await;
     let target = units[0];
-    update_battle_optical_contact(
+    update_battle_contact(
         &mut base,
         units[1],
         target,
         BattleContactRules {
-            target: BattleScanTarget {
-                lit: true,
-                hostile: true,
-                hidden: false,
-            },
+            hostile: true,
+            hidden: false,
             perception: 7,
-            visual_disabled: false,
-            amplification_disabled: false,
             acquire: true,
         },
     )

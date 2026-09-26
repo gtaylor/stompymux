@@ -45,9 +45,6 @@ mod btech_map_view;
 #[path = "../btech_material_entry.rs"]
 mod btech_material_entry;
 
-#[path = "../btech_seismic.rs"]
-mod btech_seismic;
-
 #[path = "../btech_setxy.rs"]
 mod btech_setxy;
 

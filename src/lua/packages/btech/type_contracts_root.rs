@@ -77,7 +77,7 @@
 //|---@field flags integer
 //|---@field light integer 0 night, 1 twilight, 2 day
 //|---@field visibility integer Weather range in hexes
-//|---@field sensor_flags integer Disabled sensor bitfield; visual bit 0, amplification bit 1.
+//|---@field sensor_flags integer Disabled perception channels: sensor band bit 0 (1), radar bit 5 (32), probes bit 6 (64).
 //|---@field maximum_visibility integer Saved map sensor range ceiling
 //|---@field terrain_ready boolean Whether saved tiles have a valid dictionary.
 // lua-types-end
@@ -227,13 +227,8 @@
 // lua-types-end
 
 // lua-types-begin btech 00043
-//|---@alias BattleSensorMode "visual"|"light_amplification"|"infrared"|"seismic"|"electromagnetic"|"radar"|"beagle_probe"|"light_probe"|"bloodhound_probe"
-//|---@class BattleSensorPair
-//|---@field primary BattleSensorMode
-//|---@field secondary BattleSensorMode
-//|---@class BattleSensorSelection
-//|---@field active BattleSensorPair
-//|---@field pending {wanted: BattleSensorPair, remaining: integer}|nil
+//|---@alias BattleDetectionChannel "sensors"|"sight"|"radar"|"probe" Values from btech.unit.detection_channels.
+//|---@alias BattlePerceptionStatus "ready"|"degraded"|"jammed"|"damaged"|"disabled"|"absent"
 // lua-types-end
 
 // lua-types-begin btech 00044
@@ -361,20 +356,17 @@
 //|---@field battlefield_id string? Current battlefield identity; absent without map membership.
 //|---@field searchlight {on: boolean, destroyed: boolean, remaining: integer} Hardware and pending five-second switch.
 //|---@field fired_recently boolean Launched a weapon since the last heartbeat.
-//|---@field sensor_signal integer Current committed signal strength (0-100).
 //|---@field spotter integer? Self ID while spotting, otherwise the selected observer.
 //|---@field artillery_adjustment integer Saved correction for the current artillery target.
 //|---@field spotter_events BattleSpotterEvents Pending radio requests and periodic checks.
 //|---@field tag BattleTagState
-//|---@field sensor_selection BattleSensorSelection
-//|---@field sensor_signature {team: integer, hidden: boolean, illuminated: boolean}
+//|---@field signature {team: integer, hidden: boolean, illuminated: boolean} Team, hiding and scenario lighting.
 //|---@field scanner_perception integer Perception captured at startup completion.
 //|---@field facing {torso: "left"|"center"|"right"|"both", arms_flipped: boolean}
 //|---@field stun_remaining integer Remaining seconds of cockpit stun.
 //|---@field pilot_injuries integer Tactical injury count; six means scenario pilot loss.
 //|---@field self_destruct {remaining: integer, ammunition: boolean}|nil Admitted timer and its actual Mech detonation mode.
 //|---@field self_destruct_safe boolean Scenario protection from new ammunition self-destruct requests.
-//|---@field blinded_remaining integer Seconds until temporary sensor-flash blindness clears.
 //|---@field hide_elapsed integer|nil Elapsed camouflage checks; nil when no hide event is pending.
 //|---@field crew_recovery_remaining integer Empty-crew consciousness countdown; random state stays private.
 //|---@field character_pilot {injuries: integer, killed: boolean}? Saved character-mode injury status; character health determines death.
@@ -457,7 +449,6 @@
 //|---@field cockpit_links integer[] Three explicit cockpit destinations; unresolved references remain saved.
 //|---@field preferred_id string? Configured two-letter preference; separate from the currently assigned ID.
 //|---@field fuel BattleVtolFuelStatus|nil Live fuel projection for VTOLs only.
-//|---@field sensor_signal integer Current committed signal strength, 0 through 100.
 //|---@field fired_recently boolean A weapon launched since the last heartbeat.
 //|---@field observer boolean Administrator-assigned observer role.
 //|---@field combat_safe boolean Operator-imposed immunity to combat damage.
@@ -483,14 +474,12 @@
 //|---@field crew_stunned boolean Effective crew stun, independent of its timer.
 //|---@field self_destruct {remaining: integer, ammunition: boolean}|nil Admitted timer and its actual Mech detonation mode.
 //|---@field self_destruct_safe boolean Scenario protection from new ammunition self-destruct requests.
-//|---@field blinded_remaining integer Seconds until temporary sensor-flash blindness clears.
 //|---@field hide_elapsed integer|nil Elapsed camouflage checks; nil when no hide event is pending.
 //|---@field crew_recovery_remaining integer Empty-crew consciousness countdown, separate from crew stun.
 //|---@field weapon_heat number Passive weapon heat and coolant credit; ground vehicles do not overheat.
 //|---@field gunnery_damage integer Cumulative firing penalty from sensor and commander damage.
 //|---@field lost_stabilizers string[] Sections with destroyed weapon stabilizers.
-//|---@field sensor_selection BattleSensorSelection
-//|---@field sensor_signature {team: integer, hidden: boolean, illuminated: boolean}
+//|---@field signature {team: integer, hidden: boolean, illuminated: boolean} Team, hiding and scenario lighting.
 //|---@field scanner_perception integer Perception captured at startup completion.
 //|---@field sensor_ranges {tactical: integer, long_range: integer, scan: integer} Computer-derived hex limits.
 //|---@field aimed_section BattleAimSelection|nil Saved anatomy preference; independent of the current lock.
@@ -686,9 +675,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00155
-//|---@class BattleContactSensors
-//|---@field primary boolean Current primary sensor eligibility.
-//|---@field secondary boolean Current secondary sensor eligibility.
+//|---@alias BattleProbeKind "beagle"|"light"|"bloodhound"
 // lua-types-end
 
 // lua-types-begin btech 00156
@@ -704,7 +691,7 @@
 //|---@field verbose_text string Plain multiline C0 contact report.
 //|---@field identified boolean Current terrain permits identification.
 //|---@field weapon_arc BattleContactArc Observer torso direction; individual weapons may have different arcs.
-//|---@field sensors BattleContactSensors Live roles for an already acquired target.
+//|---@field detection BattleDetectionChannel|nil How the observer currently perceives this contact; nil for clairvoyant-only views.
 //|---@field status string Five visible condition columns; blank behind blocking terrain.
 //|---@field target integer Acquired unit dbref.
 //|---@field name string Chassis name, or "something" for unidentified signals.
@@ -766,7 +753,7 @@
 // lua-types-begin btech 00180
 //|---@class BattleAimModifiers
 //|---@field self_target boolean Coolant self-application bypasses contact acquisition.
-//|---@field indirect {spotter: integer, spotting: integer, movement: integer, target_lock: integer}|nil Observer contributions; optical describes the observer sensor when present.
+//|---@field indirect {spotter: integer, spotting: integer, movement: integer, target_lock: integer}|nil Observer contributions; perception then describes the spotter's view.
 //|---@field gunnery integer
 //|---@field distance number
 //|---@field network_range {kind: "c3"|"c3i", distance: number, source: integer|nil}|nil Active command-network range; physical limits and firing visibility remain separate.
@@ -789,7 +776,7 @@
 //|---@field weapon_accuracy integer Intrinsic accuracy adjustment; pulse lasers contribute -2, MRMs +1.
 //|---@field weapon_damage integer Penalty from damaged focusing, ranging and other weapon components.
 //|---@field target_lock integer
-//|---@field optical {sensor: string, secondary: boolean, modifier: integer}|nil
+//|---@field perception {channel: BattleDetectionChannel|nil, direct_fire: boolean, modifier: integer}|nil Nil without a current contact; direct_fire is false behind blocking terrain.
 // lua-types-end
 
 // lua-types-begin btech 00181
@@ -1454,7 +1441,7 @@
 
 // lua-types-begin btech 00360
 //|---@class BattleBuildingContact
-//|---@field sensors BattleContactSensors Terrain sensor roles.
+//|---@field detection BattleDetectionChannel|nil Whether the sensor band or sight reaches the entrance.
 //|---@field short_text string Plain compact row after identification locks.
 //|---@field weapon_arc BattleContactArc Observer torso direction toward entrance.
 //|---@field interior integer
@@ -1553,7 +1540,7 @@
 //|---@field name string
 //|---@field identified boolean
 //|---@field friendly boolean Actual team relationship; identification controls display color.
-//|---@field sensors {primary: boolean, secondary: boolean} Requester's own sensors only.
+//|---@field detection BattleDetectionChannel|nil How the requester itself perceives the target; nil for network-only sightings.
 //|---@field weapon_arc string
 //|---@field coordinate BattleHexCoordinate
 //|---@field elevation integer
@@ -1643,6 +1630,8 @@
 //|---@class BattleAmmunitionModeConstant
 //|---Typed repair operation from btech.repair.operations.
 //|---@class BattleRepairOperation
+//|---Typed battlefield light constant from btech.map.light_levels.
+//|---@class BattleLightLevel
 // lua-types-end
 
 // lua-types-begin btech 00458

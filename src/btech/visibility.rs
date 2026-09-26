@@ -51,19 +51,6 @@ pub fn set_battle_visibility(
     Ok(())
 }
 
-/// Invisibility suppresses every sensor family without granting clairvoyants a sensor lock.
-pub(super) fn sensor_report(
-    world: &World,
-    target: ObjectId,
-    mut report: super::BattleSensorReport,
-) -> super::BattleSensorReport {
-    if battle_visibility(world, target).is_ok_and(|flags| flags.invisible) {
-        report.eligible = false;
-        report.acquisition_factor = 0;
-    }
-    report
-}
-
 /// Unblocked unit visibility honors clairvoyance while preserving physical geometry reports.
 pub(super) fn unit_unblocked(world: &World, observer: ObjectId, target: ObjectId) -> Result<bool> {
     let terrain = super::unit_terrain_los(world, observer, target)?;

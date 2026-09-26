@@ -51,7 +51,7 @@ async fn fixture(
     saved["constructed"][target.0.to_string()]["dice"] =
         serde_json::to_value(BattleDice::seeded([42; 32])).unwrap();
     world.btech = serde_json::from_value(saved).unwrap();
-    refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+    refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     select_battle_hex_target(
         &mut world,
         shooter,

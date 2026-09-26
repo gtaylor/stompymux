@@ -25,19 +25,19 @@ fn fixture(source: &str, recipient: &str, seed: u8) -> (Config, World, ObjectId,
         if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
             unit.power = BattlePower::Running;
             unit.dice = BattleDice::seeded([seed; 32]);
-            unit.sensor_signature.team = team;
+            unit.signature.team = team;
         } else {
             let vehicle = Arc::make_mut(&mut world.btech.vehicles)
                 .get_mut(&id)
                 .unwrap();
             vehicle.power = BattlePower::Running;
             vehicle.dice = BattleDice::seeded([seed; 32]);
-            vehicle.sensor_signature.team = team;
+            vehicle.signature.team = team;
         }
     }
     Arc::make_mut(&mut world.btech.controllers)
         .insert(shooter, crate::btech::autopilot::AutopilotController::new());
-    crate::refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+    crate::refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     crate::btech::targeting::select_target_autopilot(&mut world, shooter, Some(target)).unwrap();
     if matches!(seed, 17 | 42) {
         if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&target) {
@@ -254,14 +254,13 @@ fn validation_reuse_matches_full_checks_after_mutations_and_scope_exit() {
                 Arc::make_mut(&mut changed.btech.constructed)
                     .get_mut(&target)
                     .unwrap()
-                    .blinded_remaining = mutation as u8
+                    .hide_elapsed = Some(u16::from(mutation as u8) * 10)
             }
             1 => {
                 Arc::make_mut(&mut changed.btech.constructed)
                     .get_mut(&shooter)
                     .unwrap()
-                    .sensor_signal
-                    .strength = 101
+                    .hide_elapsed = Some(101)
             }
             2 => changed.objects.get_mut(&target).unwrap().location = None,
             3 => {

@@ -80,7 +80,7 @@ async fn battlefield() -> (tempfile::TempDir, Config, [ObjectId; 2]) {
         // A terminal hit can injure the empty cockpit, whose recovery later transfers to its pilot.
         unit["crew_recovery"]["dice"] =
             serde_json::to_value(BattleDice::seeded([player.0 as u8 + 20; 32])).unwrap();
-        unit["sensor_signature"]["team"] = player.0.into();
+        unit["signature"]["team"] = player.0.into();
         let heading = if player.0 == 1 { 0.0 } else { 180.0 };
         unit["motion"]["heading"] = heading.into();
         unit["motion"]["desired_heading"] = heading.into();

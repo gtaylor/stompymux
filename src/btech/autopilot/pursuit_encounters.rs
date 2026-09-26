@@ -322,7 +322,7 @@ pub async fn run(
                     adversarial::place(&mut world, target, map, enemy.0, enemy.1)?;
                     adversarial::seed_unit(&mut world, focal, seed, 1);
                     adversarial::seed_unit(&mut world, target, seed, 2);
-                    crate::btech::refresh_optical_scanners(&mut world, &[focal, target])?;
+                    crate::btech::refresh_contacts(&mut world, &[focal, target])?;
                     let obs = observations::observe(&world, focal, world.btech.simulation_time())?;
                     let contact = obs
                         .contacts

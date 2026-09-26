@@ -140,19 +140,17 @@ pub(super) fn check_with_dice(
     );
     let prepared = super::gatling::prepare(world, shooter, weapon_index, dice)?;
     let gunnery = operator.gunnery(world, weapon_index, rules.extended_gunnery)?;
-    let aim = super::aim::aim_modifiers_for_source_with_dice(
+    let aim = super::aim::aim_modifiers_for_source(
         world,
         operator.source,
         target,
         weapon_index,
         gunnery,
         rules.aim,
-        dice,
     )?;
-    ensure!(
-        self_cooling || aim.optical.is_some(),
-        "Target is not a current acquired contact"
-    );
+    if !self_cooling {
+        super::aim::ensure_perceived(&aim)?;
+    }
     super::hit_direction::HitDirection::Direct {
         shooter,
         mode: rules.hit_arc_mode,

@@ -99,7 +99,7 @@ pub(super) fn selected(world: &World, id: ObjectId) -> Option<ObjectId> {
         })
 }
 
-/// Shared optical and movement contributions for both shooters and observer types.
+/// Shared perception and movement contributions for both shooters and observer types.
 pub(super) fn indirect_aim(
     world: &World,
     source: super::fire_target::TargetSource,
@@ -300,10 +300,6 @@ pub(super) fn active_observer(world: &World, firer: ObjectId) -> Result<ObjectId
                 .and_then(BattleUnit::pilot))
             .is_some_and(|pilot| world.btech.unconscious(pilot)),
         "Your spotter is unconscious!"
-    );
-    ensure!(
-        !super::battle_unit_blinded(world, spotter),
-        "Your spotter can't see a thing!"
     );
     Ok(spotter)
 }

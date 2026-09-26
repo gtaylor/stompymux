@@ -12,9 +12,6 @@ mod btech_component_failure;
 #[path = "../btech_dice.rs"]
 mod btech_dice;
 
-#[path = "../btech_electromagnetic.rs"]
-mod btech_electromagnetic;
-
 #[path = "../btech_electronics.rs"]
 mod btech_electronics;
 

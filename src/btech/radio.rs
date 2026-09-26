@@ -447,7 +447,7 @@ impl RadioUnit<'_> {
     pub(super) fn position(&self) -> Option<super::BattlePosition> {
         self.state.position
     }
-    pub(super) fn sensor_signature(&self) -> super::BattleSensorSignature {
+    pub(super) fn signature(&self) -> super::BattleUnitSignature {
         self.state.signature
     }
     pub(super) fn battlefield_id(&self) -> Option<String> {

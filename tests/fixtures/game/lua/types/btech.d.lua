@@ -59,7 +59,7 @@
 ---@field flags integer
 ---@field light integer 0 night, 1 twilight, 2 day
 ---@field visibility integer Weather range in hexes
----@field sensor_flags integer Disabled sensor bitfield; visual bit 0, amplification bit 1.
+---@field sensor_flags integer Disabled perception channels: sensor band bit 0 (1), radar bit 5 (32), probes bit 6 (64).
 ---@field maximum_visibility integer Saved map sensor range ceiling
 ---@field terrain_ready boolean Whether saved tiles have a valid dictionary.
 
@@ -234,13 +234,8 @@ function btech_unit.inspect(dbref) end
 ---@field maximum_speed number Damage-adjusted maximum kph before terrain, heat and cargo.
 ---@field piloting_modifier integer Damage modifier for subsequent piloting checks.
 
----@alias BattleSensorMode "visual"|"light_amplification"|"infrared"|"seismic"|"electromagnetic"|"radar"|"beagle_probe"|"light_probe"|"bloodhound_probe"
----@class BattleSensorPair
----@field primary BattleSensorMode
----@field secondary BattleSensorMode
----@class BattleSensorSelection
----@field active BattleSensorPair
----@field pending {wanted: BattleSensorPair, remaining: integer}|nil
+---@alias BattleDetectionChannel "sensors"|"sight"|"radar"|"probe" Values from btech.unit.detection_channels.
+---@alias BattlePerceptionStatus "ready"|"degraded"|"jammed"|"damaged"|"disabled"|"absent"
 
 ---@class BattleTargetLock
 ---@field target integer Selected unit dbref; may no longer be visible.
@@ -346,20 +341,17 @@ function btech_unit.inspect(dbref) end
 ---@field battlefield_id string? Current battlefield identity; absent without map membership.
 ---@field searchlight {on: boolean, destroyed: boolean, remaining: integer} Hardware and pending five-second switch.
 ---@field fired_recently boolean Launched a weapon since the last heartbeat.
----@field sensor_signal integer Current committed signal strength (0-100).
 ---@field spotter integer? Self ID while spotting, otherwise the selected observer.
 ---@field artillery_adjustment integer Saved correction for the current artillery target.
 ---@field spotter_events BattleSpotterEvents Pending radio requests and periodic checks.
 ---@field tag BattleTagState
----@field sensor_selection BattleSensorSelection
----@field sensor_signature {team: integer, hidden: boolean, illuminated: boolean}
+---@field signature {team: integer, hidden: boolean, illuminated: boolean} Team, hiding and scenario lighting.
 ---@field scanner_perception integer Perception captured at startup completion.
 ---@field facing {torso: "left"|"center"|"right"|"both", arms_flipped: boolean}
 ---@field stun_remaining integer Remaining seconds of cockpit stun.
 ---@field pilot_injuries integer Tactical injury count; six means scenario pilot loss.
 ---@field self_destruct {remaining: integer, ammunition: boolean}|nil Admitted timer and its actual Mech detonation mode.
 ---@field self_destruct_safe boolean Scenario protection from new ammunition self-destruct requests.
----@field blinded_remaining integer Seconds until temporary sensor-flash blindness clears.
 ---@field hide_elapsed integer|nil Elapsed camouflage checks; nil when no hide event is pending.
 ---@field crew_recovery_remaining integer Empty-crew consciousness countdown; random state stays private.
 ---@field character_pilot {injuries: integer, killed: boolean}? Saved character-mode injury status; character health determines death.
@@ -436,7 +428,6 @@ function btech_unit.inspect(dbref) end
 ---@field cockpit_links integer[] Three explicit cockpit destinations; unresolved references remain saved.
 ---@field preferred_id string? Configured two-letter preference; separate from the currently assigned ID.
 ---@field fuel BattleVtolFuelStatus|nil Live fuel projection for VTOLs only.
----@field sensor_signal integer Current committed signal strength, 0 through 100.
 ---@field fired_recently boolean A weapon launched since the last heartbeat.
 ---@field observer boolean Administrator-assigned observer role.
 ---@field combat_safe boolean Operator-imposed immunity to combat damage.
@@ -462,14 +453,12 @@ function btech_unit.inspect(dbref) end
 ---@field crew_stunned boolean Effective crew stun, independent of its timer.
 ---@field self_destruct {remaining: integer, ammunition: boolean}|nil Admitted timer and its actual Mech detonation mode.
 ---@field self_destruct_safe boolean Scenario protection from new ammunition self-destruct requests.
----@field blinded_remaining integer Seconds until temporary sensor-flash blindness clears.
 ---@field hide_elapsed integer|nil Elapsed camouflage checks; nil when no hide event is pending.
 ---@field crew_recovery_remaining integer Empty-crew consciousness countdown, separate from crew stun.
 ---@field weapon_heat number Passive weapon heat and coolant credit; ground vehicles do not overheat.
 ---@field gunnery_damage integer Cumulative firing penalty from sensor and commander damage.
 ---@field lost_stabilizers string[] Sections with destroyed weapon stabilizers.
----@field sensor_selection BattleSensorSelection
----@field sensor_signature {team: integer, hidden: boolean, illuminated: boolean}
+---@field signature {team: integer, hidden: boolean, illuminated: boolean} Team, hiding and scenario lighting.
 ---@field scanner_perception integer Perception captured at startup completion.
 ---@field sensor_ranges {tactical: integer, long_range: integer, scan: integer} Computer-derived hex limits.
 ---@field aimed_section BattleAimSelection|nil Saved anatomy preference; independent of the current lock.
@@ -799,9 +788,9 @@ function btech_character.set_threshold(player, skill, threshold) end
 function btech_character.state(player) end
 
 ---Change saved light/weather conditions without reloading occupied terrain.
----Changed light rechecks active sensors and publishes cockpit warnings transactionally; locks and pending requests remain.
+---Perception follows the new light and visibility on the next scan; contacts and locks remain until then.
 ---@param dbref integer Map object dbref.
----@param light "night"|"twilight"|"day"
+---@param light BattleLightLevel Typed constant from btech.map.light_levels.
 ---@param visibility integer Weather range from 0 through 60.
 ---@return boolean
 function btech_map.conditions(dbref, light, visibility) end
@@ -828,7 +817,7 @@ function btech_map.cloud_base(actor, dbref, altitude) end
 ---@field flooded_vehicles integer[]
 ---@field notices table[] Unit dbrefs and cockpit message text.
 
----Wizard broadcast to occupants of running, conscious, unblinded units in map-slot order.
+---Wizard broadcast to occupants of running, conscious units in map-slot order.
 ---Does not require sensor contacts; all notices and the private confirmation roll back together.
 ---Rust extension retained under its descriptive name; the canonical emit follows the C contract.
 ---@param actor integer
@@ -1138,23 +1127,23 @@ function btech_map.unit_by_id(origin, id) end
 ---@return Object[] units
 function btech_map.units(map, filter) end
 
----Request a ten-second optical mode change for a running unit's conscious pilot.
+---Read-only summary of a placed unit's automatic perception: sensor band, sight, probe and radar.
 ---@param dbref integer
----@param pilot integer
----@param primary BattleSensorMode
----@param secondary BattleSensorMode
----@return boolean
-function btech_unit.sensors(dbref, pilot, primary, secondary) end
+---@return BattlePerceptionReport
+function btech_unit.perception(dbref) end
 
----Read-only reference sensor layout; verbose expands active descriptions while Wanted stays compact.
----@param dbref integer
----@param verbose? boolean
----@return string
-function btech_unit.sensor_report(dbref, verbose) end
+---@class BattlePerceptionReport
+---@field light "night"|"twilight"|"day" Current battlefield light.
+---@field sight_range integer Weather visibility in hexes, capped by the map ceiling.
+---@field lit_sight_range integer Reach to illuminated targets; triple sight at night.
+---@field sensor_range integer Effective all-conditions sensor band; zero while unavailable.
+---@field sensors BattlePerceptionStatus Condition of the sensor band.
+---@field probe {kind: BattleProbeKind, range: integer, status: BattlePerceptionStatus}|nil Best installed active probe.
+---@field radar {range: integer, status: BattlePerceptionStatus}|nil Anti-aircraft radar, if installed.
+---@field running boolean Stopped units perceive nothing.
+---@field text string The report printed by the sensor command.
 
----@class BattleContactSensors
----@field primary boolean Current primary sensor eligibility.
----@field secondary boolean Current secondary sensor eligibility.
+---@alias BattleProbeKind "beagle"|"light"|"bloodhound"
 
 ---@alias BattleContactArc "front" | "right" | "rear" | "left"
 
@@ -1166,7 +1155,7 @@ function btech_unit.sensor_report(dbref, verbose) end
 ---@field verbose_text string Plain multiline C0 contact report.
 ---@field identified boolean Current terrain permits identification.
 ---@field weapon_arc BattleContactArc Observer torso direction; individual weapons may have different arcs.
----@field sensors BattleContactSensors Live roles for an already acquired target.
+---@field detection BattleDetectionChannel|nil How the observer currently perceives this contact; nil for clairvoyant-only views.
 ---@field status string Five visible condition columns; blank behind blocking terrain.
 ---@field target integer Acquired unit dbref.
 ---@field name string Chassis name, or "something" for unidentified signals.
@@ -1175,7 +1164,7 @@ function btech_unit.sensor_report(dbref, verbose) end
 ---@field heading number Travel axis including lateral offset; reverse speed travels opposite this axis.
 ---@field speed number Current kph.
 
----Read acquired contacts still eligible under current sensor conditions; no acquisition rolls.
+---Read acquired contacts the unit still perceives; no acquisition rolls.
 ---@param dbref integer Running observer unit dbref.
 ---@param preferences BattleContactPreferences? Optional inclusion filter; omitted lists all acquired contacts.
 ---@return BattleContactView[]
@@ -1330,7 +1319,7 @@ function btech_unit.autoturret(dbref, pilot) end
 
 ---@class BattleAimModifiers
 ---@field self_target boolean Coolant self-application bypasses contact acquisition.
----@field indirect {spotter: integer, spotting: integer, movement: integer, target_lock: integer}|nil Observer contributions; optical describes the observer sensor when present.
+---@field indirect {spotter: integer, spotting: integer, movement: integer, target_lock: integer}|nil Observer contributions; perception then describes the spotter's view.
 ---@field gunnery integer
 ---@field distance number
 ---@field network_range {kind: "c3"|"c3i", distance: number, source: integer|nil}|nil Active command-network range; physical limits and firing visibility remain separate.
@@ -1353,7 +1342,7 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field weapon_accuracy integer Intrinsic accuracy adjustment; pulse lasers contribute -2, MRMs +1.
 ---@field weapon_damage integer Penalty from damaged focusing, ranging and other weapon components.
 ---@field target_lock integer
----@field optical {sensor: string, secondary: boolean, modifier: integer}|nil
+---@field perception {channel: BattleDetectionChannel|nil, direct_fire: boolean, modifier: integer}|nil Nil without a current contact; direct_fire is false behind blocking terrain.
 
 ---@class BattleSectionExposureReport
 ---@field cause "water"|"vacuum"
@@ -2697,7 +2686,7 @@ function btech_player.contact_preferences(player, preferences) end
 function btech_player.contact_options(options, brief_buildings) end
 
 ---@class BattleBuildingContact
----@field sensors BattleContactSensors Terrain sensor roles.
+---@field detection BattleDetectionChannel|nil Whether the sensor band or sight reaches the entrance.
 ---@field short_text string Plain compact row after identification locks.
 ---@field weapon_arc BattleContactArc Observer torso direction toward entrance.
 ---@field interior integer
@@ -2881,7 +2870,7 @@ function btech_unit.c3i_network(dbref, pilot) end
 ---@field name string
 ---@field identified boolean
 ---@field friendly boolean Actual team relationship; identification controls display color.
----@field sensors {primary: boolean, secondary: boolean} Requester's own sensors only.
+---@field detection BattleDetectionChannel|nil How the requester itself perceives the target; nil for network-only sightings.
 ---@field weapon_arc string
 ---@field coordinate BattleHexCoordinate
 ---@field elevation integer
@@ -3407,6 +3396,8 @@ function btech_unit.set_field(actor, unit, field, value) end
 ---@class BattleAmmunitionModeConstant
 ---Typed repair operation from btech.repair.operations.
 ---@class BattleRepairOperation
+---Typed battlefield light constant from btech.map.light_levels.
+---@class BattleLightLevel
 
 ---@class BattleValuePair
 ---@field current integer

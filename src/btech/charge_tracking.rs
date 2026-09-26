@@ -130,7 +130,7 @@ pub fn select_charge(
     }
     ensure!(
         !world.btech.maps()[&position.map].blocks_friendly_fire()
-            || unit.sensor_signature().team != victim.sensor_signature().team,
+            || unit.signature().team != victim.signature().team,
         "You can't charge your own team!"
     );
     let mut candidate = world.clone();

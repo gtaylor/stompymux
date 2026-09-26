@@ -41,7 +41,7 @@ async fn fixture(
     };
     saved[class][shooter.0.to_string()]["power"] = serde_json::json!({"state":"running"});
     saved[class][shooter.0.to_string()]["contacts"][target.0.to_string()] =
-        serde_json::json!({"primary":true,"secondary":false});
+        serde_json::json!({"identified": true});
     world.btech = serde_json::from_value(saved).unwrap();
     (dir, config, world, target, shooter)
 }
@@ -398,7 +398,7 @@ async fn pickup_clears_completed_cover_but_shutdown_preserves_it() {
     // Administrative placement clears acquired contacts; restore the carrier's explicit acquisition.
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     saved["constructed"][carrier.0.to_string()]["contacts"][target.0.to_string()] =
-        serde_json::json!({"primary":true,"secondary":false});
+        serde_json::json!({"identified": true});
     world.btech = serde_json::from_value(saved).unwrap();
     let before = world.btech.clone();
     assert!(set_battle_tow(&mut world, carrier, Some(target)).is_err());

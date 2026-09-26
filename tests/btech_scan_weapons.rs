@@ -18,8 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId,
     firing::edit(&mut world, scanner, |state| {
         state["motion"]["heading"] = 180.into();
         state["motion"]["desired_heading"] = 180.into();
-        state["contacts"][subject.0.to_string()] =
-            serde_json::json!({"primary":true,"secondary":false,"identified":true});
+        state["contacts"][subject.0.to_string()] = serde_json::json!({"identified":true});
     });
     assert!(
         visible_battle_contact(&world, scanner, subject)

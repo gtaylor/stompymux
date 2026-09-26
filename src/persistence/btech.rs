@@ -130,7 +130,7 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
         player_preferences: player_preferences.into(),
         player_configuration: player_configuration.into(),
         unit_configuration: super::btech_unit_configuration::load(c).await?.into(),
-        seismic_detect_stopped: false,
+        sensor_range: Default::default(),
         skill_thresholds: Default::default(),
         character_values: super::btech_values::load(c).await?.into(),
         characters: super::btech_character::load(c).await?.into(),
@@ -211,7 +211,7 @@ pub(super) fn validate_changes(
     expected.part_costs = after.btech.part_costs.clone();
     expected.skill_thresholds = after.btech.skill_thresholds.clone();
     expected.weapon_settings = after.btech.weapon_settings.clone();
-    expected.seismic_detect_stopped = after.btech.seismic_detect_stopped;
+    expected.sensor_range = after.btech.sensor_range;
     if let Some(purges) = purges {
         expected.purge(purges);
     }

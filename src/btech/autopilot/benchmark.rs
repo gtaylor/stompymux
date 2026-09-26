@@ -455,28 +455,24 @@ fn fixture_world(
         if let Some(unit) = std::sync::Arc::make_mut(&mut world.btech.constructed).get_mut(&unit_id)
         {
             unit.dice = crate::BattleDice::seeded(stream_seed);
-            unit.sensor_signal =
-                crate::BattleSensorSignal::seeded(0, seed_bytes(seed, index as u64 + 1_000))?;
             let mut recovery = serde_json::to_value(&unit.crew_recovery)?;
             recovery["dice"] = serde_json::to_value(crate::BattleDice::seeded(seed_bytes(
                 seed,
                 index as u64 + 2_000,
             )))?;
             unit.crew_recovery = serde_json::from_value(recovery)?;
-            unit.sensor_signature.team = if index % 2 == 0 { 1 } else { 2 };
+            unit.signature.team = if index % 2 == 0 { 1 } else { 2 };
         }
         if let Some(vehicle) = std::sync::Arc::make_mut(&mut world.btech.vehicles).get_mut(&unit_id)
         {
             vehicle.dice = crate::BattleDice::seeded(stream_seed);
-            vehicle.sensor_signal =
-                crate::BattleSensorSignal::seeded(0, seed_bytes(seed, index as u64 + 1_000))?;
             let mut recovery = serde_json::to_value(&vehicle.crew_recovery)?;
             recovery["dice"] = serde_json::to_value(crate::BattleDice::seeded(seed_bytes(
                 seed,
                 index as u64 + 2_000,
             )))?;
             vehicle.crew_recovery = serde_json::from_value(recovery)?;
-            vehicle.sensor_signature.team = if index % 2 == 0 { 1 } else { 2 };
+            vehicle.signature.team = if index % 2 == 0 { 1 } else { 2 };
         }
         let row = (index / 10) as i64;
         let col = (index % 10) as i64;
@@ -540,15 +536,13 @@ fn fixture_world(
             .keys()
             .copied()
             .collect::<Vec<_>>();
-        for (index, &id) in ids.iter().enumerate() {
+        for &id in &ids {
             if let Some(u) = std::sync::Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
                 u.power = crate::BattlePower::Running;
                 if let Some(m) = u.motion.as_mut() {
                     m.heading = 90.0;
                     m.desired_heading = 90.0;
                 }
-                u.sensor_signal =
-                    crate::BattleSensorSignal::seeded(100, seed_bytes(seed, index as u64 + 1000))?;
             }
             if let Some(u) = std::sync::Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
                 u.power = crate::BattlePower::Running;
@@ -556,14 +550,11 @@ fn fixture_world(
                     m.heading = 90.0;
                     m.desired_heading = 90.0;
                 }
-                u.sensor_signal =
-                    crate::BattleSensorSignal::seeded(100, seed_bytes(seed, index as u64 + 1000))?;
             }
         }
-        // Setup-only, bounded ordinary acquisition. Even strong seeded signals may
-        // reject an initial scan; never inject a contact to admit an attack.
+        // Setup-only, bounded ordinary acquisition; never inject a contact to admit an attack.
         for _ in 0..16 {
-            crate::btech::refresh_optical_scanners(&mut world, &ids)?;
+            crate::btech::refresh_contacts(&mut world, &ids)?;
             if ids.chunks_exact(2).all(|pair| {
                 super::orders::validate_for_unit(
                     &world,

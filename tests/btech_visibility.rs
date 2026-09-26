@@ -169,7 +169,7 @@ async fn visibility_sensor_loss_and_clairvoyant_contacts_cross_all_chassis() {
             let (_dir, config, mut world, observer, target) =
                 fixture(&observer_source, &target_source, false).await;
             edit(&mut world, observer, |state| {
-                state["contacts"] = serde_json::json!({target.0.to_string(): {"primary":true,"secondary":true,"identified":true}});
+                state["contacts"] = serde_json::json!({target.0.to_string(): {"identified":true}});
             });
             let geometry = battle_unit_terrain_los(&world, observer, target).unwrap();
             assert!(
@@ -177,16 +177,13 @@ async fn visibility_sensor_loss_and_clairvoyant_contacts_cross_all_chassis() {
                     .unwrap()
                     .is_some()
             );
-            for sensor in [
-                BattleSensorMode::Visual,
-                BattleSensorMode::LightAmplification,
-            ] {
-                assert!(
-                    battle_map_optical_contact(&world, observer, target, sensor, false, false)
-                        .unwrap()
-                        .eligible
-                );
-            }
+            assert_eq!(
+                battle_perceive(&world, observer, target)
+                    .unwrap()
+                    .unwrap()
+                    .channel,
+                BattleDetectionChannel::Sensors
+            );
             set_battle_visibility(
                 &mut world,
                 target,
@@ -203,18 +200,9 @@ async fn visibility_sensor_loss_and_clairvoyant_contacts_cross_all_chassis() {
                     .is_none()
             );
             assert!(battle_observer_messages(&world, target, "moves").is_empty());
-            for sensor in [
-                BattleSensorMode::Visual,
-                BattleSensorMode::LightAmplification,
-            ] {
-                let report =
-                    battle_map_optical_contact(&world, observer, target, sensor, false, false)
-                        .unwrap();
-                assert!(!report.eligible);
-                assert_eq!(report.acquisition_factor, 0);
-            }
+            assert!(battle_perceive(&world, observer, target).unwrap().is_none());
             assert_eq!(world.btech, hidden);
-            let events = refresh_optical_scanners(&mut world, &[observer]).unwrap();
+            let events = refresh_battle_contacts(&mut world, &[observer]).unwrap();
             assert!(
                 events
                     .iter()
@@ -234,7 +222,12 @@ async fn visibility_sensor_loss_and_clairvoyant_contacts_cross_all_chassis() {
                 .unwrap()
                 .unwrap();
             assert!(contact.identified);
-            assert!(!contact.sensors.primary && !contact.sensors.secondary);
+            assert!(contact.detection.is_none());
+            assert!(
+                contact.short_text.starts_with(' '),
+                "{}",
+                contact.short_text
+            );
             assert_eq!(visible_battle_contacts(&world, observer).unwrap().len(), 1);
             assert_eq!(battle_observer_messages(&world, target, "moves").len(), 1);
             assert_eq!(
@@ -277,15 +270,16 @@ async fn clairvoyance_preserves_physical_los_and_unacquired_aim() {
         let before = world.btech.clone();
         assert!(battle_hex_visible(&world, observer, hex).unwrap());
         assert_eq!(
-            battle_hex_sensor_visibility(&world, observer, hex).unwrap(),
-            BattleContactSensors::default()
+            battle_hex_perception(&world, observer, hex).unwrap(),
+            Some(BattleDetectionChannel::Sight)
         );
+        assert!(battle_perceive(&world, observer, target).unwrap().is_none());
         assert!(battle_hex_visible(&world, observer, BattleHexCoordinate { x: 9, y: 9 }).is_err());
         let view = visible_battle_contact(&world, observer, target)
             .unwrap()
             .unwrap();
         assert!(view.identified);
-        assert_eq!(view.sensors, BattleContactSensors::default());
+        assert_eq!(view.detection, None);
         let rules = BattleAimRules {
             woods_damage: false,
             dig_bonus: 3,
@@ -298,7 +292,14 @@ async fn clairvoyance_preserves_physical_los_and_unacquired_aim() {
             override_weapon_arcs: true,
         };
         let aim = battle_aim_modifiers(&world, observer, target, 0, 4, rules).unwrap();
-        assert_eq!(aim.optical.unwrap().modifier, 10_000);
+        assert_eq!(
+            aim.perception,
+            Some(BattlePerceptionAim {
+                channel: None,
+                direct_fire: true,
+                modifier: 10_000,
+            })
+        );
         assert!(
             battle_unit_terrain_los(&world, observer, target)
                 .unwrap()
@@ -309,35 +310,38 @@ async fn clairvoyance_preserves_physical_los_and_unacquired_aim() {
     }
 }
 
-/// Every sensor family rejects invisible signatures, even for a clairvoyant operator with working hardware.
+/// Every perception channel rejects invisible targets, even for a clairvoyant operator with working hardware.
 #[tokio::test]
-async fn invisibility_suppresses_all_sensor_families_without_acquisition_rolls() {
+async fn invisibility_suppresses_all_perception_channels_without_acquisition() {
     let source = include_str!("../game/mechs/JR7-D").replace("Left_Torso\n", "Left_Torso\n    CRIT_3-4 { BeagleProbe - - }\n    CRIT_5 { Light_BAP - - }\n    CRIT_6-8 { BloodhoundProbe - - }\n") + "\nSpecials { AntiAircraft }\n";
     let (_dir, config, base, observer, target) =
         fixture(&source, include_str!("../game/mechs/JR7-D"), false).await;
-    for mode in [
-        BattleSensorMode::Visual,
-        BattleSensorMode::LightAmplification,
-        BattleSensorMode::Infrared,
-        BattleSensorMode::Seismic,
-        BattleSensorMode::Electromagnetic,
-        BattleSensorMode::Radar,
-        BattleSensorMode::BeagleProbe,
-        BattleSensorMode::LightProbe,
-        BattleSensorMode::BloodhoundProbe,
-    ] {
+    let map = base.btech.units()[&observer].map.unwrap();
+    for channel in BattleDetectionChannel::ALL {
         let mut world = base.clone();
-        configure_battle_sensor_policy(&mut world, true);
-        if mode == BattleSensorMode::Radar {
+        // Silence every channel that would win the tie-break ahead of the one under test.
+        if channel != BattleDetectionChannel::Sensors {
+            set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false)
+                .unwrap();
+        }
+        if matches!(
+            channel,
+            BattleDetectionChannel::Radar | BattleDetectionChannel::Probe
+        ) {
+            set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
+        }
+        if channel == BattleDetectionChannel::Radar {
+            set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Probes, false)
+                .unwrap();
             edit(&mut world, target, |state| {
                 state["ground_elevation"] = 5.into()
             });
         }
-        let ordinary =
-            battle_map_optical_contact(&world, observer, target, mode, false, false).unwrap();
-        assert!(
-            ordinary.eligible,
-            "{mode:?} must have a detectable control signature"
+        let ordinary = battle_perceive(&world, observer, target).unwrap();
+        assert_eq!(
+            ordinary.map(|perception| perception.channel),
+            Some(channel),
+            "{channel:?} must have a detectable control target"
         );
         set_battle_visibility(
             &mut world,
@@ -358,29 +362,15 @@ async fn invisibility_suppresses_all_sensor_families_without_acquisition_rolls()
         )
         .unwrap();
         let before = world.btech.clone();
-        let report =
-            battle_map_optical_contact(&world, observer, target, mode, false, false).unwrap();
-        assert!(!report.eligible);
-        assert_eq!(report.acquisition_factor, 0);
-        let scan = scan_battle_optical_target(
-            &mut world,
-            observer,
-            target,
-            BattleSensorScan {
-                primary: mode,
-                secondary: mode,
-                visual_disabled: false,
-                amplification_disabled: false,
-                perception: 0,
-                target: BattleScanTarget {
-                    lit: false,
-                    hostile: true,
-                    hidden: false,
-                },
-            },
-        )
-        .unwrap();
-        assert!(scan.detected_by.is_none());
+        assert!(
+            battle_perceive(&world, observer, target).unwrap().is_none(),
+            "{channel:?}"
+        );
+        assert!(
+            refresh_battle_contacts(&mut world, &[observer])
+                .unwrap()
+                .is_empty()
+        );
         assert_eq!(world.btech, before);
         world.validate(&config).unwrap();
     }

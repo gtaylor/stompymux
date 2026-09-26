@@ -5,7 +5,7 @@ linkTitle: "contacts"
 manualLinkTitle: "contacts"
 ---
 
-Read acquired contacts still eligible under current sensor conditions; no acquisition rolls.
+Read acquired contacts the unit still perceives; no acquisition rolls.
 
 ## Signature
 

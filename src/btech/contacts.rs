@@ -1,20 +1,19 @@
-//! Durable optical observations with explicit acquisition, retention and loss transitions.
+//! Durable contacts with explicit acquisition, retention and loss transitions.
 use super::{
-    BattleScanTarget, BattleSensorMode, BattleSensorScan, BattleSensorScanReport, BattleUnit,
+    BattleAcquisitionRules, BattleDetection, BattleDetectionChannel, BattlePerception,
+    BattlePerceptionProfile, BattleUnit,
 };
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc};
 
-/// Sensor roles that could observe the target at its most recent contact update.
+/// An acquired target as of its most recent contact update.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BattleContact {
     /// Whether the last retained observation identified the target through clear terrain.
     #[serde(default)]
     pub identified: bool,
-    pub primary: bool,
-    pub secondary: bool,
 }
 
 /// Count acquired enemy contacts without rerunning detection or changing saved observations.
@@ -22,23 +21,21 @@ pub(super) fn enemy_count(world: &World, id: ObjectId) -> Result<usize> {
     let observer = super::scanner::scanner_unit(world, id).context("Unit is unavailable")?;
     Ok(observer
         .contacts
-        .iter()
-        .filter(|(target, contact)| {
-            (contact.primary || contact.secondary)
-                && super::scanner::scanner_unit(world, **target)
-                    .is_some_and(|unit| unit.signature.team != observer.signature.team)
+        .keys()
+        .filter(|target| {
+            super::scanner::scanner_unit(world, **target)
+                .is_some_and(|unit| unit.signature.team != observer.signature.team)
         })
         .count())
 }
 
-/// Live sensor roles returned by a read-only contact display.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleContactSensors {
-    pub primary: bool,
-    pub secondary: bool,
+/// Contact-row code for a detection: the channel letter, lowercase behind blocking terrain.
+/// Clairvoyant views of units nobody actually perceives show a blank.
+pub(super) fn detection_code(detection: Option<BattleDetectionChannel>, identified: bool) -> char {
+    detection.map_or(' ', |channel| channel.code(identified))
 }
 
-/// Change in ownership of an optical contact; retained observations do not reroll acquisition.
+/// Change in ownership of a contact; retained observations do not reroll acquisition.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum BattleContactTransition {
@@ -48,23 +45,23 @@ pub enum BattleContactTransition {
     Lost,
 }
 
-/// Scenario facts until skills, teams, target illumination and map sensor-disable bits are owned.
+/// Target facts supplied by the scanner for one observer/target update.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BattleContactRules {
-    pub target: BattleScanTarget,
+    pub hostile: bool,
+    pub hidden: bool,
+    /// The observing pilot's perception skill target.
     pub perception: i16,
-    pub visual_disabled: bool,
-    pub amplification_disabled: bool,
     /// False refreshes existing observations without trying to acquire unseen targets.
     pub acquire: bool,
 }
 
-/// A committed candidate observation and the acquisition attempts, when needed.
+/// A committed observation and the hidden-unit search, when one was needed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct BattleContactUpdate {
     pub transition: BattleContactTransition,
     pub contact: Option<BattleContact>,
-    pub scan: Option<BattleSensorScanReport>,
+    pub detection: Option<BattleDetection>,
 }
 
 impl BattleUnit {
@@ -81,86 +78,64 @@ impl super::BattleVehicle {
     }
 }
 
-/// Refresh one target using the observer's saved active modes and atomically owned dice.
-pub fn update_optical_contact(
+/// Perceive one target now and commit the resulting acquisition, retention or loss.
+pub fn update_contact(
     world: &mut World,
     observer: ObjectId,
     target: ObjectId,
     rules: BattleContactRules,
 ) -> Result<BattleContactUpdate> {
     ensure!(observer != target, "A unit cannot acquire itself");
-    let (power, pair, known) = if let Some(vehicle) = world.btech.vehicles().get(&observer) {
-        (
-            vehicle.power(),
-            vehicle.sensor_selection().active,
-            vehicle.contacts.contains_key(&target),
-        )
+    let perception = super::perceive(world, observer, target)?;
+    apply_contact(world, observer, target, perception, rules)
+}
+
+/// Commit an already computed perception. New targets are acquired at once, except hidden
+/// hostile units, which need a probe or a successful search; known targets are retained for
+/// as long as any channel still reaches them. Loss clears the observer's lock and any station
+/// selections on the target.
+pub(super) fn apply_contact(
+    world: &mut World,
+    observer: ObjectId,
+    target: ObjectId,
+    perception: Option<BattlePerception>,
+    rules: BattleContactRules,
+) -> Result<BattleContactUpdate> {
+    ensure!(observer != target, "A unit cannot acquire itself");
+    let (power, known) = if let Some(vehicle) = world.btech.vehicles().get(&observer) {
+        (vehicle.power(), vehicle.contacts.contains_key(&target))
     } else {
         let unit = world
             .btech
             .constructed_units()
             .get(&observer)
             .context("Unit construction state is unavailable")?;
-        (
-            unit.power(),
-            unit.sensor_selection().active,
-            unit.contacts.contains_key(&target),
-        )
+        (unit.power(), unit.contacts.contains_key(&target))
     };
     ensure!(power == super::BattlePower::Running, "Start the unit first");
-    let query = |sensor| {
-        super::map_optical_contact(
-            world,
-            observer,
-            target,
-            sensor,
-            rules.target.lit,
-            match sensor {
-                BattleSensorMode::Infrared
-                | BattleSensorMode::Seismic
-                | BattleSensorMode::Electromagnetic
-                | BattleSensorMode::Radar
-                | BattleSensorMode::BeagleProbe
-                | BattleSensorMode::LightProbe
-                | BattleSensorMode::BloodhoundProbe => false,
-                BattleSensorMode::Visual => rules.visual_disabled,
-                BattleSensorMode::LightAmplification => rules.amplification_disabled,
-            },
-        )
-    };
-    let primary = query(pair.primary)?.eligible;
-    let secondary = if pair.primary == pair.secondary {
-        primary
-    } else {
-        query(pair.secondary)?.eligible
-    };
-    let mut contact = (primary || secondary).then_some(BattleContact {
-        primary,
-        secondary,
-        identified: !super::unit_terrain_los(world, observer, target)?.blocked,
+    let mut contact = perception.map(|perception| BattleContact {
+        identified: perception.identified,
     });
-    let mut scan = None;
+    let mut detection = None;
     if !known {
-        if contact.is_some() && rules.acquire {
-            let attempt = super::scan_optical_target(
-                world,
-                observer,
-                target,
-                BattleSensorScan {
-                    primary: pair.primary,
-                    secondary: pair.secondary,
-                    target: rules.target,
-                    perception: rules.perception,
-                    visual_disabled: rules.visual_disabled,
-                    amplification_disabled: rules.amplification_disabled,
-                },
-            )?;
-            if attempt.detected_by.is_none() {
-                contact = None;
+        match perception {
+            Some(perception) if rules.acquire => {
+                let attempt = super::perception::acquire(
+                    world,
+                    observer,
+                    &perception,
+                    BattleAcquisitionRules {
+                        hostile: rules.hostile,
+                        hidden: rules.hidden,
+                        perception: rules.perception,
+                    },
+                )?;
+                if !attempt.detected {
+                    contact = None;
+                }
+                detection = Some(attempt);
             }
-            scan = Some(attempt);
-        } else {
-            contact = None;
+            _ => contact = None,
         }
     }
     let transition = match (known, contact.is_some()) {
@@ -201,7 +176,7 @@ pub fn update_optical_contact(
     Ok(BattleContactUpdate {
         transition,
         contact,
-        scan,
+        detection,
     })
 }
 
@@ -285,8 +260,8 @@ pub struct BattleContactView {
     pub identified: bool,
     /// General direction relative to the observer torso, not a mount firing guarantee.
     pub weapon_arc: super::BattleContactArc,
-    /// Current eligibility of each sensor role for this already acquired target.
-    pub sensors: BattleContactSensors,
+    /// How the target is currently perceived; absent for a clairvoyant view nobody perceives.
+    pub detection: Option<BattleDetectionChannel>,
     /// Five visible status columns; terrain-obscured identities receive blanks.
     pub status: String,
     pub target: ObjectId,
@@ -380,8 +355,8 @@ impl BattleContactView {
         let name: String = crate::text::plain(&self.name).chars().take(12).collect();
         format!(
             "{}{}{}[{}]{} {:<12} x:{:>3} y:{:>3} z:{:>3} r:{:>4.1} b:{:>3} s:{:>5.1} h:{:>3} S:{}",
-            if self.sensors.primary { 'P' } else { ' ' },
-            if self.sensors.secondary { 'S' } else { ' ' },
+            detection_code(self.detection, self.identified),
+            ' ',
             self.weapon_arc.symbol(),
             self.label,
             movement.chars().next().unwrap_or('U'),
@@ -426,7 +401,7 @@ pub(crate) struct BattleContactFacts {
     pub(crate) position: super::BattlePosition,
     pub(crate) identified: bool,
     pub(crate) friendly: bool,
-    pub(crate) sensors: BattleContactSensors,
+    pub(crate) detection: Option<BattleDetectionChannel>,
     pub(crate) known_destroyed: bool,
     pub(crate) range: super::BattleRange,
 }
@@ -436,6 +411,7 @@ fn contact_facts_with_unit(
     world: &World,
     observer: ObjectId,
     unit: &super::scanner::ScannerUnit<'_>,
+    profile: &BattlePerceptionProfile,
     target: ObjectId,
     illumination: Option<&super::searchlight::IlluminationContext<'_>>,
 ) -> Result<Option<BattleContactFacts>> {
@@ -455,44 +431,27 @@ fn contact_facts_with_unit(
     {
         return Ok(None);
     }
-    let pair = unit.pair;
-    // Geometry is immutable during this read. Trace it once for both sensor
-    // roles and identification; do not retain it across movement or a shot.
-    let geometry = if unit.visibility.clairvoyant {
-        None
+    // Clairvoyant views skip the trace: they neither need nor imply a real detection.
+    let (detection, identified, range) = if unit.visibility.clairvoyant {
+        (None, true, super::unit_range(world, observer, target)?)
     } else {
-        super::los::unit_terrain_geometry(world, observer, target).ok()
-    };
-    let eligible = |sensor| {
-        super::sensors::map_optical_contact_prepared(
+        let Some(perception) = super::perception::perceive_prepared(
             world,
             observer,
+            profile,
             target,
-            sensor,
-            other.signature.illuminated,
-            false,
-            geometry,
+            None,
             illumination,
         )
-        .is_ok_and(|report| report.eligible)
-    };
-    let primary = !unit.visibility.clairvoyant && eligible(pair.primary);
-    let secondary = if pair.primary == pair.secondary {
-        primary
-    } else {
-        !unit.visibility.clairvoyant && eligible(pair.secondary)
-    };
-    if !unit.visibility.clairvoyant && !primary && !secondary {
-        return Ok(None);
-    }
-    let identified = unit.visibility.clairvoyant
-        || match geometry {
-            Some((terrain, _)) => !terrain.blocked,
-            None => !super::unit_terrain_los(world, observer, target)?.blocked,
+        .ok()
+        .flatten() else {
+            return Ok(None);
         };
-    let range = match geometry {
-        Some((_, range)) => range,
-        None => super::unit_range(world, observer, target)?,
+        (
+            Some(perception.channel),
+            perception.identified,
+            perception.range,
+        )
     };
     let friendly = identified && unit.signature.team == other.signature.team;
     let position = other.position.context("Contact has no position")?;
@@ -501,7 +460,7 @@ fn contact_facts_with_unit(
         position,
         identified,
         friendly,
-        sensors: BattleContactSensors { primary, secondary },
+        detection,
         // contact_status hides all condition columns behind the same clear
         // terrain rule.  The target's authoritative destruction bit plus the
         // already-computed identification result is the equivalent fact,
@@ -511,17 +470,60 @@ fn contact_facts_with_unit(
     }))
 }
 
-/// Read the shared facts for one observer/target pair after observer admission.
-pub(crate) fn contact_facts(
-    world: &World,
+/// One observer's contact reads over an immutable world.
+///
+/// The observer's perception profile and lighting cache are built once and shared by every
+/// target, so loops over many targets (map displays, pathfinding occupancy) stay cheap. Nothing
+/// here survives the borrow: build a new reader after any world mutation.
+pub(crate) struct ContactReader<'w> {
+    world: &'w World,
     observer: ObjectId,
-    target: ObjectId,
-) -> Result<Option<BattleContactFacts>> {
-    let _measurement = crate::btech::autopilot::diagnostics::measure(
-        crate::btech::autopilot::diagnostics::Category::Contacts,
-    );
-    let unit = contact_observer(world, observer)?;
-    contact_facts_with_unit(world, observer, &unit, target, None)
+    unit: super::scanner::ScannerUnit<'w>,
+    profile: BattlePerceptionProfile,
+    illumination: super::searchlight::IlluminationContext<'w>,
+}
+
+impl<'w> ContactReader<'w> {
+    /// Admit a running, placed observer and prepare its perception profile.
+    pub(crate) fn new(world: &'w World, observer: ObjectId) -> Result<Self> {
+        let _measurement = crate::btech::autopilot::diagnostics::measure(
+            crate::btech::autopilot::diagnostics::Category::Contacts,
+        );
+        Ok(Self {
+            world,
+            observer,
+            unit: contact_observer(world, observer)?,
+            profile: super::perception_profile(world, observer)?,
+            illumination: super::searchlight::IlluminationContext::new(world),
+        })
+    }
+
+    /// Live facts for one target, or `None` when it is not a current contact.
+    pub(crate) fn facts(&self, target: ObjectId) -> Result<Option<BattleContactFacts>> {
+        let _measurement = crate::btech::autopilot::diagnostics::measure(
+            crate::btech::autopilot::diagnostics::Category::Contacts,
+        );
+        contact_facts_with_unit(
+            self.world,
+            self.observer,
+            &self.unit,
+            &self.profile,
+            target,
+            Some(&self.illumination),
+        )
+    }
+
+    /// The display view of one target, or `None` when it is not a current contact.
+    pub(crate) fn view(&self, target: ObjectId) -> Result<Option<BattleContactView>> {
+        contact_view(
+            self.world,
+            self.observer,
+            &self.unit,
+            &self.profile,
+            target,
+            Some(&self.illumination),
+        )
+    }
 }
 
 /// Build an acquired contact or a clairvoyant observation using current mixed-class geometry.
@@ -529,9 +531,13 @@ fn contact_view(
     world: &World,
     observer: ObjectId,
     unit: &super::scanner::ScannerUnit<'_>,
+    profile: &BattlePerceptionProfile,
     target: ObjectId,
+    illumination: Option<&super::searchlight::IlluminationContext<'_>>,
 ) -> Result<Option<BattleContactView>> {
-    let Some(facts) = contact_facts_with_unit(world, observer, unit, target, None)? else {
+    let Some(facts) =
+        contact_facts_with_unit(world, observer, unit, profile, target, illumination)?
+    else {
         return Ok(None);
     };
     let other = super::scanner::scanner_unit(world, target).context("Contact disappeared")?;
@@ -563,7 +569,7 @@ fn contact_view(
                 bearing
             },
         )?,
-        sensors: facts.sensors,
+        detection: facts.detection,
         status: super::contact_status::contact_status(world, observer, target)?,
         target,
         name: if facts.identified {
@@ -602,21 +608,21 @@ pub fn visible_contact(
     observer: ObjectId,
     target: ObjectId,
 ) -> Result<Option<BattleContactView>> {
-    contact_view(world, observer, &contact_observer(world, observer)?, target)
+    ContactReader::new(world, observer)?.view(target)
 }
 
 /// List eligible acquired contacts, or all same-map units for a clairvoyant observer.
 /// This read-only display never attempts acquisition or updates the saved observation.
 pub fn visible_contacts(world: &World, observer: ObjectId) -> Result<Vec<BattleContactView>> {
-    let unit = contact_observer(world, observer)?;
+    let reader = ContactReader::new(world, observer)?;
     let mut views = Vec::new();
-    let targets: Vec<_> = if unit.visibility.clairvoyant {
-        super::map_slots::all_unit_order(world, unit.position.unwrap().map)?
+    let targets: Vec<_> = if reader.unit.visibility.clairvoyant {
+        super::map_slots::all_unit_order(world, reader.unit.position.unwrap().map)?
     } else {
-        unit.contacts.keys().copied().collect()
+        reader.unit.contacts.keys().copied().collect()
     };
     for target in targets {
-        if let Some(view) = contact_view(world, observer, &unit, target)? {
+        if let Some(view) = reader.view(target)? {
             views.push(view);
         }
     }
@@ -641,9 +647,18 @@ pub(super) fn styled_row(text: &str, color: Option<&str>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Facts for one pair through a freshly built reader, as single-target callers read them.
+    fn contact_facts(
+        world: &World,
+        observer: ObjectId,
+        target: ObjectId,
+    ) -> Result<Option<BattleContactFacts>> {
+        ContactReader::new(world, observer)?.facts(target)
+    }
     use crate::{
-        BattleMapAsset, BattlePower, BattleSensorSignature, BattleUnitTemplate, Config, Kind,
-        ObjectId, World, create_battle_map, place_battle_unit, set_battle_sensor_signature,
+        BattleMapAsset, BattlePower, BattleUnitSignature, BattleUnitTemplate, Config, Kind,
+        ObjectId, World, create_battle_map, place_battle_unit, set_battle_unit_signature,
     };
     use std::sync::Arc;
 
@@ -676,10 +691,10 @@ mod tests {
                 .unwrap()
                 .power = BattlePower::Running;
         }
-        set_battle_sensor_signature(
+        set_battle_unit_signature(
             &mut world,
             target,
-            BattleSensorSignature {
+            BattleUnitSignature {
                 team: 1,
                 ..Default::default()
             },
@@ -689,14 +704,7 @@ mod tests {
             .get_mut(&observer)
             .unwrap()
             .contacts
-            .insert(
-                target,
-                BattleContact {
-                    identified: true,
-                    primary: true,
-                    secondary: false,
-                },
-            );
+            .insert(target, BattleContact { identified: true });
         (world, observer, target)
     }
 
@@ -712,7 +720,7 @@ mod tests {
         assert_eq!(facts.position.y, view.coordinate.y as u16);
         assert_eq!(facts.identified, view.identified);
         assert_eq!(facts.friendly, view.friendly);
-        assert_eq!(facts.sensors, view.sensors);
+        assert_eq!(facts.detection, view.detection);
         assert_eq!(facts.range, view.range);
         assert_eq!(
             facts.known_destroyed,
@@ -731,7 +739,7 @@ mod tests {
             unit.inferno_remaining = if step == 1 { 10 } else { 0 };
             unit.searchlight.on = step % 2 == 0;
             unit.searchlight.destroyed = step == 2;
-            unit.sensor_signature.illuminated = step == 3;
+            unit.signature.illuminated = step == 3;
             let context = super::super::searchlight::IlluminationContext::new(&world);
             if step == 0 {
                 assert!(context.illuminated(target));
@@ -745,8 +753,7 @@ mod tests {
         }
     }
     #[test]
-    fn batch_observation_matches_scalar_across_chassis_sensors_and_live_changes() {
-        use crate::btech::{BattleSensorMode as Sensor, BattleSensorPair};
+    fn batch_observation_matches_scalar_across_chassis_conditions_and_live_changes() {
         let config = Config::load("tests/fixtures/game").unwrap();
         let templates = [
             include_str!("../../game/mechs/JR7-D"),
@@ -766,11 +773,7 @@ mod tests {
                 .create(&mut world, observer)
                 .unwrap();
             place_battle_unit(&mut world, observer, map, 0, 0).unwrap();
-            let contact = BattleContact {
-                identified: true,
-                primary: true,
-                secondary: true,
-            };
+            let contact = BattleContact { identified: true };
             if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&observer) {
                 unit.power = BattlePower::Running;
                 unit.contacts.insert(target, contact);
@@ -781,45 +784,23 @@ mod tests {
                 unit.power = BattlePower::Running;
                 unit.contacts.insert(target, contact);
             }
-            for primary in [
-                Sensor::Visual,
-                Sensor::LightAmplification,
-                Sensor::Infrared,
-                Sensor::Radar,
-                Sensor::Electromagnetic,
-                Sensor::Seismic,
-            ] {
-                let pair = BattleSensorPair {
-                    primary,
-                    secondary: Sensor::Visual,
-                };
-                if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&observer) {
-                    unit.sensor_selection.active = pair;
-                } else {
-                    Arc::make_mut(&mut world.btech.vehicles)
-                        .get_mut(&observer)
-                        .unwrap()
-                        .sensor_selection
-                        .active = pair;
-                }
-                for light in 0..=2 {
-                    for visibility in [0, 10, 60] {
-                        let map = Arc::make_mut(&mut world.btech.maps).get_mut(&map).unwrap();
-                        map.light = light;
-                        map.visibility = visibility;
-                        let expected: Vec<_> = contact_facts(&world, observer, target)
-                            .ok()
-                            .flatten()
-                            .into_iter()
-                            .collect();
-                        let before = serde_json::to_value(&world.btech).unwrap();
-                        assert_eq!(acquired_contact_facts(&world, observer).unwrap(), expected);
-                        assert_eq!(
-                            before,
-                            serde_json::to_value(&world.btech).unwrap(),
-                            "observation must not mutate state or dice"
-                        );
-                    }
+            for light in 0..=2 {
+                for visibility in [0, 10, 60] {
+                    let map = Arc::make_mut(&mut world.btech.maps).get_mut(&map).unwrap();
+                    map.light = light;
+                    map.visibility = visibility;
+                    let expected: Vec<_> = contact_facts(&world, observer, target)
+                        .ok()
+                        .flatten()
+                        .into_iter()
+                        .collect();
+                    let before = serde_json::to_value(&world.btech).unwrap();
+                    assert_eq!(acquired_contact_facts(&world, observer).unwrap(), expected);
+                    assert_eq!(
+                        before,
+                        serde_json::to_value(&world.btech).unwrap(),
+                        "observation must not mutate state or dice"
+                    );
                 }
             }
             // Every call owns a fresh immutable context; the pure topology cache remains warm.
@@ -829,7 +810,7 @@ mod tests {
                         Arc::make_mut(&mut world.btech.constructed)
                             .get_mut(&target)
                             .unwrap()
-                            .sensor_signature
+                            .signature
                             .illuminated = true
                     }
                     1 => {
@@ -933,18 +914,11 @@ pub(crate) fn acquired_contact_facts(
     world: &World,
     observer: ObjectId,
 ) -> Result<Vec<BattleContactFacts>> {
-    let _measurement = crate::btech::autopilot::diagnostics::measure(
-        crate::btech::autopilot::diagnostics::Category::Contacts,
-    );
-    let unit = contact_observer(world, observer)?;
-    let illumination = super::searchlight::IlluminationContext::new(world);
-    Ok(unit
+    let reader = ContactReader::new(world, observer)?;
+    Ok(reader
+        .unit
         .contacts
         .keys()
-        .filter_map(|&target| {
-            contact_facts_with_unit(world, observer, &unit, target, Some(&illumination))
-                .ok()
-                .flatten()
-        })
+        .filter_map(|&target| reader.facts(target).ok().flatten())
         .collect())
 }

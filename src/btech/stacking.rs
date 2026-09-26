@@ -164,7 +164,7 @@ fn resolve_in_candidate(
         .get(&id)
         .context("Unit is unavailable")?;
     let position = unit.position().context("Collision requires placement")?;
-    let team = unit.sensor_signature().team;
+    let team = unit.signature().team;
     let occupants: Vec<_> = world
         .btech
         .constructed_units()
@@ -175,7 +175,7 @@ fn resolve_in_candidate(
                 && !other.is_destroyed()
                 && !other.airborne()
         })
-        .map(|(&other, unit)| (other, unit.sensor_signature().team == team))
+        .map(|(&other, unit)| (other, unit.signature().team == team))
         .collect();
     let friendly = occupants.iter().filter(|(_, same)| *same).count();
     let (count, same_team) = if friendly > 2 {
@@ -202,7 +202,7 @@ fn resolve_in_candidate(
                 || unit.position() != Some(position)
                 || unit.power() != BattlePower::Running
                 || unit.airborne()
-                || (unit.sensor_signature().team == team) != same_team
+                || (unit.signature().team == team) != same_team
             {
                 return None;
             }

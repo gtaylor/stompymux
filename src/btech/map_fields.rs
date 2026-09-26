@@ -41,13 +41,8 @@ fn edit(
             } else {
                 record.visibility = i64::from(integer()?);
             }
-            let light = match record.light {
-                0 => super::BattleLight::Night,
-                1 => super::BattleLight::Twilight,
-                2 => super::BattleLight::Day,
-                _ => bail!("Map light must be 0, 1 or 2"),
-            };
-            return super::set_map_visibility(
+            let light = super::BattleLight::from_stored(record.light)?;
+            super::set_map_visibility(
                 world,
                 map,
                 light,
@@ -55,7 +50,8 @@ fn edit(
                     .visibility
                     .try_into()
                     .context("Invalid battlefield visibility")?,
-            );
+            )?;
+            return Ok(Vec::new());
         }
         "winddir" | "windspeed" => {
             if field.eq_ignore_ascii_case("winddir") {

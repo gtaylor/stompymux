@@ -179,14 +179,14 @@ async fn failed_recovery_reschedules_and_later_attempts_use_current_health() {
     assert!(!world.btech.unconscious(ObjectId(1)));
 }
 
-/// Every cockpit snapshots its existing check and blindness without drawing presentation dice.
+/// Every cockpit snapshots its existing check without drawing presentation dice.
 #[tokio::test]
 async fn recovery_notices_capture_cockpit_check_and_privacy_state() {
     use stompymux_rs::*;
     for source in firing::templates() {
         let (_dir, _config, base, unit, _, _) =
             firing::fixture_with_target(&source, None, &source).await;
-        for (conscious, blinded) in [(true, false), (false, false), (true, true)] {
+        for conscious in [true, false] {
             let seed = (0..=255)
                 .map(|byte| [byte; 32])
                 .find(|seed| (BattleDice::seeded(*seed).two_d6() >= 7) == conscious)
@@ -200,14 +200,10 @@ async fn recovery_notices_capture_cockpit_check_and_privacy_state() {
                 "pain_resistance":false, "toughness":false, "dice":BattleDice::seeded(seed)
             });
             world.btech = serde_json::from_value(state).unwrap();
-            firing::edit(&mut world, unit, |state| {
-                state["blinded_remaining"] = if blinded { 2 } else { 0 }.into()
-            });
             let mut foot = world.clone();
             release_battle_pilot(&mut foot, unit, ObjectId(1)).unwrap();
             let notice = advance_battle_recovery(&mut world).pop().unwrap();
             assert_eq!(notice.unit, Some(unit));
-            assert_eq!(notice.muted, blinded);
             assert_eq!(
                 notice.check,
                 BattleConsciousnessCheck {
@@ -218,7 +214,6 @@ async fn recovery_notices_capture_cockpit_check_and_privacy_state() {
             );
             let detached = advance_battle_recovery(&mut foot).pop().unwrap();
             assert_eq!(detached.unit, None);
-            assert!(!detached.muted);
             assert_eq!(detached.check, notice.check);
             assert_eq!(
                 serde_json::to_value(&world.btech.recoveries()[&ObjectId(1)]).unwrap()["dice"],

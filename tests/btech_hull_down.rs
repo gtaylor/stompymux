@@ -1,4 +1,4 @@
-//! Quad hull-down timing, action rollback, movement admission and shared sensor cover.
+//! Quad hull-down timing, action rollback, movement admission and shared perception cover.
 use crate::support;
 use stompymux_rs::*;
 const QUAD: &str = include_str!("../game/mechs/SCP-1N");
@@ -37,6 +37,7 @@ async fn fixture(
     (dir, config, world, id, shooter)
 }
 
+/// Lower the quad and wait for the posture change to complete.
 fn lower(world: &mut World, id: ObjectId) {
     set_battle_hull_down(world, id, ObjectId(1), "").unwrap();
     for _ in 0..3 {
@@ -45,6 +46,7 @@ fn lower(world: &mut World, id: ObjectId) {
     assert!(world.btech.constructed_units()[&id].hull_down().active);
 }
 
+/// Native and Lua posture changes agree, roll back on error and resume after restart.
 #[tokio::test]
 async fn native_lua_transitions_cancel_rollback_and_resume_after_restart() {
     let (_dir, config, world, id, _) = fixture(QUAD, MECH).await;
@@ -138,6 +140,7 @@ async fn native_lua_transitions_cancel_rollback_and_resume_after_restart() {
     lua.world().validate(&config).unwrap();
 }
 
+/// Shutdown cancels a pending change, keeps a completed posture, and a fall clears it.
 #[tokio::test]
 async fn shutdown_cancels_changes_preserves_completed_posture_and_falls_clear_it() {
     for complete in [false, true] {
@@ -177,6 +180,7 @@ async fn shutdown_cancels_changes_preserves_completed_posture_and_falls_clear_it
     }
 }
 
+/// Only quads may lower; speed sets the countdown and invalid saved states fail validation.
 #[tokio::test]
 async fn chassis_admission_countdown_bounds_and_invalid_saved_states() {
     for source in [MECH, VEHICLE] {
@@ -213,8 +217,9 @@ async fn chassis_admission_countdown_bounds_and_invalid_saved_states() {
     }
 }
 
+/// Hull-down cover adds two to partial cover for Mech and vehicle attackers by sensors or sight.
 #[tokio::test]
-async fn sensor_cover_is_shared_between_attackers_and_respects_sensor_exceptions() {
+async fn hull_down_cover_is_shared_between_attackers_by_sensors_and_sight() {
     for shooter_source in [MECH, VEHICLE] {
         let (_dir, config, mut world, id, shooter) = fixture(QUAD, shooter_source).await;
         // Shallow water supplies cover visible from both tall Mechs and low vehicles.
@@ -227,46 +232,32 @@ async fn sensor_cover_is_shared_between_attackers_and_respects_sensor_exceptions
                 serde_json::json!(if index == 3 { 0 } else { 1 });
         }
         world.btech = serde_json::from_value(saved).unwrap();
-        assert!(
-            battle_unit_terrain_los(&world, shooter, id)
-                .unwrap()
-                .partial_cover
-        );
-        let mut sensors = vec![
-            BattleSensorMode::Visual,
-            BattleSensorMode::LightAmplification,
-            BattleSensorMode::Infrared,
-        ];
-        if shooter_source == MECH {
-            sensors.extend([
-                BattleSensorMode::Electromagnetic,
-                BattleSensorMode::Seismic,
-                BattleSensorMode::Radar,
-            ]);
-        }
-        for sensor in sensors {
-            let before =
-                battle_map_optical_contact(&world, shooter, id, sensor, false, false).unwrap();
+        let terrain = battle_unit_terrain_los(&world, shooter, id).unwrap();
+        assert!(terrain.partial_cover);
+        let cover = i16::from(terrain.woods) + i16::from(terrain.target_woods) + 3;
+        // The sensor band reaches first; with it switched off, sight carries the same cover.
+        for (sensors, channel) in [
+            (true, BattleDetectionChannel::Sensors),
+            (false, BattleDetectionChannel::Sight),
+        ] {
+            set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, sensors)
+                .unwrap();
+            let before = battle_perceive(&world, shooter, id).unwrap().unwrap();
+            assert_eq!((before.channel, before.aim_modifier), (channel, cover));
             lower(&mut world, id);
-            let after =
-                battle_map_optical_contact(&world, shooter, id, sensor, false, false).unwrap();
+            let after = battle_perceive(&world, shooter, id).unwrap().unwrap();
+            assert_eq!(after.aim_modifier - before.aim_modifier, 2);
             assert_eq!(
-                after.aim_modifier - before.aim_modifier,
-                if sensor == BattleSensorMode::Infrared {
-                    0
-                } else {
-                    2
-                }
+                (after.channel, after.identified, after.probed),
+                (before.channel, before.identified, before.probed)
             );
-            assert_eq!(before.eligible, after.eligible);
-            assert_eq!(before.acquisition_factor, after.acquisition_factor);
             set_battle_hull_down(&mut world, id, ObjectId(1), "-").unwrap();
             for _ in 0..3 {
                 advance_battle_units(&mut world, 0);
             }
         }
+        set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, true).unwrap();
         // Open ground removes the bonus, even though the unit remains lowered.
-        let map = world.btech.constructed_units()[&id].position().unwrap().map;
         let mut saved = serde_json::to_value(&world.btech).unwrap();
         for index in 0..9 {
             saved["maps"][map.0.to_string()]["terrain"][index]["terrain"] =
@@ -279,15 +270,9 @@ async fn sensor_cover_is_shared_between_attackers_and_respects_sensor_exceptions
                 .unwrap()
                 .partial_cover
         );
-        let before =
-            battle_map_optical_contact(&world, shooter, id, BattleSensorMode::Visual, false, false)
-                .unwrap();
+        let before = battle_perceive(&world, shooter, id).unwrap();
         lower(&mut world, id);
-        assert_eq!(
-            before,
-            battle_map_optical_contact(&world, shooter, id, BattleSensorMode::Visual, false, false)
-                .unwrap()
-        );
+        assert_eq!(before, battle_perceive(&world, shooter, id).unwrap());
         world.validate(&config).unwrap();
     }
 }
@@ -323,7 +308,7 @@ async fn pickup_clears_completed_quad_cover() {
     set_battle_towable(&mut world, id, true).unwrap();
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     saved["constructed"][carrier.0.to_string()]["contacts"][id.0.to_string()] =
-        serde_json::json!({"primary":true,"secondary":false});
+        serde_json::json!({"identified":true});
     world.btech = serde_json::from_value(saved).unwrap();
     let before = world.btech.clone();
     assert!(set_battle_tow(&mut world, carrier, Some(id)).is_err());

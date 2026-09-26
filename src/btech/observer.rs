@@ -65,7 +65,7 @@ pub(super) fn radio_text(
     };
     Ok(format!(
         "{}{open}{}:{bearing}{close} <{affiliation}:{identity}:{}> <{}> {message}[reset]",
-        team_color(source.sensor_signature().team),
+        team_color(source.signature().team),
         char::from(b'A' + channel as u8),
         selected.frequency,
         selected.title

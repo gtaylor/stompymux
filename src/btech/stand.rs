@@ -82,10 +82,6 @@ fn stand_target_by_actor(
         StandActor::Player(pilot) => super::power::controlled_unit(world, id, pilot)?,
         StandActor::Autopilot => {
             super::power::autopilot_controlled_unit(world, id)?;
-            ensure!(
-                !super::battle_unit_blinded(world, id),
-                "You are momentarily blinded!"
-            );
         }
     }
     let unit = &world.btech.constructed_units()[&id];

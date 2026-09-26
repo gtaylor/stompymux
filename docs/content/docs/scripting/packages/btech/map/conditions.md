@@ -6,7 +6,7 @@ manualLinkTitle: "conditions"
 ---
 
 Change saved light/weather conditions without reloading occupied terrain.
-Changed light rechecks active sensors and publishes cockpit warnings transactionally; locks and pending requests remain.
+Perception follows the new light and visibility on the next scan; contacts and locks remain until then.
 
 ## Signature
 
@@ -19,7 +19,7 @@ btech.map.conditions(dbref, light, visibility)
 | Name | Type | Description |
 | --- | --- | --- |
 | `dbref` | `integer` | Map object dbref. |
-| `light` | `"night"\|"twilight"\|"day"` |  |
+| `light` | `BattleLightLevel` | Typed constant from btech.map.light_levels. |
 | `visibility` | `integer` | Weather range from 0 through 60. |
 
 ## Returns

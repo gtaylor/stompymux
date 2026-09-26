@@ -169,7 +169,6 @@ async fn restoring_a_launcher_clears_its_spent_state_without_resetting_vehicle_c
             "dice",
             "pilot_injuries",
             "definition",
-            "sensor_signal",
         ] {
             assert_eq!(after[field], before[field], "{field}");
         }

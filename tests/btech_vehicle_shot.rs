@@ -105,10 +105,11 @@ async fn engagement() -> (tempfile::TempDir, Config, World, ObjectId, [ObjectId;
     power(&mut world, &ids, BattlePower::Running);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ids[2]);
     assign_battle_pilot(&mut world, ids[2], ObjectId(1)).unwrap();
-    refresh_optical_scanners(&mut world, &[ids[2]]).unwrap();
+    refresh_battle_contacts(&mut world, &[ids[2]]).unwrap();
     (dir, config, world, map, ids)
 }
 
+/// Vehicle fire checks crew, arcs, contacts, perception and weapon readiness without mutation.
 #[tokio::test]
 async fn vehicle_firing_checks_readiness_arcs_visibility_and_preserves_all_state() {
     let (_dir, _config, initial, map, [mech, _, shooter, vehicle]) = engagement().await;
@@ -138,7 +139,7 @@ async fn vehicle_firing_checks_readiness_arcs_visibility_and_preserves_all_state
             "crew",
             "arc",
             "contacts",
-            "disabled",
+            "unperceived",
             "character",
             "destroyed",
         ] {
@@ -170,8 +171,10 @@ async fn vehicle_firing_checks_readiness_arcs_visibility_and_preserves_all_state
                         saved["vehicles"][shooter.0.to_string()]["contacts"] =
                             serde_json::json!({});
                     }
-                    "disabled" => {
+                    "unperceived" => {
+                        // Neither the switched-off sensor band nor zero visibility reaches.
                         saved["maps"][map.0.to_string()]["sensor_flags"] = serde_json::json!(1);
+                        saved["maps"][map.0.to_string()]["visibility"] = serde_json::json!(0);
                     }
                     "destroyed" => {
                         saved["vehicles"][shooter.0.to_string()]["weapon_failures"]["0"] =
@@ -216,10 +219,10 @@ async fn vehicle_friendly_fire_preferences_native_lua_and_map_policy_survive_res
                 let mut world = initial.clone();
                 set_battle_friendly_fire_safety(&mut world, shooter, ObjectId(1), preference)
                     .unwrap();
-                set_battle_sensor_signature(
+                set_battle_unit_signature(
                     &mut world,
                     target,
-                    BattleSensorSignature {
+                    BattleUnitSignature {
                         team: i32::from(hostile),
                         ..Default::default()
                     },

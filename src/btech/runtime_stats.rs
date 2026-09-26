@@ -48,7 +48,7 @@ pub fn runtime_stats(
         crate::authority::is_wizard(world, actor),
         "Permission denied."
     );
-    let scanner_observers = crate::optical_scanner_observers(world).len();
+    let scanner_observers = crate::battle_contact_observers(world).len();
     let state = &world.btech;
     let mut counter = ByteCounter::default();
     serde_json::to_writer(&mut counter, state)?;

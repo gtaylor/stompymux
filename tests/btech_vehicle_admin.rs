@@ -52,12 +52,6 @@ async fn vehicle_commands_and_lua_share_creation_placement_and_snapshot_state() 
         .as_object_mut()
         .unwrap()
         .remove("dice");
-    for state in [&mut first_state, &mut second_state] {
-        state["sensor_signal"]
-            .as_object_mut()
-            .unwrap()
-            .remove("dice");
-    }
     assert_eq!(first_state, second_state);
     let text = support::run_text(
         &scripts,

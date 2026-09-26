@@ -211,10 +211,10 @@ async fn conventional_vtol_experience_uses_the_same_aerospace_skill() {
             .unwrap()
             .flags
             .insert(Flag::InCharacter);
-        set_battle_sensor_signature(
+        set_battle_unit_signature(
             &mut world,
             unit,
-            BattleSensorSignature {
+            BattleUnitSignature {
                 team,
                 hidden: false,
                 illuminated: false,

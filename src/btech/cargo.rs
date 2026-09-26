@@ -68,10 +68,6 @@ fn admit(
         ensure!(!unit.destroyed, "You are destroyed!");
         ensure!(running, "Reactor is not online!");
     }
-    ensure!(
-        !super::battle_unit_blinded(world, id),
-        "You are momentarily blinded!"
-    );
     let unconscious = pilot.map_or(recovery > 0, |pilot| world.btech.unconscious(pilot));
     ensure!(
         !unconscious || (running && pilot != Some(actor)),

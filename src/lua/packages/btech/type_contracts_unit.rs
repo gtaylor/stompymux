@@ -292,25 +292,27 @@
 // lua-types-end
 
 // lua-types-begin btech 00153
-//|---Request a ten-second optical mode change for a running unit's conscious pilot.
+//|---Read-only summary of a placed unit's automatic perception: sensor band, sight, probe and radar.
 //|---@param dbref integer
-//|---@param pilot integer
-//|---@param primary BattleSensorMode
-//|---@param secondary BattleSensorMode
-//|---@return boolean
-//|function btech_unit.sensors(dbref, pilot, primary, secondary) end
+//|---@return BattlePerceptionReport
+//|function btech_unit.perception(dbref) end
 // lua-types-end
 
 // lua-types-begin btech 00154
-//|---Read-only reference sensor layout; verbose expands active descriptions while Wanted stays compact.
-//|---@param dbref integer
-//|---@param verbose? boolean
-//|---@return string
-//|function btech_unit.sensor_report(dbref, verbose) end
+//|---@class BattlePerceptionReport
+//|---@field light "night"|"twilight"|"day" Current battlefield light.
+//|---@field sight_range integer Weather visibility in hexes, capped by the map ceiling.
+//|---@field lit_sight_range integer Reach to illuminated targets; triple sight at night.
+//|---@field sensor_range integer Effective all-conditions sensor band; zero while unavailable.
+//|---@field sensors BattlePerceptionStatus Condition of the sensor band.
+//|---@field probe {kind: BattleProbeKind, range: integer, status: BattlePerceptionStatus}|nil Best installed active probe.
+//|---@field radar {range: integer, status: BattlePerceptionStatus}|nil Anti-aircraft radar, if installed.
+//|---@field running boolean Stopped units perceive nothing.
+//|---@field text string The report printed by the sensor command.
 // lua-types-end
 
 // lua-types-begin btech 00158
-//|---Read acquired contacts still eligible under current sensor conditions; no acquisition rolls.
+//|---Read acquired contacts the unit still perceives; no acquisition rolls.
 //|---@param dbref integer Running observer unit dbref.
 //|---@param preferences BattleContactPreferences? Optional inclusion filter; omitted lists all acquired contacts.
 //|---@return BattleContactView[]

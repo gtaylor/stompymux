@@ -172,7 +172,7 @@ async fn tic_firing_reuses_shots_and_rolls_back_callbacks() {
         saved[if vehicle { "vehicles" } else { "constructed" }][shooter.0.to_string()]["dice"] =
             serde_json::to_value(BattleDice::seeded([42; 32])).unwrap();
         world.btech = serde_json::from_value(saved).unwrap();
-        refresh_optical_scanners(&mut world, &[shooter]).unwrap();
+        refresh_battle_contacts(&mut world, &[shooter]).unwrap();
         edit_battle_tic(
             &mut world,
             shooter,

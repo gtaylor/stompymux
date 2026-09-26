@@ -107,7 +107,7 @@ pub(super) fn primary_status(world: &World, id: ObjectId) -> Result<u32> {
         BattleTorso, BattleVtolFlightPhase as Flight,
     };
     let scanner = super::scanner::scanner_unit(world, id).context("Unit is unavailable")?;
-    let (selection, pilot, crew_unconscious, ams, safe, combat_safe, blind, extra) =
+    let (selection, pilot, crew_unconscious, ams, safe, combat_safe, extra) =
         if let Some(unit) = world.btech.constructed_units().get(&id) {
             let flight = unit.flight();
             let extra = [
@@ -141,7 +141,6 @@ pub(super) fn primary_status(world: &World, id: ObjectId) -> Result<u32> {
                 unit.ams_enabled,
                 unit.self_destruct_safe,
                 unit.combat_safe,
-                unit.blinded_remaining > 0,
                 extra,
             )
         } else {
@@ -156,7 +155,6 @@ pub(super) fn primary_status(world: &World, id: ObjectId) -> Result<u32> {
                 unit.ams_enabled,
                 unit.self_destruct_safe,
                 unit.combat_safe,
-                unit.blinded_remaining > 0,
                 u32::from(landed) | (u32::from(landed && unit.rotor_destroyed()) << 7),
             )
         };
@@ -187,7 +185,6 @@ pub(super) fn primary_status(world: &World, id: ObjectId) -> Result<u32> {
             crew_unconscious || pilot.is_some_and(|pilot| world.btech.unconscious(pilot)),
         ),
         (14, world.btech.tows().values().any(|target| *target == id)),
-        (21, blind),
         (22, combat_safe),
         (23, scanner.autocon_shutdown),
         (24, scanner.fired_recently),

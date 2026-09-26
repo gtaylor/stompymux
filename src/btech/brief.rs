@@ -206,10 +206,6 @@ pub(super) fn display_access(
 ) -> Result<()> {
     ensure!(!world.btech.unconscious(viewer), "You are unconscious");
     ensure!(
-        !super::battle_unit_blinded(world, unit),
-        "You are momentarily blinded!"
-    );
-    ensure!(
         (world.btech.constructed_units().contains_key(&unit)
             || (vehicles && world.btech.vehicles().contains_key(&unit)))
             && world
@@ -252,7 +248,7 @@ pub(super) fn display_source(
             owner == station || owner == context.parent,
             "Station does not control this unit"
         );
-        super::power::control_health(world, context.parent, viewer)?;
+        super::power::control_health(world, viewer)?;
         return context.target_source(world);
     }
     display_access(world, owner, viewer, true)?;

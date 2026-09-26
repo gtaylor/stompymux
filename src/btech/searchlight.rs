@@ -97,7 +97,7 @@ pub(super) fn beam(
 ) -> Option<(super::BattlePosition, super::BattlePoint, f64)> {
     let lamp = lamp_state(world, id)?;
     // Most battlefield units have no active beam. Reject them before building
-    // a full scanner view; illumination is queried for every sensor pair.
+    // a full scanner view; illumination is queried for every observed pair.
     if !lamp.on || lamp.destroyed {
         return None;
     }
@@ -243,12 +243,12 @@ fn externally_illuminated_with_sources(
         return false;
     }
     let unit = world.btech.constructed_units().get(&target);
-    if unit.is_some_and(|unit| unit.sensor_signature().illuminated)
+    if unit.is_some_and(|unit| unit.signature().illuminated)
         || world
             .btech
             .vehicles()
             .get(&target)
-            .is_some_and(|vehicle| vehicle.sensor_signature().illuminated)
+            .is_some_and(|vehicle| vehicle.signature().illuminated)
     {
         return true;
     }
