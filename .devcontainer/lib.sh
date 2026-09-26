@@ -65,6 +65,21 @@ check_optional_tools() {
   fi
 }
 
+# Node prefix for cloud images, whose own Node (and nvm) we want to shadow on PATH.
+CLOUD_NODE_PREFIX="$HOME/.local"
+
+# Installs the toolchain on a cloud image running as root, with Node under
+# CLOUD_NODE_PREFIX, and puts that Node first on this script's PATH. Callers
+# persist the PATH change in whatever way their agent's shells pick up.
+install_cloud_toolchain() {
+  log "Installing development tools"
+  NODE_PREFIX="$CLOUD_NODE_PREFIX" bash "$DEVCONTAINER_DIR/install-tools.sh"
+  export PATH="$CLOUD_NODE_PREFIX/bin:$PATH"
+  if [[ "$(command -v npm)" != "$CLOUD_NODE_PREFIX/bin/npm" ]]; then
+    die "npm resolves to $(command -v npm), expected $CLOUD_NODE_PREFIX/bin/npm"
+  fi
+}
+
 # Installs the Node dependencies used to build the documentation site.
 install_docs_dependencies() {
   log "Installing documentation site dependencies"

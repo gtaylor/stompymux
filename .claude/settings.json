@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if [ \"$CLAUDE_CODE_REMOTE\" = true ]; then \"$CLAUDE_PROJECT_DIR/.devcontainer/setup.sh\" cloud; fi",
+            "command": "if [ \"$CLAUDE_CODE_REMOTE\" = true ]; then \"$CLAUDE_PROJECT_DIR/.devcontainer/setup.sh\" claude-cloud; fi",
             "timeout": 600
           }
         ]
