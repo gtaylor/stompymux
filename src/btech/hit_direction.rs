@@ -46,7 +46,6 @@ impl HitDirection {
 mod tests {
     use super::*;
     use crate::*;
-    use std::sync::Arc;
 
     /// Both combatants may use any supported chassis; direct direction observes each new state sample.
     #[test]
@@ -95,14 +94,18 @@ mod tests {
                     (270.0, BattleHitArc::Left),
                 ] {
                     let motion = if world.btech.vehicles().contains_key(&target) {
-                        Arc::make_mut(&mut world.btech.vehicles)
+                        world
+                            .btech
+                            .vehicles
                             .get_mut(&target)
                             .unwrap()
                             .motion
                             .as_mut()
                             .unwrap()
                     } else {
-                        Arc::make_mut(&mut world.btech.constructed)
+                        world
+                            .btech
+                            .constructed
                             .get_mut(&target)
                             .unwrap()
                             .motion
@@ -140,14 +143,18 @@ mod tests {
                                 BattleHitArc::Right
                             };
                             let motion = if vehicle {
-                                Arc::make_mut(&mut world.btech.vehicles)
+                                world
+                                    .btech
+                                    .vehicles
                                     .get_mut(&target)
                                     .unwrap()
                                     .motion
                                     .as_mut()
                                     .unwrap()
                             } else {
-                                Arc::make_mut(&mut world.btech.constructed)
+                                world
+                                    .btech
+                                    .constructed
                                     .get_mut(&target)
                                     .unwrap()
                                     .motion

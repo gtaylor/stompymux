@@ -18,8 +18,7 @@ pub fn check_map_action(
     actor: ObjectId,
     map: ObjectId,
 ) -> Result<BattleMapCheck> {
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let world = scripts.world();
         ensure!(
             crate::authority::is_wizard(&world, actor),
@@ -44,11 +43,7 @@ pub fn check_map_action(
         super::notify_message(scripts, super::BattleMessageTarget::Player(actor), "Done.")?;
         scripts.effects.validate()?;
         Ok(report)
-    })();
-    if result.is_err() {
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// FIXMAP checks the actor's selected map; trailing input has no effect.

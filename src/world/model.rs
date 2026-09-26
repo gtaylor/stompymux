@@ -1,6 +1,7 @@
 //! Durable world objects and the aggregate world state.
 
 use super::containment::Links;
+use super::shared_map::SharedMap;
 use crate::{accounts::Account, communication::Channel};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -84,12 +85,12 @@ pub struct Object {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct World {
     #[serde(skip)]
-    pub links: Links,
+    pub links: std::sync::Arc<Links>,
     #[serde(skip)]
     pub palette: std::sync::Arc<crate::text::Palette>,
-    pub objects: BTreeMap<ObjectId, Object>,
-    pub accounts: BTreeMap<ObjectId, Account>,
-    pub channels: BTreeMap<String, Channel>,
+    pub objects: SharedMap<ObjectId, Object>,
+    pub accounts: SharedMap<ObjectId, Account>,
+    pub channels: SharedMap<String, Channel>,
     pub channel_aliases: BTreeMap<ObjectId, Vec<crate::communication::ChannelAlias>>,
     pub macros: crate::macros::PlayerMacros,
     /// Saved BattleTech identities shared by transaction checkpoints.
@@ -105,6 +106,19 @@ pub struct World {
 }
 
 impl World {
+    /// Apply `change` in place, restoring the world exactly as it was if it fails.
+    ///
+    /// The snapshot is cheap: every large collection is copy-on-write, so only the
+    /// entries `change` actually touches are ever copied.
+    pub fn attempt<T>(&mut self, change: impl FnOnce(&mut World) -> Result<T>) -> Result<T> {
+        let before = self.clone();
+        let result = change(self);
+        if result.is_err() {
+            *self = before;
+        }
+        result
+    }
+
     /// Resolve a player by dbref, display name, or account alias.
     pub fn find_player(&self, name: &str) -> Option<ObjectId> {
         if let Some(number) = name.strip_prefix('#') {

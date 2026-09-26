@@ -42,7 +42,7 @@ pub fn set_tow(world: &mut World, carrier: ObjectId, target: Option<ObjectId>) -
     let Some(target) = target else {
         let mut candidate = world.clone();
         detach(&mut candidate, carrier);
-        candidate.btech.validate(&candidate)?;
+        candidate.btech.validate_action(&candidate)?;
         *world = candidate;
         return Ok(());
     };
@@ -189,7 +189,7 @@ pub(super) fn synchronize_pair(
         speed: motion.speed,
         desired_speed: 0.0,
     };
-    let identity = if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&target) {
+    let identity = if let Some(unit) = world.btech.vehicles.get_mut(&target) {
         unit.update_motion(carried, position, false);
         if let Some(flight) = &mut unit.vtol_flight {
             flight.altitude = height;
@@ -199,7 +199,9 @@ pub(super) fn synchronize_pair(
         }
         unit.identity()
     } else {
-        let unit = Arc::make_mut(&mut world.btech.constructed)
+        let unit = world
+            .btech
+            .constructed
             .get_mut(&target)
             .context("Tow target is unavailable")?;
         unit.motion = Some(carried);
@@ -208,17 +210,19 @@ pub(super) fn synchronize_pair(
         unit.hex_sync_pending = false;
         unit.identity()
     };
-    Arc::make_mut(&mut world.btech.units).insert(target, identity);
+    world.btech.units.insert(target, identity);
     Ok(())
 }
 
 /// Remove ownership and external translation on an unpublished release candidate.
 pub(super) fn detach(world: &mut World, carrier: ObjectId) -> Option<ObjectId> {
     let target = Arc::make_mut(&mut world.btech.tows).remove(&carrier)?;
-    let motion = if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&target) {
+    let motion = if let Some(unit) = world.btech.vehicles.get_mut(&target) {
         unit.motion.as_mut()
     } else {
-        Arc::make_mut(&mut world.btech.constructed)
+        world
+            .btech
+            .constructed
             .get_mut(&target)
             .and_then(|unit| unit.motion.as_mut())
     };

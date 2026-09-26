@@ -2,7 +2,6 @@
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Empty means no override; the byte bound also applies when restoring saved state.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -57,10 +56,12 @@ pub fn display_name(world: &World, id: ObjectId) -> Result<&str> {
 pub(super) fn set(world: &mut World, id: ObjectId, value: &str) -> Result<()> {
     let value = DisplayName::try_from(value.to_owned())?;
     let configured = (!value.0.is_empty()).then(|| value.0.clone());
-    if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
         unit.display_name = value;
     } else {
-        Arc::make_mut(&mut world.btech.vehicles)
+        world
+            .btech
+            .vehicles
             .get_mut(&id)
             .context("Unit is unavailable")?
             .display_name = value;

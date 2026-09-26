@@ -144,7 +144,7 @@ fn break_ice_upward_inner(
             && i32::from(position.y) == coordinate.y),
         "Breakout unit is not on the ice tile"
     );
-    if let Some(unit) = Arc::make_mut(&mut candidate.btech.vehicles).get_mut(&id) {
+    if let Some(unit) = candidate.btech.vehicles.get_mut(&id) {
         if unit.vtol_flight().is_none()
             && unit.free_fall().is_none()
             && unit.orbital_drop().is_none()
@@ -152,9 +152,7 @@ fn break_ice_upward_inner(
             unit.ground_elevation = Some(unit.altitude(tile));
         }
     } else {
-        let unit = Arc::make_mut(&mut candidate.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
+        let unit = candidate.btech.constructed.get_mut(&id).unwrap();
         if !unit.airborne() {
             unit.ground_elevation = Some(unit.altitude(tile));
         }
@@ -299,23 +297,21 @@ fn break_surface(
         .collect();
     let mut candidate = world.clone();
     if bridge {
-        for (&id, unit) in Arc::make_mut(&mut candidate.btech.constructed).iter_mut() {
+        for (&id, unit) in candidate.btech.constructed.iter_mut() {
             if on_tile(id) && !unit.airborne() {
                 unit.ground_elevation = Some(unit.altitude(tile));
             }
         }
     }
     if bridge {
-        for (&id, unit) in Arc::make_mut(&mut candidate.btech.vehicles).iter_mut() {
+        for (&id, unit) in candidate.btech.vehicles.iter_mut() {
             if on_tile(id) {
                 unit.ground_elevation = Some(unit.altitude(tile));
                 unit.under_bridge = false;
             }
         }
     }
-    let record = Arc::make_mut(&mut candidate.btech.maps)
-        .get_mut(&map)
-        .unwrap();
+    let record = candidate.btech.maps.get_mut(&map).unwrap();
     let index = (i64::from(coordinate.y) * record.width + i64::from(coordinate.x)) as usize;
     Arc::make_mut(
         record
@@ -386,7 +382,9 @@ fn break_surface(
                         id,
                         "fizzles and pops as water renders it inoperable.",
                     ));
-                    Arc::make_mut(&mut candidate.btech.vehicles)
+                    candidate
+                        .btech
+                        .vehicles
                         .get_mut(&id)
                         .unwrap()
                         .destroy_by_flooding();
@@ -408,7 +406,7 @@ fn break_surface(
             report.falls.push((id, fall));
         }
     }
-    candidate.btech.validate(&candidate)?;
+    candidate.btech.validate_action(&candidate)?;
     *world = candidate;
     Ok(report)
 }

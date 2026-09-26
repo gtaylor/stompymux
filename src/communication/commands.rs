@@ -95,15 +95,9 @@ pub fn alias(
 
 /// Errors are session-private and cannot leave lock-side effects behind.
 fn transaction(service: &Service<'_>, work: impl FnOnce() -> Result<()>) -> Result<Action> {
-    let before = service.world.borrow().clone();
-    let checkpoint = service.effects.checkpoint();
-    match work() {
+    match crate::runtime::atomic(service.world, service.effects, |_| work()) {
         Ok(()) => Ok(Action::Continue),
-        Err(error) => {
-            *service.world.borrow_mut() = before;
-            service.effects.restore(checkpoint);
-            Ok(Action::Report(Report::Reply(error.to_string())))
-        }
+        Err(error) => Ok(Action::Report(Report::Reply(error.to_string()))),
     }
 }
 
@@ -214,11 +208,9 @@ impl Service<'_> {
                     .map(|a| a.channel)
                     .collect::<Vec<_>>();
                 for c in channels {
-                    let before = self.world.borrow().clone();
-                    let checkpoint = self.effects.checkpoint();
-                    if let Err(error) = self.say(who, &c, args) {
-                        *self.world.borrow_mut() = before;
-                        self.effects.restore(checkpoint);
+                    if let Err(error) = crate::runtime::atomic(self.world, self.effects, |_| {
+                        self.say(who, &c, args)
+                    }) {
                         self.notify(who, error.to_string())?;
                     }
                     if args.eq_ignore_ascii_case("who") {

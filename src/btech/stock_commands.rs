@@ -23,15 +23,13 @@ pub fn change_inventory_action(
         crate::authority::is_wizard(&scripts.world(), actor),
         "Permission denied."
     );
-    let before = scripts.world().clone();
-    super::inventory(&before, object)?;
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    super::inventory(&scripts.world(), object)?;
+    scripts.atomic(|before| {
         let mut candidate = before.clone();
         let mut rows = Vec::new();
         let mut messages = Vec::new();
         if change == BattleInventoryChange::Clear {
-            std::sync::Arc::make_mut(&mut candidate.btech.inventories).remove(&object);
+            candidate.btech.inventories.remove(&object);
             messages.push(BattleChannelMessage::new(
                 BattleChannel::Economy,
                 format!("#{} reset #{}'s stuff.", actor.0, object.0),
@@ -86,12 +84,7 @@ pub fn change_inventory_action(
         super::channels::publish(scripts, config, &messages)?;
         scripts.effects.validate()?;
         Ok(rows)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Native stock tools operate on the Wizard's current location, without cockpit or cargo-power gates.
@@ -197,9 +190,7 @@ pub fn add_stores_action(
     let Some(entry) = super::stock_selection::TransferSelector::new(pattern).first() else {
         return Ok(false);
     };
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let mut candidate = before.clone();
         super::inventory::change_quantity(&mut candidate, object, entry, quantity)?;
         if candidate.btech.constructed_units().contains_key(&object)
@@ -222,10 +213,5 @@ pub fn add_stores_action(
         super::channels::publish(scripts, config, &[message])?;
         scripts.effects.validate()?;
         Ok(true)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }

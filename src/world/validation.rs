@@ -57,6 +57,20 @@ impl World {
         Ok(())
     }
 
+    /// Invariant check after one gameplay action inside a larger transaction.
+    ///
+    /// Debug and test builds run the full [`World::validate`], so a broken action fails
+    /// where it happened. Release builds skip it: the server validates the finished
+    /// transaction once before persisting it and rolls the whole transaction back on
+    /// failure. Commands that rely on validation to reject player or wizard input call
+    /// [`World::validate`] directly instead.
+    pub fn validate_action(&self, config: &Config) -> Result<()> {
+        if cfg!(debug_assertions) {
+            return self.validate(config);
+        }
+        Ok(())
+    }
+
     /// Validate the complete transactional world projection.
     pub fn validate(&self, config: &Config) -> Result<()> {
         self.btech.validate(self)?;

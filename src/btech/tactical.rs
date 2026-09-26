@@ -9,7 +9,6 @@ use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
-use std::sync::Arc;
 
 /// Maximum explicitly assigned units in a tactical request.
 pub const MAX_TACTICAL_UNITS: usize = 100;
@@ -242,8 +241,8 @@ pub fn submit_tactical(
     // All fallible validation is above this boundary.
     for (id, controller) in candidates {
         let empty = controller.order_count() == 0;
-        Arc::make_mut(&mut world.btech.controllers).insert(id, controller);
-        Arc::make_mut(&mut world.btech.autopilot_plans).remove(&id);
+        world.btech.controllers.insert(id, controller);
+        world.btech.autopilot_plans.remove(&id);
         if empty {
             let _ = super::motion::set_speed_autopilot(world, id, 0.0);
         }

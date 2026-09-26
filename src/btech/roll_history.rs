@@ -1,7 +1,7 @@
 //! Transactional roll history combines live journals with counts retained when their owners retire.
 use crate::{BattleRollStatistics, ObjectId, World};
 use anyhow::Result;
-use std::{collections::BTreeSet, sync::Arc};
+use std::collections::BTreeSet;
 
 impl World {
     /// Read generic roll totals without draining journals, consuming dice or mutating simulation state.
@@ -42,13 +42,15 @@ impl World {
             }
         }
         for id in ids {
-            if let Some(unit) = Arc::make_mut(&mut self.btech.constructed).get_mut(id) {
+            if let Some(unit) = self.btech.constructed.get_mut(id) {
                 unit.dice.take_generic_roll_statistics();
             }
-            if let Some(vehicle) = Arc::make_mut(&mut self.btech.vehicles).get_mut(id) {
+            if let Some(vehicle) = self.btech.vehicles.get_mut(id) {
                 vehicle.dice.take_generic_roll_statistics();
             }
-            if let Some(dice) = Arc::make_mut(&mut self.btech.maps)
+            if let Some(dice) = self
+                .btech
+                .maps
                 .get_mut(id)
                 .and_then(|map| map.fire_dice.as_mut())
             {
@@ -103,7 +105,9 @@ mod tests {
             }
             dice.d6();
         }
-        let dice = Arc::make_mut(&mut world.btech.maps)
+        let dice = world
+            .btech
+            .maps
             .get_mut(&map)
             .unwrap()
             .fire_dice

@@ -69,19 +69,14 @@ pub fn send_targeted_radio_action(
     target: ObjectId,
     message: &str,
 ) -> Result<BattleTargetedRadioReport> {
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let report =
             resolve_targeted_radio(&scripts.world.borrow(), sender, pilot, target, message)?;
         for notice in &report.notices {
             super::notify_unit(scripts, notice.clone())?;
         }
         Ok(report)
-    })();
-    if result.is_err() {
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Resolve an explicit dbref or case-insensitive saved battlefield label on the sender's map.

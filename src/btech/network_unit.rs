@@ -139,14 +139,10 @@ pub(super) fn set_link(
     value: Option<u64>,
 ) {
     let (classic, improved) = if world.btech.vehicles().contains_key(&id) {
-        let unit = std::sync::Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.vehicles.get_mut(&id).unwrap();
         (&mut unit.c3_network, &mut unit.c3i_network)
     } else {
-        let unit = std::sync::Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
         (&mut unit.c3_network, &mut unit.c3i_network)
     };
     *match kind {

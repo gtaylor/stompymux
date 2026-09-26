@@ -217,9 +217,7 @@ pub fn advance_periodic_piloting_action(
     scripts: &Scripts,
     config: &Config,
 ) -> Result<Vec<BattlePeriodicPiloting>> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let reports = advance_periodic_piloting(&mut scripts.world_mut(), config)?;
         for report in &reports {
             if let Some(diagnostic) = report.check.diagnostic(true) {
@@ -251,12 +249,7 @@ pub fn advance_periodic_piloting_action(
             }
         }
         super::evacuation::publish_new_casualties(scripts, config, &before)?;
-        scripts.world().validate(config)?;
+        scripts.world().validate_action(config)?;
         Ok(reports)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }

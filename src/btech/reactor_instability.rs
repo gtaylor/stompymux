@@ -3,7 +3,6 @@ use super::{BattlePower, BattleUnit};
 use crate::World;
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Global startup grace preserves the zero-initialized reference timestamp without an unbounded clock.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -62,7 +61,7 @@ pub fn battle_reactor_windows_pending(world: &World) -> bool {
 /// Advance bounded clocks once within the host's commit checkpoint.
 pub fn advance_battle_reactor_windows(world: &mut World) {
     world.btech.reactor.startup_remaining = world.btech.reactor.startup_remaining.saturating_sub(1);
-    for unit in Arc::make_mut(&mut world.btech.constructed).values_mut() {
+    for unit in world.btech.constructed.values_mut() {
         if let Some(remaining) = &mut unit.reactor_instability_remaining {
             *remaining = remaining.saturating_sub(1);
         }
@@ -75,9 +74,7 @@ pub(super) fn triggered(world: &mut World, id: crate::ObjectId, power: BattlePow
         return false;
     }
     let initial = world.btech.reactor.startup_remaining;
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     if unit.reactor_instability_remaining.unwrap_or(initial) == 0 {
         return false;
     }

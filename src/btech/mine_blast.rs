@@ -102,54 +102,50 @@ fn resolve(
             }
         }
     }
-    let mut candidate = world.clone();
-    if neighbors {
-        std::sync::Arc::make_mut(&mut candidate.btech.maps)
+    world.attempt(|world| {
+        if neighbors {
+            world.btech.maps.get_mut(&map).unwrap().set_lookup_bit(
+                mine.coordinate,
+                super::map_bits::LookupKind::Mine,
+                false,
+            )?;
+        }
+        let mut report = BattleMineBlastReport {
+            map,
+            mine,
+            hits: Vec::new(),
+            ignited: Vec::new(),
+            removed: Vec::new(),
+            notices: Vec::new(),
+            pilot_notices: Vec::new(),
+        };
+        for (coordinate, damage) in cells {
+            hit_hex(world, &mut report, coordinate, damage, rules, character)?;
+            if coordinate == mine.coordinate {
+                continue;
+            }
+            if super::blast_damage::ignite_forest(world, map, coordinate)? {
+                report.ignited.push(coordinate);
+            }
+        }
+        if neighbors || mine.strength < 5 {
+            report.removed = world.btech.maps()[&map]
+                .ordered_minefields()
+                .filter_map(|(&id, field)| (field.coordinate == mine.coordinate).then_some(id))
+                .collect();
+            for &ordinal in &report.removed {
+                super::set_minefield(world, map, ordinal, None)?;
+            }
+        }
+        world
+            .btech
+            .maps
             .get_mut(&map)
             .unwrap()
-            .set_lookup_bit(mine.coordinate, super::map_bits::LookupKind::Mine, false)?;
-    }
-    let mut report = BattleMineBlastReport {
-        map,
-        mine,
-        hits: Vec::new(),
-        ignited: Vec::new(),
-        removed: Vec::new(),
-        notices: Vec::new(),
-        pilot_notices: Vec::new(),
-    };
-    for (coordinate, damage) in cells {
-        hit_hex(
-            &mut candidate,
-            &mut report,
-            coordinate,
-            damage,
-            rules,
-            character,
-        )?;
-        if coordinate == mine.coordinate {
-            continue;
-        }
-        if super::blast_damage::ignite_forest(&mut candidate, map, coordinate)? {
-            report.ignited.push(coordinate);
-        }
-    }
-    if neighbors || mine.strength < 5 {
-        report.removed = candidate.btech.maps()[&map]
-            .ordered_minefields()
-            .filter_map(|(&id, field)| (field.coordinate == mine.coordinate).then_some(id))
-            .collect();
-        for &ordinal in &report.removed {
-            super::set_minefield(&mut candidate, map, ordinal, None)?;
-        }
-    }
-    std::sync::Arc::make_mut(&mut candidate.btech.maps)
-        .get_mut(&map)
-        .unwrap()
-        .rebuild_mine_lookup()?;
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(report)
+            .rebuild_mine_lookup()?;
+        world.btech.validate_action(world)?;
+        Ok(report)
+    })
 }
 
 /// Resolve a blast cell in map-slot order, freezing each occupant's arc before its packets.

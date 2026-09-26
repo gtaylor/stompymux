@@ -140,7 +140,7 @@ impl StoredBattleMap {
 
 /// Server startup reconciles mine bits after read-only restoration, retaining hangar rows.
 pub(crate) fn rebuild_mine_lookups(world: &mut World) -> Result<()> {
-    for map in Arc::make_mut(&mut world.btech.maps).values_mut() {
+    for map in world.btech.maps.values_mut() {
         map.rebuild_mine_lookup()?;
     }
     Ok(())

@@ -1,7 +1,6 @@
 //! Shared kill attribution at the material or crew event that first destroys a unit.
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
-use std::sync::Arc;
 
 /// Inspect the unit-owned signed total without changing combat state.
 pub(super) fn read(world: &World, id: ObjectId) -> Result<i32> {
@@ -19,12 +18,11 @@ pub(super) fn read(world: &World, id: ObjectId) -> Result<i32> {
 /// Select the owning chassis store, without keeping a second attribution ledger.
 fn storage(world: &mut World, id: ObjectId) -> Result<&mut i32> {
     if world.btech.constructed_units().contains_key(&id) {
-        return Ok(&mut Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap()
-            .units_killed);
+        return Ok(&mut world.btech.constructed.get_mut(&id).unwrap().units_killed);
     }
-    Ok(&mut Arc::make_mut(&mut world.btech.vehicles)
+    Ok(&mut world
+        .btech
+        .vehicles
         .get_mut(&id)
         .context("Unit is unavailable")?
         .units_killed)

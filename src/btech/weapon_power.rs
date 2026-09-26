@@ -2,7 +2,7 @@
 use super::{BattleNotice, WeaponMount};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
-use std::{collections::BTreeSet, sync::Arc};
+use std::collections::BTreeSet;
 
 /// Saved power-down identities remain valid after physical destruction but must name Gauss mounts.
 pub(super) fn validate<L>(
@@ -52,13 +52,17 @@ pub fn disable_gauss_weapon(
         "That weapon is still recharging!"
     );
     if world.btech.vehicles().contains_key(&id) {
-        Arc::make_mut(&mut world.btech.vehicles)
+        world
+            .btech
+            .vehicles
             .get_mut(&id)
             .unwrap()
             .powered_down_weapons
             .insert(index);
     } else {
-        Arc::make_mut(&mut world.btech.constructed)
+        world
+            .btech
+            .constructed
             .get_mut(&id)
             .unwrap()
             .powered_down_weapons

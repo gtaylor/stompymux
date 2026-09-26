@@ -3,7 +3,6 @@ use super::*;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// One accepted building packet, including immune structures and clamped actual damage.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -88,9 +87,7 @@ pub(super) fn resolve(
             &format!("hits {name}, destroying it!"),
         ));
     }
-    let record = Arc::make_mut(&mut world.btech.maps)
-        .get_mut(&interior)
-        .unwrap();
+    let record = world.btech.maps.get_mut(&interior).unwrap();
     record.building.integrity = remaining;
     if remaining > 0 && building.integrity == building.maximum_integrity {
         record.building_repair = record.building.repair_delay();
@@ -120,7 +117,7 @@ pub fn advance_building_repairs(world: &mut World) {
     if !building_repair_pending(world) {
         return;
     }
-    for map in Arc::make_mut(&mut world.btech.maps).values_mut() {
+    for map in world.btech.maps.values_mut() {
         let Some(remaining) = map.building_repair else {
             continue;
         };

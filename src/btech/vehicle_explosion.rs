@@ -3,7 +3,6 @@ use super::{BattleDamagePhase, BattleNotice, BattleSystem, BattleVehicle, Battle
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// Completed catastrophe; occupant and visibility notices remain caller-published.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -89,9 +88,7 @@ pub(super) fn explode_followup_in_candidate(
         notices: Vec::new(),
         broadcasts: Vec::new(),
     };
-    let vehicle = Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
+    let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
     let pilot = vehicle.pilot();
     if !contained {
         vehicle.kill_crew();
@@ -111,7 +108,7 @@ pub(super) fn explode_followup_in_candidate(
     }
     if !contained
         && let Some(pilot) = pilot
-        && let Some(recovery) = Arc::make_mut(&mut world.btech.recoveries).get_mut(&pilot)
+        && let Some(recovery) = world.btech.recoveries.get_mut(&pilot)
     {
         recovery.remaining = 0;
     }

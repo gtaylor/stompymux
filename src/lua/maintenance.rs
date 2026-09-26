@@ -121,7 +121,7 @@ pub(crate) fn apply_relocations(
                 channel.object = None;
             }
         }
-        world.links = crate::dbck::rebuild_links(&world, &final_world.links);
+        world.links = std::sync::Arc::new(crate::dbck::rebuild_links(&world, &final_world.links));
         world.validate(&config)?;
         return Ok(());
     }
@@ -178,7 +178,7 @@ pub(crate) fn check(lua: &mlua::Lua) -> mlua::Result<()> {
             .validate(&config)
             .map_err(|e| failure("mux.runtime", e))?;
         report.plan.links = crate::dbck::rebuild_links(&s.world.borrow(), &links);
-        s.world.borrow_mut().links = report.plan.links.clone();
+        s.world.borrow_mut().links = std::sync::Arc::new(report.plan.links.clone());
         s.effects.stage_maintenance(report);
         Ok(())
     })

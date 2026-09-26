@@ -79,10 +79,7 @@ pub fn set_static_decoration(
         );
     }
     let decorations = Arc::make_mut(
-        &mut Arc::make_mut(&mut world.btech.maps)
-            .get_mut(&map)
-            .unwrap()
-            .static_decorations[kind.index()],
+        &mut world.btech.maps.get_mut(&map).unwrap().static_decorations[kind.index()],
     );
     if let Some(decoration) = decoration {
         decorations.insert(ordinal, decoration);

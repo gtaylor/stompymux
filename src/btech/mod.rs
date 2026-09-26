@@ -241,37 +241,31 @@ pub(crate) fn notify_message(
     recipient: BattleMessageTarget,
     text: &str,
 ) -> anyhow::Result<()> {
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
-        let world = scripts.world.borrow();
-        let (targets, policy) = match recipient {
-            BattleMessageTarget::Unit(id) => {
-                let mut targets = vec![id];
-                targets.extend(cockpit_links::audiences(&world, id));
-                (targets, crate::notification::Policy::ROOM)
-            }
-            BattleMessageTarget::Player(id) => (vec![id], crate::notification::Policy::DIRECT),
-        };
-        for target in targets {
-            crate::notification::send(
-                &world,
-                &scripts.outbox,
-                &crate::lua::configuration(&scripts.lua),
-                crate::notification::Request {
-                    target,
-                    sender: target,
-                    document: text.into(),
-                    policy,
-                    exclusions: None,
-                },
-            )?;
+    let world = scripts.world.borrow();
+    let config = crate::lua::configuration(&scripts.lua);
+    let (targets, policy) = match recipient {
+        BattleMessageTarget::Unit(id) => {
+            let mut targets = vec![id];
+            targets.extend(cockpit_links::audiences(&world, id));
+            (targets, crate::notification::Policy::ROOM)
         }
-        Ok(())
-    })();
-    if result.is_err() {
-        scripts.effects.restore(checkpoint);
+        BattleMessageTarget::Player(id) => (vec![id], crate::notification::Policy::DIRECT),
+    };
+    for target in targets {
+        crate::notification::send(
+            &world,
+            &scripts.outbox,
+            &config,
+            crate::notification::Request {
+                target,
+                sender: target,
+                document: text.into(),
+                policy,
+                exclusions: None,
+            },
+        )?;
     }
-    result
+    Ok(())
 }
 
 pub use geometry::{BattleHexCoordinate, BattlePoint, BattleRange, unit_elevation, unit_range};

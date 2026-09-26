@@ -2,10 +2,7 @@
 use crate::{Config, ObjectId, Scripts};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    sync::Arc,
-};
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Counts of installed runtime records and descents skipped for cycles or depth.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
@@ -39,9 +36,7 @@ pub fn update_map_links_action(
     actor: ObjectId,
     root: ObjectId,
 ) -> Result<BattleMapLinkUpdate> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(&before, actor),
             "Permission denied."
@@ -110,22 +105,20 @@ pub fn update_map_links_action(
                         .get(&map)
                         .context("Map not found")?
                         .clone();
-                    Arc::make_mut(&mut world.btech.maps)
+                    world
+                        .btech
+                        .maps
                         .get_mut(&map)
                         .unwrap()
                         .clear_lookup_kind(super::map_bits::LookupKind::Hangar);
                     if let Some(parent) = parent {
-                        Arc::make_mut(&mut world.btech.maps)
-                            .get_mut(&map)
-                            .unwrap()
-                            .building_parent = parent.0;
-                        Arc::make_mut(&mut world.btech.maps)
-                            .get_mut(&map)
-                            .unwrap()
-                            .building_exits = Default::default();
+                        world.btech.maps.get_mut(&map).unwrap().building_parent = parent.0;
+                        world.btech.maps.get_mut(&map).unwrap().building_exits = Default::default();
                         super::set_building_exit(&mut world, map, 0, Some(parent))?;
                         stats.leaves += 1;
-                        Arc::make_mut(&mut world.btech.maps)
+                        world
+                            .btech
+                            .maps
                             .get_mut(&map)
                             .unwrap()
                             .building_entry_points = Default::default();
@@ -197,12 +190,7 @@ pub fn update_map_links_action(
         scripts.world().validate(config)?;
         scripts.effects.validate()?;
         Ok(stats)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Native UPDATELINKS ignores its argument and rebuilds from the wizard's selected map.

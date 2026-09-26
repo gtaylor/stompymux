@@ -107,11 +107,11 @@ fn set_range(world: &mut World, id: ObjectId, display: Display, value: u8) -> Re
         Display::LongRange => "lrsrange",
         Display::Scanner => "scanrange",
     };
-    if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
         let hits = unit.system_hits(super::BattleSystem::Sensors);
         return unit.hardware.set(field, &value.to_string(), hits);
     }
-    if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         return unit.hardware.set(field, &value.to_string(), 0);
     }
     anyhow::bail!("Unit is unavailable")
@@ -216,9 +216,7 @@ fn message(effect: Failure) -> &'static str {
 
 /// Apply one committed second of recovery and turn-boundary failure checks atomically.
 pub fn advance_battle_computer_failures_action(scripts: &Scripts, config: &Config) -> Result<()> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let notices = recover(&mut scripts.world_mut())?;
         super::piloting::publish_ordered_notices(scripts, &notices, &[])?;
         if config.battletech.parts != 0 && scripts.world().btech.turn_clock.due() {
@@ -271,13 +269,8 @@ pub fn advance_battle_computer_failures_action(scripts: &Scripts, config: &Confi
             }
         }
         super::evacuation::publish_new_casualties(scripts, config, &before)?;
-        scripts.world().validate(config)?;
+        scripts.world().validate_action(config)?;
         scripts.effects.validate()?;
         Ok(())
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }

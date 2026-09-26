@@ -109,10 +109,10 @@ pub fn resolve_impact(
             .is_some_and(|object| !object.flags.contains(Flag::Going)),
         "Unit is unavailable"
     );
-    let mut candidate = super::autopilot::diagnostics::candidate(world, true);
-    let report = resolve_in_candidate(&mut candidate, id, hit, damage, None, None)?;
-    *world = candidate;
-    Ok(report.impact)
+    world.attempt(|world| {
+        let report = resolve_in_candidate(world, id, hit, damage, None, None)?;
+        Ok(report.impact)
+    })
 }
 
 /// Resolve character injuries at their damage events; the host action owns evacuation and rollback.
@@ -229,16 +229,16 @@ fn explode_ammunition_inner(
     );
     let character_effects = character;
     let character = character && object.flags.contains(Flag::InCharacter);
-    let mut candidate = super::autopilot::diagnostics::candidate(world, true);
-    let mut context = ImpactContext::new(&mut candidate, id, Some(rules))?;
-    context.character_effects = character_effects;
-    context.character_toughness = character.then_some(rules.toughness);
-    context.lose_critical(hazard.location)?;
-    context.unit().validate()?;
-    context.report.impact.destroyed = context.unit().is_destroyed();
-    let report = context.report;
-    *world = candidate;
-    Ok(report)
+    world.attempt(|world| {
+        let mut context = ImpactContext::new(world, id, Some(rules))?;
+        context.character_effects = character_effects;
+        context.character_toughness = character.then_some(rules.toughness);
+        context.lose_critical(hazard.location)?;
+        context.unit().validate()?;
+        context.report.impact.destroyed = context.unit().is_destroyed();
+        let report = context.report;
+        Ok(report)
+    })
 }
 
 /// Shared ordered damage traversal; the owner must discard the candidate on any error.
@@ -1001,9 +1001,7 @@ impl<'a> ImpactContext<'a> {
 
     /// Mutate only the unit owned by this cascade.
     fn unit_mut(&mut self) -> &mut BattleUnit {
-        super::autopilot::diagnostics::make_mut(&mut self.world.btech.constructed)
-            .get_mut(&self.id)
-            .unwrap()
+        self.world.btech.constructed.get_mut(&self.id).unwrap()
     }
 
     /// Bound nested ammunition work; the outer checkpoint owns rollback.

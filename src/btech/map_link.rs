@@ -6,9 +6,7 @@ pub(crate) fn command(
     ctx: &crate::CommandContext<'_>,
     _input: &crate::CommandInput,
 ) -> Result<crate::CommandAction> {
-    let before = ctx.scripts.world().clone();
-    let checkpoint = ctx.scripts.effects.checkpoint();
-    let result = (|| -> Result<()> {
+    let result = ctx.scripts.atomic(|before| -> Result<()> {
         let map = super::special_dispatch::object(ctx)?;
         let markers = before
             .btech
@@ -33,12 +31,10 @@ pub(crate) fn command(
         ctx.scripts.world().validate(ctx.config)?;
         ctx.scripts.effects.validate()?;
         Ok(())
-    })();
+    });
     Ok(match result {
         Ok(()) => crate::CommandAction::Continue,
         Err(error) => {
-            *ctx.scripts.world_mut() = before;
-            ctx.scripts.effects.restore(checkpoint);
             crate::CommandAction::Report(crate::CommandReport::Reply(format!("{error:#}")))
         }
     })

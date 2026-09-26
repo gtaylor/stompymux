@@ -20,9 +20,7 @@ pub fn add_mine_action(
     map: ObjectId,
     placement: BattleMinePlacement,
 ) -> Result<u32> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(&before, actor),
             "Permission denied."
@@ -64,12 +62,7 @@ pub fn add_mine_action(
         scripts.world().validate(config)?;
         scripts.effects.validate()?;
         Ok(ordinal)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Native ADDMINE uses exact case-insensitive type names and four or five arguments.

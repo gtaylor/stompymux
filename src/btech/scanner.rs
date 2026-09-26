@@ -5,7 +5,6 @@ use super::{
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Scenario-owned signature facts: team, hiding and scenario lighting.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -143,7 +142,7 @@ pub fn set_unit_signature(
     signature: BattleUnitSignature,
 ) -> Result<()> {
     ensure!(world.objects.get(&id).is_some_and(|object| object.kind == Kind::Thing && !object.flags.contains(Flag::Going)), "Unit must be a live thing");
-    if let Some(vehicle) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(vehicle) = world.btech.vehicles.get_mut(&id) {
         if vehicle.signature.team != signature.team {
             vehicle.c3_network = None;
             vehicle.c3i_network = None;
@@ -155,9 +154,7 @@ pub fn set_unit_signature(
         world.btech.constructed_units().contains_key(&id),
         "Unit construction state is unavailable"
     );
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     if unit.signature.team != signature.team {
         unit.c3i_network = None;
         unit.c3_network = None;
@@ -330,57 +327,57 @@ pub fn refresh_contacts(
     observers: &[ObjectId],
 ) -> Result<Vec<BattleContactEvent>> {
     let observations = observe(world, observers)?;
-    let mut candidate = world.clone();
-    let mut events = Vec::new();
-    for observation in observations {
-        let observer = observation.observer;
-        for (target, signature, perception) in observation.targets {
-            let unit = scanner_unit(&candidate, observer).expect("validated observer");
-            let previously_identified = unit
-                .contacts
-                .get(&target)
-                .is_some_and(|contact| contact.identified);
-            let selected = unit.selected == Some(target);
-            let update = super::contacts::apply_contact(
-                &mut candidate,
-                observer,
-                target,
-                perception,
-                BattleContactRules {
-                    hidden: signature.hidden,
-                    hostile: observation.team != signature.team,
-                    perception: observation.perception,
-                    acquire: true,
-                },
-            )?;
-            if !matches!(
-                update.transition,
-                BattleContactTransition::Acquired | BattleContactTransition::Lost
-            ) {
-                continue;
+    world.attempt(|world| {
+        let mut events = Vec::new();
+        for observation in observations {
+            let observer = observation.observer;
+            for (target, signature, perception) in observation.targets {
+                let unit = scanner_unit(world, observer).expect("validated observer");
+                let previously_identified = unit
+                    .contacts
+                    .get(&target)
+                    .is_some_and(|contact| contact.identified);
+                let selected = unit.selected == Some(target);
+                let update = super::contacts::apply_contact(
+                    world,
+                    observer,
+                    target,
+                    perception,
+                    BattleContactRules {
+                        hidden: signature.hidden,
+                        hostile: observation.team != signature.team,
+                        perception: observation.perception,
+                        acquire: true,
+                    },
+                )?;
+                if !matches!(
+                    update.transition,
+                    BattleContactTransition::Acquired | BattleContactTransition::Lost
+                ) {
+                    continue;
+                }
+                let identified = if update.transition == BattleContactTransition::Lost {
+                    previously_identified
+                } else {
+                    update.contact.is_some_and(|contact| contact.identified)
+                };
+                let experience_message = if update.transition == BattleContactTransition::Acquired {
+                    acquisition_experience(world, observer, target)?
+                } else {
+                    None
+                };
+                events.push(BattleContactEvent {
+                    identified,
+                    observer,
+                    target,
+                    acquired: update.transition == BattleContactTransition::Acquired,
+                    lock_lost: selected && update.transition == BattleContactTransition::Lost,
+                    experience_message,
+                });
             }
-            let identified = if update.transition == BattleContactTransition::Lost {
-                previously_identified
-            } else {
-                update.contact.is_some_and(|contact| contact.identified)
-            };
-            let experience_message = if update.transition == BattleContactTransition::Acquired {
-                acquisition_experience(&mut candidate, observer, target)?
-            } else {
-                None
-            };
-            events.push(BattleContactEvent {
-                identified,
-                observer,
-                target,
-                acquired: update.transition == BattleContactTransition::Acquired,
-                lock_lost: selected && update.transition == BattleContactTransition::Lost,
-                experience_message,
-            });
         }
-    }
-    *world = candidate;
-    Ok(events)
+        Ok(events)
+    })
 }
 
 /// One observer's view of its map, resolved before any contact is committed.

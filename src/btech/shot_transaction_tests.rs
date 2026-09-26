@@ -1,4 +1,4 @@
-//! Paired shot outcomes and failure-atomicity checks against nested savepoints.
+//! Shot outcomes compared with and without validation shortcuts, plus failure-atomicity checks.
 use super::*;
 use crate::{BattleDice, BattleMapAsset, BattlePower, BattleUnitTemplate, Config, Kind, ObjectId};
 use std::sync::Arc;
@@ -22,32 +22,34 @@ fn fixture(source: &str, recipient: &str, seed: u8) -> (Config, World, ObjectId,
             .create(&mut world, id)
             .unwrap();
         crate::place_battle_unit(&mut world, id, map, 0, y).unwrap();
-        if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+        if let Some(unit) = world.btech.constructed.get_mut(&id) {
             unit.power = BattlePower::Running;
             unit.dice = BattleDice::seeded([seed; 32]);
             unit.signature.team = team;
         } else {
-            let vehicle = Arc::make_mut(&mut world.btech.vehicles)
-                .get_mut(&id)
-                .unwrap();
+            let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
             vehicle.power = BattlePower::Running;
             vehicle.dice = BattleDice::seeded([seed; 32]);
             vehicle.signature.team = team;
         }
     }
-    Arc::make_mut(&mut world.btech.controllers)
+    world
+        .btech
+        .controllers
         .insert(shooter, crate::btech::autopilot::AutopilotController::new());
     crate::refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     crate::btech::targeting::select_target_autopilot(&mut world, shooter, Some(target)).unwrap();
     if matches!(seed, 17 | 42) {
-        if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&target) {
+        if let Some(unit) = world.btech.constructed.get_mut(&target) {
             for section in unit.sections.values_mut() {
                 section.armor = 0;
                 section.rear = 0;
                 section.internal = 1;
             }
         } else {
-            for section in Arc::make_mut(&mut world.btech.vehicles)
+            for section in world
+                .btech
+                .vehicles
                 .get_mut(&target)
                 .unwrap()
                 .sections
@@ -130,7 +132,7 @@ fn fire(
 }
 
 #[test]
-fn shot_transactions_match_nested_reference_across_chassis_and_rejections() {
+fn shot_transactions_match_reference_across_chassis_and_rejections() {
     let mech = include_str!("../../game/mechs/JR7-D");
     let tracked = include_str!("../../game/mechs/Demolisher");
     let mut accepted = 0;
@@ -251,13 +253,17 @@ fn validation_reuse_matches_full_checks_after_mutations_and_scope_exit() {
             .map;
         match mutation % 10 {
             0 => {
-                Arc::make_mut(&mut changed.btech.constructed)
+                changed
+                    .btech
+                    .constructed
                     .get_mut(&target)
                     .unwrap()
                     .hide_elapsed = Some(u16::from(mutation as u8) * 10)
             }
             1 => {
-                Arc::make_mut(&mut changed.btech.constructed)
+                changed
+                    .btech
+                    .constructed
                     .get_mut(&shooter)
                     .unwrap()
                     .hide_elapsed = Some(101)
@@ -270,30 +276,16 @@ fn validation_reuse_matches_full_checks_after_mutations_and_scope_exit() {
                 Arc::make_mut(&mut changed.btech.tows).insert(shooter, ObjectId(99999));
             }
             5 => {
-                let unit = Arc::make_mut(&mut changed.btech.constructed)
-                    .get_mut(&shooter)
-                    .unwrap();
+                let unit = changed.btech.constructed.get_mut(&shooter).unwrap();
                 let contact = unit.contacts.remove(&target).unwrap();
                 unit.contacts.insert(ObjectId(99999), contact);
             }
-            6 => {
-                Arc::make_mut(&mut changed.btech.maps)
-                    .get_mut(&map)
-                    .unwrap()
-                    .width = 0
-            }
+            6 => changed.btech.maps.get_mut(&map).unwrap().width = 0,
             8 => {
-                let map = Arc::make_mut(&mut changed.btech.maps)
-                    .get_mut(&map)
-                    .unwrap();
+                let map = changed.btech.maps.get_mut(&map).unwrap();
                 Arc::make_mut(map.terrain.as_mut().unwrap())[0].elevation = 10;
             }
-            9 => {
-                Arc::make_mut(&mut changed.btech.maps)
-                    .get_mut(&map)
-                    .unwrap()
-                    .temperature = 128
-            }
+            9 => changed.btech.maps.get_mut(&map).unwrap().temperature = 128,
             _ => {
                 let actor = changed.create(
                     &Config::load("tests/fixtures/game").unwrap(),
@@ -326,7 +318,7 @@ fn validation_reuse_matches_full_checks_after_mutations_and_scope_exit() {
 }
 
 #[test]
-fn special_shot_effects_match_reference_savepoints() {
+fn special_shot_effects_match_reference_validation() {
     let mech = include_str!("../../game/mechs/JR7-D");
     let vehicle = include_str!("../../game/mechs/Demolisher");
     let cases = [
@@ -363,7 +355,9 @@ fn special_shot_effects_match_reference_savepoints() {
                     .unwrap()
             };
             if weapon == crate::BattleWeapon::Srm4 {
-                Arc::make_mut(&mut initial.btech.constructed)
+                initial
+                    .btech
+                    .constructed
                     .get_mut(&shooter)
                     .unwrap()
                     .ammunition_modes
@@ -448,7 +442,10 @@ fn contact_position_index_handles_missing_unplaced_sparse_and_duplicate_records(
     assert_eq!(positions.get(ObjectId(i64::MAX)), None);
     let unit = world.btech.constructed_units()[&shooter].clone();
     let unplaced = crate::BattleUnit::from_template(unit.definition().clone()).unwrap();
-    Arc::make_mut(&mut world.btech.constructed).insert(ObjectId(target.0 + 1), unplaced);
+    world
+        .btech
+        .constructed
+        .insert(ObjectId(target.0 + 1), unplaced);
     assert_eq!(
         Positions::prepare(&world.btech)
             .unwrap()
@@ -456,19 +453,22 @@ fn contact_position_index_handles_missing_unplaced_sparse_and_duplicate_records(
         Some(None)
     );
     let duplicate = world.btech.vehicles()[&target].clone();
-    Arc::make_mut(&mut world.btech.vehicles).insert(shooter, duplicate);
+    world.btech.vehicles.insert(shooter, duplicate);
     assert_eq!(
         Positions::prepare(&world.btech).unwrap().get(shooter),
         Some(world.btech.vehicles()[&target].position())
     );
-    Arc::make_mut(&mut world.btech.constructed).insert(ObjectId(i64::MAX), unit.clone());
+    world
+        .btech
+        .constructed
+        .insert(ObjectId(i64::MAX), unit.clone());
     assert!(Positions::prepare(&world.btech).is_none());
-    Arc::make_mut(&mut world.btech.constructed).insert(ObjectId(i64::MIN), unit);
+    world.btech.constructed.insert(ObjectId(i64::MIN), unit);
     assert!(Positions::prepare(&world.btech).is_none());
 }
 
 #[test]
-fn missile_defenses_match_nested_reference_for_both_chassis() {
+fn missile_defenses_match_reference_for_both_chassis() {
     let mech = include_str!("../../game/mechs/JR7-D");
     let vehicle = include_str!("../../game/mechs/Goblin-58");
     let mut defenses = 0;
@@ -480,22 +480,16 @@ fn missile_defenses_match_nested_reference_for_both_chassis() {
                 .map(|seed| BattleDice::seeded([seed; 32]))
                 .find(|dice| dice.clone().two_d6() == 12)
                 .unwrap();
-            if let Some(unit) = Arc::make_mut(&mut initial.btech.constructed).get_mut(&shooter) {
+            if let Some(unit) = initial.btech.constructed.get_mut(&shooter) {
                 unit.dice = dice;
             } else {
-                Arc::make_mut(&mut initial.btech.vehicles)
-                    .get_mut(&shooter)
-                    .unwrap()
-                    .dice = dice;
+                initial.btech.vehicles.get_mut(&shooter).unwrap().dice = dice;
             }
 
-            if let Some(unit) = Arc::make_mut(&mut initial.btech.constructed).get_mut(&target) {
+            if let Some(unit) = initial.btech.constructed.get_mut(&target) {
                 unit.ams_enabled = true;
             } else {
-                Arc::make_mut(&mut initial.btech.vehicles)
-                    .get_mut(&target)
-                    .unwrap()
-                    .ams_enabled = true;
+                initial.btech.vehicles.get_mut(&target).unwrap().ams_enabled = true;
             }
             let index = if let Some(unit) = initial.btech.constructed_units().get(&shooter) {
                 unit.loadout()

@@ -75,7 +75,7 @@ pub fn set_building_entry_point(
             "Too many building entry points"
         );
     }
-    let record = Arc::make_mut(&mut world.btech.maps).get_mut(&id).unwrap();
+    let record = world.btech.maps.get_mut(&id).unwrap();
     let points = Arc::make_mut(&mut record.building_entry_points);
     if let Some(point) = point {
         points.insert(ordinal, point);
@@ -126,12 +126,7 @@ pub fn set_building_return_link(
             "Too many building exits"
         );
     }
-    let exits = Arc::make_mut(
-        &mut Arc::make_mut(&mut world.btech.maps)
-            .get_mut(&id)
-            .unwrap()
-            .building_exits,
-    );
+    let exits = Arc::make_mut(&mut world.btech.maps.get_mut(&id).unwrap().building_exits);
     if let Some(exit) = exit {
         exits.insert(ordinal, exit);
     } else {

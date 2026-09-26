@@ -2,7 +2,6 @@
 use super::{BattleAnalogRadioReport, BattleChannel, BattleChannelMessage};
 use crate::{Flag, ObjectId, World};
 use anyhow::Result;
-use std::sync::Arc;
 
 impl super::BattleUnit {
     /// Simulation seconds until another interfered reception can attempt communication XP.
@@ -19,15 +18,15 @@ pub fn award_radio_experience(
     report: &BattleAnalogRadioReport,
     now: i64,
 ) -> Result<Vec<BattleChannelMessage>> {
-    let mut candidate = world.clone();
-    let mut messages = Vec::new();
-    for &receiver in &report.interfered_receivers {
-        if let Some(message) = attempt(&mut candidate, receiver, now)? {
-            messages.push(message);
+    world.attempt(|world| {
+        let mut messages = Vec::new();
+        for &receiver in &report.interfered_receivers {
+            if let Some(message) = attempt(world, receiver, now)? {
+                messages.push(message);
+            }
         }
-    }
-    *world = candidate;
-    Ok(messages)
+        Ok(messages)
+    })
 }
 
 /// Capture a due attempt before checking active-pilot eligibility, matching the unit-level gate.
@@ -72,10 +71,10 @@ fn attempt(
 
 /// Tick all saved gates, including radios on shutdown units, without requiring a startup event.
 pub(super) fn advance(world: &mut World) {
-    for unit in Arc::make_mut(&mut world.btech.constructed).values_mut() {
+    for unit in world.btech.constructed.values_mut() {
         unit.radio_experience_remaining = unit.radio_experience_remaining.saturating_sub(1);
     }
-    for unit in Arc::make_mut(&mut world.btech.vehicles).values_mut() {
+    for unit in world.btech.vehicles.values_mut() {
         unit.radio_experience_remaining = unit.radio_experience_remaining.saturating_sub(1);
     }
 }

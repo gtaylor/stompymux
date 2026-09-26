@@ -2,7 +2,6 @@
 use super::*;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 impl BattleUnit {
     /// The arm holding a tree, independent of physical recovery.
@@ -71,10 +70,7 @@ pub fn grab_club(
             unit.carried_club.is_some(),
             "You aren't currently carrying a club."
         );
-        Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap()
-            .carried_club = None;
+        world.btech.constructed.get_mut(&id).unwrap().carried_club = None;
         return Ok(dropped_notices(world, id));
     }
     ensure!(
@@ -128,25 +124,23 @@ pub fn grab_club(
         matches!(tile.terrain, Terrain::LightForest | Terrain::HeavyForest),
         "There don't appear to be any trees within grabbing distance."
     );
-    let mut candidate = world.clone();
-    let unit = Arc::make_mut(&mut candidate.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
-    unit.carried_club = Some(arm);
-    unit.limb_recycle.insert(arm.section(), 60);
-    candidate.btech.validate(&candidate)?;
-    let mut notices = super::broadcast::observer_notices(
-        &candidate,
-        id,
-        "reaches down and yanks a tree out of the ground!",
-    );
-    notices.push(BattleNotice {
-        unit: id,
-        text: format!(
-            "You reach down and yank a tree out of the ground with your {}.",
-            arm.section().name().replace('_', " ")
-        ),
-    });
-    *world = candidate;
-    Ok(notices)
+    world.attempt(|world| {
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
+        unit.carried_club = Some(arm);
+        unit.limb_recycle.insert(arm.section(), 60);
+        world.btech.validate_action(world)?;
+        let mut notices = super::broadcast::observer_notices(
+            world,
+            id,
+            "reaches down and yanks a tree out of the ground!",
+        );
+        notices.push(BattleNotice {
+            unit: id,
+            text: format!(
+                "You reach down and yank a tree out of the ground with your {}.",
+                arm.section().name().replace('_', " ")
+            ),
+        });
+        Ok(notices)
+    })
 }

@@ -1,6 +1,5 @@
 //! Startup projects personal health into cockpit injury state without resolving a death or save.
 use crate::{Flag, ObjectId, World};
-use std::sync::Arc;
 
 /// Positive pilot damage is bounded by the reference's signed-byte storage.
 pub(super) fn bounded(count: u16) -> u8 {
@@ -23,15 +22,12 @@ fn injuries(profile: Option<super::BattleCharacter>) -> u8 {
 
 /// Keep the cockpit scalar and optional character report in agreement for every injury source.
 pub(super) fn set_count(world: &mut World, id: ObjectId, injuries: u8) {
-    let (count, character) =
-        if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
-            (&mut unit.pilot_injuries, &mut unit.character_pilot)
-        } else {
-            let unit = Arc::make_mut(&mut world.btech.constructed)
-                .get_mut(&id)
-                .unwrap();
-            (&mut unit.pilot_injuries, &mut unit.character_pilot)
-        };
+    let (count, character) = if let Some(unit) = world.btech.vehicles.get_mut(&id) {
+        (&mut unit.pilot_injuries, &mut unit.character_pilot)
+    } else {
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
+        (&mut unit.pilot_injuries, &mut unit.character_pilot)
+    };
     *count = injuries;
     if let Some(character) = character {
         character.injuries = injuries.into();
@@ -46,18 +42,16 @@ pub(super) fn synchronize(world: &mut World, id: ObjectId, player: ObjectId) {
             injuries: injuries.into(),
             killed: false,
         });
-    if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         unit.character_pilot = character;
         unit.crew_recovery.edit_tactical_injuries(injuries);
     } else {
-        let unit = Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
         unit.character_pilot = character;
         unit.crew_recovery.edit_tactical_injuries(injuries);
     }
     set_count(world, id, injuries);
-    if let Some(recovery) = Arc::make_mut(&mut world.btech.recoveries).get_mut(&player) {
+    if let Some(recovery) = world.btech.recoveries.get_mut(&player) {
         recovery.edit_tactical_injuries(injuries);
     }
 }

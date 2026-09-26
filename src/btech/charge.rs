@@ -3,7 +3,6 @@ use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// Configuration and accumulated travel supplied by the movement owner at collision time.
 #[derive(Debug, Clone, Copy)]
@@ -356,10 +355,7 @@ fn packets(
         let mut dice = unit.dice.clone();
         let roll = dice.generic_roll();
         let hit = rules.hit.resolve(unit, arc, roll, &mut dice)?;
-        Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap()
-            .dice = dice;
+        world.btech.constructed.get_mut(&id).unwrap().dice = dice;
         let amount = damage.min(5);
         if character
             && let Some(pilot) = world.btech.constructed_units()[&attacker].pilot()
@@ -436,9 +432,7 @@ fn resolve_charge_inner(
         character,
     )?;
     let mut candidate = world.clone();
-    let unit = Arc::make_mut(&mut candidate.btech.constructed)
-        .get_mut(&attacker)
-        .unwrap();
+    let unit = candidate.btech.constructed.get_mut(&attacker).unwrap();
     unit.facing.torso = unit.facing.torso.restored_after_forward_arc();
     let roll = unit.dice.generic_roll();
     let recoil_mass = world.btech.constructed_units()[&target].effective_mass()? / 1024;
@@ -483,192 +477,189 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Battl
         recoil_mass,
         character,
     } = prepared;
-    let mut candidate = world.clone();
-    if role != ChargeRole::OneWay {
-        let range = unit_range(&candidate, target, attacker)?;
-        let heading = candidate.btech.constructed_units()[&target]
-            .motion()
-            .context("Target is not placed")?
-            .heading;
-        profile.target_arc = BattleHitArc::from_bearing(
-            range.bearing.unwrap_or(180.0),
-            heading,
-            rules.physical.hit_arc_mode,
-        )?;
-    }
-    let hit = i32::from(roll) >= profile.target_number;
-    let target_number = profile.target_number;
-    let mut report = BattleChargeReport {
-        attacker,
-        target,
-        profile,
-        roll,
-        hit,
-        target_impacts: vec![],
-        experience: vec![],
-        experience_messages: vec![],
-        attacker_impacts: vec![],
-        received_damage: 0,
-        recoil_arc: None,
-        balance: vec![],
-        pilot_notices: Vec::new(),
-        notices: if role == ChargeRole::OneWay {
-            vec![BattleNotice {
-                unit: attacker,
-                text: format!("Charge: BTH {}\tRoll: {roll}", target_number),
-            }]
-        } else {
-            vec![]
-        },
-    };
-    if hit {
-        if role == ChargeRole::OneWay {
-            report.notices.extend(super::broadcast::interaction_notices(
-                &candidate, attacker, target, "charges",
-            ));
-        }
-        report.notices.push(BattleNotice {
-            unit: attacker,
-            text: "SMASH!!! You crash into your target!".into(),
-        });
-        if role != ChargeRole::OneWay
-            || candidate.btech.constructed_units()[&target].power() == BattlePower::Running
-        {
-            report.notices.push(BattleNotice {
-                unit: target,
-                text: format!("CRASH!!!\n#{} charges into you!", attacker.0),
-            });
-        }
-        let target_rules =
-            super::physical::participant_fall_rules(&candidate, target, rules.physical.fall);
-        let attacker_rules =
-            super::physical::participant_fall_rules(&candidate, attacker, rules.physical.fall);
-        let target_packets = packets(
-            &mut candidate,
-            target,
-            report.profile.inflicted_damage,
-            report.profile.target_arc,
-            target_rules,
-            (attacker, character),
-        )?;
-        report.target_impacts = target_packets.impacts;
-        report.experience = target_packets.experience;
-        report.experience_messages = target_packets.experience_messages;
-        report.received_damage = recoil_damage(
-            &candidate.btech.constructed_units()[&attacker],
-            &candidate.btech.constructed_units()[&target],
-            recoil_mass,
-            rules,
-        )?;
-        if role == ChargeRole::Second {
-            report.received_damage =
-                report.received_damage / 5 * 5 + report.profile.inflicted_damage % 5;
-        }
-        let range = unit_range(&candidate, attacker, target)?;
-        let heading = candidate.btech.constructed_units()[&attacker]
-            .motion()
-            .context("Unit is not placed")?
-            .heading;
-        let recoil_arc = BattleHitArc::from_bearing(
-            range.bearing.unwrap_or(180.0),
-            heading,
-            rules.physical.hit_arc_mode,
-        )?;
-        report.recoil_arc = Some(recoil_arc);
-        report.attacker_impacts = packets(
-            &mut candidate,
-            attacker,
-            report.received_damage,
-            recoil_arc,
-            attacker_rules,
-            (attacker, character),
-        )?
-        .impacts;
-        for impact in report.target_impacts.iter().chain(&report.attacker_impacts) {
-            super::piloting::append_feedback(
-                &mut report.pilot_notices,
-                impact.pilot_notices.iter().cloned(),
-                report.notices.len(),
-            );
-            report.notices.extend(impact.notices.iter().cloned());
-        }
+    world.attempt(|world| {
         if role != ChargeRole::OneWay {
-            stop_motion(&mut candidate, attacker);
+            let range = unit_range(world, target, attacker)?;
+            let heading = world.btech.constructed_units()[&target]
+                .motion()
+                .context("Target is not placed")?
+                .heading;
+            profile.target_arc = BattleHitArc::from_bearing(
+                range.bearing.unwrap_or(180.0),
+                heading,
+                rules.physical.hit_arc_mode,
+            )?;
         }
-        let checks = if role == ChargeRole::Second {
-            [(target, target_rules), (attacker, attacker_rules)]
-        } else {
-            [(attacker, attacker_rules), (target, target_rules)]
+        let hit = i32::from(roll) >= profile.target_number;
+        let target_number = profile.target_number;
+        let mut report = BattleChargeReport {
+            attacker,
+            target,
+            profile,
+            roll,
+            hit,
+            target_impacts: vec![],
+            experience: vec![],
+            experience_messages: vec![],
+            attacker_impacts: vec![],
+            received_damage: 0,
+            recoil_arc: None,
+            balance: vec![],
+            pilot_notices: Vec::new(),
+            notices: if role == ChargeRole::OneWay {
+                vec![BattleNotice {
+                    unit: attacker,
+                    text: format!("Charge: BTH {}\tRoll: {roll}", target_number),
+                }]
+            } else {
+                vec![]
+            },
         };
-        for (id, fall_rules) in checks {
-            if candidate.btech.constructed_units()[&id].is_destroyed() {
-                continue;
+        if hit {
+            if role == ChargeRole::OneWay {
+                report.notices.extend(super::broadcast::interaction_notices(
+                    world, attacker, target, "charges",
+                ));
             }
-            let mut check =
-                roll_piloting(&mut candidate, id, 2, rules.physical.fall.extended_piloting)?;
-            super::piloting::capture_feedback(
-                id,
-                candidate.btech.constructed_units()[&id].pilot(),
-                &check,
-                &mut report.notices,
-                &mut report.pilot_notices,
-            );
-            if character {
-                report
-                    .experience_messages
-                    .extend(super::piloting::award_control_check(
-                        &mut candidate,
-                        id,
-                        &mut check,
-                        rules.physical.fall.extended_piloting,
-                    )?);
-            }
-            let fall = if !check.success
-                && candidate.btech.constructed_units()[&id].posture() != BattlePosture::Prone
+            report.notices.push(BattleNotice {
+                unit: attacker,
+                text: "SMASH!!! You crash into your target!".into(),
+            });
+            if role != ChargeRole::OneWay
+                || world.btech.constructed_units()[&target].power() == BattlePower::Running
             {
                 report.notices.push(BattleNotice {
-                    unit: id,
-                    text: "Your piloting skill fails and you fall over!!".into(),
+                    unit: target,
+                    text: format!("CRASH!!!\n#{} charges into you!", attacker.0),
                 });
-                report.notices.extend(super::broadcast::observer_notices(
-                    &candidate,
-                    id,
-                    "falls down!",
-                ));
-                let fall = if character && candidate.objects[&id].flags.contains(Flag::InCharacter)
-                {
-                    super::fall::resolve_character_fall(&mut candidate, id, 1, fall_rules)?
-                } else {
-                    resolve_fall(&mut candidate, id, 1, fall_rules)?
-                };
-                fall.append_notices(id, &mut report.notices, &mut report.pilot_notices);
-                Some(fall)
+            }
+            let target_rules =
+                super::physical::participant_fall_rules(world, target, rules.physical.fall);
+            let attacker_rules =
+                super::physical::participant_fall_rules(world, attacker, rules.physical.fall);
+            let target_packets = packets(
+                world,
+                target,
+                report.profile.inflicted_damage,
+                report.profile.target_arc,
+                target_rules,
+                (attacker, character),
+            )?;
+            report.target_impacts = target_packets.impacts;
+            report.experience = target_packets.experience;
+            report.experience_messages = target_packets.experience_messages;
+            report.received_damage = recoil_damage(
+                &world.btech.constructed_units()[&attacker],
+                &world.btech.constructed_units()[&target],
+                recoil_mass,
+                rules,
+            )?;
+            if role == ChargeRole::Second {
+                report.received_damage =
+                    report.received_damage / 5 * 5 + report.profile.inflicted_damage % 5;
+            }
+            let range = unit_range(world, attacker, target)?;
+            let heading = world.btech.constructed_units()[&attacker]
+                .motion()
+                .context("Unit is not placed")?
+                .heading;
+            let recoil_arc = BattleHitArc::from_bearing(
+                range.bearing.unwrap_or(180.0),
+                heading,
+                rules.physical.hit_arc_mode,
+            )?;
+            report.recoil_arc = Some(recoil_arc);
+            report.attacker_impacts = packets(
+                world,
+                attacker,
+                report.received_damage,
+                recoil_arc,
+                attacker_rules,
+                (attacker, character),
+            )?
+            .impacts;
+            for impact in report.target_impacts.iter().chain(&report.attacker_impacts) {
+                super::piloting::append_feedback(
+                    &mut report.pilot_notices,
+                    impact.pilot_notices.iter().cloned(),
+                    report.notices.len(),
+                );
+                report.notices.extend(impact.notices.iter().cloned());
+            }
+            if role != ChargeRole::OneWay {
+                stop_motion(world, attacker);
+            }
+            let checks = if role == ChargeRole::Second {
+                [(target, target_rules), (attacker, attacker_rules)]
             } else {
-                None
+                [(attacker, attacker_rules), (target, target_rules)]
             };
-            report.balance.push(BattleChargeBalance {
-                unit: id,
-                check,
-                fall,
-            });
+            for (id, fall_rules) in checks {
+                if world.btech.constructed_units()[&id].is_destroyed() {
+                    continue;
+                }
+                let mut check = roll_piloting(world, id, 2, rules.physical.fall.extended_piloting)?;
+                super::piloting::capture_feedback(
+                    id,
+                    world.btech.constructed_units()[&id].pilot(),
+                    &check,
+                    &mut report.notices,
+                    &mut report.pilot_notices,
+                );
+                if character {
+                    report
+                        .experience_messages
+                        .extend(super::piloting::award_control_check(
+                            world,
+                            id,
+                            &mut check,
+                            rules.physical.fall.extended_piloting,
+                        )?);
+                }
+                let fall = if !check.success
+                    && world.btech.constructed_units()[&id].posture() != BattlePosture::Prone
+                {
+                    report.notices.push(BattleNotice {
+                        unit: id,
+                        text: "Your piloting skill fails and you fall over!!".into(),
+                    });
+                    report.notices.extend(super::broadcast::observer_notices(
+                        world,
+                        id,
+                        "falls down!",
+                    ));
+                    let fall = if character && world.objects[&id].flags.contains(Flag::InCharacter)
+                    {
+                        super::fall::resolve_character_fall(world, id, 1, fall_rules)?
+                    } else {
+                        resolve_fall(world, id, 1, fall_rules)?
+                    };
+                    fall.append_notices(id, &mut report.notices, &mut report.pilot_notices);
+                    Some(fall)
+                } else {
+                    None
+                };
+                report.balance.push(BattleChargeBalance {
+                    unit: id,
+                    check,
+                    fall,
+                });
+            }
+            if role == ChargeRole::OneWay {
+                stop_motion(world, attacker);
+            }
         }
         if role == ChargeRole::OneWay {
-            stop_motion(&mut candidate, attacker);
+            start_recovery(world, attacker);
         }
-    }
-    if role == ChargeRole::OneWay {
-        start_recovery(&mut candidate, attacker);
-    }
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(report)
+        world.btech.validate_action(world)?;
+        Ok(report)
+    })
 }
 
 /// Stop a charging unit after its collision, preserving heading.
 fn stop_motion(world: &mut World, id: ObjectId) {
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     if let Some(motion) = &mut unit.motion {
         motion.speed = 0.0;
         motion.desired_speed = 0.0;
@@ -677,9 +668,7 @@ fn stop_motion(world: &mut World, id: ObjectId) {
 
 /// Apply the common six-section recovery at the appropriate transaction boundary.
 fn start_recovery(world: &mut World, id: ObjectId) {
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     for section in RECOVERY {
         unit.limb_recycle.insert(section, 60);
     }
@@ -797,9 +786,7 @@ fn resolve_mutual_charge_inner(
     };
     let mut candidate = world.clone();
     let other_torso = candidate.btech.constructed_units()[&second].facing.torso;
-    let unit = Arc::make_mut(&mut candidate.btech.constructed)
-        .get_mut(&first)
-        .unwrap();
+    let unit = candidate.btech.constructed.get_mut(&first).unwrap();
     unit.facing.torso = unit
         .facing
         .torso
@@ -819,7 +806,9 @@ fn resolve_mutual_charge_inner(
     if accepted {
         for attempt in &mut report.attempts {
             attempt.roll = Some(
-                Arc::make_mut(&mut candidate.btech.constructed)
+                candidate
+                    .btech
+                    .constructed
                     .get_mut(&attempt.unit)
                     .unwrap()
                     .dice
@@ -883,7 +872,7 @@ fn resolve_mutual_charge_inner(
         start_recovery(&mut candidate, first);
         start_recovery(&mut candidate, second);
     }
-    candidate.btech.validate(&candidate)?;
+    candidate.btech.validate_action(&candidate)?;
     *world = candidate;
     Ok(report)
 }
@@ -904,7 +893,9 @@ mod tests {
                     // Component-only skill state independently of world registration.
                     let mut encoded = serde_json::to_value(&base).unwrap();
                     encoded["definition"]["attributes"]["move_type"] = chassis.into();
-                    Arc::make_mut(&mut world.btech.constructed)
+                    world
+                        .btech
+                        .constructed
                         .insert(id, serde_json::from_value(encoded).unwrap());
                 }
                 let restored: World =

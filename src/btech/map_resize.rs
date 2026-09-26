@@ -13,9 +13,7 @@ pub fn resize_map_action(
     width: i64,
     height: i64,
 ) -> Result<()> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(&before, actor),
             "Permission denied."
@@ -50,7 +48,7 @@ pub fn resize_map_action(
         }
         {
             let mut world = scripts.world_mut();
-            let map = Arc::make_mut(&mut world.btech.maps).get_mut(&id).unwrap();
+            let map = world.btech.maps.get_mut(&id).unwrap();
             map.width = width;
             map.height = height;
             map.terrain = Some(Arc::new(tiles));
@@ -64,12 +62,7 @@ pub fn resize_map_action(
         )?;
         scripts.effects.validate()?;
         Ok(())
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// The native operator resizes the selected map using two checked integer dimensions.

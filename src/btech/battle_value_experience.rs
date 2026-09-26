@@ -222,22 +222,22 @@ pub fn award_battle_value_gunnery_experience(
     .calculate_with_settings(config, world.btech.weapon_settings())?
     .expect("Eligible nonzero damage has battle-value difficulty");
     let skill = super::gunnery_experience::award_skill(world, request);
-    let mut candidate = world.clone();
-    let award = super::award_skill_experience(
-        &mut candidate,
-        request.pilot,
-        skill,
-        calculation.amount,
-        request.now,
-        false,
-    )?;
-    *world = candidate;
-    Ok(Some(BattleValueExperienceAward {
-        calculation,
-        amount: calculation.amount,
-        skill,
-        award,
-    }))
+    world.attempt(|world| {
+        let award = super::award_skill_experience(
+            world,
+            request.pilot,
+            skill,
+            calculation.amount,
+            request.now,
+            false,
+        )?;
+        Ok(Some(BattleValueExperienceAward {
+            calculation,
+            amount: calculation.amount,
+            skill,
+            award,
+        }))
+    })
 }
 
 #[cfg(test)]

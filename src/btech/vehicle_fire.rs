@@ -178,10 +178,7 @@ fn fire_shot(
     } else {
         Vec::new()
     };
-    super::autopilot::diagnostics::make_mut(&mut candidate.btech.vehicles)
-        .get_mut(&shooter)
-        .unwrap()
-        .dice = aim_dice;
+    candidate.btech.vehicles.get_mut(&shooter).unwrap().dice = aim_dice;
     let mut launch = super::vehicle_launch::launch_prepared(
         &mut candidate,
         BattleVehicleLaunchRequest {
@@ -378,7 +375,7 @@ fn fire_shot(
     drop(damage_measurement);
     #[cfg(test)]
     super::shot_transaction::checkpoint(super::shot_transaction::FailurePoint::Validation)?;
-    candidate.btech.validate(&candidate)?;
+    candidate.btech.validate_action(&candidate)?;
     let _publication = super::autopilot::diagnostics::combat("publication");
     attempt.succeed();
     candidate.commit(world);

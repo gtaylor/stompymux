@@ -69,9 +69,7 @@ pub fn delete_map_objects_action(
     kind: Option<BattleMapObjectKind>,
     coordinate: Option<BattleHexCoordinate>,
 ) -> Result<usize> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(&before, actor),
             "Permission denied."
@@ -108,7 +106,10 @@ pub fn delete_map_objects_action(
             count += removed;
         }
         if rebuild_mines {
-            std::sync::Arc::make_mut(&mut scripts.world_mut().btech.maps)
+            scripts
+                .world_mut()
+                .btech
+                .maps
                 .get_mut(&map)
                 .unwrap()
                 .rebuild_mine_lookup()?;
@@ -124,12 +125,7 @@ pub fn delete_map_objects_action(
         scripts.world().validate(config)?;
         scripts.effects.validate()?;
         Ok(count)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Distinguish source ordinals from active overlay tile indices, even when their numbers coincide.
@@ -174,10 +170,7 @@ fn remove_kind(
         if record.has_lookup_object()
             && coordinate.is_none_or(|p| p == BattleHexCoordinate { x: 0, y: 0 })
         {
-            std::sync::Arc::make_mut(&mut world.btech.maps)
-                .get_mut(&map)
-                .unwrap()
-                .lookup_bits = None;
+            world.btech.maps.get_mut(&map).unwrap().lookup_bits = None;
             return Ok(1);
         }
         return Ok(0);

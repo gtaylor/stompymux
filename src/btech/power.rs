@@ -2,7 +2,6 @@
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Engine lifecycle stored with the unit; countdowns measure committed simulation seconds.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -116,13 +115,12 @@ fn start_unit_by_actor(
         unit.heat().excess <= 30.0,
         "This 'Mech is too hot to start back up!"
     );
-    Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap()
-        .power = BattlePower::Starting {
+    world.btech.constructed.get_mut(&id).unwrap().power = BattlePower::Starting {
         remaining: if fast { 5 } else { 30 },
     };
-    Arc::make_mut(&mut world.btech.constructed)
+    world
+        .btech
+        .constructed
         .get_mut(&id)
         .unwrap()
         .limb_recycle
@@ -209,93 +207,83 @@ fn stop_inner(
         .pilot()
         .and_then(|pilot| world.btech.character_values().get(&pilot))
         .is_some_and(|values| super::advantages::enabled(values, "Toughness"));
-    let mut candidate = world.clone();
-    let mut notices = vec![BattleNotice {
-        unit: id,
-        text: (if starting {
-            "The startup sequence has been aborted."
-        } else {
-            "All systems shut down."
-        })
-        .to_owned(),
-    }];
-    if !starting {
-        Arc::make_mut(&mut candidate.btech.constructed)
-            .get_mut(&id)
-            .unwrap()
-            .facing
-            .torso = super::BattleTorso::Center;
-        if twisted {
-            notices.push(BattleNotice {
-                unit: id,
-                text: "Torso rotated back to center for shutdown".to_owned(),
-            });
-        }
-        if let Some(fall) = free_fall {
-            let unit = Arc::make_mut(&mut candidate.btech.constructed)
-                .get_mut(&id)
-                .unwrap();
-            unit.flight = None;
-            unit.free_fall = Some(fall);
-            notices.push(BattleNotice {
-                unit: id,
-                text: "You start free-fall.. Enjoy the ride!".to_owned(),
-            });
-        } else if moving {
-            notices.push(BattleNotice {
-                unit: id,
-                text: "Your systems stop in mid-motion!".to_owned(),
-            });
-            notices.extend(
-                super::observer_messages(&candidate, id, "stops in mid-motion, and falls!")
-                    .into_iter()
-                    .map(|(unit, text)| BattleNotice { unit, text }),
-            );
-            let fall = if effects.is_some()
-                && candidate.objects[&id]
-                    .flags
-                    .contains(crate::Flag::InCharacter)
-            {
-                super::fall::resolve_character_fall(&mut candidate, id, 1, rules)?
+    world.attempt(|world| {
+        let mut notices = vec![BattleNotice {
+            unit: id,
+            text: (if starting {
+                "The startup sequence has been aborted."
             } else {
-                super::resolve_fall(&mut candidate, id, 1, rules)?
-            };
-            if let Some(effects) = effects.as_deref_mut() {
-                fall.append_notices(id, &mut notices, &mut effects.pilot_notices);
-            } else {
-                notices.extend(fall.notices(id));
+                "All systems shut down."
+            })
+            .to_owned(),
+        }];
+        if !starting {
+            world.btech.constructed.get_mut(&id).unwrap().facing.torso = super::BattleTorso::Center;
+            if twisted {
+                notices.push(BattleNotice {
+                    unit: id,
+                    text: "Torso rotated back to center for shutdown".to_owned(),
+                });
             }
-            if let Some(effects) = effects.as_deref_mut() {
-                effects.falls.push(fall);
+            if let Some(fall) = free_fall {
+                let unit = world.btech.constructed.get_mut(&id).unwrap();
+                unit.flight = None;
+                unit.free_fall = Some(fall);
+                notices.push(BattleNotice {
+                    unit: id,
+                    text: "You start free-fall.. Enjoy the ride!".to_owned(),
+                });
+            } else if moving {
+                notices.push(BattleNotice {
+                    unit: id,
+                    text: "Your systems stop in mid-motion!".to_owned(),
+                });
+                notices.extend(
+                    super::observer_messages(world, id, "stops in mid-motion, and falls!")
+                        .into_iter()
+                        .map(|(unit, text)| BattleNotice { unit, text }),
+                );
+                let fall = if effects.is_some()
+                    && world.objects[&id].flags.contains(crate::Flag::InCharacter)
+                {
+                    super::fall::resolve_character_fall(world, id, 1, rules)?
+                } else {
+                    super::resolve_fall(world, id, 1, rules)?
+                };
+                if let Some(effects) = effects.as_deref_mut() {
+                    fall.append_notices(id, &mut notices, &mut effects.pilot_notices);
+                } else {
+                    notices.extend(fall.notices(id));
+                }
+                if let Some(effects) = effects.as_deref_mut() {
+                    effects.falls.push(fall);
+                }
+                let input =
+                    super::stacking::physical_input(world, id, super::BattleStackingEntry::Fall)?;
+                let collisions = if let Some(effects) = effects {
+                    super::stacking::resolve_in_action(
+                        world,
+                        id,
+                        input,
+                        rules.stacking,
+                        rules,
+                        &mut effects.stacking,
+                        (&mut effects.pilot_notices, notices.len()),
+                    )?
+                } else {
+                    super::resolve_stacking(world, id, input, rules.stacking, rules)?
+                };
+                notices.extend(collisions);
             }
-            let input =
-                super::stacking::physical_input(&candidate, id, super::BattleStackingEntry::Fall)?;
-            let collisions = if let Some(effects) = effects {
-                super::stacking::resolve_in_action(
-                    &mut candidate,
-                    id,
-                    input,
-                    rules.stacking,
-                    rules,
-                    &mut effects.stacking,
-                    (&mut effects.pilot_notices, notices.len()),
-                )?
-            } else {
-                super::resolve_stacking(&mut candidate, id, input, rules.stacking, rules)?
-            };
-            notices.extend(collisions);
         }
-    }
-    let unit = Arc::make_mut(&mut candidate.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
-    let dropped = finish_shutdown(unit, id, &mut notices);
-    if dropped {
-        notices.extend(super::club::dropped_notices(&candidate, id));
-    }
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(notices)
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
+        let dropped = finish_shutdown(unit, id, &mut notices);
+        if dropped {
+            notices.extend(super::club::dropped_notices(world, id));
+        }
+        world.btech.validate_action(world)?;
+        Ok(notices)
+    })
 }
 
 /// Shared control cleanup after the caller has resolved any location-dependent consequences.
@@ -388,9 +376,7 @@ pub fn advance_units(world: &mut World, now: i64) -> Vec<BattleNotice> {
     for (id, perception, radio_skill, sixth_sense) in pending {
         let remaining;
         {
-            let unit = Arc::make_mut(&mut world.btech.constructed)
-                .get_mut(&id)
-                .unwrap();
+            let unit = world.btech.constructed.get_mut(&id).unwrap();
             remaining = unit
                 .power
                 .advance_startup(&mut unit.last_startup, &mut unit.auxiliary_preferences, now)
@@ -569,7 +555,6 @@ pub(super) fn require_running_unit(world: &World, shooter: ObjectId) -> Result<(
 mod tests {
     use super::*;
     use crate::{BattleRecovery, BattleUnitTemplate, Config, Kind};
-    use std::sync::Arc;
 
     fn config() -> Config {
         Config::load(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"))
@@ -577,7 +562,9 @@ mod tests {
     }
 
     fn attach(world: &mut World, unit: ObjectId) {
-        Arc::make_mut(&mut world.btech.controllers)
+        world
+            .btech
+            .controllers
             .insert(unit, super::super::autopilot::AutopilotController::new());
     }
 
@@ -585,7 +572,7 @@ mod tests {
         let pilot = world.create(config, "Unconscious autopilot pilot".into(), Kind::Player);
         let mut recovery = BattleRecovery::fresh();
         recovery.remaining = 1;
-        Arc::make_mut(&mut world.btech.recoveries).insert(pilot, recovery);
+        world.btech.recoveries.insert(pilot, recovery);
         pilot
     }
 
@@ -604,10 +591,7 @@ mod tests {
         assert!(autopilot_controlled_unit(&world, unit).is_ok());
 
         let pilot = unconscious_pilot(&mut world, &config);
-        Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&unit)
-            .unwrap()
-            .pilot = Some(pilot);
+        world.btech.constructed.get_mut(&unit).unwrap().pilot = Some(pilot);
         let error = autopilot_controlled_unit(&world, unit).unwrap_err();
         assert!(error.to_string().contains("unconscious"));
     }
@@ -626,10 +610,7 @@ mod tests {
         assert!(autopilot_controlled_vehicle(&world, unit).is_ok());
 
         let pilot = unconscious_pilot(&mut world, &config);
-        Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&unit)
-            .unwrap()
-            .pilot = Some(pilot);
+        world.btech.vehicles.get_mut(&unit).unwrap().pilot = Some(pilot);
         let error = autopilot_controlled_vehicle(&world, unit).unwrap_err();
         assert!(error.to_string().contains("unconscious"));
     }

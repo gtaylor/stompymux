@@ -35,9 +35,7 @@ pub fn send_radio_action(
     channel: u8,
     message: &str,
 ) -> Result<BattleRadioTransmission> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let (digital, frequency) = {
             let world = scripts.world.borrow();
             super::radio::controlled(&world, sender, pilot)?;
@@ -117,12 +115,7 @@ pub fn send_radio_action(
             audit_messages,
             experience_messages,
         })
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Letter-based cockpit input delegates to the same host transaction as Lua.

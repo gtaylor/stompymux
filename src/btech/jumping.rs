@@ -5,7 +5,6 @@ use super::{
 };
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// Current administrative course values, retained after the flight cursor is retired.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -104,19 +103,19 @@ pub fn launch_jump(
     bearing: i32,
     range: f64,
 ) -> Result<Vec<BattleNotice>> {
-    let mut candidate = world.clone();
-    let notices = launch(
-        &mut candidate,
-        id,
-        pilot,
-        JumpRequest::Projected { bearing, range },
-        super::BattleMovementRules::STANDARD.fall,
-        super::SpeedPolicy::STANDARD,
-        None,
-    )?;
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(notices)
+    world.attempt(|world| {
+        let notices = launch(
+            world,
+            id,
+            pilot,
+            JumpRequest::Projected { bearing, range },
+            super::BattleMovementRules::STANDARD.fall,
+            super::SpeedPolicy::STANDARD,
+            None,
+        )?;
+        world.btech.validate_action(world)?;
+        Ok(notices)
+    })
 }
 
 /// Plan a DFA jump to an acquired target's current hex without chasing subsequent movement.
@@ -127,19 +126,19 @@ pub fn launch_dfa(
     pilot: ObjectId,
     target: Option<ObjectId>,
 ) -> Result<Vec<BattleNotice>> {
-    let mut candidate = world.clone();
-    let notices = launch(
-        &mut candidate,
-        id,
-        pilot,
-        JumpRequest::Target(target),
-        super::BattleMovementRules::STANDARD.fall,
-        super::SpeedPolicy::STANDARD,
-        None,
-    )?;
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(notices)
+    world.attempt(|world| {
+        let notices = launch(
+            world,
+            id,
+            pilot,
+            JumpRequest::Target(target),
+            super::BattleMovementRules::STANDARD.fall,
+            super::SpeedPolicy::STANDARD,
+            None,
+        )?;
+        world.btech.validate_action(world)?;
+        Ok(notices)
+    })
 }
 
 /// Launch-time routing facts distinguish projections from fixed target identities.
@@ -249,9 +248,7 @@ fn launch_action(
     pilot: ObjectId,
     request: JumpRequest<'_>,
 ) -> Result<()> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let mut effects = LaunchEffects::default();
         let mut rules = super::BattleFallRules::configured(config);
         rules.toughness =
@@ -278,14 +275,9 @@ fn launch_action(
             super::evacuation::publish_fall_consequences(scripts, config, &fall)?;
         }
         super::evacuation::publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(())
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Shared launch authorization, terrain validation and flight publication.
@@ -423,9 +415,7 @@ fn launch(
     } = prepared;
     motion.speed = 0.0;
     motion.desired_heading = motion.heading;
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     unit.motion = Some(motion);
     unit.ground_elevation = None;
     unit.flight = Some(flight);
@@ -602,9 +592,7 @@ fn advance_jumps_inner(
         unit.validate()?;
         if unit.free_fall.is_some() {
             if unit.jump_stabilization > 0 {
-                let unit = Arc::make_mut(&mut candidate.btech.constructed)
-                    .get_mut(&id)
-                    .unwrap();
+                let unit = candidate.btech.constructed.get_mut(&id).unwrap();
                 unit.jump_stabilization -= 1;
                 if unit.jump_stabilization == 0 && unit.power() == BattlePower::Running {
                     notices.push(BattleNotice {
@@ -624,9 +612,7 @@ fn advance_jumps_inner(
             continue;
         }
         let Some(mut flight) = unit.flight else {
-            let unit = Arc::make_mut(&mut candidate.btech.constructed)
-                .get_mut(&id)
-                .unwrap();
+            let unit = candidate.btech.constructed.get_mut(&id).unwrap();
             unit.jump_stabilization -= 1;
             if unit.jump_stabilization == 0 && unit.power() == BattlePower::Running {
                 notices.push(BattleNotice {
@@ -688,9 +674,7 @@ fn advance_jumps_inner(
                         .clamp(f64::from(i16::MIN), f64::from(i16::MAX)) as i16,
                 ),
             );
-            let unit = Arc::make_mut(&mut candidate.btech.constructed)
-                .get_mut(&id)
-                .unwrap();
+            let unit = candidate.btech.constructed.get_mut(&id).unwrap();
             unit.position = Some(position);
             unit.hex_sync_pending = false;
             unit.motion
@@ -740,9 +724,7 @@ fn advance_jumps_inner(
             && (coordinate.x, coordinate.y) == (i32::from(position.x), i32::from(position.y))
         {
             // Arrival in the current destination hex precedes vertical ice crossing checks.
-            let unit = Arc::make_mut(&mut candidate.btech.constructed)
-                .get_mut(&id)
-                .unwrap();
+            let unit = candidate.btech.constructed.get_mut(&id).unwrap();
             unit.motion
                 .as_mut()
                 .context("Airborne unit has no motion")?
@@ -882,9 +864,7 @@ fn advance_jumps_inner(
         let previous_tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
         if previous_tile.strikes_bridge_during_jump((step.to.elevation + 0.5).trunc() as i32) {
             // Vertical integration precedes hex synchronization. Preserve both positions if interrupted.
-            let unit = Arc::make_mut(&mut candidate.btech.constructed)
-                .get_mut(&id)
-                .unwrap();
+            let unit = candidate.btech.constructed.get_mut(&id).unwrap();
             unit.motion
                 .as_mut()
                 .context("Airborne unit has no motion")?
@@ -1018,9 +998,7 @@ fn advance_jumps_inner(
         }
         position.x = u16::try_from(coordinate.x)?;
         position.y = u16::try_from(coordinate.y)?;
-        let unit = Arc::make_mut(&mut candidate.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
+        let unit = candidate.btech.constructed.get_mut(&id).unwrap();
         unit.position = Some(position);
         unit.hex_sync_pending = false;
         unit.motion
@@ -1029,7 +1007,7 @@ fn advance_jumps_inner(
             .point = step.to.point;
         unit.flight = Some(flight);
         let identity = unit.identity();
-        Arc::make_mut(&mut candidate.btech.units).insert(id, identity);
+        candidate.btech.units.insert(id, identity);
         if crossed_hex {
             notices.extend(super::hiding::movement(&mut candidate, id));
         }
@@ -1102,7 +1080,7 @@ fn advance_jumps_inner(
         experience_messages.extend(experience);
     }
     super::towing::synchronize(&mut candidate)?;
-    candidate.btech.validate(&candidate)?;
+    candidate.btech.validate_action(&candidate)?;
     let mut report = super::movement_report::MovementReport {
         pilot_notices,
         boundaries: Vec::new(),
@@ -1123,7 +1101,7 @@ fn advance_jumps_inner(
             false,
         )?);
     }
-    candidate.btech.validate(&candidate)?;
+    candidate.btech.validate_action(&candidate)?;
     *world = candidate;
     Ok(report)
 }
@@ -1247,9 +1225,7 @@ fn finish_landing_inner(
             }),
         }
     }
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     unit.flight = None;
     if let Some(event) = &mut unit.free_fall {
         event.land();
@@ -1367,9 +1343,7 @@ fn finish_landing_inner(
     // A stagger failure terminates landing; its shared fall already handles immersion and mines.
     if stagger_failed {
         // Flight was cleared for surface resolution; retain the shared airborne fall's stabilization.
-        let unit = Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
         if !dfa && !unit.is_destroyed() {
             unit.jump_stabilization = 12;
         }
@@ -1421,9 +1395,7 @@ fn finish_landing_inner(
     if !world.btech.constructed_units()[&id].is_destroyed() {
         notices.extend(flood_after_jump(world, id, rules, character, falls)?);
     }
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     if !dfa && !unit.is_destroyed() {
         unit.jump_stabilization = 12;
     }

@@ -2,7 +2,6 @@
 use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Result, ensure};
-use std::sync::Arc;
 
 /// Empty crews cannot use character health or coexist with a player's active cockpit state.
 /// A terminal explosion can start a new recovery after ordinary destruction clears the old one.
@@ -27,15 +26,9 @@ pub(super) fn validate(
 /// Mutable storage adapter; all recovery decisions remain in the shared component.
 fn recovery_mut(world: &mut World, id: ObjectId) -> &mut BattleRecovery {
     if world.btech.vehicles().contains_key(&id) {
-        return &mut Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap()
-            .crew_recovery;
+        return &mut world.btech.vehicles.get_mut(&id).unwrap().crew_recovery;
     }
-    &mut Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap()
-        .crew_recovery
+    &mut world.btech.constructed.get_mut(&id).unwrap().crew_recovery
 }
 
 /// Resolve a tactical injury without assigning a fictitious player or starting a new random stream.
@@ -61,9 +54,13 @@ pub(super) fn assign(world: &mut World, id: ObjectId, pilot: ObjectId) {
         return;
     }
     let owned = recovery.clone();
-    let mut previous = Arc::make_mut(&mut world.btech.recoveries)
-        .insert(pilot, owned)
-        .expect("pilot recovery prepared before assignment");
+    let mut previous = std::sync::Arc::unwrap_or_clone(
+        world
+            .btech
+            .recoveries
+            .insert(pilot, owned)
+            .expect("pilot recovery prepared before assignment"),
+    );
     previous.clear();
     *recovery_mut(world, id) = previous;
 }

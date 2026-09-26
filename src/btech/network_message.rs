@@ -65,20 +65,13 @@ fn send_for(
     text: &str,
     kind: BattleCommandNetwork,
 ) -> Result<Vec<BattleNotice>> {
-    let before = scripts.world().clone();
-    let effects = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let notices = message_for(&scripts.world(), id, pilot, text, kind)?;
         for notice in &notices {
             super::notify_unit(scripts, notice.clone())?;
         }
         Ok(notices)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(effects);
-    }
-    result
+    })
 }
 
 /// Native network message sender uses the invoking player's cockpit.

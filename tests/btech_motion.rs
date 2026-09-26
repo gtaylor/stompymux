@@ -20056,6 +20056,10 @@ async fn dfa_damage_resamples_target_posture() {
 
 /// A late world-validation failure discards the attack roll, flight cancellation and all damage.
 #[tokio::test]
+#[cfg_attr(
+    not(debug_assertions),
+    ignore = "injects a late failure through per-operation validation, which runs only in debug builds"
+)]
 async fn dfa_damage_candidate_error_rolls_back() {
     use stompymux_rs::*;
     let (_dir, config, mut world, id, target) = kick_fixture().await;

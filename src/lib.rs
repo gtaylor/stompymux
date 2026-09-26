@@ -133,7 +133,7 @@ pub mod telnet;
 pub mod text;
 pub use text::{ColorDepth, Document, Palette, RenderOptions};
 mod world;
-pub use world::{CreationContext, Kind, LinkSlots, Links, Object, ObjectId, World};
+pub use world::{CreationContext, Kind, LinkSlots, Links, Object, ObjectId, SharedMap, World};
 
 pub mod flags;
 pub use flags::{Flag, FlagSet};

@@ -30,9 +30,7 @@ pub fn damage_action(
     unit: ObjectId,
     request: BattleScenarioSalvo,
 ) -> Result<BattleScenarioSalvoReport> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         super::scenario_damage::admit(&before, actor, unit, request.damage)?;
         ensure!(request.clusters > 0, "Invalid cluster size!");
         ensure!(
@@ -103,14 +101,9 @@ pub fn damage_action(
         super::piloting::publish_ordered_notices(scripts, &notices, &private)?;
         super::evacuation::publish_blast_consequences(scripts, config, &report.impacts, None)?;
         super::evacuation::publish_new_casualties(scripts, config, &before)?;
-        scripts.world().validate(config)?;
+        scripts.world().validate_action(config)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Four signed integer arguments preserve native flag and cluster-count semantics.

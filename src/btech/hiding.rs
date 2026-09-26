@@ -2,7 +2,6 @@
 use super::{BattleNotice, BattlePower, Terrain};
 use crate::{CommandAction, CommandContext, CommandInput, CommandReport, Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 impl super::BattleUnit {
     /// Elapsed committed hide checks; zero is the initial scheduled event.
@@ -39,14 +38,10 @@ fn facts(world: &World, id: ObjectId) -> Option<(Option<u16>, bool, bool)> {
 /// Mutable timer and signature fields are the only chassis-specific hiding state.
 fn state_mut(world: &mut World, id: ObjectId) -> (&mut Option<u16>, &mut bool) {
     if world.btech.vehicles().contains_key(&id) {
-        let unit = Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.vehicles.get_mut(&id).unwrap();
         return (&mut unit.hide_elapsed, &mut unit.signature.hidden);
     }
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     (&mut unit.hide_elapsed, &mut unit.signature.hidden)
 }
 
@@ -198,7 +193,7 @@ pub fn advance_battle_hiding(world: &mut World) -> Result<Vec<BattleNotice>> {
             text: "You are now hidden!".into(),
         });
     }
-    candidate.btech.validate(&candidate)?;
+    candidate.btech.validate_action(&candidate)?;
     *world = candidate;
     Ok(notices)
 }
@@ -285,9 +280,7 @@ pub(super) fn movement_changes(world: &mut World, before: &World) -> Vec<BattleN
 
 /// Native hiding ignores trailing text, sharing the same mutation and cockpit publication as Lua.
 pub(crate) fn command(ctx: &CommandContext<'_>, _: &CommandInput) -> Result<CommandAction> {
-    let before = ctx.scripts.world.borrow().clone();
-    let checkpoint = ctx.scripts.effects.checkpoint();
-    let result = (|| {
+    let result = ctx.scripts.atomic(|before| {
         let id = before
             .objects
             .get(&ctx.player)
@@ -295,13 +288,9 @@ pub(crate) fn command(ctx: &CommandContext<'_>, _: &CommandInput) -> Result<Comm
             .context("Enter a unit first")?;
         let notice = begin_battle_hiding(&mut ctx.scripts.world.borrow_mut(), id, ctx.player)?;
         super::notify_unit(ctx.scripts, notice)
-    })();
+    });
     Ok(match result {
         Ok(()) => CommandAction::Continue,
-        Err(error) => {
-            *ctx.scripts.world.borrow_mut() = before;
-            ctx.scripts.effects.restore(checkpoint);
-            CommandAction::Report(CommandReport::Reply(format!("{error:#}")))
-        }
+        Err(error) => CommandAction::Report(CommandReport::Reply(format!("{error:#}"))),
     })
 }

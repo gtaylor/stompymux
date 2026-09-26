@@ -24,9 +24,7 @@ pub fn emit_map_action(
     map: ObjectId,
     text: &str,
 ) -> Result<Vec<ObjectId>> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(&before, actor),
             "Permission denied."
@@ -67,12 +65,7 @@ pub fn emit_map_action(
         )?;
         scripts.effects.validate()?;
         Ok(units)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// The native operator broadcasts to the map containing their player object.

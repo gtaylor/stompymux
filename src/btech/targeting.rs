@@ -3,7 +3,6 @@ use super::{BattleNotice, BattlePower, BattleUnit};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Selected unit and settling time. Zero means settled, not necessarily currently visible.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -212,16 +211,18 @@ pub(super) fn set_selection(
     unit: ObjectId,
     selection: Option<BattleTargetSelection>,
 ) {
-    if let Some(station) = Arc::make_mut(&mut world.btech.gunner_stations).get_mut(&unit) {
+    if let Some(station) = world.btech.gunner_stations.get_mut(&unit) {
         station.set_target_selection(selection);
         return;
     }
     super::artillery_adjustment::reset(world, unit);
-    if let Some(vehicle) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&unit) {
+    if let Some(vehicle) = world.btech.vehicles.get_mut(&unit) {
         vehicle.target_lock = selection;
         return;
     }
-    Arc::make_mut(&mut world.btech.constructed)
+    world
+        .btech
+        .constructed
         .get_mut(&unit)
         .expect("checked unit")
         .target_lock = selection;
@@ -381,7 +382,7 @@ pub fn select_hex_target(
             remaining,
         })),
     );
-    if let Some(station) = Arc::make_mut(&mut world.btech.gunner_stations).get_mut(&unit) {
+    if let Some(station) = world.btech.gunner_stations.get_mut(&unit) {
         station.target_coordinates[2] = i16::from(elevation);
     }
     let purpose = match mode {
@@ -427,7 +428,7 @@ pub(crate) fn select_hex_target_autopilot(
             remaining,
         })),
     );
-    if let Some(station) = Arc::make_mut(&mut world.btech.gunner_stations).get_mut(&unit) {
+    if let Some(station) = world.btech.gunner_stations.get_mut(&unit) {
         station.target_coordinates[2] = i16::from(elevation);
     }
     Ok(BattleNotice {
@@ -494,15 +495,12 @@ pub fn advance_target_locks(world: &mut World) -> Vec<BattleNotice> {
     let mut notices = Vec::new();
     for (id, mut lock, message) in updates {
         lock.advance();
-        if let Some(station) = Arc::make_mut(&mut world.btech.gunner_stations).get_mut(&id) {
+        if let Some(station) = world.btech.gunner_stations.get_mut(&id) {
             station.lock_remaining = lock.remaining();
-        } else if let Some(vehicle) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+        } else if let Some(vehicle) = world.btech.vehicles.get_mut(&id) {
             vehicle.target_lock = Some(lock);
         } else {
-            Arc::make_mut(&mut world.btech.constructed)
-                .get_mut(&id)
-                .unwrap()
-                .target_lock = Some(lock);
+            world.btech.constructed.get_mut(&id).unwrap().target_lock = Some(lock);
         }
         if let Some(text) = message {
             notices.push(BattleNotice { unit: id, text });

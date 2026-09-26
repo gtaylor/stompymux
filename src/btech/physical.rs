@@ -3,7 +3,6 @@ use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// The leg used by a kick or trip; the other must still support the unit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -884,263 +883,249 @@ fn resolve_attack_inner(
 ) -> Result<BattlePhysicalReport> {
     let character = context.character;
     let profile = attack_profile_inner(world, attacker, pilot, target, attack, rules, context)?;
-    let mut candidate = world.clone();
-    let unit = Arc::make_mut(&mut candidate.btech.constructed)
-        .get_mut(&attacker)
-        .unwrap();
-    let roll = unit.dice.generic_roll();
-    unit.limb_recycle.insert(attack.section(unit.chassis()), 60);
-    if attack == BattlePhysicalAttack::Club {
-        unit.limb_recycle.insert(BattleSection::LeftArm, 60);
-    }
-    let threshold =
-        profile.target_number - i32::from(rules.glancing == BattleGlancingMode::BelowTarget);
-    let hit = i32::from(roll) >= threshold;
-    let glancing =
-        hit && rules.glancing != BattleGlancingMode::Disabled && i32::from(roll) == threshold;
-    let mut pilot_notices = Vec::new();
-    let mut notices = vec![BattleNotice {
-        unit: attacker,
-        text: format!(
-            "You try to {} #{}.  BTH:  {},\tRoll:  {}",
-            attack.verb(),
-            target.0,
-            profile.target_number,
-            roll
-        ),
-    }];
-    if candidate.btech.constructed_units()[&target].power() == BattlePower::Running {
-        notices.push(BattleNotice {
-            unit: target,
-            text: format!("#{} tries to {} you!", attacker.0, attack.verb()),
-        });
-    }
-    notices.extend(super::broadcast::interaction_notices(
-        &candidate,
-        attacker,
-        target,
-        &if hit {
-            format!("{}s", attack.verb())
-        } else {
-            format!("attempts to {}", attack.verb())
-        },
-    ));
-    let mut impact = None;
-    let mut experience = None;
-    let mut experience_messages = Vec::new();
-    if glancing {
-        notices.extend(super::broadcast::observer_notices(
-            &candidate,
-            target,
-            "is nicked by a glancing blow!",
-        ));
-        notices.push(BattleNotice {
-            unit: target,
-            text: "You are nicked by a glancing blow!".into(),
-        });
-    }
-    if hit && attack == BattlePhysicalAttack::Club {
-        let unit = Arc::make_mut(&mut candidate.btech.constructed)
-            .get_mut(&attacker)
-            .unwrap();
-        if unit.carried_club.take().is_some() {
+    world.attempt(|world| {
+        let unit = world.btech.constructed.get_mut(&attacker).unwrap();
+        let roll = unit.dice.generic_roll();
+        unit.limb_recycle.insert(attack.section(unit.chassis()), 60);
+        if attack == BattlePhysicalAttack::Club {
+            unit.limb_recycle.insert(BattleSection::LeftArm, 60);
+        }
+        let threshold =
+            profile.target_number - i32::from(rules.glancing == BattleGlancingMode::BelowTarget);
+        let hit = i32::from(roll) >= threshold;
+        let glancing =
+            hit && rules.glancing != BattleGlancingMode::Disabled && i32::from(roll) == threshold;
+        let mut pilot_notices = Vec::new();
+        let mut notices = vec![BattleNotice {
+            unit: attacker,
+            text: format!(
+                "You try to {} #{}.  BTH:  {},\tRoll:  {}",
+                attack.verb(),
+                target.0,
+                profile.target_number,
+                roll
+            ),
+        }];
+        if world.btech.constructed_units()[&target].power() == BattlePower::Running {
             notices.push(BattleNotice {
-                unit: attacker,
-                text: "Your club shatters on contact.".into(),
+                unit: target,
+                text: format!("#{} tries to {} you!", attacker.0, attack.verb()),
             });
-            notices.extend(super::broadcast::observer_notices(
-                &candidate,
-                attacker,
-                "'s club shatters with a loud *CRACK*!",
-            ));
         }
-    }
-    if hit && !attack.is_trip() {
-        let victim = &candidate.btech.constructed_units()[&target];
-        let mut dice = victim.dice.clone();
-        let location = if let Some(section) = profile.fixed_location {
-            BattleHit {
-                section,
-                rear_armor: false,
-                through_armor_critical: false,
-                crew_stun: false,
-            }
-        } else if profile.hit_table == BattleHitTable::Weapon {
-            let roll = dice.generic_roll();
-            rules
-                .fall
-                .hit
-                .resolve(victim, profile.hit_arc, roll, &mut dice)?
-        } else {
-            BattleHit {
-                section: profile.hit_table.location(
-                    victim.chassis(),
-                    profile.hit_arc,
-                    dice.d6(),
-                )?,
-                rear_armor: profile.hit_arc == BattleHitArc::Rear,
-                through_armor_critical: false,
-                crew_stun: false,
-            }
-        };
-        Arc::make_mut(&mut candidate.btech.constructed)
-            .get_mut(&target)
-            .unwrap()
-            .dice = dice;
-        let damage = if glancing {
-            profile.damage.div_ceil(2)
-        } else {
-            profile.damage
-        };
-        if character
-            && let Some(award) = super::physical_experience::award(
-                &mut candidate,
-                attacker,
-                pilot,
-                target,
-                damage,
-                crate::clock::wall_time(),
-                rules.fall.extended_piloting,
-            )?
-        {
-            experience = Some(award.award);
-            experience_messages.extend(award.message);
-        }
-        let fall_rules = participant_fall_rules(&candidate, target, rules.fall);
-        let result = super::impact::resolve_attack_in_candidate(
-            &mut candidate,
+        notices.extend(super::broadcast::interaction_notices(
+            world,
+            attacker,
             target,
-            location,
-            damage,
-            fall_rules,
-            super::impact::AttackImpact {
-                attacker: Some(attacker),
-                weapon_effect: None,
-                character,
-                followup: false,
+            &if hit {
+                format!("{}s", attack.verb())
+            } else {
+                format!("attempts to {}", attack.verb())
             },
-        )?;
-        super::piloting::append_feedback(
-            &mut pilot_notices,
-            result.pilot_notices.clone(),
-            notices.len(),
-        );
-        notices.extend(result.notices.iter().cloned());
-        impact = Some(result);
-    }
-    let (balance, fall) = if matches!(attack, BattlePhysicalAttack::Kick { .. })
-        || (attack.is_trip() && hit)
-        || (matches!(attack, BattlePhysicalAttack::Mace { .. }) && !hit)
-    {
-        let balancing = if hit { target } else { attacker };
-        if !hit {
+        ));
+        let mut impact = None;
+        let mut experience = None;
+        let mut experience_messages = Vec::new();
+        if glancing {
+            notices.extend(super::broadcast::observer_notices(
+                world,
+                target,
+                "is nicked by a glancing blow!",
+            ));
             notices.push(BattleNotice {
-                unit: attacker,
-                text: "You miss and try to remain standing!".into(),
+                unit: target,
+                text: "You are nicked by a glancing blow!".into(),
             });
         }
-        let modifier = if matches!(attack, BattlePhysicalAttack::Mace { .. }) {
-            2
-        } else {
-            0
-        };
-        let mut balance = roll_piloting(
-            &mut candidate,
-            balancing,
-            modifier,
-            rules.fall.extended_piloting,
-        )?;
-        super::piloting::capture_feedback(
-            balancing,
-            candidate.btech.constructed_units()[&balancing].pilot(),
-            &balance,
-            &mut notices,
-            &mut pilot_notices,
-        );
-        if character {
-            experience_messages.extend(super::piloting::award_control_check(
-                &mut candidate,
-                balancing,
-                &mut balance,
-                rules.fall.extended_piloting,
-            )?);
-        }
-        let fall = if !balance.success
-            && !candidate.btech.constructed_units()[&balancing].is_destroyed()
-            && candidate.btech.constructed_units()[&balancing].posture() != BattlePosture::Prone
-        {
-            if attack.is_trip() {
+        if hit && attack == BattlePhysicalAttack::Club {
+            let unit = world.btech.constructed.get_mut(&attacker).unwrap();
+            if unit.carried_club.take().is_some() {
                 notices.push(BattleNotice {
                     unit: attacker,
-                    text: format!("You trip #{}!", target.0),
+                    text: "Your club shatters on contact.".into(),
                 });
+                notices.extend(super::broadcast::observer_notices(
+                    world,
+                    attacker,
+                    "'s club shatters with a loud *CRACK*!",
+                ));
             }
-            if !attack.is_trip()
-                || candidate.btech.constructed_units()[&target].power() == BattlePower::Running
-            {
-                notices.push(BattleNotice {
-                    unit: balancing,
-                    text: if attack.is_trip() {
-                        "You are tripped and fall to the ground!"
-                    } else if hit {
-                        "The kick knocks you to the ground!"
-                    } else {
-                        "You lose your balance and fall down!"
-                    }
-                    .into(),
-                });
-            }
-            notices.extend(super::broadcast::observer_notices(
-                &candidate,
-                balancing,
-                if attack.is_trip() {
-                    "trips up and falls down!"
-                } else {
-                    "stumbles and falls down!"
-                },
-            ));
-            let fall_rules = participant_fall_rules(&candidate, balancing, rules.fall);
-            let result = if character
-                && candidate.objects[&balancing]
-                    .flags
-                    .contains(Flag::InCharacter)
-            {
-                super::fall::resolve_character_fall(&mut candidate, balancing, 1, fall_rules)?
-            } else {
-                resolve_fall(&mut candidate, balancing, 1, fall_rules)?
-            };
-            result.append_notices(balancing, &mut notices, &mut pilot_notices);
-            Some(result)
-        } else {
-            None
-        };
-        if attack.is_trip() && fall.is_none() {
-            notices.extend(super::broadcast::observer_notices(
-                &candidate,
-                target,
-                "manages to stay upright!",
-            ));
         }
-        (Some(balance), fall)
-    } else {
-        (None, None)
-    };
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(BattlePhysicalReport {
-        attacker,
-        target,
-        profile,
-        roll,
-        hit,
-        glancing,
-        impact,
-        experience,
-        experience_messages,
-        balance,
-        fall,
-        pilot_notices,
-        notices,
+        if hit && !attack.is_trip() {
+            let victim = &world.btech.constructed_units()[&target];
+            let mut dice = victim.dice.clone();
+            let location = if let Some(section) = profile.fixed_location {
+                BattleHit {
+                    section,
+                    rear_armor: false,
+                    through_armor_critical: false,
+                    crew_stun: false,
+                }
+            } else if profile.hit_table == BattleHitTable::Weapon {
+                let roll = dice.generic_roll();
+                rules
+                    .fall
+                    .hit
+                    .resolve(victim, profile.hit_arc, roll, &mut dice)?
+            } else {
+                BattleHit {
+                    section: profile.hit_table.location(
+                        victim.chassis(),
+                        profile.hit_arc,
+                        dice.d6(),
+                    )?,
+                    rear_armor: profile.hit_arc == BattleHitArc::Rear,
+                    through_armor_critical: false,
+                    crew_stun: false,
+                }
+            };
+            world.btech.constructed.get_mut(&target).unwrap().dice = dice;
+            let damage = if glancing {
+                profile.damage.div_ceil(2)
+            } else {
+                profile.damage
+            };
+            if character
+                && let Some(award) = super::physical_experience::award(
+                    world,
+                    attacker,
+                    pilot,
+                    target,
+                    damage,
+                    crate::clock::wall_time(),
+                    rules.fall.extended_piloting,
+                )?
+            {
+                experience = Some(award.award);
+                experience_messages.extend(award.message);
+            }
+            let fall_rules = participant_fall_rules(world, target, rules.fall);
+            let result = super::impact::resolve_attack_in_candidate(
+                world,
+                target,
+                location,
+                damage,
+                fall_rules,
+                super::impact::AttackImpact {
+                    attacker: Some(attacker),
+                    weapon_effect: None,
+                    character,
+                    followup: false,
+                },
+            )?;
+            super::piloting::append_feedback(
+                &mut pilot_notices,
+                result.pilot_notices.clone(),
+                notices.len(),
+            );
+            notices.extend(result.notices.iter().cloned());
+            impact = Some(result);
+        }
+        let (balance, fall) = if matches!(attack, BattlePhysicalAttack::Kick { .. })
+            || (attack.is_trip() && hit)
+            || (matches!(attack, BattlePhysicalAttack::Mace { .. }) && !hit)
+        {
+            let balancing = if hit { target } else { attacker };
+            if !hit {
+                notices.push(BattleNotice {
+                    unit: attacker,
+                    text: "You miss and try to remain standing!".into(),
+                });
+            }
+            let modifier = if matches!(attack, BattlePhysicalAttack::Mace { .. }) {
+                2
+            } else {
+                0
+            };
+            let mut balance =
+                roll_piloting(world, balancing, modifier, rules.fall.extended_piloting)?;
+            super::piloting::capture_feedback(
+                balancing,
+                world.btech.constructed_units()[&balancing].pilot(),
+                &balance,
+                &mut notices,
+                &mut pilot_notices,
+            );
+            if character {
+                experience_messages.extend(super::piloting::award_control_check(
+                    world,
+                    balancing,
+                    &mut balance,
+                    rules.fall.extended_piloting,
+                )?);
+            }
+            let fall = if !balance.success
+                && !world.btech.constructed_units()[&balancing].is_destroyed()
+                && world.btech.constructed_units()[&balancing].posture() != BattlePosture::Prone
+            {
+                if attack.is_trip() {
+                    notices.push(BattleNotice {
+                        unit: attacker,
+                        text: format!("You trip #{}!", target.0),
+                    });
+                }
+                if !attack.is_trip()
+                    || world.btech.constructed_units()[&target].power() == BattlePower::Running
+                {
+                    notices.push(BattleNotice {
+                        unit: balancing,
+                        text: if attack.is_trip() {
+                            "You are tripped and fall to the ground!"
+                        } else if hit {
+                            "The kick knocks you to the ground!"
+                        } else {
+                            "You lose your balance and fall down!"
+                        }
+                        .into(),
+                    });
+                }
+                notices.extend(super::broadcast::observer_notices(
+                    world,
+                    balancing,
+                    if attack.is_trip() {
+                        "trips up and falls down!"
+                    } else {
+                        "stumbles and falls down!"
+                    },
+                ));
+                let fall_rules = participant_fall_rules(world, balancing, rules.fall);
+                let result =
+                    if character && world.objects[&balancing].flags.contains(Flag::InCharacter) {
+                        super::fall::resolve_character_fall(world, balancing, 1, fall_rules)?
+                    } else {
+                        resolve_fall(world, balancing, 1, fall_rules)?
+                    };
+                result.append_notices(balancing, &mut notices, &mut pilot_notices);
+                Some(result)
+            } else {
+                None
+            };
+            if attack.is_trip() && fall.is_none() {
+                notices.extend(super::broadcast::observer_notices(
+                    world,
+                    target,
+                    "manages to stay upright!",
+                ));
+            }
+            (Some(balance), fall)
+        } else {
+            (None, None)
+        };
+        world.btech.validate_action(world)?;
+        Ok(BattlePhysicalReport {
+            attacker,
+            target,
+            profile,
+            roll,
+            hit,
+            glancing,
+            impact,
+            experience,
+            experience_messages,
+            balance,
+            fall,
+            pilot_notices,
+            notices,
+        })
     })
 }
 
@@ -1263,84 +1248,81 @@ fn resolve_arm_attack_inner(
         BattleArmSelection::Right => &[BattleArm::Right],
         BattleArmSelection::Both => &[BattleArm::Left, BattleArm::Right],
     };
-    let mut candidate = world.clone();
-    let mut report = BattleArmAttackReport {
-        attacks: Vec::new(),
-        rejections: Vec::new(),
-        pilot_notices: Vec::new(),
-        notices: Vec::new(),
-    };
-    let mut completed_arm = None;
-    for &arm in arms {
-        if auto_select
-            && !kind.available(
-                &candidate.btech.constructed_units()[&attacker],
-                arm.section(),
-            )?
-        {
-            continue;
+    world.attempt(|world| {
+        let mut report = BattleArmAttackReport {
+            attacks: Vec::new(),
+            rejections: Vec::new(),
+            pilot_notices: Vec::new(),
+            notices: Vec::new(),
+        };
+        let mut completed_arm = None;
+        for &arm in arms {
+            if auto_select
+                && !kind.available(&world.btech.constructed_units()[&attacker], arm.section())?
+            {
+                continue;
+            }
+            let attack = kind.attack(arm);
+            if let Err(error) = attack_profile_inner(
+                world,
+                attacker,
+                pilot,
+                target,
+                attack,
+                rules,
+                AttackContext {
+                    completed_arm,
+                    character,
+                },
+            ) {
+                let reason = format!("{}: {error:#}", arm.section().name().replace('_', " "));
+                report.notices.push(BattleNotice {
+                    unit: attacker,
+                    text: reason.clone(),
+                });
+                report.rejections.push(BattleArmRejection { arm, reason });
+                continue;
+            }
+            let result = resolve_attack_inner(
+                world,
+                attacker,
+                pilot,
+                target,
+                attack,
+                rules,
+                AttackContext {
+                    completed_arm,
+                    character,
+                },
+            )?;
+            if matches!(kind, BattleArmAttack::Punch | BattleArmAttack::Claw) {
+                completed_arm = Some(arm.section());
+            }
+            super::piloting::append_feedback(
+                &mut report.pilot_notices,
+                result.pilot_notices.clone(),
+                report.notices.len(),
+            );
+            report.notices.extend(result.notices.iter().cloned());
+            report.attacks.push(result);
         }
-        let attack = kind.attack(arm);
-        if let Err(error) = attack_profile_inner(
-            &candidate,
-            attacker,
-            pilot,
-            target,
-            attack,
-            rules,
-            AttackContext {
-                completed_arm,
-                character,
-            },
-        ) {
-            let reason = format!("{}: {error:#}", arm.section().name().replace('_', " "));
-            report.notices.push(BattleNotice {
-                unit: attacker,
-                text: reason.clone(),
-            });
-            report.rejections.push(BattleArmRejection { arm, reason });
-            continue;
+        if report.attacks.is_empty() {
+            let reasons = report
+                .rejections
+                .iter()
+                .map(|r| r.reason.as_str())
+                .collect::<Vec<_>>()
+                .join("\n");
+            ensure!(
+                !reasons.is_empty(),
+                "No usable {:?} in the selected arms",
+                kind
+            );
+            anyhow::bail!("No selected arm could attack: {reasons}");
         }
-        let result = resolve_attack_inner(
-            &mut candidate,
-            attacker,
-            pilot,
-            target,
-            attack,
-            rules,
-            AttackContext {
-                completed_arm,
-                character,
-            },
-        )?;
-        if matches!(kind, BattleArmAttack::Punch | BattleArmAttack::Claw) {
-            completed_arm = Some(arm.section());
-        }
-        super::piloting::append_feedback(
-            &mut report.pilot_notices,
-            result.pilot_notices.clone(),
-            report.notices.len(),
-        );
-        report.notices.extend(result.notices.iter().cloned());
-        report.attacks.push(result);
-    }
-    if report.attacks.is_empty() {
-        let reasons = report
-            .rejections
-            .iter()
-            .map(|r| r.reason.as_str())
-            .collect::<Vec<_>>()
-            .join("\n");
-        ensure!(
-            !reasons.is_empty(),
-            "No usable {:?} in the selected arms",
-            kind
-        );
-        anyhow::bail!("No selected arm could attack: {reasons}");
-    }
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(report)
+        world.btech.validate_action(world)?;
+        Ok(report)
+    })
 }
 
 /// Parse one or both arms, defaulting to both.
@@ -1573,9 +1555,7 @@ fn command_for(
         PhysicalCommand::GrabClub => "Usage: grabclub [left|right|-]",
         PhysicalCommand::Charge => "Usage: charge [#unit|-]",
     };
-    let before = ctx.scripts.world.borrow().clone();
-    let checkpoint = ctx.scripts.effects.checkpoint();
-    let result = (|| {
+    let result = ctx.scripts.atomic(|_| {
         let mut args = input.args.split_whitespace().peekable();
         let leg = if args.peek().is_some_and(|arg| !arg.starts_with('#')) {
             args.next()
@@ -1664,12 +1644,10 @@ fn command_for(
             super::notify_unit(ctx.scripts, notice)?;
         }
         Ok(())
-    })();
+    });
     Ok(match result {
         Ok(()) => crate::CommandAction::Continue,
         Err(error) => {
-            *ctx.scripts.world.borrow_mut() = before;
-            ctx.scripts.effects.restore(checkpoint);
             crate::CommandAction::Report(crate::CommandReport::Reply(format!("{error:#}")))
         }
     })

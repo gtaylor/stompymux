@@ -88,26 +88,19 @@ pub(super) fn resolve_with_context(
     rules: BattleVehicleImpactRules,
     context: SalvoContext<'_>,
 ) -> Result<BattleVehicleSalvoReport> {
-    resolve_with_context_mode(
-        world,
-        target,
-        direction,
-        request,
-        rules,
-        context,
-        super::shot_transaction::EffectMode::Atomic,
-    )
+    world.attempt(|world| {
+        resolve_with_context_in_candidate(world, target, direction, request, rules, context)
+    })
 }
 
-/// Resolve all groups in the explicitly selected savepoint.
-pub(super) fn resolve_with_context_mode(
+/// Resolve all groups directly in the caller's world; the caller owns rollback.
+pub(super) fn resolve_with_context_in_candidate(
     world: &mut World,
     target: ObjectId,
     direction: super::hit_direction::HitDirection,
     request: BattleVehicleSalvoRequest,
     rules: BattleVehicleImpactRules,
     context: SalvoContext<'_>,
-    mode: super::shot_transaction::EffectMode,
 ) -> Result<BattleVehicleSalvoReport> {
     let SalvoContext {
         woods_damage,
@@ -168,15 +161,8 @@ pub(super) fn resolve_with_context_mode(
     );
     let target_beacon =
         vehicle.has_beacon(BattleBeaconKind::Narc) || vehicle.has_beacon(BattleBeaconKind::Homing);
-    let mut candidate = super::shot_transaction::EffectCandidate::new(world, mode);
     let initial_woods = if woods_damage && let Some(shooter) = attacker {
-        super::woods_absorption::begin_pellets(
-            &mut candidate,
-            shooter,
-            target,
-            weapon,
-            request.ammunition,
-        )?
+        super::woods_absorption::begin_pellets(world, shooter, target, weapon, request.ammunition)?
     } else {
         None
     };
@@ -199,10 +185,7 @@ pub(super) fn resolve_with_context_mode(
             angel_blocked: request.angel_blocked,
             target_beacon,
         },
-        &mut super::autopilot::diagnostics::make_mut(&mut candidate.btech.vehicles)
-            .get_mut(&target)
-            .unwrap()
-            .dice,
+        &mut world.btech.vehicles.get_mut(&target).unwrap().dice,
     )?;
     packets.limit_missiles(incoming);
     packets.finish_burst_glancing(request.fire_mode, request.glancing && !shell_woods);
@@ -221,15 +204,10 @@ pub(super) fn resolve_with_context_mode(
         if request.ammunition == BattleAmmunitionMode::Inferno {
             if surviving > 0 {
                 report.inferno = Some(super::vehicle_burning::resolve_inferno_from(
-                    &mut candidate,
-                    target,
-                    surviving,
-                    rules,
-                    attacker,
+                    world, target, surviving, rules, attacker,
                 )?);
             }
-            candidate.btech.validate(&candidate)?;
-            candidate.commit();
+            world.btech.validate_action(world)?;
             return Ok(report);
         }
     }
@@ -238,7 +216,7 @@ pub(super) fn resolve_with_context_mode(
         && let Some(shooter) = attacker
     {
         report.woods = super::woods_absorption::resolve_projectiles(
-            &mut candidate,
+            world,
             shooter,
             target,
             weapon,
@@ -248,7 +226,7 @@ pub(super) fn resolve_with_context_mode(
     }
     if shell_woods && let Some(shooter) = attacker {
         report.woods = super::woods_absorption::resolve_shells(
-            &mut candidate,
+            world,
             shooter,
             target,
             weapon,
@@ -259,19 +237,19 @@ pub(super) fn resolve_with_context_mode(
     }
     let groups = packets.damage;
     for damage in groups {
-        let arc = direction.current(&candidate, target)?;
+        let arc = direction.current(world, target)?;
         let award = experience
-            .map(|context| context.award(&mut candidate, damage))
+            .map(|context| context.award(world, damage))
             .transpose()?
             .flatten();
         if let Some(context) = experience {
             report
                 .experience_messages
-                .extend(context.messages(&candidate, damage, award.as_ref()));
+                .extend(context.messages(world, damage, award.as_ref()));
         }
         report.experience.push(award);
         let preferred = aimed
-            .map(|aimed| aimed.preferred(&mut candidate, target, arc, false))
+            .map(|aimed| aimed.preferred(world, target, arc, false))
             .transpose()?
             .flatten();
         let forced = match preferred {
@@ -285,7 +263,7 @@ pub(super) fn resolve_with_context_mode(
             _ => None,
         };
         let impact = super::vehicle_impact::resolve_directed_followup(
-            &mut candidate,
+            world,
             target,
             arc,
             super::vehicle_impact::ImpactRequest {
@@ -302,7 +280,6 @@ pub(super) fn resolve_with_context_mode(
             .groups
             .push(BattleVehicleSalvoGroup { damage, impact });
     }
-    candidate.btech.validate(&candidate)?;
-    candidate.commit();
+    world.btech.validate_action(world)?;
     Ok(report)
 }

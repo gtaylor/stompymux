@@ -3,16 +3,11 @@ use super::{BattleCharacterNotice, BattleMessageTarget};
 use crate::Scripts;
 use anyhow::Result;
 
-/// Publish the complete recovery result atomically inside its heartbeat transaction.
+/// Publish the complete recovery result; a failure rolls back the enclosing heartbeat transaction.
 pub(super) fn publish(scripts: &Scripts, notice: BattleCharacterNotice) -> Result<()> {
-    let checkpoint = scripts.effects.checkpoint();
-    let result = messages(notice)
+    messages(notice)
         .into_iter()
-        .try_for_each(|(recipient, text)| super::notify_message(scripts, recipient, &text));
-    if result.is_err() {
-        scripts.effects.restore(checkpoint);
-    }
-    result
+        .try_for_each(|(recipient, text)| super::notify_message(scripts, recipient, &text))
 }
 
 /// Build pilot and cockpit feedback from the resolved recovery check.

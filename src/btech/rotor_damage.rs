@@ -114,9 +114,7 @@ pub(super) fn apply_in_world(
     } else {
         None
     };
-    let unit = std::sync::Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.vehicles.get_mut(&id).unwrap();
     let report = unit.apply_rotor_hit(effect, fallen)?;
     if let Some(maximum) = maximum {
         unit.constrain_vtol_cruise_at(vertical, maximum)?;

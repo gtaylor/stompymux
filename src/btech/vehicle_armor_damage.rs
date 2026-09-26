@@ -3,7 +3,6 @@ use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// One already located hit, after weapon-specific damage adjustments by the enclosing attack.
 #[derive(Debug, Clone, Copy)]
@@ -43,10 +42,10 @@ pub fn resolve_vehicle_armor_damage(
     hit: BattleVehicleArmorHit,
     rules: BattleVehicleCriticalRules,
 ) -> Result<BattleVehicleArmorDamage> {
-    let mut candidate = world.clone();
-    let result = resolve_in_candidate(&mut candidate, id, hit, rules)?;
-    *world = candidate;
-    Ok(result)
+    world.attempt(|world| {
+        let result = resolve_in_candidate(world, id, hit, rules)?;
+        Ok(result)
+    })
 }
 
 /// Resolve the material stages inside the enclosing action's isolated state.
@@ -154,9 +153,7 @@ pub(super) fn resolve_rear_followup_in_candidate(
     if amount == 0 {
         return Ok(result);
     }
-    let vehicle = Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
+    let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
     result.rolls.push(vehicle.dice.generic_roll());
     if rules.combat_safe || super::combat_safe::protects(world, context.attacker, id) {
         result
@@ -169,9 +166,7 @@ pub(super) fn resolve_rear_followup_in_candidate(
         context.attacker,
         id,
     ));
-    let vehicle = Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
+    let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
     if rear && !vehicle.definition().has_special("SalvageTech") {
         result.rolls.push(vehicle.dice.generic_roll());
     }
@@ -196,9 +191,7 @@ pub(super) fn resolve_rear_followup_in_candidate(
         result.broadcasts.extend(broadcasts);
     }
 
-    let vehicle = Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
+    let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
     result.notices.push(BattleNotice {
         unit: id,
         text: format!(

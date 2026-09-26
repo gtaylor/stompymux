@@ -2,7 +2,6 @@
 use super::*;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
-use std::sync::Arc;
 
 /// Completed launch facts and hit-location policy supplied by an enclosing shot transaction.
 pub(super) struct DirectEffectRequest {
@@ -191,10 +190,12 @@ pub(super) fn thermal_notices(
 
 /// Adapt heat storage without imposing a Mech thermal lifecycle on other unit classes.
 fn stored_heat_mut(world: &mut World, target: ObjectId) -> Result<&mut f64> {
-    if let Some(vehicle) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&target) {
+    if let Some(vehicle) = world.btech.vehicles.get_mut(&target) {
         return Ok(&mut vehicle.weapon_heat);
     }
-    Ok(&mut Arc::make_mut(&mut world.btech.constructed)
+    Ok(&mut world
+        .btech
+        .constructed
         .get_mut(&target)
         .context("Target has no heat storage")?
         .heat

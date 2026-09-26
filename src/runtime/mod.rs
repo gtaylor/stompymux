@@ -4,4 +4,4 @@ mod map_write;
 pub mod transaction;
 pub use map_write::MapAssetWrite;
 
-pub use transaction::{EffectBatch, Effects, Outbox, PrivateOutput, SharedWorld};
+pub use transaction::{EffectBatch, Effects, Outbox, PrivateOutput, SharedWorld, atomic};

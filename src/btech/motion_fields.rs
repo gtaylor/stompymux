@@ -1,7 +1,6 @@
 //! Administrative actual-motion edits preserve requested controls and use shared saved motion.
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// Edit actual motion without advancing time, position or dice; the caller validates and rolls back.
 pub(super) fn set(world: &mut World, id: ObjectId, field: &str, value: &str) -> Result<()> {
@@ -23,10 +22,12 @@ pub(super) fn set(world: &mut World, id: ObjectId, field: &str, value: &str) -> 
         ensure!(speed.is_finite(), "Expected a finite speed");
         f64::from(speed)
     };
-    let motion = if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    let motion = if let Some(unit) = world.btech.constructed.get_mut(&id) {
         &mut unit.motion
     } else {
-        &mut Arc::make_mut(&mut world.btech.vehicles)
+        &mut world
+            .btech
+            .vehicles
             .get_mut(&id)
             .context("Unit is unavailable")?
             .motion

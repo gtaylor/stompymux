@@ -385,8 +385,7 @@ pub fn view_unit_fields_action(
     id: ObjectId,
     arguments: &str,
 ) -> Result<BattleUnitFieldReport> {
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let world = scripts.world();
         admission(&world, actor, id)?;
         let (columns, filter) = super::field_report::options(arguments);
@@ -423,14 +422,10 @@ pub fn view_unit_fields_action(
                 &crate::text::escape(line),
             )?;
         }
-        scripts.world().validate(config)?;
+        scripts.world().validate_action(config)?;
         scripts.effects.validate()?;
         Ok(report)
-    })();
-    if result.is_err() {
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Native inspection selects the wizard's current unit without requiring a cockpit assignment.
@@ -466,9 +461,7 @@ pub fn set_unit_field_action(
     field: &str,
     value: &str,
 ) -> Result<()> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         admission(&before, actor, id)?;
         ensure!(
             ![
@@ -550,18 +543,14 @@ pub fn set_unit_field_action(
             "maxspeed" => {
                 let speed = super::propulsion::parse(value)?;
                 let mut world = scripts.world_mut();
-                if let Some(unit) =
-                    std::sync::Arc::make_mut(&mut world.btech.constructed).get_mut(&id)
-                {
+                if let Some(unit) = world.btech.constructed.get_mut(&id) {
                     unit.propulsion.set(speed);
                     ensure!(
                         unit.mobility().maximum_speed == speed,
                         "Material damage prevents that maximum speed"
                     );
                 } else {
-                    let unit = std::sync::Arc::make_mut(&mut world.btech.vehicles)
-                        .get_mut(&id)
-                        .unwrap();
+                    let unit = world.btech.vehicles.get_mut(&id).unwrap();
                     unit.propulsion.set(speed);
                     ensure!(
                         unit.maximum_speed() == speed,
@@ -572,12 +561,12 @@ pub fn set_unit_field_action(
             "templatesp" => {
                 let speed = super::template_speed::parse(value)?;
                 let mut world = scripts.world_mut();
-                if let Some(unit) =
-                    std::sync::Arc::make_mut(&mut world.btech.constructed).get_mut(&id)
-                {
+                if let Some(unit) = world.btech.constructed.get_mut(&id) {
                     unit.set_template_speed(speed);
                 } else {
-                    std::sync::Arc::make_mut(&mut world.btech.vehicles)
+                    world
+                        .btech
+                        .vehicles
                         .get_mut(&id)
                         .unwrap()
                         .set_template_speed(speed);
@@ -625,15 +614,10 @@ pub fn set_unit_field_action(
                     .parse::<i64>()
                     .context("Expected a signed Unix timestamp")?;
                 let mut world = scripts.world_mut();
-                if let Some(unit) =
-                    std::sync::Arc::make_mut(&mut world.btech.constructed).get_mut(&id)
-                {
+                if let Some(unit) = world.btech.constructed.get_mut(&id) {
                     unit.last_startup = timestamp;
                 } else {
-                    std::sync::Arc::make_mut(&mut world.btech.vehicles)
-                        .get_mut(&id)
-                        .unwrap()
-                        .last_startup = timestamp;
+                    world.btech.vehicles.get_mut(&id).unwrap().last_startup = timestamp;
                 }
             }
             "units_killed" => {
@@ -666,12 +650,12 @@ pub fn set_unit_field_action(
             "hsengoverride" => {
                 let value = super::engine_sink_override::parse(value)?;
                 let mut world = scripts.world_mut();
-                if let Some(unit) =
-                    std::sync::Arc::make_mut(&mut world.btech.constructed).get_mut(&id)
-                {
+                if let Some(unit) = world.btech.constructed.get_mut(&id) {
                     unit.set_engine_sink_override(value);
                 } else {
-                    std::sync::Arc::make_mut(&mut world.btech.vehicles)
+                    world
+                        .btech
+                        .vehicles
                         .get_mut(&id)
                         .unwrap()
                         .set_engine_sink_override(value);
@@ -711,20 +695,18 @@ pub fn set_unit_field_action(
                     .get(&id)
                     .map_or(0, |unit| unit.system_hits(BattleSystem::Sensors));
                 let mut world = scripts.world_mut();
-                let hardware = if let Some(unit) =
-                    std::sync::Arc::make_mut(&mut world.btech.constructed).get_mut(&id)
-                {
+                let hardware = if let Some(unit) = world.btech.constructed.get_mut(&id) {
                     &mut unit.hardware
                 } else {
-                    &mut std::sync::Arc::make_mut(&mut world.btech.vehicles)
-                        .get_mut(&id)
-                        .unwrap()
-                        .hardware
+                    &mut world.btech.vehicles.get_mut(&id).unwrap().hardware
                 };
                 hardware.set(&field.to_ascii_lowercase(), value, sensor_hits)?;
             }
             "heat" | "dissheat" | "overheat" => {
-                std::sync::Arc::make_mut(&mut scripts.world_mut().btech.constructed)
+                scripts
+                    .world_mut()
+                    .btech
+                    .constructed
                     .get_mut(&id)
                     .context("This unit does not use Mech thermal state")?
                     .set_thermal_field(&field.to_ascii_lowercase(), value)?;
@@ -780,12 +762,7 @@ pub fn set_unit_field_action(
         scripts.world().validate(config)?;
         scripts.effects.validate()?;
         Ok(())
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Native named edits retain the full value following the first field-name token.

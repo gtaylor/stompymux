@@ -3,7 +3,6 @@ use super::{BattleNotice, BattlePower, BattleUnit};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Durable hardware state; pending transitions invert the current setting after five seconds.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -71,10 +70,12 @@ fn hardware(world: &World, id: ObjectId) -> Option<(BattleSearchlight, bool)> {
 
 /// Borrow admitted hardware without duplicating switch or damage rules.
 fn hardware_mut(world: &mut World, id: ObjectId) -> &mut BattleSearchlight {
-    if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
         return &mut unit.searchlight;
     }
-    &mut Arc::make_mut(&mut world.btech.vehicles)
+    &mut world
+        .btech
+        .vehicles
         .get_mut(&id)
         .expect("admitted lamp")
         .searchlight
@@ -368,13 +369,11 @@ pub fn refresh_illumination(world: &mut World) -> Vec<BattleNotice> {
         .collect();
     let mut notices = Vec::new();
     for (id, lit) in changes {
-        let warning = if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+        let warning = if let Some(unit) = world.btech.constructed.get_mut(&id) {
             unit.illumination_observed = lit;
             unit.searchlight_warning
         } else {
-            let unit = Arc::make_mut(&mut world.btech.vehicles)
-                .get_mut(&id)
-                .expect("observed vehicle");
+            let unit = world.btech.vehicles.get_mut(&id).expect("observed vehicle");
             unit.illumination_observed = lit;
             unit.searchlight_warning
         };
@@ -408,10 +407,10 @@ pub(super) fn strike(
     if !installed || lamp.destroyed {
         return None;
     }
-    let dice = if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    let dice = if let Some(unit) = world.btech.constructed.get_mut(&id) {
         &mut unit.dice
     } else {
-        &mut Arc::make_mut(&mut world.btech.vehicles).get_mut(&id)?.dice
+        &mut world.btech.vehicles.get_mut(&id)?.dice
     };
     if dice.generic_roll() <= 6 || (!lamp.on && dice.generic_roll() <= 5) {
         return None;

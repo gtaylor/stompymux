@@ -146,7 +146,7 @@ pub(super) fn extent(state: &BtechState, map: ObjectId) -> u32 {
 /// Removing the last allocated slot shortens the span once, leaving earlier holes allocated.
 pub(super) fn depart(state: &mut BtechState, id: ObjectId) {
     // Searches and clearance watches belong to the battlefield being left.
-    std::sync::Arc::make_mut(&mut state.autopilot_plans).remove(&id);
+    state.autopilot_plans.remove(&id);
     let membership = state
         .constructed_units()
         .get(&id)
@@ -161,7 +161,7 @@ pub(super) fn depart(state: &mut BtechState, id: ObjectId) {
         return;
     };
     let span = extent(state, position.map);
-    if let Some(map) = std::sync::Arc::make_mut(&mut state.maps).get_mut(&position.map) {
+    if let Some(map) = state.maps.get_mut(&position.map) {
         map.membership_extent = if slot.checked_add(1) == Some(span) {
             span - 1
         } else {
@@ -182,7 +182,8 @@ pub(super) fn arrive(state: &mut BtechState, id: ObjectId, map: ObjectId, slot: 
         depart(state, id);
     }
     let span = extent(state, map).max(slot.saturating_add(1));
-    std::sync::Arc::make_mut(&mut state.maps)
+    state
+        .maps
         .get_mut(&map)
         .expect("admitted map")
         .membership_extent = span;

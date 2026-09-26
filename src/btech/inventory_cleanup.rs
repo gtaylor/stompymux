@@ -3,7 +3,7 @@ use super::{BattleInventoryEntry, BattlePart};
 use crate::{Config, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::{collections::BTreeMap, sync::Arc};
+use std::collections::BTreeMap;
 
 /// Detached cleanup totals; quantities are wide enough to count multiple full stock rows.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -78,21 +78,21 @@ pub fn clean_inventory(
                 .context("Inventory item count overflow")
         })?,
     };
-    let mut candidate = world.clone();
-    let inventories = Arc::make_mut(&mut candidate.btech.inventories);
-    if cleaned.is_empty() {
-        inventories.remove(&object);
-    } else {
-        inventories.insert(object, cleaned);
-    }
-    if candidate.btech.constructed_units().contains_key(&object)
-        || candidate.btech.vehicles().contains_key(&object)
-    {
-        super::load::reconcile(&mut candidate, object, config.battletech.tsm_tow_bonus != 0)?;
-    }
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(report)
+    world.attempt(|world| {
+        let inventories = &mut world.btech.inventories;
+        if cleaned.is_empty() {
+            inventories.remove(&object);
+        } else {
+            inventories.insert(object, cleaned);
+        }
+        if world.btech.constructed_units().contains_key(&object)
+            || world.btech.vehicles().contains_key(&object)
+        {
+            super::load::reconcile(world, object, config.battletech.tsm_tow_bonus != 0)?;
+        }
+        world.btech.validate_action(world)?;
+        Ok(report)
+    })
 }
 
 /// Stage the private summary with cleanup so output and callback failures restore both.
@@ -102,9 +102,7 @@ pub fn clean_inventory_action(
     actor: ObjectId,
     object: ObjectId,
 ) -> Result<BattleInventoryCleanup> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let report = clean_inventory(&mut scripts.world_mut(), config, actor, object)?;
         super::notify_message(
             scripts,
@@ -113,12 +111,7 @@ pub fn clean_inventory_action(
         )?;
         scripts.effects.validate()?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// FIXSTUFF operates on the operator's location and ignores arguments, as does the reference command.

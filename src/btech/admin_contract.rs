@@ -2,7 +2,6 @@
 use super::*;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
-use std::sync::Arc;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AdministrativeRepairKind {
@@ -56,11 +55,11 @@ pub fn apply_administrative_repair(
         .iter()
         .position(|section| *section as i32 == section_code)
         .context("Section is not valid for this unit")?;
-    if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
         let section = administrative_mech_section(unit, section_code)?;
         unit.apply_immediate_repair(section, kind, value, hull)?;
     } else {
-        let vehicles = Arc::make_mut(&mut world.btech.vehicles);
+        let vehicles = &mut world.btech.vehicles;
         let unit = vehicles
             .get_mut(&id)
             .context("Unit runtime state is unavailable")?;
@@ -140,10 +139,12 @@ fn apply_raw_section_repair(
 
 pub fn set_administrative_heat_sinks(world: &mut World, id: ObjectId, count: u16) -> Result<()> {
     super::ensure_registered_unit_runtime(world, id)?;
-    if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
         unit.set_administrative_heat_sinks(count);
     } else {
-        Arc::make_mut(&mut world.btech.vehicles)
+        world
+            .btech
+            .vehicles
             .get_mut(&id)
             .context("Unit runtime state is unavailable")?
             .set_administrative_heat_sinks(count);
@@ -170,11 +171,11 @@ pub fn set_administrative_armor(
         .iter()
         .position(|section| *section as i32 == section_code)
         .context("Section is not valid for this unit")?;
-    if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
         let section = administrative_mech_section(unit, section_code)?;
         unit.set_administrative_armor(section, armor, internal, rear);
     } else {
-        let vehicles = Arc::make_mut(&mut world.btech.vehicles);
+        let vehicles = &mut world.btech.vehicles;
         let unit = vehicles
             .get_mut(&id)
             .context("Unit runtime state is unavailable")?;
@@ -255,15 +256,15 @@ fn administrative_mech_section(unit: &BattleUnit, code: i32) -> Result<BattleSec
 }
 
 fn storage(world: &mut World, id: ObjectId) -> Result<AdministrativeStorage<'_>> {
-    if Arc::make_mut(&mut world.btech.constructed).contains_key(&id) {
+    if world.btech.constructed.contains_key(&id) {
         return Ok(AdministrativeStorage::Mech(
-            Arc::make_mut(&mut world.btech.constructed)
-                .get_mut(&id)
-                .expect("checked unit"),
+            world.btech.constructed.get_mut(&id).expect("checked unit"),
         ));
     }
     Ok(AdministrativeStorage::Vehicle(
-        Arc::make_mut(&mut world.btech.vehicles)
+        world
+            .btech
+            .vehicles
             .get_mut(&id)
             .context("Unit runtime state is unavailable")?,
     ))
@@ -831,10 +832,12 @@ pub fn set_administrative_technology(
             false,
         )?;
     }
-    if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
         unit.set_administrative_special(attribute, flag, enabled)
     } else {
-        Arc::make_mut(&mut world.btech.vehicles)
+        world
+            .btech
+            .vehicles
             .get_mut(&id)
             .context("Unit runtime state is unavailable")?
             .set_administrative_special(attribute, flag, enabled)
@@ -879,7 +882,7 @@ fn remove_administrative_systems(
     systems: &[BattleSystem],
     clear_case: bool,
 ) -> Result<()> {
-    if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
         let mut definition = unit.definition().clone();
         let mut touched = Vec::new();
         for (&section, layout) in &mut definition.sections {
@@ -907,7 +910,9 @@ fn remove_administrative_systems(
         }
         return Ok(());
     }
-    let unit = Arc::make_mut(&mut world.btech.vehicles)
+    let unit = world
+        .btech
+        .vehicles
         .get_mut(&id)
         .context("Unit runtime state is unavailable")?;
     let mut definition = unit.definition().clone();

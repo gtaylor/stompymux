@@ -2,7 +2,6 @@
 use super::{BattlePower, BattleUnjam, BattleWeaponReadiness};
 use crate::{ObjectId, World};
 use anyhow::Result;
-use std::sync::Arc;
 
 /// Current cockpit, mount and feed facts used by common admission and expiry rules.
 pub(super) struct FeedState {
@@ -61,14 +60,9 @@ pub(super) fn state(world: &World, id: ObjectId, index: usize) -> Result<FeedSta
 /// Borrow the owned countdown under the enclosing world transaction.
 pub(super) fn pending(world: &mut World, id: ObjectId) -> Result<&mut Option<BattleUnjam>> {
     if world.btech.vehicles().contains_key(&id) {
-        return Ok(&mut Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap()
-            .unjam);
+        return Ok(&mut world.btech.vehicles.get_mut(&id).unwrap().unjam);
     }
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     unit.validate()?;
     Ok(&mut unit.unjam)
 }
@@ -81,18 +75,14 @@ pub(super) fn clear(
     bin: Option<usize>,
 ) -> Result<()> {
     if world.btech.vehicles().contains_key(&id) {
-        let unit = Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.vehicles.get_mut(&id).unwrap();
         unit.clear_weapon_jam(index)?;
         if let Some(bin) = bin {
             unit.expend_ammunition(bin, 1)?;
         }
         return Ok(());
     }
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     unit.clear_weapon_jam(index)?;
     if let Some(bin) = bin {
         unit.ammunition[bin] -= 1;

@@ -11,9 +11,7 @@ pub(crate) fn initialize_map_action(
     name: &str,
     create: bool,
 ) -> Result<()> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let (asset, warnings) = super::assets::read_map_diagnostics(
             &config.path(&config.database.map_database),
             name,
@@ -26,12 +24,7 @@ pub(crate) fn initialize_map_action(
             super::reload_map(&mut scripts.world_mut(), id, name, asset)?;
         }
         super::assets::publish_map_warnings(scripts, config, id, &warnings)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Load a map or publish its structural preflight failure after restoring map state.
@@ -61,22 +54,17 @@ pub fn load_map_action(
             id.0
         ),
     };
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let published = super::channels::publish(
-        scripts,
-        config,
-        &[super::BattleChannelMessage::new(
-            super::BattleChannel::MapErrors,
-            text,
-        )],
-    )
-    .and_then(|()| scripts.effects.validate());
-    if let Err(error) = published {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-        return Err(error);
-    }
+    scripts.atomic(|_| {
+        super::channels::publish(
+            scripts,
+            config,
+            &[super::BattleChannelMessage::new(
+                super::BattleChannel::MapErrors,
+                text,
+            )],
+        )?;
+        scripts.effects.validate()
+    })?;
     result
 }
 
@@ -88,9 +76,7 @@ fn load_map_state_action(
     id: ObjectId,
     name: &str,
 ) -> Result<()> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(&before, actor),
             "Permission denied."
@@ -162,12 +148,7 @@ fn load_map_state_action(
         scripts.world().validate(config)?;
         scripts.effects.validate()?;
         Ok(())
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Load one relative asset into the operator's selected map.

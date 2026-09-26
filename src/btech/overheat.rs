@@ -3,7 +3,6 @@ use super::{BattleNotice, BattlePower, BattleUnit};
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Unit-local committed-second timing; elapsed saturates until heat reaches a checkable level.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -150,310 +149,305 @@ fn advance_overheat_inner(
     rules: BattleOverheatRules,
     character: bool,
 ) -> Result<Vec<BattleOverheatReport>> {
-    let mut candidate = world.clone();
-    let ids: Vec<_> = candidate
-        .btech
-        .constructed_units()
-        .iter()
-        .filter(|(id, unit)| {
-            !unit.is_destroyed()
-                && (unit.overheat_clock.injury_due
-                    || (unit.overheat_clock.elapsed == 30 && unit.heat().excess >= 10.0))
-                && candidate.objects.get(id).is_some_and(|object| {
-                    !object.flags.contains(Flag::Going)
-                        && (character || !object.flags.contains(Flag::InCharacter))
-                })
-        })
-        .map(|(&id, _)| id)
-        .collect();
-    let mut reports = Vec::new();
-    for id in ids {
-        let character_unit = character && candidate.objects[&id].flags.contains(Flag::InCharacter);
-        candidate.btech.constructed_units()[&id].validate()?;
-        let toughness = advantage(&candidate, id, "Toughness");
-        let fall_rules = super::BattleFallRules {
-            vehicle_impact: rules.vehicle_impact,
-            stacking: rules.stacking,
-            hit: rules.hit,
-            extended_piloting: rules.extended_piloting,
-            stagger: rules.stagger,
-            toughness,
-        };
-        let mut report = BattleOverheatReport {
-            unit: id,
-            injury: None,
-            character_injury: None,
-            stacking_impacts: Vec::new(),
-            stacking_falls: Vec::new(),
-            ammunition_check: None,
-            explosion: None,
-            shutdown_check: None,
-            shutdown: false,
-            balance: None,
-            experience_messages: Vec::new(),
-            computer_experience: None,
-            fall: None,
-            notices: Vec::new(),
-            pilot_notices: Vec::new(),
-        };
-        let unit = unit_mut(&mut candidate, id);
-        let heat = unit.heat().excess;
-        let injury_due = std::mem::take(&mut unit.overheat_clock.injury_due);
-        if injury_due {
-            let failed_support = unit.system_hits(super::BattleSystem::LifeSupport) > 0;
-            let exposed = failed_support || (heat > 30.0 && unit.dice.die(2)? == 1);
-            let hits = if exposed && heat > 25.0 {
-                if failed_support { 2 } else { 1 }
-            } else if exposed && heat >= 15.0 {
-                1
-            } else {
-                0
+    world.attempt(|world| {
+        let ids: Vec<_> = world
+            .btech
+            .constructed_units()
+            .iter()
+            .filter(|(id, unit)| {
+                !unit.is_destroyed()
+                    && (unit.overheat_clock.injury_due
+                        || (unit.overheat_clock.elapsed == 30 && unit.heat().excess >= 10.0))
+                    && world.objects.get(id).is_some_and(|object| {
+                        !object.flags.contains(Flag::Going)
+                            && (character || !object.flags.contains(Flag::InCharacter))
+                    })
+            })
+            .map(|(&id, _)| id)
+            .collect();
+        let mut reports = Vec::new();
+        for id in ids {
+            let character_unit = character && world.objects[&id].flags.contains(Flag::InCharacter);
+            world.btech.constructed_units()[&id].validate()?;
+            let toughness = advantage(world, id, "Toughness");
+            let fall_rules = super::BattleFallRules {
+                vehicle_impact: rules.vehicle_impact,
+                stacking: rules.stacking,
+                hit: rules.hit,
+                extended_piloting: rules.extended_piloting,
+                stagger: rules.stagger,
+                toughness,
             };
-            if hits > 0 && unit.pilot().is_some() {
-                report.notices.push(BattleNotice {
-                    unit: id,
-                    text: "You take personal injury from heat!".to_owned(),
-                });
-                if character_unit {
-                    report.character_injury = Some(super::injure_character_pilot(
-                        &mut candidate,
-                        id,
-                        hits,
-                        toughness,
-                    )?);
+            let mut report = BattleOverheatReport {
+                unit: id,
+                injury: None,
+                character_injury: None,
+                stacking_impacts: Vec::new(),
+                stacking_falls: Vec::new(),
+                ammunition_check: None,
+                explosion: None,
+                shutdown_check: None,
+                shutdown: false,
+                balance: None,
+                experience_messages: Vec::new(),
+                computer_experience: None,
+                fall: None,
+                notices: Vec::new(),
+                pilot_notices: Vec::new(),
+            };
+            let unit = unit_mut(world, id);
+            let heat = unit.heat().excess;
+            let injury_due = std::mem::take(&mut unit.overheat_clock.injury_due);
+            if injury_due {
+                let failed_support = unit.system_hits(super::BattleSystem::LifeSupport) > 0;
+                let exposed = failed_support || (heat > 30.0 && unit.dice.die(2)? == 1);
+                let hits = if exposed && heat > 25.0 {
+                    if failed_support { 2 } else { 1 }
+                } else if exposed && heat >= 15.0 {
+                    1
                 } else {
-                    let injury = super::injure_tactical_pilot(&mut candidate, id, hits, toughness)?;
-                    if let Some(notice) = injury.notice(id) {
-                        report.notices.push(notice);
-                    }
-                    report.injury = Some(injury);
-                }
-            }
-        }
-        let unit = &candidate.btech.constructed_units()[&id];
-        if !unit.is_destroyed() && heat >= 10.0 && unit.overheat_clock.elapsed == 30 {
-            unit_mut(&mut candidate, id).overheat_clock.elapsed = 0;
-            let inferno = if rules.hit.inferno_penalty {
-                candidate.btech.constructed_units()[&id].inferno_ammunition_hazard()?
-            } else {
-                None
-            };
-            if let Some(target) = ammunition_target(heat, inferno.is_some()) {
-                let roll = unit_mut(&mut candidate, id).dice.generic_roll();
-                let check = BattleHeatCheck {
-                    target,
-                    roll: Some(roll),
-                    success: i16::from(roll) >= target,
-                    computer: false,
+                    0
                 };
-                report.ammunition_check = Some(check);
-                if !check.success {
-                    let hazard = match inferno {
-                        Some(hazard) => Some(hazard),
-                        None => {
-                            candidate.btech.constructed_units()[&id].ammunition_hazard_maximum()?
-                        }
-                    };
-                    if let Some(hazard) = hazard {
-                        let explode = if character {
-                            super::impact::explode_ammunition_in_action
-                        } else {
-                            super::explode_ammunition
-                        };
-                        let explosion = explode(&mut candidate, id, hazard.index, fall_rules)?;
-                        super::piloting::append_feedback(
-                            &mut report.pilot_notices,
-                            explosion.pilot_notices.clone(),
-                            report.notices.len(),
-                        );
-                        report.notices.extend(explosion.notices.iter().cloned());
-                        report.explosion = Some(explosion);
+                if hits > 0 && unit.pilot().is_some() {
+                    report.notices.push(BattleNotice {
+                        unit: id,
+                        text: "You take personal injury from heat!".to_owned(),
+                    });
+                    if character_unit {
+                        report.character_injury =
+                            Some(super::injure_character_pilot(world, id, hits, toughness)?);
                     } else {
-                        report.notices.push(BattleNotice {
-                            unit: id,
-                            text: "You have no ammunition, lucky you!".to_owned(),
-                        });
+                        let injury = super::injure_tactical_pilot(world, id, hits, toughness)?;
+                        if let Some(notice) = injury.notice(id) {
+                            report.notices.push(notice);
+                        }
+                        report.injury = Some(injury);
                     }
                 }
             }
-            if !candidate.btech.constructed_units()[&id].is_destroyed() {
-                let check = shutdown_check(&mut candidate, id, heat)?;
-                if check.computer {
-                    report.notices.push(BattleNotice {
-                        unit: id,
-                        text: COMPUTER_OVERRIDE_NOTICE.to_owned(),
-                    });
-                    if check.success && character_unit {
-                        let (award, message) = award_computer_override(&mut candidate, id)?;
-                        report.computer_experience = Some(award);
-                        report.experience_messages.extend(message);
-                    }
-                }
-                report.shutdown_check = check
-                    .computer
-                    .then_some(check)
-                    .or_else(|| (heat >= 14.0 || !check.success).then_some(check));
-                if !check.success
-                    && candidate.btech.constructed_units()[&id].power() == BattlePower::Running
-                {
-                    report.notices.push(BattleNotice {
-                        unit: id,
-                        text: "Reactor shutting down...".to_owned(),
-                    });
-                    let airborne = candidate.btech.constructed_units()[&id].airborne();
-                    if airborne {
-                        report.notices.push(BattleNotice {
-                            unit: id,
-                            text: "Reactor shutdown cuts your jump short!".to_owned(),
-                        });
-                    }
-                    report.notices.extend(super::broadcast::observer_notices(
-                        &candidate,
-                        id,
-                        if airborne {
-                            "falls from the sky!"
-                        } else {
-                            "stops in mid-motion!"
-                        },
-                    ));
-                    if airborne {
-                        let input = super::stacking::physical_input(
-                            &candidate,
-                            id,
-                            super::BattleStackingEntry::Fall,
-                        )?;
-                        let resolve = if character_unit {
-                            super::fall::resolve_character_signed_fall
-                        } else {
-                            super::fall::resolve_signed_fall
+            let unit = &world.btech.constructed_units()[&id];
+            if !unit.is_destroyed() && heat >= 10.0 && unit.overheat_clock.elapsed == 30 {
+                unit_mut(world, id).overheat_clock.elapsed = 0;
+                let inferno = if rules.hit.inferno_penalty {
+                    world.btech.constructed_units()[&id].inferno_ammunition_hazard()?
+                } else {
+                    None
+                };
+                if let Some(target) = ammunition_target(heat, inferno.is_some()) {
+                    let roll = unit_mut(world, id).dice.generic_roll();
+                    let check = BattleHeatCheck {
+                        target,
+                        roll: Some(roll),
+                        success: i16::from(roll) >= target,
+                        computer: false,
+                    };
+                    report.ammunition_check = Some(check);
+                    if !check.success {
+                        let hazard = match inferno {
+                            Some(hazard) => Some(hazard),
+                            None => {
+                                world.btech.constructed_units()[&id].ammunition_hazard_maximum()?
+                            }
                         };
-                        let fall = resolve(
-                            &mut candidate,
-                            id,
-                            i16::try_from(input.jump_movement_points)
-                                .context("Jump fall multiplier exceeds supported range")?,
-                            fall_rules,
-                        )?;
-                        fall.append_notices(id, &mut report.notices, &mut report.pilot_notices);
-                        report.fall = Some(fall);
-                        let input = super::stacking::physical_input(
-                            &candidate,
-                            id,
-                            super::BattleStackingEntry::Fall,
-                        )?;
-                        if character {
-                            let mut effects = super::stacking::StackingEffects::default();
-                            report.notices.extend(super::stacking::resolve_in_action(
-                                &mut candidate,
-                                id,
-                                input,
-                                rules.stacking,
-                                fall_rules,
-                                &mut effects,
-                                (&mut report.pilot_notices, report.notices.len()),
-                            )?);
-                            report
-                                .experience_messages
-                                .extend(effects.experience_messages);
-                            report.stacking_impacts = effects.impacts;
-                            report.stacking_falls = effects.falls;
-                        } else {
-                            report.notices.extend(super::resolve_stacking(
-                                &mut candidate,
-                                id,
-                                input,
-                                rules.stacking,
-                                fall_rules,
-                            )?);
-                        }
-                    }
-                    let unit = &candidate.btech.constructed_units()[&id];
-                    if unit.posture() != super::BattlePosture::Prone
-                        && unit
-                            .motion()
-                            .is_some_and(|motion| motion.speed.abs() > 10.75)
-                    {
-                        let mut balance =
-                            super::roll_piloting(&mut candidate, id, 3, rules.extended_piloting)?;
-                        super::piloting::capture_feedback(
-                            id,
-                            candidate.btech.constructed_units()[&id].pilot(),
-                            &balance,
-                            &mut report.notices,
-                            &mut report.pilot_notices,
-                        );
-                        if character {
-                            report.experience_messages.extend(
-                                super::piloting::award_control_check(
-                                    &mut candidate,
-                                    id,
-                                    &mut balance,
-                                    rules.extended_piloting,
-                                )?,
-                            );
-                        }
-                        if !balance.success {
-                            report.notices.extend(super::broadcast::observer_notices(
-                                &candidate,
-                                id,
-                                "falls down!",
-                            ));
-                            let fall = if character_unit {
-                                super::fall::resolve_character_fall(
-                                    &mut candidate,
-                                    id,
-                                    0,
-                                    fall_rules,
-                                )?
+                        if let Some(hazard) = hazard {
+                            let explode = if character {
+                                super::impact::explode_ammunition_in_action
                             } else {
-                                super::fall::resolve_zero_fall(&mut candidate, id, fall_rules)?
+                                super::explode_ammunition
                             };
+                            let explosion = explode(world, id, hazard.index, fall_rules)?;
+                            super::piloting::append_feedback(
+                                &mut report.pilot_notices,
+                                explosion.pilot_notices.clone(),
+                                report.notices.len(),
+                            );
+                            report.notices.extend(explosion.notices.iter().cloned());
+                            report.explosion = Some(explosion);
+                        } else {
                             report.notices.push(BattleNotice {
                                 unit: id,
-                                text: "You lose your balance and fall down!".to_owned(),
+                                text: "You have no ammunition, lucky you!".to_owned(),
                             });
+                        }
+                    }
+                }
+                if !world.btech.constructed_units()[&id].is_destroyed() {
+                    let check = shutdown_check(world, id, heat)?;
+                    if check.computer {
+                        report.notices.push(BattleNotice {
+                            unit: id,
+                            text: COMPUTER_OVERRIDE_NOTICE.to_owned(),
+                        });
+                        if check.success && character_unit {
+                            let (award, message) = award_computer_override(world, id)?;
+                            report.computer_experience = Some(award);
+                            report.experience_messages.extend(message);
+                        }
+                    }
+                    report.shutdown_check = check
+                        .computer
+                        .then_some(check)
+                        .or_else(|| (heat >= 14.0 || !check.success).then_some(check));
+                    if !check.success
+                        && world.btech.constructed_units()[&id].power() == BattlePower::Running
+                    {
+                        report.notices.push(BattleNotice {
+                            unit: id,
+                            text: "Reactor shutting down...".to_owned(),
+                        });
+                        let airborne = world.btech.constructed_units()[&id].airborne();
+                        if airborne {
+                            report.notices.push(BattleNotice {
+                                unit: id,
+                                text: "Reactor shutdown cuts your jump short!".to_owned(),
+                            });
+                        }
+                        report.notices.extend(super::broadcast::observer_notices(
+                            world,
+                            id,
+                            if airborne {
+                                "falls from the sky!"
+                            } else {
+                                "stops in mid-motion!"
+                            },
+                        ));
+                        if airborne {
+                            let input = super::stacking::physical_input(
+                                world,
+                                id,
+                                super::BattleStackingEntry::Fall,
+                            )?;
+                            let resolve = if character_unit {
+                                super::fall::resolve_character_signed_fall
+                            } else {
+                                super::fall::resolve_signed_fall
+                            };
+                            let fall = resolve(
+                                world,
+                                id,
+                                i16::try_from(input.jump_movement_points)
+                                    .context("Jump fall multiplier exceeds supported range")?,
+                                fall_rules,
+                            )?;
                             fall.append_notices(id, &mut report.notices, &mut report.pilot_notices);
                             report.fall = Some(fall);
+                            let input = super::stacking::physical_input(
+                                world,
+                                id,
+                                super::BattleStackingEntry::Fall,
+                            )?;
+                            if character {
+                                let mut effects = super::stacking::StackingEffects::default();
+                                report.notices.extend(super::stacking::resolve_in_action(
+                                    world,
+                                    id,
+                                    input,
+                                    rules.stacking,
+                                    fall_rules,
+                                    &mut effects,
+                                    (&mut report.pilot_notices, report.notices.len()),
+                                )?);
+                                report
+                                    .experience_messages
+                                    .extend(effects.experience_messages);
+                                report.stacking_impacts = effects.impacts;
+                                report.stacking_falls = effects.falls;
+                            } else {
+                                report.notices.extend(super::resolve_stacking(
+                                    world,
+                                    id,
+                                    input,
+                                    rules.stacking,
+                                    fall_rules,
+                                )?);
+                            }
                         }
-                        report.balance = Some(balance);
+                        let unit = &world.btech.constructed_units()[&id];
+                        if unit.posture() != super::BattlePosture::Prone
+                            && unit
+                                .motion()
+                                .is_some_and(|motion| motion.speed.abs() > 10.75)
+                        {
+                            let mut balance =
+                                super::roll_piloting(world, id, 3, rules.extended_piloting)?;
+                            super::piloting::capture_feedback(
+                                id,
+                                world.btech.constructed_units()[&id].pilot(),
+                                &balance,
+                                &mut report.notices,
+                                &mut report.pilot_notices,
+                            );
+                            if character {
+                                report.experience_messages.extend(
+                                    super::piloting::award_control_check(
+                                        world,
+                                        id,
+                                        &mut balance,
+                                        rules.extended_piloting,
+                                    )?,
+                                );
+                            }
+                            if !balance.success {
+                                report.notices.extend(super::broadcast::observer_notices(
+                                    world,
+                                    id,
+                                    "falls down!",
+                                ));
+                                let fall = if character_unit {
+                                    super::fall::resolve_character_fall(world, id, 0, fall_rules)?
+                                } else {
+                                    super::fall::resolve_zero_fall(world, id, fall_rules)?
+                                };
+                                report.notices.push(BattleNotice {
+                                    unit: id,
+                                    text: "You lose your balance and fall down!".to_owned(),
+                                });
+                                fall.append_notices(
+                                    id,
+                                    &mut report.notices,
+                                    &mut report.pilot_notices,
+                                );
+                                report.fall = Some(fall);
+                            }
+                            report.balance = Some(balance);
+                        }
+                        let unit = unit_mut(world, id);
+                        let dropped = unit.carried_club.take().is_some();
+                        unit.power = BattlePower::Off;
+                        unit.hide_elapsed = None;
+                        unit.masc.shutdown();
+                        unit.supercharger.shutdown();
+                        unit.reconcile_electronics();
+                        unit.charge.target = None;
+                        unit.jump_stabilization = 0;
+                        unit.pilot = None;
+                        unit.target_lock = None;
+                        unit.stand_timer = None;
+                        if let Some(motion) = &mut unit.motion {
+                            motion.speed = 0.0;
+                            motion.desired_speed = 0.0;
+                            motion.desired_heading = motion.heading;
+                        }
+                        if dropped {
+                            report
+                                .notices
+                                .extend(super::club::dropped_notices(world, id));
+                        }
+                        report.shutdown = true;
                     }
-                    let unit = unit_mut(&mut candidate, id);
-                    let dropped = unit.carried_club.take().is_some();
-                    unit.power = BattlePower::Off;
-                    unit.hide_elapsed = None;
-                    unit.masc.shutdown();
-                    unit.supercharger.shutdown();
-                    unit.reconcile_electronics();
-                    unit.charge.target = None;
-                    unit.jump_stabilization = 0;
-                    unit.pilot = None;
-                    unit.target_lock = None;
-                    unit.stand_timer = None;
-                    if let Some(motion) = &mut unit.motion {
-                        motion.speed = 0.0;
-                        motion.desired_speed = 0.0;
-                        motion.desired_heading = motion.heading;
-                    }
-                    if dropped {
-                        report
-                            .notices
-                            .extend(super::club::dropped_notices(&candidate, id));
-                    }
-                    report.shutdown = true;
                 }
             }
+            world.btech.constructed_units()[&id].validate()?;
+            if report.character_injury.is_some()
+                || report.injury.is_some()
+                || report.ammunition_check.is_some()
+                || report.shutdown_check.is_some()
+            {
+                reports.push(report);
+            }
         }
-        candidate.btech.constructed_units()[&id].validate()?;
-        if report.character_injury.is_some()
-            || report.injury.is_some()
-            || report.ammunition_check.is_some()
-            || report.shutdown_check.is_some()
-        {
-            reports.push(report);
-        }
-    }
-    *world = candidate;
-    Ok(reports)
+        Ok(reports)
+    })
 }
 
 /// Read a canonical boolean advantage from the currently assigned pilot.
@@ -466,9 +460,7 @@ fn advantage(world: &World, id: ObjectId, name: &str) -> bool {
 
 /// Borrow one unit in the enclosing private candidate.
 fn unit_mut(world: &mut World, id: ObjectId) -> &mut BattleUnit {
-    Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap()
+    world.btech.constructed.get_mut(&id).unwrap()
 }
 
 /// Conventional ammunition avoidance bands; inferno ammunition is not supported by construction.

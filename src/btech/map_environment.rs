@@ -2,7 +2,6 @@
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// SETCOND values; omitted vacuum and underground arguments are false.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -71,7 +70,7 @@ pub fn set_map_environment(
     }
     map.validate()?;
     let actual = map.environment();
-    Arc::make_mut(&mut world.btech.maps).insert(id, map);
+    world.btech.maps.insert(id, map);
     Ok(actual)
 }
 
@@ -128,9 +127,7 @@ pub fn set_map_environment_action(
     id: ObjectId,
     conditions: BattleMapEnvironment,
 ) -> Result<BattleMapEnvironment> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let actual = set_map_environment(&mut scripts.world_mut(), actor, id, conditions)?;
         super::notify_message(
             scripts,
@@ -139,12 +136,7 @@ pub fn set_map_environment_action(
         )?;
         scripts.effects.validate()?;
         Ok(actual)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Native map operators use their current location and the same transaction as Lua.

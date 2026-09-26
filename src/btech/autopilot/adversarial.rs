@@ -3,7 +3,7 @@ use super::*;
 use crate::{BattlePosition, BattlePower, Config, HeartbeatHarness, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::{collections::BTreeMap, io::Write, path::Path, sync::Arc};
+use std::{collections::BTreeMap, io::Write, path::Path};
 
 /// Stable fixture identifiers; impossible passage is diagnostic, never a success gate.
 pub const SCENARIOS: &[&str] = &[
@@ -103,23 +103,23 @@ fn orders(world: &mut World, id: ObjectId, orders: Vec<AutopilotOrder>, fire: bo
         controller.submit(orders, AutopilotSubmissionMode::Replace, None)?;
         controller.resume(None)?;
     }
-    Arc::make_mut(&mut world.btech.controllers).insert(id, controller);
+    world.btech.controllers.insert(id, controller);
     Ok(())
 }
 
 /// Setup-only placement; scenario events never relocate running units.
 pub(super) fn place(world: &mut World, id: ObjectId, map: ObjectId, x: i64, y: i64) -> Result<()> {
-    if let Some(u) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    if let Some(u) = world.btech.constructed.get_mut(&id) {
         u.power = BattlePower::Off;
     }
-    if let Some(u) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(u) = world.btech.vehicles.get_mut(&id) {
         u.power = BattlePower::Off;
     }
     crate::btech::place_unit(world, id, map, x, y)?;
-    if let Some(u) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    if let Some(u) = world.btech.constructed.get_mut(&id) {
         u.power = BattlePower::Running;
     }
-    if let Some(u) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(u) = world.btech.vehicles.get_mut(&id) {
         u.power = BattlePower::Running;
     }
     Ok(())
@@ -140,14 +140,14 @@ pub(super) fn seed_unit(world: &mut World, id: ObjectId, seed: u8, role: u8) {
     let mut bytes = [seed; 32];
     bytes[0] = role;
     bytes[31] = seed.wrapping_add(role);
-    if let Some(u) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    if let Some(u) = world.btech.constructed.get_mut(&id) {
         u.dice = crate::BattleDice::seeded(bytes);
         let mut recovery = serde_json::to_value(&u.crew_recovery).expect("serialize recovery");
         recovery["dice"] =
             serde_json::to_value(crate::BattleDice::seeded(bytes)).expect("serialize dice");
         u.crew_recovery = serde_json::from_value(recovery).expect("recovery with seeded dice");
     }
-    if let Some(u) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(u) = world.btech.vehicles.get_mut(&id) {
         u.dice = crate::BattleDice::seeded(bytes);
         let mut recovery = serde_json::to_value(&u.crew_recovery).expect("serialize recovery");
         recovery["dice"] =
@@ -345,10 +345,7 @@ pub async fn run_policy(
                     crate::BattleMapAsset::parse(&terrain)?,
                 )?;
                 let dice = world.btech.maps()[&old_map].fire_dice.clone();
-                Arc::make_mut(&mut world.btech.maps)
-                    .get_mut(&map)
-                    .unwrap()
-                    .fire_dice = dice;
+                world.btech.maps.get_mut(&map).unwrap().fire_dice = dice;
                 place(&mut world, focal, map, 2, if corridor { 6 } else { 9 })?;
                 place(
                     &mut world,
@@ -404,25 +401,22 @@ pub async fn run_policy(
                     name == "duel",
                 )?;
                 if name == "occluded" {
-                    Arc::make_mut(&mut world.btech.controllers)
-                        .get_mut(&focal)
-                        .unwrap()
-                        .configure(
-                            AutopilotConfigPatch {
-                                speed_percent: Some(25),
-                                ..Default::default()
-                            },
-                            None,
-                        )?;
+                    world.btech.controllers.get_mut(&focal).unwrap().configure(
+                        AutopilotConfigPatch {
+                            speed_percent: Some(25),
+                            ..Default::default()
+                        },
+                        None,
+                    )?;
                 }
                 if matches!(name, "pursuers" | "bottleneck" | "no_passing_space") {
                     for n in 0..2 {
                         let id = world.create(&config, format!("ally {n}"), crate::Kind::Thing);
                         crate::BattleUnitTemplate::parse(&source)?.create(&mut world, id)?;
-                        if let Some(u) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+                        if let Some(u) = world.btech.constructed.get_mut(&id) {
                             u.signature.team = 1;
                         }
-                        if let Some(u) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+                        if let Some(u) = world.btech.vehicles.get_mut(&id) {
                             u.signature.team = 1;
                         }
                         place(
@@ -462,7 +456,9 @@ pub async fn run_policy(
                 }
                 if matches!(name, "bottleneck" | "no_passing_space") {
                     place(&mut world, target, map, 6, 6)?;
-                    Arc::make_mut(&mut world.btech.constructed)
+                    world
+                        .btech
+                        .constructed
                         .get_mut(&target)
                         .unwrap()
                         .signature
@@ -476,10 +472,10 @@ pub async fn run_policy(
                             crate::Kind::Thing,
                         );
                         crate::BattleUnitTemplate::parse(&source)?.create(&mut world, id)?;
-                        if let Some(u) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+                        if let Some(u) = world.btech.constructed.get_mut(&id) {
                             u.signature.team = 1;
                         }
-                        if let Some(u) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+                        if let Some(u) = world.btech.vehicles.get_mut(&id) {
                             u.signature.team = 1;
                         }
                         place(&mut world, id, map, 2, row)?;
@@ -505,14 +501,10 @@ pub async fn run_policy(
                             );
                             crate::BattleUnitTemplate::parse(&source)?
                                 .create(&mut world, blocker)?;
-                            if let Some(u) =
-                                Arc::make_mut(&mut world.btech.constructed).get_mut(&blocker)
-                            {
+                            if let Some(u) = world.btech.constructed.get_mut(&blocker) {
                                 u.signature.team = 1;
                             }
-                            if let Some(u) =
-                                Arc::make_mut(&mut world.btech.vehicles).get_mut(&blocker)
-                            {
+                            if let Some(u) = world.btech.vehicles.get_mut(&blocker) {
                                 u.signature.team = 1;
                             }
                             place(&mut world, blocker, map, 6, row)?;
@@ -532,12 +524,12 @@ pub async fn run_policy(
                     let heading = point
                         .bearing(steering::motion(&world, *enemy).unwrap().point)?
                         .unwrap_or(0.0);
-                    if let Some(u) = Arc::make_mut(&mut world.btech.constructed).get_mut(id) {
+                    if let Some(u) = world.btech.constructed.get_mut(id) {
                         let motion = u.motion.as_mut().unwrap();
                         motion.heading = heading;
                         motion.desired_heading = heading;
                     }
-                    if let Some(u) = Arc::make_mut(&mut world.btech.vehicles).get_mut(id) {
+                    if let Some(u) = world.btech.vehicles.get_mut(id) {
                         let motion = u.motion.as_mut().unwrap();
                         motion.heading = heading;
                         motion.desired_heading = heading;
@@ -654,9 +646,7 @@ pub async fn run_policy(
                                 if super::orders::validate_for_unit(&world, id, &order).is_err() {
                                     continue;
                                 }
-                                let controller = Arc::make_mut(&mut world.btech.controllers)
-                                    .get_mut(&id)
-                                    .unwrap();
+                                let controller = world.btech.controllers.get_mut(&id).unwrap();
                                 controller.configure(
                                     AutopilotConfigPatch {
                                         fire_mode: Some(AutopilotFireMode::AssignedTarget),

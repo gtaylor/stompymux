@@ -2,7 +2,6 @@
 use super::{BattlePosition, BattleVtolFlightPhase};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// Resolve the first reciprocal exit and reject structures whose entrance remains rubble.
 pub fn building_exit_for_unit(world: &World, id: ObjectId) -> Result<BattlePosition> {
@@ -42,28 +41,25 @@ pub(super) fn exit_configured(
         .get(&id)
         .and_then(|unit| unit.vtol_flight())
         .map(|flight| flight.vertical_speed);
-    let mut candidate = world.clone();
-    super::map_transfer::place_transfer(&mut candidate, id, destination)?;
-    let maximum = super::effective_speed::configured(&candidate, id, policy)?;
-    let motion = if let Some(unit) = Arc::make_mut(&mut candidate.btech.vehicles).get_mut(&id) {
-        if let Some(flight) = &mut unit.vtol_flight {
-            flight.phase = BattleVtolFlightPhase::Airborne;
-            flight.altitude += 1.0;
-            flight.vertical_speed = vertical_speed.expect("VTOL flight state");
+    world.attempt(|world| {
+        super::map_transfer::place_transfer(world, id, destination)?;
+        let maximum = super::effective_speed::configured(world, id, policy)?;
+        let motion = if let Some(unit) = world.btech.vehicles.get_mut(&id) {
+            if let Some(flight) = &mut unit.vtol_flight {
+                flight.phase = BattleVtolFlightPhase::Airborne;
+                flight.altitude += 1.0;
+                flight.vertical_speed = vertical_speed.expect("VTOL flight state");
+            }
+            &mut unit.motion
+        } else {
+            &mut world.btech.constructed.get_mut(&id).unwrap().motion
+        };
+        let motion = motion.as_mut().expect("placed motion");
+        motion.speed = motion.speed.min(maximum);
+        if let Some(target) = world.btech.tows().get(&id).copied() {
+            super::towing::synchronize_pair(world, id, target)?;
         }
-        &mut unit.motion
-    } else {
-        &mut Arc::make_mut(&mut candidate.btech.constructed)
-            .get_mut(&id)
-            .unwrap()
-            .motion
-    };
-    let motion = motion.as_mut().expect("placed motion");
-    motion.speed = motion.speed.min(maximum);
-    if let Some(target) = candidate.btech.tows().get(&id).copied() {
-        super::towing::synchronize_pair(&mut candidate, id, target)?;
-    }
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(destination)
+        world.btech.validate_action(world)?;
+        Ok(destination)
+    })
 }

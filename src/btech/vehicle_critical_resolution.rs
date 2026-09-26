@@ -4,7 +4,6 @@ use super::*;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, bail, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// Applied critical with occupant feedback staged for the enclosing attack transaction.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -34,11 +33,10 @@ pub fn resolve_vehicle_critical(
     section: BattleVehicleSection,
     rules: BattleVehicleCriticalRules,
 ) -> Result<BattleVehicleCriticalResolution> {
-    let mut candidate = world.clone();
-    let report =
-        resolve_in_candidate(&mut candidate, id, section, rules, DamageContext::default())?;
-    *world = candidate;
-    Ok(report)
+    world.attempt(|world| {
+        let report = resolve_in_candidate(world, id, section, rules, DamageContext::default())?;
+        Ok(report)
+    })
 }
 
 /// Resolve a nested critical in an already isolated attack candidate.
@@ -74,9 +72,7 @@ pub(super) fn resolve_in_candidate(
         ) {
             let killed = effect == BattleVehicleCriticalEffect::CrewKilled;
             if killed {
-                let vehicle = Arc::make_mut(&mut candidate.btech.vehicles)
-                    .get_mut(&id)
-                    .unwrap();
+                let vehicle = candidate.btech.vehicles.get_mut(&id).unwrap();
                 let pilot = vehicle.pilot();
                 let was_destroyed = vehicle.is_destroyed();
                 vehicle.kill_crew();
@@ -89,14 +85,15 @@ pub(super) fn resolve_in_candidate(
                     destroyed,
                 )?;
                 if let Some(pilot) = pilot
-                    && let Some(recovery) =
-                        Arc::make_mut(&mut candidate.btech.recoveries).get_mut(&pilot)
+                    && let Some(recovery) = candidate.btech.recoveries.get_mut(&pilot)
                 {
                     recovery.remaining = 0;
                 }
                 let advanced = selection.table == BattleVehicleCriticalTable::Advanced;
                 if advanced {
-                    Arc::make_mut(&mut candidate.btech.vehicles)
+                    candidate
+                        .btech
+                        .vehicles
                         .get_mut(&id)
                         .unwrap()
                         .apply_motive_hit(BattleVehicleMotiveHit::Immobilize);
@@ -167,9 +164,7 @@ pub(super) fn resolve_in_candidate(
                     .context("Aircraft explosion map is unavailable")?
                     .base_hex(i64::from(position.x), i64::from(position.y))?
                     .surface_height();
-                let vehicle = Arc::make_mut(&mut candidate.btech.vehicles)
-                    .get_mut(&id)
-                    .unwrap();
+                let vehicle = candidate.btech.vehicles.get_mut(&id).unwrap();
                 let flight = vehicle.vtol_flight.as_mut().unwrap();
                 flight.phase = BattleVtolFlightPhase::Landed;
                 flight.fall = None;
@@ -446,9 +441,7 @@ fn apply(
                         .definition()
                         .has_special("ICEEngine_Tech")) =>
         {
-            let vehicle = Arc::make_mut(&mut world.btech.vehicles)
-                .get_mut(&id)
-                .unwrap();
+            let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
             ensure!(
                 vehicle.maximum_speed() == 0.0
                     || vehicle.vtol_flight().is_none_or(|flight| matches!(

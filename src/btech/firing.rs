@@ -272,9 +272,7 @@ pub(crate) fn fire_command(
     ctx: &CommandContext<'_>,
     input: &CommandInput,
 ) -> Result<CommandAction> {
-    let before = ctx.scripts.world.borrow().clone();
-    let checkpoint = ctx.scripts.effects.checkpoint();
-    let result = (|| -> Result<CommandAction> {
+    let result = ctx.scripts.atomic(|_| -> Result<CommandAction> {
         let shooter = ctx
             .scripts
             .world
@@ -302,14 +300,10 @@ pub(crate) fn fire_command(
             Ok(_) => CommandAction::Continue,
             Err(reason) => CommandAction::CommitReply(reason),
         })
-    })();
+    });
     Ok(match result {
         Ok(action) => action,
-        Err(error) => {
-            *ctx.scripts.world.borrow_mut() = before;
-            ctx.scripts.effects.restore(checkpoint);
-            CommandAction::Report(CommandReport::Reply(format!("{error:#}")))
-        }
+        Err(error) => CommandAction::Report(CommandReport::Reply(format!("{error:#}"))),
     })
 }
 

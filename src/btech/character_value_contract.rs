@@ -4,7 +4,6 @@ use super::{BattleCharacterValue, BattleSkillDefinition};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct CharacterValueDefinition {
@@ -139,15 +138,16 @@ pub fn set_character_raw_value(
         {
             let mut value = saved(world, player, name);
             value.value = amount;
-            Arc::make_mut(&mut world.btech.character_values)
-                .entry(player)
-                .or_default()
+            world
+                .btech
+                .character_values
+                .get_or_default(player)
                 .insert(name.into(), value);
             return Ok(());
         }
         _ => return Ok(()),
     }
-    Arc::make_mut(&mut world.btech.characters).insert(player, profile);
+    world.btech.characters.insert(player, profile);
     Ok(())
 }
 
@@ -206,9 +206,10 @@ pub fn set_character_skill_experience(
     }
     let mut value = saved(world, player, definition.name);
     value.experience = experience;
-    Arc::make_mut(&mut world.btech.character_values)
-        .entry(player)
-        .or_default()
+    world
+        .btech
+        .character_values
+        .get_or_default(player)
         .insert(definition.name.into(), value);
     Ok(())
 }

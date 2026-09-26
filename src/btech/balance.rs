@@ -76,9 +76,7 @@ pub(super) fn resolve_balance(
     if airborne && !gyro && !thrust_loss {
         if unit.airborne_support_lost() {
             // Structural collapse changes posture while the jets continue the same trajectory.
-            let unit = std::sync::Arc::make_mut(&mut world.btech.constructed)
-                .get_mut(&id)
-                .unwrap();
+            let unit = world.btech.constructed.get_mut(&id).unwrap();
             unit.hull_down = Default::default();
             unit.posture = BattlePosture::Prone;
             unit.facing = Default::default();

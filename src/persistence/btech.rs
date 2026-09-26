@@ -230,7 +230,7 @@ pub(super) fn validate_changes(
             );
             std::sync::Arc::make_mut(&mut expected.registrations).insert(*id, "MAP".into());
         }
-        std::sync::Arc::make_mut(&mut expected.maps).insert(*id, map.clone());
+        expected.maps.insert(*id, map.clone());
     }
     super::btech_gunner_stations::validate_changes(&mut expected, &after.btech)?;
     super::btech_units::validate_changes(&mut expected, &after.btech)?;
@@ -254,12 +254,12 @@ pub(super) fn validate_changes(
         std::sync::Arc::make_mut(&mut expected.registrations).insert(*id, "MECH".into());
     }
     for (&id, recovery) in after.btech.recoveries() {
-        std::sync::Arc::make_mut(&mut expected.recoveries).insert(id, recovery.clone());
+        expected.recoveries.insert(id, recovery.clone());
     }
     for (&id, entries) in after.btech.character_values() {
-        std::sync::Arc::make_mut(&mut expected.character_values)
-            .entry(id)
-            .or_default()
+        expected
+            .character_values
+            .get_or_default(id)
             .extend(entries.iter().map(|(name, value)| (name.clone(), *value)));
     }
     // These preference records support explicit reset as well as replacement.
@@ -270,7 +270,7 @@ pub(super) fn validate_changes(
     // Search frontiers are transaction-local and intentionally have no database projection.
     expected.autopilot_plans = after.btech.autopilot_plans.clone();
     for (&id, &profile) in after.btech.characters() {
-        std::sync::Arc::make_mut(&mut expected.characters).insert(id, profile);
+        expected.characters.insert(id, profile);
     }
     ensure!(
         expected == after.btech,

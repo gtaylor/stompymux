@@ -441,10 +441,7 @@ fn resolve_shot_inner(
         Vec::new()
     };
     let target_number = aim.subtotal();
-    super::autopilot::diagnostics::make_mut(&mut candidate.btech.constructed)
-        .get_mut(&shooter)
-        .unwrap()
-        .dice = aim_dice;
+    candidate.btech.constructed.get_mut(&shooter).unwrap().dice = aim_dice;
     let weapon = mount.weapon;
     let streak_confused = weapon.is_streak()
         && (super::electronic_field(world, shooter)?.angel_disturbed
@@ -673,7 +670,7 @@ fn resolve_shot_inner(
     drop(damage_measurement);
     #[cfg(test)]
     super::shot_transaction::checkpoint(super::shot_transaction::FailurePoint::Validation)?;
-    candidate.btech.validate(&candidate)?;
+    candidate.btech.validate_action(&candidate)?;
     let _publication = super::autopilot::diagnostics::combat("publication");
     attempt.succeed();
     candidate.commit(world);

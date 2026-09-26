@@ -2,7 +2,7 @@
 use super::{BattleVehicle, VehicleCriticalLocation};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::{collections::BTreeSet, sync::Arc};
+use std::collections::BTreeSet;
 
 impl BattleVehicle {
     /// Explicit equipment losses; section destruction also makes all its slots unavailable.
@@ -88,7 +88,9 @@ pub fn destroy_vehicle_critical(
             .is_some_and(|object| !object.flags.contains(Flag::Going)),
         "Vehicle is unavailable"
     );
-    let vehicle = Arc::make_mut(&mut world.btech.vehicles)
+    let vehicle = world
+        .btech
+        .vehicles
         .get_mut(&id)
         .context("Vehicle is unavailable")?;
     vehicle.destroy_critical(location)
@@ -144,9 +146,7 @@ pub fn select_vehicle_weapon_critical(
         return Ok(None);
     }
     let count = u16::try_from(candidates.len()).context("Too many vehicle weapons")?;
-    let vehicle = Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
+    let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
     let selected = usize::from(vehicle.dice.die(count)? - 1);
     Ok(Some(candidates[selected]))
 }

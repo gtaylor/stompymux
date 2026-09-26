@@ -113,7 +113,7 @@ pub fn set_landing_exclusion(
             "Too many landing exclusions"
         );
     }
-    let record = Arc::make_mut(&mut world.btech.maps).get_mut(&map).unwrap();
+    let record = world.btech.maps.get_mut(&map).unwrap();
     let zones = Arc::make_mut(&mut record.landing_exclusions);
     if let Some(zone) = zone {
         if zones.insert(ordinal, zone).is_none() {

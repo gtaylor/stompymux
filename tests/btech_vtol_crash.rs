@@ -142,6 +142,10 @@ async fn safe_crash_stops_descent_without_damage_and_invalid_crashes_are_atomic(
 }
 
 #[tokio::test]
+#[cfg_attr(
+    not(debug_assertions),
+    ignore = "injects a late failure through per-operation validation, which runs only in debug builds"
+)]
 async fn nested_mine_admission_failure_rolls_back_crash_damage_and_dice() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Mined field".into(), Kind::Room);
@@ -369,6 +373,11 @@ async fn host_movement_uses_character_path_and_rolls_back_invalid_placement() {
             .contains("character publication")
     );
     assert_eq!(world.btech, before.btech);
+    // The invalid placement below is caught by per-operation validation, which runs only in
+    // debug builds; release relies on the commit check.
+    if !cfg!(debug_assertions) {
+        return;
+    }
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let error =
         advance_battle_motion_action(&scripts, &config, BattleMovementRules::STANDARD).unwrap_err();
@@ -481,6 +490,10 @@ async fn world_contacts_commit_clear_flight_landing_crash_and_water_with_replay(
 }
 
 #[tokio::test]
+#[cfg_attr(
+    not(debug_assertions),
+    ignore = "injects a late failure through per-operation validation, which runs only in debug builds"
+)]
 async fn world_contact_failure_restores_precontact_height_position_and_dice() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Rejected contact field".into(), Kind::Room);

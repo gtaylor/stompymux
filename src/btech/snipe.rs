@@ -12,9 +12,7 @@ pub fn snipe_action(
     target: ObjectId,
     selection: &str,
 ) -> Result<()> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(&before, pilot),
             "Permission denied."
@@ -58,15 +56,10 @@ pub fn snipe_action(
                 )?;
             }
         }
-        scripts.world().validate(config)?;
+        scripts.world().validate_action(config)?;
         scripts.effects.validate()?;
         Ok(())
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Native syntax accepts a battlefield target ID and the shared comma/range weapon selection.

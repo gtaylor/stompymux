@@ -295,8 +295,9 @@ async fn idle_server_settles_station_lock_after_parent_shutdown() {
                     .unwrap();
             }
             assert!(battle_contact_observers(&world).is_empty());
-            world.accounts.entry(gunner).or_default().hash =
-                Some(accounts::hash("secret", &config).unwrap());
+            let mut account = world.accounts.get(&gunner).cloned().unwrap_or_default();
+            account.hash = Some(accounts::hash("secret", &config).unwrap());
+            world.accounts.insert(gunner, account);
             persistence::save(&config.database(), &world).await.unwrap();
             let (address, shutdown, task, _) =
                 support::start(&config, Rc::new(std::cell::Cell::new(1))).await;

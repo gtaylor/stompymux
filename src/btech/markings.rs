@@ -2,7 +2,6 @@
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Literal player-authored description with the reference large-buffer byte bound.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -66,10 +65,12 @@ pub fn set_unit_markings(
     );
     let value = Markings::try_from(value.to_owned())?;
     let configured = (!value.0.is_empty()).then(|| value.0.clone());
-    if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&unit) {
+    if let Some(unit) = world.btech.constructed.get_mut(&unit) {
         unit.markings = value;
     } else {
-        Arc::make_mut(&mut world.btech.vehicles)
+        world
+            .btech
+            .vehicles
             .get_mut(&unit)
             .context("Unit is unavailable")?
             .markings = value;

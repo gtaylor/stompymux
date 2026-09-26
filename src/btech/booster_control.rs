@@ -3,7 +3,6 @@ use super::{BattleNotice, BattlePower};
 use crate::{Config, ObjectId, Scripts, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Durable overload history and next check; hardware failure survives shutdown.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -72,9 +71,7 @@ fn toggle(world: &mut World, id: ObjectId, pilot: ObjectId, kind: Booster) -> Re
             "How much can you Supercharge if you can't move?"
         }
     );
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     kind.state_mut(unit).enabled = enabled;
     kind.state_mut(unit).remaining = if enabled { 1 } else { 60 };
     unit.supercharger_scheduled_last = kind == Booster::Supercharger;
@@ -96,18 +93,11 @@ fn control(
     pilot: ObjectId,
     kind: Booster,
 ) -> Result<BattleNotice> {
-    let before = scripts.world().clone();
-    let effects = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let notice = toggle(&mut scripts.world_mut(), id, pilot, kind)?;
         super::notify_unit(scripts, notice.clone())?;
         Ok(notice)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(effects);
-    }
-    result
+    })
 }
 
 /// Advance overload or recovery and publish all falls inside a single host transaction.
@@ -132,9 +122,7 @@ pub fn advance_boosters_action(scripts: &Scripts, config: &Config) -> Result<Vec
     if ids.is_empty() {
         return Ok(Vec::new());
     }
-    let before = scripts.world().clone();
-    let effects = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let mut notices = Vec::new();
         let mut private = Vec::new();
         let mut falls = Vec::new();
@@ -146,18 +134,12 @@ pub fn advance_boosters_action(scripts: &Scripts, config: &Config) -> Result<Vec
                 .is_some_and(|object| !object.flags.contains(crate::Flag::Going));
             let unit = &world.btech.constructed_units()[&id];
             if !available || unit.power() != BattlePower::Running || unit.is_destroyed() {
-                kind.state_mut(
-                    Arc::make_mut(&mut world.btech.constructed)
-                        .get_mut(&id)
-                        .unwrap(),
-                )
-                .shutdown();
+                kind.state_mut(world.btech.constructed.get_mut(&id).unwrap())
+                    .shutdown();
                 continue;
             }
             if kind.state(unit).enabled && !kind.operational(unit)? {
-                let unit = Arc::make_mut(&mut world.btech.constructed)
-                    .get_mut(&id)
-                    .unwrap();
+                let unit = world.btech.constructed.get_mut(&id).unwrap();
                 kind.state_mut(unit).enabled = false;
                 kind.state_mut(unit).remaining = 60;
                 unit.supercharger_scheduled_last = kind == Booster::Supercharger;
@@ -169,9 +151,7 @@ pub fn advance_boosters_action(scripts: &Scripts, config: &Config) -> Result<Vec
             let toughness = pilot
                 .and_then(|pilot| world.btech.character_values().get(&pilot))
                 .is_some_and(|values| super::advantages::enabled(values, "Toughness"));
-            let unit = Arc::make_mut(&mut world.btech.constructed)
-                .get_mut(&id)
-                .unwrap();
+            let unit = world.btech.constructed.get_mut(&id).unwrap();
             kind.state(unit).validate()?;
             if kind.state(unit).remaining == 0 {
                 continue;
@@ -264,9 +244,7 @@ pub fn advance_boosters_action(scripts: &Scripts, config: &Config) -> Result<Vec
             } else {
                 None
             };
-            let unit = Arc::make_mut(&mut world.btech.constructed)
-                .get_mut(&id)
-                .unwrap();
+            let unit = world.btech.constructed.get_mut(&id).unwrap();
             unit.damage_masc_hips()?;
             unit.reconcile_damage();
             drop(world);
@@ -280,14 +258,9 @@ pub fn advance_boosters_action(scripts: &Scripts, config: &Config) -> Result<Vec
             super::evacuation::publish_fall_consequences(scripts, config, fall)?;
         }
         super::evacuation::publish_new_casualties(scripts, config, &before)?;
-        scripts.world().validate(config)?;
+        scripts.world().validate_action(config)?;
         Ok(notices)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(effects);
-    }
-    result
+    })
 }
 
 /// Native toggle resolves the invoking player's cockpit.
@@ -395,9 +368,7 @@ fn fail_supercharger(
         unit: id,
         text: "Your supercharger overloads and explodes!".into(),
     });
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     let loadout = unit.loadout()?;
     for part in loadout.systems.iter().filter(|part| {
         part.location.section == BattleSection::CenterTorso
@@ -427,7 +398,9 @@ fn fail_supercharger(
                 "'s center torso spews black smoke!",
             ));
         }
-        Arc::make_mut(&mut world.btech.constructed)
+        world
+            .btech
+            .constructed
             .get_mut(&id)
             .unwrap()
             .destroy_critical(location)?;

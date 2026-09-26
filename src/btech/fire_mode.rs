@@ -149,9 +149,7 @@ pub(super) fn selected_command(
     input: &crate::CommandInput,
     mut toggle: impl FnMut(&mut World, ObjectId, ObjectId, usize) -> Result<String>,
 ) -> Result<crate::CommandAction> {
-    let before = ctx.scripts.world.borrow().clone();
-    let checkpoint = ctx.scripts.effects.checkpoint();
-    let result = (|| -> Result<()> {
+    let result = ctx.scripts.atomic(|_| -> Result<()> {
         let id = {
             let world = ctx.scripts.world.borrow();
             world
@@ -207,12 +205,10 @@ pub(super) fn selected_command(
             }
         }
         Ok(())
-    })();
+    });
     Ok(match result {
         Ok(()) => crate::CommandAction::Continue,
         Err(error) => {
-            *ctx.scripts.world.borrow_mut() = before;
-            ctx.scripts.effects.restore(checkpoint);
             crate::CommandAction::Report(crate::CommandReport::Reply(format!("{error:#}")))
         }
     })

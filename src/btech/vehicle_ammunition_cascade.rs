@@ -3,7 +3,6 @@ use super::{BattleAmmunitionDraw, BattleVehicle, BattleVehicleSection};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// Consumed ammunition and the internal damage still owed by the enclosing critical action.
 /// Zero damage requires the weapon-destruction fallback instead of an explosion.
@@ -85,6 +84,6 @@ pub fn discharge_vehicle_ammunition_cascade(
     for draw in &report.ammunition {
         vehicle.expend_ammunition(draw.bin_index, draw.rounds)?;
     }
-    Arc::make_mut(&mut world.btech.vehicles).insert(id, vehicle);
+    world.btech.vehicles.insert(id, vehicle);
     Ok(report)
 }

@@ -75,19 +75,12 @@ pub fn eta_action(
     viewer: ObjectId,
     arguments: &str,
 ) -> Result<BattleEtaReport> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let report = eta(&scripts.world(), unit, viewer, arguments)?;
         let source = super::brief::display_source(&scripts.world(), unit, viewer)?;
         super::notify_unit_text(scripts, source.owner, &report.text)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Native estimate resolves the invoking occupant's cockpit.

@@ -42,7 +42,7 @@ pub fn resolve_inferno_hit(
     let mut notices = exposure_notices(world, target, burning);
     notices.extend(extinguish_inferno_in_water(&mut candidate, target)?);
     let extinguished = candidate.btech.constructed_units()[&target].inferno_remaining() == 0;
-    candidate.btech.validate(&candidate)?;
+    candidate.btech.validate_action(&candidate)?;
     *world = candidate;
     Ok(BattleInfernoHit {
         target,

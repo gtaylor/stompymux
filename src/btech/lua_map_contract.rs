@@ -3,10 +3,7 @@
 use super::*;
 use crate::{Config, Flag, Kind, ObjectId, Scripts, World};
 use anyhow::{Context, Result, ensure};
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    sync::Arc,
-};
+use std::collections::{BTreeMap, BTreeSet};
 
 /// A live unit sample in the persisted mixed map-slot order.
 #[derive(Debug, Clone)]
@@ -191,29 +188,34 @@ pub fn place_battle_map_unit(
     coordinate: BattleHexCoordinate,
     z: Option<i32>,
 ) -> Result<()> {
-    let mut candidate = world.clone();
-    ensure!(candidate.objects.get(&unit).is_some_and(|object| object.kind == Kind::Thing && !object.flags.contains(Flag::Going)), "Unit is unavailable");
-    let tile = candidate
-        .btech
-        .maps()
-        .get(&map)
-        .context("Map not found")?
-        .base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
-    let towed = candidate.btech.tows().get(&unit).copied();
-    super::scenario_map::reassign_in_candidate(&mut candidate, unit, map, None)?;
-    if let Some(target) = towed {
-        super::scenario_map::reassign_in_candidate(&mut candidate, target, map, None)?;
-        super::towing::set_tow(&mut candidate, unit, Some(target))?;
-    }
-    let position = BattlePosition {
-        map,
-        x: u16::try_from(coordinate.x)?,
-        y: u16::try_from(coordinate.y)?,
-    };
-    super::scenario_position::relocate(&mut candidate, unit, position, tile, z)?;
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(())
+    world.attempt(|world| {
+        ensure!(
+            world.objects.get(&unit).is_some_and(
+                |object| object.kind == Kind::Thing && !object.flags.contains(Flag::Going)
+            ),
+            "Unit is unavailable"
+        );
+        let tile = world
+            .btech
+            .maps()
+            .get(&map)
+            .context("Map not found")?
+            .base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
+        let towed = world.btech.tows().get(&unit).copied();
+        super::scenario_map::reassign_in_candidate(world, unit, map, None)?;
+        if let Some(target) = towed {
+            super::scenario_map::reassign_in_candidate(world, target, map, None)?;
+            super::towing::set_tow(world, unit, Some(target))?;
+        }
+        let position = BattlePosition {
+            map,
+            x: u16::try_from(coordinate.x)?,
+            y: u16::try_from(coordinate.y)?,
+        };
+        super::scenario_position::relocate(world, unit, position, tile, z)?;
+        world.btech.validate(world)?;
+        Ok(())
+    })
 }
 
 /// Trusted map load with C ordering: validate asset, replace it, clear membership and map objects.
@@ -223,9 +225,7 @@ pub fn load_battle_map_trusted_action(
     map: ObjectId,
     name: &str,
 ) -> Result<()> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         ensure!(
             before
                 .objects
@@ -254,12 +254,7 @@ pub fn load_battle_map_trusted_action(
         super::map_clear::clear_map_units_action(scripts, config, ObjectId(1), map)?;
         super::map_objects::clear(&mut scripts.world_mut(), map)?;
         Ok(())
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Rebuild links as a trusted call and discard only the operator acknowledgement.
@@ -344,14 +339,14 @@ pub fn update_battle_map_links_trusted_action(
                     .get(&map)
                     .context("Map not found")?
                     .clone();
-                Arc::make_mut(&mut candidate.btech.maps)
+                candidate
+                    .btech
+                    .maps
                     .get_mut(&map)
                     .unwrap()
                     .clear_lookup_kind(super::map_bits::LookupKind::Hangar);
                 if let Some(parent) = parent {
-                    let stored = Arc::make_mut(&mut candidate.btech.maps)
-                        .get_mut(&map)
-                        .unwrap();
+                    let stored = candidate.btech.maps.get_mut(&map).unwrap();
                     stored.building_parent = parent.0;
                     stored.building_exits = Default::default();
                     stored.building_entry_points = Default::default();

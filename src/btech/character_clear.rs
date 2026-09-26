@@ -1,7 +1,6 @@
 //! Wizard character resets restore effective defaults without resetting unit or recovery lifecycles.
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Result, ensure};
-use std::sync::Arc;
 
 /// Clear personal stats atomically while preserving pending recovery and its random stream.
 pub fn clear_character(world: &mut World, actor: ObjectId, player: ObjectId) -> Result<()> {
@@ -15,30 +14,30 @@ pub fn clear_character(world: &mut World, actor: ObjectId, player: ObjectId) -> 
         ),
         "I don't know who that is"
     );
-    let mut candidate = world.clone();
-    // An explicit profile represents the reference's absent-state read defaults.
-    // Removing attributes would invalidate active character recovery in this model.
-    Arc::make_mut(&mut candidate.btech.characters).insert(
-        player,
-        super::BattleCharacter {
-            build: 1,
-            reflexes: 1,
-            intuition: 1,
-            learn: 1,
-            charisma: 1,
-            bruise: 0,
-            lethal: 0,
-        },
-    );
-    Arc::make_mut(&mut candidate.btech.character_values).remove(&player);
-    if let Some(recovery) = Arc::make_mut(&mut candidate.btech.recoveries).get_mut(&player) {
-        // Future checks see the cleared advantages; the countdown and dice survive.
-        recovery.pain_resistance = false;
-        recovery.toughness = false;
-    }
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(())
+    world.attempt(|world| {
+        // An explicit profile represents the reference's absent-state read defaults.
+        // Removing attributes would invalidate active character recovery in this model.
+        world.btech.characters.insert(
+            player,
+            super::BattleCharacter {
+                build: 1,
+                reflexes: 1,
+                intuition: 1,
+                learn: 1,
+                charisma: 1,
+                bruise: 0,
+                lethal: 0,
+            },
+        );
+        world.btech.character_values.remove(&player);
+        if let Some(recovery) = world.btech.recoveries.get_mut(&player) {
+            // Future checks see the cleared advantages; the countdown and dice survive.
+            recovery.pain_resistance = false;
+            recovery.toughness = false;
+        }
+        world.btech.validate(world)?;
+        Ok(())
+    })
 }
 
 /// Native lookup accepts the same player names, account aliases and dbrefs as other controls.

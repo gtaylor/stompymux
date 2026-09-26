@@ -23,10 +23,7 @@ fn fixture() -> (Config, World, Vec<ObjectId>) {
             .create(&mut world, id)
             .unwrap();
         crate::place_battle_unit(&mut world, id, map, 1, row).unwrap();
-        Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap()
-            .power = BattlePower::Running;
+        world.btech.constructed.get_mut(&id).unwrap().power = BattlePower::Running;
         let mut controller = super::super::AutopilotController::new();
         controller
             .submit(
@@ -43,7 +40,7 @@ fn fixture() -> (Config, World, Vec<ObjectId>) {
             )
             .unwrap();
         controller.resume(None).unwrap();
-        Arc::make_mut(&mut world.btech.controllers).insert(id, controller);
+        world.btech.controllers.insert(id, controller);
         units.push(id);
     }
     (config, world, units)
@@ -66,7 +63,9 @@ fn one_expansion_budget_rotates_service_until_every_route_is_found() {
                 .is_some_and(|p| !p.route.is_empty())
             {
                 found.insert(*id);
-                Arc::make_mut(&mut world.btech.controllers)
+                world
+                    .btech
+                    .controllers
                     .get_mut(id)
                     .unwrap()
                     .pause(None)
@@ -109,7 +108,9 @@ fn single_frontier_reservation_defers_other_jobs_without_deadlock_or_failure() {
                 .is_some_and(|p| !p.route.is_empty())
             {
                 found.insert(*id);
-                Arc::make_mut(&mut world.btech.controllers)
+                world
+                    .btech
+                    .controllers
                     .get_mut(id)
                     .unwrap()
                     .pause(None)
@@ -240,9 +241,7 @@ fn crowded_world(config: Config, mut world: World) -> (Config, World, Vec<Object
             .create(&mut world, id)
             .unwrap();
         crate::place_battle_unit(&mut world, id, map, 0, if index == 0 { 0 } else { 3 }).unwrap();
-        let unit = Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
         unit.power = BattlePower::Running;
         unit.signature.team = 1;
         ids.push(id);
@@ -259,7 +258,7 @@ fn crowded_world(config: Config, mut world: World) -> (Config, World, Vec<Object
         )
         .unwrap();
     controller.resume(None).unwrap();
-    Arc::make_mut(&mut world.btech.controllers).insert(ids[0], controller);
+    world.btech.controllers.insert(ids[0], controller);
     (config, world, ids)
 }
 
@@ -285,19 +284,13 @@ fn crowded_route_retries_then_recovers_or_blocks() {
     advance_with_metrics(&mut world, &config, 6, &mut metrics).unwrap();
     assert_eq!(metrics.congestion_by_unit[&ids[0]].clearance_checks, 1);
     // Moving one of four blockers still leaves three friends in the watched cell.
-    Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&ids[1])
-        .unwrap()
-        .power = BattlePower::Off;
+    world.btech.constructed.get_mut(&ids[1]).unwrap().power = BattlePower::Off;
     crate::place_battle_unit(&mut world, ids[1], map, 0, 4).unwrap();
     advance_with_metrics(&mut world, &config, 11, &mut metrics).unwrap();
     assert_eq!(metrics.expansions, 0);
     assert_eq!(metrics.congestion_by_unit[&ids[0]].early_starts, 0);
     for (index, id) in ids.iter().skip(1).enumerate() {
-        Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(id)
-            .unwrap()
-            .power = BattlePower::Off;
+        world.btech.constructed.get_mut(id).unwrap().power = BattlePower::Off;
         crate::place_battle_unit(&mut world, *id, map, 0, 4 + index as i64).unwrap();
     }
     // Clearance qualifies, but quota denial must not consume the early attempt.
@@ -332,14 +325,13 @@ fn congestion_watches_do_not_survive_replacement_or_restart() {
     assert!(!taken_over.btech.autopilot_plans.contains_key(&ids[0]));
     let mut removed = world.clone();
     let hangar = removed.create(&config, "Hangar".into(), Kind::Room);
-    Arc::make_mut(&mut removed.btech.constructed)
-        .get_mut(&ids[0])
-        .unwrap()
-        .power = BattlePower::Off;
+    removed.btech.constructed.get_mut(&ids[0]).unwrap().power = BattlePower::Off;
     crate::btech::placement::remove_unit(&mut removed, ids[0], hangar).unwrap();
     assert!(!removed.btech.autopilot_plans.contains_key(&ids[0]));
     let mut destroyed = world.clone();
-    Arc::make_mut(&mut destroyed.btech.constructed)
+    destroyed
+        .btech
+        .constructed
         .get_mut(&ids[0])
         .unwrap()
         .sections
@@ -350,7 +342,9 @@ fn congestion_watches_do_not_survive_replacement_or_restart() {
     assert!(!destroyed.btech.autopilot_plans.contains_key(&ids[0]));
     let restarted: World = serde_json::from_value(serde_json::to_value(&world).unwrap()).unwrap();
     assert!(restarted.btech.autopilot_plans.is_empty());
-    Arc::make_mut(&mut world.btech.controllers)
+    world
+        .btech
+        .controllers
         .get_mut(&ids[0])
         .unwrap()
         .submit(
@@ -377,12 +371,10 @@ fn waiting_controller_polling_benchmark() {
             .create(&mut base, id)
             .unwrap();
         crate::place_battle_unit(&mut base, id, pos.map, 0, 0).unwrap();
-        let unit = Arc::make_mut(&mut base.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
+        let unit = base.btech.constructed.get_mut(&id).unwrap();
         unit.power = BattlePower::Running;
         unit.signature.team = 1;
-        Arc::make_mut(&mut base.btech.controllers).insert(id, controller.clone());
+        base.btech.controllers.insert(id, controller.clone());
     }
     advance(&mut base, &config, 1).unwrap();
     assert_eq!(
@@ -399,7 +391,7 @@ fn waiting_controller_polling_benchmark() {
         for _ in 0..20 {
             let mut world = base.clone();
             if !polling {
-                for plan in Arc::make_mut(&mut world.btech.autopilot_plans).values_mut() {
+                for plan in world.btech.autopilot_plans.values_mut() {
                     plan.congestion.early = 3;
                 }
             }
@@ -479,9 +471,7 @@ async fn congestion_polling_rollback_discards_transient_work() {
 fn rising_mech_waits_without_failing_or_spending_navigation_work() {
     let (config, mut world, ids) = crowded_fixture();
     advance(&mut world, &config, 1).unwrap();
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&ids[0])
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&ids[0]).unwrap();
     unit.stand_timer = Some(crate::btech::BattleStandTimer::Rising { remaining: 4 });
     assert_eq!(unit.posture(), crate::btech::BattlePosture::Standing);
     let before = world.battle_roll_statistics().unwrap();
@@ -494,7 +484,9 @@ fn rising_mech_waits_without_failing_or_spending_navigation_work() {
     assert_eq!(metrics.expansions, 0);
     assert_eq!(world.battle_roll_statistics().unwrap(), before);
     assert_eq!(world.btech.autopilot_plans[&ids[0]].congestion.poll_at, 6);
-    Arc::make_mut(&mut world.btech.constructed)
+    world
+        .btech
+        .constructed
         .get_mut(&ids[0])
         .unwrap()
         .stand_timer = None;

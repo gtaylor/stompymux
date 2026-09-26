@@ -1,7 +1,6 @@
 //! Shared cloud-boundary policy for supported units and persisted operator controls.
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// Change a map's cloud boundary; zero disables it and negative levels remain meaningful underground.
 pub fn set_map_cloud_base(
@@ -22,9 +21,7 @@ pub fn set_map_cloud_base(
                 && !object.flags.contains(crate::Flag::Going)),
         "Map is unavailable"
     );
-    let map = Arc::make_mut(&mut world.btech.maps)
-        .get_mut(&map)
-        .context("Map not found")?;
+    let map = world.btech.maps.get_mut(&map).context("Map not found")?;
     map.cloud_base = altitude;
     Ok(())
 }

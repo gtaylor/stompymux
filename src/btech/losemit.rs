@@ -10,8 +10,7 @@ pub fn losemit_action(
     unit: ObjectId,
     message: &str,
 ) -> Result<usize> {
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let world = scripts.world();
         ensure!(
             crate::authority::is_wizard(&world, actor),
@@ -49,11 +48,7 @@ pub fn losemit_action(
         )?;
         scripts.effects.validate()?;
         Ok(messages.len())
-    })();
-    if result.is_err() {
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Native @LOSEMIT uses the occupied physical unit and preserves the message payload.

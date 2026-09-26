@@ -106,9 +106,7 @@ pub fn set_inventory_quantity_action(
     brand_id: u8,
     quantity: i32,
 ) -> Result<()> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         set_inventory_quantity(
             &mut scripts.world_mut(),
             actor,
@@ -143,12 +141,7 @@ pub fn set_inventory_quantity_action(
         super::channels::publish(scripts, config, &[message])?;
         scripts.effects.validate()?;
         Ok(())
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Prepared gameplay candidates share the same stock invariants as Wizard corrections.
@@ -181,7 +174,7 @@ pub(super) fn edit_quantity(
     {
         super::parts::entries_mass(&rows)?;
     }
-    let inventories = Arc::make_mut(&mut world.btech.inventories);
+    let inventories = &mut world.btech.inventories;
     if rows.is_empty() {
         inventories.remove(&object);
     } else {

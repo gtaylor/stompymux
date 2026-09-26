@@ -436,7 +436,7 @@ fn fixture_world(
         "autopilot-benchmark",
         BattleMapAsset::parse(&map_source(scenario, seed))?,
     )?;
-    if let Some(map) = std::sync::Arc::make_mut(&mut world.btech.maps).get_mut(&map_id) {
+    if let Some(map) = world.btech.maps.get_mut(&map_id) {
         map.fire_dice = Some(crate::BattleDice::seeded(seed_bytes(seed, 0)));
     }
 
@@ -452,8 +452,7 @@ fn fixture_world(
         BattleUnitTemplate::parse(templates[index / CHASSIS_PER_KIND])?
             .create(&mut world, unit_id)?;
         let stream_seed = seed_bytes(seed, index as u64 + 1);
-        if let Some(unit) = std::sync::Arc::make_mut(&mut world.btech.constructed).get_mut(&unit_id)
-        {
+        if let Some(unit) = world.btech.constructed.get_mut(&unit_id) {
             unit.dice = crate::BattleDice::seeded(stream_seed);
             let mut recovery = serde_json::to_value(&unit.crew_recovery)?;
             recovery["dice"] = serde_json::to_value(crate::BattleDice::seeded(seed_bytes(
@@ -463,8 +462,7 @@ fn fixture_world(
             unit.crew_recovery = serde_json::from_value(recovery)?;
             unit.signature.team = if index % 2 == 0 { 1 } else { 2 };
         }
-        if let Some(vehicle) = std::sync::Arc::make_mut(&mut world.btech.vehicles).get_mut(&unit_id)
-        {
+        if let Some(vehicle) = world.btech.vehicles.get_mut(&unit_id) {
             vehicle.dice = crate::BattleDice::seeded(stream_seed);
             let mut recovery = serde_json::to_value(&vehicle.crew_recovery)?;
             recovery["dice"] = serde_json::to_value(crate::BattleDice::seeded(seed_bytes(
@@ -527,7 +525,7 @@ fn fixture_world(
         });
         controller.submit(orders, AutopilotSubmissionMode::Replace, None)?;
         controller.resume(None)?;
-        std::sync::Arc::make_mut(&mut world.btech.controllers).insert(unit_id, controller);
+        world.btech.controllers.insert(unit_id, controller);
     }
     if scenario == BenchmarkScenario::MovingPursuit {
         let ids = world
@@ -537,14 +535,14 @@ fn fixture_world(
             .copied()
             .collect::<Vec<_>>();
         for &id in &ids {
-            if let Some(u) = std::sync::Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+            if let Some(u) = world.btech.constructed.get_mut(&id) {
                 u.power = crate::BattlePower::Running;
                 if let Some(m) = u.motion.as_mut() {
                     m.heading = 90.0;
                     m.desired_heading = 90.0;
                 }
             }
-            if let Some(u) = std::sync::Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+            if let Some(u) = world.btech.vehicles.get_mut(&id) {
                 u.power = crate::BattlePower::Running;
                 if let Some(m) = u.motion.as_mut() {
                     m.heading = 90.0;
@@ -580,10 +578,11 @@ fn fixture_world(
             super::orders::validate_for_unit(&world, pair[0], &order).with_context(|| {
                 format!("moving pursuit acquisition {:?} -> {:?}", pair[0], pair[1])
             })?;
-            std::sync::Arc::make_mut(&mut world.btech.controllers)
-                .get_mut(&pair[0])
-                .unwrap()
-                .submit(vec![order], AutopilotSubmissionMode::Replace, None)?;
+            world.btech.controllers.get_mut(&pair[0]).unwrap().submit(
+                vec![order],
+                AutopilotSubmissionMode::Replace,
+                None,
+            )?;
         }
     }
     Ok((world, map_id))
@@ -593,7 +592,6 @@ fn fixture_world(
 /// Restorations are scenario events between ticks, excluded from all reported timings.
 /// Orders retain their monotonic IDs and feedback history through ordinary replacement.
 fn renew_workload(harness: &mut HeartbeatHarness, pristine: &World) -> Result<u64> {
-    use std::sync::Arc;
     let mut world = harness.scripts().world.borrow_mut();
     let ids: Vec<_> = world
         .btech
@@ -617,23 +615,25 @@ fn renew_workload(harness: &mut HeartbeatHarness, pristine: &World) -> Result<u6
         if let Some(unit) = pristine.btech.constructed_units().get(&id) {
             let mut unit = unit.clone();
             unit.power = crate::BattlePower::Running;
-            Arc::make_mut(&mut world.btech.constructed).insert(id, unit);
+            world.btech.constructed.insert(id, unit);
         } else if let Some(unit) = pristine.btech.vehicles().get(&id) {
             let mut unit = unit.clone();
             unit.power = crate::BattlePower::Running;
-            Arc::make_mut(&mut world.btech.vehicles).insert(id, unit);
+            world.btech.vehicles.insert(id, unit);
         }
         let orders = pristine.btech.controllers()[&id]
             .queued_orders()
             .iter()
             .map(|record| record.order.clone())
             .collect();
-        let controller = Arc::make_mut(&mut world.btech.controllers)
+        let controller = world
+            .btech
+            .controllers
             .get_mut(&id)
             .expect("benchmark roster persists");
         controller.submit(orders, AutopilotSubmissionMode::Replace, None)?;
         controller.resume(None)?;
-        Arc::make_mut(&mut world.btech.autopilot_plans).remove(&id);
+        world.btech.autopilot_plans.remove(&id);
     }
     Ok(ids.len() as u64)
 }
@@ -680,7 +680,7 @@ fn seed_bytes(seed: u64, stream: u64) -> [u8; 32] {
 
 fn alter_benchmark_terrain(harness: &mut HeartbeatHarness, map_id: crate::ObjectId, blocked: bool) {
     let mut world = harness.scripts().world.borrow_mut();
-    if let Some(map) = std::sync::Arc::make_mut(&mut world.btech.maps).get_mut(&map_id)
+    if let Some(map) = world.btech.maps.get_mut(&map_id)
         && let Some(terrain) = &map.terrain
     {
         let mut terrain = (**terrain).clone();
@@ -704,7 +704,7 @@ fn alter_benchmark_terrain_with(
     terrain: std::sync::Arc<Vec<crate::BattleHex>>,
 ) {
     let mut world = harness.scripts().world.borrow_mut();
-    if let Some(map) = std::sync::Arc::make_mut(&mut world.btech.maps).get_mut(&map_id) {
+    if let Some(map) = world.btech.maps.get_mut(&map_id) {
         map.terrain = Some(terrain);
     }
 }

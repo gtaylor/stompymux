@@ -61,9 +61,7 @@ pub fn building_contacts(
     observer: ObjectId,
     pilot: ObjectId,
 ) -> Result<Vec<BattleBuildingContact>> {
-    let before = scripts.world.borrow().clone();
-    let effects = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let source = super::brief::display_source(&scripts.world.borrow(), observer, pilot)?;
         let map = admission(&scripts.world.borrow(), source, pilot)?;
         let entries: Vec<_> = scripts.world.borrow().btech.maps()[&map]
@@ -112,12 +110,7 @@ pub fn building_contacts(
             }
         }
         Ok(contacts)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(effects);
-    }
-    result
+    })
 }
 
 /// Revalidate the original operator and physical parent after identification callbacks.

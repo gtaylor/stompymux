@@ -1,10 +1,7 @@
 //! Shared carrier-loss propagation, independent of weapon, chassis and crew casualty rules.
 use crate::{Config, Flag, ObjectId, Scripts, World};
 use anyhow::{Result, ensure};
-use std::{
-    collections::{BTreeSet, VecDeque},
-    sync::Arc,
-};
+use std::collections::{BTreeSet, VecDeque};
 
 /// Read the common destruction state without treating an arbitrary container as a unit.
 fn destroyed(world: &World, id: ObjectId) -> Option<bool> {
@@ -89,10 +86,10 @@ pub(super) fn publish(scripts: &Scripts, config: &Config, before: &World) -> Res
             let newly_destroyed = destroyed(&scripts.world(), id) == Some(false);
             if newly_destroyed {
                 let mut world = scripts.world_mut();
-                if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+                if let Some(unit) = world.btech.constructed.get_mut(&id) {
                     unit.transport_destroyed = true;
                     unit.reconcile_damage();
-                } else if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+                } else if let Some(unit) = world.btech.vehicles.get_mut(&id) {
                     unit.destroy_with_transport();
                 }
             }

@@ -63,16 +63,11 @@ pub(crate) fn perform_with_relocation(
     request: Request,
     relocate: impl FnOnce(&mut crate::World) -> Result<()>,
 ) -> Result<()> {
-    let before = s.world.borrow().clone();
-    let checkpoint = s.effects.checkpoint();
-    let result = crate::lua::transactions::with_cause(&s.lua, request.cause, || {
-        apply(s, request, || relocate(&mut s.world.borrow_mut()))
-    });
-    if result.is_err() {
-        *s.world.borrow_mut() = before;
-        s.effects.restore(checkpoint);
-    }
-    result
+    s.atomic(|_| {
+        crate::lua::transactions::with_cause(&s.lua, request.cause, || {
+            apply(s, request, || relocate(&mut s.world.borrow_mut()))
+        })
+    })
 }
 
 /// A denied participant cancels the entire movement batch without publishing staged effects.
@@ -99,9 +94,7 @@ pub(crate) fn perform_pair_with_relocation(
         requests[0].object != requests[1].object,
         "Duplicate movement participant"
     );
-    let before = s.world.borrow().clone();
-    let checkpoint = s.effects.checkpoint();
-    let result = (|| {
+    let result = s.atomic(|_| {
         let mut first = false;
         crate::lua::transactions::with_cause(&s.lua, requests[0].cause, || {
             apply(s, requests[0], || {
@@ -120,12 +113,10 @@ pub(crate) fn perform_pair_with_relocation(
         })?;
         ensure!(first, BatchDenied);
         Ok(())
-    })();
+    });
     match result {
         Ok(()) => Ok(true),
         Err(error) => {
-            *s.world.borrow_mut() = before;
-            s.effects.restore(checkpoint);
             if error.is::<BatchDenied>() {
                 return Ok(false);
             }

@@ -10,9 +10,7 @@ pub fn save_map_action(
     id: ObjectId,
     name: &str,
 ) -> Result<()> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(&before, actor),
             "Permission denied."
@@ -55,12 +53,7 @@ pub fn save_map_action(
         scripts.world().validate(config)?;
         scripts.effects.validate()?;
         Ok(())
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Save the operator's selected map using one relative asset name.

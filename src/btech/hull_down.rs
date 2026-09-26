@@ -3,7 +3,6 @@ use super::*;
 use crate::{Flag, ObjectId, Scripts, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Completed posture and an optional timed transition; cancellation retains the completed posture.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -110,7 +109,9 @@ pub fn set_hull_down(
             state.pending.is_some(),
             "You are not changing hull-down mode"
         );
-        Arc::make_mut(&mut world.btech.constructed)
+        world
+            .btech
+            .constructed
             .get_mut(&id)
             .unwrap()
             .hull_down
@@ -134,9 +135,7 @@ pub fn set_hull_down(
         "Unit is already in that hull-down mode"
     );
     let remaining = (30.0 / (unit.mobility().maximum_speed / 10.75).clamp(1.0, 30.0)) as u8;
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     unit.hull_down = BattleHullDownState {
         active: state.active,
         pending: Some(active),
@@ -183,7 +182,7 @@ fn notices(world: &World, id: ObjectId, active: bool, complete: bool) -> Vec<Bat
 /// Advance through the ordinary committed heartbeat, preserving completed posture on cancellation.
 pub(super) fn advance(world: &mut World) -> Vec<BattleNotice> {
     let mut completed = Vec::new();
-    for (&id, unit) in Arc::make_mut(&mut world.btech.constructed) {
+    for (&id, unit) in &mut world.btech.constructed {
         let Some(active) = unit.hull_down.pending else {
             continue;
         };
@@ -234,20 +233,13 @@ pub fn hull_down_action(
     pilot: ObjectId,
     argument: &str,
 ) -> Result<()> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let notices = set_hull_down(&mut scripts.world_mut(), id, pilot, argument)?;
         for notice in notices {
             super::notify_unit(scripts, notice)?;
         }
         Ok(())
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Native control derives the cockpit from the invoking player.

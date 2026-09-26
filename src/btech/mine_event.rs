@@ -52,76 +52,76 @@ pub(super) fn resolve(
     if selected.is_empty() {
         return Ok(report);
     }
-    let mut candidate = world.clone();
-    for activation in selected {
-        // Earlier explosions can remove colocated fields from the activation snapshot.
-        if candidate.btech.maps()[&position.map]
-            .minefields()
-            .get(&activation.ordinal)
-            != Some(&activation.mine)
-        {
-            continue;
-        }
-        match activation.response {
-            BattleMineResponse::Spotted => report.notices.push(BattleNotice {
-                unit,
-                text: "You spot small bomblets lying on the ground here..".into(),
-            }),
-            BattleMineResponse::Trigger => report.triggers += 1,
-            BattleMineResponse::Explode => {
-                let (cockpit, observed) = if reason == BattleMineTriggerReason::Step {
-                    (
-                        format!(
-                            "As you move to {},{}, you trigger a mine!",
-                            position.x, position.y
-                        ),
-                        format!(
-                            "moves to {},{}, and triggers a mine!",
-                            position.x, position.y
-                        ),
-                    )
-                } else {
-                    ("You trigger a mine!".into(), "triggers a mine!".into())
-                };
-                report.notices.extend(super::broadcast::observer_notices(
-                    &candidate, unit, &observed,
-                ));
-                report.notices.push(BattleNotice {
+    world.attempt(|world| {
+        for activation in selected {
+            // Earlier explosions can remove colocated fields from the activation snapshot.
+            if world.btech.maps()[&position.map]
+                .minefields()
+                .get(&activation.ordinal)
+                != Some(&activation.mine)
+            {
+                continue;
+            }
+            match activation.response {
+                BattleMineResponse::Spotted => report.notices.push(BattleNotice {
                     unit,
-                    text: cockpit,
-                });
-                if activation.mine.kind == BattleMineKind::Vibra
-                    && activation.mine.coordinate
-                        != (BattleHexCoordinate {
-                            x: i32::from(position.x),
-                            y: i32::from(position.y),
-                        })
-                {
-                    report.notices.extend(explosion_notices(
-                        &candidate,
-                        position.map,
-                        activation.mine.coordinate,
-                    )?);
+                    text: "You spot small bomblets lying on the ground here..".into(),
+                }),
+                BattleMineResponse::Trigger => report.triggers += 1,
+                BattleMineResponse::Explode => {
+                    let (cockpit, observed) = if reason == BattleMineTriggerReason::Step {
+                        (
+                            format!(
+                                "As you move to {},{}, you trigger a mine!",
+                                position.x, position.y
+                            ),
+                            format!(
+                                "moves to {},{}, and triggers a mine!",
+                                position.x, position.y
+                            ),
+                        )
+                    } else {
+                        ("You trigger a mine!".into(), "triggers a mine!".into())
+                    };
+                    report
+                        .notices
+                        .extend(super::broadcast::observer_notices(world, unit, &observed));
+                    report.notices.push(BattleNotice {
+                        unit,
+                        text: cockpit,
+                    });
+                    if activation.mine.kind == BattleMineKind::Vibra
+                        && activation.mine.coordinate
+                            != (BattleHexCoordinate {
+                                x: i32::from(position.x),
+                                y: i32::from(position.y),
+                            })
+                    {
+                        report.notices.extend(explosion_notices(
+                            world,
+                            position.map,
+                            activation.mine.coordinate,
+                        )?);
+                    }
+                    let blast = if character {
+                        super::mine_blast::resolve_in_action
+                    } else {
+                        super::resolve_mine_blast
+                    };
+                    let blast = blast(world, position.map, activation.ordinal, rules)?;
+                    super::piloting::append_feedback(
+                        &mut report.pilot_notices,
+                        blast.pilot_notices.iter().cloned(),
+                        report.notices.len(),
+                    );
+                    report.notices.extend(blast.notices.iter().cloned());
+                    report.blasts.push(blast);
                 }
-                let blast = if character {
-                    super::mine_blast::resolve_in_action
-                } else {
-                    super::resolve_mine_blast
-                };
-                let blast = blast(&mut candidate, position.map, activation.ordinal, rules)?;
-                super::piloting::append_feedback(
-                    &mut report.pilot_notices,
-                    blast.pilot_notices.iter().cloned(),
-                    report.notices.len(),
-                );
-                report.notices.extend(blast.notices.iter().cloned());
-                report.blasts.push(blast);
             }
         }
-    }
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(report)
+        world.btech.validate_action(world)?;
+        Ok(report)
+    })
 }
 
 /// Visible remote detonations name the affected hex without disclosing unseen units.

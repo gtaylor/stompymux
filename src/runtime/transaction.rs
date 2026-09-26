@@ -14,6 +14,26 @@ pub type SharedWorld = Rc<RefCell<World>>;
 /// Transaction-staged object-directed output.
 pub type Outbox = Rc<RefCell<Vec<(ObjectId, Document)>>>;
 
+/// Run one native action atomically against a shared world and its staged effects.
+///
+/// `action` receives the world as it stood before the action began. If the action
+/// fails, the world and every effect it staged return to that state, so the caller
+/// reports the error without any cleanup of its own.
+pub fn atomic<T>(
+    world: &SharedWorld,
+    effects: &Effects,
+    action: impl FnOnce(&World) -> anyhow::Result<T>,
+) -> anyhow::Result<T> {
+    let before = world.borrow().clone();
+    let checkpoint = effects.checkpoint();
+    let result = action(&before);
+    if result.is_err() {
+        *world.borrow_mut() = before;
+        effects.restore(checkpoint);
+    }
+    result
+}
+
 /// Player incarnation associated with a descriptor flow.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct FlowIdentity {

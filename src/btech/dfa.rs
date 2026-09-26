@@ -3,7 +3,6 @@ use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// A landing attack forecast; the target's posture must be sampled again for each damage packet.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -268,10 +267,7 @@ fn packets(
         if matches!(phase, DamagePhase::Miss) {
             hit.rear_armor = true;
         }
-        Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap()
-            .dice = dice;
+        world.btech.constructed.get_mut(&id).unwrap().dice = dice;
         let amount = damage.min(5);
         if character
             && let Some(pilot) = world.btech.constructed_units()[&attacker].pilot()
@@ -341,263 +337,248 @@ fn resolve_dfa_inner(
     character: bool,
 ) -> Result<BattleDfaReport> {
     let profile = dfa_profile_inner(world, attacker, target, rules, character)?;
-    let mut candidate = world.clone();
-    let source = Arc::make_mut(&mut candidate.btech.constructed)
-        .get_mut(&attacker)
-        .unwrap();
-    let roll = source.dice.generic_roll();
-    source.flight = None;
-    let hit = i32::from(roll) >= profile.target_number;
-    let mut report = BattleDfaReport {
-        attacker,
-        target,
-        roll,
-        hit,
-        pilot_notices: Vec::new(),
-        notices: vec![BattleNotice {
-            unit: attacker,
-            text: format!("DFA: BTH {}\tRoll: {roll}", profile.target_number),
-        }],
-        profile,
-        target_impacts: vec![],
-        attacker_impacts: vec![],
-        balance: vec![],
-        pilot_injury: None,
-        character_injury: None,
-        experience: Vec::new(),
-        experience_messages: Vec::new(),
-        flooding: Vec::new(),
-    };
-    let attacker_rules = super::physical::participant_fall_rules(&candidate, attacker, rules.fall);
-    let target_rules = super::physical::participant_fall_rules(&candidate, target, rules.fall);
-    if hit {
-        report.notices.push(BattleNotice {
-            unit: attacker,
-            text: "You land on your target legs first!".into(),
-        });
-        if candidate.btech.constructed_units()[&target].power() == BattlePower::Running {
-            report.notices.push(BattleNotice {
-                unit: target,
-                text: format!(
-                    "DEATH FROM ABOVE!!!\n#{} lands on you from above!",
-                    attacker.0
-                ),
-            });
-        }
-        report.notices.extend(super::broadcast::interaction_notices(
-            &candidate, attacker, target, "lands on",
-        ));
-        let target_packets = packets(
-            &mut candidate,
-            target,
-            report.profile.inflicted_damage,
-            report.profile.target_arc,
-            DamagePhase::Target,
-            target_rules,
-            (attacker, character),
-        )?;
-        report.target_impacts = target_packets.impacts;
-        report.experience = target_packets.experience;
-        report.experience_messages = target_packets.experience_messages;
-        report.attacker_impacts = packets(
-            &mut candidate,
+    world.attempt(|world| {
+        let source = world.btech.constructed.get_mut(&attacker).unwrap();
+        let roll = source.dice.generic_roll();
+        source.flight = None;
+        let hit = i32::from(roll) >= profile.target_number;
+        let mut report = BattleDfaReport {
             attacker,
-            report.profile.received_damage,
-            BattleHitArc::Front,
-            DamagePhase::Legs,
-            attacker_rules,
-            (attacker, character),
-        )?
-        .impacts;
-    } else {
-        if candidate.btech.constructed_units()[&attacker].posture() != BattlePosture::Prone {
+            target,
+            roll,
+            hit,
+            pilot_notices: Vec::new(),
+            notices: vec![BattleNotice {
+                unit: attacker,
+                text: format!("DFA: BTH {}\tRoll: {roll}", profile.target_number),
+            }],
+            profile,
+            target_impacts: vec![],
+            attacker_impacts: vec![],
+            balance: vec![],
+            pilot_injury: None,
+            character_injury: None,
+            experience: Vec::new(),
+            experience_messages: Vec::new(),
+            flooding: Vec::new(),
+        };
+        let attacker_rules = super::physical::participant_fall_rules(world, attacker, rules.fall);
+        let target_rules = super::physical::participant_fall_rules(world, target, rules.fall);
+        if hit {
             report.notices.push(BattleNotice {
                 unit: attacker,
-                text: "You miss your DFA attack and fall on your back!!".into(),
+                text: "You land on your target legs first!".into(),
             });
-            report.notices.extend(super::broadcast::observer_notices(
-                &candidate,
-                attacker,
-                "misses DFA and falls down!",
-            ));
-        }
-        report.attacker_impacts = packets(
-            &mut candidate,
-            attacker,
-            report.profile.received_damage,
-            BattleHitArc::Rear,
-            DamagePhase::Miss,
-            attacker_rules,
-            (attacker, character),
-        )?
-        .impacts;
-    }
-    for impact in report.target_impacts.iter().chain(&report.attacker_impacts) {
-        super::piloting::append_feedback(
-            &mut report.pilot_notices,
-            impact.pilot_notices.iter().cloned(),
-            report.notices.len(),
-        );
-        report.notices.extend(impact.notices.iter().cloned());
-    }
-    if hit && candidate.btech.constructed_units()[&attacker].posture() != BattlePosture::Prone {
-        for (id, modifier, fall_rules) in [(attacker, 4, attacker_rules), (target, 2, target_rules)]
-        {
-            if candidate.btech.constructed_units()[&id].is_destroyed() {
-                continue;
-            }
-            let mut check =
-                roll_piloting(&mut candidate, id, modifier, rules.fall.extended_piloting)?;
-            super::piloting::capture_feedback(
-                id,
-                candidate.btech.constructed_units()[&id].pilot(),
-                &check,
-                &mut report.notices,
-                &mut report.pilot_notices,
-            );
-            if character {
-                report
-                    .experience_messages
-                    .extend(super::piloting::award_control_check(
-                        &mut candidate,
-                        id,
-                        &mut check,
-                        rules.fall.extended_piloting,
-                    )?);
-            }
-            let fall = if !check.success {
+            if world.btech.constructed_units()[&target].power() == BattlePower::Running {
                 report.notices.push(BattleNotice {
-                    unit: id,
-                    text: "Your piloting skill fails and you fall over!!".into(),
+                    unit: target,
+                    text: format!(
+                        "DEATH FROM ABOVE!!!\n#{} lands on you from above!",
+                        attacker.0
+                    ),
                 });
-                report.notices.extend(super::broadcast::observer_notices(
-                    &candidate,
-                    id,
-                    "stumbles and falls down!",
-                ));
-                let fall = if character && candidate.objects[&id].flags.contains(Flag::InCharacter)
-                {
-                    super::fall::resolve_character_fall(&mut candidate, id, 1, fall_rules)?
-                } else {
-                    resolve_fall(&mut candidate, id, 1, fall_rules)?
-                };
-                fall.append_notices(id, &mut report.notices, &mut report.pilot_notices);
-                Some(fall)
-            } else {
-                None
-            };
-            report.balance.push(BattleDfaBalance {
-                unit: id,
-                check,
-                fall,
-            });
-        }
-    }
-    if !hit {
-        if !candidate.btech.constructed_units()[&attacker].is_destroyed() {
-            let mut check =
-                roll_piloting(&mut candidate, attacker, 2, rules.fall.extended_piloting)?;
-            super::piloting::capture_feedback(
-                attacker,
-                candidate.btech.constructed_units()[&attacker].pilot(),
-                &check,
-                &mut report.notices,
-                &mut report.pilot_notices,
-            );
-            if character {
-                report
-                    .experience_messages
-                    .extend(super::piloting::award_control_check(
-                        &mut candidate,
-                        attacker,
-                        &mut check,
-                        rules.fall.extended_piloting,
-                    )?);
             }
-            if !check.success
-                && candidate.btech.constructed_units()[&attacker]
-                    .pilot()
-                    .is_some()
-            {
+            report.notices.extend(super::broadcast::interaction_notices(
+                world, attacker, target, "lands on",
+            ));
+            let target_packets = packets(
+                world,
+                target,
+                report.profile.inflicted_damage,
+                report.profile.target_arc,
+                DamagePhase::Target,
+                target_rules,
+                (attacker, character),
+            )?;
+            report.target_impacts = target_packets.impacts;
+            report.experience = target_packets.experience;
+            report.experience_messages = target_packets.experience_messages;
+            report.attacker_impacts = packets(
+                world,
+                attacker,
+                report.profile.received_damage,
+                BattleHitArc::Front,
+                DamagePhase::Legs,
+                attacker_rules,
+                (attacker, character),
+            )?
+            .impacts;
+        } else {
+            if world.btech.constructed_units()[&attacker].posture() != BattlePosture::Prone {
                 report.notices.push(BattleNotice {
                     unit: attacker,
-                    text: "You take personal injury from the fall!".into(),
+                    text: "You miss your DFA attack and fall on your back!!".into(),
                 });
-                if character
-                    && candidate.objects[&attacker]
-                        .flags
-                        .contains(Flag::InCharacter)
-                {
-                    report.character_injury = Some(super::injure_character_pilot(
-                        &mut candidate,
-                        attacker,
-                        1,
-                        attacker_rules.toughness,
-                    )?);
+                report.notices.extend(super::broadcast::observer_notices(
+                    world,
+                    attacker,
+                    "misses DFA and falls down!",
+                ));
+            }
+            report.attacker_impacts = packets(
+                world,
+                attacker,
+                report.profile.received_damage,
+                BattleHitArc::Rear,
+                DamagePhase::Miss,
+                attacker_rules,
+                (attacker, character),
+            )?
+            .impacts;
+        }
+        for impact in report.target_impacts.iter().chain(&report.attacker_impacts) {
+            super::piloting::append_feedback(
+                &mut report.pilot_notices,
+                impact.pilot_notices.iter().cloned(),
+                report.notices.len(),
+            );
+            report.notices.extend(impact.notices.iter().cloned());
+        }
+        if hit && world.btech.constructed_units()[&attacker].posture() != BattlePosture::Prone {
+            for (id, modifier, fall_rules) in
+                [(attacker, 4, attacker_rules), (target, 2, target_rules)]
+            {
+                if world.btech.constructed_units()[&id].is_destroyed() {
+                    continue;
+                }
+                let mut check = roll_piloting(world, id, modifier, rules.fall.extended_piloting)?;
+                super::piloting::capture_feedback(
+                    id,
+                    world.btech.constructed_units()[&id].pilot(),
+                    &check,
+                    &mut report.notices,
+                    &mut report.pilot_notices,
+                );
+                if character {
+                    report
+                        .experience_messages
+                        .extend(super::piloting::award_control_check(
+                            world,
+                            id,
+                            &mut check,
+                            rules.fall.extended_piloting,
+                        )?);
+                }
+                let fall = if !check.success {
+                    report.notices.push(BattleNotice {
+                        unit: id,
+                        text: "Your piloting skill fails and you fall over!!".into(),
+                    });
+                    report.notices.extend(super::broadcast::observer_notices(
+                        world,
+                        id,
+                        "stumbles and falls down!",
+                    ));
+                    let fall = if character && world.objects[&id].flags.contains(Flag::InCharacter)
+                    {
+                        super::fall::resolve_character_fall(world, id, 1, fall_rules)?
+                    } else {
+                        resolve_fall(world, id, 1, fall_rules)?
+                    };
+                    fall.append_notices(id, &mut report.notices, &mut report.pilot_notices);
+                    Some(fall)
                 } else {
-                    let injury = super::pilot_injury::injure_tactical_pilot_in_candidate(
-                        &mut candidate,
-                        attacker,
-                        1,
-                        attacker_rules.toughness,
-                    )?;
-                    report.notices.extend(injury.notice(attacker));
-                    report.pilot_injury = Some(injury);
+                    None
+                };
+                report.balance.push(BattleDfaBalance {
+                    unit: id,
+                    check,
+                    fall,
+                });
+            }
+        }
+        if !hit {
+            if !world.btech.constructed_units()[&attacker].is_destroyed() {
+                let mut check = roll_piloting(world, attacker, 2, rules.fall.extended_piloting)?;
+                super::piloting::capture_feedback(
+                    attacker,
+                    world.btech.constructed_units()[&attacker].pilot(),
+                    &check,
+                    &mut report.notices,
+                    &mut report.pilot_notices,
+                );
+                if character {
+                    report
+                        .experience_messages
+                        .extend(super::piloting::award_control_check(
+                            world,
+                            attacker,
+                            &mut check,
+                            rules.fall.extended_piloting,
+                        )?);
+                }
+                if !check.success && world.btech.constructed_units()[&attacker].pilot().is_some() {
+                    report.notices.push(BattleNotice {
+                        unit: attacker,
+                        text: "You take personal injury from the fall!".into(),
+                    });
+                    if character && world.objects[&attacker].flags.contains(Flag::InCharacter) {
+                        report.character_injury = Some(super::injure_character_pilot(
+                            world,
+                            attacker,
+                            1,
+                            attacker_rules.toughness,
+                        )?);
+                    } else {
+                        let injury = super::pilot_injury::injure_tactical_pilot_in_candidate(
+                            world,
+                            attacker,
+                            1,
+                            attacker_rules.toughness,
+                        )?;
+                        report.notices.extend(injury.notice(attacker));
+                        report.pilot_injury = Some(injury);
+                    }
+                }
+                report.balance.push(BattleDfaBalance {
+                    unit: attacker,
+                    check,
+                    fall: None,
+                });
+            }
+            let position = world.btech.constructed_units()[&attacker]
+                .position()
+                .context("DFA attacker is not placed")?;
+            let tile = world.btech.maps()[&position.map]
+                .base_hex(i64::from(position.x), i64::from(position.y))?;
+            let ground =
+                (tile.surface_height() != tile.standing_height()).then_some(tile.surface_height());
+            let source = world.btech.constructed.get_mut(&attacker).unwrap();
+            source.hull_down = Default::default();
+            source.posture = BattlePosture::Prone;
+            source.facing = Default::default();
+            source.stand_timer = None;
+            if rules.fall.stagger != BattleStaggerMode::Traditional {
+                source.stagger.clear_damage();
+            }
+            source.ground_elevation = ground.map(f64::from);
+            if let Some(motion) = &mut source.motion {
+                motion.speed = 0.0;
+                motion.desired_speed = 0.0;
+            }
+            if !source.is_destroyed() {
+                report.flooding = if character {
+                    super::flooding::flood_unit_in_action(world, attacker, attacker_rules)?
+                } else {
+                    flood_unit(world, attacker, attacker_rules)?
+                };
+                for flooding in &report.flooding {
+                    super::piloting::append_feedback(
+                        &mut report.pilot_notices,
+                        flooding.pilot_notices.iter().cloned(),
+                        report.notices.len(),
+                    );
+                    report.notices.extend(flooding.notices.iter().cloned());
                 }
             }
-            report.balance.push(BattleDfaBalance {
-                unit: attacker,
-                check,
-                fall: None,
-            });
         }
-        let position = candidate.btech.constructed_units()[&attacker]
-            .position()
-            .context("DFA attacker is not placed")?;
-        let tile = candidate.btech.maps()[&position.map]
-            .base_hex(i64::from(position.x), i64::from(position.y))?;
-        let ground =
-            (tile.surface_height() != tile.standing_height()).then_some(tile.surface_height());
-        let source = Arc::make_mut(&mut candidate.btech.constructed)
-            .get_mut(&attacker)
-            .unwrap();
-        source.hull_down = Default::default();
-        source.posture = BattlePosture::Prone;
-        source.facing = Default::default();
-        source.stand_timer = None;
-        if rules.fall.stagger != BattleStaggerMode::Traditional {
-            source.stagger.clear_damage();
+        let source = world.btech.constructed.get_mut(&attacker).unwrap();
+        for section in SECTIONS {
+            source.limb_recycle.insert(section, 60);
         }
-        source.ground_elevation = ground.map(f64::from);
-        if let Some(motion) = &mut source.motion {
-            motion.speed = 0.0;
-            motion.desired_speed = 0.0;
-        }
-        if !source.is_destroyed() {
-            report.flooding = if character {
-                super::flooding::flood_unit_in_action(&mut candidate, attacker, attacker_rules)?
-            } else {
-                flood_unit(&mut candidate, attacker, attacker_rules)?
-            };
-            for flooding in &report.flooding {
-                super::piloting::append_feedback(
-                    &mut report.pilot_notices,
-                    flooding.pilot_notices.iter().cloned(),
-                    report.notices.len(),
-                );
-                report.notices.extend(flooding.notices.iter().cloned());
-            }
-        }
-    }
-    let source = Arc::make_mut(&mut candidate.btech.constructed)
-        .get_mut(&attacker)
-        .unwrap();
-    for section in SECTIONS {
-        source.limb_recycle.insert(section, 60);
-    }
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(report)
+        world.btech.validate_action(world)?;
+        Ok(report)
+    })
 }
 
 #[cfg(test)]

@@ -39,7 +39,6 @@ use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use sight::SightFacts;
-use std::sync::Arc;
 
 /// Default reach of the all-conditions sensor band, in hexes.
 pub const DEFAULT_SENSOR_RANGE: u16 = 15;
@@ -274,9 +273,7 @@ pub fn set_map_perception(
             .is_some_and(|object| !object.flags.contains(Flag::Going)),
         "Map is unavailable"
     );
-    let stored = Arc::make_mut(&mut world.btech.maps)
-        .get_mut(&map)
-        .context("Map not found")?;
+    let stored = world.btech.maps.get_mut(&map).context("Map not found")?;
     if enabled {
         stored.sensor_flags &= !flag.bit();
     } else {

@@ -32,7 +32,7 @@ pub(super) fn normalize(world: &mut World) {
         .chain(world.btech.units.keys())
         .copied()
         .collect();
-    std::sync::Arc::make_mut(&mut world.btech.unit_configuration).retain(|id, value| {
+    world.btech.unit_configuration.retain_mut(|id, value| {
         if registrations.get(id).map(String::as_str) != Some("MECH") || !runtime.contains(id) {
             return false;
         }

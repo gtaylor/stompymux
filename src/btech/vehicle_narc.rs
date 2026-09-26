@@ -2,10 +2,7 @@
 use super::*;
 use crate::{ObjectId, World};
 use anyhow::Result;
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    sync::Arc,
-};
+use std::collections::{BTreeMap, BTreeSet};
 
 impl BattleVehicle {
     /// Persistent pod effects on surviving hull faces or the turret.
@@ -52,9 +49,7 @@ pub(super) fn attach(
     let Some(hit) = location.hit else {
         return Ok(report);
     };
-    let vehicle = Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&target)
-        .unwrap();
+    let vehicle = world.btech.vehicles.get_mut(&target).unwrap();
     if !vehicle
         .sections()
         .get(&hit.section)

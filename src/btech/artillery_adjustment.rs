@@ -2,7 +2,6 @@
 use super::*;
 use crate::{ObjectId, World};
 use anyhow::Result;
-use std::sync::Arc;
 
 impl BattleUnit {
     /// Accumulated trajectory correction for the currently selected target.
@@ -59,12 +58,14 @@ fn reset_links(
         })
         .collect();
     for id in stations {
-        Arc::make_mut(&mut world.btech.gunner_stations)
+        world
+            .btech
+            .gunner_stations
             .get_mut(&id)
             .unwrap()
             .artillery_adjustment = 0;
     }
-    for (&unit_id, unit) in Arc::make_mut(&mut world.btech.vehicles) {
+    for (&unit_id, unit) in &mut world.btech.vehicles {
         if (own && unit_id == id)
             || (dependents
                 && unit_id != id
@@ -75,7 +76,7 @@ fn reset_links(
             unit.artillery_adjustment = 0;
         }
     }
-    for (&unit_id, unit) in Arc::make_mut(&mut world.btech.constructed) {
+    for (&unit_id, unit) in &mut world.btech.constructed {
         if (own && unit_id == id)
             || (dependents
                 && unit_id != id
@@ -172,16 +173,12 @@ pub(super) fn observe_miss(
         Vec::new()
     };
     if source.owner != shooter {
-        let station = Arc::make_mut(&mut world.btech.gunner_stations)
-            .get_mut(&source.owner)
-            .unwrap();
+        let station = world.btech.gunner_stations.get_mut(&source.owner).unwrap();
         station.artillery_adjustment = station.artillery_adjustment.wrapping_add(1);
-    } else if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&shooter) {
+    } else if let Some(unit) = world.btech.vehicles.get_mut(&shooter) {
         unit.artillery_adjustment = unit.artillery_adjustment.wrapping_add(1);
     } else {
-        let unit = Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&shooter)
-            .unwrap();
+        let unit = world.btech.constructed.get_mut(&shooter).unwrap();
         unit.artillery_adjustment = unit.artillery_adjustment.wrapping_add(1);
     }
     Ok(notices)

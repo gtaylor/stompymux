@@ -3,7 +3,6 @@ use super::*;
 use crate::{Config, Flag, ObjectId, Scripts, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// An optional explicit altitude is clamped to the unit's signed-short coordinate range.
 #[derive(Debug, Clone, Copy)]
@@ -27,9 +26,7 @@ pub fn set_coordinates_action(
     unit: ObjectId,
     request: BattleScenarioPosition,
 ) -> Result<BattleScenarioPositionReport> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(&before, actor),
             "Permission denied."
@@ -93,12 +90,7 @@ pub fn set_coordinates_action(
         )?;
         scripts.world().validate(config)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Integer field edits share scenario placement, including tow synchronization and observations.
@@ -233,7 +225,7 @@ fn relocate_precise(
         height.is_finite() && (f64::from(i16::MIN)..=f64::from(i16::MAX)).contains(&height),
         "Invalid coordinate altitude"
     );
-    let identity = if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    let identity = if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         let mut motion = unit.motion().context("Placed unit has no motion")?;
         motion.point = point;
         unit.update_motion(
@@ -265,7 +257,9 @@ fn relocate_precise(
         }
         unit.identity()
     } else {
-        let unit = Arc::make_mut(&mut world.btech.constructed)
+        let unit = world
+            .btech
+            .constructed
             .get_mut(&id)
             .context("Unit is unavailable")?;
         unit.motion
@@ -293,7 +287,7 @@ fn relocate_precise(
         }
         unit.identity()
     };
-    Arc::make_mut(&mut world.btech.units).insert(id, identity);
+    world.btech.units.insert(id, identity);
     Ok(())
 }
 

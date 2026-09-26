@@ -2,7 +2,6 @@
 use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// Append feedback through the ordinary movement publication boundary.
 fn notice(report: &mut super::movement_report::MovementReport, id: ObjectId, text: &str) {
@@ -60,7 +59,9 @@ pub(super) fn advance_all(
             .context("Aircraft map is unavailable")?;
         if matches!(flight.phase, BattleVtolFlightPhase::Launching { .. }) {
             let underground = map.flags & 16 != 0;
-            let result = Arc::make_mut(&mut world.btech.vehicles)
+            let result = world
+                .btech
+                .vehicles
                 .get_mut(&id)
                 .unwrap()
                 .advance_vtol_takeoff(underground, rules.free_fusion_vtol_fuel)?;
@@ -88,10 +89,7 @@ pub(super) fn advance_all(
             continue;
         }
         if unit.is_destroyed() || unit.rotor_destroyed() {
-            Arc::make_mut(&mut world.btech.vehicles)
-                .get_mut(&id)
-                .unwrap()
-                .lose_vtol_lift();
+            world.btech.vehicles.get_mut(&id).unwrap().lose_vtol_lift();
             continue;
         }
         let mut motion = unit.motion().context("Aircraft motion is unavailable")?;
@@ -102,10 +100,7 @@ pub(super) fn advance_all(
             motion.limit_load(maximum, maximum);
         }
         if !motion.active() && flight.vertical_speed == 0.0 {
-            Arc::make_mut(&mut world.btech.vehicles)
-                .get_mut(&id)
-                .unwrap()
-                .motion = Some(motion);
+            world.btech.vehicles.get_mut(&id).unwrap().motion = Some(motion);
             continue;
         }
         let speed_demon = unit
@@ -121,9 +116,7 @@ pub(super) fn advance_all(
             speed_demon,
             movement_modifier: map.movement_modifier,
         };
-        let unit = Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.vehicles.get_mut(&id).unwrap();
         let fuel = unit.consume_vtol_fuel(
             flight.vertical_speed,
             flight.altitude as i32,

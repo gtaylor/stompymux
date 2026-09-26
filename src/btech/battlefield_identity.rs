@@ -2,7 +2,7 @@
 use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::{collections::BTreeSet, sync::Arc};
+use std::collections::BTreeSet;
 
 /// Assign a preferred two-letter identity, resolving collisions with the unit's durable dice.
 /// Trusted callers own wizard authority and publication; failure leaves the world unchanged.
@@ -12,11 +12,11 @@ pub fn assign_battlefield_id(
     id: ObjectId,
     preferred: Option<&str>,
 ) -> Result<String> {
-    let mut candidate = world.clone();
-    let label = assign_in_candidate(&mut candidate, id, preferred)?;
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(label)
+    world.attempt(|world| {
+        let label = assign_in_candidate(world, id, preferred)?;
+        world.btech.validate(world)?;
+        Ok(label)
+    })
 }
 
 /// Select and save an ID inside an enclosing map reassignment transaction.
@@ -69,13 +69,11 @@ pub(super) fn assign_in_candidate(
     let label = label
         .filter(|label| !used.contains(label))
         .unwrap_or(available);
-    if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         unit.battlefield_label = Some(label.clone());
         unit.dice = dice;
     } else {
-        let unit = Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
         unit.battlefield_label = Some(label.clone());
         unit.dice = dice;
     }

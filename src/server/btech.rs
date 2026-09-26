@@ -55,7 +55,11 @@ impl Server {
                 error.to_string(),
             );
             *self.scripts.world.borrow_mut() = before;
-            std::sync::Arc::make_mut(&mut self.scripts.world.borrow_mut().btech.autopilot_plans)
+            self.scripts
+                .world
+                .borrow_mut()
+                .btech
+                .autopilot_plans
                 .clear();
             self.scripts.effects.rollback();
             return;
@@ -72,7 +76,11 @@ impl Server {
                 error.to_string(),
             );
             *self.scripts.world.borrow_mut() = before;
-            std::sync::Arc::make_mut(&mut self.scripts.world.borrow_mut().btech.autopilot_plans)
+            self.scripts
+                .world
+                .borrow_mut()
+                .btech
+                .autopilot_plans
                 .clear();
             self.scripts.effects.rollback();
             return;
@@ -106,7 +114,11 @@ impl Server {
                 error.to_string(),
             );
             *self.scripts.world.borrow_mut() = before;
-            std::sync::Arc::make_mut(&mut self.scripts.world.borrow_mut().btech.autopilot_plans)
+            self.scripts
+                .world
+                .borrow_mut()
+                .btech
+                .autopilot_plans
                 .clear();
             self.scripts.effects.rollback();
             return;
@@ -122,10 +134,12 @@ impl Server {
                         error.to_string(),
                     );
                     *self.scripts.world.borrow_mut() = before;
-                    std::sync::Arc::make_mut(
-                        &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
-                    )
-                    .clear();
+                    self.scripts
+                        .world
+                        .borrow_mut()
+                        .btech
+                        .autopilot_plans
+                        .clear();
                     self.scripts.effects.rollback();
                     return;
                 }
@@ -144,7 +158,11 @@ impl Server {
                 error.to_string(),
             );
             *self.scripts.world.borrow_mut() = before;
-            std::sync::Arc::make_mut(&mut self.scripts.world.borrow_mut().btech.autopilot_plans)
+            self.scripts
+                .world
+                .borrow_mut()
+                .btech
+                .autopilot_plans
                 .clear();
             self.scripts.effects.rollback();
             return;
@@ -159,7 +177,11 @@ impl Server {
                 error.to_string(),
             );
             *self.scripts.world.borrow_mut() = before;
-            std::sync::Arc::make_mut(&mut self.scripts.world.borrow_mut().btech.autopilot_plans)
+            self.scripts
+                .world
+                .borrow_mut()
+                .btech
+                .autopilot_plans
                 .clear();
             self.scripts.effects.rollback();
             return;
@@ -192,10 +214,12 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
-                std::sync::Arc::make_mut(
-                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
-                )
-                .clear();
+                self.scripts
+                    .world
+                    .borrow_mut()
+                    .btech
+                    .autopilot_plans
+                    .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -258,10 +282,12 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
-                std::sync::Arc::make_mut(
-                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
-                )
-                .clear();
+                self.scripts
+                    .world
+                    .borrow_mut()
+                    .btech
+                    .autopilot_plans
+                    .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -286,7 +312,11 @@ impl Server {
                 error.to_string(),
             );
             *self.scripts.world.borrow_mut() = before;
-            std::sync::Arc::make_mut(&mut self.scripts.world.borrow_mut().btech.autopilot_plans)
+            self.scripts
+                .world
+                .borrow_mut()
+                .btech
+                .autopilot_plans
                 .clear();
             self.scripts.effects.rollback();
             return;
@@ -302,10 +332,12 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
-                std::sync::Arc::make_mut(
-                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
-                )
-                .clear();
+                self.scripts
+                    .world
+                    .borrow_mut()
+                    .btech
+                    .autopilot_plans
+                    .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -325,10 +357,12 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
-                std::sync::Arc::make_mut(
-                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
-                )
-                .clear();
+                self.scripts
+                    .world
+                    .borrow_mut()
+                    .btech
+                    .autopilot_plans
+                    .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -347,10 +381,12 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
-                std::sync::Arc::make_mut(
-                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
-                )
-                .clear();
+                self.scripts
+                    .world
+                    .borrow_mut()
+                    .btech
+                    .autopilot_plans
+                    .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -414,10 +450,12 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
-                std::sync::Arc::make_mut(
-                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
-                )
-                .clear();
+                self.scripts
+                    .world
+                    .borrow_mut()
+                    .btech
+                    .autopilot_plans
+                    .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -439,10 +477,12 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
-                std::sync::Arc::make_mut(
-                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
-                )
-                .clear();
+                self.scripts
+                    .world
+                    .borrow_mut()
+                    .btech
+                    .autopilot_plans
+                    .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -457,7 +497,11 @@ impl Server {
                 error.to_string(),
             );
             *self.scripts.world.borrow_mut() = before;
-            std::sync::Arc::make_mut(&mut self.scripts.world.borrow_mut().btech.autopilot_plans)
+            self.scripts
+                .world
+                .borrow_mut()
+                .btech
+                .autopilot_plans
                 .clear();
             self.scripts.effects.rollback();
             return;
@@ -491,10 +535,12 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
-                std::sync::Arc::make_mut(
-                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
-                )
-                .clear();
+                self.scripts
+                    .world
+                    .borrow_mut()
+                    .btech
+                    .autopilot_plans
+                    .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -524,10 +570,12 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
-                std::sync::Arc::make_mut(
-                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
-                )
-                .clear();
+                self.scripts
+                    .world
+                    .borrow_mut()
+                    .btech
+                    .autopilot_plans
+                    .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -542,7 +590,11 @@ impl Server {
                 error.to_string(),
             );
             *self.scripts.world.borrow_mut() = before;
-            std::sync::Arc::make_mut(&mut self.scripts.world.borrow_mut().btech.autopilot_plans)
+            self.scripts
+                .world
+                .borrow_mut()
+                .btech
+                .autopilot_plans
                 .clear();
             self.scripts.effects.rollback();
             return;
@@ -559,10 +611,12 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
-                std::sync::Arc::make_mut(
-                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
-                )
-                .clear();
+                self.scripts
+                    .world
+                    .borrow_mut()
+                    .btech
+                    .autopilot_plans
+                    .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -578,10 +632,12 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
-                std::sync::Arc::make_mut(
-                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
-                )
-                .clear();
+                self.scripts
+                    .world
+                    .borrow_mut()
+                    .btech
+                    .autopilot_plans
+                    .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -601,7 +657,11 @@ impl Server {
                 error.to_string(),
             );
             *self.scripts.world.borrow_mut() = before;
-            std::sync::Arc::make_mut(&mut self.scripts.world.borrow_mut().btech.autopilot_plans)
+            self.scripts
+                .world
+                .borrow_mut()
+                .btech
+                .autopilot_plans
                 .clear();
             self.scripts.effects.rollback();
             return;
@@ -621,10 +681,12 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
-                std::sync::Arc::make_mut(
-                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
-                )
-                .clear();
+                self.scripts
+                    .world
+                    .borrow_mut()
+                    .btech
+                    .autopilot_plans
+                    .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -639,10 +701,12 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
-                std::sync::Arc::make_mut(
-                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
-                )
-                .clear();
+                self.scripts
+                    .world
+                    .borrow_mut()
+                    .btech
+                    .autopilot_plans
+                    .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -673,10 +737,12 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
-                std::sync::Arc::make_mut(
-                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
-                )
-                .clear();
+                self.scripts
+                    .world
+                    .borrow_mut()
+                    .btech
+                    .autopilot_plans
+                    .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -690,10 +756,12 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
-                std::sync::Arc::make_mut(
-                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
-                )
-                .clear();
+                self.scripts
+                    .world
+                    .borrow_mut()
+                    .btech
+                    .autopilot_plans
+                    .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -708,7 +776,11 @@ impl Server {
                 error.to_string(),
             );
             *self.scripts.world.borrow_mut() = before;
-            std::sync::Arc::make_mut(&mut self.scripts.world.borrow_mut().btech.autopilot_plans)
+            self.scripts
+                .world
+                .borrow_mut()
+                .btech
+                .autopilot_plans
                 .clear();
             self.scripts.effects.rollback();
             return;
@@ -722,10 +794,12 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
-                std::sync::Arc::make_mut(
-                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
-                )
-                .clear();
+                self.scripts
+                    .world
+                    .borrow_mut()
+                    .btech
+                    .autopilot_plans
+                    .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -742,10 +816,12 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
-                std::sync::Arc::make_mut(
-                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
-                )
-                .clear();
+                self.scripts
+                    .world
+                    .borrow_mut()
+                    .btech
+                    .autopilot_plans
+                    .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -763,7 +839,11 @@ impl Server {
         let started = metrics.as_ref().map(|_| Instant::now());
         let committed = self.commit(before).await;
         if !committed {
-            std::sync::Arc::make_mut(&mut self.scripts.world.borrow_mut().btech.autopilot_plans)
+            self.scripts
+                .world
+                .borrow_mut()
+                .btech
+                .autopilot_plans
                 .clear();
         }
         if let (Some(metrics), Some(started)) = (metrics, started) {

@@ -261,8 +261,7 @@ pub fn scan_unit_action(
     let observer = super::combat_operator::for_owner(&scripts.world(), observer, pilot)?
         .source
         .unit;
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let (text, notice) = {
             let world = scripts.world.borrow();
             let text = scan_unit_configured(
@@ -297,11 +296,7 @@ pub fn scan_unit_action(
             super::notify_unit(scripts, notice)?;
         }
         Ok(text)
-    })();
-    if result.is_err() {
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Scan the first acquired visible occupant of a coordinate, in saved map membership order.

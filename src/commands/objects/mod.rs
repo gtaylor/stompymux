@@ -60,17 +60,11 @@ pub fn definitions() -> Vec<CommandDefinition> {
 
 /// Restore every provisional mutation on failed validation, callback or operation.
 fn transaction(ctx: &CommandContext<'_>, work: impl FnOnce() -> Result<()>) -> Result<Action> {
-    let before = ctx.scripts.world.borrow().clone();
-    let checkpoint = ctx.scripts.effects.checkpoint();
-    match work() {
+    match ctx.scripts.atomic(|_| work()) {
         Ok(()) => Ok(Action::Continue),
-        Err(e) => {
-            *ctx.scripts.world.borrow_mut() = before;
-            ctx.scripts.effects.restore(checkpoint);
-            Ok(Action::Report(crate::commands::Report::Reply(
-                e.to_string(),
-            )))
-        }
+        Err(e) => Ok(Action::Report(crate::commands::Report::Reply(
+            e.to_string(),
+        ))),
     }
 }
 

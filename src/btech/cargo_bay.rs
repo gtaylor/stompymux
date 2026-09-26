@@ -2,7 +2,6 @@
 use crate::{ObjectId, StoredBattleMap, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Optional loading location; hints are only revealed when explicitly configured.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -56,10 +55,7 @@ pub fn set_cargo_transfer_point(
     if let Some(point) = point {
         point.validate(stored)?;
     }
-    Arc::make_mut(&mut world.btech.maps)
-        .get_mut(&map)
-        .unwrap()
-        .cargo_transfer_point = point;
+    world.btech.maps.get_mut(&map).unwrap().cargo_transfer_point = point;
     Ok(())
 }
 

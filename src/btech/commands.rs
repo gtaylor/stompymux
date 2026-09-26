@@ -786,9 +786,7 @@ pub(crate) fn pilot_command(
     ctx: &CommandContext<'_>,
     input: &CommandInput,
 ) -> Result<CommandAction> {
-    let before = ctx.scripts.world.borrow().clone();
-    let checkpoint = ctx.scripts.effects.checkpoint();
-    let result = (|| -> Result<Option<String>> {
+    let result = ctx.scripts.atomic(|_| -> Result<Option<String>> {
         ensure!(
             input.args.trim().is_empty(),
             "pilot and unpilot take no arguments"
@@ -841,15 +839,11 @@ pub(crate) fn pilot_command(
         super::assign_pilot(&mut world, unit, ctx.player)?;
         world.validate(ctx.config)?;
         Ok(Some("You take the cockpit.".into()))
-    })();
+    });
     Ok(match result {
         Ok(Some(text)) => CommandAction::CommitReply(text),
         Ok(None) => CommandAction::Continue,
-        Err(error) => {
-            *ctx.scripts.world.borrow_mut() = before;
-            ctx.scripts.effects.restore(checkpoint);
-            CommandAction::Report(CommandReport::Reply(format!("{error:#}")))
-        }
+        Err(error) => CommandAction::Report(CommandReport::Reply(format!("{error:#}"))),
     })
 }
 
@@ -858,9 +852,7 @@ pub(crate) fn power_command(
     ctx: &CommandContext<'_>,
     input: &CommandInput,
 ) -> Result<CommandAction> {
-    let before = ctx.scripts.world.borrow().clone();
-    let checkpoint = ctx.scripts.effects.checkpoint();
-    let result = (|| -> Result<()> {
+    let result = ctx.scripts.atomic(|_| -> Result<()> {
         let startup = input.name.eq_ignore_ascii_case("startup");
         let argument = input.args.trim();
         if !startup && !argument.is_empty() {
@@ -906,14 +898,10 @@ pub(crate) fn power_command(
             super::notify_unit(ctx.scripts, notice)?;
         }
         Ok(())
-    })();
+    });
     Ok(match result {
         Ok(()) => CommandAction::Continue,
-        Err(error) => {
-            *ctx.scripts.world.borrow_mut() = before;
-            ctx.scripts.effects.restore(checkpoint);
-            CommandAction::Report(CommandReport::Reply(format!("{error:#}")))
-        }
+        Err(error) => CommandAction::Report(CommandReport::Reply(format!("{error:#}"))),
     })
 }
 
@@ -947,54 +935,50 @@ pub(crate) fn motion_command(
             result.unwrap_or_else(|error| format!("{error:#}")),
         )));
     }
-    let before = ctx.scripts.world.borrow().clone();
-    let checkpoint = ctx.scripts.effects.checkpoint();
-    let result = (|| -> Result<super::BattleNotice> {
-        let mut world = ctx.scripts.world.borrow_mut();
-        let unit = world
-            .objects
-            .get(&ctx.player)
-            .and_then(|player| player.location)
-            .context("Enter a unit first")?;
-        if input.name == "fixturret" {
-            ensure!(input.args.trim().is_empty(), "Usage: fixturret");
-            return super::begin_vehicle_turret_repair(&mut world, unit, ctx.player);
-        }
-        if input.name == "heading" || input.name == "turret" {
-            let heading: f64 = input
-                .args
-                .trim()
-                .parse()
-                .with_context(|| format!("Usage: {} <degrees>", input.name))?;
-            return if input.name == "turret" {
-                super::set_turret(&mut world, unit, ctx.player, heading)
-            } else {
-                super::set_heading(&mut world, unit, ctx.player, heading)
-            };
-        }
-        let speed = super::motion_controls::speed_request(
-            &world,
-            unit,
-            &input.args,
-            super::SpeedPolicy::configured(ctx.config),
-        )?;
-        super::motion::set_speed_configured(
-            &mut world,
-            unit,
-            ctx.player,
-            speed,
-            super::SpeedPolicy::configured(ctx.config),
-            ctx.config.battletech.nofusionvtolfuel != 0,
-        )
-    })()
-    .and_then(|notice| super::notify_unit(ctx.scripts, notice));
+    let result = ctx.scripts.atomic(|_| {
+        (|| -> Result<super::BattleNotice> {
+            let mut world = ctx.scripts.world.borrow_mut();
+            let unit = world
+                .objects
+                .get(&ctx.player)
+                .and_then(|player| player.location)
+                .context("Enter a unit first")?;
+            if input.name == "fixturret" {
+                ensure!(input.args.trim().is_empty(), "Usage: fixturret");
+                return super::begin_vehicle_turret_repair(&mut world, unit, ctx.player);
+            }
+            if input.name == "heading" || input.name == "turret" {
+                let heading: f64 = input
+                    .args
+                    .trim()
+                    .parse()
+                    .with_context(|| format!("Usage: {} <degrees>", input.name))?;
+                return if input.name == "turret" {
+                    super::set_turret(&mut world, unit, ctx.player, heading)
+                } else {
+                    super::set_heading(&mut world, unit, ctx.player, heading)
+                };
+            }
+            let speed = super::motion_controls::speed_request(
+                &world,
+                unit,
+                &input.args,
+                super::SpeedPolicy::configured(ctx.config),
+            )?;
+            super::motion::set_speed_configured(
+                &mut world,
+                unit,
+                ctx.player,
+                speed,
+                super::SpeedPolicy::configured(ctx.config),
+                ctx.config.battletech.nofusionvtolfuel != 0,
+            )
+        })()
+        .and_then(|notice| super::notify_unit(ctx.scripts, notice))
+    });
     Ok(match result {
         Ok(()) => CommandAction::Continue,
-        Err(error) => {
-            *ctx.scripts.world.borrow_mut() = before;
-            ctx.scripts.effects.restore(checkpoint);
-            CommandAction::Report(CommandReport::Reply(format!("{error:#}")))
-        }
+        Err(error) => CommandAction::Report(CommandReport::Reply(format!("{error:#}"))),
     })
 }
 
@@ -1003,9 +987,7 @@ pub(crate) fn facing_command(
     ctx: &CommandContext<'_>,
     input: &CommandInput,
 ) -> Result<CommandAction> {
-    let before = ctx.scripts.world.borrow().clone();
-    let checkpoint = ctx.scripts.effects.checkpoint();
-    let result = (|| -> Result<()> {
+    let result = ctx.scripts.atomic(|_| -> Result<()> {
         let notice = {
             let mut world = ctx.scripts.world.borrow_mut();
             let unit = world
@@ -1038,14 +1020,10 @@ pub(crate) fn facing_command(
         };
         super::notify_unit(ctx.scripts, notice)?;
         Ok(())
-    })();
+    });
     Ok(match result {
         Ok(()) => CommandAction::Continue,
-        Err(error) => {
-            *ctx.scripts.world.borrow_mut() = before;
-            ctx.scripts.effects.restore(checkpoint);
-            CommandAction::Report(CommandReport::Reply(format!("{error:#}")))
-        }
+        Err(error) => CommandAction::Report(CommandReport::Reply(format!("{error:#}"))),
     })
 }
 
@@ -1105,9 +1083,7 @@ pub(crate) fn lock_command(
     ctx: &CommandContext<'_>,
     input: &CommandInput,
 ) -> Result<CommandAction> {
-    let before = ctx.scripts.world.borrow().clone();
-    let checkpoint = ctx.scripts.effects.checkpoint();
-    let result = (|| -> Result<()> {
+    let result = ctx.scripts.atomic(|_| -> Result<()> {
         let arguments: Vec<_> = input.args.split_whitespace().collect();
         let notice = {
             let mut world = ctx.scripts.world.borrow_mut();
@@ -1144,14 +1120,10 @@ pub(crate) fn lock_command(
         };
         super::notify_unit(ctx.scripts, notice)?;
         Ok(())
-    })();
+    });
     Ok(match result {
         Ok(()) => CommandAction::Continue,
-        Err(error) => {
-            *ctx.scripts.world.borrow_mut() = before;
-            ctx.scripts.effects.restore(checkpoint);
-            CommandAction::Report(CommandReport::Reply(format!("{error:#}")))
-        }
+        Err(error) => CommandAction::Report(CommandReport::Reply(format!("{error:#}"))),
     })
 }
 
@@ -1160,9 +1132,7 @@ pub(crate) fn spot_command(
     ctx: &CommandContext<'_>,
     input: &CommandInput,
 ) -> Result<CommandAction> {
-    let before = ctx.scripts.world.borrow().clone();
-    let checkpoint = ctx.scripts.effects.checkpoint();
-    let result = (|| -> Result<()> {
+    let result = ctx.scripts.atomic(|_| -> Result<()> {
         let notices = {
             let mut world = ctx.scripts.world.borrow_mut();
             let unit = world
@@ -1195,22 +1165,16 @@ pub(crate) fn spot_command(
             super::notify_unit(ctx.scripts, notice)?;
         }
         Ok(())
-    })();
+    });
     Ok(match result {
         Ok(()) => CommandAction::Continue,
-        Err(error) => {
-            *ctx.scripts.world.borrow_mut() = before;
-            ctx.scripts.effects.restore(checkpoint);
-            CommandAction::Report(CommandReport::Reply(format!("{error:#}")))
-        }
+        Err(error) => CommandAction::Report(CommandReport::Reply(format!("{error:#}"))),
     })
 }
 
 /// Select or clear a TAG connection and stage the notice with the world transaction.
 pub(crate) fn tag_command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<CommandAction> {
-    let before = ctx.scripts.world.borrow().clone();
-    let checkpoint = ctx.scripts.effects.checkpoint();
-    let result = (|| -> Result<()> {
+    let result = ctx.scripts.atomic(|_| -> Result<()> {
         let notices = {
             let mut world = ctx.scripts.world.borrow_mut();
             let unit = world
@@ -1239,14 +1203,10 @@ pub(crate) fn tag_command(ctx: &CommandContext<'_>, input: &CommandInput) -> Res
             super::notify_unit(ctx.scripts, notice)?;
         }
         Ok(())
-    })();
+    });
     Ok(match result {
         Ok(()) => CommandAction::Continue,
-        Err(error) => {
-            *ctx.scripts.world.borrow_mut() = before;
-            ctx.scripts.effects.restore(checkpoint);
-            CommandAction::Report(CommandReport::Reply(format!("{error:#}")))
-        }
+        Err(error) => CommandAction::Report(CommandReport::Reply(format!("{error:#}"))),
     })
 }
 
@@ -1255,9 +1215,7 @@ pub(crate) fn stand_command(
     ctx: &CommandContext<'_>,
     input: &CommandInput,
 ) -> Result<CommandAction> {
-    let before = ctx.scripts.world.borrow().clone();
-    let checkpoint = ctx.scripts.effects.checkpoint();
-    let result = (|| -> Result<Option<String>> {
+    let result = ctx.scripts.atomic(|_| -> Result<Option<String>> {
         let argument = input.args.trim().to_ascii_lowercase();
         let unit = ctx
             .scripts
@@ -1286,15 +1244,11 @@ pub(crate) fn stand_command(
         let _attempt =
             super::stand::configured_stand(ctx.scripts, ctx.config, unit, ctx.player, mode)?;
         Ok(None)
-    })();
+    });
     Ok(match result {
         Ok(Some(text)) => CommandAction::Report(CommandReport::Inspection(text)),
         Ok(None) => CommandAction::Continue,
-        Err(error) => {
-            *ctx.scripts.world.borrow_mut() = before;
-            ctx.scripts.effects.restore(checkpoint);
-            CommandAction::Report(CommandReport::Reply(format!("{error:#}")))
-        }
+        Err(error) => CommandAction::Report(CommandReport::Reply(format!("{error:#}"))),
     })
 }
 

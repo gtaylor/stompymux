@@ -385,7 +385,10 @@ async fn character_coordinate_misload_publishes_injuries_and_rolls_back_failed_e
                 Some(shooter)
             );
             assert!(scripts.drain_outbox().is_empty());
-            scripts.world_mut().objects.insert(afterlife, room);
+            scripts
+                .world_mut()
+                .objects
+                .insert(afterlife, std::sync::Arc::unwrap_or_clone(room));
         }
         let report: (bool, String, usize) = scripts.eval_callback(&code).unwrap();
         assert_eq!(report, (true, "vehicle".into(), 0));

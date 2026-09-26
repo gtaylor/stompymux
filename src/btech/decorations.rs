@@ -82,23 +82,21 @@ pub fn set_map_decoration(
         }
         effect
     });
-    let mut candidate = world.clone();
-    let record = Arc::make_mut(&mut candidate.btech.maps)
-        .get_mut(&map)
-        .unwrap();
-    if decoration.is_some_and(|effect| effect.kind == BattleDecorationKind::Fire)
-        && record.fire_dice.is_none()
-    {
-        record.fire_dice = Some(super::BattleDice::fresh());
-    }
-    if let Some(decoration) = decoration {
-        install_decoration(record, index, decoration)?;
-    } else {
-        Arc::make_mut(&mut record.decorations).remove(&index);
-    }
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(())
+    world.attempt(|world| {
+        let record = world.btech.maps.get_mut(&map).unwrap();
+        if decoration.is_some_and(|effect| effect.kind == BattleDecorationKind::Fire)
+            && record.fire_dice.is_none()
+        {
+            record.fire_dice = Some(super::BattleDice::fresh());
+        }
+        if let Some(decoration) = decoration {
+            install_decoration(record, index, decoration)?;
+        } else {
+            Arc::make_mut(&mut record.decorations).remove(&index);
+        }
+        world.btech.validate(world)?;
+        Ok(())
+    })
 }
 
 /// Replace stored restoration records and overlays through the same terrain normalization path.
@@ -147,7 +145,7 @@ pub fn advance_map_smoke(world: &mut World) {
     if !map_smoke_pending(world) {
         return;
     }
-    for map in Arc::make_mut(&mut world.btech.maps).values_mut() {
+    for map in world.btech.maps.values_mut() {
         if !map
             .decorations
             .values()

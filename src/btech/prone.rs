@@ -6,7 +6,6 @@ use super::{
 use crate::{Config, ObjectId, Scripts, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// Completed controlled drop; an optional failed control check precedes ordinary fall consequences.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -34,9 +33,7 @@ pub fn prone_action(
     id: ObjectId,
     pilot: ObjectId,
 ) -> Result<BattleProneReport> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let report = resolve(&mut scripts.world.borrow_mut(), config, id, pilot)?;
         super::piloting::publish_maneuver_feedback(
             scripts,
@@ -55,14 +52,9 @@ pub fn prone_action(
         }
         super::evacuation::publish_mine_consequences(scripts, config, &report.mines)?;
         super::evacuation::publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Validate before dice or posture changes, then resolve the complete physical sequence.
@@ -190,9 +182,7 @@ fn resolve(
     } else {
         None
     };
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     super::fall::set_prone(unit);
     unit.motion.as_mut().unwrap().stop_translation();
     let flooding = super::flooding::flood_unit_in_action(world, id, rules)?;
@@ -206,7 +196,9 @@ fn resolve(
     }
     notices.extend(super::extinguish_inferno_in_water(world, id)?);
     if rules.stagger != super::BattleStaggerMode::Traditional {
-        Arc::make_mut(&mut world.btech.constructed)
+        world
+            .btech
+            .constructed
             .get_mut(&id)
             .unwrap()
             .stagger

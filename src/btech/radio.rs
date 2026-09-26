@@ -3,7 +3,6 @@ use super::BattleUnit;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Hardware limits shared by all supported radios.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -498,9 +497,7 @@ pub(super) struct RadioStorage<'a> {
 /// Borrow only radio-owned state and the unit's existing random stream.
 pub(super) fn storage(world: &mut World, id: ObjectId) -> Result<RadioStorage<'_>> {
     if world.btech.vehicles().contains_key(&id) {
-        let unit = Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.vehicles.get_mut(&id).unwrap();
         let pilot = unit.pilot();
         return Ok(RadioStorage {
             radio: &mut unit.radio,
@@ -509,7 +506,9 @@ pub(super) fn storage(world: &mut World, id: ObjectId) -> Result<RadioStorage<'_
             pilot,
         });
     }
-    let unit = Arc::make_mut(&mut world.btech.constructed)
+    let unit = world
+        .btech
+        .constructed
         .get_mut(&id)
         .context("Unit is not constructed")?;
     let pilot = unit.pilot();

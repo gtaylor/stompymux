@@ -142,11 +142,7 @@ impl Scripts {
         if name.starts_with("on_server_") {
             return self.call_event(t, name, ctx);
         }
-        let before = self.world.borrow().clone();
-        let checkpoint = self.effects.checkpoint();
-        if let Err(error) = self.call_event(t, name, ctx) {
-            *self.world.borrow_mut() = before;
-            self.effects.restore(checkpoint);
+        if let Err(error) = self.atomic(|_| self.call_event(t, name, ctx)) {
             crate::lua::configuration(&self.lua).log(
                 &[crate::logging::Category::Bugs],
                 "LUA",

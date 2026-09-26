@@ -1,7 +1,6 @@
 //! Pilot-selected unit preferences, persisted with the unit rather than the cockpit occupant.
 use crate::{ObjectId, World};
 use anyhow::Result;
-use std::sync::Arc;
 
 /// Set downhill cliff behavior on the current pilot's unit.
 pub fn set_auto_fall(
@@ -12,17 +11,11 @@ pub fn set_auto_fall(
 ) -> Result<()> {
     if world.btech.vehicles().contains_key(&id) {
         super::vehicle_power::controlled(world, id, pilot)?;
-        Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap()
-            .auto_fall = enabled;
+        world.btech.vehicles.get_mut(&id).unwrap().auto_fall = enabled;
         return Ok(());
     }
     preference_access(world, id, pilot)?;
-    Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap()
-        .auto_fall = enabled;
+    world.btech.constructed.get_mut(&id).unwrap().auto_fall = enabled;
     Ok(())
 }
 
@@ -118,14 +111,18 @@ pub fn set_friendly_fire_safety(
 ) -> Result<()> {
     if world.btech.vehicles().contains_key(&id) {
         super::vehicle_power::controlled(world, id, pilot)?;
-        Arc::make_mut(&mut world.btech.vehicles)
+        world
+            .btech
+            .vehicles
             .get_mut(&id)
             .unwrap()
             .friendly_fire_safety = enabled;
         return Ok(());
     }
     preference_access(world, id, pilot)?;
-    Arc::make_mut(&mut world.btech.constructed)
+    world
+        .btech
+        .constructed
         .get_mut(&id)
         .unwrap()
         .friendly_fire_safety = enabled;
@@ -195,12 +192,10 @@ fn friendly_fire_preference(enabled: bool) -> Preference {
 
 /// Select the shared mutable notice preferences after cockpit admission.
 fn notice_preferences(world: &mut World, id: ObjectId) -> (&mut bool, &mut bool) {
-    if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
         return (&mut unit.searchlight_warning, &mut unit.autocon_shutdown);
     }
-    let unit = Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .expect("admitted vehicle");
+    let unit = world.btech.vehicles.get_mut(&id).expect("admitted vehicle");
     (&mut unit.searchlight_warning, &mut unit.autocon_shutdown)
 }
 
@@ -246,12 +241,10 @@ fn notice_preference_access(world: &World, id: ObjectId, pilot: ObjectId) -> Res
 
 /// Borrow combat-warning preferences after shared cockpit admission.
 fn combat_preferences(world: &mut World, id: ObjectId) -> (&mut bool, &mut bool) {
-    if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
         return (&mut unit.no_armor_warning, &mut unit.no_ammunition_warning);
     }
-    let unit = Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .expect("admitted vehicle");
+    let unit = world.btech.vehicles.get_mut(&id).expect("admitted vehicle");
     (&mut unit.no_armor_warning, &mut unit.no_ammunition_warning)
 }
 

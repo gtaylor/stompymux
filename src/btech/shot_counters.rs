@@ -2,7 +2,6 @@
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Reference integer fields remain independent: administrative writes need not balance totals.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -27,10 +26,12 @@ pub(super) fn read(world: &World, id: ObjectId) -> Result<ShotCounters> {
 
 /// Borrow the owning storage only after the caller has validated a complete update.
 fn storage(world: &mut World, id: ObjectId) -> Result<&mut ShotCounters> {
-    if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
         return Ok(&mut unit.shot_counters);
     }
-    Ok(&mut Arc::make_mut(&mut world.btech.vehicles)
+    Ok(&mut world
+        .btech
+        .vehicles
         .get_mut(&id)
         .context("Unit is unavailable")?
         .shot_counters)

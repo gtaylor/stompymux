@@ -2,7 +2,6 @@
 use super::StoredBattleMap;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 impl StoredBattleMap {
     /// Delay in committed seconds between fire spreading events.
@@ -26,7 +25,7 @@ pub fn set_map_wind(world: &mut World, map: ObjectId, direction: i64, speed: i64
     );
     let record = world.btech.maps().get(&map).context("Map not found")?;
     ensure!(record.terrain_ready(), "Map terrain is unavailable");
-    let record = Arc::make_mut(&mut world.btech.maps).get_mut(&map).unwrap();
+    let record = world.btech.maps.get_mut(&map).unwrap();
     record.wind_direction = direction;
     record.wind_speed = speed;
     Ok(())

@@ -11,9 +11,7 @@ pub fn view_map_action(
     map: ObjectId,
     center: BattleHexCoordinate,
 ) -> Result<BattleTacticalMap> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(&before, actor),
             "Permission denied."
@@ -35,15 +33,10 @@ pub fn view_map_action(
         for line in report.text.lines() {
             super::notify_message(scripts, super::BattleMessageTarget::Player(actor), line)?;
         }
-        scripts.world().validate(config)?;
+        scripts.world().validate_action(config)?;
         scripts.effects.validate()?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// VIEW accepts two signed coordinates, then clamps the center through the shared viewport.

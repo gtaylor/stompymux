@@ -3,7 +3,7 @@ use super::*;
 use crate::{BattleHexCoordinate, BattlePosition, Config, HeartbeatHarness, ObjectId};
 use anyhow::{Result, ensure};
 use serde::Serialize;
-use std::{io::Write, path::Path, sync::Arc};
+use std::{io::Write, path::Path};
 
 /// Stable scenario identifiers, separate from established encounter defaults.
 pub const SCENARIOS: &[&str] = &[
@@ -298,10 +298,7 @@ pub async fn run(
                         crate::BattleMapAsset::parse(&terrain)?,
                     )?;
                     let dice = world.btech.maps()[&old_map].fire_dice.clone();
-                    Arc::make_mut(&mut world.btech.maps)
-                        .get_mut(&map)
-                        .unwrap()
-                        .fire_dice = dice;
+                    world.btech.maps.get_mut(&map).unwrap().fire_dice = dice;
                     let start = if name == "opposite_crossing" {
                         (34, 26)
                     } else if name == "intercept_move" {
@@ -377,8 +374,10 @@ pub async fn run(
                     })?;
                     controller.submit(vec![order], AutopilotSubmissionMode::Replace, None)?;
                     controller.resume(None)?;
-                    Arc::make_mut(&mut world.btech.controllers).insert(focal, controller);
-                    Arc::make_mut(&mut world.btech.controllers)
+                    world.btech.controllers.insert(focal, controller);
+                    world
+                        .btech
+                        .controllers
                         .insert(target, AutopilotController::new());
                     crate::persistence::save(&config.database(), &world).await?;
                     let mut cap = if name == "short_occlusions" {
@@ -482,9 +481,7 @@ pub async fn run(
                                 .collect(),
                             };
                             orders::validate_for_unit(&world, target, &order)?;
-                            let controller = Arc::make_mut(&mut world.btech.controllers)
-                                .get_mut(&target)
-                                .unwrap();
+                            let controller = world.btech.controllers.get_mut(&target).unwrap();
                             controller.submit(
                                 vec![order],
                                 AutopilotSubmissionMode::Replace,

@@ -6,7 +6,7 @@ use super::{
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, sync::Arc};
+use std::collections::BTreeMap;
 
 /// An acquired target as of its most recent contact update.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -145,14 +145,16 @@ pub(super) fn apply_contact(
         (true, false) => BattleContactTransition::Lost,
     };
     if contact.is_none() {
-        for station in Arc::make_mut(&mut world.btech.gunner_stations).values_mut() {
+        for station in world.btech.gunner_stations.values_mut() {
             if station.parent == observer && station.target == target {
                 station.set_target_selection(None);
             }
         }
     }
     let contacts = if world.btech.vehicles().contains_key(&observer) {
-        let unit = Arc::make_mut(&mut world.btech.vehicles)
+        let unit = world
+            .btech
+            .vehicles
             .get_mut(&observer)
             .expect("validated observer");
         if contact.is_none() && unit.target_lock().is_some_and(|lock| lock.target == target) {
@@ -160,7 +162,9 @@ pub(super) fn apply_contact(
         }
         &mut unit.contacts
     } else {
-        let unit = Arc::make_mut(&mut world.btech.constructed)
+        let unit = world
+            .btech
+            .constructed
             .get_mut(&observer)
             .expect("validated observer");
         if contact.is_none() && unit.target_lock().is_some_and(|lock| lock.target == target) {
@@ -210,14 +214,14 @@ pub(super) fn relocate_observations(world: &mut World, id: ObjectId) -> Vec<supe
 
 /// Share acquisition invalidation while allowing same-map edits to keep outgoing selections.
 fn invalidate_observations(state: &mut super::BtechState, id: ObjectId, preserve_selection: bool) {
-    for station in Arc::make_mut(&mut state.gunner_stations).values_mut() {
+    for station in state.gunner_stations.values_mut() {
         if (station.parent == id && !preserve_selection)
             || (station.parent != id && station.target == id)
         {
             station.set_target_selection(None);
         }
     }
-    for (observer, vehicle) in Arc::make_mut(&mut state.vehicles).iter_mut() {
+    for (observer, vehicle) in state.vehicles.iter_mut() {
         if *observer == id {
             vehicle.contacts.clear();
             if !preserve_selection {
@@ -230,7 +234,7 @@ fn invalidate_observations(state: &mut super::BtechState, id: ObjectId, preserve
             }
         }
     }
-    for (observer, unit) in Arc::make_mut(&mut state.constructed).iter_mut() {
+    for (observer, unit) in state.constructed.iter_mut() {
         if *observer == id {
             unit.contacts.clear();
             if !preserve_selection {
@@ -660,7 +664,6 @@ mod tests {
         BattleMapAsset, BattlePower, BattleUnitSignature, BattleUnitTemplate, Config, Kind,
         ObjectId, World, create_battle_map, place_battle_unit, set_battle_unit_signature,
     };
-    use std::sync::Arc;
 
     fn facts_fixture(blocked: bool) -> (World, ObjectId, ObjectId) {
         let config = Config::load("tests/fixtures/game").unwrap();
@@ -686,10 +689,7 @@ mod tests {
             .create(&mut world, id)
             .unwrap();
             place_battle_unit(&mut world, id, map, 0, y).unwrap();
-            Arc::make_mut(&mut world.btech.constructed)
-                .get_mut(&id)
-                .unwrap()
-                .power = BattlePower::Running;
+            world.btech.constructed.get_mut(&id).unwrap().power = BattlePower::Running;
         }
         set_battle_unit_signature(
             &mut world,
@@ -700,7 +700,9 @@ mod tests {
             },
         )
         .unwrap();
-        Arc::make_mut(&mut world.btech.constructed)
+        world
+            .btech
+            .constructed
             .get_mut(&observer)
             .unwrap()
             .contacts
@@ -732,9 +734,7 @@ mod tests {
     fn observation_lighting_context_matches_live_lights_and_invalidates_by_borrow() {
         let (mut world, observer, target) = facts_fixture(false);
         for step in 0..5 {
-            let unit = Arc::make_mut(&mut world.btech.constructed)
-                .get_mut(&observer)
-                .unwrap();
+            let unit = world.btech.constructed.get_mut(&observer).unwrap();
             unit.motion.as_mut().unwrap().heading = 180.0;
             unit.inferno_remaining = if step == 1 { 10 } else { 0 };
             unit.searchlight.on = step % 2 == 0;
@@ -774,19 +774,17 @@ mod tests {
                 .unwrap();
             place_battle_unit(&mut world, observer, map, 0, 0).unwrap();
             let contact = BattleContact { identified: true };
-            if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&observer) {
+            if let Some(unit) = world.btech.constructed.get_mut(&observer) {
                 unit.power = BattlePower::Running;
                 unit.contacts.insert(target, contact);
             } else {
-                let unit = Arc::make_mut(&mut world.btech.vehicles)
-                    .get_mut(&observer)
-                    .unwrap();
+                let unit = world.btech.vehicles.get_mut(&observer).unwrap();
                 unit.power = BattlePower::Running;
                 unit.contacts.insert(target, contact);
             }
             for light in 0..=2 {
                 for visibility in [0, 10, 60] {
-                    let map = Arc::make_mut(&mut world.btech.maps).get_mut(&map).unwrap();
+                    let map = world.btech.maps.get_mut(&map).unwrap();
                     map.light = light;
                     map.visibility = visibility;
                     let expected: Vec<_> = contact_facts(&world, observer, target)
@@ -807,42 +805,40 @@ mod tests {
             for step in 0..6 {
                 match step {
                     0 => {
-                        Arc::make_mut(&mut world.btech.constructed)
+                        world
+                            .btech
+                            .constructed
                             .get_mut(&target)
                             .unwrap()
                             .signature
                             .illuminated = true
                     }
                     1 => {
-                        Arc::make_mut(&mut world.btech.constructed)
+                        world
+                            .btech
+                            .constructed
                             .get_mut(&target)
                             .unwrap()
                             .visibility
                             .invisible = true
                     }
                     2 => {
-                        Arc::make_mut(&mut world.btech.constructed)
-                            .get_mut(&target)
-                            .unwrap()
-                            .power = BattlePower::Off;
+                        world.btech.constructed.get_mut(&target).unwrap().power = BattlePower::Off;
                         place_battle_unit(&mut world, target, map, 0, 1).unwrap();
-                        Arc::make_mut(&mut world.btech.constructed)
-                            .get_mut(&target)
-                            .unwrap()
-                            .power = BattlePower::Running;
+                        world.btech.constructed.get_mut(&target).unwrap().power =
+                            BattlePower::Running;
                     }
                     3 => {
-                        Arc::make_mut(&mut world.btech.constructed)
+                        world
+                            .btech
+                            .constructed
                             .get_mut(&target)
                             .unwrap()
                             .visibility
                             .invisible = false
                     }
                     4 => {
-                        Arc::make_mut(&mut world.btech.maps)
-                            .get_mut(&map)
-                            .unwrap()
-                            .light = 0;
+                        world.btech.maps.get_mut(&map).unwrap().light = 0;
                     }
                     _ => {
                         world
@@ -863,9 +859,7 @@ mod tests {
         }
         let (mut world, observer, target) = facts_fixture(true);
         assert!(acquired_contact_facts(&world, observer).unwrap().is_empty());
-        let unit = Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&observer)
-            .unwrap();
+        let unit = world.btech.constructed.get_mut(&observer).unwrap();
         unit.visibility.clairvoyant = true;
         unit.contacts.clear();
         assert!(contact_facts(&world, observer, target).unwrap().is_some());
@@ -885,7 +879,9 @@ mod tests {
         assert!(visible_contact(&world, observer, target).unwrap().is_none());
 
         let (mut world, observer, target) = facts_fixture(false);
-        Arc::make_mut(&mut world.btech.constructed)
+        world
+            .btech
+            .constructed
             .get_mut(&target)
             .unwrap()
             .visibility
@@ -894,12 +890,16 @@ mod tests {
         assert!(visible_contact(&world, observer, target).unwrap().is_none());
 
         let (mut world, observer, target) = facts_fixture(false);
-        Arc::make_mut(&mut world.btech.constructed)
+        world
+            .btech
+            .constructed
             .get_mut(&observer)
             .unwrap()
             .visibility
             .clairvoyant = true;
-        Arc::make_mut(&mut world.btech.constructed)
+        world
+            .btech
+            .constructed
             .get_mut(&target)
             .unwrap()
             .visibility

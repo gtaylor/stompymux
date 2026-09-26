@@ -20,13 +20,13 @@ pub fn advance_map_fire(world: &mut World) -> Result<()> {
     if !map_fire_pending(world) {
         return Ok(());
     }
-    let mut candidate = world.clone();
-    for map in Arc::make_mut(&mut candidate.btech.maps).values_mut() {
-        advance_fire(map)?;
-    }
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(())
+    world.attempt(|world| {
+        for map in world.btech.maps.values_mut() {
+            advance_fire(map)?;
+        }
+        world.btech.validate_action(world)?;
+        Ok(())
+    })
 }
 
 /// Step existing clocks before processing events, so new markers receive their full lifetime.

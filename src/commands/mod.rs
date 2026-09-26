@@ -69,19 +69,14 @@ pub fn execute(s: &Scripts, c: &Config, execution: ExecutionContext, line: &str)
         execution.origin != InputOrigin::Queued || execution.session.is_none(),
         "Queued commands cannot borrow an interactive session."
     );
-    let before = s.world.borrow().clone();
-    let effects = s.effects.checkpoint();
-    s.reset_command_callbacks();
-    let result = crate::lua::transactions::with_cause(&s.lua, execution.cause, || {
-        crate::lua::transactions::with_descriptor(&s.lua, execution.session, || {
-            run_inner(s, c, execution, line)
+    s.atomic(|_| {
+        s.reset_command_callbacks();
+        crate::lua::transactions::with_cause(&s.lua, execution.cause, || {
+            crate::lua::transactions::with_descriptor(&s.lua, execution.session, || {
+                run_inner(s, c, execution, line)
+            })
         })
-    });
-    if result.is_err() {
-        *s.world.borrow_mut() = before;
-        s.effects.restore(effects);
-    }
-    result
+    })
 }
 
 fn run_inner(s: &Scripts, c: &Config, execution: ExecutionContext, line: &str) -> Result<Action> {

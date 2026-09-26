@@ -2,8 +2,6 @@
 use super::*;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
-#[cfg(test)]
-use std::sync::Arc;
 
 /// An admitted conventional launch; its target-side preparation precedes defense and damage rolls.
 pub(super) struct AimedLaunch {
@@ -160,12 +158,12 @@ mod tests {
             BattleUnitTemplate::Mech(template) => {
                 let mut unit = BattleUnit::from_template(template).unwrap();
                 unit.power = power;
-                Arc::make_mut(&mut world.btech.constructed).insert(id, unit);
+                world.btech.constructed.insert(id, unit);
             }
             BattleUnitTemplate::Vehicle(template) => {
                 let mut unit = BattleVehicle::new(template).unwrap();
                 unit.power = power;
-                Arc::make_mut(&mut world.btech.vehicles).insert(id, unit);
+                world.btech.vehicles.insert(id, unit);
             }
         }
     }
@@ -276,10 +274,7 @@ mod tests {
                     let mut world = World::default();
                     target(&mut world, include_str!("../../game/mechs/JR7-D"), running);
                     let mut dice = BattleDice::seeded([byte; 32]);
-                    Arc::make_mut(&mut world.btech.constructed)
-                        .get_mut(&ObjectId(42))
-                        .unwrap()
-                        .dice = dice.clone();
+                    world.btech.constructed.get_mut(&ObjectId(42)).unwrap().dice = dice.clone();
                     let success = dice.d6() >= 3
                         && (section == BattleSection::CenterTorso
                             || (section == BattleSection::Head && !running));

@@ -2,7 +2,7 @@
 use crate::{CommandAction, CommandContext, CommandInput, CommandReport, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeSet, sync::Arc};
+use std::collections::BTreeSet;
 
 /// Four independent, ordered groups; damage and ammunition depletion do not change membership.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -64,15 +64,9 @@ pub fn edit_battle_tic(
         BattleTicEdit::Clear => next.0[group].clear(),
     }
     if world.btech.vehicles().contains_key(&id) {
-        Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap()
-            .tics = next;
+        world.btech.vehicles.get_mut(&id).unwrap().tics = next;
     } else {
-        Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap()
-            .tics = next;
+        world.btech.constructed.get_mut(&id).unwrap().tics = next;
     }
     Ok(())
 }
@@ -208,11 +202,9 @@ pub(super) fn fire_tics(
     groups: Vec<usize>,
     target: super::fire_target::FireTargetRequest<'_>,
 ) -> Result<Vec<BattleTicShot>> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         super::weapons_hold::admit(&before, id, pilot)?;
-        before.validate(config)?;
+        before.validate_action(config)?;
         ensure!(!groups.is_empty(), "Supply a TIC selection");
         let groups: BTreeSet<_> = groups.into_iter().collect();
         let selected = groups
@@ -279,12 +271,7 @@ pub(super) fn fire_tics(
             }
         }
         Ok(shots)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Shared batch stop condition; individual firing admission retains all other unit checks.

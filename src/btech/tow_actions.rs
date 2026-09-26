@@ -12,9 +12,7 @@ pub fn tow_action(
     pilot: ObjectId,
     target: Option<ObjectId>,
 ) -> Result<()> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         if let Some(target) = target {
             let report = super::pickup_transaction::pickup(
                 &mut scripts.world_mut(),
@@ -44,14 +42,9 @@ pub fn tow_action(
             }
         }
         super::evacuation::publish_new_casualties(scripts, config, &before)?;
-        scripts.world().validate(config)?;
+        scripts.world().validate_action(config)?;
         Ok(())
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Parse a map label or dbref and delegate both native commands to the shared action.

@@ -3,10 +3,7 @@ use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    sync::Arc,
-};
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Reserved firing cycle; attack effects still belong to the enclosing transaction.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -294,9 +291,7 @@ pub(super) fn reserve_prepared_weapon(
             draws
         };
     let heat = fire_mode.launch_heat(mount.weapon, gatling_damage, launched);
-    let vehicle = Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
+    let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
     vehicle.weapon_heat += f64::from(heat);
     vehicle.fired_recently |= launched;
     for draw in &ammunition {
@@ -341,9 +336,7 @@ pub(super) fn advance(world: &mut World) -> Vec<BattleNotice> {
         .collect();
     let mut notices = Vec::new();
     for id in ids {
-        let vehicle = Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap();
+        let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
         let loadout = vehicle.loadout().expect("validated vehicle loadout");
         vehicle.weapon_recycle.retain(|index, remaining| {
             *remaining = super::weapon_failure::remaining(

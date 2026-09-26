@@ -3,7 +3,6 @@ use super::{BattleBuildingScan, BattleChannelMessage, BattleHexCoordinate};
 use crate::{Config, ObjectId, Scripts, World};
 use anyhow::Result;
 use serde::Serialize;
-use std::sync::Arc;
 
 /// Mine recognition discloses presence only, never field type, strength, owner or trigger settings.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -68,12 +67,16 @@ fn scan_with_range(
     }
     let (_, range) = super::los::unit_hex_los(&candidate, observer, coordinate)?;
     let dice = if candidate.btech.vehicles().contains_key(&observer) {
-        &mut Arc::make_mut(&mut candidate.btech.vehicles)
+        &mut candidate
+            .btech
+            .vehicles
             .get_mut(&observer)
             .expect("checked vehicle scanner")
             .dice
     } else {
-        &mut Arc::make_mut(&mut candidate.btech.constructed)
+        &mut candidate
+            .btech
+            .constructed
             .get_mut(&observer)
             .expect("checked Mech scanner")
             .dice
@@ -114,9 +117,7 @@ pub(super) fn action_with_range(
     observer_range: bool,
 ) -> Result<BattleHexScan> {
     let source = super::combat_operator::for_owner(&scripts.world(), observer, pilot)?.source;
-    let checkpoint = scripts.world.borrow().clone();
-    let effects = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let now = crate::clock::wall_time();
         let building = super::scan_building::scan_with_range(
             &mut scripts.world.borrow_mut(),
@@ -144,10 +145,5 @@ pub(super) fn action_with_range(
         };
         super::notify_message(scripts, recipient, &mines.text)?;
         Ok(BattleHexScan { building, mines })
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = checkpoint;
-        scripts.effects.restore(effects);
-    }
-    result
+    })
 }

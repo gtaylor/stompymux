@@ -2,7 +2,6 @@
 use super::{BattleDice, BattleNotice, BattleVehicleSection, StoredBattleMap};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
-use std::sync::Arc;
 
 /// Armor penetration breaches directly; other eligible damage events check 10+ on 2d6.
 /// Special conditions consume this roll even when the map is not a vacuum.
@@ -38,9 +37,7 @@ pub(super) fn check_vehicle(
         .maps
         .get(&position.map)
         .context("Map not found")?;
-    let vehicle = Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
+    let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
     let (roll, breach) = trigger(map, &mut vehicle.dice, penetrating);
     if !breach
         || vehicle
@@ -101,9 +98,7 @@ pub(super) fn check_mech(
         .maps
         .get(&position.map)
         .context("Map not found")?;
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     let (_, breach) = trigger(map, &mut unit.dice, penetrating);
     if !breach || unit.sections()[&section].internal == 0 || unit.section_disabled(section) {
         return Ok(false);

@@ -2,7 +2,6 @@
 use crate::{ObjectId, World};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Saved building inclusion; follow-brief uses the caller's current display policy.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -69,9 +68,10 @@ pub fn set_contact_preferences(
     preferences: BattleContactPreferences,
 ) -> Result<()> {
     super::view_dimensions(world, player)?;
-    Arc::make_mut(&mut world.btech.player_preferences)
-        .entry(player)
-        .or_default()
+    world
+        .btech
+        .player_preferences
+        .get_or_default(player)
         .contacts = preferences;
     Ok(())
 }

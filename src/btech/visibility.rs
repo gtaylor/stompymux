@@ -2,7 +2,6 @@
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Independent scenario privileges shared by every supported chassis.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -40,11 +39,13 @@ pub fn set_battle_visibility(
             .is_some_and(|o| o.kind == Kind::Thing && !o.flags.contains(Flag::Going)),
         "Unit must be a live thing"
     );
-    if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         unit.visibility = visibility;
         return Ok(());
     }
-    Arc::make_mut(&mut world.btech.constructed)
+    world
+        .btech
+        .constructed
         .get_mut(&id)
         .context("Unit is not constructed")?
         .visibility = visibility;

@@ -44,21 +44,21 @@ pub fn resolve_vehicle_impact(
         .get(&id)
         .context("Vehicle is unavailable")?;
     ensure!(!vehicle.is_destroyed(), "Vehicle is destroyed");
-    let mut candidate = super::autopilot::diagnostics::candidate(world, true);
-    let result = resolve_followup_in_candidate(
-        &mut candidate,
-        id,
-        arc,
-        ImpactRequest {
-            amount,
-            armor_piercing,
-            rear: false,
-            attacker: None,
-        },
-        rules,
-    )?;
-    *world = candidate;
-    Ok(result)
+    world.attempt(|world| {
+        let result = resolve_followup_in_candidate(
+            world,
+            id,
+            arc,
+            ImpactRequest {
+                amount,
+                armor_piercing,
+                rear: false,
+                attacker: None,
+            },
+            rules,
+        )?;
+        Ok(result)
+    })
 }
 
 /// One admitted vehicle damage entry, independent of the attacker's chassis.
@@ -142,7 +142,9 @@ pub(super) fn resolve_directed_followup(
             .notices
             .extend(super::combat_safe::notice(attacker, id));
         // Safe material impacts still enter the damage stage and consume its diagnostic roll.
-        super::autopilot::diagnostics::make_mut(&mut world.btech.vehicles)
+        world
+            .btech
+            .vehicles
             .get_mut(&id)
             .unwrap()
             .dice
@@ -203,10 +205,7 @@ fn resolve_location_followup(
         broadcasts: Vec::new(),
     };
     if rules.criticals.combat_safe || vehicle.combat_safe {
-        super::autopilot::diagnostics::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap()
-            .dice = dice;
+        world.btech.vehicles.get_mut(&id).unwrap().dice = dice;
         return Ok(result);
     }
     let roll = *result.rolls.last().unwrap();
@@ -222,10 +221,7 @@ fn resolve_location_followup(
         } else {
             vehicle.definition().vtol_hit(arc, roll)?
         };
-        super::autopilot::diagnostics::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap()
-            .dice = dice;
+        world.btech.vehicles.get_mut(&id).unwrap().dice = dice;
         if let Some(effect) = selected.rotor {
             let rotor = super::rotor_damage::apply_in_world(world, id, effect)?;
             result.notices.push(BattleNotice {
@@ -271,9 +267,7 @@ fn resolve_location_followup(
     } else {
         vehicle.standard_hit(arc, roll, rules.hit.critical_mode, &mut dice)?
     };
-    let vehicle = super::autopilot::diagnostics::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
+    let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
     vehicle.dice = dice;
     let (notices, broadcasts) = super::vehicle_motive_effects::apply(
         vehicle,

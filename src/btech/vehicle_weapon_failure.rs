@@ -5,7 +5,7 @@ use super::{
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::{collections::BTreeMap, sync::Arc};
+use std::collections::BTreeMap;
 
 /// Applied critical failure and its initial recovery duration for caller-owned notification.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -83,9 +83,7 @@ pub fn jam_vehicle_weapon(
     let seconds = dice.die(61)? + 59;
     let weapon = loadout.weapons[index].weapon;
     let failure = BattleEquipmentFailure::for_weapon(weapon);
-    let vehicle = Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
+    let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
     vehicle.weapon_failures.insert(index, failure);
     vehicle.weapon_recycle.insert(index, seconds);
     vehicle.dice = dice;
@@ -143,9 +141,7 @@ pub fn jam_vehicle_main_weapon(
     let selected = vehicle
         .rank_main_weapon(&mut dice)?
         .map(|(index, weapon)| BattleVehicleMainWeaponJam { index, weapon });
-    let vehicle = Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
+    let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
     vehicle.dice = dice;
     if let Some(jam) = &selected {
         vehicle

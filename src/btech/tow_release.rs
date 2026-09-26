@@ -2,7 +2,6 @@
 use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// Release a tow atomically after the caller establishes authority over the carrier.
 /// The same operation serves operator dropoff and pickup of a target that carries a tow.
@@ -47,9 +46,7 @@ pub fn release_tow(world: &mut World, carrier: ObjectId) -> Result<Vec<BattleNot
         if falling {
             super::begin_vehicle_descent(&mut candidate, target)?;
         } else {
-            let unit = Arc::make_mut(&mut candidate.btech.vehicles)
-                .get_mut(&target)
-                .unwrap();
+            let unit = candidate.btech.vehicles.get_mut(&target).unwrap();
             unit.under_bridge = false;
             if let Some(flight) = &mut unit.vtol_flight {
                 *flight = BattleVtolFlight {
@@ -62,7 +59,9 @@ pub fn release_tow(world: &mut World, carrier: ObjectId) -> Result<Vec<BattleNot
             }
         }
     } else {
-        let unit = Arc::make_mut(&mut candidate.btech.constructed)
+        let unit = candidate
+            .btech
+            .constructed
             .get_mut(&target)
             .context("Tow target is unavailable")?;
         unit.ground_elevation = (!falling).then_some(f64::from(surface));
@@ -100,7 +99,7 @@ pub fn release_tow(world: &mut World, carrier: ObjectId) -> Result<Vec<BattleNot
             "falls through the sky.",
         ));
     }
-    candidate.btech.validate(&candidate)?;
+    candidate.btech.validate_action(&candidate)?;
     *world = candidate;
     Ok(notices)
 }

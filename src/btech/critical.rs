@@ -567,7 +567,9 @@ pub fn destroy_unit_critical(
         .get(&id)
         .context("Unit construction state is unavailable")?;
     unit.validate()?;
-    std::sync::Arc::make_mut(&mut world.btech.constructed)
+    world
+        .btech
+        .constructed
         .get_mut(&id)
         .unwrap()
         .destroy_critical(location)

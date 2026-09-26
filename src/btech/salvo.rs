@@ -260,19 +260,20 @@ pub(super) fn resolve_salvo_in_action(
     arc: BattleHitArc,
     rules: super::BattleFallRules,
 ) -> Result<BattleSalvoReport> {
-    resolve_salvo_with_effects(
-        world,
-        target,
-        (weapon, super::BattleAmmunitionMode::Normal),
-        HitGeometry::Fixed(arc),
-        rules.hit,
-        SalvoEffects::Character {
-            rules,
-            experience: None,
-        },
-        false,
-        super::shot_transaction::EffectMode::Atomic,
-    )
+    world.attempt(|world| {
+        resolve_salvo_with_effects(
+            world,
+            target,
+            (weapon, super::BattleAmmunitionMode::Normal),
+            HitGeometry::Fixed(arc),
+            rules.hit,
+            SalvoEffects::Character {
+                rules,
+                experience: None,
+            },
+            false,
+        )
+    })
 }
 
 /// Resolve a successful conventional weapon hit as one world mutation, including all groups and dice.
@@ -286,16 +287,17 @@ pub fn resolve_salvo(
     arc: BattleHitArc,
     rules: BattleHitRules,
 ) -> Result<BattleSalvoReport> {
-    resolve_salvo_with_effects(
-        world,
-        target,
-        (weapon, super::BattleAmmunitionMode::Normal),
-        HitGeometry::Fixed(arc),
-        rules,
-        SalvoEffects::Material,
-        false,
-        super::shot_transaction::EffectMode::Atomic,
-    )
+    world.attempt(|world| {
+        resolve_salvo_with_effects(
+            world,
+            target,
+            (weapon, super::BattleAmmunitionMode::Normal),
+            HitGeometry::Fixed(arc),
+            rules,
+            SalvoEffects::Material,
+            false,
+        )
+    })
 }
 
 /// Resolve tactical injuries and stun between damage groups, stopping on structural or pilot loss.
@@ -307,16 +309,17 @@ pub fn resolve_tactical_salvo(
     arc: BattleHitArc,
     rules: super::BattleFallRules,
 ) -> Result<BattleSalvoReport> {
-    resolve_salvo_with_effects(
-        world,
-        target,
-        (weapon, super::BattleAmmunitionMode::Normal),
-        HitGeometry::Fixed(arc),
-        rules.hit,
-        SalvoEffects::Tactical(rules),
-        false,
-        super::shot_transaction::EffectMode::Atomic,
-    )
+    world.attempt(|world| {
+        resolve_salvo_with_effects(
+            world,
+            target,
+            (weapon, super::BattleAmmunitionMode::Normal),
+            HitGeometry::Fixed(arc),
+            rules.hit,
+            SalvoEffects::Tactical(rules),
+            false,
+        )
+    })
 }
 
 /// Damage policy and pre-impact XP facts supplied by the enclosing direct shot.
@@ -342,35 +345,16 @@ pub(super) fn resolve_salvo_from_shot(
     weapon: impl Into<SalvoWeapon>,
     damage: ShotDamage<'_>,
 ) -> Result<BattleSalvoReport> {
-    resolve_salvo_from_shot_mode(
-        world,
-        shooter,
-        target,
-        weapon,
-        damage,
-        super::shot_transaction::EffectMode::Atomic,
-    )
+    world.attempt(|world| resolve_salvo_in_candidate(world, shooter, target, weapon, damage))
 }
 
 /// Apply directly to an enclosing shot; every failure aborts that shot.
 pub(super) fn resolve_salvo_in_candidate(
-    world: &mut super::shot_transaction::ShotCandidate,
-    shooter: ObjectId,
-    target: ObjectId,
-    weapon: impl Into<SalvoWeapon>,
-    damage: ShotDamage<'_>,
-) -> Result<BattleSalvoReport> {
-    let mode = world.mode();
-    resolve_salvo_from_shot_mode(world, shooter, target, weapon, damage, mode)
-}
-
-fn resolve_salvo_from_shot_mode(
     world: &mut World,
     shooter: ObjectId,
     target: ObjectId,
     weapon: impl Into<SalvoWeapon>,
     damage: ShotDamage<'_>,
-    mode: super::shot_transaction::EffectMode,
 ) -> Result<BattleSalvoReport> {
     let weapon = weapon.into();
     let effects = if damage.character {
@@ -401,7 +385,6 @@ fn resolve_salvo_from_shot_mode(
         damage.rules.hit,
         effects,
         damage.glancing,
-        mode,
     )
 }
 
@@ -490,9 +473,7 @@ fn resolve_salvo_with_effects(
     rules: BattleHitRules,
     effects: SalvoEffects<'_>,
     glancing: bool,
-    mode: super::shot_transaction::EffectMode,
 ) -> Result<BattleSalvoReport> {
-    let transaction_mode = mode;
     let (weapon, mode) = weapon;
     let character = matches!(effects, SalvoEffects::Character { .. });
     let tactical_rules = match effects {
@@ -549,20 +530,17 @@ fn resolve_salvo_with_effects(
             )
         }
     };
-    let mut candidate = super::shot_transaction::EffectCandidate::new(world, transaction_mode);
     let initial_woods = if let HitGeometry::Direct {
         shooter,
         woods_damage: true,
         ..
     } = geometry
     {
-        super::woods_absorption::begin_pellets(&mut candidate, shooter, target, weapon, mode)?
+        super::woods_absorption::begin_pellets(world, shooter, target, weapon, mode)?
     } else {
         None
     };
-    let unit = super::autopilot::diagnostics::make_mut(&mut candidate.btech.constructed)
-        .get_mut(&target)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&target).unwrap();
     let fire_mode = match geometry {
         HitGeometry::Direct { fire_mode, .. } => fire_mode,
         HitGeometry::Fixed(_) => super::BattleFireMode::Normal,
@@ -631,13 +609,8 @@ fn resolve_salvo_with_effects(
         report.missiles_before_defense = Some(hits as u8);
         if mode == super::BattleAmmunitionMode::Inferno {
             if surviving > 0 {
-                report.inferno = Some(super::resolve_inferno_hit(
-                    &mut candidate,
-                    target,
-                    surviving,
-                )?);
+                report.inferno = Some(super::resolve_inferno_hit(world, target, surviving)?);
             }
-            candidate.commit();
             return Ok(report);
         }
     }
@@ -649,7 +622,7 @@ fn resolve_salvo_with_effects(
         } = geometry
     {
         report.woods = super::woods_absorption::resolve_projectiles(
-            &mut candidate,
+            world,
             shooter,
             target,
             weapon,
@@ -659,7 +632,7 @@ fn resolve_salvo_with_effects(
     }
     if shell_woods && let HitGeometry::Direct { shooter, .. } = geometry {
         report.woods = super::woods_absorption::resolve_shells(
-            &mut candidate,
+            world,
             shooter,
             target,
             weapon,
@@ -677,18 +650,18 @@ fn resolve_salvo_with_effects(
         Some(super::impact::WeaponEffect::Conventional)
     };
     for damage in damage_groups {
-        let unit = &candidate.btech.constructed_units()[&target];
+        let unit = &world.btech.constructed_units()[&target];
         if unit.is_destroyed() {
             break;
         }
-        let (arc, partial_cover) = geometry.current(&candidate, target)?;
+        let (arc, partial_cover) = geometry.current(world, target)?;
         let preferred = match geometry {
             HitGeometry::Direct {
                 aimed: Some(aimed), ..
-            } => aimed.preferred(&mut candidate, target, arc, partial_cover)?,
+            } => aimed.preferred(world, target, arc, partial_cover)?,
             _ => None,
         };
-        let unit = &candidate.btech.constructed_units()[&target];
+        let unit = &world.btech.constructed_units()[&target];
         let mut dice = unit.dice.clone();
         let hit = if let Some(super::BattleUnitSection::Mech(section)) = preferred {
             BattleHit {
@@ -721,16 +694,13 @@ fn resolve_salvo_with_effects(
             let roll = dice.generic_roll();
             rules.resolve(unit, arc, roll, &mut dice)?
         };
-        super::autopilot::diagnostics::make_mut(&mut candidate.btech.constructed)
-            .get_mut(&target)
-            .unwrap()
-            .dice = dice;
+        world.btech.constructed.get_mut(&target).unwrap().dice = dice;
         let experience = if let SalvoEffects::Character {
             experience: Some(request),
             ..
         } = effects
         {
-            request.award(&mut candidate, damage)?
+            request.award(world, damage)?
         } else {
             None
         };
@@ -739,11 +709,9 @@ fn resolve_salvo_with_effects(
             ..
         } = effects
         {
-            report.experience_messages.extend(request.messages(
-                &candidate,
-                damage,
-                experience.as_ref(),
-            ));
+            report
+                .experience_messages
+                .extend(request.messages(world, damage, experience.as_ref()));
         }
         let (impact, pilot_injuries, notices, pilot_notices, balance, flooding) =
             if let Some(rules) = tactical_rules {
@@ -752,7 +720,7 @@ fn resolve_salvo_with_effects(
                     HitGeometry::Fixed(_) => None,
                 };
                 let result = super::impact::resolve_attack_in_candidate(
-                    &mut candidate,
+                    world,
                     target,
                     hit,
                     damage,
@@ -775,7 +743,7 @@ fn resolve_salvo_with_effects(
             } else {
                 (
                     super::impact::resolve_in_candidate(
-                        &mut candidate,
+                        world,
                         target,
                         hit,
                         damage,
@@ -802,7 +770,6 @@ fn resolve_salvo_with_effects(
             flooding,
         });
     }
-    candidate.commit();
     Ok(report)
 }
 

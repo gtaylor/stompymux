@@ -3,7 +3,6 @@ use super::*;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Anatomical preference retains its selected target class across subsequent lock changes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -119,10 +118,12 @@ pub fn set_aimed_section(
     } else {
         (None, "Targetting disabled.".into())
     };
-    if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         unit.aimed_section = selection;
     } else {
-        Arc::make_mut(&mut world.btech.constructed)
+        world
+            .btech
+            .constructed
             .get_mut(&id)
             .context("Unit construction state is unavailable")?
             .aimed_section = selection;
@@ -194,20 +195,13 @@ pub(crate) fn action(
     pilot: ObjectId,
     section: Option<&str>,
 ) -> Result<Option<BattleAimSelection>> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let notice = set_aimed_section(&mut scripts.world.borrow_mut(), id, pilot, section)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         let selected = aimed_section(&scripts.world.borrow(), id)?;
         super::notify_unit(scripts, notice)?;
         Ok(selected)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Cockpit authority precedes argument validation, matching ordinary targeting controls.

@@ -2,7 +2,6 @@
 use super::{BattleNotice, BattlePower, BattleUnit};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 impl BattleUnit {
     /// Remaining committed seconds of cockpit stun; zero allows weapon operation.
@@ -27,9 +26,7 @@ pub fn stun_unit(world: &mut World, id: ObjectId) -> Result<BattleNotice> {
         .context("Unit construction state is unavailable")?;
     ensure!(!unit.is_destroyed(), "Unit is already destroyed");
     let walking = unit.movement_maximum_speed() * 2.0 / 3.0;
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     unit.stun_remaining = 10;
     if let Some(motion) = &mut unit.motion
         && motion.speed > walking
@@ -60,9 +57,7 @@ pub fn advance_stun(world: &mut World) -> Vec<BattleNotice> {
         .collect();
     let mut notices = Vec::new();
     for id in ids {
-        let unit = Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
         unit.stun_remaining -= 1;
         if unit.stun_remaining == 0 && unit.power() == BattlePower::Running && !unit.is_destroyed()
         {

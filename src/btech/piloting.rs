@@ -2,7 +2,6 @@
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// All control checks share power, unit-owned recovery and assigned-pilot recovery gates.
 /// Callers retain their distinct automatic-success rules and destruction policy.
@@ -260,7 +259,9 @@ fn roll_check(
         None
     } else {
         Some(
-            Arc::make_mut(&mut world.btech.constructed)
+            world
+                .btech
+                .constructed
                 .get_mut(&unit)
                 .unwrap()
                 .dice
@@ -414,7 +415,7 @@ mod tests {
         });
         unit.map_slot = Some(0);
         unit.power = super::super::BattlePower::Running;
-        Arc::make_mut(&mut world.btech.constructed).insert(id, unit);
+        world.btech.constructed.insert(id, unit);
         let before = serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap();
         let check = roll_check(&mut world, id, 20, false, true).unwrap();
         assert!(check.success);
@@ -432,10 +433,7 @@ mod tests {
             serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap(),
             before
         );
-        Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap()
-            .power = super::super::BattlePower::Off;
+        world.btech.constructed.get_mut(&id).unwrap().power = super::super::BattlePower::Off;
         let check = roll_check(&mut world, id, 0, false, true).unwrap();
         assert!(!check.success);
         assert_eq!(check.roll, None);
@@ -447,10 +445,7 @@ mod tests {
                 .total(),
             0
         );
-        Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap()
-            .power = super::super::BattlePower::Running;
+        world.btech.constructed.get_mut(&id).unwrap().power = super::super::BattlePower::Running;
         let mut expected = world.btech.constructed_units()[&id].dice.clone();
         let expected_roll = expected.two_d6();
         let check = roll_check(&mut world, id, 0, false, false).unwrap();

@@ -11,9 +11,7 @@ pub fn list_map_action(
     map: ObjectId,
     objects: bool,
 ) -> Result<()> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(&before, actor),
             "Permission denied."
@@ -76,15 +74,10 @@ pub fn list_map_action(
                 notify(&format!("{span} is first free slot, according to db."))?;
             }
         }
-        scripts.world().validate(config)?;
+        scripts.world().validate_action(config)?;
         scripts.effects.validate()?;
         Ok(())
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Project each typed record into the reference's object, byte, short and scalar columns.

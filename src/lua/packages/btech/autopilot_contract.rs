@@ -7,7 +7,6 @@ use crate::btech::autopilot::{
 };
 use crate::{ObjectId, SharedWorld, btech::BattlePosition};
 use mlua::{Lua, LuaSerdeExt, MultiValue, Table, Value};
-use std::sync::Arc;
 
 fn arg(args: &MultiValue, index: usize) -> Value {
     args.get(index).cloned().unwrap_or(Value::Nil)
@@ -62,7 +61,7 @@ fn with_controller<T>(
 ) -> mlua::Result<T> {
     let mut world = shared.borrow_mut();
     let time = world.btech.simulation_time();
-    let controllers = Arc::make_mut(&mut world.btech.controllers);
+    let controllers = &mut world.btech.controllers;
     let controller = controllers.get_mut(&id).ok_or_else(|| {
         error::failure(
             "mux.object.unavailable",
@@ -256,7 +255,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
                 controller.config().clone()
             };
             let mut world = world.borrow_mut();
-            let controllers = Arc::make_mut(&mut world.btech.controllers);
+            let controllers = &mut world.btech.controllers;
             if controllers.contains_key(&id) {
                 return Err(bad("Autopilot already attached"));
             }
@@ -283,10 +282,12 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
                 return Err(bad("No autopilot is attached"));
             }
             let _ = crate::btech::set_speed_autopilot(&mut world, id, 0.0);
-            Arc::make_mut(&mut world.btech.controllers)
+            world
+                .btech
+                .controllers
                 .remove(&id)
                 .expect("controller checked above");
-            Arc::make_mut(&mut world.btech.autopilot_plans).remove(&id);
+            world.btech.autopilot_plans.remove(&id);
             Ok(())
         })?,
     )?;
@@ -352,7 +353,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
                     &serde_json::json!({"ids": ids, "revision": controller.revision()}),
                 )
             })?;
-            Arc::make_mut(&mut world.borrow_mut().btech.autopilot_plans).remove(&id);
+            world.borrow_mut().btech.autopilot_plans.remove(&id);
             let empty = world.borrow().btech.controllers()[&id].order_count() == 0;
             if empty {
                 let _ = crate::btech::set_speed_autopilot(&mut world.borrow_mut(), id, 0.0);
@@ -381,7 +382,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
                     .map_err(mlua::Error::external)
             })?;
             if canceled {
-                Arc::make_mut(&mut world.borrow_mut().btech.autopilot_plans).remove(&id);
+                world.borrow_mut().btech.autopilot_plans.remove(&id);
                 let empty = world.borrow().btech.controllers()[&id].order_count() == 0;
                 if empty {
                     let _ = crate::btech::set_speed_autopilot(&mut world.borrow_mut(), id, 0.0);
@@ -416,7 +417,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
                     }
                     .map_err(mlua::Error::external)
                 })?;
-                Arc::make_mut(&mut world.borrow_mut().btech.autopilot_plans).remove(&id);
+                world.borrow_mut().btech.autopilot_plans.remove(&id);
                 if !resume {
                     let _ = crate::btech::set_speed_autopilot(&mut world.borrow_mut(), id, 0.0);
                 }

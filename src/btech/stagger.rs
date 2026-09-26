@@ -5,7 +5,6 @@ use super::{
 use crate::{Flag, ObjectId, World};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Traditional per-turn checks or the configured rolling sixty-second damage window.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -194,218 +193,216 @@ fn advance_stagger_inner(
     rules: BattleStaggerRules,
     character: bool,
 ) -> Result<Vec<BattleStaggerReport>> {
-    let mut candidate = world.clone();
-    let ids: Vec<_> = candidate
-        .btech
-        .constructed_units()
-        .iter()
-        .filter(|(id, unit)| {
-            unit.stagger_active(rules.mode)
-                && candidate.objects.get(id).is_some_and(|object| {
-                    !object.flags.contains(Flag::Going)
-                        && (character || !object.flags.contains(Flag::InCharacter))
-                })
-        })
-        .map(|(&id, _)| id)
-        .collect();
-    let mut reports = Vec::new();
-    for id in ids {
-        let unit = &candidate.btech.constructed_units()[&id];
-        unit.validate()?;
-        let conscious_off = unit.power() != BattlePower::Running
-            && unit
-                .pilot()
-                .is_none_or(|pilot| !candidate.btech.unconscious(pilot));
-        let prone = unit.posture() == BattlePosture::Prone;
-        let airborne = unit.airborne();
-        let tons = unit.definition().tons;
-        let unit = Arc::make_mut(&mut candidate.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
-        let history = &mut unit.stagger;
-        for hit in &mut history.hits {
-            hit.remaining -= 1;
-        }
-        history.hits.retain(|hit| hit.remaining > 0);
-        let level = if rules.mode == BattleStaggerMode::Traditional {
-            if conscious_off {
-                continue;
+    world.attempt(|world| {
+        let ids: Vec<_> = world
+            .btech
+            .constructed_units()
+            .iter()
+            .filter(|(id, unit)| {
+                unit.stagger_active(rules.mode)
+                    && world.objects.get(id).is_some_and(|object| {
+                        !object.flags.contains(Flag::Going)
+                            && (character || !object.flags.contains(Flag::InCharacter))
+                    })
+            })
+            .map(|(&id, _)| id)
+            .collect();
+        let mut reports = Vec::new();
+        for id in ids {
+            let unit = &world.btech.constructed_units()[&id];
+            unit.validate()?;
+            let conscious_off = unit.power() != BattlePower::Running
+                && unit
+                    .pilot()
+                    .is_none_or(|pilot| !world.btech.unconscious(pilot));
+            let prone = unit.posture() == BattlePosture::Prone;
+            let airborne = unit.airborne();
+            let tons = unit.definition().tons;
+            let unit = world.btech.constructed.get_mut(&id).unwrap();
+            let history = &mut unit.stagger;
+            for hit in &mut history.hits {
+                hit.remaining -= 1;
             }
-            history.phase = (history.phase + 1) % 30;
-            if history.turn_damage >= 20
-                && history
-                    .checked_phase
-                    .is_none_or(|phase| phase == history.phase)
-            {
-                history.turn_damage = 0;
-                history.checked_phase = Some(history.phase);
-                if prone || airborne {
+            history.hits.retain(|hit| hit.remaining > 0);
+            let level = if rules.mode == BattleStaggerMode::Traditional {
+                if conscious_off {
                     continue;
                 }
-                1
-            } else {
-                if history.checked_phase == Some(history.phase)
-                    || (history.checked_phase.is_none() && history.phase == 0)
+                history.phase = (history.phase + 1) % 30;
+                if history.turn_damage >= 20
+                    && history
+                        .checked_phase
+                        .is_none_or(|phase| phase == history.phase)
                 {
                     history.turn_damage = 0;
-                    history.checked_phase = None;
-                }
-                continue;
-            }
-        } else {
-            history.turn_damage = 0;
-            history.checked_phase = None;
-            history.elapsed = history.elapsed.saturating_add(1);
-            if history.elapsed < rules.interval.max(1) {
-                continue;
-            }
-            history.elapsed = 0;
-            let fresh: u32 = history
-                .hits
-                .iter()
-                .filter(|hit| !hit.counted)
-                .map(|hit| u32::from(hit.damage))
-                .sum();
-            if fresh < 20 {
-                continue;
-            }
-            let counted: u32 = history
-                .hits
-                .iter()
-                .filter(|hit| hit.counted)
-                .map(|hit| u32::from(hit.damage))
-                .sum();
-            let mut remaining = fresh / 20 * 20;
-            for hit in &mut history.hits {
-                if remaining == 0 {
-                    break;
-                }
-                if hit.counted {
+                    history.checked_phase = Some(history.phase);
+                    if prone || airborne {
+                        continue;
+                    }
+                    1
+                } else {
+                    if history.checked_phase == Some(history.phase)
+                        || (history.checked_phase.is_none() && history.phase == 0)
+                    {
+                        history.turn_damage = 0;
+                        history.checked_phase = None;
+                    }
                     continue;
                 }
-                remaining = remaining.saturating_sub(u32::from(hit.damage));
-                hit.counted = true;
-            }
-            if rules.mode == BattleStaggerMode::Consume {
-                history.hits.retain(|hit| !hit.counted);
-                fresh / 20
             } else {
-                (fresh + counted) / 20
-            }
-        };
-        let tonnage = i64::from(tonnage_modifier(tons));
-        let modifier = if candidate.btech.constructed_units()[&id].power() != BattlePower::Running {
-            999
-        } else if rules.mode == BattleStaggerMode::Traditional {
-            1
-        } else {
-            i64::from(level) - 1 + if rules.tonnage { tonnage } else { 0 }
-        };
-        let mut notices = Vec::new();
-        if rules.mode != BattleStaggerMode::Traditional {
-            let (own, observed) = match level {
-                1 => (
-                    "The damage causes you to stagger a little.",
-                    "stumbles slightly!",
-                ),
-                2 => (
-                    "The damage causes you to stagger even more!",
-                    "starts to stagger from the damage!",
-                ),
-                _ => (
-                    "The damage causes you to stagger violently while attempting to keep your footing!",
-                    "staggers back and forth attempting to keep its footing!",
-                ),
-            };
-            notices.push(super::BattleNotice {
-                unit: id,
-                text: own.to_owned(),
-            });
-            notices.extend(super::broadcast::observer_notices(&candidate, id, observed));
-        }
-        notices.push(super::BattleNotice {
-            unit: id,
-            text: "You stagger from the damage!".to_owned(),
-        });
-        let mut check = super::roll_piloting(
-            &mut candidate,
-            id,
-            modifier.clamp(i64::from(i16::MIN), i64::from(i16::MAX)) as i16,
-            rules.extended_piloting,
-        )?;
-        let experience_messages = if character {
-            super::piloting::award_control_check(
-                &mut candidate,
-                id,
-                &mut check,
-                rules.extended_piloting,
-            )?
-            .into_iter()
-            .collect()
-        } else {
-            Vec::new()
-        };
-        let mut pilot_notices = Vec::new();
-        let check_notice_index = notices.len();
-        super::piloting::capture_feedback(
-            id,
-            candidate.btech.constructed_units()[&id].pilot(),
-            &check,
-            &mut notices,
-            &mut pilot_notices,
-        );
-        let toughness = candidate.btech.constructed_units()[&id]
-            .pilot()
-            .and_then(|pilot| candidate.btech.character_values().get(&pilot))
-            .is_some_and(|values| super::advantages::enabled(values, "Toughness"));
-        let fall = if check.success {
-            None
-        } else {
-            notices.push(super::BattleNotice {
-                unit: id,
-                text: "You fall over from all the damage!".to_owned(),
-            });
-            notices.extend(super::broadcast::observer_notices(
-                &candidate,
-                id,
-                if rules.mode == BattleStaggerMode::Traditional {
-                    "falls down, staggered by the damage!"
+                history.turn_damage = 0;
+                history.checked_phase = None;
+                history.elapsed = history.elapsed.saturating_add(1);
+                if history.elapsed < rules.interval.max(1) {
+                    continue;
+                }
+                history.elapsed = 0;
+                let fresh: u32 = history
+                    .hits
+                    .iter()
+                    .filter(|hit| !hit.counted)
+                    .map(|hit| u32::from(hit.damage))
+                    .sum();
+                if fresh < 20 {
+                    continue;
+                }
+                let counted: u32 = history
+                    .hits
+                    .iter()
+                    .filter(|hit| hit.counted)
+                    .map(|hit| u32::from(hit.damage))
+                    .sum();
+                let mut remaining = fresh / 20 * 20;
+                for hit in &mut history.hits {
+                    if remaining == 0 {
+                        break;
+                    }
+                    if hit.counted {
+                        continue;
+                    }
+                    remaining = remaining.saturating_sub(u32::from(hit.damage));
+                    hit.counted = true;
+                }
+                if rules.mode == BattleStaggerMode::Consume {
+                    history.hits.retain(|hit| !hit.counted);
+                    fresh / 20
                 } else {
-                    "tumbles over, staggered by the damage!"
-                },
-            ));
-            let resolve = if character && candidate.objects[&id].flags.contains(Flag::InCharacter) {
-                super::fall::resolve_character_fall
-            } else {
-                super::resolve_fall
+                    (fresh + counted) / 20
+                }
             };
-            let fall = resolve(
-                &mut candidate,
+            let tonnage = i64::from(tonnage_modifier(tons));
+            let modifier = if world.btech.constructed_units()[&id].power() != BattlePower::Running {
+                999
+            } else if rules.mode == BattleStaggerMode::Traditional {
+                1
+            } else {
+                i64::from(level) - 1 + if rules.tonnage { tonnage } else { 0 }
+            };
+            let mut notices = Vec::new();
+            if rules.mode != BattleStaggerMode::Traditional {
+                let (own, observed) = match level {
+                    1 => (
+                        "The damage causes you to stagger a little.",
+                        "stumbles slightly!",
+                    ),
+                    2 => (
+                        "The damage causes you to stagger even more!",
+                        "starts to stagger from the damage!",
+                    ),
+                    _ => (
+                        "The damage causes you to stagger violently while attempting to keep your footing!",
+                        "staggers back and forth attempting to keep its footing!",
+                    ),
+                };
+                notices.push(super::BattleNotice {
+                    unit: id,
+                    text: own.to_owned(),
+                });
+                notices.extend(super::broadcast::observer_notices(world, id, observed));
+            }
+            notices.push(super::BattleNotice {
+                unit: id,
+                text: "You stagger from the damage!".to_owned(),
+            });
+            let mut check = super::roll_piloting(
+                world,
                 id,
-                1,
-                BattleFallRules {
-                    vehicle_impact: rules.vehicle_impact,
-                    stacking: crate::BattleStackingRules::STANDARD,
-                    hit: rules.hit,
-                    extended_piloting: rules.extended_piloting,
-                    stagger: rules.mode,
-                    toughness,
-                },
+                modifier.clamp(i64::from(i16::MIN), i64::from(i16::MAX)) as i16,
+                rules.extended_piloting,
             )?;
-            fall.append_notices(id, &mut notices, &mut pilot_notices);
-            Some(fall)
-        };
-        reports.push(BattleStaggerReport {
-            experience_messages,
-            check_notice_index,
-            unit: id,
-            level,
-            check,
-            fall,
-            notices,
-            pilot_notices,
-        });
-    }
-    *world = candidate;
-    Ok(reports)
+            let experience_messages = if character {
+                super::piloting::award_control_check(
+                    world,
+                    id,
+                    &mut check,
+                    rules.extended_piloting,
+                )?
+                .into_iter()
+                .collect()
+            } else {
+                Vec::new()
+            };
+            let mut pilot_notices = Vec::new();
+            let check_notice_index = notices.len();
+            super::piloting::capture_feedback(
+                id,
+                world.btech.constructed_units()[&id].pilot(),
+                &check,
+                &mut notices,
+                &mut pilot_notices,
+            );
+            let toughness = world.btech.constructed_units()[&id]
+                .pilot()
+                .and_then(|pilot| world.btech.character_values().get(&pilot))
+                .is_some_and(|values| super::advantages::enabled(values, "Toughness"));
+            let fall = if check.success {
+                None
+            } else {
+                notices.push(super::BattleNotice {
+                    unit: id,
+                    text: "You fall over from all the damage!".to_owned(),
+                });
+                notices.extend(super::broadcast::observer_notices(
+                    world,
+                    id,
+                    if rules.mode == BattleStaggerMode::Traditional {
+                        "falls down, staggered by the damage!"
+                    } else {
+                        "tumbles over, staggered by the damage!"
+                    },
+                ));
+                let resolve = if character && world.objects[&id].flags.contains(Flag::InCharacter) {
+                    super::fall::resolve_character_fall
+                } else {
+                    super::resolve_fall
+                };
+                let fall = resolve(
+                    world,
+                    id,
+                    1,
+                    BattleFallRules {
+                        vehicle_impact: rules.vehicle_impact,
+                        stacking: crate::BattleStackingRules::STANDARD,
+                        hit: rules.hit,
+                        extended_piloting: rules.extended_piloting,
+                        stagger: rules.mode,
+                        toughness,
+                    },
+                )?;
+                fall.append_notices(id, &mut notices, &mut pilot_notices);
+                Some(fall)
+            };
+            reports.push(BattleStaggerReport {
+                experience_messages,
+                check_notice_index,
+                unit: id,
+                level,
+                check,
+                fall,
+                notices,
+                pilot_notices,
+            });
+        }
+        Ok(reports)
+    })
 }

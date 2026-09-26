@@ -2,7 +2,6 @@
 use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Result, ensure};
-use std::sync::Arc;
 
 /// Water avoidance stops movement; success also restores the previous position.
 pub(super) struct WaterEntry {
@@ -24,7 +23,9 @@ pub(super) fn flood(world: &mut World, id: ObjectId, character: bool) -> Result<
         character || !world.objects[&id].flags.contains(Flag::InCharacter),
         "Character vehicle flooding requires a host movement transaction"
     );
-    Arc::make_mut(&mut world.btech.vehicles)
+    world
+        .btech
+        .vehicles
         .get_mut(&id)
         .unwrap()
         .destroy_by_flooding();

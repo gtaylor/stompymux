@@ -4,7 +4,6 @@ use anyhow::{Context, Result, ensure};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Explicit algorithm tag prevents a future generator change from reinterpreting saved state.
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
@@ -135,16 +134,16 @@ pub fn roll_unit_dice(world: &mut World, id: ObjectId, count: u8) -> Result<Vec<
         "Dice count must be between 1 and 20"
     );
     if world.btech.vehicles().contains_key(&id) {
-        let vehicle = Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .expect("checked vehicle");
+        let vehicle = world.btech.vehicles.get_mut(&id).expect("checked vehicle");
         return Ok((0..count).map(|_| vehicle.dice.d6()).collect());
     }
     ensure!(
         world.btech.constructed_units().contains_key(&id),
         "Unit construction state is unavailable"
     );
-    let unit = Arc::make_mut(&mut world.btech.constructed)
+    let unit = world
+        .btech
+        .constructed
         .get_mut(&id)
         .context("Unit construction state is unavailable")?;
     Ok((0..count).map(|_| unit.dice.d6()).collect())
@@ -153,12 +152,11 @@ pub fn roll_unit_dice(world: &mut World, id: ObjectId, count: u8) -> Result<Vec<
 /// Borrow the owning unit's stream inside an already validated candidate transaction.
 pub(super) fn unit_dice_mut(world: &mut World, id: ObjectId) -> Result<&mut BattleDice> {
     if world.btech.vehicles().contains_key(&id) {
-        return Ok(&mut Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap()
-            .dice);
+        return Ok(&mut world.btech.vehicles.get_mut(&id).unwrap().dice);
     }
-    Ok(&mut Arc::make_mut(&mut world.btech.constructed)
+    Ok(&mut world
+        .btech
+        .constructed
         .get_mut(&id)
         .context("Unit construction state is unavailable")?
         .dice)

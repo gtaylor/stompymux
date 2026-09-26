@@ -2,7 +2,6 @@
 use super::{BattlePilotingCheck, BattleVtolFlight, BattleVtolFlightPhase};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
-use std::sync::Arc;
 
 /// Resolve emergency landing or start a forced descent inside the critical candidate.
 /// Unsuitable terrain skips the pilot check; missing map data remains a transaction error.
@@ -35,9 +34,7 @@ pub(super) fn engine_landing(
     } else {
         None
     };
-    let unit = Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.vehicles.get_mut(&id).unwrap();
     unit.disable_engine(advanced);
     if !check.as_ref().is_some_and(|check| check.success) {
         unit.lose_vtol_lift();

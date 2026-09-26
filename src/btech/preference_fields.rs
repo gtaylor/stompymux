@@ -1,7 +1,6 @@
 //! Administrative preference masks project typed gameplay settings without separate saved flags.
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// Bits for the six shared preferences, in their persistent field's public order.
 const MASKS: [u32; 6] = [2, 4, 8, 16, 64, 128];
@@ -48,7 +47,7 @@ pub(super) fn set(world: &mut World, id: ObjectId, bits: u32) -> Result<()> {
         "Preference bitvector includes settings not implemented for this chassis"
     );
     super::auxiliary_preferences::set_bits(world, id, bits)?;
-    let fields = if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    let fields = if let Some(unit) = world.btech.constructed.get_mut(&id) {
         [
             &mut unit.searchlight_warning,
             &mut unit.auto_fall,
@@ -58,7 +57,9 @@ pub(super) fn set(world: &mut World, id: ObjectId, bits: u32) -> Result<()> {
             &mut unit.friendly_fire_safety,
         ]
     } else {
-        let unit = Arc::make_mut(&mut world.btech.vehicles)
+        let unit = world
+            .btech
+            .vehicles
             .get_mut(&id)
             .context("Unit is unavailable")?;
         [

@@ -45,14 +45,7 @@ pub fn publish_building_arrivals(
 
 /// Savepoint for entry callbacks, map state and staged notifications.
 fn transaction<T>(scripts: &Scripts, operation: impl FnOnce() -> Result<T>) -> Result<T> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = operation();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    scripts.atomic(|_| operation())
 }
 
 /// Evaluate the enter lock with explicit command or timer identities.
@@ -538,9 +531,9 @@ pub(super) fn dispatch_boundary_exits(
 
 /// Replace only motion controls while retaining the boundary's last valid coordinate.
 fn set_boundary_motion(world: &mut crate::World, id: ObjectId, motion: BattleMotion) {
-    if let Some(unit) = std::sync::Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         unit.motion = Some(motion);
-    } else if let Some(unit) = std::sync::Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    } else if let Some(unit) = world.btech.constructed.get_mut(&id) {
         unit.motion = Some(motion);
     }
 }

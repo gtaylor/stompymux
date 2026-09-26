@@ -2,7 +2,6 @@
 use crate::{CommandAction, CommandContext, CommandInput, CommandReport, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Disabled cooling is measured in heat points, independently of physical heat sink damage.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -69,7 +68,9 @@ pub fn toggle_battle_heat_cutoff(
 ) -> Result<super::BattleNotice> {
     ensure!(allowed, "This command has been disabled.");
     super::power::controlled_unit(world, id, pilot)?;
-    let unit = Arc::make_mut(&mut world.btech.constructed)
+    let unit = world
+        .btech
+        .constructed
         .get_mut(&id)
         .context("Unit does not use Mech heat accounting")?;
     ensure!(

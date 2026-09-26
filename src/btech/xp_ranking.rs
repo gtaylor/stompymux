@@ -29,8 +29,7 @@ pub fn xp_ranking_action(
     actor: ObjectId,
     skill: &str,
 ) -> Result<BattleXpRanking> {
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let world = scripts.world();
         ensure!(
             crate::authority::is_wizard(&world, actor),
@@ -104,14 +103,10 @@ pub fn xp_ranking_action(
         for line in display.lines() {
             super::notify_message(scripts, super::BattleMessageTarget::Player(actor), line)?;
         }
-        scripts.world().validate(config)?;
+        scripts.world().validate_action(config)?;
         scripts.effects.validate()?;
         Ok(report)
-    })();
-    if result.is_err() {
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// XPTOP takes one complete skill name or catalogue alias.

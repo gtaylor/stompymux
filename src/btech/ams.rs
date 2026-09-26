@@ -140,9 +140,7 @@ pub(crate) fn configure(
     pilot: ObjectId,
     enabled: Option<bool>,
 ) -> Result<bool> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         super::targeting::controlled(&before, id, pilot)?;
         let enabled = enabled.unwrap_or(!super::ams_unit::enabled(&before, id)?);
         set_ams(&mut scripts.world.borrow_mut(), id, pilot, enabled)?;
@@ -156,12 +154,7 @@ pub(crate) fn configure(
             },
         )?;
         Ok(enabled)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// The cockpit command toggles the whole defense system; the optional weapon argument is ignored.

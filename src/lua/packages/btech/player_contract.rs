@@ -311,7 +311,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             let mut world = scripts.world_mut();
             let player = player(lua, &world, first(&args), 1)?;
             if second(&args).is_nil() {
-                Arc::make_mut(&mut world.btech.player_preferences).remove(&player);
+                world.btech.player_preferences.remove(&player);
                 return Ok(mlua::MultiValue::new());
             }
             let Value::Table(table) = second(&args) else {
@@ -368,7 +368,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 buildings,
                 ..booleans
             };
-            Arc::make_mut(&mut world.btech.player_preferences).insert(
+            world.btech.player_preferences.insert(
                 player,
                 crate::BattlePlayerPreferences {
                     dimensions,

@@ -49,7 +49,7 @@ pub(super) fn set(world: &mut World, id: ObjectId, value: &str) -> Result<()> {
     let speed = super::propulsion::parse(value)?;
     BattleJumpCapacity::from_speed(speed * 2.0)
         .context("Jump speed exceeds supported flight capacity at low gravity")?;
-    if let Some(unit) = std::sync::Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
         ensure!(
             !unit.is_destroyed() || speed == 0.0,
             "Destroyed units cannot provide jump thrust"
@@ -57,7 +57,9 @@ pub(super) fn set(world: &mut World, id: ObjectId, value: &str) -> Result<()> {
         let lost = usize::from(unit.system_hits(BattleSystem::JumpJet));
         unit.propulsion.set_jump(speed, lost);
     } else {
-        let unit = std::sync::Arc::make_mut(&mut world.btech.vehicles)
+        let unit = world
+            .btech
+            .vehicles
             .get_mut(&id)
             .context("Unit is unavailable")?;
         ensure!(

@@ -3,7 +3,6 @@ use super::{BattleDice, BattleVehicle, BattleVehicleMovement, BattleVehicleSecti
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// Available vehicle critical tables.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -109,10 +108,7 @@ pub fn roll_vehicle_critical(
     );
     let mut dice = vehicle.dice.clone();
     let report = select(vehicle, section, rules, &mut dice);
-    Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap()
-        .dice = dice;
+    world.btech.vehicles.get_mut(&id).unwrap().dice = dice;
     Ok(report)
 }
 

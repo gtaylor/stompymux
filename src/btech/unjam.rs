@@ -129,106 +129,106 @@ fn advance_unjamming_inner(
     extended_gunnery: bool,
     character: bool,
 ) -> Result<UnjamReport> {
-    let mut candidate = world.clone();
-    let ids: Vec<_> = candidate
-        .btech
-        .constructed_units()
-        .iter()
-        .filter_map(|(id, unit)| unit.unjam().map(|_| *id))
-        .chain(
-            candidate
-                .btech
-                .vehicles()
-                .iter()
-                .filter_map(|(id, unit)| unit.unjam().map(|_| *id)),
-        )
-        .filter(|id| {
-            candidate
-                .objects
-                .get(id)
-                .is_some_and(|object| !object.flags.contains(crate::Flag::Going))
-        })
-        .collect();
-    let mut messages = Vec::new();
-    let mut diagnostics = Vec::new();
-    let mut experience_messages = Vec::new();
-    for id in ids {
-        let pending = super::unjam_unit::pending(&mut candidate, id)?;
-        let attempt = pending.as_mut().unwrap();
-        attempt.remaining -= 1;
-        if attempt.remaining > 0 {
-            continue;
-        }
-        let index = attempt.weapon_index;
-        *pending = None;
-        let state = super::unjam_unit::state(&candidate, id, index)?;
-        if state.power != BattlePower::Running || !state.ready.intact || !state.jammed {
-            continue;
-        }
-        if state
-            .pilot
-            .is_some_and(|pilot| candidate.btech.unconscious(pilot))
-        {
-            continue;
-        }
-        let weapon = state.ready.weapon;
-        let name = weapon.name();
-        let Some(bin) = state.bin else {
-            super::unjam_unit::clear(&mut candidate, id, index, None)?;
-            messages.push((Recipient::Unit(id), format!("You finish bouncing around and realize you no longer have ammo for your {name}!")));
-            continue;
-        };
-        let recipient = state
-            .pilot
-            .map(Recipient::Player)
-            .unwrap_or(Recipient::Unit(id));
-        let success = if weapon.is_rotary() {
-            let target = super::unit_gunnery_target(&candidate, id, index, extended_gunnery)? + 3;
-            let roll = super::dice::unit_dice_mut(&mut candidate, id)?.generic_roll();
-            messages.push((recipient, "You make a roll to unjam the weapon!".into()));
+    world.attempt(|world| {
+        let ids: Vec<_> = world
+            .btech
+            .constructed_units()
+            .iter()
+            .filter_map(|(id, unit)| unit.unjam().map(|_| *id))
+            .chain(
+                world
+                    .btech
+                    .vehicles()
+                    .iter()
+                    .filter_map(|(id, unit)| unit.unjam().map(|_| *id)),
+            )
+            .filter(|id| {
+                world
+                    .objects
+                    .get(id)
+                    .is_some_and(|object| !object.flags.contains(crate::Flag::Going))
+            })
+            .collect();
+        let mut messages = Vec::new();
+        let mut diagnostics = Vec::new();
+        let mut experience_messages = Vec::new();
+        for id in ids {
+            let pending = super::unjam_unit::pending(world, id)?;
+            let attempt = pending.as_mut().unwrap();
+            attempt.remaining -= 1;
+            if attempt.remaining > 0 {
+                continue;
+            }
+            let index = attempt.weapon_index;
+            *pending = None;
+            let state = super::unjam_unit::state(world, id, index)?;
+            if state.power != BattlePower::Running || !state.ready.intact || !state.jammed {
+                continue;
+            }
+            if state
+                .pilot
+                .is_some_and(|pilot| world.btech.unconscious(pilot))
+            {
+                continue;
+            }
+            let weapon = state.ready.weapon;
+            let name = weapon.name();
+            let Some(bin) = state.bin else {
+                super::unjam_unit::clear(world, id, index, None)?;
+                messages.push((Recipient::Unit(id), format!("You finish bouncing around and realize you no longer have ammo for your {name}!")));
+                continue;
+            };
+            let recipient = state
+                .pilot
+                .map(Recipient::Player)
+                .unwrap_or(Recipient::Unit(id));
+            let success = if weapon.is_rotary() {
+                let target = super::unit_gunnery_target(world, id, index, extended_gunnery)? + 3;
+                let roll = super::dice::unit_dice_mut(world, id)?.generic_roll();
+                messages.push((recipient, "You make a roll to unjam the weapon!".into()));
+                messages.push((
+                    recipient,
+                    format!("Modified Gunnery Skill: BTH {target}\tRoll: {roll}"),
+                ));
+                i16::from(roll) >= target
+            } else {
+                let mut check = super::roll_piloting(world, id, 0, extended_piloting)?;
+                if let Some(diagnostic) = check.diagnostic(true) {
+                    diagnostics.push((messages.len(), diagnostic));
+                }
+                if character {
+                    experience_messages.extend(super::piloting::award_control_check(
+                        world,
+                        id,
+                        &mut check,
+                        extended_piloting,
+                    )?);
+                }
+                if let Some(feedback) = check.messages() {
+                    messages.extend(feedback.into_iter().map(|text| (recipient, text)));
+                }
+                check.success
+            };
+            if !success {
+                messages.push((Recipient::Unit(id), "Your attempt to remove the jammed slug fails. You'll need to try again to clear it.".into()));
+                continue;
+            }
+            super::unjam_unit::clear(world, id, index, Some(bin))?;
             messages.push((
-                recipient,
-                format!("Modified Gunnery Skill: BTH {target}\tRoll: {roll}"),
+                Recipient::Unit(id),
+                format!("You manage to clear the jam on your {name}!"),
             ));
-            i16::from(roll) >= target
-        } else {
-            let mut check = super::roll_piloting(&mut candidate, id, 0, extended_piloting)?;
-            if let Some(diagnostic) = check.diagnostic(true) {
-                diagnostics.push((messages.len(), diagnostic));
-            }
-            if character {
-                experience_messages.extend(super::piloting::award_control_check(
-                    &mut candidate,
-                    id,
-                    &mut check,
-                    extended_piloting,
-                )?);
-            }
-            if let Some(feedback) = check.messages() {
-                messages.extend(feedback.into_iter().map(|text| (recipient, text)));
-            }
-            check.success
-        };
-        if !success {
-            messages.push((Recipient::Unit(id), "Your attempt to remove the jammed slug fails. You'll need to try again to clear it.".into()));
-            continue;
+            messages.extend(
+                super::observer_messages(world, id, "ejects a mangled shell!")
+                    .into_iter()
+                    .map(|(id, text)| (Recipient::Unit(id), text)),
+            );
         }
-        super::unjam_unit::clear(&mut candidate, id, index, Some(bin))?;
-        messages.push((
-            Recipient::Unit(id),
-            format!("You manage to clear the jam on your {name}!"),
-        ));
-        messages.extend(
-            super::observer_messages(&candidate, id, "ejects a mangled shell!")
-                .into_iter()
-                .map(|(id, text)| (Recipient::Unit(id), text)),
-        );
-    }
-    *world = candidate;
-    Ok(UnjamReport {
-        messages,
-        diagnostics,
-        experience_messages,
+        Ok(UnjamReport {
+            messages,
+            diagnostics,
+            experience_messages,
+    })
     })
 }
 
@@ -261,22 +261,15 @@ pub fn advance_unjamming_action(
     extended_piloting: bool,
     extended_gunnery: bool,
 ) -> Result<()> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let report = advance_unjamming_in_action(
             &mut scripts.world.borrow_mut(),
             extended_piloting,
             extended_gunnery,
         )?;
         publish_unjamming(scripts, config, &report)?;
-        scripts.world.borrow().validate(config)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+        scripts.world.borrow().validate_action(config)
+    })
 }
 
 /// Shared bounded cockpit selection parser.

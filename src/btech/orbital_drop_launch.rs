@@ -3,7 +3,6 @@ use super::*;
 use crate::{Config, Flag, Kind, ObjectId, Scripts};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// Committed insertion pose and the owning descent or aircraft state.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -23,9 +22,7 @@ pub fn initiate_action(
     id: ObjectId,
     request: BattleScenarioPosition,
 ) -> Result<BattleOrbitalInsertion> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(&before, actor),
             "Permission denied."
@@ -98,26 +95,21 @@ pub fn initiate_action(
         {
             let mut world = scripts.world_mut();
             // Cancel competing vertical owners before the scenario helper chooses retained altitude.
-            if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+            if let Some(unit) = world.btech.constructed.get_mut(&id) {
                 unit.flight = None;
                 unit.free_fall = None;
                 unit.stand_timer = None;
                 unit.jump_stabilization = 0;
             } else {
-                Arc::make_mut(&mut world.btech.vehicles)
-                    .get_mut(&id)
-                    .unwrap()
-                    .free_fall = None;
+                world.btech.vehicles.get_mut(&id).unwrap().free_fall = None;
             }
             super::scenario_position::relocate(&mut world, id, position, tile, Some(elevation))?;
-            if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+            if let Some(unit) = world.btech.constructed.get_mut(&id) {
                 unit.ground_elevation = None;
                 unit.orbital_drop = drop;
                 flight = None;
             } else {
-                let unit = Arc::make_mut(&mut world.btech.vehicles)
-                    .get_mut(&id)
-                    .unwrap();
+                let unit = world.btech.vehicles.get_mut(&id).unwrap();
                 unit.ground_elevation = None;
                 unit.orbital_drop = drop;
                 if vtol {
@@ -153,19 +145,14 @@ pub fn initiate_action(
             BattleMessageTarget::Player(actor),
             "OOD initiated.",
         )?;
-        scripts.world().validate(config)?;
+        scripts.world().validate_action(config)?;
         Ok(BattleOrbitalInsertion {
             position,
             elevation,
             drop,
             flight,
         })
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Native OOD parses the first three signed coordinates and defaults its third value.

@@ -14,12 +14,14 @@ pub(super) fn set_tonnage(
         .parse::<u16>()
         .context("Invalid unit tonnage")?;
     ensure!(tons > 0, "Unit tonnage must be positive");
-    if let Some(unit) = std::sync::Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
         unit.set_nominal_tonnage(tons);
         unit.validate()?;
         unit.mass()?;
     } else {
-        let unit = std::sync::Arc::make_mut(&mut world.btech.vehicles)
+        let unit = world
+            .btech
+            .vehicles
             .get_mut(&id)
             .context("Unit is unavailable")?;
         unit.set_nominal_tonnage(tons);
@@ -36,14 +38,16 @@ pub(super) fn set_movement(
     value: &str,
     tsm_bonus: bool,
 ) -> Result<()> {
-    if let Some(unit) = std::sync::Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
         let chassis = super::BattleMechChassis::parse(value.trim())?;
         unit.set_chassis(chassis);
         unit.validate()?;
         unit.mass()?;
     } else {
         let movement = super::BattleVehicleMovement::parse(value.trim())?;
-        let unit = std::sync::Arc::make_mut(&mut world.btech.vehicles)
+        let unit = world
+            .btech
+            .vehicles
             .get_mut(&id)
             .context("Unit is unavailable")?;
         unit.set_movement(movement);

@@ -2,7 +2,6 @@
 use super::{BattleRadioChannel, BattleUnit};
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 impl BattleUnit {
     /// Administrator-controlled observer mode; cockpit pilots cannot enable it through radio settings.
@@ -29,11 +28,13 @@ pub fn set_observer(world: &mut World, id: ObjectId, enabled: bool) -> Result<()
             .is_some_and(|o| o.kind == Kind::Thing && !o.flags.contains(Flag::Going)),
         "Unit must be a live thing"
     );
-    if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         unit.observer = enabled;
         return Ok(());
     }
-    let unit = Arc::make_mut(&mut world.btech.constructed)
+    let unit = world
+        .btech
+        .constructed
         .get_mut(&id)
         .context("Unit is not constructed")?;
     unit.observer = enabled;

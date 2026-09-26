@@ -3,7 +3,6 @@ use super::{BattleHexCoordinate, StoredBattleMap};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Cardinal arrival configuration, ordered north, east, south, west.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -107,9 +106,6 @@ pub fn set_map_link(world: &mut World, child: ObjectId, link: Option<BattleMapLi
             );
         }
     }
-    Arc::make_mut(&mut world.btech.maps)
-        .get_mut(&child)
-        .unwrap()
-        .authored_link = link;
+    world.btech.maps.get_mut(&child).unwrap().authored_link = link;
     Ok(())
 }

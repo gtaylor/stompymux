@@ -2,7 +2,6 @@
 use super::{BattleFireMode, BattlePower, BattleWeaponReadiness};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
-use std::sync::Arc;
 
 /// Validate cockpit authority, physical loss, recycle and manual feed jams in reference order.
 /// Vehicle critical failures remain separate from manually cleared ammunition-feed jams.
@@ -117,12 +116,16 @@ fn fire_modes_mut(
     id: ObjectId,
 ) -> &mut std::collections::BTreeMap<usize, BattleFireMode> {
     if world.btech.vehicles().contains_key(&id) {
-        return &mut Arc::make_mut(&mut world.btech.vehicles)
+        return &mut world
+            .btech
+            .vehicles
             .get_mut(&id)
             .expect("authorized vehicle")
             .fire_modes;
     }
-    &mut Arc::make_mut(&mut world.btech.constructed)
+    &mut world
+        .btech
+        .constructed
         .get_mut(&id)
         .expect("authorized unit")
         .fire_modes
@@ -149,12 +152,16 @@ fn ammunition_modes_mut(
     id: ObjectId,
 ) -> &mut std::collections::BTreeMap<usize, super::BattleAmmunitionMode> {
     if world.btech.vehicles().contains_key(&id) {
-        &mut Arc::make_mut(&mut world.btech.vehicles)
+        &mut world
+            .btech
+            .vehicles
             .get_mut(&id)
             .expect("authorized vehicle")
             .ammunition_modes
     } else {
-        &mut Arc::make_mut(&mut world.btech.constructed)
+        &mut world
+            .btech
+            .constructed
             .get_mut(&id)
             .expect("authorized unit")
             .ammunition_modes

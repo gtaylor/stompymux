@@ -3,7 +3,6 @@ use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Charge intent and accumulated movement; clearing a selection can retain its counters.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
@@ -92,10 +91,7 @@ pub fn select_charge(
     unit.validate_charge_support()?;
     let position = unit.position().context("Unit is not on a battlefield")?;
     if selection == BattleChargeSelection::Cancel {
-        Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap()
-            .charge = BattleChargeState::default();
+        world.btech.constructed.get_mut(&id).unwrap().charge = BattleChargeState::default();
         return Ok(vec![BattleNotice {
             unit: id,
             text: "You are no longer charging.".into(),
@@ -133,22 +129,18 @@ pub fn select_charge(
             || unit.signature().team != victim.signature().team,
         "You can't charge your own team!"
     );
-    let mut candidate = world.clone();
-    Arc::make_mut(&mut candidate.btech.constructed)
-        .get_mut(&id)
-        .unwrap()
-        .charge
-        .target = Some(target);
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(vec![BattleNotice {
-        unit: id,
-        text: if selection == BattleChargeSelection::Default {
-            "Charge target set to default target.".into()
-        } else {
-            format!("Charge target set to #{}.", target.0)
-        },
-    }])
+    world.attempt(|world| {
+        world.btech.constructed.get_mut(&id).unwrap().charge.target = Some(target);
+        world.btech.validate_action(world)?;
+        Ok(vec![BattleNotice {
+            unit: id,
+            text: if selection == BattleChargeSelection::Default {
+                "Charge target set to default target.".into()
+            } else {
+                format!("Charge target set to #{}.", target.0)
+            },
+        }])
+    })
 }
 
 /// Age a selection at the start of a movement update, reproducing the post-increment timeout.
@@ -157,9 +149,7 @@ pub(super) fn begin_update(
     id: ObjectId,
     policy: BattleChargePolicy,
 ) -> Vec<BattleNotice> {
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     if !policy.new_rules || unit.charge.target.is_none() {
         return vec![];
     }
@@ -182,9 +172,7 @@ pub(super) fn record_distance(
     to: BattlePoint,
     policy: BattleChargePolicy,
 ) {
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     if !policy.new_rules || unit.charge.target.is_none() {
         return;
     }
@@ -229,10 +217,7 @@ pub(super) fn finish_update(
         })
     });
     if !valid || !live {
-        Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap()
-            .charge = BattleChargeState::default();
+        world.btech.constructed.get_mut(&id).unwrap().charge = BattleChargeState::default();
         return Ok(vec![BattleNotice {
             unit: id,
             text: "Invalid CHARGE target!".into(),
@@ -288,15 +273,9 @@ pub(super) fn finish_update(
             report.notices
         }
     };
-    Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap()
-        .charge = BattleChargeState::default();
+    world.btech.constructed.get_mut(&id).unwrap().charge = BattleChargeState::default();
     if mutual {
-        Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&target)
-            .unwrap()
-            .charge = BattleChargeState::default();
+        world.btech.constructed.get_mut(&target).unwrap().charge = BattleChargeState::default();
     }
     Ok(notices)
 }

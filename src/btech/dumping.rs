@@ -3,7 +3,6 @@ use super::{BattleNotice, BattlePower, BattleSection, BattleUnit, BattleWeapon};
 use crate::{ObjectId, Scripts, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Bins selected by physical location or weapon family; ammunition modes remain independent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -183,10 +182,7 @@ pub fn begin_dump(
             "starts dumping ammo from hatches on its back.",
         )
     };
-    Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap()
-        .dumping = dump;
+    world.btech.constructed.get_mut(&id).unwrap().dumping = dump;
     let mut notices = vec![BattleNotice { unit: id, text }];
     notices.extend(super::broadcast::observer_notices(world, id, observer));
     Ok(notices)
@@ -194,72 +190,72 @@ pub fn begin_dump(
 
 /// Advance all attempts atomically; unavailable bins never eject ammunition.
 pub fn advance_dumping(world: &mut World) -> Result<Vec<BattleNotice>> {
-    let mut candidate = world.clone();
-    let ids: Vec<_> = candidate
-        .btech
-        .constructed_units()
-        .iter()
-        .filter_map(|(&id, unit)| unit.dumping.is_some().then_some(id))
-        .collect();
-    let mut notices = Vec::new();
-    for id in ids {
-        let available = candidate
-            .objects
-            .get(&id)
-            .is_some_and(|object| !object.flags.contains(crate::Flag::Going));
-        let unit = Arc::make_mut(&mut candidate.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
-        validate(unit)?;
-        let mut dump = unit.dumping.unwrap();
-        if !available || unit.power() != BattlePower::Running || unit.is_destroyed() {
-            unit.dumping = None;
-            continue;
-        }
-        dump.phase = dump
-            .phase
-            .checked_add(1)
-            .context("Ammunition dump clock overflow")?;
-        let mut remaining = false;
-        for (index, bin) in unit.loadout()?.ammunition.iter().enumerate() {
-            if !dump.selection.matches(bin)
-                || unit.critical_unavailable(bin.location)
-                || unit.ammunition[index] == 0
-            {
+    world.attempt(|world| {
+        let ids: Vec<_> = world
+            .btech
+            .constructed_units()
+            .iter()
+            .filter_map(|(&id, unit)| unit.dumping.is_some().then_some(id))
+            .collect();
+        let mut notices = Vec::new();
+        for id in ids {
+            let available = world
+                .objects
+                .get(&id)
+                .is_some_and(|object| !object.flags.contains(crate::Flag::Going));
+            let unit = world.btech.constructed.get_mut(&id).unwrap();
+            validate(unit)?;
+            let mut dump = unit.dumping.unwrap();
+            if !available || unit.power() != BattlePower::Running || unit.is_destroyed() {
+                unit.dumping = None;
                 continue;
             }
-            let capacity = bin
-                .weapon
-                .profile_for_ammunition(bin.mode)
-                .ammunition_per_ton;
-            let amount = if capacity >= 30 {
-                u16::from(capacity / 30)
-            } else {
-                u16::from(dump.phase.is_multiple_of(u64::from(30 / capacity)))
-            };
-            let amount = amount.min(unit.ammunition[index]);
-            if let Some(text) = super::combat_warnings::dumping_message(unit, bin.weapon, amount) {
-                notices.push(BattleNotice { unit: id, text });
+            dump.phase = dump
+                .phase
+                .checked_add(1)
+                .context("Ammunition dump clock overflow")?;
+            let mut remaining = false;
+            for (index, bin) in unit.loadout()?.ammunition.iter().enumerate() {
+                if !dump.selection.matches(bin)
+                    || unit.critical_unavailable(bin.location)
+                    || unit.ammunition[index] == 0
+                {
+                    continue;
+                }
+                let capacity = bin
+                    .weapon
+                    .profile_for_ammunition(bin.mode)
+                    .ammunition_per_ton;
+                let amount = if capacity >= 30 {
+                    u16::from(capacity / 30)
+                } else {
+                    u16::from(dump.phase.is_multiple_of(u64::from(30 / capacity)))
+                };
+                let amount = amount.min(unit.ammunition[index]);
+                if let Some(text) =
+                    super::combat_warnings::dumping_message(unit, bin.weapon, amount)
+                {
+                    notices.push(BattleNotice { unit: id, text });
+                }
+                unit.ammunition[index] -= amount;
+                unit.live_mass.invalidate();
+                remaining |= unit.ammunition[index] > 0;
             }
-            unit.ammunition[index] -= amount;
-            unit.live_mass.invalidate();
-            remaining |= unit.ammunition[index] > 0;
+            unit.dumping = remaining.then_some(dump);
+            if !remaining {
+                notices.push(BattleNotice {
+                    unit: id,
+                    text: dump.selection.completion(),
+                });
+                notices.extend(super::broadcast::observer_notices(
+                    world,
+                    id,
+                    "no longer has ammo dumping from hatches on its back.",
+                ));
+            }
         }
-        unit.dumping = remaining.then_some(dump);
-        if !remaining {
-            notices.push(BattleNotice {
-                unit: id,
-                text: dump.selection.completion(),
-            });
-            notices.extend(super::broadcast::observer_notices(
-                &candidate,
-                id,
-                "no longer has ammo dumping from hatches on its back.",
-            ));
-        }
-    }
-    *world = candidate;
-    Ok(notices)
+        Ok(notices)
+    })
 }
 
 /// Publish a cockpit action with state and notification rollback on failure.
@@ -269,20 +265,13 @@ pub fn dump(
     pilot: ObjectId,
     argument: &str,
 ) -> Result<Vec<BattleNotice>> {
-    let before = scripts.world().clone();
-    let effects = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let notices = begin_dump(&mut scripts.world_mut(), id, pilot, argument)?;
         for notice in &notices {
             super::notify_unit(scripts, notice.clone())?;
         }
         Ok(notices)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(effects);
-    }
-    result
+    })
 }
 
 /// Native adapter resolves the player's current cockpit.

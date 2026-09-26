@@ -2,7 +2,6 @@
 use crate::{Flag, Kind, ObjectId, Scripts, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 const CONTACTS: [&str; 4] = [
     "0 - Very verbose",
@@ -100,9 +99,7 @@ pub fn brief(
     pilot: ObjectId,
     arguments: &str,
 ) -> Result<BattleBriefReport> {
-    let before = scripts.world.borrow().clone();
-    let effects = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         display_access(&scripts.world.borrow(), unit, pilot, true)?;
         let mut settings = {
             let world = scripts.world.borrow();
@@ -144,13 +141,10 @@ pub fn brief(
         settings.validate()?;
         {
             let mut world = scripts.world.borrow_mut();
-            if let Some(vehicle) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&unit) {
+            if let Some(vehicle) = world.btech.vehicles.get_mut(&unit) {
                 vehicle.brief = settings;
             } else {
-                Arc::make_mut(&mut world.btech.constructed)
-                    .get_mut(&unit)
-                    .unwrap()
-                    .brief = settings;
+                world.btech.constructed.get_mut(&unit).unwrap().brief = settings;
             }
         }
         super::notify_unit_text(scripts, unit, &text)?;
@@ -159,12 +153,7 @@ pub fn brief(
             changed: true,
             text,
         })
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(effects);
-    }
-    result
+    })
 }
 
 /// Native adapter uses the invoking pilot's current cockpit.

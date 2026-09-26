@@ -1,7 +1,6 @@
 //! Shared scenario fortification state and admission for every supported unit chassis.
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// Inspect the scenario flag independently of cockpit authority and power state.
 pub fn unit_fortified(world: &World, id: ObjectId) -> Result<bool> {
@@ -56,13 +55,10 @@ pub fn set_fortified(world: &mut World, id: ObjectId, enabled: bool) -> Result<(
             );
         }
     }
-    if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         unit.fortified = enabled;
     } else {
-        Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap()
-            .fortified = enabled;
+        world.btech.constructed.get_mut(&id).unwrap().fortified = enabled;
     }
     Ok(())
 }

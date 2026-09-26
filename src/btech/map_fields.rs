@@ -1,7 +1,6 @@
 //! Named map field edits delegate to shared controls and preserve typed state invariants.
 use crate::{Config, ObjectId, Scripts, World};
 use anyhow::{Context, Result, bail, ensure};
-use std::sync::Arc;
 
 /// Apply one exact field name; caller supplies authorization and transaction rollback.
 fn edit(
@@ -79,7 +78,7 @@ fn edit(
         _ => bail!("Unknown map field"),
     }
     record.validate()?;
-    Arc::make_mut(&mut world.btech.maps).insert(map, record);
+    world.btech.maps.insert(map, record);
     Ok(Vec::new())
 }
 
@@ -92,9 +91,7 @@ pub fn set_map_field_action(
     field: &str,
     value: &str,
 ) -> Result<()> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(&before, actor),
             "Permission denied."
@@ -112,12 +109,7 @@ pub fn set_map_field_action(
         scripts.world().validate(config)?;
         scripts.effects.validate()?;
         Ok(())
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Native SETMAP uses the selected map and preserves spaces in the supplied value.

@@ -609,19 +609,24 @@ async fn hiding_aircraft_crash_orders_crossing_before_damage_and_replays() {
             let live = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
             advance_battle_motion_action(&live, &config, movement_rules).unwrap();
             assert_eq!(hiding(&live.world(), id), (None, false));
-            let mut invalid = world.clone();
-            invalid.objects.get_mut(&id).unwrap().location = Some(ObjectId(1));
-            let failed = Scripts::new(&config, Rc::new(RefCell::new(invalid))).unwrap();
-            let before = failed.world().btech.clone();
-            let error = advance_battle_motion_action(&failed, &config, movement_rules).unwrap_err();
-            assert!(
-                error
-                    .to_string()
-                    .contains("Placed vehicle location differs"),
-                "{error}"
-            );
-            assert_eq!(failed.world().btech, before);
-            assert!(failed.drain_outbox().is_empty());
+            // The invalid location is caught by per-operation validation, which runs only in
+            // debug builds; release relies on the commit check.
+            if cfg!(debug_assertions) {
+                let mut invalid = world.clone();
+                invalid.objects.get_mut(&id).unwrap().location = Some(ObjectId(1));
+                let failed = Scripts::new(&config, Rc::new(RefCell::new(invalid))).unwrap();
+                let before = failed.world().btech.clone();
+                let error =
+                    advance_battle_motion_action(&failed, &config, movement_rules).unwrap_err();
+                assert!(
+                    error
+                        .to_string()
+                        .contains("Placed vehicle location differs"),
+                    "{error}"
+                );
+                assert_eq!(failed.world().btech, before);
+                assert!(failed.drain_outbox().is_empty());
+            }
         }
         let result = advance_battle_vtol_environment(&mut world, id, false, rules).unwrap();
         assert_eq!(

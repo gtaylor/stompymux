@@ -2,7 +2,6 @@
 use crate::{Flag, Kind, ObjectId, Scripts, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Exactly two uppercase ASCII letters; deserialization and configuration share normalization.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -70,10 +69,12 @@ pub fn set_preferred_id(
         .transpose()?;
     let result = value.as_ref().map(|value| value.as_ref().to_owned());
     let configured = result.clone();
-    if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         unit.preferred_id = value;
     } else {
-        let unit = Arc::make_mut(&mut world.btech.constructed)
+        let unit = world
+            .btech
+            .constructed
             .get_mut(&id)
             .context("Unit is not constructed")?;
         unit.preferred_id = value;

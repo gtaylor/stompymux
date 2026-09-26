@@ -3,7 +3,6 @@ use super::{BattleConsciousnessCheck, BattleDice};
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Health source used by subsequent recovery attempts.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -139,7 +138,10 @@ pub fn prepare_recovery(world: &mut World, player: ObjectId) -> Result<()> {
     if world.btech.recoveries().contains_key(&player) {
         return Ok(());
     }
-    Arc::make_mut(&mut world.btech.recoveries).insert(player, BattleRecovery::fresh());
+    world
+        .btech
+        .recoveries
+        .insert(player, BattleRecovery::fresh());
     Ok(())
 }
 
@@ -201,7 +203,7 @@ fn check_consciousness(
     recovery.pain_resistance = pain_resistance;
     recovery.toughness = toughness;
     let check = recovery.check(target);
-    Arc::make_mut(&mut world.btech.recoveries).insert(player, recovery);
+    world.btech.recoveries.insert(player, recovery);
     Ok(check)
 }
 
@@ -225,9 +227,7 @@ pub fn advance_recovery(world: &mut World) -> Vec<BattleCharacterNotice> {
         let target = world.btech.recoveries()[&player]
             .target(world, player)
             .expect("validated recovery health");
-        let recovery = Arc::make_mut(&mut world.btech.recoveries)
-            .get_mut(&player)
-            .unwrap();
+        let recovery = world.btech.recoveries.get_mut(&player).unwrap();
         let Some(check) = recovery.advance(target) else {
             continue;
         };

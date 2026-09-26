@@ -2,7 +2,6 @@
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Existing character state; skill/advantage values remain in their separate table.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -115,7 +114,7 @@ pub fn set_character(world: &mut World, player: ObjectId, profile: BattleCharact
         profile.consciousness_target(recovery.pain_resistance)?;
     }
     super::prepare_recovery(world, player)?;
-    Arc::make_mut(&mut world.btech.characters).insert(player, profile);
+    world.btech.characters.insert(player, profile);
     Ok(())
 }
 

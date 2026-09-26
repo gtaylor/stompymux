@@ -4,7 +4,6 @@ use super::{
 };
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// A traced entry retains its terrain hazards until earlier entries have resolved.
 struct VehicleStep {
@@ -150,9 +149,7 @@ pub(crate) fn set_control_by_actor(
         motion.desired_heading = heading.rem_euclid(360.0);
         format!("Desired heading: {:.1} degrees.", motion.desired_heading)
     };
-    let vehicle = Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
+    let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
     if speed.is_some_and(|speed| speed.abs() > 0.1) || (heading.is_some() && vehicle.dig.digging) {
         if vehicle.cancel_digging() {
             text = format!("You cease your attempts at digging in.\r\n{text}");
@@ -298,26 +295,21 @@ pub(super) fn advance(
             reached = point;
             let mut entry_motion = next;
             entry_motion.point = point;
-            Arc::make_mut(&mut world.btech.vehicles)
-                .get_mut(&id)
-                .unwrap()
-                .update_motion(
-                    entry_motion,
-                    super::BattlePosition {
-                        map: position.map,
-                        x: u16::try_from(hex.x)?,
-                        y: u16::try_from(hex.y)?,
-                    },
-                    entry_under,
-                );
+            world.btech.vehicles.get_mut(&id).unwrap().update_motion(
+                entry_motion,
+                super::BattlePosition {
+                    map: position.map,
+                    x: u16::try_from(hex.x)?,
+                    y: u16::try_from(hex.y)?,
+                },
+                entry_under,
+            );
             if world.btech.vehicles()[&id].position() != Some(previous_position) {
                 report.notices.extend(super::hiding::movement(world, id));
             }
             let tile =
                 world.btech.maps()[&position.map].base_hex(i64::from(hex.x), i64::from(hex.y))?;
-            let vehicle = Arc::make_mut(&mut world.btech.vehicles)
-                .get_mut(&id)
-                .unwrap();
+            let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
             vehicle.ground_elevation = (i32::from(support_height)
                 != vehicle.terrain_elevation(tile, entry_under))
             .then_some(f64::from(support_height));
@@ -401,9 +393,7 @@ pub(super) fn advance(
                     report.notices.extend(fall.notices.iter().cloned());
                     report.vehicle_falls.push(fall);
                 }
-                let unit = Arc::make_mut(&mut world.btech.vehicles)
-                    .get_mut(&id)
-                    .unwrap();
+                let unit = world.btech.vehicles.get_mut(&id).unwrap();
                 unit.restore_ground_position(
                     previous_position,
                     previous_point,
@@ -475,9 +465,7 @@ pub(super) fn advance(
                             .push(super::vehicle_water::flood(world, id, character)?);
                     }
                 }
-                let unit = Arc::make_mut(&mut world.btech.vehicles)
-                    .get_mut(&id)
-                    .unwrap();
+                let unit = world.btech.vehicles.get_mut(&id).unwrap();
                 if change > 0 || success {
                     unit.restore_ground_position(
                         previous_position,
@@ -501,9 +489,7 @@ pub(super) fn advance(
                     character,
                 )?;
                 report.extend(entry.movement);
-                let unit = Arc::make_mut(&mut world.btech.vehicles)
-                    .get_mut(&id)
-                    .unwrap();
+                let unit = world.btech.vehicles.get_mut(&id).unwrap();
                 if entry.restore {
                     unit.restore_ground_position(
                         previous_position,
@@ -533,7 +519,9 @@ pub(super) fn advance(
             )?;
             report.extend(obstacle);
             if change.abs() == 1 {
-                let motion = Arc::make_mut(&mut world.btech.vehicles)
+                let motion = world
+                    .btech
+                    .vehicles
                     .get_mut(&id)
                     .unwrap()
                     .motion
@@ -629,9 +617,7 @@ pub(super) fn advance(
                 text: text.into(),
             });
         }
-        let vehicle = Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap();
+        let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
         let hex = next.point.containing_hex()?;
         vehicle.update_motion(
             next,

@@ -6290,6 +6290,10 @@ async fn inferno_missile_immersion_extinguishes_after_ignition_and_rolls_back_la
             world.btech
         );
         // Corrupt a different unit so validation fails after this target ignites and makes steam.
+        // Per-operation validation runs only in debug builds; release relies on the commit check.
+        if !cfg!(debug_assertions) {
+            continue;
+        }
         let mut invalid = before;
         let mut encoded = serde_json::to_value(&invalid.btech).unwrap();
         encoded["constructed"][units[1].0.to_string()]["inferno_remaining"] = u32::MAX.into();

@@ -2,7 +2,6 @@
 use super::BattleNotice;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// Read a controllable turret for a conscious, assigned operator in a running vehicle.
 pub fn turret_readout(world: &World, id: ObjectId, pilot: ObjectId) -> Result<f64> {
@@ -80,9 +79,7 @@ fn set_turret_by_actor(
             && heading <= f64::from(i32::MAX),
         "Invalid turret heading"
     );
-    let vehicle = Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
+    let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
     let heading = heading.rem_euclid(360.0);
     // Floating-point rem_euclid can round a tiny negative offset up to 360.
     // Canonicalize that endpoint before the ordinary strict facing validator.
@@ -102,7 +99,9 @@ pub fn lock_vehicle_turret(world: &mut World, id: ObjectId) -> Result<()> {
             .is_some_and(|object| !object.flags.contains(crate::Flag::Going)),
         "Vehicle is unavailable"
     );
-    let vehicle = Arc::make_mut(&mut world.btech.vehicles)
+    let vehicle = world
+        .btech
+        .vehicles
         .get_mut(&id)
         .context("Vehicle is unavailable")?;
     ensure!(!vehicle.is_destroyed(), "Vehicle is destroyed");
@@ -130,7 +129,9 @@ pub fn jam_vehicle_turret(world: &mut World, id: ObjectId) -> Result<BattleNotic
             .is_some_and(|object| !object.flags.contains(crate::Flag::Going)),
         "Vehicle is unavailable"
     );
-    let vehicle = Arc::make_mut(&mut world.btech.vehicles)
+    let vehicle = world
+        .btech
+        .vehicles
         .get_mut(&id)
         .context("Vehicle is unavailable")?;
     ensure!(!vehicle.is_destroyed(), "Vehicle is destroyed");
@@ -158,9 +159,7 @@ pub fn begin_vehicle_turret_repair(
 ) -> Result<BattleNotice> {
     super::vehicle_power::controlled(world, id, pilot)?;
     super::vehicle_driving::readout(world, id, pilot)?;
-    let vehicle = Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
+    let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
     ensure!(
         !vehicle.turret_locked(),
         "Your turret is locked! You need a repairbay to fix it!"
@@ -197,9 +196,7 @@ pub(super) fn advance(world: &mut World) -> Vec<BattleNotice> {
         let conscious = world.btech.vehicles()[&id]
             .pilot()
             .is_none_or(|pilot| !world.btech.unconscious(pilot));
-        let vehicle = Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap();
+        let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
         let mut finished = 0;
         vehicle.turret_repairs.retain_mut(|remaining| {
             *remaining -= 1;

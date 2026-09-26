@@ -52,11 +52,13 @@ pub(super) fn set(
     value: &str,
 ) -> Result<()> {
     use anyhow::Context;
-    use std::sync::Arc;
-    if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
         unit.set_identity(field, value)?;
     } else {
-        let unit = Arc::make_mut(&mut world.btech.vehicles)
+        let unit = world
+            .btech
+            .vehicles
             .get_mut(&id)
             .context("Unit is unavailable")?;
         unit.set_identity(field, value)?;
@@ -77,7 +79,7 @@ pub(super) fn refresh(world: &mut crate::World, id: crate::ObjectId) -> Result<(
             .context("Unit is unavailable")?
             .identity()
     };
-    std::sync::Arc::make_mut(&mut world.btech.units).insert(id, identity);
+    world.btech.units.insert(id, identity);
     Ok(())
 }
 

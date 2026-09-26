@@ -14,9 +14,7 @@ pub fn set_radio_frequency_action(
     channel: u8,
     frequency: u32,
 ) -> Result<Vec<BattleChannelMessage>> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         super::set_radio_frequency(
             &mut scripts.world.borrow_mut(),
             unit,
@@ -27,12 +25,7 @@ pub fn set_radio_frequency_action(
         let messages = frequency_matches(&scripts.world.borrow(), unit, frequency)?;
         super::channels::publish(scripts, config, &messages)?;
         Ok(messages)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Capture one alert per matching enemy channel, including muted, shutdown and repeated settings.

@@ -82,9 +82,13 @@ pub(super) fn normalize(world: &mut World) {
     if invalid.is_empty() {
         return;
     }
-    std::sync::Arc::make_mut(&mut world.btech.player_configuration)
+    world
+        .btech
+        .player_configuration
         .retain(|player, _| !invalid.contains(player));
-    std::sync::Arc::make_mut(&mut world.btech.player_preferences)
+    world
+        .btech
+        .player_preferences
         .retain(|player, _| !invalid.contains(player));
 }
 

@@ -2,7 +2,6 @@
 use super::{BattleDamageSlot, VehicleCriticalLocation};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
-use std::sync::Arc;
 
 /// Convert a vehicle slot to the common compact representation.
 fn slot(location: VehicleCriticalLocation) -> BattleDamageSlot {
@@ -19,7 +18,9 @@ pub(super) fn set(world: &mut World, id: ObjectId, value: &str, tsm_bonus: bool)
         return reconcile_load(world, id, tsm_bonus);
     }
     let replacement = super::prepare_damage_field(world, id, value)?;
-    let unit = Arc::make_mut(&mut world.btech.vehicles)
+    let unit = world
+        .btech
+        .vehicles
         .get_mut(&id)
         .context("Unit construction is unavailable")?;
     let loadout = unit.loadout()?;
@@ -110,9 +111,7 @@ fn reconcile_load(world: &mut World, id: ObjectId, tsm_bonus: bool) -> Result<()
 /// Mech anatomy shares prepared material while owning its conditional system reconstruction.
 fn set_mech(world: &mut World, id: ObjectId, value: &str) -> Result<()> {
     let replacement = super::prepare_damage_field(world, id, value)?;
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     let loadout = unit.loadout()?;
     let light_probe = super::BattleActiveProbe::Light;
     let previous_probe_failure = if unit.has_active_probe(light_probe)? {

@@ -47,10 +47,12 @@ pub(super) fn set(world: &mut World, id: ObjectId, value: &str, tsm_bonus: bool)
     let mass = value.trim().parse::<i32>().context("Invalid live mass")?;
     ensure!(mass >= 0, "Live mass cannot be negative");
     let correction = LiveMass(Some(mass as u32));
-    if let Some(unit) = std::sync::Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
         unit.live_mass = correction;
     } else {
-        std::sync::Arc::make_mut(&mut world.btech.vehicles)
+        world
+            .btech
+            .vehicles
             .get_mut(&id)
             .context("Unit is unavailable")?
             .live_mass = correction;

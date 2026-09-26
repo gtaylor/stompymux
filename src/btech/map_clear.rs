@@ -32,9 +32,7 @@ fn clear(
     recipient: ObjectId,
     teardown: bool,
 ) -> Result<Vec<ObjectId>> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(&before, actor),
             "Permission denied."
@@ -84,7 +82,10 @@ fn clear(
             super::placement::detach_membership(&mut world, id)?;
         }
         // Bulk clearing releases the complete allocation, including holes left by removals.
-        std::sync::Arc::make_mut(&mut scripts.world_mut().btech.maps)
+        scripts
+            .world_mut()
+            .btech
+            .maps
             .get_mut(&map)
             .context("Map is unavailable")?
             .membership_extent = 0;
@@ -96,12 +97,7 @@ fn clear(
         scripts.world().validate(config)?;
         scripts.effects.validate()?;
         Ok(units)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// CLEARMECHS operates on the wizard's selected map; the reference ignores its argument.

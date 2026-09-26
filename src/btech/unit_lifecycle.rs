@@ -3,7 +3,7 @@
 //! dispatching to newfreemech SPECIAL_FREE and btech_configuration_forget).
 
 use crate::{BtechState, Kind, ObjectId, World};
-use std::{collections::BTreeSet, sync::Arc};
+use std::collections::BTreeSet;
 
 /// Drop the object's own administrative configuration and other units' references to it.
 ///
@@ -11,7 +11,7 @@ use std::{collections::BTreeSet, sync::Arc};
 /// configuration entry when an object is unregistered, clears `assigned_pilot` references
 /// pointing at the forgotten object, and deletes the object's own entry.
 pub(crate) fn forget_configuration(state: &mut BtechState, id: ObjectId) {
-    let configurations = Arc::make_mut(&mut state.unit_configuration);
+    let configurations = &mut state.unit_configuration;
     configurations.remove(&id);
     for entry in configurations.values_mut() {
         if entry.assigned_pilot == Some(id) {

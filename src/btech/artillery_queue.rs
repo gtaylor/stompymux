@@ -124,21 +124,19 @@ pub(super) fn enqueue_for_source(
         .map(|(&id, _)| id.checked_add(1).context("Artillery sequence exhausted"))
         .transpose()?
         .unwrap_or(0);
-    let mut candidate = world.clone();
-    let record = Arc::make_mut(&mut candidate.btech.maps)
-        .get_mut(&map)
-        .unwrap();
-    Arc::make_mut(&mut record.artillery_shots).insert(
-        ordinal,
-        BattleArtilleryShot {
-            shooter,
-            station,
-            flight,
-        },
-    );
-    record.validate_artillery()?;
-    *world = candidate;
-    Ok(ordinal)
+    world.attempt(|world| {
+        let record = world.btech.maps.get_mut(&map).unwrap();
+        Arc::make_mut(&mut record.artillery_shots).insert(
+            ordinal,
+            BattleArtilleryShot {
+                shooter,
+                station,
+                flight,
+            },
+        );
+        record.validate_artillery()?;
+        Ok(ordinal)
+    })
 }
 
 /// Queued rounds keep otherwise idle battlefields in the committed-second simulation.
@@ -161,33 +159,31 @@ pub fn advance_artillery_action(
     if !artillery_pending(&scripts.world.borrow()) {
         return Ok(Vec::new());
     }
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let shots: Vec<_> = before
-        .btech
-        .maps()
-        .iter()
-        .filter(|(id, _)| {
-            before
-                .objects
-                .get(id)
-                .is_some_and(|object| !object.flags.contains(Flag::Going))
-        })
-        .flat_map(|(&map, record)| {
-            record.artillery_shots.iter().map(move |(&ordinal, shot)| {
-                (
-                    map,
-                    ordinal,
-                    super::fire_target::TargetSource {
-                        unit: shot.shooter,
-                        owner: shot.station.unwrap_or(shot.shooter),
-                    },
-                    shot.flight.clone(),
-                )
+    scripts.atomic(|before| {
+        let shots: Vec<_> = before
+            .btech
+            .maps()
+            .iter()
+            .filter(|(id, _)| {
+                before
+                    .objects
+                    .get(id)
+                    .is_some_and(|object| !object.flags.contains(Flag::Going))
             })
-        })
-        .collect();
-    let result = (|| {
+            .flat_map(|(&map, record)| {
+                record.artillery_shots.iter().map(move |(&ordinal, shot)| {
+                    (
+                        map,
+                        ordinal,
+                        super::fire_target::TargetSource {
+                            unit: shot.shooter,
+                            owner: shot.station.unwrap_or(shot.shooter),
+                        },
+                        shot.flight.clone(),
+                    )
+                })
+            })
+            .collect();
         let mut reports = Vec::new();
         for (map, ordinal, source, mut flight) in shots {
             let mut report =
@@ -205,7 +201,9 @@ pub fn advance_artillery_action(
                 report.notices.extend(notices);
             }
             let mut world = scripts.world.borrow_mut();
-            let record = Arc::make_mut(&mut world.btech.maps)
+            let record = world
+                .btech
+                .maps
                 .get_mut(&map)
                 .context("Artillery map disappeared during arrival")?;
             let shots = Arc::make_mut(&mut record.artillery_shots);
@@ -219,12 +217,7 @@ pub fn advance_artillery_action(
                     .flight = flight;
             }
         }
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(reports)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }

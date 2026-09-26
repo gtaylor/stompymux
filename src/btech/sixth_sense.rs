@@ -2,7 +2,6 @@
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Distance-major warning table; text is deliberately independent of target identification.
 const MESSAGES: [&str; 9] = [
@@ -77,15 +76,9 @@ fn state(world: &World, id: ObjectId) -> Result<&SixthSense> {
 /// Mutate an already validated unit without maintaining a separate event registry.
 fn state_mut(world: &mut World, id: ObjectId) -> &mut SixthSense {
     if world.btech.vehicles().contains_key(&id) {
-        return &mut Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap()
-            .sixth_sense;
+        return &mut world.btech.vehicles.get_mut(&id).unwrap().sixth_sense;
     }
-    &mut Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap()
-        .sixth_sense
+    &mut world.btech.constructed.get_mut(&id).unwrap().sixth_sense
 }
 
 /// Current material mass includes the same cargo and damage adjustments as movement.
@@ -207,19 +200,13 @@ pub fn advance_sixth_sense(world: &mut World) -> Vec<(ObjectId, String)> {
 
 /// Countdown changes and private output belong to the same enclosing host transaction.
 pub fn advance_sixth_sense_action(scripts: &crate::Scripts) -> Result<Vec<(ObjectId, String)>> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let notices = advance_sixth_sense(&mut scripts.world_mut());
-    for (player, text) in &notices {
-        if let Err(error) =
-            super::notify_message(scripts, super::BattleMessageTarget::Player(*player), text)
-        {
-            *scripts.world_mut() = before;
-            scripts.effects.restore(checkpoint);
-            return Err(error);
+    scripts.atomic(|_| {
+        let notices = advance_sixth_sense(&mut scripts.world_mut());
+        for (player, text) in &notices {
+            super::notify_message(scripts, super::BattleMessageTarget::Player(*player), text)?;
         }
-    }
-    Ok(notices)
+        Ok(notices)
+    })
 }
 
 #[cfg(test)]

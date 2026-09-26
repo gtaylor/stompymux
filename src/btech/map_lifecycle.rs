@@ -5,9 +5,9 @@ use std::{collections::BTreeSet, sync::Arc};
 
 /// Remove map-owned state and authored configuration references, retaining world-object references.
 pub(crate) fn forget(state: &mut BtechState, ids: &BTreeSet<ObjectId>) {
-    Arc::make_mut(&mut state.maps).retain(|id, _| !ids.contains(id));
+    state.maps.retain(|id, _| !ids.contains(id));
     Arc::make_mut(&mut state.registrations).retain(|id, _| !ids.contains(id));
-    for map in Arc::make_mut(&mut state.maps).values_mut() {
+    for map in state.maps.values_mut() {
         if map
             .authored_link
             .is_some_and(|link| ids.contains(&link.parent))
@@ -56,9 +56,7 @@ pub(super) fn unregister(
     actor: ObjectId,
     map: ObjectId,
 ) -> Result<()> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(&before, actor)
                 && crate::authority::controls(&before, actor, map),
@@ -69,10 +67,5 @@ pub(super) fn unregister(
         scripts.world().validate(config)?;
         scripts.effects.validate()?;
         Ok(())
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }

@@ -3,7 +3,6 @@ use super::*;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// One committed second of forced vehicle descent, before host consequence publication.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -75,36 +74,32 @@ fn advance_in_candidate(
         .context("Aircraft descent map is unavailable")?
         .base_hex(i64::from(position.x), i64::from(position.y))?;
     let surface = super::fall_profile::surface(tile, unit.elevation_level(tile));
-    let mut candidate = world.clone();
-    let unit = Arc::make_mut(&mut candidate.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
-    let step = if unit.vtol_flight().is_some() {
-        unit.advance_vtol_fall(i32::from(surface), free_fusion_fuel)?
-    } else {
-        let fall = unit.free_fall.as_mut().context("Vehicle is not falling")?;
-        fall.advance(i32::from(surface))?
-    };
-    let event = match step {
-        BattleFreeFallStep::Recovered => BattleVehicleDescentEvent::Recovered,
-        BattleFreeFallStep::Waiting => BattleVehicleDescentEvent::Waiting,
-        BattleFreeFallStep::Descending => BattleVehicleDescentEvent::Descending,
-        BattleFreeFallStep::Impact { levels } => BattleVehicleDescentEvent::Impact {
-            levels,
-            fall: Box::new(if candidate.btech.vehicles()[&id].vtol_flight().is_some() {
-                resolve_in_candidate(&mut candidate, id, levels, rules, character)?
-            } else {
-                let unit = Arc::make_mut(&mut candidate.btech.vehicles)
-                    .get_mut(&id)
-                    .unwrap();
-                unit.free_fall = None;
-                unit.ground_elevation = Some(f64::from(surface));
-                super::vehicle_fall::resolve_material(&mut candidate, id, levels, rules, character)?
-            }),
-        },
-    };
-    *world = candidate;
-    Ok(event)
+    world.attempt(|world| {
+        let unit = world.btech.vehicles.get_mut(&id).unwrap();
+        let step = if unit.vtol_flight().is_some() {
+            unit.advance_vtol_fall(i32::from(surface), free_fusion_fuel)?
+        } else {
+            let fall = unit.free_fall.as_mut().context("Vehicle is not falling")?;
+            fall.advance(i32::from(surface))?
+        };
+        let event = match step {
+            BattleFreeFallStep::Recovered => BattleVehicleDescentEvent::Recovered,
+            BattleFreeFallStep::Waiting => BattleVehicleDescentEvent::Waiting,
+            BattleFreeFallStep::Descending => BattleVehicleDescentEvent::Descending,
+            BattleFreeFallStep::Impact { levels } => BattleVehicleDescentEvent::Impact {
+                levels,
+                fall: Box::new(if world.btech.vehicles()[&id].vtol_flight().is_some() {
+                    resolve_in_candidate(world, id, levels, rules, character)?
+                } else {
+                    let unit = world.btech.vehicles.get_mut(&id).unwrap();
+                    unit.free_fall = None;
+                    unit.ground_elevation = Some(f64::from(surface));
+                    super::vehicle_fall::resolve_material(world, id, levels, rules, character)?
+                }),
+            },
+        };
+        Ok(event)
+    })
 }
 
 /// Resolve tactical crash material at the aircraft's current map position atomically.
@@ -163,36 +158,36 @@ pub(super) fn resolve_signed_in_candidate(
         .context("Aircraft crash map is unavailable")?
         .base_hex(i64::from(position.x), i64::from(position.y))?;
     let height = super::fall_profile::surface(tile, unit.elevation_level(tile));
-    let mut candidate = world.clone();
-    let unit = Arc::make_mut(&mut candidate.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
-    // Clear descent before impact criticals can remove lift again.
-    unit.vtol_flight = Some(BattleVtolFlight {
-        phase: BattleVtolFlightPhase::Landed,
-        altitude: f64::from(height),
-        vertical_speed: 0.0,
-        fall: None,
-    });
-    let mut report = super::vehicle_fall::resolve_material_signed(
-        &mut candidate,
-        id,
-        i32::from(levels),
-        rules,
-        character,
-    )?;
-    if !rules.vehicle_impact.criticals.combat_safe && !super::battle_combat_safe(&candidate, id)? {
-        Arc::make_mut(&mut candidate.btech.vehicles)
-            .get_mut(&id)
-            .unwrap()
-            .apply_motive_hit(BattleVehicleMotiveHit::Immobilize);
-        report.notices.push(BattleNotice {
-            unit: id,
-            text: "Your rotor has been destroyed!".into(),
+    world.attempt(|world| {
+        let unit = world.btech.vehicles.get_mut(&id).unwrap();
+        // Clear descent before impact criticals can remove lift again.
+        unit.vtol_flight = Some(BattleVtolFlight {
+            phase: BattleVtolFlightPhase::Landed,
+            altitude: f64::from(height),
+            vertical_speed: 0.0,
+            fall: None,
         });
-    }
-    *world = candidate;
-    Ok(report)
+        let mut report = super::vehicle_fall::resolve_material_signed(
+            world,
+            id,
+            i32::from(levels),
+            rules,
+            character,
+        )?;
+        if !rules.vehicle_impact.criticals.combat_safe && !super::battle_combat_safe(world, id)? {
+            world
+                .btech
+                .vehicles
+                .get_mut(&id)
+                .unwrap()
+                .apply_motive_hit(BattleVehicleMotiveHit::Immobilize);
+            report.notices.push(BattleNotice {
+                unit: id,
+                text: "Your rotor has been destroyed!".into(),
+            });
+        }
+        Ok(report)
+    })
 }
 
 /// Advance falling vehicles once in stable unit order inside the movement candidate.
@@ -293,23 +288,21 @@ pub(super) fn begin_descent(world: &mut World, id: ObjectId) -> Result<()> {
         elevation > i32::from(super::fall_profile::surface(tile, elevation)),
         "Vehicle is already on the surface"
     );
-    let mut candidate = world.clone();
-    let unit = Arc::make_mut(&mut candidate.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
-    unit.halt();
-    unit.dig = super::BattleDigState::default();
-    unit.building_entry = None;
-    unit.ground_elevation = None;
-    unit.orbital_drop = None;
-    if let Some(flight) = &mut unit.vtol_flight {
-        flight.phase = BattleVtolFlightPhase::Falling;
-        flight.vertical_speed = 0.0;
-        flight.fall = Some(BattleFreeFall::at_altitude(altitude)?);
-    } else {
-        unit.free_fall = Some(BattleFreeFall::at_altitude(altitude)?);
-    }
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(())
+    world.attempt(|world| {
+        let unit = world.btech.vehicles.get_mut(&id).unwrap();
+        unit.halt();
+        unit.dig = super::BattleDigState::default();
+        unit.building_entry = None;
+        unit.ground_elevation = None;
+        unit.orbital_drop = None;
+        if let Some(flight) = &mut unit.vtol_flight {
+            flight.phase = BattleVtolFlightPhase::Falling;
+            flight.vertical_speed = 0.0;
+            flight.fall = Some(BattleFreeFall::at_altitude(altitude)?);
+        } else {
+            unit.free_fall = Some(BattleFreeFall::at_altitude(altitude)?);
+        }
+        world.btech.validate_action(world)?;
+        Ok(())
+    })
 }

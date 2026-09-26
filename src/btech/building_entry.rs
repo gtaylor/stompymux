@@ -3,7 +3,6 @@ use super::{BattleHexCoordinate, BattlePosition, BattlePosture};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// An entry event saves the selector, not a destination that could become stale.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -38,12 +37,11 @@ pub fn building_entry(world: &World, id: ObjectId) -> Option<BattleBuildingEntry
 /// Obtain the one saved event slot without duplicating scheduling or admission rules.
 fn slot(world: &mut World, id: ObjectId) -> Result<&mut Option<BattleBuildingEntry>> {
     if world.btech.vehicles().contains_key(&id) {
-        return Ok(&mut Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap()
-            .building_entry);
+        return Ok(&mut world.btech.vehicles.get_mut(&id).unwrap().building_entry);
     }
-    Ok(&mut Arc::make_mut(&mut world.btech.constructed)
+    Ok(&mut world
+        .btech
+        .constructed
         .get_mut(&id)
         .context("Unit is not constructed")?
         .building_entry)

@@ -185,11 +185,13 @@ pub fn set_unit_experience(
 ) -> Result<()> {
     use anyhow::Context;
     settings.validate()?;
-    if let Some(unit) = std::sync::Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         unit.experience = settings;
         return Ok(());
     }
-    let unit = std::sync::Arc::make_mut(&mut world.btech.constructed)
+    let unit = world
+        .btech
+        .constructed
         .get_mut(&id)
         .context("Unit construction state is unavailable")?;
     unit.experience = settings;

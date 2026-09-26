@@ -3,7 +3,6 @@ use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// An internal explosion's ordered rolls, critical consequences and final protection change.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -36,17 +35,11 @@ pub fn resolve_vehicle_internal_damage(
     amount: u32,
     rules: BattleVehicleCriticalRules,
 ) -> Result<BattleVehicleInternalDamage> {
-    let mut candidate = world.clone();
-    let result = resolve_in_candidate(
-        &mut candidate,
-        id,
-        section,
-        amount,
-        rules,
-        DamageContext::default(),
-    )?;
-    *world = candidate;
-    Ok(result)
+    world.attempt(|world| {
+        let result =
+            resolve_in_candidate(world, id, section, amount, rules, DamageContext::default())?;
+        Ok(result)
+    })
 }
 
 /// Source attribution and recursion budget travel together through vehicle critical cascades.
@@ -166,9 +159,7 @@ fn resolve_damage(
     }
     let safe = rules.combat_safe || super::combat_safe::protects(world, context.attacker, id);
     let warning = super::weapons_hold::damage_notice(world, context.attacker, id);
-    let vehicle = Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
+    let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
     if armor_criticals.is_none() {
         result.rolls.push(vehicle.dice.generic_roll());
         if safe {
@@ -193,9 +184,7 @@ fn resolve_damage(
             ),
         });
     }
-    let vehicle = Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
+    let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
     let roll = vehicle.dice.generic_roll();
     result.rolls.push(roll);
     let count = match roll {
@@ -226,9 +215,7 @@ fn resolve_damage(
         result.broadcasts.extend(critical.broadcasts.clone());
         result.criticals.push(critical);
     }
-    let vehicle = Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
+    let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
     let was_destroyed = vehicle.is_destroyed();
     let damage = vehicle.damage_phase(
         section,

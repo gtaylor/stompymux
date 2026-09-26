@@ -2,7 +2,6 @@
 use super::*;
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
-use std::sync::Arc;
 
 impl BattleUnit {
     /// Saved armor controls; the equipment capability is derived from installed slots.
@@ -88,7 +87,9 @@ pub fn toggle_stealth(world: &mut World, id: ObjectId, pilot: ObjectId) -> Resul
         "You are already changing the status of your Stealth Armor system!"
     );
     let enabled = !unit.stealth.enabled;
-    Arc::make_mut(&mut world.btech.constructed)
+    world
+        .btech
+        .constructed
         .get_mut(&id)
         .unwrap()
         .stealth
@@ -118,7 +119,7 @@ pub fn advance_stealth(world: &mut World) -> Vec<BattleNotice> {
         return Vec::new();
     }
     let mut notices = Vec::new();
-    for (&id, unit) in Arc::make_mut(&mut world.btech.constructed) {
+    for (&id, unit) in &mut world.btech.constructed {
         let available = unit.power() == BattlePower::Running
             && unit
                 .electronic_suite_available(BattleElectronicSuite::Guardian)

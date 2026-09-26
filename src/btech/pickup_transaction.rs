@@ -2,7 +2,6 @@
 use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// Material effects retained until the host publishes nested injuries and casualties.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
@@ -155,11 +154,12 @@ pub(super) fn pickup(
         None
     };
     let maximum = super::throttle_maximum(&candidate, carrier, tsm_tow_bonus)?;
-    let motion = if let Some(unit) = Arc::make_mut(&mut candidate.btech.vehicles).get_mut(&carrier)
-    {
+    let motion = if let Some(unit) = candidate.btech.vehicles.get_mut(&carrier) {
         unit.motion.as_mut()
     } else {
-        Arc::make_mut(&mut candidate.btech.constructed)
+        candidate
+            .btech
+            .constructed
             .get_mut(&carrier)
             .and_then(|unit| unit.motion.as_mut())
     };
@@ -167,7 +167,7 @@ pub(super) fn pickup(
         motion.limit_load(maximum, maximum);
     }
     super::towing::synchronize_pair(&mut candidate, carrier, target)?;
-    candidate.btech.validate(&candidate)?;
+    candidate.btech.validate_action(&candidate)?;
     *world = candidate;
     Ok(BattlePickupReport {
         pilot_notices,

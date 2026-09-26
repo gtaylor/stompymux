@@ -2,7 +2,6 @@
 use super::*;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// Queue a piloted launch; nonzero delay overrides require wizard authority.
 pub fn begin_vtol_takeoff(
@@ -36,7 +35,9 @@ pub fn begin_vtol_takeoff(
         .context("Aircraft map is unavailable")?;
     map.base_hex(i64::from(position.x), i64::from(position.y))?;
     let underground = map.flags & 16 != 0;
-    Arc::make_mut(&mut world.btech.vehicles)
+    world
+        .btech
+        .vehicles
         .get_mut(&id)
         .unwrap()
         .begin_vtol_takeoff(underground, free_fusion_fuel, delay)?;
@@ -80,7 +81,9 @@ pub fn set_vtol_vertical_speed(
     super::vehicle_power::controlled(world, id, pilot)?;
     super::fortification::require_mobile(world, id)?;
     let maximum = super::motion_controls::throttle_maximum(world, id, true)?;
-    Arc::make_mut(&mut world.btech.vehicles)
+    world
+        .btech
+        .vehicles
         .get_mut(&id)
         .unwrap()
         .set_vtol_vertical_at(speed, free_fusion_fuel, maximum)?;
@@ -108,14 +111,16 @@ pub(super) fn land_in_candidate(
         .get(&position.map)
         .context("Aircraft map is unavailable")?
         .base_hex(i64::from(position.x), i64::from(position.y))?;
-    let mut candidate = world.clone();
-    let outcome = Arc::make_mut(&mut candidate.btech.vehicles)
-        .get_mut(&id)
-        .unwrap()
-        .land_vtol(tile, movement.free_fusion_vtol_fuel)?;
-    let report = landing_consequences(&mut candidate, id, outcome, movement.fall, character)?;
-    *world = candidate;
-    Ok(report)
+    world.attempt(|world| {
+        let outcome = world
+            .btech
+            .vehicles
+            .get_mut(&id)
+            .unwrap()
+            .land_vtol(tile, movement.free_fusion_vtol_fuel)?;
+        let report = landing_consequences(world, id, outcome, movement.fall, character)?;
+        Ok(report)
+    })
 }
 
 /// Shared touchdown effects for deliberate and automatic landing, published by the host.
@@ -206,9 +211,7 @@ pub(crate) fn command(
     ctx: &crate::CommandContext<'_>,
     input: &crate::CommandInput,
 ) -> Result<crate::CommandAction> {
-    let before = ctx.scripts.world().clone();
-    let checkpoint = ctx.scripts.effects.checkpoint();
-    let result = (|| -> Result<Option<String>> {
+    let result = ctx.scripts.atomic(|_| -> Result<Option<String>> {
         let id = ctx.scripts.world().objects[&ctx.player]
             .location
             .context("Enter a unit first")?;
@@ -239,13 +242,11 @@ pub(crate) fn command(
             argument.parse().context("Usage: vertical [kph]")?,
         )?;
         Ok(None)
-    })();
+    });
     Ok(match result {
         Ok(None) => crate::CommandAction::Continue,
         Ok(Some(text)) => crate::CommandAction::Report(crate::CommandReport::Reply(text)),
         Err(error) => {
-            *ctx.scripts.world_mut() = before;
-            ctx.scripts.effects.restore(checkpoint);
             crate::CommandAction::Report(crate::CommandReport::Reply(format!("{error:#}")))
         }
     })

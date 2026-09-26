@@ -108,10 +108,13 @@ impl HeartbeatHarness {
             metrics.autopilot.prediction_ticks = 0;
             metrics.autopilot.prediction_fallbacks = 0;
             // Decisions from a rejected candidate cannot become the next tick's cached work.
-            std::sync::Arc::make_mut(
-                &mut self.server.scripts.world.borrow_mut().btech.autopilot_plans,
-            )
-            .clear();
+            self.server
+                .scripts
+                .world
+                .borrow_mut()
+                .btech
+                .autopilot_plans
+                .clear();
         }
         metrics
     }

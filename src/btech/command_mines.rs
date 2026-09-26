@@ -73,32 +73,32 @@ pub(super) fn resolve(
     if selected.is_empty() {
         return Ok(report);
     }
-    let mut candidate = world.clone();
-    for (ordinal, mine) in selected {
-        // Damage cascades can already have removed another selected field.
-        if candidate.btech.maps()[&map].minefields().get(&ordinal) != Some(&mine) {
-            continue;
+    world.attempt(|world| {
+        for (ordinal, mine) in selected {
+            // Damage cascades can already have removed another selected field.
+            if world.btech.maps()[&map].minefields().get(&ordinal) != Some(&mine) {
+                continue;
+            }
+            report.notices.extend(super::mine_event::explosion_notices(
+                world,
+                map,
+                mine.coordinate,
+            )?);
+            let detonate = if character {
+                super::mine_blast::resolve_in_action
+            } else {
+                super::resolve_mine_blast
+            };
+            let blast = detonate(world, map, ordinal, rules)?;
+            super::piloting::append_feedback(
+                &mut report.pilot_notices,
+                blast.pilot_notices.iter().cloned(),
+                report.notices.len(),
+            );
+            report.notices.extend(blast.notices.iter().cloned());
+            report.blasts.push(blast);
         }
-        report.notices.extend(super::mine_event::explosion_notices(
-            &candidate,
-            map,
-            mine.coordinate,
-        )?);
-        let detonate = if character {
-            super::mine_blast::resolve_in_action
-        } else {
-            super::resolve_mine_blast
-        };
-        let blast = detonate(&mut candidate, map, ordinal, rules)?;
-        super::piloting::append_feedback(
-            &mut report.pilot_notices,
-            blast.pilot_notices.iter().cloned(),
-            report.notices.len(),
-        );
-        report.notices.extend(blast.notices.iter().cloned());
-        report.blasts.push(blast);
-    }
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(report)
+        world.btech.validate(world)?;
+        Ok(report)
+    })
 }

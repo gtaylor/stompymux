@@ -2,7 +2,6 @@
 use super::*;
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// Administrative relocation resets motion; a building transfer preserves running controls.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -16,11 +15,11 @@ pub(super) enum PlacementMode {
 /// Invalid placement or resulting world state leaves the original world unchanged.
 pub fn transfer_unit(world: &mut World, id: ObjectId, position: BattlePosition) -> Result<()> {
     validate_transfer(world, id, false)?;
-    let mut candidate = world.clone();
-    place_transfer(&mut candidate, id, position)?;
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(())
+    world.attempt(|world| {
+        place_transfer(world, id, position)?;
+        world.btech.validate(world)?;
+        Ok(())
+    })
 }
 
 /// Move every member before checking relationship invariants; caller owns rollback.
@@ -184,7 +183,7 @@ pub(super) fn place(
     motion.point = point;
     super::map_slots::arrive(&mut world.btech, id, position.map, slot);
     super::contacts::forget_unit(world, id);
-    let identity = if let Some(vehicle) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    let identity = if let Some(vehicle) = world.btech.vehicles.get_mut(&id) {
         if mode == PlacementMode::Administrative {
             vehicle.pilot = None;
         }
@@ -196,9 +195,7 @@ pub(super) fn place(
         }
         vehicle.identity()
     } else {
-        let unit = Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
         if unit.position.is_none_or(|old| old.map != position.map) {
             unit.c3i_network = None;
             unit.c3_network = None;
@@ -222,7 +219,7 @@ pub(super) fn place(
         unit.charge.target = None;
         unit.identity()
     };
-    Arc::make_mut(&mut world.btech.units).insert(id, identity);
+    world.btech.units.insert(id, identity);
     world.objects.get_mut(&id).unwrap().location = Some(position.map);
     Ok(())
 }

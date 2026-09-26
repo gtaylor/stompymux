@@ -746,20 +746,19 @@ impl AutopilotController {
 /// Pause a controller after an already-admitted player action.
 pub(crate) fn manual_takeover(world: &mut World, id: ObjectId) -> Result<bool> {
     let simulation_time = world.btech.simulation_time();
-    let Some(controller) = std::sync::Arc::make_mut(&mut world.btech.controllers).get_mut(&id)
-    else {
+    let Some(controller) = world.btech.controllers.get_mut(&id) else {
         return Ok(false);
     };
     let paused = controller.manual_takeover(simulation_time);
     if paused {
-        std::sync::Arc::make_mut(&mut world.btech.autopilot_plans).remove(&id);
+        world.btech.autopilot_plans.remove(&id);
     }
     Ok(paused)
 }
 
 /// Validate controller state independently of world references.
 pub(crate) fn validate_controllers(
-    controllers: &std::collections::BTreeMap<ObjectId, AutopilotController>,
+    controllers: &crate::SharedMap<ObjectId, AutopilotController>,
 ) -> Result<()> {
     for (unit, controller) in controllers {
         ensure!(

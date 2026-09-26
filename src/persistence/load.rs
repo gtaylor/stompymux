@@ -223,6 +223,6 @@ pub(super) async fn read(c: &mut SqliteConnection) -> Result<World> {
     w.next_id = w
         .next_id
         .max(w.objects.keys().next_back().map_or(0, |id| id.0 + 1));
-    w.links = super::maintenance::links(c).await?;
+    w.links = std::sync::Arc::new(super::maintenance::links(c).await?);
     Ok(w)
 }

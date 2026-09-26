@@ -6,7 +6,6 @@ use super::{
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Independently controlled electronic-warfare suite families.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -142,15 +141,9 @@ fn state(world: &World, id: ObjectId) -> Result<BattleElectronics> {
 /// Borrow common controls while keeping construction-specific storage private.
 fn state_mut(world: &mut World, id: ObjectId) -> &mut BattleElectronics {
     if world.btech.vehicles().contains_key(&id) {
-        return &mut Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap()
-            .electronics;
+        return &mut world.btech.vehicles.get_mut(&id).unwrap().electronics;
     }
-    &mut Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap()
-        .electronics
+    &mut world.btech.constructed.get_mut(&id).unwrap().electronics
 }
 
 /// Query construction-specific equipment availability for a common suite.
@@ -349,9 +342,7 @@ pub(crate) fn configure(
     suite: BattleElectronicSuite,
     requested: Mode,
 ) -> Result<Mode> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let mode =
             toggle_electronics(&mut scripts.world.borrow_mut(), id, pilot, suite, requested)?;
         let name = if suite == BattleElectronicSuite::Angel {
@@ -370,12 +361,7 @@ pub(crate) fn configure(
             super::notify_unit_text(scripts, notice.unit, &notice.text)?;
         }
         Ok(mode)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Four cockpit commands select Guardian or Angel ECM/ECCM modes.

@@ -218,9 +218,7 @@ pub(super) fn advance_in_candidate(
         map.base_hex(x, y).map(Some)
     };
     let mut candidate = world.clone();
-    let unit = std::sync::Arc::make_mut(&mut candidate.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
+    let unit = candidate.btech.vehicles.get_mut(&id).unwrap();
     let mut outcome = unit.advance_environment_with(
         &lookup,
         map.movement_modifier,
@@ -262,7 +260,9 @@ pub(super) fn advance_in_candidate(
             old_tile.surface_height()
         };
         if !forest {
-            std::sync::Arc::make_mut(&mut candidate.btech.vehicles)
+            candidate
+                .btech
+                .vehicles
                 .get_mut(&id)
                 .unwrap()
                 .vtol_flight
@@ -316,9 +316,7 @@ pub(super) fn advance_in_candidate(
                 }
                 .into(),
             });
-            let unit = std::sync::Arc::make_mut(&mut candidate.btech.vehicles)
-                .get_mut(&id)
-                .unwrap();
+            let unit = candidate.btech.vehicles.get_mut(&id).unwrap();
             unit.vtol_flight.as_mut().unwrap().altitude = f64::from(rollback_height);
             if forest {
                 unit.motion.as_mut().unwrap().stop_translation();
@@ -331,7 +329,9 @@ pub(super) fn advance_in_candidate(
             None
         } else {
             if forest {
-                std::sync::Arc::make_mut(&mut candidate.btech.vehicles)
+                candidate
+                    .btech
+                    .vehicles
                     .get_mut(&id)
                     .unwrap()
                     .place_contact(path)?;

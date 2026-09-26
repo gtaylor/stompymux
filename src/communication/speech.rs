@@ -399,15 +399,9 @@ fn perform(ctx: &CommandContext<'_>, input: &CommandInput, mode: Mode) -> Result
 macro_rules! handler {
     ($name:ident,$mode:ident) => {
         pub fn $name(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
-            let before = ctx.scripts.world.borrow().clone();
-            let checkpoint = ctx.scripts.effects.checkpoint();
-            match perform(ctx, input, Mode::$mode) {
+            match ctx.scripts.atomic(|_| perform(ctx, input, Mode::$mode)) {
                 Ok(action) => Ok(action),
-                Err(error) => {
-                    *ctx.scripts.world.borrow_mut() = before;
-                    ctx.scripts.effects.restore(checkpoint);
-                    Ok(Action::Report(Report::Reply(error.to_string())))
-                }
+                Err(error) => Ok(Action::Report(Report::Reply(error.to_string()))),
             }
         }
     };

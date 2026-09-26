@@ -3,7 +3,6 @@ use super::{BattleConsciousnessCheck, BattleNotice};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// Tactical injury outcome; notices are published by the enclosing attack after commit.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -38,10 +37,10 @@ pub fn injure_tactical_pilot(
     hits: u8,
     toughness: bool,
 ) -> Result<BattlePilotInjury> {
-    let mut candidate = world.clone();
-    let report = injure_tactical_pilot_in_candidate(&mut candidate, id, hits, toughness)?;
-    *world = candidate;
-    Ok(report)
+    world.attempt(|world| {
+        let report = injure_tactical_pilot_in_candidate(world, id, hits, toughness)?;
+        Ok(report)
+    })
 }
 
 /// Mutate an enclosing attack candidate; its owner discards all changes on failure.
@@ -148,13 +147,11 @@ fn injure_tactical_crew(
         return Ok(report);
     }
     super::pilot_health::set_count(world, id, injuries);
-    if let Some(vehicle) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(vehicle) = world.btech.vehicles.get_mut(&id) {
         vehicle.pilot_killed = report.killed;
         vehicle.reconcile_crew_loss();
     } else {
-        let unit = Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
         unit.pilot_killed = report.killed;
         if report.killed {
             unit.pilot = None;
@@ -163,7 +160,7 @@ fn injure_tactical_crew(
     }
     if let Some(pilot) = pilot {
         if report.killed {
-            if let Some(recovery) = Arc::make_mut(&mut world.btech.recoveries).get_mut(&pilot) {
+            if let Some(recovery) = world.btech.recoveries.get_mut(&pilot) {
                 recovery.remaining = 0;
             }
         } else {
@@ -173,7 +170,7 @@ fn injure_tactical_crew(
     } else if !report.killed {
         report.consciousness = super::crew_recovery::check(world, id, injuries, toughness)?;
     }
-    world.btech.validate(world)?;
+    world.btech.validate_action(world)?;
     Ok(report)
 }
 
@@ -236,11 +233,10 @@ pub fn resolve_tactical_impact(
     damage: u16,
     rules: super::BattleFallRules,
 ) -> Result<BattleTacticalImpact> {
-    let mut candidate = world.clone();
-    let report =
-        resolve_tactical_impact_in_candidate(&mut candidate, id, hit, damage, rules, None)?;
-    *world = candidate;
-    Ok(report)
+    world.attempt(|world| {
+        let report = resolve_tactical_impact_in_candidate(world, id, hit, damage, rules, None)?;
+        Ok(report)
+    })
 }
 
 /// Reuse the enclosing salvo checkpoint instead of cloning the world for every damage group.
@@ -313,17 +309,15 @@ pub(super) fn set_administrative_injuries(
         return Ok(report.notice(id));
     }
     super::pilot_health::set_count(world, id, injuries);
-    let recovery = if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    let recovery = if let Some(unit) = world.btech.constructed.get_mut(&id) {
         &mut unit.crew_recovery
     } else {
-        let unit = Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.vehicles.get_mut(&id).unwrap();
         &mut unit.crew_recovery
     };
     recovery.edit_tactical_injuries(injuries);
     if let Some(pilot) = pilot
-        && let Some(recovery) = Arc::make_mut(&mut world.btech.recoveries).get_mut(&pilot)
+        && let Some(recovery) = world.btech.recoveries.get_mut(&pilot)
     {
         recovery.edit_tactical_injuries(injuries);
     }

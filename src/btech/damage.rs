@@ -3,7 +3,6 @@ use super::{BattleSection, BattleSectionState, BattleUnit};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// A material-damage phase, deliberately separate from hit selection and critical execution.
 #[derive(Debug, Clone, Copy)]
@@ -179,8 +178,6 @@ pub fn apply_damage_phase(
         .get(&id)
         .context("Unit construction state is unavailable")?;
     unit.validate()?;
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     Ok(unit.damage_phase(section, amount, phase))
 }

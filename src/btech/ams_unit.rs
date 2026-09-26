@@ -2,7 +2,6 @@
 use super::*;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
-use std::sync::Arc;
 
 /// One selected mount and its first usable normal-ammunition bin.
 pub(super) struct Defense {
@@ -26,11 +25,13 @@ pub(super) fn enabled(world: &World, id: ObjectId) -> Result<bool> {
 
 /// Store a switch after the caller has checked cockpit authority and installation.
 pub(super) fn set_enabled(world: &mut World, id: ObjectId, enabled: bool) -> Result<()> {
-    if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         unit.ams_enabled = enabled;
         return Ok(());
     }
-    Arc::make_mut(&mut world.btech.constructed)
+    world
+        .btech
+        .constructed
         .get_mut(&id)
         .context("Unit is unavailable")?
         .ams_enabled = enabled;
@@ -155,14 +156,16 @@ pub(super) fn expend(
     rounds: u16,
 ) -> Result<u16> {
     let recycle = world.btech.weapon_settings.recycle_seconds(weapon);
-    if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         let spent = unit.ammunition()[bin].min(rounds);
         unit.expend_reserved_ammunition(bin, spent)?;
         unit.weapon_heat += f64::from(weapon.profile().heat);
         unit.weapon_recycle.insert(index, u16::from(recycle));
         return Ok(spent);
     }
-    let unit = Arc::make_mut(&mut world.btech.constructed)
+    let unit = world
+        .btech
+        .constructed
         .get_mut(&id)
         .context("Unit is unavailable")?;
     let spent = unit.ammunition[bin].min(rounds);

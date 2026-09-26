@@ -5,7 +5,6 @@ use super::{
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Ground posture changes eye height, movement and combat geometry.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -216,205 +215,189 @@ fn resolve_material_with_tonnage(
     let pilot = unit.pilot();
     let has_pilot = pilot.is_some();
     let safe = unit.combat_safe;
-    let mut candidate = world.clone();
-    let mut avoidance = if safe {
-        None
-    } else {
-        Some(super::piloting::roll_piloting_i32(
-            &mut candidate,
-            id,
-            levels,
-            rules.extended_piloting,
-        )?)
-    };
-    let experience_messages = if character && let Some(check) = &mut avoidance {
-        super::piloting::award_control_check(&mut candidate, id, check, rules.extended_piloting)?
-            .into_iter()
-            .collect()
-    } else {
-        Vec::new()
-    };
-    let character_injury =
-        if character && avoidance.is_some_and(|check| !check.success) && has_pilot {
-            Some(super::injure_character_pilot(
-                &mut candidate,
+    world.attempt(|world| {
+        let mut avoidance = if safe {
+            None
+        } else {
+            Some(super::piloting::roll_piloting_i32(
+                world,
                 id,
-                1,
-                rules.toughness,
+                levels,
+                rules.extended_piloting,
             )?)
+        };
+        let experience_messages = if character && let Some(check) = &mut avoidance {
+            super::piloting::award_control_check(world, id, check, rules.extended_piloting)?
+                .into_iter()
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let character_injury =
+            if character && avoidance.is_some_and(|check| !check.success) && has_pilot {
+                Some(super::injure_character_pilot(
+                    world,
+                    id,
+                    1,
+                    rules.toughness,
+                )?)
+            } else {
+                None
+            };
+        let pilot_injury =
+            if !character && avoidance.is_some_and(|check| !check.success) && has_pilot {
+                Some(super::injure_tactical_pilot(world, id, 1, rules.toughness)?)
+            } else {
+                None
+            };
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
+        if matches!(
+            unit.stand_timer,
+            Some(super::BattleStandTimer::Rising { .. })
+        ) {
+            unit.stand_timer = None;
+        }
+        unit.stagger.clear_damage();
+        unit.ground_elevation = if below_bridge {
+            Some(-1.0)
+        } else if below_ice {
+            Some(f64::from(
+                tile.expect("ice fall has a terrain tile").surface_height(),
+            ))
         } else {
             None
         };
-    let pilot_injury = if !character && avoidance.is_some_and(|check| !check.success) && has_pilot {
-        Some(super::injure_tactical_pilot(
-            &mut candidate,
-            id,
-            1,
-            rules.toughness,
-        )?)
-    } else {
-        None
-    };
-    let unit = Arc::make_mut(&mut candidate.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
-    if matches!(
-        unit.stand_timer,
-        Some(super::BattleStandTimer::Rising { .. })
-    ) {
-        unit.stand_timer = None;
-    }
-    unit.stagger.clear_damage();
-    unit.ground_elevation = if below_bridge {
-        Some(-1.0)
-    } else if below_ice {
-        Some(f64::from(
-            tile.expect("ice fall has a terrain tile").surface_height(),
-        ))
-    } else {
-        None
-    };
-    let airborne = unit.airborne();
-    if let Some(event) = &mut unit.free_fall {
-        event.land();
-    }
-    unit.flight = None;
-    unit.orbital_drop = None;
-    if airborne && !unit.is_destroyed() {
-        unit.jump_stabilization = 12;
-    }
-    set_prone(unit);
-    if let Some(motion) = &mut unit.motion {
-        motion.speed = 0.0;
-        motion.desired_speed = 0.0;
-        motion.desired_heading = motion.heading;
-    }
-    let ice_break = if position.is_some() {
-        if character {
-            super::surface_break::check_ice_landing_in_action(&mut candidate, id, rules)?
-        } else {
-            super::surface_break::check_ice_landing(&mut candidate, id, rules)?
+        let airborne = unit.airborne();
+        if let Some(event) = &mut unit.free_fall {
+            event.land();
         }
-        .map(Box::new)
-    } else {
-        None
-    };
-    let wet = if let Some(position) = position {
-        let tile = candidate.btech.maps()[&position.map]
-            .base_hex(i64::from(position.x), i64::from(position.y))?;
-        (matches!(
-            tile.terrain,
-            super::Terrain::Water | super::Terrain::Ice | super::Terrain::Bridge
-        ) && candidate.btech.constructed_units()[&id].elevation_level(tile) < 0)
-            || tile.terrain == super::Terrain::HighWater
-    } else {
-        false
-    };
-    let damage = super::fall_profile::damage(tons, levels, wet, gravity)?;
-    let flooding = if position.is_none() {
-        Vec::new()
-    } else if character {
-        super::flooding::flood_unit_in_action(&mut candidate, id, rules)?
-    } else {
-        super::flood_unit(&mut candidate, id, rules)?
-    };
-    let inferno_notices = if position.is_some() {
-        super::extinguish_inferno_in_water(&mut candidate, id)?
-    } else {
-        Vec::new()
-    };
-    let unit = Arc::make_mut(&mut candidate.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
-    let direction_roll = unit.dice.d6();
-    let (arc, offset) = super::fall_profile::direction(direction_roll)?;
-    if let Some(motion) = &mut unit.motion {
-        motion.speed = 0.0;
-        motion.desired_speed = 0.0;
-        motion.heading = (motion.heading + f64::from(offset)).rem_euclid(360.0);
-        motion.desired_heading = motion.heading;
-    }
-    let mut groups = Vec::new();
-    let mut remaining = if safe { 0 } else { damage };
-    while remaining > 0 {
-        let amount = remaining.min(5);
-        remaining -= amount;
-        let amount = amount as u16;
-        let unit = &candidate.btech.constructed_units()[&id];
-        let mut dice = unit.dice.clone();
-        let roll = dice.generic_roll();
-        let hit = rules.hit.resolve(unit, arc, roll, &mut dice)?;
-        Arc::make_mut(&mut candidate.btech.constructed)
-            .get_mut(&id)
-            .unwrap()
-            .dice = dice;
-        // Native falling continues rolling each five-point group after a lethal packet;
-        // its damage entry point then ignores the already destroyed unit.
-        if candidate.btech.constructed_units()[&id].is_destroyed() {
-            continue;
+        unit.flight = None;
+        unit.orbital_drop = None;
+        if airborne && !unit.is_destroyed() {
+            unit.jump_stabilization = 12;
         }
-        let outcome = if character {
-            super::impact::resolve_character_impact_with_rules(
-                &mut candidate,
-                id,
-                hit,
-                amount,
-                Some(rules),
-            )?
+        set_prone(unit);
+        if let Some(motion) = &mut unit.motion {
+            motion.speed = 0.0;
+            motion.desired_speed = 0.0;
+            motion.desired_heading = motion.heading;
+        }
+        let ice_break = if position.is_some() {
+            if character {
+                super::surface_break::check_ice_landing_in_action(world, id, rules)?
+            } else {
+                super::surface_break::check_ice_landing(world, id, rules)?
+            }
+            .map(Box::new)
         } else {
-            super::pilot_injury::resolve_tactical_impact_in_candidate(
-                &mut candidate,
-                id,
-                hit,
-                amount,
-                rules,
-                None,
-            )?
+            None
         };
-        groups.push(BattleSalvoGroup {
-            damage: amount,
-            hit,
-            impact: outcome.impact,
-            pilot_injuries: outcome.pilot_injuries,
-            pilot_notices: outcome.pilot_notices,
-            notices: outcome.notices,
-            balance: outcome.balance,
-            flooding: outcome.flooding,
-        });
-    }
-    let mines = if position.is_some() {
-        super::mine_event::resolve(
-            &mut candidate,
-            id,
-            super::BattleMineTriggerReason::Fall,
-            rules,
-            character,
-        )?
-    } else {
-        super::BattleMineEventReport {
-            unit: id,
-            reason: super::BattleMineTriggerReason::Fall,
-            blasts: Vec::new(),
-            triggers: 0,
-            notices: Vec::new(),
-            pilot_notices: Vec::new(),
+        let wet = if let Some(position) = position {
+            let tile = world.btech.maps()[&position.map]
+                .base_hex(i64::from(position.x), i64::from(position.y))?;
+            (matches!(
+                tile.terrain,
+                super::Terrain::Water | super::Terrain::Ice | super::Terrain::Bridge
+            ) && world.btech.constructed_units()[&id].elevation_level(tile) < 0)
+                || tile.terrain == super::Terrain::HighWater
+        } else {
+            false
+        };
+        let damage = super::fall_profile::damage(tons, levels, wet, gravity)?;
+        let flooding = if position.is_none() {
+            Vec::new()
+        } else if character {
+            super::flooding::flood_unit_in_action(world, id, rules)?
+        } else {
+            super::flood_unit(world, id, rules)?
+        };
+        let inferno_notices = if position.is_some() {
+            super::extinguish_inferno_in_water(world, id)?
+        } else {
+            Vec::new()
+        };
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
+        let direction_roll = unit.dice.d6();
+        let (arc, offset) = super::fall_profile::direction(direction_roll)?;
+        if let Some(motion) = &mut unit.motion {
+            motion.speed = 0.0;
+            motion.desired_speed = 0.0;
+            motion.heading = (motion.heading + f64::from(offset)).rem_euclid(360.0);
+            motion.desired_heading = motion.heading;
         }
-    };
-    *world = candidate;
-    Ok(BattleFallReport {
-        experience_messages,
-        avoidance,
-        pilot,
-        pilot_injury,
-        character_injury,
-        direction_roll,
-        arc,
-        damage,
-        groups,
-        flooding,
-        inferno_notices,
-        mines,
-        ice_break,
+        let mut groups = Vec::new();
+        let mut remaining = if safe { 0 } else { damage };
+        while remaining > 0 {
+            let amount = remaining.min(5);
+            remaining -= amount;
+            let amount = amount as u16;
+            let unit = &world.btech.constructed_units()[&id];
+            let mut dice = unit.dice.clone();
+            let roll = dice.generic_roll();
+            let hit = rules.hit.resolve(unit, arc, roll, &mut dice)?;
+            world.btech.constructed.get_mut(&id).unwrap().dice = dice;
+            // Native falling continues rolling each five-point group after a lethal packet;
+            // its damage entry point then ignores the already destroyed unit.
+            if world.btech.constructed_units()[&id].is_destroyed() {
+                continue;
+            }
+            let outcome = if character {
+                super::impact::resolve_character_impact_with_rules(
+                    world,
+                    id,
+                    hit,
+                    amount,
+                    Some(rules),
+                )?
+            } else {
+                super::pilot_injury::resolve_tactical_impact_in_candidate(
+                    world, id, hit, amount, rules, None,
+                )?
+            };
+            groups.push(BattleSalvoGroup {
+                damage: amount,
+                hit,
+                impact: outcome.impact,
+                pilot_injuries: outcome.pilot_injuries,
+                pilot_notices: outcome.pilot_notices,
+                notices: outcome.notices,
+                balance: outcome.balance,
+                flooding: outcome.flooding,
+            });
+        }
+        let mines = if position.is_some() {
+            super::mine_event::resolve(
+                world,
+                id,
+                super::BattleMineTriggerReason::Fall,
+                rules,
+                character,
+            )?
+        } else {
+            super::BattleMineEventReport {
+                unit: id,
+                reason: super::BattleMineTriggerReason::Fall,
+                blasts: Vec::new(),
+                triggers: 0,
+                notices: Vec::new(),
+                pilot_notices: Vec::new(),
+            }
+        };
+        Ok(BattleFallReport {
+            experience_messages,
+            avoidance,
+            pilot,
+            pilot_injury,
+            character_injury,
+            direction_roll,
+            arc,
+            damage,
+            groups,
+            flooding,
+            inferno_notices,
+            mines,
+            ice_break,
+        })
     })
 }
 

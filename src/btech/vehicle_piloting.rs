@@ -2,7 +2,6 @@
 use super::BattlePilotingCheck;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// Evaluate a vehicle control check; the caller owns damage, XP, notices and the transaction.
 pub(super) fn roll(
@@ -42,7 +41,9 @@ pub(super) fn roll(
         None
     } else {
         Some(
-            Arc::make_mut(&mut world.btech.vehicles)
+            world
+                .btech
+                .vehicles
                 .get_mut(&id)
                 .unwrap()
                 .dice

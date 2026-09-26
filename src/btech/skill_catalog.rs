@@ -311,7 +311,7 @@ pub fn retain_character_experience(
                 (u64::from(value.experience_balance()) * u64::from(per_mille) / 1000) as u32;
         }
     }
-    std::sync::Arc::make_mut(&mut world.btech.character_values).insert(player, retained);
+    world.btech.character_values.insert(player, retained);
     Ok(())
 }
 

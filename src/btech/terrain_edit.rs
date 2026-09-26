@@ -46,12 +46,12 @@ pub(super) fn replace_hex(
                 && i32::from(position.y) == coordinate.y
         })
     };
-    for unit in Arc::make_mut(&mut world.btech.constructed).values_mut() {
+    for unit in world.btech.constructed.values_mut() {
         if on_tile(unit.position) && unit.retained_altitude().is_none() {
             unit.ground_elevation = Some(unit.altitude(before));
         }
     }
-    for unit in Arc::make_mut(&mut world.btech.vehicles).values_mut() {
+    for unit in world.btech.vehicles.values_mut() {
         if !on_tile(unit.position()) {
             continue;
         }
@@ -66,7 +66,7 @@ pub(super) fn replace_hex(
             unit.under_bridge = false;
         }
     }
-    let record = Arc::make_mut(&mut world.btech.maps).get_mut(&map).unwrap();
+    let record = world.btech.maps.get_mut(&map).unwrap();
     let index = (i64::from(coordinate.y) * record.width + i64::from(coordinate.x)) as usize;
     Arc::make_mut(record.terrain.as_mut().unwrap())[index] = after;
     Ok(report)
@@ -83,9 +83,7 @@ pub fn set_map_hex_action(
     terrain: Terrain,
     elevation: i32,
 ) -> Result<BattleMapHexChange> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(&before, actor),
             "Permission denied."
@@ -115,12 +113,7 @@ pub fn set_map_hex_action(
         scripts.world().validate(config)?;
         scripts.effects.validate()?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Native terrain arguments use the first symbol, including the operator's grassland shorthand.

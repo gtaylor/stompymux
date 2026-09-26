@@ -181,159 +181,150 @@ fn resolve_hex_shot_inner(
         toughness,
     };
     let target_number = aim.subtotal();
-    let mut candidate = world.clone();
-    let launch = super::coordinate_launch::resolve(
-        &mut candidate,
-        super::weapon_launch::WeaponLaunchRequest {
-            shooter,
-            pilot,
-            weapon_index,
-            distance: aim.modifiers.distance,
-            target_number,
-            streak_confused: field.angel_disturbed,
-            glancing: rules.glancing,
-            fall,
-            character_shooter,
-        },
-        false,
-    )?;
-    let intent = match aim.mode {
-        BattleHexTargetMode::Ignite => BattleWoodlandIntent::Ignite,
-        BattleHexTargetMode::Clear => BattleWoodlandIntent::Clear,
-        _ => BattleWoodlandIntent::Incidental,
-    };
-    let mut cluster_roll = None;
-    let mut terrain = Vec::new();
-    let mut surfaces = Vec::new();
-    let mut buildings = Vec::new();
-    if launch.launched && target_number.is_some() {
-        if launch.hit {
-            let packets = super::weapon_groups::roll_weapon_groups(
-                super::weapon_groups::WeaponGroupRequest {
-                    submerged,
-                    range_damage: rules.range_damage,
-                    damage_penalty: launch.expenditure.damage_penalty,
-                    weapon,
-                    ammunition: if launch.expenditure.ammunition_mode
-                        == BattleAmmunitionMode::Flechette
-                    {
-                        BattleAmmunitionMode::Normal
-                    } else {
-                        launch.expenditure.ammunition_mode
-                    },
-                    fire_mode: launch.expenditure.fire_mode,
-                    gatling_damage: launch.expenditure.gatling_damage,
-                    distance: Some(aim.modifiers.distance),
-                    glancing: false,
-                    guidance_blocked: field.blocks_outgoing_guidance(),
-                    angel_blocked: field.angel_disturbed,
-                    target_beacon: false,
-                },
-                super::dice::unit_dice_mut(&mut candidate, shooter)?,
-            )?;
-            cluster_roll = packets.cluster_roll;
-            if aim.mode != BattleHexTargetMode::UnitAtHex {
-                let damage = if launch.expenditure.ammunition_mode == BattleAmmunitionMode::Inferno
-                {
-                    // Inferno terrain exposure occurs once with no clearing or building damage.
-                    vec![0]
-                } else {
-                    packets.damage
-                };
-                for damage in damage {
-                    if aim.mode == BattleHexTargetMode::Building {
-                        if let Some(impact) = super::building_damage::resolve(
-                            &mut candidate,
-                            shooter,
-                            coordinate,
-                            damage,
-                        )? {
-                            buildings.push(impact);
-                        }
-                        continue;
-                    }
-                    terrain.push(resolve_woodland_attack(
-                        &mut candidate,
-                        BattleWoodlandAttack {
-                            shooter,
-                            coordinate,
-                            weapon,
-                            ammunition: launch.expenditure.ammunition_mode,
-                            damage,
-                            intent,
+    world.attempt(|world| {
+        let launch = super::coordinate_launch::resolve(
+            world,
+            super::weapon_launch::WeaponLaunchRequest {
+                shooter,
+                pilot,
+                weapon_index,
+                distance: aim.modifiers.distance,
+                target_number,
+                streak_confused: field.angel_disturbed,
+                glancing: rules.glancing,
+                fall,
+                character_shooter,
+            },
+            false,
+        )?;
+        let intent = match aim.mode {
+            BattleHexTargetMode::Ignite => BattleWoodlandIntent::Ignite,
+            BattleHexTargetMode::Clear => BattleWoodlandIntent::Clear,
+            _ => BattleWoodlandIntent::Incidental,
+        };
+        let mut cluster_roll = None;
+        let mut terrain = Vec::new();
+        let mut surfaces = Vec::new();
+        let mut buildings = Vec::new();
+        if launch.launched && target_number.is_some() {
+            if launch.hit {
+                let packets = super::weapon_groups::roll_weapon_groups(
+                    super::weapon_groups::WeaponGroupRequest {
+                        submerged,
+                        range_damage: rules.range_damage,
+                        damage_penalty: launch.expenditure.damage_penalty,
+                        weapon,
+                        ammunition: if launch.expenditure.ammunition_mode
+                            == BattleAmmunitionMode::Flechette
+                        {
+                            BattleAmmunitionMode::Normal
+                        } else {
+                            launch.expenditure.ammunition_mode
                         },
-                    )?);
-                    if aim.mode == BattleHexTargetMode::Hex
-                        && let Some(impact) = super::surface_weapon::resolve(
-                            &mut candidate,
-                            shooter,
-                            coordinate,
-                            (weapon, launch.expenditure.ammunition_mode),
-                            fall,
-                            character,
-                        )?
-                    {
-                        surfaces.push(impact);
+                        fire_mode: launch.expenditure.fire_mode,
+                        gatling_damage: launch.expenditure.gatling_damage,
+                        distance: Some(aim.modifiers.distance),
+                        glancing: false,
+                        guidance_blocked: field.blocks_outgoing_guidance(),
+                        angel_blocked: field.angel_disturbed,
+                        target_beacon: false,
+                    },
+                    super::dice::unit_dice_mut(world, shooter)?,
+                )?;
+                cluster_roll = packets.cluster_roll;
+                if aim.mode != BattleHexTargetMode::UnitAtHex {
+                    let damage =
+                        if launch.expenditure.ammunition_mode == BattleAmmunitionMode::Inferno {
+                            // Inferno terrain exposure occurs once with no clearing or building damage.
+                            vec![0]
+                        } else {
+                            packets.damage
+                        };
+                    for damage in damage {
+                        if aim.mode == BattleHexTargetMode::Building {
+                            if let Some(impact) =
+                                super::building_damage::resolve(world, shooter, coordinate, damage)?
+                            {
+                                buildings.push(impact);
+                            }
+                            continue;
+                        }
+                        terrain.push(resolve_woodland_attack(
+                            world,
+                            BattleWoodlandAttack {
+                                shooter,
+                                coordinate,
+                                weapon,
+                                ammunition: launch.expenditure.ammunition_mode,
+                                damage,
+                                intent,
+                            },
+                        )?);
+                        if aim.mode == BattleHexTargetMode::Hex
+                            && let Some(impact) = super::surface_weapon::resolve(
+                                world,
+                                shooter,
+                                coordinate,
+                                (weapon, launch.expenditure.ammunition_mode),
+                                fall,
+                                character,
+                            )?
+                        {
+                            surfaces.push(impact);
+                        }
                     }
                 }
+            } else if weapon.profile().missiles == 0 {
+                let damage = if let Some(damage) = launch.expenditure.gatling_damage {
+                    u16::from(damage)
+                } else {
+                    weapon
+                        .damage_groups_at_range(None, aim.modifiers.distance)?
+                        .into_iter()
+                        .sum()
+                };
+                terrain.push(resolve_woodland_attack(
+                    world,
+                    BattleWoodlandAttack {
+                        shooter,
+                        coordinate,
+                        weapon,
+                        ammunition: launch.expenditure.ammunition_mode,
+                        damage,
+                        intent,
+                    },
+                )?);
             }
-        } else if weapon.profile().missiles == 0 {
-            let damage = if let Some(damage) = launch.expenditure.gatling_damage {
-                u16::from(damage)
-            } else {
-                weapon
-                    .damage_groups_at_range(None, aim.modifiers.distance)?
-                    .into_iter()
-                    .sum()
-            };
-            terrain.push(resolve_woodland_attack(
-                &mut candidate,
-                BattleWoodlandAttack {
-                    shooter,
-                    coordinate,
-                    weapon,
-                    ammunition: launch.expenditure.ammunition_mode,
-                    damage,
-                    intent,
-                },
-            )?);
         }
-    }
-    let recoil = if vehicle {
-        None
-    } else {
-        super::weapon_launch::resolve_recoil(
-            &mut candidate,
+        let recoil = if vehicle {
+            None
+        } else {
+            super::weapon_launch::resolve_recoil(world, shooter, weapon, fall, character_shooter)?
+        };
+        world.btech.validate_action(world)?;
+        Ok(BattleHexShotReport {
             shooter,
-            weapon,
-            fall,
-            character_shooter,
-        )?
-    };
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(BattleHexShotReport {
-        shooter,
-        map,
-        coordinate,
-        weapon_index,
-        aim,
-        target_number,
-        roll: launch.roll,
-        hit: launch.hit,
-        launched: launch.launched,
-        jammed: launch.jammed,
-        loader_destroyed: launch.loader_destroyed,
-        propellant_roll: launch.propellant_roll,
-        expenditure: launch.expenditure,
-        misload: launch.misload,
-        ammunition_warning: launch.ammunition_warning,
-        launch_notices: launch.launch_notices,
-        cluster_roll,
-        terrain,
-        surfaces,
-        buildings,
-        recoil,
+            map,
+            coordinate,
+            weapon_index,
+            aim,
+            target_number,
+            roll: launch.roll,
+            hit: launch.hit,
+            launched: launch.launched,
+            jammed: launch.jammed,
+            loader_destroyed: launch.loader_destroyed,
+            propellant_roll: launch.propellant_roll,
+            expenditure: launch.expenditure,
+            misload: launch.misload,
+            ammunition_warning: launch.ammunition_warning,
+            launch_notices: launch.launch_notices,
+            cluster_roll,
+            terrain,
+            surfaces,
+            buildings,
+            recoil,
+        })
     })
 }
 

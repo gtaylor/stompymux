@@ -5,14 +5,7 @@ use anyhow::{Context, Result, ensure};
 /// Evacuate non-wizard contents of an in-character unit to the configured afterlife.
 /// The adapter owns authority; a failed move or callback restores the entire operation.
 pub(crate) fn evacuate(scripts: &Scripts, config: &Config, unit: ObjectId) -> Result<usize> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = evacuate_contents(scripts, config, unit);
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    scripts.atomic(|_| evacuate_contents(scripts, config, unit))
 }
 
 /// Snapshot occupants before callbacks; never sweep newly arrived objects into an ongoing evacuation.
@@ -135,9 +128,7 @@ fn impact_action(
     damage: u16,
     scenario: bool,
 ) -> Result<super::BattleImpactReport> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let character = scripts
             .world
             .borrow()
@@ -168,14 +159,9 @@ fn impact_action(
             super::resolve_impact(&mut scripts.world.borrow_mut(), unit, hit, damage)?
         };
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Apply in-character pilot injury and fatal evacuation in one action checkpoint.
@@ -186,21 +172,14 @@ pub fn injure_character_pilot_action(
     hits: u8,
     toughness: bool,
 ) -> Result<super::BattleCharacterPilotInjury> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let report =
             super::injure_character_pilot(&mut scripts.world.borrow_mut(), unit, hits, toughness)?;
         super::character_pilot::notify_injury(scripts, &report)?;
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Publish a vehicle critical, nested character injury feedback and evacuation in one checkpoint.
@@ -377,9 +356,7 @@ fn vehicle_damage_action<T>(
     config: &Config,
     resolve: impl FnOnce(&mut crate::World) -> Result<(T, VehicleDamageEffects)>,
 ) -> Result<T> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let (report, effects) = resolve(&mut scripts.world.borrow_mut())?;
         super::piloting::publish_ordered_notices(
             scripts,
@@ -397,14 +374,9 @@ fn vehicle_damage_action<T>(
             super::character_pilot::notify_injury(scripts, &injury)?;
         }
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Apply immersion flooding and newly breached cockpit evacuation in one action checkpoint.
@@ -415,9 +387,7 @@ pub fn flood_unit_action(
     unit: ObjectId,
     rules: super::BattleFallRules,
 ) -> Result<Vec<super::BattleSectionExposureReport>> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let reports =
             super::flooding::flood_unit_in_action(&mut scripts.world.borrow_mut(), unit, rules)?;
         for report in &reports {
@@ -431,14 +401,9 @@ pub fn flood_unit_action(
             publish_section_exposure_consequences(scripts, config, report)?;
         }
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(reports)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Identify newly lethal crew states across an action, including secondary units in nested events.
@@ -536,21 +501,14 @@ pub fn land_action(
     pilot: ObjectId,
     rules: super::BattleMovementRules,
 ) -> Result<()> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let report =
             super::landing::land_in_action(&mut scripts.world.borrow_mut(), unit, pilot, rules)?;
         publish_movement_consequences(scripts, config, &report)?;
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(())
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Publish a balance failure's fall and collision consequences once; notices are already ordered.
@@ -644,11 +602,9 @@ pub(super) fn fall_unit_contract_action(
     levels: i32,
     rules: super::BattleFallRules,
 ) -> Result<super::BattleFallReport> {
-    let before = scripts.world.borrow().clone();
-    let tons =
-        super::administrative_unit_tonnage(&before, unit).context("unit tonnage is unavailable")?;
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
+        let tons = super::administrative_unit_tonnage(&before, unit)
+            .context("unit tonnage is unavailable")?;
         let character = before
             .objects
             .get(&unit)
@@ -667,14 +623,9 @@ pub(super) fn fall_unit_contract_action(
         super::piloting::publish_ordered_notices(scripts, &notices, &private)?;
         publish_fall_consequences(scripts, config, &report)?;
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Break ice or a bridge and publish every occupant consequence in one host action.
@@ -686,9 +637,7 @@ pub fn break_surface_action(
     terrain: super::Terrain,
     rules: super::BattleFallRules,
 ) -> Result<super::BattleSurfaceBreak> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let report = super::surface_break::break_surface_in_action(
             &mut scripts.world.borrow_mut(),
             map,
@@ -699,14 +648,9 @@ pub fn break_surface_action(
         super::piloting::publish_ordered_notices(scripts, &report.notices, &report.pilot_notices)?;
         publish_surface_consequences(scripts, config, &report)?;
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Break ice from below, preserving the breaker while atomically publishing neighbor casualties.
@@ -719,9 +663,7 @@ pub fn break_ice_upward_action(
     unit: ObjectId,
     rules: super::BattleFallRules,
 ) -> Result<super::BattleSurfaceBreak> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let report = super::surface_break::break_ice_upward_in_action(
             &mut scripts.world.borrow_mut(),
             map,
@@ -732,14 +674,9 @@ pub fn break_ice_upward_action(
         super::piloting::publish_ordered_notices(scripts, &report.notices, &report.pilot_notices)?;
         publish_surface_consequences(scripts, config, &report)?;
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Advance airborne events and publish their notices and newly lethal crews atomically.
@@ -785,9 +722,7 @@ fn movement_action(
     ) -> Result<super::movement_report::MovementReport>,
     orbital: bool,
 ) -> Result<Vec<super::BattleBuildingArrival>> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let mut report = advance(&mut scripts.world.borrow_mut(), rules)?;
         let arrivals = super::building_actions::dispatch_boundary_exits(scripts, &mut report)?;
         report.notices.extend(super::hiding::movement_changes(
@@ -799,14 +734,9 @@ fn movement_action(
             super::orbital_drop_movement::advance_in_action(scripts, config, rules)?;
         }
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(arrivals)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Publish character injury feedback from both direct collision hits and nested falls.
@@ -834,9 +764,7 @@ pub fn stacking_action(
     rules: super::BattleStackingRules,
     fall: super::BattleFallRules,
 ) -> Result<Vec<super::BattleNotice>> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let mut effects = super::stacking::StackingEffects::default();
         let mut private = Vec::new();
         let notices = super::stacking::resolve_in_action(
@@ -851,14 +779,9 @@ pub fn stacking_action(
         super::piloting::publish_ordered_notices(scripts, &notices, &private)?;
         publish_stacking_consequences(scripts, config, &effects)?;
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(notices)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Publish private injuries from an impact and its immediate balance and flooding cascades.
@@ -896,9 +819,7 @@ pub fn physical_attack_action(
     attack: super::BattlePhysicalAttack,
     rules: super::BattlePhysicalRules,
 ) -> Result<super::BattlePhysicalReport> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let report = super::physical::resolve_attack_in_action(
             &mut scripts.world.borrow_mut(),
             attacker,
@@ -910,14 +831,9 @@ pub fn physical_attack_action(
         super::piloting::publish_ordered_notices(scripts, &report.notices, &report.pilot_notices)?;
         publish_physical_consequences(scripts, config, &report)?;
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// XP diagnostics and private physical injury feedback are shared by single attacks and arm sequences.
@@ -946,9 +862,7 @@ pub fn arm_attack_action(
     choice: super::BattleArmAttackChoice,
     rules: super::BattlePhysicalRules,
 ) -> Result<super::BattleArmAttackReport> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let report = super::physical::resolve_arm_attack_in_action(
             &mut scripts.world.borrow_mut(),
             attacker,
@@ -962,14 +876,9 @@ pub fn arm_attack_action(
             publish_physical_consequences(scripts, config, attack)?;
         }
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Resolve a one-way charge and publish every packet, balance fall and crew casualty atomically.
@@ -981,9 +890,7 @@ pub fn charge_action(
     target: ObjectId,
     rules: super::BattleChargeRules,
 ) -> Result<super::BattleChargeReport> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let report = super::charge::resolve_charge_in_action(
             &mut scripts.world.borrow_mut(),
             attacker,
@@ -993,14 +900,9 @@ pub fn charge_action(
         super::piloting::publish_ordered_notices(scripts, &report.notices, &report.pilot_notices)?;
         publish_charge_consequences(scripts, config, &report)?;
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Publish charge XP diagnostics and private injuries without duplicating aggregate cockpit notices.
@@ -1030,9 +932,7 @@ pub fn mutual_charge_action(
     rules: super::BattleChargeRules,
     second_distance: f32,
 ) -> Result<super::BattleMutualChargeReport> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let report = super::charge::resolve_mutual_charge_in_action(
             &mut scripts.world.borrow_mut(),
             first,
@@ -1047,14 +947,9 @@ pub fn mutual_charge_action(
             }
         }
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Resolve DFA and publish damage, missed-landing injury, immersion and crew evacuation atomically.
@@ -1065,9 +960,7 @@ pub fn dfa_action(
     target: ObjectId,
     rules: super::BattlePhysicalRules,
 ) -> Result<super::BattleDfaReport> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let report = super::dfa::resolve_dfa_in_action(
             &mut scripts.world.borrow_mut(),
             attacker,
@@ -1077,14 +970,9 @@ pub fn dfa_action(
         super::piloting::publish_ordered_notices(scripts, &report.notices, &report.pilot_notices)?;
         publish_dfa_consequences(scripts, config, &report)?;
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Publish DFA XP diagnostics and private injuries, including recoil, failed landing and immersion cascades.
@@ -1121,9 +1009,7 @@ pub fn stand_action(
     careful_enabled: bool,
     rules: super::BattleFallRules,
 ) -> Result<super::BattleStandAttempt> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let report = super::stand::begin_stand_in_action(
             &mut scripts.world.borrow_mut(),
             id,
@@ -1144,14 +1030,9 @@ pub fn stand_action(
             publish_fall_consequences(scripts, config, fall)?;
         }
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Publish one stagger tick with all fall injuries and crew transfers atomically.
@@ -1160,9 +1041,7 @@ pub fn stagger_action(
     config: &Config,
     rules: super::BattleStaggerRules,
 ) -> Result<Vec<super::BattleStaggerReport>> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let reports =
             super::stagger::advance_stagger_in_action(&mut scripts.world.borrow_mut(), rules)?;
         for report in &reports {
@@ -1182,14 +1061,9 @@ pub fn stagger_action(
             }
         }
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(reports)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Detonate one bin and publish nested injury and casualty consequences atomically.
@@ -1200,9 +1074,7 @@ pub fn ammunition_explosion_action(
     index: usize,
     rules: super::BattleFallRules,
 ) -> Result<super::BattleTacticalImpact> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let report = super::impact::explode_ammunition_in_action(
             &mut scripts.world.borrow_mut(),
             id,
@@ -1212,14 +1084,9 @@ pub fn ammunition_explosion_action(
         super::piloting::publish_ordered_notices(scripts, &report.notices, &report.pilot_notices)?;
         publish_impact_consequences(scripts, config, &report)?;
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Publish due thermal effects, nested collisions and newly lethal crews atomically.
@@ -1228,9 +1095,7 @@ pub fn overheat_action(
     config: &Config,
     rules: super::BattleOverheatRules,
 ) -> Result<Vec<super::BattleOverheatReport>> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let reports =
             super::overheat::advance_overheat_in_action(&mut scripts.world.borrow_mut(), rules)?;
         for report in &reports {
@@ -1259,14 +1124,9 @@ pub fn overheat_action(
             }
         }
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(reports)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Resolve a successful grouped hit and publish its character injuries and casualties atomically.
@@ -1279,9 +1139,7 @@ pub fn salvo_action(
     arc: super::BattleHitArc,
     rules: super::BattleFallRules,
 ) -> Result<super::BattleSalvoReport> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let report = super::salvo::resolve_salvo_in_action(
             &mut scripts.world.borrow_mut(),
             target,
@@ -1291,14 +1149,9 @@ pub fn salvo_action(
         )?;
         publish_salvo_consequences(scripts, config, &report, true)?;
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Publish grouped injuries, optionally including the aggregate cockpit notices.
@@ -1345,9 +1198,7 @@ pub fn shot_action(
     index: usize,
     rules: super::BattleShotRules,
 ) -> Result<super::BattleShotReport> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let report = super::shot::resolve_shot_in_action(
             &mut scripts.world.borrow_mut(),
             shooter,
@@ -1366,14 +1217,9 @@ pub fn shot_action(
         super::channels::publish_shot(scripts, config, &report)?;
         publish_shot_consequences(scripts, config, &report)?;
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Publish private injuries from both participants in a completed shot.
@@ -1480,32 +1326,26 @@ pub(super) fn attempt_configured_firing_action(
     index: usize,
     request: super::fire_target::FireTargetRequest<'_>,
 ) -> Result<std::result::Result<super::BattleFireReport, String>> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let operator = super::combat_operator::admit(&scripts.world.borrow(), shooter, pilot)?;
         let shooter = operator.source.unit;
         let notices = super::hiding::firing(&mut scripts.world.borrow_mut(), shooter);
         for notice in notices {
             super::notify_unit(scripts, notice)?;
         }
-        let admitted = scripts.world.borrow().clone();
-        let admitted_effects = scripts.effects.checkpoint();
-        let action = super::firing::resolve_in_action(
-            &mut scripts.world.borrow_mut(),
-            config,
-            shooter,
-            pilot,
-            index,
-            request,
-        );
+        let action = scripts.atomic(|_| {
+            super::firing::resolve_in_action(
+                &mut scripts.world.borrow_mut(),
+                config,
+                shooter,
+                pilot,
+                index,
+                request,
+            )
+        });
         let action = match action {
             Ok(action) => action,
-            Err(error) => {
-                *scripts.world.borrow_mut() = admitted;
-                scripts.effects.restore(admitted_effects);
-                return Ok(Err(format!("{error:#}")));
-            }
+            Err(error) => return Ok(Err(format!("{error:#}"))),
         };
         let notices: Vec<_> = action
             .messages
@@ -1550,14 +1390,9 @@ pub(super) fn attempt_configured_firing_action(
             }
         }
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(Ok(action.report))
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Advance artillery with atomic notice, character injury and evacuation publication.
@@ -1569,10 +1404,8 @@ pub fn advance_artillery_flight_action(
     flight: &mut super::BattleArtilleryFlight,
     rules: super::BattleFallRules,
 ) -> Result<Option<super::BattleArtilleryImpactReport>> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
     let mut cursor = flight.clone();
-    let result = (|| {
+    let report = scripts.atomic(|before| {
         let report = super::artillery_impact::advance(
             &mut scripts.world.borrow_mut(),
             map,
@@ -1594,18 +1427,13 @@ pub fn advance_artillery_flight_action(
                     hit.vehicle_heat.as_ref(),
                 )?;
             }
-            publish_new_casualties(scripts, config, &before)?;
+            publish_new_casualties(scripts, config, before)?;
         }
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    } else {
-        *flight = cursor;
-    }
-    result
+    })?;
+    *flight = cursor;
+    Ok(report)
 }
 
 /// Publish an admitted mine blast, including character injuries and evacuation, atomically.
@@ -1616,9 +1444,7 @@ pub fn resolve_mine_blast_action(
     ordinal: u32,
     rules: super::BattleFallRules,
 ) -> Result<super::BattleMineBlastReport> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let report = super::mine_blast::resolve_in_action(
             &mut scripts.world.borrow_mut(),
             map,
@@ -1628,14 +1454,9 @@ pub fn resolve_mine_blast_action(
         super::piloting::publish_ordered_notices(scripts, &report.notices, &report.pilot_notices)?;
         publish_mine_blast_consequences(scripts, config, &report)?;
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Mine notices are retained by the enclosing movement/fall report; publish private effects once.
@@ -1718,9 +1539,7 @@ pub fn detonate_command_mines_action(
     frequency: i32,
     rules: super::BattleFallRules,
 ) -> Result<super::BattleCommandMineReport> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let report = super::command_mines::resolve(
             &mut scripts.world.borrow_mut(),
             sender,
@@ -1733,14 +1552,9 @@ pub fn detonate_command_mines_action(
             publish_mine_blast_consequences(scripts, config, blast)?;
         }
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Resolve vehicle fall damage, injuries, mines and evacuation in one host checkpoint.
@@ -1789,12 +1603,10 @@ fn vehicle_fall_action_inner_with_tonnage(
     character: bool,
     administrative_tonnage: bool,
 ) -> Result<super::BattleVehicleFallReport> {
-    let before = scripts.world.borrow().clone();
-    let tons = administrative_tonnage
-        .then(|| super::administrative_unit_tonnage(&before, unit))
-        .flatten();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
+        let tons = administrative_tonnage
+            .then(|| super::administrative_unit_tonnage(&before, unit))
+            .flatten();
         let report = super::vehicle_fall::resolve_material_signed_with_tonnage(
             &mut scripts.world.borrow_mut(),
             unit,
@@ -1806,14 +1618,9 @@ fn vehicle_fall_action_inner_with_tonnage(
         super::piloting::publish_ordered_notices(scripts, &report.notices, &report.pilot_notices)?;
         publish_vehicle_fall_consequences(scripts, config, &report)?;
         publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Traverse personal injury, nested fractures, material packets and mines in resolution order.

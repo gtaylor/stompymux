@@ -3,7 +3,6 @@ use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// Anatomy-specific consequences retained for blast reports and character publication.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -218,10 +217,7 @@ pub(super) fn resolve_packet(
             crew_stun: false,
         }
     };
-    Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap()
-        .dice = dice;
+    world.btech.constructed.get_mut(&id).unwrap().dice = dice;
     // Unplaced scenario units have material damage but no battlefield fall or flooding effects.
     let environment = world.btech.constructed_units()[&id]
         .position()
@@ -283,7 +279,9 @@ pub(super) fn ignite_forest(
     {
         return Ok(false);
     }
-    let dice = Arc::make_mut(&mut world.btech.maps)
+    let dice = world
+        .btech
+        .maps
         .get_mut(&map)
         .unwrap()
         .fire_dice

@@ -3,7 +3,7 @@ use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::{collections::BTreeSet, sync::Arc};
+use std::collections::BTreeSet;
 
 /// One installed section in the cockpit's pod inspection table.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -207,98 +207,100 @@ fn resolve(
     )?;
     let target_number =
         i32::from(unit_piloting_target(world, id, rules.extended_piloting)?) + 4 + penalty;
-    let mut candidate = world.clone();
-    let roll = Arc::make_mut(&mut candidate.btech.constructed)
-        .get_mut(&id)
-        .unwrap()
-        .dice
-        .generic_roll();
-    let removed = i32::from(roll) >= target_number;
-    let mut pilot_notices = Vec::new();
-    let mut notices = vec![BattleNotice {
-        unit: id,
-        text: format!(
-            "You try to swat at the iNarc pods attached to your {} with your {}.  BTH:  {target_number},\tRoll:  {roll}",
-            section.name().replace('_', " "),
-            arm.section().name().replace('_', " ")
-        ),
-    }];
-    let impact = if removed {
-        let unit = Arc::make_mut(&mut candidate.btech.constructed)
+    world.attempt(|world| {
+        let roll = world
+            .btech
+            .constructed
             .get_mut(&id)
-            .unwrap();
-        let kinds = unit.beacons.get_mut(&section).unwrap();
-        kinds.remove(&kind);
-        if kinds.is_empty() {
-            unit.beacons.remove(&section);
-        }
-        notices.push(BattleNotice {
+            .unwrap()
+            .dice
+            .generic_roll();
+        let removed = i32::from(roll) >= target_number;
+        let mut pilot_notices = Vec::new();
+        let mut notices = vec![BattleNotice {
             unit: id,
             text: format!(
-                "You knock a {kind:?} pod off your {}!",
-                section.name().replace('_', " ")
+                "You try to swat at the iNarc pods attached to your {} with your {}.  BTH:  {target_number},\tRoll:  {roll}",
+                section.name().replace('_', " "),
+                arm.section().name().replace('_', " ")
             ),
-        });
-        notices.extend(super::broadcast::observer_notices(
-            &candidate,
-            id,
-            "knocks an iNarc pod off itself.",
-        ));
-        None
-    } else {
-        notices.push(BattleNotice {
-            unit: id,
-            text: "Uh oh. You miss the pod and hit yourself!".into(),
-        });
-        notices.extend(super::broadcast::observer_notices(
-            &candidate,
-            id,
-            "tries to swat off an iNarc pod, but misses and hits itself!",
-        ));
-        let hit = BattleHit {
-            section,
-            rear_armor: false,
-            through_armor_critical: false,
-            crew_stun: false,
-        };
-        let impact = if candidate.objects[&id].flags.contains(Flag::InCharacter) {
-            super::impact::resolve_character_impact_with_rules(
-                &mut candidate,
+        }];
+        let impact = if removed {
+            let unit = world.btech.constructed.get_mut(&id).unwrap();
+            let kinds = unit.beacons.get_mut(&section).unwrap();
+            kinds.remove(&kind);
+            if kinds.is_empty() {
+                unit.beacons.remove(&section);
+            }
+            notices.push(BattleNotice {
+                unit: id,
+                text: format!(
+                    "You knock a {kind:?} pod off your {}!",
+                    section.name().replace('_', " ")
+                ),
+            });
+            notices.extend(super::broadcast::observer_notices(
+                world,
                 id,
-                hit,
-                damage,
-                Some(rules),
-            )?
+                "knocks an iNarc pod off itself.",
+            ));
+            None
         } else {
-            resolve_tactical_impact(&mut candidate, id, hit, damage, rules)?
+            notices.push(BattleNotice {
+                unit: id,
+                text: "Uh oh. You miss the pod and hit yourself!".into(),
+            });
+            notices.extend(super::broadcast::observer_notices(
+                world,
+                id,
+                "tries to swat off an iNarc pod, but misses and hits itself!",
+            ));
+            let hit = BattleHit {
+                section,
+                rear_armor: false,
+                through_armor_critical: false,
+                crew_stun: false,
+            };
+            let impact = if world.objects[&id].flags.contains(Flag::InCharacter) {
+                super::impact::resolve_character_impact_with_rules(
+                    world,
+                    id,
+                    hit,
+                    damage,
+                    Some(rules),
+                )?
+            } else {
+                resolve_tactical_impact(world, id, hit, damage, rules)?
+            };
+            super::piloting::append_feedback(
+                &mut pilot_notices,
+                impact.pilot_notices.iter().cloned(),
+                notices.len(),
+            );
+            notices.extend(impact.notices.iter().cloned());
+            Some(impact)
         };
-        super::piloting::append_feedback(
-            &mut pilot_notices,
-            impact.pilot_notices.iter().cloned(),
-            notices.len(),
-        );
-        notices.extend(impact.notices.iter().cloned());
-        Some(impact)
-    };
-    Arc::make_mut(&mut candidate.btech.constructed)
-        .get_mut(&id)
-        .unwrap()
-        .limb_recycle
-        .insert(arm.section(), 60);
-    notices.extend(refresh_electronic_fields(&mut candidate)?);
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(BattlePodRemoval {
-        section,
-        kind,
-        arm,
-        target_number,
-        roll,
-        removed,
-        self_damage: if removed { 0 } else { damage },
-        impact,
-        notices,
-        pilot_notices,
+        world
+            .btech
+            .constructed
+            .get_mut(&id)
+            .unwrap()
+            .limb_recycle
+            .insert(arm.section(), 60);
+        notices.extend(refresh_electronic_fields(world)?);
+        world.btech.validate_action(world)?;
+        Ok(BattlePodRemoval {
+            section,
+            kind,
+            arm,
+            target_number,
+            roll,
+            removed,
+            self_damage: if removed { 0 } else { damage },
+            impact,
+            notices,
+            pilot_notices,
+    })
     })
 }
 
@@ -312,9 +314,7 @@ pub fn remove_pod_action(
     kind: BattleBeaconKind,
     rules: BattleFallRules,
 ) -> Result<BattlePodRemoval> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let report = resolve(
             &mut scripts.world.borrow_mut(),
             id,
@@ -328,14 +328,9 @@ pub fn remove_pod_action(
             super::evacuation::publish_impact_consequences(scripts, config, impact)?;
         }
         super::evacuation::publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Resolve command locations against the unit's own anatomy.

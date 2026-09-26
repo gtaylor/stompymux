@@ -6,7 +6,6 @@ use super::{
 use crate::{Flag, ObjectId, World};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Successful rises are upright but movement-locked; failed attempts recover while prone.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -188,79 +187,77 @@ fn begin_stand_inner(
         character || !world.objects[&id].flags.contains(Flag::InCharacter),
         "Standing requires tactical casualty rules"
     );
-    let mut candidate = world.clone();
-    let mut notices = super::broadcast::observer_notices(&candidate, id, "attempts to stand up.");
-    let mut pilot_notices = Vec::new();
-    Arc::make_mut(&mut candidate.btech.constructed)
-        .get_mut(&id)
-        .unwrap()
-        .posture = BattlePosture::Standing;
-    let check = super::piloting::roll_standing(
-        &mut candidate,
-        id,
-        if mode == BattleStandMode::Careful {
-            -2
-        } else {
-            0
-        },
-        rules.extended_piloting,
-    )?;
-    super::piloting::capture_feedback(id, actor.pilot(), &check, &mut notices, &mut pilot_notices);
-    notices.push(BattleNotice {
-        unit: id,
-        text: if check.success {
-            "You begin to stand up."
-        } else {
-            "You fail your attempt to stand and fall back on the ground."
-        }
-        .to_owned(),
-    });
-    let fall = if check.success {
-        None
-    } else {
-        notices.extend(super::broadcast::observer_notices(
-            &candidate,
+    world.attempt(|world| {
+        let mut notices = super::broadcast::observer_notices(world, id, "attempts to stand up.");
+        let mut pilot_notices = Vec::new();
+        world.btech.constructed.get_mut(&id).unwrap().posture = BattlePosture::Standing;
+        let check = super::piloting::roll_standing(
+            world,
             id,
-            "falls down!",
-        ));
-        let fall = if character && candidate.objects[&id].flags.contains(Flag::InCharacter) {
-            super::fall::resolve_character_fall(&mut candidate, id, 1, rules)?
-        } else {
-            super::resolve_fall(&mut candidate, id, 1, rules)?
-        };
-        fall.append_notices(id, &mut notices, &mut pilot_notices);
-        Some(fall)
-    };
-    let unit = Arc::make_mut(&mut candidate.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
-    let timer = if unit.is_destroyed() {
-        None
-    } else {
-        let base = (30.0 / (unit.movement_maximum_speed() / 21.5).clamp(1.0, 30.0)).floor() as u8;
-        let remaining = if mode == BattleStandMode::Careful {
-            if check.success {
-                base * 2
+            if mode == BattleStandMode::Careful {
+                -2
             } else {
-                (base * 2).max(30)
+                0
+            },
+            rules.extended_piloting,
+        )?;
+        super::piloting::capture_feedback(
+            id,
+            actor.pilot(),
+            &check,
+            &mut notices,
+            &mut pilot_notices,
+        );
+        notices.push(BattleNotice {
+            unit: id,
+            text: if check.success {
+                "You begin to stand up."
+            } else {
+                "You fail your attempt to stand and fall back on the ground."
             }
+            .to_owned(),
+        });
+        let fall = if check.success {
+            None
         } else {
-            base
+            notices.extend(super::broadcast::observer_notices(world, id, "falls down!"));
+            let fall = if character && world.objects[&id].flags.contains(Flag::InCharacter) {
+                super::fall::resolve_character_fall(world, id, 1, rules)?
+            } else {
+                super::resolve_fall(world, id, 1, rules)?
+            };
+            fall.append_notices(id, &mut notices, &mut pilot_notices);
+            Some(fall)
         };
-        Some(if check.success {
-            BattleStandTimer::Rising { remaining }
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
+        let timer = if unit.is_destroyed() {
+            None
         } else {
-            BattleStandTimer::Recovering { remaining }
+            let base =
+                (30.0 / (unit.movement_maximum_speed() / 21.5).clamp(1.0, 30.0)).floor() as u8;
+            let remaining = if mode == BattleStandMode::Careful {
+                if check.success {
+                    base * 2
+                } else {
+                    (base * 2).max(30)
+                }
+            } else {
+                base
+            };
+            Some(if check.success {
+                BattleStandTimer::Rising { remaining }
+            } else {
+                BattleStandTimer::Recovering { remaining }
+            })
+        };
+        unit.stand_timer = timer;
+        Ok(BattleStandAttempt {
+            check,
+            fall,
+            timer,
+            notices,
+            pilot_notices,
         })
-    };
-    unit.stand_timer = timer;
-    *world = candidate;
-    Ok(BattleStandAttempt {
-        check,
-        fall,
-        timer,
-        notices,
-        pilot_notices,
     })
 }
 
@@ -274,9 +271,7 @@ pub fn advance_standing(world: &mut World) -> Vec<BattleNotice> {
         .filter_map(|(&id, unit)| unit.stand_timer.map(|timer| (id, timer)))
         .collect();
     for (id, timer) in pending {
-        let unit = Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
         let remaining = timer.remaining() - 1;
         if remaining > 0 {
             unit.stand_timer = Some(match timer {

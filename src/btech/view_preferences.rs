@@ -2,7 +2,6 @@
 use super::BattleViewDimensions;
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Result, ensure};
-use std::sync::Arc;
 
 /// Player-owned map dimensions and unit-list inclusion settings.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -38,9 +37,10 @@ pub fn set_view_dimensions(
 ) -> Result<()> {
     view_dimensions(world, player)?;
     dimensions.validate()?;
-    Arc::make_mut(&mut world.btech.player_preferences)
-        .entry(player)
-        .or_default()
+    world
+        .btech
+        .player_preferences
+        .get_or_default(player)
         .dimensions = dimensions;
     Ok(())
 }

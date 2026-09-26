@@ -189,10 +189,12 @@ pub(super) fn set_cargo_capacity(
         .parse::<i32>()
         .context("Expected a nonnegative 32-bit cargo capacity")?;
     ensure!(capacity >= 0, "Cargo capacity cannot be negative");
-    if let Some(unit) = std::sync::Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
         unit.set_cargo_space(capacity as u32);
     } else {
-        std::sync::Arc::make_mut(&mut world.btech.vehicles)
+        world
+            .btech
+            .vehicles
             .get_mut(&id)
             .context("Unit is unavailable")?
             .set_cargo_space(capacity as u32);
@@ -246,7 +248,7 @@ pub(super) fn reconcile(world: &mut World, id: ObjectId, tsm_bonus: bool) -> Res
                 .and_then(|map| map.hex(i64::from(position.x), i64::from(position.y)).ok())
         })
         .is_some_and(|hex| matches!(hex.terrain, super::Terrain::Road | super::Terrain::Bridge));
-    if let Some(unit) = std::sync::Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         if let Some(mut motion) = unit.motion() {
             motion.limit_load(
                 maximum,
@@ -260,7 +262,9 @@ pub(super) fn reconcile(world: &mut World, id: ObjectId, tsm_bonus: bool) -> Res
         }
         return Ok(());
     }
-    let unit = std::sync::Arc::make_mut(&mut world.btech.constructed)
+    let unit = world
+        .btech
+        .constructed
         .get_mut(&id)
         .context("Unit is unavailable")?;
     if let Some(mut motion) = unit.motion() {

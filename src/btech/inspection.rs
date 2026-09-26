@@ -2384,8 +2384,8 @@ fn detached_template_world(
     let mut detached = world.clone();
     let id = insert_detached_object(&mut detached, template.name.clone())?;
     let unit = super::BattleUnit::from_contract_template(inspection_compatible_template(template))?;
-    std::sync::Arc::make_mut(&mut detached.btech.units).insert(id, unit.identity());
-    std::sync::Arc::make_mut(&mut detached.btech.constructed).insert(id, unit);
+    detached.btech.units.insert(id, unit.identity());
+    detached.btech.constructed.insert(id, unit);
     std::sync::Arc::make_mut(&mut detached.btech.registrations).insert(id, "MECH".into());
     Ok((detached, id))
 }

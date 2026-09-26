@@ -2,7 +2,6 @@
 use super::BattlePosition;
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// Place a constructed unit on decoded terrain, preserving the unit's existing condition.
 pub fn place_unit(world: &mut World, id: ObjectId, map: ObjectId, x: i64, y: i64) -> Result<()> {
@@ -58,13 +57,15 @@ pub(super) fn detach_membership(world: &mut World, id: ObjectId) -> Result<()> {
     );
     super::map_slots::depart(&mut world.btech, id);
     super::contacts::forget_unit(world, id);
-    let identity = if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    let identity = if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         unit.pilot = None;
         unit.building_entry = None;
         unit.set_placement(None);
         unit.identity()
     } else {
-        let unit = Arc::make_mut(&mut world.btech.constructed)
+        let unit = world
+            .btech
+            .constructed
             .get_mut(&id)
             .context("Unit construction state is unavailable")?;
         unit.pilot = None;
@@ -86,7 +87,7 @@ pub(super) fn detach_membership(world: &mut World, id: ObjectId) -> Result<()> {
         unit.motion = None;
         unit.identity()
     };
-    Arc::make_mut(&mut world.btech.units).insert(id, identity);
+    world.btech.units.insert(id, identity);
     Ok(())
 }
 

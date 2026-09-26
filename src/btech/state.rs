@@ -1,6 +1,6 @@
 //! Transactional maps and saved special-object identities, with shared immutable terrain.
 use super::{BattleHex, BattleMapAsset, BattleTemplate, BattleUnit};
-use crate::{Kind, ObjectId, World};
+use crate::{Kind, ObjectId, SharedMap, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -365,16 +365,16 @@ pub struct BtechState {
     pub(crate) simulation_seconds: i64,
     /// Independently occupied weapon-control stations.
     #[serde(default)]
-    pub(crate) gunner_stations: Arc<BTreeMap<ObjectId, super::BattleGunnerStation>>,
+    pub(crate) gunner_stations: SharedMap<ObjectId, super::BattleGunnerStation>,
     /// Ground autopilot intent keyed by the directly controlled unit.
     #[serde(default)]
-    pub(crate) controllers: Arc<BTreeMap<ObjectId, super::autopilot::AutopilotController>>,
+    pub(crate) controllers: SharedMap<ObjectId, super::autopilot::AutopilotController>,
     /// Runtime-only path searches and steering cursors; rebuilt from active orders after load.
     #[serde(skip)]
-    pub(crate) autopilot_plans: Arc<BTreeMap<ObjectId, super::autopilot::runtime::AutopilotPlan>>,
+    pub(crate) autopilot_plans: SharedMap<ObjectId, super::autopilot::runtime::AutopilotPlan>,
     /// Loose parts shared by rooms, units and other game objects.
     #[serde(default)]
-    pub(crate) inventories: Arc<BTreeMap<ObjectId, Vec<super::BattleInventoryEntry>>>,
+    pub(crate) inventories: SharedMap<ObjectId, Vec<super::BattleInventoryEntry>>,
     #[serde(default)]
     pub(crate) part_costs: Arc<BTreeMap<i32, u64>>,
     /// Runtime catalogue overrides reset on reload; saved countdowns retain their remaining time.
@@ -390,13 +390,13 @@ pub struct BtechState {
     pub(crate) tows: Arc<BTreeMap<ObjectId, ObjectId>>,
     /// Saved player map dimensions and contact-list categories.
     #[serde(default)]
-    pub(crate) player_preferences: Arc<BTreeMap<ObjectId, super::BattlePlayerPreferences>>,
+    pub(crate) player_preferences: SharedMap<ObjectId, super::BattlePlayerPreferences>,
     /// Player-owned template and personal-combat configuration; UI configuration is tracked
     /// independently by presence in `player_preferences`.
     #[serde(default)]
-    pub(crate) player_configuration: Arc<BTreeMap<ObjectId, super::BattlePlayerConfiguration>>,
+    pub(crate) player_configuration: SharedMap<ObjectId, super::BattlePlayerConfiguration>,
     #[serde(default)]
-    pub(crate) unit_configuration: Arc<BTreeMap<ObjectId, super::BattleUnitConfiguration>>,
+    pub(crate) unit_configuration: SharedMap<ObjectId, super::BattleUnitConfiguration>,
     /// Runtime sensor band reach supplied by the host configuration; not stored in database tables.
     #[serde(default)]
     pub(crate) sensor_range: super::BattleSensorRange,
@@ -404,20 +404,19 @@ pub struct BtechState {
     #[serde(default)]
     pub(crate) skill_thresholds: Arc<BTreeMap<String, u32>>,
     #[serde(default)]
-    pub(crate) character_values:
-        Arc<BTreeMap<ObjectId, BTreeMap<String, super::BattleCharacterValue>>>,
+    pub(crate) character_values: SharedMap<ObjectId, BTreeMap<String, super::BattleCharacterValue>>,
     #[serde(default)]
-    pub(crate) recoveries: Arc<BTreeMap<ObjectId, super::BattleRecovery>>,
+    pub(crate) recoveries: SharedMap<ObjectId, super::BattleRecovery>,
     #[serde(default)]
-    pub(crate) characters: Arc<BTreeMap<ObjectId, super::BattleCharacter>>,
+    pub(crate) characters: SharedMap<ObjectId, super::BattleCharacter>,
     #[serde(default)]
-    pub(crate) constructed: Arc<BTreeMap<ObjectId, BattleUnit>>,
+    pub(crate) constructed: SharedMap<ObjectId, BattleUnit>,
     /// Owned ground-vehicle state, awaiting battlefield admission.
     #[serde(default)]
-    pub(crate) vehicles: Arc<BTreeMap<ObjectId, super::BattleVehicle>>,
+    pub(crate) vehicles: SharedMap<ObjectId, super::BattleVehicle>,
     pub(crate) registrations: Arc<BTreeMap<ObjectId, String>>,
-    pub(crate) maps: Arc<BTreeMap<ObjectId, StoredBattleMap>>,
-    pub(crate) units: Arc<BTreeMap<ObjectId, StoredBattleUnit>>,
+    pub(crate) maps: SharedMap<ObjectId, StoredBattleMap>,
+    pub(crate) units: SharedMap<ObjectId, StoredBattleUnit>,
 }
 
 impl BtechState {
@@ -432,18 +431,18 @@ impl BtechState {
     }
 
     /// Ground autopilot controllers keyed by controlled unit identity.
-    pub fn controllers(&self) -> &BTreeMap<ObjectId, super::autopilot::AutopilotController> {
+    pub fn controllers(&self) -> &SharedMap<ObjectId, super::autopilot::AutopilotController> {
         &self.controllers
     }
     /// Exact named skill/advantage records, separate from fixed health and attributes.
     pub fn character_values(
         &self,
-    ) -> &BTreeMap<ObjectId, BTreeMap<String, super::BattleCharacterValue>> {
+    ) -> &SharedMap<ObjectId, BTreeMap<String, super::BattleCharacterValue>> {
         &self.character_values
     }
 
     /// Recovery state follows the player across cockpit changes; random streams are private to Rust.
-    pub fn recoveries(&self) -> &BTreeMap<ObjectId, super::BattleRecovery> {
+    pub fn recoveries(&self) -> &SharedMap<ObjectId, super::BattleRecovery> {
         &self.recoveries
     }
 
@@ -455,17 +454,17 @@ impl BtechState {
     }
 
     /// Persisted character attributes and health, separate from cockpit occupancy.
-    pub fn characters(&self) -> &BTreeMap<ObjectId, super::BattleCharacter> {
+    pub fn characters(&self) -> &SharedMap<ObjectId, super::BattleCharacter> {
         &self.characters
     }
 
     /// Units with complete Rust-owned construction state.
-    pub fn constructed_units(&self) -> &BTreeMap<ObjectId, BattleUnit> {
+    pub fn constructed_units(&self) -> &SharedMap<ObjectId, BattleUnit> {
         &self.constructed
     }
 
     /// Ground vehicles with owned material state, separate from live Mech simulation.
-    pub fn vehicles(&self) -> &BTreeMap<ObjectId, super::BattleVehicle> {
+    pub fn vehicles(&self) -> &SharedMap<ObjectId, super::BattleVehicle> {
         &self.vehicles
     }
 
@@ -475,13 +474,23 @@ impl BtechState {
     }
 
     /// Inspect saved map metadata without guessing at terrain codes.
-    pub fn maps(&self) -> &BTreeMap<ObjectId, StoredBattleMap> {
+    pub fn maps(&self) -> &SharedMap<ObjectId, StoredBattleMap> {
         &self.maps
     }
 
     /// Inspect saved unit metadata without activating simulation.
-    pub fn units(&self) -> &BTreeMap<ObjectId, StoredBattleUnit> {
+    pub fn units(&self) -> &SharedMap<ObjectId, StoredBattleUnit> {
         &self.units
+    }
+
+    /// Invariant check after one gameplay operation, with the same build split as
+    /// [`World::validate_action`]: full in debug and test builds, skipped in release
+    /// builds, where the server validates the finished transaction before persisting it.
+    pub(crate) fn validate_action(&self, world: &World) -> Result<()> {
+        if cfg!(debug_assertions) {
+            return self.validate(world);
+        }
+        Ok(())
     }
 
     /// Validate decoded maps without interpreting deferred identities or opaque terrain.
@@ -913,14 +922,15 @@ impl BtechState {
 
     /// Reconcile the projection with the same destruction plan used by relational cleanup.
     pub(crate) fn purge(&mut self, ids: &BTreeSet<ObjectId>) {
-        Arc::make_mut(&mut self.inventories).retain(|object, _| !ids.contains(object));
+        self.inventories.retain(|object, _| !ids.contains(object));
         if ids.is_empty() {
             return;
         }
-        Arc::make_mut(&mut self.gunner_stations).retain(|station, _| !ids.contains(station));
-        Arc::make_mut(&mut self.controllers).retain(|unit, _| !ids.contains(unit));
-        Arc::make_mut(&mut self.autopilot_plans).retain(|unit, _| !ids.contains(unit));
-        for station in Arc::make_mut(&mut self.gunner_stations).values_mut() {
+        self.gunner_stations
+            .retain(|station, _| !ids.contains(station));
+        self.controllers.retain(|unit, _| !ids.contains(unit));
+        self.autopilot_plans.retain(|unit, _| !ids.contains(unit));
+        for station in self.gunner_stations.values_mut() {
             if ids.contains(&station.parent) || ids.contains(&station.target) {
                 station.lock_remaining = 0;
                 station.artillery_adjustment = 0;
@@ -955,11 +965,11 @@ impl BtechState {
                 && !unplaced.contains(carrier)
                 && !unplaced.contains(target)
         });
-        Arc::make_mut(&mut self.character_values).retain(|id, _| !ids.contains(id));
-        Arc::make_mut(&mut self.player_preferences).retain(|id, _| !ids.contains(id));
-        Arc::make_mut(&mut self.player_configuration).retain(|id, _| !ids.contains(id));
-        Arc::make_mut(&mut self.unit_configuration).retain(|id, _| !ids.contains(id));
-        for configuration in Arc::make_mut(&mut self.unit_configuration).values_mut() {
+        self.character_values.retain(|id, _| !ids.contains(id));
+        self.player_preferences.retain(|id, _| !ids.contains(id));
+        self.player_configuration.retain(|id, _| !ids.contains(id));
+        self.unit_configuration.retain(|id, _| !ids.contains(id));
+        for configuration in self.unit_configuration.values_mut() {
             if configuration
                 .assigned_pilot
                 .is_some_and(|pilot| ids.contains(&pilot))
@@ -967,17 +977,17 @@ impl BtechState {
                 configuration.assigned_pilot = None;
             }
         }
-        Arc::make_mut(&mut self.characters).retain(|id, _| !ids.contains(id));
+        self.characters.retain(|id, _| !ids.contains(id));
         Arc::make_mut(&mut self.wrecks).retain(|id, _| !ids.contains(id));
-        Arc::make_mut(&mut self.recoveries).retain(|id, _| !ids.contains(id));
+        self.recoveries.retain(|id, _| !ids.contains(id));
         Arc::make_mut(&mut self.sensor_recoveries).retain(|event| !ids.contains(&event.unit()));
         for &id in ids {
             super::map_slots::depart(self, id);
-            Arc::make_mut(&mut self.constructed).remove(&id);
-            Arc::make_mut(&mut self.vehicles).remove(&id);
+            self.constructed.remove(&id);
+            self.vehicles.remove(&id);
         }
-        Arc::make_mut(&mut self.vehicles).retain(|id, _| !ids.contains(id));
-        for vehicle in Arc::make_mut(&mut self.vehicles).values_mut() {
+        self.vehicles.retain(|id, _| !ids.contains(id));
+        for vehicle in self.vehicles.values_mut() {
             vehicle.contacts.retain(|id, _| !ids.contains(id));
             if vehicle
                 .target_lock()
@@ -998,7 +1008,7 @@ impl BtechState {
                 vehicle.power = super::BattlePower::Off;
             }
         }
-        let constructed = Arc::make_mut(&mut self.constructed);
+        let constructed = &mut self.constructed;
         constructed.retain(|id, _| !ids.contains(id));
         for unit in constructed.values_mut() {
             unit.contacts.retain(|id, _| !ids.contains(id));
@@ -1039,8 +1049,8 @@ impl BtechState {
             }
         }
         Arc::make_mut(&mut self.registrations).retain(|id, _| !ids.contains(id));
-        Arc::make_mut(&mut self.maps).retain(|id, _| !ids.contains(id));
-        for map in Arc::make_mut(&mut self.maps).values_mut() {
+        self.maps.retain(|id, _| !ids.contains(id));
+        for map in self.maps.values_mut() {
             if ids.contains(&ObjectId(map.building_parent)) {
                 map.building_parent = 0;
             }
@@ -1061,7 +1071,7 @@ impl BtechState {
             Arc::make_mut(&mut map.building_exits)
                 .retain(|_, exit| !ids.contains(&exit.destination));
         }
-        let units = Arc::make_mut(&mut self.units);
+        let units = &mut self.units;
         units.retain(|id, _| !ids.contains(id));
         for unit in units.values_mut() {
             if unit.map.is_some_and(|map| ids.contains(&map)) {
@@ -1086,7 +1096,7 @@ pub fn create_map(
         "Object already has BattleTech state"
     );
     let map = map_from_asset(name, asset)?;
-    Arc::make_mut(&mut world.btech.maps).insert(id, map);
+    world.btech.maps.insert(id, map);
     Arc::make_mut(&mut world.btech.registrations).insert(id, "MAP".into());
     Ok(())
 }
@@ -1159,7 +1169,7 @@ pub(super) fn replace_map_asset(
     map.authored_link = old.authored_link;
     map.static_decorations = old.static_decorations.clone();
     map.fire_dice = old.fire_dice.clone().or(map.fire_dice);
-    Arc::make_mut(&mut world.btech.maps).insert(id, map);
+    world.btech.maps.insert(id, map);
     Ok(())
 }
 
@@ -1240,8 +1250,8 @@ pub fn create_unit(world: &mut World, id: ObjectId, definition: BattleTemplate) 
     );
     super::inventory_mass(world, id)?;
     let unit = BattleUnit::from_template(definition)?;
-    Arc::make_mut(&mut world.btech.units).insert(id, unit.identity());
-    Arc::make_mut(&mut world.btech.constructed).insert(id, unit);
+    world.btech.units.insert(id, unit.identity());
+    world.btech.constructed.insert(id, unit);
     Arc::make_mut(&mut world.btech.registrations).insert(id, "MECH".into());
     Ok(())
 }
@@ -1285,7 +1295,7 @@ pub fn set_map_visibility(
         map.terrain_ready(),
         "Map terrain is ambiguous; reload it first"
     );
-    let map = Arc::make_mut(&mut world.btech.maps).get_mut(&id).unwrap();
+    let map = world.btech.maps.get_mut(&id).unwrap();
     map.light = light.stored();
     map.visibility = i64::from(visibility);
     map.maximum_visibility = (map.visibility * 3).clamp(24, 60);

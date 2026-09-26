@@ -120,7 +120,7 @@ fn set_with_lookup(
             "Too many minefields"
         );
     }
-    let record = Arc::make_mut(&mut world.btech.maps).get_mut(&map).unwrap();
+    let record = world.btech.maps.get_mut(&map).unwrap();
     let mines = Arc::make_mut(&mut record.minefields);
     if let Some(mine) = mine {
         record.flags |= 1;
@@ -159,12 +159,7 @@ pub(super) fn insert_with_lookup(
         .find(|slot| !record.minefields.contains_key(slot))
         .context("No minefield slot available")?;
     set_with_lookup(world, map, ordinal, Some(mine), rebuild)?;
-    let order = Arc::make_mut(
-        &mut Arc::make_mut(&mut world.btech.maps)
-            .get_mut(&map)
-            .unwrap()
-            .minefield_order,
-    );
+    let order = Arc::make_mut(&mut world.btech.maps.get_mut(&map).unwrap().minefield_order);
     order.retain(|slot| *slot != ordinal);
     order.insert(0, ordinal);
     Ok(ordinal)

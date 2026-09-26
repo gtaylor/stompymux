@@ -80,7 +80,7 @@ pub(super) fn forget_removed(expected: &mut BtechState, after: &BtechState) -> R
             after.registrations().get(&id).map(String::as_str) != Some("TURRET"),
             "Removed station retains registration"
         );
-        Arc::make_mut(&mut expected.gunner_stations).remove(&id);
+        expected.gunner_stations.remove(&id);
         Arc::make_mut(&mut expected.registrations).remove(&id);
     }
     Ok(())
@@ -96,7 +96,7 @@ pub(super) fn validate_changes(expected: &mut BtechState, after: &BtechState) ->
             );
             Arc::make_mut(&mut expected.registrations).insert(id, "TURRET".into());
         }
-        Arc::make_mut(&mut expected.gunner_stations).insert(id, station.clone());
+        expected.gunner_stations.insert(id, station.clone());
     }
     Ok(())
 }

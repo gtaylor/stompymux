@@ -3,7 +3,7 @@ use super::{BattleVehicle, BattleVehicleSection};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::{collections::BTreeSet, sync::Arc};
+use std::collections::BTreeSet;
 
 /// Direct control-system consequences; the enclosing critical action owns notices and crew effects.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -119,7 +119,9 @@ pub fn damage_vehicle_controls(
             .is_some_and(|object| !object.flags.contains(Flag::Going)),
         "Vehicle is unavailable"
     );
-    Arc::make_mut(&mut world.btech.vehicles)
+    world
+        .btech
+        .vehicles
         .get_mut(&id)
         .context("Vehicle is unavailable")?
         .apply_control_hit(hit)
@@ -128,7 +130,7 @@ pub fn damage_vehicle_controls(
 /// Recover conscious control independently of vehicle power inside the server transaction.
 pub(super) fn advance(world: &mut World) -> Vec<super::BattleNotice> {
     let mut notices = Vec::new();
-    for (&id, vehicle) in Arc::make_mut(&mut world.btech.vehicles).iter_mut() {
+    for (&id, vehicle) in world.btech.vehicles.iter_mut() {
         if vehicle.crew_stun_remaining == 0
             || !world
                 .objects

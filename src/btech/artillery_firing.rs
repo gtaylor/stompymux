@@ -172,7 +172,7 @@ pub(super) fn resolve_in_action(
         );
         messages
     };
-    candidate.btech.validate(&candidate)?;
+    candidate.btech.validate_action(&candidate)?;
     *world = candidate;
     Ok(super::firing::BattleFiringAction {
         pilot_notices: private,

@@ -139,7 +139,7 @@ pub fn resolve_analog_radio(
             text: report.receptions.last().unwrap().text.clone(),
         });
     }
-    candidate.btech.validate(&candidate)?;
+    candidate.btech.validate_action(&candidate)?;
     *world = candidate;
     Ok(report)
 }

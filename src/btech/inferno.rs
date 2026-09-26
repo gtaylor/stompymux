@@ -2,7 +2,6 @@
 use super::{BattleNotice, BattleUnit};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 impl BattleUnit {
     /// Remaining inferno seconds; positive duration suppresses six points of heat dissipation.
@@ -46,7 +45,9 @@ pub(super) fn adjust_burn(world: &mut World, id: ObjectId, seconds: i64) -> Resu
         .get(&id)
         .context("Unit is not constructed")?;
     let remaining = adjusted_duration(unit.inferno_remaining, seconds)?;
-    Arc::make_mut(&mut world.btech.constructed)
+    world
+        .btech
+        .constructed
         .get_mut(&id)
         .unwrap()
         .inferno_remaining = remaining;
@@ -70,9 +71,7 @@ pub fn advance_inferno_burns(world: &mut World) -> Vec<BattleNotice> {
         .collect();
     let mut notices = Vec::new();
     for id in ids {
-        let unit = Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
         unit.inferno_remaining -= 1;
         if unit.inferno_remaining == 0 {
             notices.push(BattleNotice {
@@ -118,25 +117,27 @@ pub fn extinguish_inferno_in_water(world: &mut World, id: ObjectId) -> Result<Ve
         id,
         "is surrounded by a plume of steam as the flames extinguish.",
     ));
-    let mut candidate = world.clone();
-    Arc::make_mut(&mut candidate.btech.constructed)
-        .get_mut(&id)
-        .unwrap()
-        .inferno_remaining = 0;
-    super::set_map_decoration(
-        &mut candidate,
-        position.map,
-        super::BattleHexCoordinate {
-            x: i32::from(position.x),
-            y: i32::from(position.y),
-        },
-        Some(super::BattleDecoration::new(
-            super::BattleDecorationKind::Smoke,
-            120,
-            None,
-        )),
-    )?;
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(notices)
+    world.attempt(|world| {
+        world
+            .btech
+            .constructed
+            .get_mut(&id)
+            .unwrap()
+            .inferno_remaining = 0;
+        super::set_map_decoration(
+            world,
+            position.map,
+            super::BattleHexCoordinate {
+                x: i32::from(position.x),
+                y: i32::from(position.y),
+            },
+            Some(super::BattleDecoration::new(
+                super::BattleDecorationKind::Smoke,
+                120,
+                None,
+            )),
+        )?;
+        world.btech.validate_action(world)?;
+        Ok(notices)
+    })
 }

@@ -389,7 +389,7 @@ mod tests {
                 let mut world = World::default();
                 let mut map = lane(&[(Terrain::Grassland, 0); 201]);
                 map.maximum_visibility = maximum;
-                Arc::make_mut(&mut world.btech.maps).insert(ObjectId(99), map);
+                world.btech.maps.insert(ObjectId(99), map);
                 let mut template = crate::BattleTemplate::parse(include_str!(
                     "../../tests/fixtures/btech/mechs/JR7-D"
                 ))
@@ -408,7 +408,7 @@ mod tests {
                 unit.motion = Some(crate::BattleMotion::stationary(
                     BattleHexCoordinate { x: 0, y: 0 }.center(),
                 ));
-                Arc::make_mut(&mut world.btech.constructed).insert(ObjectId(1), unit);
+                world.btech.constructed.insert(ObjectId(1), unit);
                 let before = world.btech.clone();
                 for y in [10, 11, 180, 181, 200] {
                     let (los, distance) =

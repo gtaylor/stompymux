@@ -3,7 +3,6 @@ use super::*;
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// Assigned position and identity, with the reference's out-of-bounds origin-reset diagnostic.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -21,11 +20,11 @@ pub fn reassign_map(
     map: ObjectId,
     preferred: Option<&str>,
 ) -> Result<BattleMapAssignment> {
-    let mut candidate = world.clone();
-    let report = reassign_in_candidate(&mut candidate, id, map, preferred)?;
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(report)
+    world.attempt(|world| {
+        let report = reassign_in_candidate(world, id, map, preferred)?;
+        world.btech.validate(world)?;
+        Ok(report)
+    })
 }
 
 /// Change membership inside the host's transaction, retaining the unit's physical condition.
@@ -122,7 +121,7 @@ pub(super) fn reassign_in_candidate(
     }
     super::map_slots::arrive(&mut world.btech, id, position.map, slot);
     super::contacts::forget_unit(world, id);
-    let identity = if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    let identity = if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         unit.assign_membership(position, slot);
         unit.motion = Some(motion);
         if unit.vtol_flight.is_none() && unit.free_fall.is_none() && unit.orbital_drop.is_none() {
@@ -137,9 +136,7 @@ pub(super) fn reassign_in_candidate(
         );
         unit.identity()
     } else {
-        let unit = Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
         unit.detached = false;
         unit.position = Some(position);
         unit.map_slot = Some(slot);
@@ -153,7 +150,7 @@ pub(super) fn reassign_in_candidate(
         }
         unit.identity()
     };
-    Arc::make_mut(&mut world.btech.units).insert(id, identity);
+    world.btech.units.insert(id, identity);
     world.objects.get_mut(&id).unwrap().location = Some(map);
     // A bounds reset updates the active flight sample as well as the ordinary motion cursor.
     if reset_origin || original.is_none() {
@@ -165,10 +162,7 @@ pub(super) fn reassign_in_candidate(
             .context("Airborne unit has no motion")?
             .point;
         if flight.rebind(&world.btech.maps()[&map], point)? {
-            Arc::make_mut(&mut world.btech.constructed)
-                .get_mut(&id)
-                .unwrap()
-                .flight = Some(flight);
+            world.btech.constructed.get_mut(&id).unwrap().flight = Some(flight);
         }
     }
     let label = super::battlefield_identity::assign_in_candidate(world, id, preferred)?;
@@ -211,51 +205,54 @@ fn retained_height(world: &World, id: ObjectId) -> Result<Option<i32>> {
 /// Remove tactical membership immediately; retain physical pose, power and crew until an update.
 /// The enclosing object stays in its existing container. Failure restores all world state.
 pub fn remove_map_membership(world: &mut World, id: ObjectId) -> Result<()> {
-    let mut candidate = world.clone();
-    ensure!(candidate.objects.get(&id).is_some_and(|object| object.kind == Kind::Thing
-        && !object.flags.contains(Flag::Going)), "Unit is unavailable");
-    let source = super::scanner::scanner_unit(&candidate, id).context("Unit is not constructed")?;
-    if let Some(position) = source.position {
+    world.attempt(|world| {
         ensure!(
-            candidate.btech.maps().contains_key(&position.map)
-                && candidate
-                    .objects
-                    .get(&position.map)
-                    .is_some_and(|object| !object.flags.contains(Flag::Going)),
-            "Current map index is invalid!"
+            world.objects.get(&id).is_some_and(
+                |object| object.kind == Kind::Thing && !object.flags.contains(Flag::Going)
+            ),
+            "Unit is unavailable"
         );
-    }
-    let height = retained_height(&candidate, id)?;
-    let carrier = candidate.btech.towed_by(id).unwrap_or(id);
-    super::towing::detach(&mut candidate, carrier);
-    super::map_slots::depart(&mut candidate.btech, id);
-    super::contacts::forget_unit(&mut candidate, id);
-    let identity = if let Some(unit) = Arc::make_mut(&mut candidate.btech.vehicles).get_mut(&id) {
-        if unit.vtol_flight.is_none() && unit.free_fall.is_none() && unit.orbital_drop.is_none() {
-            unit.ground_elevation = height.map(f64::from);
+        let source = super::scanner::scanner_unit(world, id).context("Unit is not constructed")?;
+        if let Some(position) = source.position {
+            ensure!(
+                world.btech.maps().contains_key(&position.map)
+                    && world
+                        .objects
+                        .get(&position.map)
+                        .is_some_and(|object| !object.flags.contains(Flag::Going)),
+                "Current map index is invalid!"
+            );
         }
-        unit.detach_scenario_membership();
-        unit.identity()
-    } else {
-        let unit = Arc::make_mut(&mut candidate.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
-        if unit.flight.is_none() && unit.free_fall.is_none() && unit.orbital_drop.is_none() {
-            unit.ground_elevation = height.map(f64::from);
-        }
-        unit.detached = unit.position.is_some();
-        unit.map_slot = None;
-        unit.c3_network = None;
-        unit.c3i_network = None;
-        unit.tag.target = None;
-        unit.hull_down = Default::default();
-        unit.building_entry = None;
-        unit.identity()
-    };
-    Arc::make_mut(&mut candidate.btech.units).insert(id, identity);
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(())
+        let height = retained_height(world, id)?;
+        let carrier = world.btech.towed_by(id).unwrap_or(id);
+        super::towing::detach(world, carrier);
+        super::map_slots::depart(&mut world.btech, id);
+        super::contacts::forget_unit(world, id);
+        let identity = if let Some(unit) = world.btech.vehicles.get_mut(&id) {
+            if unit.vtol_flight.is_none() && unit.free_fall.is_none() && unit.orbital_drop.is_none()
+            {
+                unit.ground_elevation = height.map(f64::from);
+            }
+            unit.detach_scenario_membership();
+            unit.identity()
+        } else {
+            let unit = world.btech.constructed.get_mut(&id).unwrap();
+            if unit.flight.is_none() && unit.free_fall.is_none() && unit.orbital_drop.is_none() {
+                unit.ground_elevation = height.map(f64::from);
+            }
+            unit.detached = unit.position.is_some();
+            unit.map_slot = None;
+            unit.c3_network = None;
+            unit.c3i_network = None;
+            unit.tag.target = None;
+            unit.hull_down = Default::default();
+            unit.building_entry = None;
+            unit.identity()
+        };
+        world.btech.units.insert(id, identity);
+        world.btech.validate(world)?;
+        Ok(())
+    })
 }
 
 /// Resolve powered off-map state at the next simulation update using normal shutdown cleanup.
@@ -263,7 +260,7 @@ pub fn remove_map_membership(world: &mut World, id: ObjectId) -> Result<()> {
 pub(super) fn advance_detached(world: &mut World) -> Vec<BattleNotice> {
     let mut notices = Vec::new();
     let mut dropped_clubs = Vec::new();
-    for (&id, unit) in Arc::make_mut(&mut world.btech.constructed).iter_mut() {
+    for (&id, unit) in world.btech.constructed.iter_mut() {
         if !unit.detached
             || (unit.power == BattlePower::Off
                 && unit.flight.is_none()
@@ -291,7 +288,7 @@ pub(super) fn advance_detached(world: &mut World) -> Vec<BattleNotice> {
         }
         unit.facing.torso = BattleTorso::Center;
     }
-    for (&id, unit) in Arc::make_mut(&mut world.btech.vehicles).iter_mut() {
+    for (&id, unit) in world.btech.vehicles.iter_mut() {
         if !unit.detached
             || (unit.power == BattlePower::Off
                 && unit.orbital_drop.is_none()
@@ -354,9 +351,7 @@ pub fn set_map_index_action(
     map: ObjectId,
     preferred: Option<&str>,
 ) -> Result<BattleMapIndexReport> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(&before, actor),
             "Permission denied."
@@ -393,12 +388,7 @@ pub fn set_map_index_action(
         }
         scripts.effects.validate()?;
         Ok(BattleMapIndexReport { assignment })
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// SETMAPINDX accepts a decimal map dbref (-1 removes membership) and an optional preferred ID.

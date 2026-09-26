@@ -10,9 +10,7 @@ pub fn set_team_action(
     unit: ObjectId,
     team: i32,
 ) -> Result<i32> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(&before, actor),
             "Permission denied."
@@ -38,12 +36,7 @@ pub fn set_team_action(
         )?;
         scripts.effects.validate()?;
         Ok(team)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Native SETTEAM edits the wizard's occupied physical unit and accepts one signed integer.

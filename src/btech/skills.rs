@@ -3,7 +3,6 @@ use super::BattleCharacter;
 use crate::{Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// A saved skill/advantage value; experience contains a low 24-bit XP balance and earned levels above it.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -103,9 +102,10 @@ pub fn set_character_value(
         !name.is_empty() && name.chars().count() <= 255 && !name.contains('\0'),
         "Invalid character value name"
     );
-    Arc::make_mut(&mut world.btech.character_values)
-        .entry(player)
-        .or_default()
+    world
+        .btech
+        .character_values
+        .get_or_default(player)
         .insert(name.into(), value);
     Ok(())
 }
@@ -326,7 +326,7 @@ mod anatomy_tests {
             encoded["definition"]["attributes"]["move_type"] = chassis.into();
             let unit = serde_json::from_value(encoded).unwrap();
             let mut world = World::default();
-            Arc::make_mut(&mut world.btech.constructed).insert(ObjectId(42), unit);
+            world.btech.constructed.insert(ObjectId(42), unit);
             for extended in [false, true] {
                 assert_eq!(
                     unit_piloting_target(&world, ObjectId(42), extended).unwrap(),

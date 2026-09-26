@@ -3,7 +3,6 @@ use super::{BattleCharacterInjury, BattleConsciousnessCheck};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Character-mode pilot damage is independent of the six-hit tactical injury limit.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -72,7 +71,7 @@ pub fn injure_character_pilot(
     if injury.fatal {
         status.killed = true;
         store_status(&mut candidate, unit, status);
-        if let Some(recovery) = Arc::make_mut(&mut candidate.btech.recoveries).get_mut(&pilot) {
+        if let Some(recovery) = candidate.btech.recoveries.get_mut(&pilot) {
             recovery.remaining = 0;
         }
     } else {
@@ -88,7 +87,7 @@ pub fn injure_character_pilot(
         ));
         store_status(&mut candidate, unit, status);
     }
-    candidate.btech.validate(&candidate)?;
+    candidate.btech.validate_action(&candidate)?;
     *world = candidate;
     Ok(report)
 }
@@ -101,16 +100,14 @@ fn store_status(world: &mut World, id: ObjectId, status: BattleCharacterPilotSta
         ..status
     };
     super::pilot_health::set_count(world, id, injuries);
-    if let Some(vehicle) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(vehicle) = world.btech.vehicles.get_mut(&id) {
         vehicle.character_pilot = Some(status);
         if status.killed {
             vehicle.reconcile_crew_loss();
         }
         return;
     }
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     unit.character_pilot = Some(status);
     if status.killed {
         unit.pilot = None;

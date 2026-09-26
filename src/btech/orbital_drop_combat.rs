@@ -3,7 +3,6 @@ use super::orbital_drop_state::current;
 use super::*;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
-use std::sync::Arc;
 
 /// Breaches compare raw terrain elevation, including the bed below ice and water.
 /// Off-map protection retires at its retained height without scheduling an impossible map fall.
@@ -37,10 +36,12 @@ pub(super) fn intercept(
     if amount == 0 {
         return Ok(None);
     }
-    let roll = if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    let roll = if let Some(unit) = world.btech.constructed.get_mut(&id) {
         unit.dice.generic_roll()
     } else {
-        Arc::make_mut(&mut world.btech.vehicles)
+        world
+            .btech
+            .vehicles
             .get_mut(&id)
             .unwrap()
             .dice
@@ -138,7 +139,7 @@ fn continue_after_breach(
     );
     let fall =
         (breach == Some(BattleDropBreach::FreeFall)).then(|| BattleFreeFall::new(drop.elevation()));
-    if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
         unit.orbital_drop = (!retired).then_some(drop);
         if let Some(fall) = fall {
             unit.free_fall = Some(fall);
@@ -153,9 +154,7 @@ fn continue_after_breach(
             unit.ground_elevation = Some(f64::from(drop.elevation()));
         }
     } else {
-        let unit = Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.vehicles.get_mut(&id).unwrap();
         unit.orbital_drop = (!retired).then_some(drop);
         if let Some(fall) = fall {
             unit.free_fall = Some(fall);

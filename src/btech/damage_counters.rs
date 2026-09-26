@@ -2,7 +2,6 @@
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Signed reference fields retain independently editable totals, not remaining-material deltas.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -27,12 +26,16 @@ pub(super) fn read(world: &World, id: ObjectId) -> Result<DamageCounters> {
 /// Select only the owning construction store for a validated update.
 fn storage(world: &mut World, id: ObjectId) -> Result<&mut DamageCounters> {
     if world.btech.constructed_units().contains_key(&id) {
-        return Ok(&mut Arc::make_mut(&mut world.btech.constructed)
+        return Ok(&mut world
+            .btech
+            .constructed
             .get_mut(&id)
             .unwrap()
             .damage_counters);
     }
-    Ok(&mut Arc::make_mut(&mut world.btech.vehicles)
+    Ok(&mut world
+        .btech
+        .vehicles
         .get_mut(&id)
         .context("Unit is unavailable")?
         .damage_counters)

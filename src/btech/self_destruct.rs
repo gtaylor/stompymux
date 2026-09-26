@@ -5,7 +5,6 @@ use crate::{
 };
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// An admitted sequence; advertised intent is separate from the event's actual detonation mode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -91,11 +90,13 @@ pub fn set_battle_self_destruct_safe(world: &mut World, id: ObjectId, safe: bool
             .is_some_and(|o| !o.flags.contains(crate::Flag::Going)),
         "Unit is unavailable"
     );
-    if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         unit.self_destruct_safe = safe;
         return Ok(());
     }
-    Arc::make_mut(&mut world.btech.constructed)
+    world
+        .btech
+        .constructed
         .get_mut(&id)
         .context("Unit is unavailable")?
         .self_destruct_safe = safe;
@@ -135,15 +136,9 @@ pub(super) fn validate(state: &BtechState) -> Result<()> {
 /// Mutable anatomy adapter; no countdown or detonation decisions are duplicated here.
 fn timer_mut(world: &mut World, id: ObjectId) -> &mut Option<BattleSelfDestruct> {
     if world.btech.vehicles().contains_key(&id) {
-        return &mut Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap()
-            .self_destruct;
+        return &mut world.btech.vehicles.get_mut(&id).unwrap().self_destruct;
     }
-    &mut Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap()
-        .self_destruct
+    &mut world.btech.constructed.get_mut(&id).unwrap().self_destruct
 }
 
 /// Largest destructive live bin, retaining canonical order for equal hazards.
@@ -360,9 +355,7 @@ pub fn self_destruct_action(
     pilot: ObjectId,
     text: &str,
 ) -> Result<()> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let notices = control(&mut scripts.world.borrow_mut(), config, unit, pilot, text)?;
         for feedback in notices {
             match feedback {
@@ -370,13 +363,8 @@ pub fn self_destruct_action(
                 Feedback::Debug(text) => debug(scripts, config, text)?,
             }
         }
-        scripts.world.borrow().validate(config)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+        scripts.world.borrow().validate_action(config)
+    })
 }
 
 /// Idle shutdown cancellation must be processed even with no other battlefield activity.
@@ -414,9 +402,7 @@ pub fn advance_battle_self_destructs_action(
     scripts: &Scripts,
     config: &Config,
 ) -> Result<Vec<BattleSelfDestructOutcome>> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let mut reports = Vec::new();
         for (id, _) in pending(&before.btech) {
             let current = {
@@ -500,14 +486,9 @@ pub fn advance_battle_self_destructs_action(
             }
         }
         super::evacuation::publish_new_casualties(scripts, config, &before)?;
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(reports)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Ground vehicles and rotorcraft lose their rear section and receive the shared terminal injury.
@@ -536,9 +517,7 @@ fn immolate(scripts: &Scripts, id: ObjectId) -> Result<BattleSelfDestructOutcome
     let height = surface
         .checked_add(6)
         .context("Explosion altitude overflow")?;
-    let unit = Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.vehicles.get_mut(&id).unwrap();
     let amount = unit.sections()[&BattleVehicleSection::Rear].internal;
     let damage = unit.damage_phase(
         BattleVehicleSection::Rear,

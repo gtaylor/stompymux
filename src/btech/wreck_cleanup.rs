@@ -43,11 +43,11 @@ pub(super) fn schedule(world: &mut World, before: &World) -> BTreeSet<ObjectId> 
         .collect();
     for &id in &ids {
         Arc::make_mut(&mut world.btech.wrecks).insert(id, 10);
-        if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+        if let Some(unit) = world.btech.constructed.get_mut(&id) {
             unit.radio = Default::default();
             unit.tics = Default::default();
         }
-        if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+        if let Some(unit) = world.btech.vehicles.get_mut(&id) {
             unit.radio = Default::default();
             unit.tics = Default::default();
         }
@@ -76,11 +76,11 @@ pub(crate) fn forget(state: &mut BtechState, id: ObjectId) {
     Arc::make_mut(&mut state.sensor_recoveries).retain(|event| event.unit() != id);
     super::contacts::forget_state(state, id);
     Arc::make_mut(&mut state.tows).retain(|carrier, target| *carrier != id && *target != id);
-    Arc::make_mut(&mut state.constructed).remove(&id);
-    Arc::make_mut(&mut state.vehicles).remove(&id);
-    Arc::make_mut(&mut state.units).remove(&id);
-    Arc::make_mut(&mut state.controllers).remove(&id);
-    Arc::make_mut(&mut state.autopilot_plans).remove(&id);
+    state.constructed.remove(&id);
+    state.vehicles.remove(&id);
+    state.units.remove(&id);
+    state.controllers.remove(&id);
+    state.autopilot_plans.remove(&id);
     Arc::make_mut(&mut state.registrations).remove(&id);
     Arc::make_mut(&mut state.wrecks).remove(&id);
 }
@@ -132,9 +132,7 @@ pub fn advance_battle_wrecks_action(scripts: &Scripts, config: &Config) -> Resul
     if !battle_wrecks_pending(&scripts.world.borrow()) {
         return Ok(Vec::new());
     }
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let mut retired = Vec::new();
         for (&id, &remaining) in before.btech.wrecks.iter() {
             if scripts.world.borrow().btech.wrecks.get(&id) != Some(&remaining) {
@@ -150,14 +148,9 @@ pub fn advance_battle_wrecks_action(scripts: &Scripts, config: &Config) -> Resul
             retire(scripts, config, id)?;
             retired.push(id);
         }
-        scripts.world.borrow().validate(config)?;
+        scripts.world.borrow().validate_action(config)?;
         Ok(retired)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Run the explicit departure action while the native state is still available, then retire silently.

@@ -555,14 +555,17 @@ async fn analog_radio_range_reception_dice_and_restart_are_atomic() {
             report.interfered_receivers.contains(&id)
         );
     }
-    // A late state rejection rolls back dice already consumed by earlier receivers.
-    let mut invalid = before.clone();
-    radio_fact(&mut invalid, units[4], |u| {
-        u["radio"][15]["frequency"] = 1000000.into()
-    });
-    let snapshot = invalid.btech.clone();
-    assert!(resolve_analog_radio(&mut invalid, source, 0, "Message 123").is_err());
-    assert_eq!(invalid.btech, snapshot);
+    // A late state rejection rolls back dice already consumed by earlier receivers. The
+    // rejection comes from per-operation validation, which runs only in debug builds.
+    if cfg!(debug_assertions) {
+        let mut invalid = before.clone();
+        radio_fact(&mut invalid, units[4], |u| {
+            u["radio"][15]["frequency"] = 1000000.into()
+        });
+        let snapshot = invalid.btech.clone();
+        assert!(resolve_analog_radio(&mut invalid, source, 0, "Message 123").is_err());
+        assert_eq!(invalid.btech, snapshot);
+    }
     // Near-range reception, including self-monitoring, consumes no dice at all.
     let mut nearby = before;
     for &id in &units[3..] {

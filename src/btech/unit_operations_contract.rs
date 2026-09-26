@@ -7,10 +7,11 @@ use super::{
 };
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 fn unit(world: &mut World, id: ObjectId) -> Result<&mut BattleUnit> {
-    Arc::make_mut(&mut world.btech.constructed)
+    world
+        .btech
+        .constructed
         .get_mut(&id)
         .context("unit runtime state is unavailable")
 }
@@ -31,9 +32,7 @@ pub(crate) fn apply_unit_damage_action(
     id: ObjectId,
     request: UnitDamageRequest<'_>,
 ) -> Result<()> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         super::scenario_damage::admit(&before, ObjectId(1), id, i32::from(request.amount))?;
         if let Some(message) = request.unit_message.filter(|message| !message.is_empty()) {
             notify_unit_operation(scripts, id, message)?;
@@ -91,7 +90,10 @@ pub(crate) fn apply_unit_damage_action(
                     };
                     hit.rear_armor = rear;
                     hit.through_armor_critical = request.critical;
-                    Arc::make_mut(&mut scripts.world_mut().btech.constructed)
+                    scripts
+                        .world_mut()
+                        .btech
+                        .constructed
                         .get_mut(&id)
                         .unwrap()
                         .dice = dice;
@@ -172,13 +174,8 @@ pub(crate) fn apply_unit_damage_action(
         super::piloting::publish_ordered_notices(scripts, &notices, &private)?;
         super::evacuation::publish_blast_consequences(scripts, config, &impacts, None)?;
         super::evacuation::publish_new_casualties(scripts, config, &before)?;
-        scripts.world().validate(config)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+        scripts.world().validate_action(config)
+    })
 }
 
 pub(crate) fn notify_unit_operation(
@@ -212,7 +209,9 @@ fn edit(
 }
 
 fn vehicle(world: &mut World, id: ObjectId) -> Result<&mut BattleVehicle> {
-    Arc::make_mut(&mut world.btech.vehicles)
+    world
+        .btech
+        .vehicles
         .get_mut(&id)
         .context("unit runtime state is unavailable")
 }
@@ -293,7 +292,7 @@ pub(crate) fn load_unit_template(
                 replacement.radio = radio;
                 replacement.tics = tics;
             }
-            Arc::make_mut(&mut world.btech.units).insert(id, replacement.identity());
+            world.btech.units.insert(id, replacement.identity());
             *unit(world, id)? = replacement;
         }
         BattleUnitTemplate::Vehicle(definition) if world.btech.vehicles().contains_key(&id) => {
@@ -307,7 +306,7 @@ pub(crate) fn load_unit_template(
                 replacement.radio = radio;
                 replacement.tics = tics;
             }
-            Arc::make_mut(&mut world.btech.units).insert(id, replacement.identity());
+            world.btech.units.insert(id, replacement.identity());
             *vehicle(world, id)? = replacement;
         }
         definition if !configured => {
@@ -319,13 +318,13 @@ pub(crate) fn load_unit_template(
             match definition {
                 BattleUnitTemplate::Mech(definition) => {
                     let unit = BattleUnit::from_contract_template(definition)?;
-                    Arc::make_mut(&mut world.btech.units).insert(id, unit.identity());
-                    Arc::make_mut(&mut world.btech.constructed).insert(id, unit);
+                    world.btech.units.insert(id, unit.identity());
+                    world.btech.constructed.insert(id, unit);
                 }
                 BattleUnitTemplate::Vehicle(definition) => {
                     let unit = BattleVehicle::new_contract(definition)?;
-                    Arc::make_mut(&mut world.btech.units).insert(id, unit.identity());
-                    Arc::make_mut(&mut world.btech.vehicles).insert(id, unit);
+                    world.btech.units.insert(id, unit.identity());
+                    world.btech.vehicles.insert(id, unit);
                 }
             }
         }

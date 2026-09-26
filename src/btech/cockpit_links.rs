@@ -2,7 +2,7 @@
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeSet, sync::Arc};
+use std::collections::BTreeSet;
 
 /// Three named destinations retain deferred references independently of station ownership.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -35,10 +35,12 @@ pub(super) fn set(
     slot: usize,
     destination: ObjectId,
 ) -> Result<()> {
-    let links = if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    let links = if let Some(unit) = world.btech.constructed.get_mut(&id) {
         &mut unit.cockpit_links
     } else {
-        &mut Arc::make_mut(&mut world.btech.vehicles)
+        &mut world
+            .btech
+            .vehicles
             .get_mut(&id)
             .context("Unit is unavailable")?
             .cockpit_links

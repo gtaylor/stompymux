@@ -3,7 +3,6 @@ use super::*;
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// A scheduled selection retains its destination through intervening shutdowns.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -122,7 +121,9 @@ pub fn toggle_null_signature(
         "You are already changing the status of your Null Signature System!"
     );
     let enabled = !unit.null_signature.enabled;
-    Arc::make_mut(&mut world.btech.constructed)
+    world
+        .btech
+        .constructed
         .get_mut(&id)
         .unwrap()
         .null_signature
@@ -152,7 +153,7 @@ pub fn advance_null_signature(world: &mut World) -> Vec<BattleNotice> {
         return Vec::new();
     }
     let mut notices = Vec::new();
-    for (&id, unit) in Arc::make_mut(&mut world.btech.constructed) {
+    for (&id, unit) in &mut world.btech.constructed {
         let available = unit.power() == BattlePower::Running
             && unit.null_signature_available().unwrap_or(false);
         if let Some(enabled) = unit.null_signature.advance(available) {

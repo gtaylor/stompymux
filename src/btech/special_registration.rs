@@ -30,7 +30,7 @@ pub(crate) fn unregister_special(
     match existing.as_deref() {
         // The turret lifecycle's SPECIAL_FREE case is empty (ds_turret.c:276).
         Some("TURRET") => {
-            Arc::make_mut(&mut world.btech.gunner_stations).remove(&id);
+            world.btech.gunner_stations.remove(&id);
             Arc::make_mut(&mut world.btech.registrations).remove(&id);
         }
         // newfreemech SPECIAL_FREE (mech_restrict.c:437) releases battlefield
@@ -115,7 +115,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                 Arc::make_mut(&mut world.btech.registrations).insert(id, kind.clone());
             }
             "TURRET" => {
-                Arc::make_mut(&mut world.btech.gunner_stations).insert(id, Default::default());
+                world.btech.gunner_stations.insert(id, Default::default());
                 Arc::make_mut(&mut world.btech.registrations).insert(id, kind.clone());
             }
             "MAP" => {

@@ -2,7 +2,6 @@
 use crate::{ObjectId, Scripts, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Travel direction relative to the chassis, without changing weapon facing.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -137,17 +136,14 @@ pub fn set_lateral(
             ),
         )
     };
-    Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap()
-        .lateral = next;
+    world.btech.constructed.get_mut(&id).unwrap().lateral = next;
     Ok(super::BattleNotice { unit: id, text })
 }
 
 /// Advance queued changes once per simulation second; stopped units discard the request when its timer expires.
 pub(super) fn advance(world: &mut World) -> Vec<super::BattleNotice> {
     let mut notices = Vec::new();
-    for (&id, unit) in Arc::make_mut(&mut world.btech.constructed) {
+    for (&id, unit) in &mut world.btech.constructed {
         let Some(mode) = unit.lateral.pending else {
             continue;
         };
@@ -186,9 +182,7 @@ pub fn lateral(
     pilot: ObjectId,
     argument: &str,
 ) -> Result<super::BattleNotice> {
-    let before = scripts.world.borrow().clone();
-    let effects = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let notice = set_lateral(
             &mut scripts.world.borrow_mut(),
             unit,
@@ -197,12 +191,7 @@ pub fn lateral(
         )?;
         super::notify_unit_text(scripts, unit, &notice.text)?;
         Ok(notice)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(effects);
-    }
-    result
+    })
 }
 
 /// Native control uses the invoking pilot's cockpit.

@@ -2,7 +2,7 @@
 use super::{BattleNotice, BattleSectionState, BattleWeaponReadiness, WeaponMount};
 use crate::{CommandAction, CommandContext, CommandInput, CommandReport, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::{collections::BTreeMap, sync::Arc};
+use std::collections::BTreeMap;
 
 /// Preferred, mount-local and other sections retain stable slot order within each rank.
 pub(super) fn priority<S: Eq>(preferred: Option<S>, mount: S, bin: S) -> u8 {
@@ -94,7 +94,9 @@ pub fn set_battle_ammunition_section(
         let already = unit.ammunition_section(index) == section;
         let name = section.map(|s| s.name());
         set(
-            &mut Arc::make_mut(&mut world.btech.vehicles)
+            &mut world
+                .btech
+                .vehicles
                 .get_mut(&id)
                 .unwrap()
                 .ammunition_sections,
@@ -117,7 +119,9 @@ pub fn set_battle_ammunition_section(
         let already = unit.ammunition_section(index) == section;
         let name = section.map(|s| unit.chassis().section_name(s));
         set(
-            &mut Arc::make_mut(&mut world.btech.constructed)
+            &mut world
+                .btech
+                .constructed
                 .get_mut(&id)
                 .unwrap()
                 .ammunition_sections,
@@ -151,9 +155,7 @@ fn set<S>(preferences: &mut BTreeMap<usize, S>, index: usize, section: Option<S>
 
 /// Cockpit and Lua controls call the same domain operation.
 pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<CommandAction> {
-    let before = ctx.scripts.world.borrow().clone();
-    let checkpoint = ctx.scripts.effects.checkpoint();
-    let result = (|| {
+    let result = ctx.scripts.atomic(|before| {
         let mut args = input.args.split_whitespace();
         let index = args
             .next()
@@ -174,13 +176,9 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
             (!section.starts_with('-')).then_some(section),
         )?;
         super::notify_unit(ctx.scripts, notice)
-    })();
+    });
     Ok(match result {
         Ok(()) => CommandAction::Continue,
-        Err(error) => {
-            *ctx.scripts.world.borrow_mut() = before;
-            ctx.scripts.effects.restore(checkpoint);
-            CommandAction::Report(CommandReport::Reply(format!("{error:#}")))
-        }
+        Err(error) => CommandAction::Report(CommandReport::Reply(format!("{error:#}"))),
     })
 }

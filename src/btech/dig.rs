@@ -3,7 +3,6 @@ use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Cover and preparation are independent of scheduled completion events.
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -103,9 +102,7 @@ pub fn dig_unit(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<Batt
         ),
         "You cannot dig into this surface"
     );
-    let unit = Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.vehicles.get_mut(&id).unwrap();
     unit.dig.dug_in = false;
     unit.dig.digging = true;
     unit.dig.completion.insert(20);
@@ -118,7 +115,7 @@ pub fn dig_unit(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<Batt
 /// The ordinary heartbeat owns countdown advancement and persistence; no private timer is scheduled.
 pub(super) fn advance(world: &mut World) -> Vec<BattleNotice> {
     let mut notices = Vec::new();
-    for (&id, unit) in Arc::make_mut(&mut world.btech.vehicles).iter_mut() {
+    for (&id, unit) in world.btech.vehicles.iter_mut() {
         if unit.dig.completion.is_empty()
             || world
                 .objects
@@ -197,17 +194,10 @@ impl BattleVehicle {
 
 /// Share the same world/effect checkpoint for native and Lua initiation.
 pub fn dig_action(scripts: &crate::Scripts, id: ObjectId, pilot: ObjectId) -> Result<()> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let notice = dig_unit(&mut scripts.world_mut(), id, pilot)?;
         super::notify_unit(scripts, notice)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Native digging takes no arguments and uses the caller's current cockpit.

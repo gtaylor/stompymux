@@ -2027,8 +2027,8 @@ pub fn create_vehicle(
     );
     super::inventory_mass(world, id)?;
     let vehicle = BattleVehicle::new(definition)?;
-    std::sync::Arc::make_mut(&mut world.btech.units).insert(id, vehicle.identity());
-    std::sync::Arc::make_mut(&mut world.btech.vehicles).insert(id, vehicle);
+    world.btech.units.insert(id, vehicle.identity());
+    world.btech.vehicles.insert(id, vehicle);
     std::sync::Arc::make_mut(&mut world.btech.registrations).insert(id, "MECH".into());
     Ok(())
 }
@@ -2048,7 +2048,9 @@ pub fn damage_vehicle_phase(
             .is_some_and(|object| !object.flags.contains(crate::Flag::Going)),
         "Vehicle object is unavailable"
     );
-    std::sync::Arc::make_mut(&mut world.btech.vehicles)
+    world
+        .btech
+        .vehicles
         .get_mut(&id)
         .context("Constructed vehicle not found")?
         .damage_phase(section, amount, phase)
@@ -2067,7 +2069,9 @@ pub fn damage_vehicle_motive(
             .is_some_and(|object| !object.flags.contains(crate::Flag::Going)),
         "Vehicle object is unavailable"
     );
-    let vehicle = std::sync::Arc::make_mut(&mut world.btech.vehicles)
+    let vehicle = world
+        .btech
+        .vehicles
         .get_mut(&id)
         .context("Constructed vehicle not found")?;
     ensure!(!vehicle.is_destroyed(), "Vehicle is already destroyed");

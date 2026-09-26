@@ -2,7 +2,6 @@
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Safety concerns unsupported MechWarrior targets; debug and standing flags have no combat consumers.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -31,10 +30,12 @@ fn read(world: &World, id: ObjectId) -> Result<AuxiliaryPreferences> {
 
 /// Select the existing unit-owned preference storage after caller admission.
 fn storage(world: &mut World, id: ObjectId) -> Result<&mut AuxiliaryPreferences> {
-    if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
         return Ok(&mut unit.auxiliary_preferences);
     }
-    Ok(&mut Arc::make_mut(&mut world.btech.vehicles)
+    Ok(&mut world
+        .btech
+        .vehicles
         .get_mut(&id)
         .context("Unit is unavailable")?
         .auxiliary_preferences)

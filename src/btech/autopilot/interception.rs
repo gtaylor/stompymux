@@ -458,7 +458,6 @@ mod tests {
 mod integration_tests {
     use super::*;
     use crate::btech::autopilot::{self, AutopilotOrder, AutopilotSubmissionMode, runtime};
-    use std::sync::Arc;
 
     #[tokio::test]
     async fn tracking_checkpoint_takeover_replacement_and_restart() {
@@ -474,9 +473,7 @@ mod integration_tests {
         )
         .unwrap();
         runtime::advance(&mut world, &config, 1).unwrap();
-        let p = Arc::make_mut(&mut world.btech.autopilot_plans)
-            .get_mut(&id)
-            .unwrap();
+        let p = world.btech.autopilot_plans.get_mut(&id).unwrap();
         let before = p.clone();
         p.pursuit
             .sample(1, target, BattlePosition { map, x: 6, y: 1 }, 2);
@@ -486,7 +483,9 @@ mod integration_tests {
         autopilot::manual_takeover(&mut world, id).unwrap();
         assert!(!world.btech.autopilot_plans.contains_key(&id));
         world = tracked.clone();
-        Arc::make_mut(&mut world.btech.controllers)
+        world
+            .btech
+            .controllers
             .get_mut(&id)
             .unwrap()
             .submit(

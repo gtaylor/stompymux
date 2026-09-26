@@ -3,7 +3,7 @@ use super::{BattleNotice, BattlePoint};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeSet, sync::Arc};
+use std::collections::BTreeSet;
 
 /// A captured pair means connection setup; no pair means a recurring radio check.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -60,15 +60,9 @@ fn events(world: &World, id: ObjectId) -> &BattleSpotterEvents {
 /// Edit the queue on the caller's unpublished world candidate.
 fn events_mut(world: &mut World, id: ObjectId) -> &mut BattleSpotterEvents {
     if world.btech.vehicles().contains_key(&id) {
-        &mut Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap()
-            .spotter_events
+        &mut world.btech.vehicles.get_mut(&id).unwrap().spotter_events
     } else {
-        &mut Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap()
-            .spotter_events
+        &mut world.btech.constructed.get_mut(&id).unwrap().spotter_events
     }
 }
 
@@ -165,128 +159,126 @@ fn identity(world: &World, viewer: ObjectId, subject: ObjectId) -> String {
 
 /// Selected observer is the existing authority; periodic events retain their own inspected target.
 fn select(world: &mut World, id: ObjectId, target: Option<ObjectId>) {
-    if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         unit.spotter = target;
     } else {
-        Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap()
-            .spotter = target;
+        world.btech.constructed.get_mut(&id).unwrap().spotter = target;
     }
 }
 
 /// Advance one committed second and publish due events in original request order.
 /// The caller owns the world transaction and must publish the returned participant notices.
 pub fn advance_spotter_links(world: &mut World) -> Result<Vec<BattleNotice>> {
-    let mut candidate = world.clone();
-    let mut due = Vec::new();
-    for id in super::scanner::scanner_ids(&candidate) {
-        let destroyed = super::scanner::scanner_unit(&candidate, id)
-            .is_none_or(|unit| unit.destroyed)
-            || candidate
-                .objects
-                .get(&id)
-                .is_none_or(|object| object.flags.contains(Flag::Going));
-        let queue = events_mut(&mut candidate, id);
-        if destroyed {
-            clear(queue);
-            continue;
-        }
-        for event in &mut queue.events {
-            event.remaining -= 1;
-        }
-        queue.events.retain(|event| {
-            if event.remaining == 0 {
-                due.push((id, *event));
-                false
-            } else {
-                true
+    world.attempt(|world| {
+        let mut due = Vec::new();
+        for id in super::scanner::scanner_ids(world) {
+            let destroyed = super::scanner::scanner_unit(world, id)
+                .is_none_or(|unit| unit.destroyed)
+                || world
+                    .objects
+                    .get(&id)
+                    .is_none_or(|object| object.flags.contains(Flag::Going));
+            let queue = events_mut(world, id);
+            if destroyed {
+                clear(queue);
+                continue;
             }
-        });
-    }
-    due.sort_by_key(|(_, event)| event.order);
-    let mut notices = Vec::new();
-    for (id, event) in due {
-        // Clearing selection stops maintenance before inspecting its retained observer.
-        if event.positions.is_none() && super::spotter::selected(&candidate, id).is_none() {
-            continue;
-        }
-        let source =
-            super::scanner::scanner_unit(&candidate, id).context("Link owner is unavailable")?;
-        let observer = super::scanner::scanner_unit(&candidate, event.observer);
-        let live = candidate
-            .objects
-            .get(&event.observer)
-            .is_some_and(|object| !object.flags.contains(Flag::Going));
-        let Some(observer) = observer.filter(|_| live) else {
-            select(&mut candidate, id, None);
-            notices.push(BattleNotice {
-                unit: id,
-                text: "You have lost link with your spotter!".into(),
+            for event in &mut queue.events {
+                event.remaining -= 1;
+            }
+            queue.events.retain(|event| {
+                if event.remaining == 0 {
+                    due.push((id, *event));
+                    false
+                } else {
+                    true
+                }
             });
-            continue;
-        };
-        if let Some(original) = event.positions {
-            // Unplaced objects have no usable coordinates. Retire their request instead
-            // of rolling back every subsequent simulation heartbeat indefinitely.
-            let (Some(source_point), Some(observer_point)) = (source.point, observer.point) else {
-                select(&mut candidate, id, None);
+        }
+        due.sort_by_key(|(_, event)| event.order);
+        let mut notices = Vec::new();
+        for (id, event) in due {
+            // Clearing selection stops maintenance before inspecting its retained observer.
+            if event.positions.is_none() && super::spotter::selected(world, id).is_none() {
+                continue;
+            }
+            let source =
+                super::scanner::scanner_unit(world, id).context("Link owner is unavailable")?;
+            let observer = super::scanner::scanner_unit(world, event.observer);
+            let live = world
+                .objects
+                .get(&event.observer)
+                .is_some_and(|object| !object.flags.contains(Flag::Going));
+            let Some(observer) = observer.filter(|_| live) else {
+                select(world, id, None);
                 notices.push(BattleNotice {
                     unit: id,
                     text: "You have lost link with your spotter!".into(),
                 });
                 continue;
             };
-            let points = [source_point, observer_point];
-            if moved(original, points) {
-                for unit in [event.observer, id] {
+            if let Some(original) = event.positions {
+                // Unplaced objects have no usable coordinates. Retire their request instead
+                // of rolling back every subsequent simulation heartbeat indefinitely.
+                let (Some(source_point), Some(observer_point)) = (source.point, observer.point)
+                else {
+                    select(world, id, None);
                     notices.push(BattleNotice {
-                        unit,
-                        text: "The data link was not established due to movement!".into(),
+                        unit: id,
+                        text: "You have lost link with your spotter!".into(),
                     });
+                    continue;
+                };
+                let points = [source_point, observer_point];
+                if moved(original, points) {
+                    for unit in [event.observer, id] {
+                        notices.push(BattleNotice {
+                            unit,
+                            text: "The data link was not established due to movement!".into(),
+                        });
+                    }
+                    continue;
                 }
-                continue;
-            }
-            let name = identity(&candidate, event.observer, id);
-            notices.push(BattleNotice {
-                unit: event.observer,
-                text: format!("Data link established with {name}."),
-            });
-            notices.push(BattleNotice {
-                unit: id,
-                text: format!(
-                    "Data link established with {name}, you now have a forward observer."
-                ),
-            });
-            select(&mut candidate, id, Some(event.observer));
-        } else {
-            let range = super::unit_range(&candidate, id, event.observer);
-            let maximum =
-                2.0 * f64::from(super::unit_radio_capabilities(&candidate, event.observer)?.range);
-            if source.position.map(|position| position.map)
-                != observer.position.map(|position| position.map)
-                || super::spotter::selected(&candidate, event.observer).is_none()
-                || range.is_err()
-                || range.is_ok_and(|range| range.spatial > maximum)
-            {
-                select(&mut candidate, id, None);
+                let name = identity(world, event.observer, id);
+                notices.push(BattleNotice {
+                    unit: event.observer,
+                    text: format!("Data link established with {name}."),
+                });
                 notices.push(BattleNotice {
                     unit: id,
-                    text: "You have lost link with your spotter!".into(),
+                    text: format!(
+                        "Data link established with {name}, you now have a forward observer."
+                    ),
                 });
-                continue;
+                select(world, id, Some(event.observer));
+            } else {
+                let range = super::unit_range(world, id, event.observer);
+                let maximum =
+                    2.0 * f64::from(super::unit_radio_capabilities(world, event.observer)?.range);
+                if source.position.map(|position| position.map)
+                    != observer.position.map(|position| position.map)
+                    || super::spotter::selected(world, event.observer).is_none()
+                    || range.is_err()
+                    || range.is_ok_and(|range| range.spatial > maximum)
+                {
+                    select(world, id, None);
+                    notices.push(BattleNotice {
+                        unit: id,
+                        text: "You have lost link with your spotter!".into(),
+                    });
+                    continue;
+                }
             }
+            schedule(
+                world,
+                id,
+                Event {
+                    remaining: 10,
+                    positions: None,
+                    ..event
+                },
+            )?;
         }
-        schedule(
-            &mut candidate,
-            id,
-            Event {
-                remaining: 10,
-                positions: None,
-                ..event
-            },
-        )?;
-    }
-    *world = candidate;
-    Ok(notices)
+        Ok(notices)
+    })
 }

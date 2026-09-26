@@ -504,7 +504,9 @@ fn advance_controller(
     // Queue transitions happen at the beginning of a simulation tick.  The
     // controller API deliberately leaves this internal transition private.
     if controller.state() == AutopilotState::Executing && controller.active_order().is_none() {
-        Arc::make_mut(&mut world.btech.controllers)
+        world
+            .btech
+            .controllers
             .get_mut(&id)
             .and_then(|controller| controller.start_next(simulation_time));
     }
@@ -577,7 +579,7 @@ fn advance_controller(
         } else {
             active.progress.recovery_attempts.saturating_add(1)
         };
-        if let Some(controller) = Arc::make_mut(&mut world.btech.controllers).get_mut(&id)
+        if let Some(controller) = world.btech.controllers.get_mut(&id)
             && let Some(order) = controller.active_order_mut()
         {
             order.progress.recovery_attempts = recovery_attempts;
@@ -979,13 +981,12 @@ fn advance_controller(
         }
         if matches!(&active.order, AutopilotOrder::AttackMove { .. }) {
             if directive.attack_move_diversion && active.progress.attack_move_origin.is_none() {
-                if let Some(controller) = Arc::make_mut(&mut world.btech.controllers).get_mut(&id)
+                if let Some(controller) = world.btech.controllers.get_mut(&id)
                     && let Some(order) = controller.active_order_mut()
                 {
                     order.progress.attack_move_origin = Some(position);
                 }
-            } else if let Some(controller) =
-                Arc::make_mut(&mut world.btech.controllers).get_mut(&id)
+            } else if let Some(controller) = world.btech.controllers.get_mut(&id)
                 && let Some(order) = controller.active_order_mut()
             {
                 if directive.attack_move_suppressed {
@@ -1818,7 +1819,7 @@ fn update_memory(world: &mut World, id: ObjectId, now: i64, observation: &Autopi
         .iter()
         .filter(|contact| contact.identified && !contact.friendly && !contact.known_destroyed)
         .map(|contact| (contact.unit, contact.position));
-    if let Some(controller) = Arc::make_mut(&mut world.btech.controllers).get_mut(&id) {
+    if let Some(controller) = world.btech.controllers.get_mut(&id) {
         for contact in observation
             .contacts
             .iter()
@@ -1832,7 +1833,7 @@ fn update_memory(world: &mut World, id: ObjectId, now: i64, observation: &Autopi
 }
 
 fn update_waypoint(world: &mut World, id: ObjectId, next: u16) {
-    if let Some(controller) = Arc::make_mut(&mut world.btech.controllers).get_mut(&id)
+    if let Some(controller) = world.btech.controllers.get_mut(&id)
         && let Some(active) = controller.active_order_mut()
     {
         active.progress.waypoint_index = next;
@@ -1840,7 +1841,7 @@ fn update_waypoint(world: &mut World, id: ObjectId, next: u16) {
 }
 
 fn sync_stagnation(world: &mut World, id: ObjectId, stagnant_ticks: u16) {
-    if let Some(controller) = Arc::make_mut(&mut world.btech.controllers).get_mut(&id)
+    if let Some(controller) = world.btech.controllers.get_mut(&id)
         && let Some(order) = controller.active_order_mut()
     {
         order.progress.stagnant_ticks = stagnant_ticks;
@@ -1873,7 +1874,7 @@ fn navigation_stalled(plan: &mut AutopilotPlan) -> bool {
 }
 
 fn complete(world: &mut World, id: ObjectId, now: i64) {
-    if let Some(controller) = Arc::make_mut(&mut world.btech.controllers).get_mut(&id) {
+    if let Some(controller) = world.btech.controllers.get_mut(&id) {
         controller.complete_active(now);
     }
 }
@@ -1882,19 +1883,19 @@ fn fail(world: &mut World, id: ObjectId, now: i64, reason: AutopilotReason) {
     // A blocked controller must not retain a previous route's desired speed.
     // This is an internal stop, so it cannot trigger manual takeover.
     let _ = stop_unit(world, id);
-    if let Some(controller) = Arc::make_mut(&mut world.btech.controllers).get_mut(&id) {
+    if let Some(controller) = world.btech.controllers.get_mut(&id) {
         controller.fail_active(now, reason);
     }
-    Arc::make_mut(&mut world.btech.autopilot_plans).remove(&id);
+    world.btech.autopilot_plans.remove(&id);
 }
 
 fn persist_plan(world: &mut World, id: ObjectId, plan: AutopilotPlan) {
     let _publication = super::diagnostics::pursuit("plan_publication");
-    Arc::make_mut(&mut world.btech.autopilot_plans).insert(id, plan);
+    world.btech.autopilot_plans.insert(id, plan);
 }
 
 fn remove_plan(world: &mut World, id: ObjectId) {
-    Arc::make_mut(&mut world.btech.autopilot_plans).remove(&id);
+    world.btech.autopilot_plans.remove(&id);
 }
 
 fn total_search_records(world: &World) -> usize {
@@ -2170,7 +2171,9 @@ mod navigation_recovery_tests {
             1,
         )
         .unwrap();
-        Arc::make_mut(&mut world.btech.controllers)
+        world
+            .btech
+            .controllers
             .get_mut(&id)
             .unwrap()
             .configure(
@@ -2181,10 +2184,7 @@ mod navigation_recovery_tests {
                 None,
             )
             .unwrap();
-        Arc::make_mut(&mut world.btech.controllers)
-            .get_mut(&id)
-            .unwrap()
-            .start_next(0);
+        world.btech.controllers.get_mut(&id).unwrap().start_next(0);
         let before = world.btech.constructed_units()[&id].clone();
         let mut metrics = AutopilotRuntimeMetrics::default();
         let notices = advance_combat_with_metrics(&mut world, &config, 1, &mut metrics).unwrap();
@@ -2197,7 +2197,7 @@ mod navigation_recovery_tests {
         // A stopped route may still be turning. Combat can twist/aim its mounts,
         // but must not replace the navigation heading in that phase.
         crate::btech::motion::set_heading_autopilot(&mut world, id, 123.0).unwrap();
-        Arc::make_mut(&mut world.btech.autopilot_plans).insert(
+        world.btech.autopilot_plans.insert(
             id,
             AutopilotPlan {
                 route: vec![Hex::new(1, 1), Hex::new(1, 2)],
@@ -2228,7 +2228,9 @@ mod navigation_recovery_tests {
         )
         .unwrap();
         advance(&mut world, &config, 1).unwrap();
-        Arc::make_mut(&mut world.btech.controllers)
+        world
+            .btech
+            .controllers
             .get_mut(&id)
             .unwrap()
             .active_order_mut()
@@ -2446,7 +2448,9 @@ mod replacement_tests {
             y: i32::from(aim.y),
         }
         .center();
-        let motion = Arc::make_mut(&mut world.btech.constructed)
+        let motion = world
+            .btech
+            .constructed
             .get_mut(&id)
             .unwrap()
             .motion
@@ -2478,7 +2482,9 @@ mod replacement_tests {
             "route continuation must not allocate a frontier"
         );
         assert_eq!(plan.route_index, 1);
-        Arc::make_mut(&mut world.btech.constructed)
+        world
+            .btech
+            .constructed
             .get_mut(&id)
             .unwrap()
             .motion

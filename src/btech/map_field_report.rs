@@ -57,8 +57,7 @@ pub fn view_map_fields_action(
     map: ObjectId,
     arguments: &str,
 ) -> Result<BattleMapFieldReport> {
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let world = scripts.world();
         ensure!(
             crate::authority::is_wizard(&world, actor),
@@ -98,14 +97,10 @@ pub fn view_map_fields_action(
                 &crate::text::escape(line),
             )?;
         }
-        scripts.world().validate(config)?;
+        scripts.world().validate_action(config)?;
         scripts.effects.validate()?;
         Ok(report)
-    })();
-    if result.is_err() {
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Native @VIEWMAP inspects the selected map using the common prefix and layout parser.

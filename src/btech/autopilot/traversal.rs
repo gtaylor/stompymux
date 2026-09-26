@@ -580,7 +580,6 @@ mod tests {
     #[test]
     fn stale_acquisition_cannot_reveal_hidden_movement_or_destruction() {
         use crate::{BattleContact, BattlePower, BattleSection, BattleUnitTemplate, Config, Kind};
-        use std::sync::Arc;
         let config = Config::load("tests/fixtures/game").unwrap();
         let mut world = World::default();
         let map = world.create(&config, "Occupancy map".into(), Kind::Room);
@@ -600,10 +599,7 @@ mod tests {
                 .create(&mut world, id)
                 .unwrap();
             crate::place_battle_unit(&mut world, id, map, 0, y).unwrap();
-            Arc::make_mut(&mut world.btech.constructed)
-                .get_mut(&id)
-                .unwrap()
-                .power = BattlePower::Running;
+            world.btech.constructed.get_mut(&id).unwrap().power = BattlePower::Running;
         }
         crate::set_battle_unit_signature(
             &mut world,
@@ -614,7 +610,9 @@ mod tests {
             },
         )
         .unwrap();
-        Arc::make_mut(&mut world.btech.constructed)
+        world
+            .btech
+            .constructed
             .get_mut(&observer)
             .unwrap()
             .contacts
@@ -623,7 +621,9 @@ mod tests {
             known_occupancy(&world, observer, map).get(&(0, 2)),
             Some(&(1, 0))
         );
-        Arc::make_mut(&mut world.btech.constructed)
+        world
+            .btech
+            .constructed
             .get_mut(&target)
             .unwrap()
             .visibility
@@ -633,20 +633,16 @@ mod tests {
         assert!(watched_clearance(&world, observer, map, &watched));
         assert!(filtered_occupancy(&world, observer, map, Some(&watched)).is_empty());
         assert!(!known_occupant(&world, observer, target));
-        Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&target)
-            .unwrap()
-            .power = BattlePower::Off;
+        world.btech.constructed.get_mut(&target).unwrap().power = BattlePower::Off;
         crate::place_battle_unit(&mut world, target, map, 0, 3).unwrap();
-        Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&target)
-            .unwrap()
-            .power = BattlePower::Running;
+        world.btech.constructed.get_mut(&target).unwrap().power = BattlePower::Running;
         assert!(known_occupancy(&world, observer, map).is_empty());
         let watched = [(0, 2), (0, 3)].into_iter().collect();
         assert!(watched_clearance(&world, observer, map, &watched));
         assert!(filtered_occupancy(&world, observer, map, Some(&watched)).is_empty());
-        Arc::make_mut(&mut world.btech.constructed)
+        world
+            .btech
+            .constructed
             .get_mut(&target)
             .unwrap()
             .sections

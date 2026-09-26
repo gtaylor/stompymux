@@ -3,7 +3,6 @@ use super::{BattleNotice, BattlePoint, BattlePower, Terrain};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Durable sub-hex position and commanded versus actual motion.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -310,10 +309,7 @@ fn set_speed_by_actor(
         "You can't run through water!"
     );
     motion.desired_speed = speed;
-    Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap()
-        .motion = Some(motion);
+    world.btech.constructed.get_mut(&id).unwrap().motion = Some(motion);
     Ok(BattleNotice {
         unit: id,
         text: super::motion_controls::speed_confirmation(speed),
@@ -401,10 +397,7 @@ fn set_heading_by_actor(
     ensure!(heading.is_finite(), "Invalid heading");
     let mut motion = unit.motion().context("Unit is not placed")?;
     motion.desired_heading = heading.rem_euclid(360.0);
-    Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap()
-        .motion = Some(motion);
+    world.btech.constructed.get_mut(&id).unwrap().motion = Some(motion);
     Ok(BattleNotice {
         unit: id,
         text: format!("Desired heading: {:.1} degrees.", motion.desired_heading),
@@ -501,7 +494,9 @@ fn advance_fall_headings(
             .get(&id)
             .and_then(|unit| unit.vtol_flight())
         {
-            let fuel = Arc::make_mut(&mut world.btech.vehicles)
+            let fuel = world
+                .btech
+                .vehicles
                 .get_mut(&id)
                 .unwrap()
                 .consume_vtol_fuel(
@@ -542,13 +537,10 @@ fn advance_fall_headings(
             .get(&id)
             .map_or(1.0, |unit| unit.chassis().turn_multiplier());
         motion.turn_toward(maximum, rules.fasa_turning, multiplier);
-        if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+        if let Some(unit) = world.btech.constructed.get_mut(&id) {
             unit.motion = Some(motion);
         } else {
-            Arc::make_mut(&mut world.btech.vehicles)
-                .get_mut(&id)
-                .unwrap()
-                .motion = Some(motion);
+            world.btech.vehicles.get_mut(&id).unwrap().motion = Some(motion);
         }
     }
     Ok(notices)
@@ -609,10 +601,7 @@ fn advance_motion_inner(
                 3.0 * f64::from(unit.jump_capacity(map.gravity)?.movement_points) * chassis
             };
             motion.turn_by(turn);
-            Arc::make_mut(&mut world.btech.constructed)
-                .get_mut(&id)
-                .unwrap()
-                .motion = Some(motion);
+            world.btech.constructed.get_mut(&id).unwrap().motion = Some(motion);
             continue;
         }
         let proposal = super::propose_mech_ground_motion(
@@ -627,9 +616,7 @@ fn advance_motion_inner(
         )?;
         motion = proposal.motion;
         if proposal.immobilized {
-            let unit = Arc::make_mut(&mut world.btech.constructed)
-                .get_mut(&id)
-                .unwrap();
+            let unit = world.btech.constructed.get_mut(&id).unwrap();
             unit.motion = Some(motion);
             unit.reconcile_damage();
             continue;
@@ -920,9 +907,7 @@ fn resolve_ground_segment(
         position.x = hex.x as u16;
         position.y = hex.y as u16;
     }
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     if unit
         .motion
         .is_some_and(|previous| previous.point != motion.point)
@@ -961,9 +946,7 @@ fn resolve_ground_segment(
         ice_check,
     } in checked_steps
     {
-        let unit = Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
         unit.position = Some(super::BattlePosition {
             map: position.map,
             x: hex.x as u16,
@@ -1003,9 +986,7 @@ fn resolve_ground_segment(
             }
             continue;
         }
-        let unit = Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
         if change.abs() > 2 {
             if change > 0 {
                 restore_ground_position(unit, old_position, old_point, old_elevation);
@@ -1032,9 +1013,7 @@ fn resolve_ground_segment(
                     })
                     .to_owned(),
                 });
-                let unit = Arc::make_mut(&mut world.btech.constructed)
-                    .get_mut(&id)
-                    .unwrap();
+                let unit = world.btech.constructed.get_mut(&id).unwrap();
                 restore_ground_position(unit, old_position, old_point, old_elevation);
             } else {
                 notices.push(BattleNotice {
@@ -1057,9 +1036,7 @@ fn resolve_ground_segment(
                     falls.push(report);
                 }
             }
-            let unit = Arc::make_mut(&mut world.btech.constructed)
-                .get_mut(&id)
-                .unwrap();
+            let unit = world.btech.constructed.get_mut(&id).unwrap();
             let motion = unit.motion.as_mut().unwrap();
             motion.speed = 0.0;
             motion.desired_speed = 0.0;
@@ -1172,18 +1149,14 @@ fn resolve_ground_segment(
             falls.push(report);
         }
         if change > 0 {
-            let unit = Arc::make_mut(&mut world.btech.constructed)
-                .get_mut(&id)
-                .unwrap();
+            let unit = world.btech.constructed.get_mut(&id).unwrap();
             restore_ground_position(unit, old_position, old_point, old_elevation);
         }
         stopped = true;
         break;
     }
     if !stopped {
-        let unit = Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
         unit.position = Some(position);
         unit.ground_elevation = ground_elevation;
         motion.point = proposed;

@@ -196,10 +196,7 @@ pub(super) fn advance_unit(
         } else {
             super::fall::resolve_signed_fall(world, id, levels, rules)?
         };
-        std::sync::Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap()
-            .free_fall = None;
+        world.btech.constructed.get_mut(&id).unwrap().free_fall = None;
         let mut notices = vec![super::BattleNotice {
             unit: id,
             text: "You hit the ground!".to_owned(),
@@ -215,10 +212,7 @@ pub(super) fn advance_unit(
         falls.push(report);
         return Ok(notices);
     }
-    std::sync::Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap()
-        .free_fall = Some(fall);
+    world.btech.constructed.get_mut(&id).unwrap().free_fall = Some(fall);
     Ok(Vec::new())
 }
 

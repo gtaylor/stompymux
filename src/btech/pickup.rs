@@ -5,7 +5,6 @@ use super::{
 };
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// Read the explicit scenario permission for towing an out-of-character target.
 pub fn unit_towable(world: &World, id: ObjectId) -> Result<bool> {
@@ -23,11 +22,13 @@ pub fn unit_towable(world: &World, id: ObjectId) -> Result<bool> {
 /// Trusted scenario edit; the caller owns administrative authority and persistence.
 pub fn set_towable(world: &mut World, id: ObjectId, enabled: bool) -> Result<()> {
     live(world, id)?;
-    if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         unit.towable = enabled;
         return Ok(());
     }
-    Arc::make_mut(&mut world.btech.constructed)
+    world
+        .btech
+        .constructed
         .get_mut(&id)
         .context("Unit construction is unavailable")?
         .towable = enabled;
@@ -224,7 +225,7 @@ pub(super) fn prepare_target(
         .context("Target is unavailable")?
         .power;
     // Pickup arrests translation before shutdown, avoiding a shutdown-induced moving fall.
-    if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&target) {
+    if let Some(unit) = world.btech.vehicles.get_mut(&target) {
         unit.halt();
         unit.dig = super::BattleDigState::default();
         unit.building_entry = None;
@@ -235,7 +236,9 @@ pub(super) fn prepare_target(
             };
         }
     } else {
-        let unit = Arc::make_mut(&mut world.btech.constructed)
+        let unit = world
+            .btech
+            .constructed
             .get_mut(&target)
             .context("Target is unavailable")?;
         if let Some(motion) = &mut unit.motion {
@@ -266,9 +269,9 @@ pub fn prepare_pickup(
     rules: super::BattleFallRules,
 ) -> Result<Vec<super::BattleNotice>> {
     pickup_admission(world, carrier, pilot, target)?;
-    let mut candidate = world.clone();
-    let notices = prepare_target(&mut candidate, target, rules)?;
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(notices)
+    world.attempt(|world| {
+        let notices = prepare_target(world, target, rules)?;
+        world.btech.validate_action(world)?;
+        Ok(notices)
+    })
 }

@@ -2,7 +2,6 @@
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Successful hex-changing updates and the coordinates of the last eligible XP attempt.
 /// The mark deliberately excludes map identity, and starts at coordinate zero.
@@ -29,9 +28,7 @@ pub(super) fn record_entry(
     if !world.objects[&id].flags.contains(Flag::InCharacter) {
         return Ok(None);
     }
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     let progress = &mut unit.movement_experience;
     progress.hexes_walked = progress
         .hexes_walked

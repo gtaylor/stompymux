@@ -6,7 +6,7 @@ use crate::{
 };
 use anyhow::{Result, ensure};
 use serde::Serialize;
-use std::{io::Write, path::Path, sync::Arc};
+use std::{io::Write, path::Path};
 
 /// Deterministic outcome metrics; all durations count committed simulation ticks.
 #[derive(Debug, Serialize)]
@@ -130,10 +130,7 @@ pub async fn run_policy(
                         settled = false;
                         stable = 0;
                         let mut world = harness.scripts().world_mut();
-                        Arc::make_mut(&mut world.btech.constructed)
-                            .get_mut(&target)
-                            .unwrap()
-                            .power = BattlePower::Off;
+                        world.btech.constructed.get_mut(&target).unwrap().power = BattlePower::Off;
                         crate::btech::place_unit(
                             &mut world,
                             target,
@@ -145,10 +142,8 @@ pub async fn run_policy(
                             },
                             if name == "attack_move" { 0 } else { 3 },
                         )?;
-                        Arc::make_mut(&mut world.btech.constructed)
-                            .get_mut(&target)
-                            .unwrap()
-                            .power = BattlePower::Running;
+                        world.btech.constructed.get_mut(&target).unwrap().power =
+                            BattlePower::Running;
                     }
                     let before = harness.world();
                     let point = crate::btech::scanner::scanner_unit(&before, shooter)
@@ -403,10 +398,7 @@ pub(super) fn fixture_with_target(
         "encounter",
         BattleMapAsset::parse(&terrain)?,
     )?;
-    Arc::make_mut(&mut world.btech.maps)
-        .get_mut(&map)
-        .unwrap()
-        .fire_dice = Some(crate::BattleDice::seeded([seed; 32]));
+    world.btech.maps.get_mut(&map).unwrap().fire_dice = Some(crate::BattleDice::seeded([seed; 32]));
     let shooter = world.create(config, "shooter".into(), Kind::Thing);
     let target = world.create(config, "target".into(), Kind::Thing);
     let start = match scenario {
@@ -438,7 +430,7 @@ pub(super) fn fixture_with_target(
             .create(&mut world, id)
             .map_err(|e| anyhow::anyhow!("{scenario} {id:?} construction: {e:#}"))?;
         crate::btech::place_unit(&mut world, id, map, x, y)?;
-        if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+        if let Some(unit) = world.btech.constructed.get_mut(&id) {
             unit.power = BattlePower::Running;
             unit.dice = crate::BattleDice::seeded([seed; 32]);
             unit.signature.team = team;
@@ -446,9 +438,7 @@ pub(super) fn fixture_with_target(
             recovery["dice"] = serde_json::to_value(crate::BattleDice::seeded([seed; 32]))?;
             unit.crew_recovery = serde_json::from_value(recovery)?;
         } else {
-            let unit = Arc::make_mut(&mut world.btech.vehicles)
-                .get_mut(&id)
-                .unwrap();
+            let unit = world.btech.vehicles.get_mut(&id).unwrap();
             unit.power = BattlePower::Running;
             unit.dice = crate::BattleDice::seeded([seed; 32]);
             unit.signature.team = team;
@@ -458,13 +448,11 @@ pub(super) fn fixture_with_target(
         }
     }
     if matches!(scenario, "behind" | "jammed") {
-        if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&shooter) {
+        if let Some(unit) = world.btech.constructed.get_mut(&shooter) {
             unit.motion.as_mut().unwrap().heading = 180.0;
             unit.motion.as_mut().unwrap().desired_heading = 180.0;
         } else {
-            let unit = Arc::make_mut(&mut world.btech.vehicles)
-                .get_mut(&shooter)
-                .unwrap();
+            let unit = world.btech.vehicles.get_mut(&shooter).unwrap();
             unit.motion.as_mut().unwrap().heading = 180.0;
             unit.motion.as_mut().unwrap().desired_heading = 180.0;
             if scenario == "jammed" {
@@ -511,7 +499,7 @@ pub(super) fn fixture_with_target(
         None,
     )?;
     controller.resume(None)?;
-    Arc::make_mut(&mut world.btech.controllers).insert(shooter, controller);
+    world.btech.controllers.insert(shooter, controller);
     Ok((world, shooter, target, map))
 }
 
@@ -592,9 +580,7 @@ mod tests {
                 .iter()
                 .all(|cell| cell.x != 5 || cell.y < 4 || cell.y >= 9)
         );
-        let unit = Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
         let maximum = unit.mobility().maximum_speed;
         let motion = unit.motion.as_mut().unwrap();
         motion.heading = 0.0;
@@ -620,9 +606,7 @@ mod tests {
         let motion = world.btech.constructed_units()[&id].motion().unwrap();
         assert_eq!(motion.desired_speed, 0.0);
         assert_eq!(motion.point, before);
-        let unit = Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
         unit.motion.as_mut().unwrap().speed = -maximum / 2.0;
         unit.motion.as_mut().unwrap().desired_speed = -maximum / 2.0;
         super::super::steering::drive(
@@ -663,7 +647,9 @@ mod tests {
             1,
         )
         .unwrap();
-        Arc::make_mut(&mut world.btech.vehicles)
+        world
+            .btech
+            .vehicles
             .get_mut(&id)
             .unwrap()
             .motion

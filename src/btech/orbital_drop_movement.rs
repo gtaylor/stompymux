@@ -2,7 +2,6 @@
 use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// Resolve the upper support, lower bridge surface and chassis-specific touchdown level.
 fn surface(tile: BattleHex, elevation: i32, hover: bool) -> BattleDropSurface {
@@ -185,13 +184,10 @@ fn touchdown_notice(id: ObjectId) -> BattleNotice {
 
 /// Commit only the shared vertical cursor; horizontal controls remain owned by normal movement.
 fn set_cursor(world: &mut World, id: ObjectId, drop: Option<BattleOrbitalDrop>) {
-    if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
         unit.orbital_drop = drop;
     } else {
-        Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap()
-            .orbital_drop = drop;
+        world.btech.vehicles.get_mut(&id).unwrap().orbital_drop = drop;
     }
 }
 
@@ -240,7 +236,9 @@ fn landing_input(
         None
     } else if mech {
         Some(
-            Arc::make_mut(&mut world.btech.constructed)
+            world
+                .btech
+                .constructed
                 .get_mut(&id)
                 .unwrap()
                 .dice
@@ -248,7 +246,9 @@ fn landing_input(
         )
     } else {
         Some(
-            Arc::make_mut(&mut world.btech.vehicles)
+            world
+                .btech
+                .vehicles
                 .get_mut(&id)
                 .unwrap()
                 .dice
@@ -301,12 +301,10 @@ fn touchdown(
     }
     set_cursor(world, id, None);
     // Surface placement happens before material resolution so ice, water and packet geometry agree.
-    if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
         unit.ground_elevation = Some(f64::from(level));
     } else {
-        let unit = Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.vehicles.get_mut(&id).unwrap();
         unit.ground_elevation = Some(f64::from(level));
         unit.under_bridge = tile.terrain == Terrain::Bridge
             && level < i32::from(tile.surface_height())

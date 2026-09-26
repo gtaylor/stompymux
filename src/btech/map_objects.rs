@@ -1,7 +1,6 @@
 //! Shared removal of map-owned objects and reciprocal building return routes.
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
-use std::sync::Arc;
 
 /// Remove all owned map objects, leaving terrain, units and general environmental settings intact.
 pub(super) fn clear(world: &mut World, id: ObjectId) -> Result<()> {
@@ -17,7 +16,7 @@ pub(super) fn clear(world: &mut World, id: ObjectId) -> Result<()> {
     for ordinal in entrances {
         super::set_building_entrance(world, id, ordinal, None)?;
     }
-    let maps = Arc::make_mut(&mut world.btech.maps);
+    let maps = &mut world.btech.maps;
     let map = maps.get_mut(&id).unwrap();
     map.decorations = Default::default();
     map.static_decorations = Default::default();

@@ -3,7 +3,6 @@ use super::{BattleNotice, BattlePower, BattleSystem, BattleUnit, Terrain};
 use crate::{Flag, World};
 use anyhow::{Context, Result, bail, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Weapon heat (including temporary coolant credit) and the last sampled excess.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
@@ -246,9 +245,7 @@ pub fn advance_heat(world: &mut World) -> Vec<BattleNotice> {
         .collect();
     let mut notices = Vec::new();
     for (id, (cutoff, rates)) in ids {
-        let unit = Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
         if cutoff.enabled != unit.heat_cutoff.enabled {
             notices.push(BattleNotice {
                 unit: id,

@@ -2,7 +2,6 @@
 use super::{BattleFallRules, BattleNotice, BattlePosture, Terrain};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
-use std::sync::Arc;
 
 /// Water-entry messages and whether immersion interrupted further travel.
 #[derive(Default)]
@@ -38,9 +37,7 @@ pub(super) fn enter_water(
     let mut experience_messages = Vec::new();
     if check && (depth > 0 || high_water) {
         let walking = unit.movement_maximum_speed() * 2.0 / 3.0;
-        let unit = Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
         let motion = unit
             .motion
             .as_mut()

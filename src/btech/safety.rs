@@ -4,9 +4,7 @@ use anyhow::{Context, Result};
 
 /// Apply or inspect the safety setting inside one state-and-output checkpoint.
 fn action(scripts: &Scripts, id: ObjectId, pilot: ObjectId, argument: &str) -> Result<()> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         super::radio::controlled(&before, id, pilot)?;
         let enabled = match argument.trim().to_ascii_lowercase().as_str() {
             "on" => Some(true),
@@ -33,12 +31,7 @@ fn action(scripts: &Scripts, id: ObjectId, pilot: ObjectId, argument: &str) -> R
             super::notify_message(scripts, super::BattleMessageTarget::Player(pilot), text)?;
         }
         Ok(())
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Native safety uses the assigned pilot's current cockpit, independently of engine state.

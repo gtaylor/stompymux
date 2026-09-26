@@ -3,7 +3,6 @@
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BattlePersonalEquipment {
@@ -88,7 +87,7 @@ pub fn set_player_configuration(
 ) -> Result<()> {
     require_player(world, player)?;
     configuration.validate()?;
-    let values = Arc::make_mut(&mut world.btech.player_configuration);
+    let values = &mut world.btech.player_configuration;
     if configuration == BattlePlayerConfiguration::default() {
         values.remove(&player);
     } else {

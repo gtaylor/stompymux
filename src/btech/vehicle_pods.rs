@@ -2,7 +2,6 @@
 use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 impl BattleVehicle {
     /// Remaining seconds of the crew's active iNarc removal attempt.
@@ -53,10 +52,7 @@ pub fn begin_pod_removal(world: &mut World, id: ObjectId, pilot: ObjectId) -> Re
             .any(|kinds| kinds.iter().any(|kind| *kind != BattleBeaconKind::Narc)),
         "There are no iNarc pods attached to this unit."
     );
-    Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap()
-        .pod_removal = Some(60);
+    world.btech.vehicles.get_mut(&id).unwrap().pod_removal = Some(60);
     Ok(BattleNotice {
         unit: id,
         text: "You begin to systematically remove all the iNarc pods from your unit.".into(),
@@ -69,17 +65,10 @@ pub fn begin_pod_removal_action(
     id: ObjectId,
     pilot: ObjectId,
 ) -> Result<()> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let notice = begin_pod_removal(&mut scripts.world.borrow_mut(), id, pilot)?;
         super::notify_unit(scripts, notice)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Expire attempts even after shutdown; destroyed vehicles finish silently without removing state.
@@ -99,9 +88,7 @@ pub(super) fn advance(world: &mut World) -> Vec<BattleNotice> {
         .collect();
     let mut notices = Vec::new();
     for id in ids {
-        let unit = Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.vehicles.get_mut(&id).unwrap();
         let remaining = unit.pod_removal.as_mut().unwrap();
         *remaining -= 1;
         if *remaining > 0 {

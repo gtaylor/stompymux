@@ -5,8 +5,7 @@ use anyhow::{Result, ensure};
 /// Stage a wizard checkpoint and its confirmation; only the host performs persistence.
 /// Callback or output failure removes both the request and its pending confirmation.
 pub fn request_database_save(scripts: &Scripts, actor: ObjectId) -> Result<()> {
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         ensure!(
             crate::authority::is_wizard(&scripts.world(), actor),
             "Permission denied."
@@ -19,11 +18,7 @@ pub fn request_database_save(scripts: &Scripts, actor: ObjectId) -> Result<()> {
         scripts.effects.request_save();
         scripts.effects.validate()?;
         Ok(())
-    })();
-    if result.is_err() {
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// SAVEDB ignores trailing input and commits through the ordinary serialized world owner.

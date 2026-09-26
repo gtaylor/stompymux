@@ -2,7 +2,7 @@
 use crate::{Flag, Kind, ObjectId, Scripts, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, sync::Arc};
+use std::sync::Arc;
 
 /// Saved station fields retain independent aiming state and signed database sentinels.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -53,7 +53,7 @@ pub struct BattleGunnerContext {
 
 impl super::BtechState {
     /// Inspect saved stations without granting control of their parent equipment.
-    pub fn gunner_stations(&self) -> &BTreeMap<ObjectId, BattleGunnerStation> {
+    pub fn gunner_stations(&self) -> &crate::SharedMap<ObjectId, BattleGunnerStation> {
         &self.gunner_stations
     }
 }
@@ -108,7 +108,7 @@ pub fn register_gunner_station(
     );
     parent_available(world, parent)?;
     Arc::make_mut(&mut world.btech.registrations).insert(station, "TURRET".into());
-    Arc::make_mut(&mut world.btech.gunner_stations).insert(
+    world.btech.gunner_stations.insert(
         station,
         BattleGunnerStation {
             parent,
@@ -204,9 +204,7 @@ pub fn gunner_station_action(
     actor: ObjectId,
     initialize: bool,
 ) -> Result<()> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let state = station_for(&before, station, actor)?;
         if initialize && state.gunner == actor {
             return super::notify_message(
@@ -237,18 +235,16 @@ pub fn gunner_station_action(
             }
         );
         super::notify_message(scripts, super::BattleMessageTarget::Unit(station), &message)?;
-        Arc::make_mut(&mut scripts.world_mut().btech.gunner_stations)
+        scripts
+            .world_mut()
+            .btech
+            .gunner_stations
             .get_mut(&station)
             .expect("validated station")
             .gunner = if initialize { actor } else { ObjectId(-1) };
         scripts.effects.validate()?;
         Ok(())
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Native lifecycle commands ignore trailing text, as do their cockpit counterparts.

@@ -16,10 +16,10 @@ pub fn flood_unit(
             .is_some_and(|object| !object.flags.contains(Flag::InCharacter)),
         "Character flooding requires casualty publication"
     );
-    let mut candidate = world.clone();
-    let reports = flood_unit_in_action(&mut candidate, id, rules)?;
-    *world = candidate;
-    Ok(reports)
+    world.attempt(|world| {
+        let reports = flood_unit_in_action(world, id, rules)?;
+        Ok(reports)
+    })
 }
 
 /// The host action owns rollback and character casualty publication for whole-unit immersion.

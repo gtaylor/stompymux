@@ -30,6 +30,11 @@ impl Scripts {
         self.world.borrow_mut()
     }
 
+    /// Run one native action atomically against the live world; see [`crate::runtime::atomic`].
+    pub fn atomic<T>(&self, action: impl FnOnce(&World) -> anyhow::Result<T>) -> anyhow::Result<T> {
+        crate::runtime::atomic(&self.world, &self.effects, action)
+    }
+
     /// Retain read-only live-world inspection when the runtime owner is moved.
     pub fn inspect_world(&self) -> WorldInspection {
         WorldInspection {

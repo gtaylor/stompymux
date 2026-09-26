@@ -75,7 +75,7 @@ pub fn set_building_entrance(
             "Too many building entrances"
         );
     }
-    let record = Arc::make_mut(&mut world.btech.maps).get_mut(&map).unwrap();
+    let record = world.btech.maps.get_mut(&map).unwrap();
     let entrances = Arc::make_mut(&mut record.building_entrances);
     if let Some(entrance) = entrance {
         entrances.insert(ordinal, entrance);
@@ -87,7 +87,7 @@ pub fn set_building_entrance(
     } else if let Some(removed) = entrances.remove(&ordinal) {
         // Return routes belong to the removed exterior entrance, even when another
         // entrance points at the same interior. Interior arrival points stay intact.
-        if let Some(interior) = Arc::make_mut(&mut world.btech.maps).get_mut(&removed.interior) {
+        if let Some(interior) = world.btech.maps.get_mut(&removed.interior) {
             interior.building_exits = Default::default();
             interior.building_parent = 0;
         }

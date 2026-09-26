@@ -299,20 +299,13 @@ pub fn control(
         let world = scripts.world();
         Some(super::radio_targeted::target(&world, id, words[0])?)
     };
-    let before = scripts.world().clone();
-    let effects = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let notices = join_leave_for(&mut scripts.world_mut(), id, pilot, target, kind)?;
         for notice in &notices {
             super::notify_unit(scripts, notice.clone())?;
         }
         Ok(notices)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(effects);
-    }
-    result
+    })
 }
 
 /// Native network join/leave commands use the invoking player's cockpit.

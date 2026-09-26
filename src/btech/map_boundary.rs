@@ -157,10 +157,7 @@ fn install_markers(world: &mut World, id: ObjectId, candidate: StoredBattleMap) 
                 .context("Wrapping change would invalidate an active jump")?;
         }
     }
-    Arc::make_mut(&mut world.btech.maps)
-        .get_mut(&id)
-        .unwrap()
-        .linked_markers = candidate.linked_markers;
+    world.btech.maps.get_mut(&id).unwrap().linked_markers = candidate.linked_markers;
     Ok(())
 }
 

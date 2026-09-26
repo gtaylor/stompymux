@@ -7,7 +7,6 @@ use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
-use std::sync::Arc;
 
 /// Persistent pod effects; several kinds can coexist on one surviving section.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -138,9 +137,7 @@ pub(super) fn attach(
         }
         section = current.damage_transfer();
     }
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&target)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&target).unwrap();
     unit.dice = dice;
     if let Some(section) = section {
         unit.beacons.entry(section).or_default().insert(kind);

@@ -1,7 +1,6 @@
 //! Cockpit assignment coordinated with ordinary player entry, departure and destruction.
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// Assign a physically present player to an unoccupied cockpit. Authority belongs to the adapter.
 pub fn assign_pilot(world: &mut World, unit: ObjectId, pilot: ObjectId) -> Result<()> {
@@ -49,13 +48,10 @@ pub fn assign_pilot(world: &mut World, unit: ObjectId, pilot: ObjectId) -> Resul
     );
     super::prepare_recovery(world, pilot)?;
     super::crew_recovery::assign(world, unit, pilot);
-    if let Some(vehicle) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&unit) {
+    if let Some(vehicle) = world.btech.vehicles.get_mut(&unit) {
         vehicle.pilot = Some(pilot);
     } else {
-        Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&unit)
-            .unwrap()
-            .pilot = Some(pilot);
+        world.btech.constructed.get_mut(&unit).unwrap().pilot = Some(pilot);
     }
     Ok(())
 }
@@ -67,10 +63,7 @@ pub fn release_pilot(world: &mut World, unit: ObjectId, pilot: ObjectId) -> Resu
             vehicle.pilot() == Some(pilot),
             "You are not piloting this unit"
         );
-        Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&unit)
-            .unwrap()
-            .pilot = None;
+        world.btech.vehicles.get_mut(&unit).unwrap().pilot = None;
         return Ok(());
     }
     let record = world
@@ -82,10 +75,7 @@ pub fn release_pilot(world: &mut World, unit: ObjectId, pilot: ObjectId) -> Resu
         record.pilot == Some(pilot),
         "You are not piloting this unit"
     );
-    Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&unit)
-        .unwrap()
-        .pilot = None;
+    world.btech.constructed.get_mut(&unit).unwrap().pilot = None;
     Ok(())
 }
 
@@ -95,7 +85,7 @@ pub(crate) fn player_moved(world: &mut World, player: ObjectId) {
         .objects
         .get(&player)
         .and_then(|object| object.location);
-    for (&id, vehicle) in Arc::make_mut(&mut world.btech.vehicles).iter_mut() {
+    for (&id, vehicle) in world.btech.vehicles.iter_mut() {
         if vehicle.pilot == Some(player) && location != Some(id) {
             vehicle.pilot = None;
         }
@@ -108,10 +98,7 @@ pub(crate) fn player_moved(world: &mut World, player: ObjectId) {
     let Some(unit) = unit else {
         return;
     };
-    Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&unit)
-        .unwrap()
-        .pilot = None;
+    world.btech.constructed.get_mut(&unit).unwrap().pilot = None;
 }
 
 /// Consciousness includes empty cockpit crew recovery as well as an assigned character.

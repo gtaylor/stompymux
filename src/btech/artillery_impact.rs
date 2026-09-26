@@ -3,7 +3,6 @@ use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// One blast occupant, retaining each packet's character and material consequences.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -59,9 +58,7 @@ pub(super) fn advance(
     ensure!(record.terrain_ready(), "Map terrain is unavailable");
     let mut candidate = world.clone();
     let mut cursor = flight.clone();
-    let record = Arc::make_mut(&mut candidate.btech.maps)
-        .get_mut(&map)
-        .unwrap();
+    let record = candidate.btech.maps.get_mut(&map).unwrap();
     let dimensions = (u16::try_from(record.width)?, u16::try_from(record.height)?);
     let wind = u16::try_from(record.wind_speed)?;
     let dice = record
@@ -122,7 +119,7 @@ pub(super) fn advance(
             }
         }
     }
-    candidate.btech.validate(&candidate)?;
+    candidate.btech.validate_action(&candidate)?;
     *world = candidate;
     *flight = cursor;
     Ok(Some(report))

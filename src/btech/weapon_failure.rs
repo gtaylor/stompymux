@@ -3,7 +3,7 @@ use super::{BattleEquipmentCondition, BattleWeapon};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, sync::Arc};
+use std::collections::BTreeMap;
 
 /// A named failure code, separate from material loss; weapon mounts also enforce it during firing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -109,7 +109,7 @@ pub fn set_weapon_failure(
     index: usize,
     failure: Option<BattleEquipmentFailure>,
 ) -> Result<()> {
-    let failures = if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    let failures = if let Some(unit) = world.btech.constructed.get_mut(&id) {
         ensure!(
             index < unit.loadout()?.weapons.len(),
             "Weapon index out of bounds"
@@ -120,7 +120,9 @@ pub fn set_weapon_failure(
         );
         &mut unit.weapon_failures
     } else {
-        let unit = Arc::make_mut(&mut world.btech.vehicles)
+        let unit = world
+            .btech
+            .vehicles
             .get_mut(&id)
             .context("Unit is unavailable")?;
         ensure!(

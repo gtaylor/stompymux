@@ -178,42 +178,42 @@ pub fn transfer_cargo(
         !entries.is_empty(),
         "Nothing matching that criteria was found!"
     );
-    let mut candidate = world.clone();
-    let mut moved = Vec::new();
-    for entry in entries {
-        let count = quantity.min(entry.quantity);
-        let existing = super::inventory(&candidate, destination)?
-            .iter()
-            .find(|row| row.key() == entry.key())
-            .map_or(0, |row| row.quantity);
-        let next = existing
-            .checked_add(count)
-            .context("Destination inventory quantity overflow")?;
-        super::inventory::edit_quantity(
-            &mut candidate,
-            source,
-            entry.part_id,
-            entry.brand_id,
-            entry.quantity - count,
-        )?;
-        super::inventory::edit_quantity(
-            &mut candidate,
-            destination,
-            entry.part_id,
-            entry.brand_id,
-            next,
-        )?;
-        moved.push(BattleCargoRow {
-            part_id: entry.part_id,
-            brand_id: entry.brand_id,
-            quantity: count,
-            name: name(&entry),
-        });
-    }
-    super::load::reconcile(&mut candidate, unit, config.battletech.tsm_tow_bonus != 0)?;
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(moved)
+    world.attempt(|world| {
+        let mut moved = Vec::new();
+        for entry in entries {
+            let count = quantity.min(entry.quantity);
+            let existing = super::inventory(world, destination)?
+                .iter()
+                .find(|row| row.key() == entry.key())
+                .map_or(0, |row| row.quantity);
+            let next = existing
+                .checked_add(count)
+                .context("Destination inventory quantity overflow")?;
+            super::inventory::edit_quantity(
+                world,
+                source,
+                entry.part_id,
+                entry.brand_id,
+                entry.quantity - count,
+            )?;
+            super::inventory::edit_quantity(
+                world,
+                destination,
+                entry.part_id,
+                entry.brand_id,
+                next,
+            )?;
+            moved.push(BattleCargoRow {
+                part_id: entry.part_id,
+                brand_id: entry.brand_id,
+                quantity: count,
+                name: name(&entry),
+            });
+        }
+        super::load::reconcile(world, unit, config.battletech.tsm_tow_bonus != 0)?;
+        world.btech.validate(world)?;
+        Ok(moved)
+    })
 }
 
 /// Transfer stock and publish economy diagnostics under one world/effects checkpoint.
@@ -226,9 +226,7 @@ pub fn transfer_cargo_action(
     pattern: &str,
     quantity: i32,
 ) -> Result<Vec<BattleCargoRow>> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let rows = transfer_cargo(
             &mut scripts.world_mut(),
             config,
@@ -263,12 +261,7 @@ pub fn transfer_cargo_action(
         super::channels::publish(scripts, config, &messages)?;
         scripts.effects.validate()?;
         Ok(rows)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Plain cockpit output keeps the same rows and transfer counts as Lua.

@@ -1,7 +1,6 @@
 //! Trusted weapons-hold state and shared cockpit admission before any firing intent.
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// Read the operator-imposed firing restriction independently of mechanical readiness.
 pub fn battle_weapons_hold(world: &World, id: ObjectId) -> Result<bool> {
@@ -25,11 +24,13 @@ pub fn set_battle_weapons_hold(world: &mut World, id: ObjectId, enabled: bool) -
             .is_some_and(|o| o.kind == Kind::Thing && !o.flags.contains(Flag::Going)),
         "Unit must be a live thing"
     );
-    if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         unit.weapons_hold = enabled;
         return Ok(());
     }
-    Arc::make_mut(&mut world.btech.constructed)
+    world
+        .btech
+        .constructed
         .get_mut(&id)
         .context("Unit is not constructed")?
         .weapons_hold = enabled;

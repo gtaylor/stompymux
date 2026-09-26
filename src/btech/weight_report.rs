@@ -187,17 +187,12 @@ pub fn weight_report(world: &World, actor: ObjectId, id: ObjectId) -> Result<Bat
 /// Publish a private wizard report atomically, preserving earlier output on a late capacity failure.
 pub fn weight_action(scripts: &Scripts, actor: ObjectId, unit: ObjectId) -> Result<String> {
     let text = weight_report(&scripts.world(), actor, unit)?.render();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         for line in text.split("\r\n") {
             super::notify_message(scripts, BattleMessageTarget::Player(actor), line)?;
         }
         Ok(text)
-    })();
-    if result.is_err() {
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// The reference ignores trailing arguments; the occupied physical unit supplies the design.

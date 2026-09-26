@@ -127,23 +127,11 @@ impl Drop for Attempt {
     }
 }
 
-/// Attribute cloning separately from copy-on-write detachments during effects.
-pub(crate) fn candidate(world: &crate::World, nested: bool) -> crate::World {
+/// Time the world copy that starts each shot.
+pub(crate) fn candidate(world: &crate::World) -> crate::World {
     let _measurement = combat("candidate_creation");
-    count(if nested {
-        "nested_transactions"
-    } else {
-        "shot_transactions"
-    });
+    count("shot_transactions");
     world.clone()
-}
-
-/// Time only copy-on-write operations that actually detach shared storage.
-pub(crate) fn make_mut<T: Clone>(value: &mut std::sync::Arc<T>) -> &mut T {
-    let _measurement = (std::sync::Arc::strong_count(value) > 1
-        || std::sync::Arc::weak_count(value) > 0)
-        .then(|| combat("copy_on_write"));
-    std::sync::Arc::make_mut(value)
 }
 
 /// Inclusive state validation plus its time outside local unit/map checks.

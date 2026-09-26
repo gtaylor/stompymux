@@ -17,11 +17,33 @@ identities, constructed units and vehicles, and related runtime state such as
 turn timing, inventories, character data, and recovery. MUX objects and
 BattleTech records refer to the same object IDs.
 
-`BtechState` and its maps use shared, copy-on-write data so a world checkpoint
-can be cloned before an operation. Registration alone does not imply that a
-unit has constructed Rust gameplay state. Code that needs a simulated unit
-uses the constructed unit or vehicle collections, rather than treating every
-registered object as one.
+Registration alone does not imply that a unit has constructed Rust gameplay
+state. Code that needs a simulated unit uses the constructed unit or vehicle
+collections, rather than treating every registered object as one.
+
+## Transactions and rollback
+
+The world's object, account and channel tables, and the per-entity collections
+in `BtechState` (units, vehicles, maps, autopilots, characters and so on), are
+`SharedMap`s. Cloning the world only bumps reference counts, and the first
+write after a clone copies just the entry being changed. Rollback is therefore
+cheap, and two helpers cover it:
+
+- `Scripts::atomic(|before| ...)` runs a native action. If it fails, the world
+  and every effect it staged (messages, logs, map writes) return to their state
+  before the action. `before` is that earlier world, for comparisons.
+- `World::attempt(|world| ...)` does the same for an operation that only
+  changes the world.
+
+A shot resolves in a private copy of the world (`ShotCandidate`) and commits it
+only on success, so effects inside the shot mutate that copy directly.
+
+The server validates the whole world once per committed transaction and rolls
+the transaction back if validation fails. `World::validate_action` and
+`BtechState::validate_action` re-check after individual gameplay operations in
+debug and test builds only, so a broken operation fails where it happened.
+Commands that rely on validation to reject wizard or player input call
+`validate` directly.
 
 The gameplay modules are organized around focused rules and state transitions:
 

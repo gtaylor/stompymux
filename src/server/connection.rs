@@ -135,11 +135,22 @@ impl Server {
         );
         let connected: std::collections::BTreeSet<_> =
             self.sessions.values().filter_map(|s| s.player).collect();
-        for o in self.scripts.world.borrow_mut().objects.values_mut() {
-            if o.kind == Kind::Player && connected.contains(&o.id) {
-                o.flags.insert(crate::flags::Flag::Connected);
-            } else {
+        let mut world = self.scripts.world.borrow_mut();
+        let stale: Vec<ObjectId> = world
+            .objects
+            .values()
+            .filter(|o| {
+                let wanted = o.kind == Kind::Player && connected.contains(&o.id);
+                o.flags.contains(crate::flags::Flag::Connected) != wanted
+            })
+            .map(|o| o.id)
+            .collect();
+        for id in stale {
+            let o = world.objects.get_mut(&id).expect("stale object exists");
+            if o.flags.contains(crate::flags::Flag::Connected) {
                 o.flags.remove(crate::flags::Flag::Connected);
+            } else {
+                o.flags.insert(crate::flags::Flag::Connected);
             }
         }
     }

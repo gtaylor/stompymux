@@ -13,9 +13,7 @@ pub fn add_landing_exclusion_action(
     radius: i32,
     team: i32,
 ) -> Result<u32> {
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(&before, actor),
             "Permission denied."
@@ -46,9 +44,7 @@ pub fn add_landing_exclusion_action(
         )?;
         {
             let mut world = scripts.world_mut();
-            let record = std::sync::Arc::make_mut(&mut world.btech.maps)
-                .get_mut(&map)
-                .unwrap();
+            let record = world.btech.maps.get_mut(&map).unwrap();
             let order = std::sync::Arc::make_mut(&mut record.landing_exclusion_order);
             order.retain(|slot| *slot != ordinal);
             order.insert(0, ordinal);
@@ -64,12 +60,7 @@ pub fn add_landing_exclusion_action(
         scripts.world().validate(config)?;
         scripts.effects.validate()?;
         Ok(ordinal)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Native ADDBLOCK uses the selected map and an optional exempt team.

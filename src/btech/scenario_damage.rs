@@ -34,9 +34,7 @@ pub fn damage_section_action(
         rear,
         critical,
     } = hit;
-    let before = scripts.world().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         admit(&before, actor, unit, damage)?;
         if let Some(vehicle) = before.btech.vehicles().get(&unit) {
             let section =
@@ -85,12 +83,7 @@ pub fn damage_section_action(
             damage as u16,
         )
         .map(BattleScenarioDamage::Mech)
-    })();
-    if result.is_err() {
-        *scripts.world_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Native section damage accepts four arguments with signed numeric flags interpreted as booleans.

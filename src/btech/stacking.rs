@@ -5,7 +5,6 @@ use super::{
 };
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// Applied collision effects retained until the host publishes private character feedback.
 #[derive(Default)]
@@ -93,19 +92,11 @@ pub fn resolve_stacking(
     rules: BattleStackingRules,
     fall: BattleFallRules,
 ) -> Result<Vec<BattleNotice>> {
-    let mut candidate = world.clone();
-    let notices = resolve_in_candidate(
-        &mut candidate,
-        id,
-        input,
-        rules,
-        fall,
-        None,
-        &mut Vec::new(),
-    )?;
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(notices)
+    world.attempt(|world| {
+        let notices = resolve_in_candidate(world, id, input, rules, fall, None, &mut Vec::new())?;
+        world.btech.validate_action(world)?;
+        Ok(notices)
+    })
 }
 
 /// Character-capable collision resolution inside an owning world/effect checkpoint.
@@ -186,7 +177,9 @@ fn resolve_in_candidate(
         return Ok(Vec::new());
     };
     let count = u16::try_from(count).context("Too many units in collision hex")?;
-    let mut choice = Arc::make_mut(&mut world.btech.constructed)
+    let mut choice = world
+        .btech
+        .constructed
         .get_mut(&id)
         .unwrap()
         .dice
@@ -232,10 +225,7 @@ fn resolve_in_candidate(
     if damage <= 1 {
         return Ok(Vec::new());
     }
-    Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap()
-        .charge = Default::default();
+    world.btech.constructed.get_mut(&id).unwrap().charge = Default::default();
     let ground = entry == BattleStackingEntry::Ground;
     let mut notices = vec![
         BattleNotice {
@@ -345,9 +335,7 @@ fn resolve_in_candidate(
         }
     }
     if ground {
-        let unit = Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
         if let Some(motion) = &mut unit.motion {
             motion.speed = 0.0;
             motion.desired_speed = 0.0;
@@ -423,10 +411,7 @@ fn apply_collision(
                 crew_stun: false,
             }
         };
-        Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&target)
-            .unwrap()
-            .dice = dice;
+        world.btech.constructed.get_mut(&target).unwrap().dice = dice;
         let group = remaining.min(5);
         remaining -= group;
         let character = effects.is_some();

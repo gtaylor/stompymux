@@ -3,7 +3,6 @@ use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// A target with a positive timer is settling; a timer without a target is recycling.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -123,13 +122,10 @@ pub(super) fn state(world: &World, id: ObjectId) -> Option<BattleTagState> {
 
 /// Update one already-resolved participant in the enclosing transaction.
 fn set_state(world: &mut World, id: ObjectId, state: BattleTagState) {
-    if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         unit.tag = state;
     } else {
-        Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap()
-            .tag = state;
+        world.btech.constructed.get_mut(&id).unwrap().tag = state;
     }
 }
 

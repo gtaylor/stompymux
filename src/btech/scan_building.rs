@@ -38,17 +38,10 @@ pub(super) fn scan_with_range(
     let observer = super::combat_operator::for_owner(world, observer, pilot)?
         .source
         .unit;
-    let mut candidate = world.clone();
-    let report = resolve(
-        &mut candidate,
-        observer,
-        pilot,
-        coordinate,
-        now,
-        observer_range,
-    )?;
-    *world = candidate;
-    Ok(report)
+    world.attempt(|world| {
+        let report = resolve(world, observer, pilot, coordinate, now, observer_range)?;
+        Ok(report)
+    })
 }
 
 /// Inspect the first entrance only; a concealed first entry does not expose later duplicates.
@@ -125,9 +118,7 @@ pub(super) fn action_with_range(
     observer_range: bool,
 ) -> Result<BattleBuildingScan> {
     let source = super::combat_operator::for_owner(&scripts.world(), observer, pilot)?.source;
-    let checkpoint = scripts.world.borrow().clone();
-    let effects = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let report = scan_with_range(
             &mut scripts.world.borrow_mut(),
             observer,
@@ -139,10 +130,5 @@ pub(super) fn action_with_range(
         super::channels::publish(scripts, config, &report.experience_messages)?;
         super::notify_unit_text(scripts, source.owner, &report.text)?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = checkpoint;
-        scripts.effects.restore(effects);
-    }
-    result
+    })
 }

@@ -3,7 +3,6 @@ use super::BattleUnit;
 use crate::{Config, ObjectId, Scripts, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// Detached maneuver outcome, including any committed fall and skill award.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -100,9 +99,7 @@ pub fn bootlegger(
     pilot: ObjectId,
     direction: &str,
 ) -> Result<BattleBootleggerReport> {
-    let before = scripts.world.borrow().clone();
-    let effects = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let words: Vec<_> = direction.split_whitespace().collect();
         ensure!(words.len() == 1, "Invalid number of arguments!");
         let delta = match words[0].chars().next().unwrap().to_ascii_uppercase() {
@@ -152,7 +149,7 @@ pub fn bootlegger(
             &mut pilot_notices,
         );
         let fall = if check.success {
-            let unit = Arc::make_mut(&mut world.btech.constructed)
+            let unit = world.btech.constructed
                 .get_mut(&id)
                 .unwrap();
             let motion = unit.motion.as_mut().unwrap();
@@ -207,7 +204,7 @@ pub fn bootlegger(
             super::evacuation::publish_fall_consequences(scripts, config, fall)?;
         }
         super::evacuation::publish_new_casualties(scripts, config, &before)?;
-        scripts.world().validate(config)?;
+        scripts.world().validate_action(config)?;
         Ok(BattleBootleggerReport {
             modifier,
             check,
@@ -215,12 +212,7 @@ pub fn bootlegger(
             notices,
             pilot_notices,
         })
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(effects);
-    }
-    result
+    })
 }
 
 /// Native maneuver uses the invoking player's current cockpit.

@@ -2,7 +2,6 @@
 use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// A validated spotter and its currently acquired unit target; no dice or derived aim is stored.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -218,13 +217,10 @@ pub fn select_spotter(
         }
     };
     super::artillery_adjustment::spotter_change(world, id, selected);
-    if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         unit.spotter = selected;
     } else {
-        Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap()
-            .spotter = selected;
+        world.btech.constructed.get_mut(&id).unwrap().spotter = selected;
     }
     Ok(vec![BattleNotice { unit: id, text }])
 }

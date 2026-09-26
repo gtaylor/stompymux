@@ -51,18 +51,16 @@ pub fn apply_woodland_clearing(
         terrain: replacement,
         ..before
     };
-    let mut candidate = world.clone();
-    let record = Arc::make_mut(&mut candidate.btech.maps)
-        .get_mut(&map)
-        .unwrap();
-    let index = (i64::from(coordinate.y) * record.width + i64::from(coordinate.x)) as usize;
-    Arc::make_mut(record.terrain.as_mut().unwrap())[index] = after;
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(BattleWoodlandChange {
-        map,
-        coordinate,
-        before,
-        after,
+    world.attempt(|world| {
+        let record = world.btech.maps.get_mut(&map).unwrap();
+        let index = (i64::from(coordinate.y) * record.width + i64::from(coordinate.x)) as usize;
+        Arc::make_mut(record.terrain.as_mut().unwrap())[index] = after;
+        world.btech.validate(world)?;
+        Ok(BattleWoodlandChange {
+            map,
+            coordinate,
+            before,
+            after,
+        })
     })
 }

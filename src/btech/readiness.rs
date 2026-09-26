@@ -3,7 +3,7 @@ use super::{BattleNotice, BattlePower, BattleUnit, BattleWeapon};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::{collections::BTreeMap, sync::Arc};
+use std::collections::BTreeMap;
 
 /// Mechanical readiness; authorization and target-dependent firing checks remain separate.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -220,21 +220,16 @@ pub fn spend_weapon(
     pilot: ObjectId,
     index: usize,
 ) -> Result<BattleWeaponUse> {
-    let mut candidate = world.clone();
-    super::combat_operator::controlled_mech(&candidate, id, pilot)?;
-    let unit = Arc::make_mut(&mut candidate.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
-    ensure!(unit.weapon_readiness(index)?.ready, "Weapon is not ready");
-    let mut dice = unit.dice.clone();
-    let gatling_damage = super::gatling::prepare(&candidate, id, index, &mut dice)?.damage();
-    Arc::make_mut(&mut candidate.btech.constructed)
-        .get_mut(&id)
-        .unwrap()
-        .dice = dice;
-    let result = use_weapon(&mut candidate, id, pilot, index, true, gatling_damage)?;
-    *world = candidate;
-    Ok(result)
+    world.attempt(|world| {
+        super::combat_operator::controlled_mech(world, id, pilot)?;
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
+        ensure!(unit.weapon_readiness(index)?.ready, "Weapon is not ready");
+        let mut dice = unit.dice.clone();
+        let gatling_damage = super::gatling::prepare(world, id, index, &mut dice)?.damage();
+        world.btech.constructed.get_mut(&id).unwrap().dice = dice;
+        let result = use_weapon(world, id, pilot, index, true, gatling_damage)?;
+        Ok(result)
+    })
 }
 
 /// Start a firing cycle; a failed Streak lock recycles without expending ammunition or heat.
@@ -290,9 +285,7 @@ pub(super) fn use_weapon(
         draws
     };
     let recycle = world.btech.weapon_settings.recycle_seconds(weapon);
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     if fire_mode == super::BattleFireMode::Normal {
         unit.fire_modes.remove(&index);
     }
@@ -336,9 +329,7 @@ pub fn advance_recycle(world: &mut World) -> Vec<BattleNotice> {
         .collect();
     let mut notices = super::vehicle_readiness::advance(world);
     for id in ids {
-        let unit = Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
         let loadout = unit.loadout().expect("validated weapon loadout");
         for index in unit.weapon_recycle.keys().copied().collect::<Vec<_>>() {
             if !unit.weapon_intact(index).expect("validated weapon index") {
@@ -389,7 +380,6 @@ pub fn advance_recycle(world: &mut World) -> Vec<BattleNotice> {
 mod tests {
     use super::*;
     use crate::{BattleUnitTemplate, Config, Kind, ObjectId, World};
-    use std::sync::Arc;
 
     #[test]
     fn batch_readiness_matches_each_mount_after_live_changes() {
@@ -423,13 +413,8 @@ mod tests {
                 loadout.weapons.len(),
             )
         };
-        Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap()
-            .power = BattlePower::Running;
-        let unit = Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&id)
-            .unwrap();
+        world.btech.constructed.get_mut(&id).unwrap().power = BattlePower::Running;
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
         unit.ammunition[ammo_bin] = 0;
         unit.weapon_recycle.insert(ammo_index, 3);
         unit.lost_criticals.insert(damaged_location);

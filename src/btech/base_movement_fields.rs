@@ -2,7 +2,6 @@
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Administrative base-speed fields have no movement consumer and default to zero.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -30,10 +29,12 @@ pub(super) fn set(world: &mut World, id: ObjectId, walking: bool, value: &str) -
         .trim()
         .parse::<i32>()
         .context("Expected a signed 32-bit integer")?;
-    let fields = if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    let fields = if let Some(unit) = world.btech.constructed.get_mut(&id) {
         &mut unit.base_movement_fields
     } else {
-        &mut Arc::make_mut(&mut world.btech.vehicles)
+        &mut world
+            .btech
+            .vehicles
             .get_mut(&id)
             .context("Unit is unavailable")?
             .base_movement_fields

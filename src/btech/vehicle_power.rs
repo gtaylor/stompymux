@@ -2,7 +2,6 @@
 use super::{BattleNotice, BattlePower, BattleVehicleMovement};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// Require a conscious, assigned operator physically inside a live vehicle.
 pub(super) fn controlled(world: &World, id: ObjectId, pilot: ObjectId) -> Result<()> {
@@ -92,10 +91,7 @@ pub(super) fn start_by_actor(
         .get(&position.map)
         .context("Map not found")?
         .hex(i64::from(position.x), i64::from(position.y))?;
-    Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap()
-        .power = BattlePower::Starting {
+    world.btech.vehicles.get_mut(&id).unwrap().power = BattlePower::Starting {
         remaining: if fast { 5 } else { 30 },
     };
     if let super::combat_operator::ControlActor::Player(pilot) = actor {
@@ -184,9 +180,7 @@ pub(super) fn stop_admitted(
             effects.vehicle_falls.push(fall);
         }
     }
-    let unit = Arc::make_mut(&mut candidate.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
+    let unit = candidate.btech.vehicles.get_mut(&id).unwrap();
     if unit.searchlight.on {
         notices.push(BattleNotice {
             unit: id,
@@ -200,7 +194,7 @@ pub(super) fn stop_admitted(
         });
     }
     finish_shutdown(unit);
-    candidate.btech.validate(&candidate)?;
+    candidate.btech.validate_action(&candidate)?;
     *world = candidate;
     Ok(notices)
 }
@@ -249,7 +243,7 @@ pub(super) fn advance(world: &mut World, now: i64) -> Vec<BattleNotice> {
         })
         .collect();
     let mut notices = Vec::new();
-    for (&id, unit) in Arc::make_mut(&mut world.btech.vehicles).iter_mut() {
+    for (&id, unit) in world.btech.vehicles.iter_mut() {
         let BattlePower::Starting { .. } = unit.power else {
             continue;
         };

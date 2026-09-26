@@ -56,81 +56,77 @@ fn land_inner(
         .character_values()
         .get(&pilot)
         .is_some_and(|values| super::advantages::enabled(values, "Toughness"));
-    let mut candidate = world.clone();
-    let mut report = super::movement_report::MovementReport::default();
-    report.notices.push(BattleNotice {
-        unit: id,
-        text: "You abort your full jump and attempt to land early".to_owned(),
-    });
-    let mut check = super::roll_piloting(&mut candidate, id, 0, rules.extended_piloting)?;
-    super::piloting::capture_feedback(
-        id,
-        Some(pilot),
-        &check,
-        &mut report.notices,
-        &mut report.pilot_notices,
-    );
-    if character {
-        report
-            .experience_messages
-            .extend(super::piloting::award_control_check(
-                &mut candidate,
-                id,
-                &mut check,
-                rules.extended_piloting,
-            )?);
-    }
-    if check.success {
+    world.attempt(|world| {
+        let mut report = super::movement_report::MovementReport::default();
         report.notices.push(BattleNotice {
             unit: id,
-            text: "You are able to abort the jump.".to_owned(),
+            text: "You abort your full jump and attempt to land early".to_owned(),
         });
-        if character {
-            super::jumping::finish_landing_in_action(
-                &mut candidate,
-                id,
-                BattleMovementRules {
-                    fall: rules,
-                    ..movement
-                },
-                &mut report,
-            )?;
-        } else {
-            report.notices.extend(super::jumping::finish_landing(
-                &mut candidate,
-                id,
-                false,
-                BattleMovementRules {
-                    fall: rules,
-                    ..movement
-                },
-            )?);
-        }
-    } else {
-        report.notices.push(BattleNotice {
-            unit: id,
-            text: "You don't quite make it.".to_owned(),
-        });
-        report.notices.extend(super::broadcast::observer_notices(
-            &candidate,
+        let mut check = super::roll_piloting(world, id, 0, rules.extended_piloting)?;
+        super::piloting::capture_feedback(
             id,
-            "attempts a landing, but crashes to the ground!",
-        ));
-        let fall = if character
-            && candidate.objects[&id]
-                .flags
-                .contains(crate::Flag::InCharacter)
-        {
-            super::fall::resolve_character_fall(&mut candidate, id, 1, rules)?
+            Some(pilot),
+            &check,
+            &mut report.notices,
+            &mut report.pilot_notices,
+        );
+        if character {
+            report
+                .experience_messages
+                .extend(super::piloting::award_control_check(
+                    world,
+                    id,
+                    &mut check,
+                    rules.extended_piloting,
+                )?);
+        }
+        if check.success {
+            report.notices.push(BattleNotice {
+                unit: id,
+                text: "You are able to abort the jump.".to_owned(),
+            });
+            if character {
+                super::jumping::finish_landing_in_action(
+                    world,
+                    id,
+                    BattleMovementRules {
+                        fall: rules,
+                        ..movement
+                    },
+                    &mut report,
+                )?;
+            } else {
+                report.notices.extend(super::jumping::finish_landing(
+                    world,
+                    id,
+                    false,
+                    BattleMovementRules {
+                        fall: rules,
+                        ..movement
+                    },
+                )?);
+            }
         } else {
-            super::resolve_fall(&mut candidate, id, 1, rules)?
-        };
-        fall.append_notices(id, &mut report.notices, &mut report.pilot_notices);
-        report.falls.push(fall);
-    }
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(report)
+            report.notices.push(BattleNotice {
+                unit: id,
+                text: "You don't quite make it.".to_owned(),
+            });
+            report.notices.extend(super::broadcast::observer_notices(
+                world,
+                id,
+                "attempts a landing, but crashes to the ground!",
+            ));
+            let fall = if character && world.objects[&id].flags.contains(crate::Flag::InCharacter) {
+                super::fall::resolve_character_fall(world, id, 1, rules)?
+            } else {
+                super::resolve_fall(world, id, 1, rules)?
+            };
+            fall.append_notices(id, &mut report.notices, &mut report.pilot_notices);
+            report.falls.push(fall);
+        }
+        world.btech.validate_action(world)?;
+        Ok(report)
+    })
 }
 
 /// Map the configured combat rules once for native and Lua landing adapters.
@@ -167,21 +163,17 @@ pub(crate) fn command(
     ctx: &crate::CommandContext<'_>,
     input: &crate::CommandInput,
 ) -> Result<crate::CommandAction> {
-    let before = ctx.scripts.world.borrow().clone();
-    let checkpoint = ctx.scripts.effects.checkpoint();
-    let result = (|| -> Result<()> {
+    let result = ctx.scripts.atomic(|_| -> Result<()> {
         ensure!(input.args.trim().is_empty(), "Usage: land");
         let id = ctx.scripts.world.borrow().objects[&ctx.player]
             .location
             .context("Enter a unit first")?;
         configured_land(ctx.scripts, ctx.config, id, ctx.player)?;
         Ok(())
-    })();
+    });
     Ok(match result {
         Ok(()) => crate::CommandAction::Continue,
         Err(error) => {
-            *ctx.scripts.world.borrow_mut() = before;
-            ctx.scripts.effects.restore(checkpoint);
             crate::CommandAction::Report(crate::CommandReport::Reply(format!("{error:#}")))
         }
     })

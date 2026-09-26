@@ -67,7 +67,9 @@ pub(super) fn set_original_capacity(
         .parse::<i32>()
         .context("Expected a nonnegative 32-bit fuel capacity")?;
     ensure!(capacity >= 0, "Fuel capacity cannot be negative");
-    std::sync::Arc::make_mut(&mut world.btech.vehicles)
+    world
+        .btech
+        .vehicles
         .get_mut(&id)
         .context("Fuel capacity requires a VTOL")?
         .set_original_fuel_capacity(capacity as u32)?;
@@ -238,15 +240,17 @@ pub fn set_vtol_fuel(
         u64::from(amount) <= status.capacity,
         "Fuel exceeds current tank capacity"
     );
-    let mut candidate = world.clone();
-    let fuel = std::sync::Arc::make_mut(&mut candidate.btech.vehicles)
-        .get_mut(&id)
-        .and_then(|unit| unit.vtol_fuel.as_mut())
-        .context("VTOL fuel state is missing")?;
-    fuel.remaining = i64::from(amount);
-    super::load::reconcile(&mut candidate, id, config.battletech.tsm_tow_bonus != 0)?;
-    candidate.btech.validate(&candidate)?;
-    let status = vtol_fuel_status(&candidate, id)?;
-    *world = candidate;
-    Ok(status)
+    world.attempt(|world| {
+        let fuel = world
+            .btech
+            .vehicles
+            .get_mut(&id)
+            .and_then(|unit| unit.vtol_fuel.as_mut())
+            .context("VTOL fuel state is missing")?;
+        fuel.remaining = i64::from(amount);
+        super::load::reconcile(world, id, config.battletech.tsm_tow_bonus != 0)?;
+        world.btech.validate_action(world)?;
+        let status = vtol_fuel_status(world, id)?;
+        Ok(status)
+    })
 }

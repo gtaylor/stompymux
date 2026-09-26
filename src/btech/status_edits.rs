@@ -1,7 +1,6 @@
 //! Administrative status edits target existing controls instead of storing duplicate status words.
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// Set controls and committed observations; the caller owns validation and rollback.
 pub(super) fn secondary(world: &mut World, id: ObjectId, bits: u32) -> Result<()> {
@@ -44,26 +43,23 @@ pub(super) fn secondary(world: &mut World, id: ObjectId, bits: u32) -> Result<()
         .context("Unit is unavailable")?;
     experience.suppress_gunnery = bits & (1 << 24) != 0;
     super::set_unit_experience(world, id, experience)?;
-    let (electronics, lamp) =
-        if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
-            ensure!(
-                bits & (1 << 14) == 0,
-                "Automatic turret control requires a vehicle turret"
-            );
-            unit.stealth.enabled = bits & (1 << 6) != 0;
-            unit.null_signature.enabled = bits & (1 << 7) != 0;
-            (&mut unit.electronics, &mut unit.searchlight)
-        } else {
-            let unit = Arc::make_mut(&mut world.btech.vehicles)
-                .get_mut(&id)
-                .unwrap();
-            ensure!(
-                bits & ((1 << 6) | (1 << 7)) == 0,
-                "This chassis has no Mech signature controls"
-            );
-            unit.automatic_turret = bits & (1 << 14) != 0;
-            (&mut unit.electronics, &mut unit.searchlight)
-        };
+    let (electronics, lamp) = if let Some(unit) = world.btech.constructed.get_mut(&id) {
+        ensure!(
+            bits & (1 << 14) == 0,
+            "Automatic turret control requires a vehicle turret"
+        );
+        unit.stealth.enabled = bits & (1 << 6) != 0;
+        unit.null_signature.enabled = bits & (1 << 7) != 0;
+        (&mut unit.electronics, &mut unit.searchlight)
+    } else {
+        let unit = world.btech.vehicles.get_mut(&id).unwrap();
+        ensure!(
+            bits & ((1 << 6) | (1 << 7)) == 0,
+            "This chassis has no Mech signature controls"
+        );
+        unit.automatic_turret = bits & (1 << 14) != 0;
+        (&mut unit.electronics, &mut unit.searchlight)
+    };
     electronics.guardian = guardian;
     electronics.angel = angel;
     electronics.field.disturbed = bits & (1 << 2) != 0;
@@ -95,7 +91,7 @@ pub(super) fn secondary_criticals(world: &mut World, id: ObjectId, bits: u32) ->
     ensure!(bits & !3 == 0, "Unsupported secondary critical-status bits");
     let previous = super::status_fields::secondary_criticals(world, id)?;
     let probe_changed = (previous ^ bits) & 2 != 0;
-    if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
         unit.set_hardened_hit_used(bits & 1 != 0)?;
         if probe_changed {
             ensure!(
@@ -106,7 +102,9 @@ pub(super) fn secondary_criticals(world: &mut World, id: ObjectId, bits: u32) ->
         }
     } else {
         ensure!(bits & 1 == 0, "Vehicles have no hardened gyro");
-        let unit = Arc::make_mut(&mut world.btech.vehicles)
+        let unit = world
+            .btech
+            .vehicles
             .get_mut(&id)
             .context("Unit is unavailable")?;
         if probe_changed {
@@ -131,7 +129,9 @@ pub(super) fn vehicle_criticals(world: &mut World, id: ObjectId, bits: u32) -> R
         ensure!(bits == 0, "Vehicle critical conditions require a vehicle");
         return Ok(());
     }
-    let unit = Arc::make_mut(&mut world.btech.vehicles)
+    let unit = world
+        .btech
+        .vehicles
         .get_mut(&id)
         .context("Unit is unavailable")?;
     unit.set_turret_conditions(bits & 1 != 0, bits & 2 != 0)?;

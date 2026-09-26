@@ -3,7 +3,6 @@ use super::*;
 use crate::{Config, ObjectId, Scripts, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// Sighting retains the ordinary aim breakdown for its actual target kind.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -38,14 +37,12 @@ pub(super) fn action(
     index: usize,
     request: super::fire_target::FireTargetRequest<'_>,
 ) -> Result<BattleSightReport> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|before| {
         let operator = super::combat_operator::admit_running(&before, shooter, pilot)?;
         let shooter = operator.source.unit;
         let mut candidate = before.clone();
         let report = resolve(&mut candidate, config, shooter, pilot, index, request)?;
-        candidate.validate(config)?;
+        candidate.validate_action(config)?;
         *scripts.world.borrow_mut() = candidate;
         let network = match &report.aim {
             BattleSightAim::Unit(aim) => aim.network_range,
@@ -99,12 +96,7 @@ pub(super) fn action(
             &format!("You aim {name} at {destination} - {number}{cover}"),
         )?;
         Ok(report)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Native sighting uses ordinary weapon/target grammar without admitting firing or revealing cover.
@@ -263,13 +255,10 @@ fn resolve(
         }
     };
     let roll = weapon.attack_roll(distance, &mut dice);
-    if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&shooter) {
+    if let Some(unit) = world.btech.vehicles.get_mut(&shooter) {
         unit.dice = dice;
     } else {
-        Arc::make_mut(&mut world.btech.constructed)
-            .get_mut(&shooter)
-            .unwrap()
-            .dice = dice;
+        world.btech.constructed.get_mut(&shooter).unwrap().dice = dice;
     }
     Ok(BattleSightReport {
         shooter,

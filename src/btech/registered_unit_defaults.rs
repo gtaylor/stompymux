@@ -3,7 +3,6 @@ use super::{BattleSection, BattleTemplate, CriticalDefinition, SectionDefinition
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result};
 use std::collections::BTreeMap;
-use std::sync::Arc;
 
 fn critical(equipment: &str) -> CriticalDefinition {
     CriticalDefinition {
@@ -103,7 +102,7 @@ pub fn ensure_registered_unit_runtime(world: &mut World, id: ObjectId) -> Result
     let definition =
         registered_unit_default_template(world, id).context("Unit runtime state is unavailable")?;
     let unit = super::BattleUnit::from_contract_template(definition)?;
-    Arc::make_mut(&mut world.btech.units).insert(id, unit.identity());
-    Arc::make_mut(&mut world.btech.constructed).insert(id, unit);
+    world.btech.units.insert(id, unit.identity());
+    world.btech.constructed.insert(id, unit);
     Ok(())
 }

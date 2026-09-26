@@ -1,7 +1,6 @@
 //! Wizard station fields use owned Rust values and shared field-list presentation.
 use crate::{Config, Flag, Kind, ObjectId, Scripts, World};
 use anyhow::{Context, Result, bail, ensure};
-use std::sync::Arc;
 
 /// Wizard inspection is independent of the station's assigned gunner or parent availability.
 fn admission(world: &World, actor: ObjectId, station: ObjectId) -> Result<()> {
@@ -60,7 +59,11 @@ pub fn set_gunner_field(
     }
     record.lock_remaining = 0;
     record.artillery_adjustment = 0;
-    Arc::make_mut(&mut scripts.world_mut().btech.gunner_stations).insert(station, record);
+    scripts
+        .world_mut()
+        .btech
+        .gunner_stations
+        .insert(station, record);
     let validation = scripts.world().validate(config);
     if let Err(error) = validation {
         *scripts.world_mut() = before;
@@ -102,8 +105,7 @@ pub fn view_gunner_fields(
             .map(|(name, value)| (*name, Some(value.as_str()))),
     );
     drop(world);
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         for line in text.lines() {
             super::notify_message(
                 scripts,
@@ -113,11 +115,7 @@ pub fn view_gunner_fields(
         }
         scripts.effects.validate()?;
         Ok(text)
-    })();
-    if result.is_err() {
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Native wizard commands operate on the selected station without requiring initialization.

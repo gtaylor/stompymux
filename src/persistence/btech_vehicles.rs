@@ -35,7 +35,7 @@ pub(super) async fn load(c: &mut SqliteConnection, state: &mut BtechState) -> Re
 
         ensure!(!state.units.contains_key(&id) && !state.maps.contains_key(&id), "Conflicting unit records for #{}", id.0);
         ensure!(state.registrations.get(&id).is_some_and(|kind| kind == "MECH"), "Unit #{} lacks MECH registration", id.0);
-        Arc::make_mut(&mut state.units).insert(id, unit.identity());
+        state.units.insert(id, unit.identity());
         units.insert(id, unit);
     }
     state.vehicles = units.into();
@@ -61,8 +61,8 @@ pub(super) fn validate_changes(expected: &mut BtechState, after: &BtechState) ->
             );
             Arc::make_mut(&mut expected.registrations).insert(id, "MECH".into());
         }
-        Arc::make_mut(&mut expected.units).insert(id, unit.identity());
-        Arc::make_mut(&mut expected.vehicles).insert(id, unit.clone());
+        expected.units.insert(id, unit.identity());
+        expected.vehicles.insert(id, unit.clone());
     }
     Ok(())
 }

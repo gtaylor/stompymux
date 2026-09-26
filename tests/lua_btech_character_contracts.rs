@@ -70,11 +70,8 @@ async fn character_contract_uses_object_identity_catalog_codes_and_zero_return_m
       local suffix="bad argument #1 to 'value' (object is going away)"
       assert(not ok and e.code=='mux.object.unavailable' and e.message:sub(-#suffix)==suffix,e.message)
     "#).unwrap();
-    let mut removed = s
-        .world_mut()
-        .objects
-        .remove(&stompymux_rs::ObjectId(1))
-        .unwrap();
+    let removed = s.world_mut().objects.remove(&stompymux_rs::ObjectId(1));
+    let mut removed = std::sync::Arc::unwrap_or_clone(removed.unwrap());
     s.eval_callback::<()>(r#"
       local ok,e=mux.error.pcall(function() btech.character.value(saved_character_object,'Build') end)
       local suffix="bad argument #1 to 'value' (object no longer exists)"

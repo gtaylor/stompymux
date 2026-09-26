@@ -115,7 +115,7 @@ pub fn resolve_woodland_attack(
         );
         notices.extend(super::broadcast::observer_notices(world, shooter, &text));
     }
-    candidate.btech.validate(&candidate)?;
+    candidate.btech.validate_action(&candidate)?;
     *world = candidate;
     Ok(BattleWoodlandImpact {
         map,

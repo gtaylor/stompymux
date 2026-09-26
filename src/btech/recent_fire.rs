@@ -40,13 +40,10 @@ pub fn clear_recent_fire(world: &mut World) {
         .map(|(id, _)| id)
         .collect();
     for id in ids {
-        if let Some(unit) = std::sync::Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+        if let Some(unit) = world.btech.vehicles.get_mut(&id) {
             unit.fired_recently = false;
         } else {
-            std::sync::Arc::make_mut(&mut world.btech.constructed)
-                .get_mut(&id)
-                .unwrap()
-                .fired_recently = false;
+            world.btech.constructed.get_mut(&id).unwrap().fired_recently = false;
         }
     }
 }

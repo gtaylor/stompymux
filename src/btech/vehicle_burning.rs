@@ -3,7 +3,6 @@ use super::*;
 use crate::{Config, Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// Target-owned inferno outcome after missile clustering and interception.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -93,35 +92,35 @@ pub(super) fn resolve_inferno_from(
         pilot_notices: Vec::new(),
         broadcasts: Vec::new(),
     };
-    let mut candidate = world.clone();
-    if stationary {
-        report.burn_seconds = super::inferno_hit::duration(missiles);
-        add_jelly(&mut candidate, target, i64::from(report.burn_seconds))?;
-    } else if rules.advanced_fire {
-        let effects = ignite_sections(&mut candidate, target, rules.criticals, attacker)?;
-        report.damage = effects.damage;
-        super::piloting::append_feedback(
-            &mut report.pilot_notices,
-            effects.pilot_notices.iter().cloned(),
-            report.notices.len(),
-        );
-        report.notices.extend(effects.notices);
-        report.broadcasts.extend(effects.broadcasts);
-    } else {
-        let effect = heat_explosion(&mut candidate, target, attacker)?;
-        report.explosion_roll = effect.explosion_roll;
-        report.explosion = effect.explosion;
-        super::piloting::append_feedback(
-            &mut report.pilot_notices,
-            effect.pilot_notices.iter().cloned(),
-            report.notices.len(),
-        );
-        report.notices.extend(effect.notices);
-        report.broadcasts.extend(effect.broadcasts);
-    }
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(report)
+    world.attempt(|world| {
+        if stationary {
+            report.burn_seconds = super::inferno_hit::duration(missiles);
+            add_jelly(world, target, i64::from(report.burn_seconds))?;
+        } else if rules.advanced_fire {
+            let effects = ignite_sections(world, target, rules.criticals, attacker)?;
+            report.damage = effects.damage;
+            super::piloting::append_feedback(
+                &mut report.pilot_notices,
+                effects.pilot_notices.iter().cloned(),
+                report.notices.len(),
+            );
+            report.notices.extend(effects.notices);
+            report.broadcasts.extend(effects.broadcasts);
+        } else {
+            let effect = heat_explosion(world, target, attacker)?;
+            report.explosion_roll = effect.explosion_roll;
+            report.explosion = effect.explosion;
+            super::piloting::append_feedback(
+                &mut report.pilot_notices,
+                effect.pilot_notices.iter().cloned(),
+                report.notices.len(),
+            );
+            report.notices.extend(effect.notices);
+            report.broadcasts.extend(effect.broadcasts);
+        }
+        world.btech.validate_action(world)?;
+        Ok(report)
+    })
 }
 
 /// Vehicle response to blast heat, separate from missile inferno exposure.
@@ -161,42 +160,40 @@ pub fn resolve_vehicle_heat_exposure(
         .get(&target)
         .context("Vehicle is unavailable")?;
     let stationary = unit.definition().movement == BattleVehicleMovement::Stationary;
-    let mut candidate = world.clone();
-    let mut report = BattleVehicleHeatExposure {
-        burn_seconds: 0,
-        fire: None,
-        explosion_roll: None,
-        explosion: None,
-        notices: Vec::new(),
-        pilot_notices: Vec::new(),
-        broadcasts: Vec::new(),
-    };
-    if stationary {
-        report.burn_seconds = i64::from(heat) * 6;
-        add_jelly(&mut candidate, target, report.burn_seconds)?;
-    } else if rules.advanced_fire {
-        let fire = resolve_vehicle_fire_exposure(&mut candidate, target, rules.criticals)?;
-        super::piloting::append_feedback(
-            &mut report.pilot_notices,
-            fire.effects.pilot_notices.iter().cloned(),
-            report.notices.len(),
-        );
-        report.notices.extend(fire.effects.notices.clone());
-        report.broadcasts.extend(fire.effects.broadcasts.clone());
-        report.fire = Some(fire);
-    } else {
-        report = heat_explosion(&mut candidate, target, None)?;
-    }
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(report)
+    world.attempt(|world| {
+        let mut report = BattleVehicleHeatExposure {
+            burn_seconds: 0,
+            fire: None,
+            explosion_roll: None,
+            explosion: None,
+            notices: Vec::new(),
+            pilot_notices: Vec::new(),
+            broadcasts: Vec::new(),
+        };
+        if stationary {
+            report.burn_seconds = i64::from(heat) * 6;
+            add_jelly(world, target, report.burn_seconds)?;
+        } else if rules.advanced_fire {
+            let fire = resolve_vehicle_fire_exposure(world, target, rules.criticals)?;
+            super::piloting::append_feedback(
+                &mut report.pilot_notices,
+                fire.effects.pilot_notices.iter().cloned(),
+                report.notices.len(),
+            );
+            report.notices.extend(fire.effects.notices.clone());
+            report.broadcasts.extend(fire.effects.broadcasts.clone());
+            report.fire = Some(fire);
+        } else {
+            report = heat_explosion(world, target, None)?;
+        }
+        world.btech.validate_action(world)?;
+        Ok(report)
+    })
 }
 
 /// Jelly accounting is shared by missile exposure and blast heat.
 fn add_jelly(world: &mut World, target: ObjectId, seconds: i64) -> Result<()> {
-    let unit = Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&target)
-        .unwrap();
+    let unit = world.btech.vehicles.get_mut(&target).unwrap();
     unit.inferno_remaining = super::inferno::adjusted_duration(unit.inferno_remaining, seconds)?;
     Ok(())
 }
@@ -207,7 +204,9 @@ fn heat_explosion(
     target: ObjectId,
     attacker: Option<ObjectId>,
 ) -> Result<BattleVehicleHeatExposure> {
-    let roll = Arc::make_mut(&mut world.btech.vehicles)
+    let roll = world
+        .btech
+        .vehicles
         .get_mut(&target)
         .unwrap()
         .dice
@@ -233,10 +232,7 @@ fn heat_explosion(
         unit: target,
         text: "The heat's too much for your vehicle! It blows up!".into(),
     });
-    Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&target)
-        .unwrap()
-        .clear_fires();
+    world.btech.vehicles.get_mut(&target).unwrap().clear_fires();
     let was_destroyed = world.btech.vehicles()[&target].is_destroyed();
     let explosion = super::vehicle_explosion::explode_followup_in_candidate(world, target, false)?;
     let destroyed = world.btech.vehicles()[&target].is_destroyed();
@@ -308,9 +304,7 @@ pub fn advance_vehicle_fires(world: &mut World, config: &Config) -> Result<Battl
     let mut pilot_notices = Vec::new();
     let mut character_injuries = Vec::new();
     for id in ids {
-        let unit = Arc::make_mut(&mut candidate.btech.vehicles)
-            .get_mut(&id)
-            .unwrap();
+        let unit = candidate.btech.vehicles.get_mut(&id).unwrap();
         if unit.inferno_remaining > 0 {
             unit.inferno_remaining -= 1;
             if unit.inferno_remaining == 0 {
@@ -337,9 +331,7 @@ pub fn advance_vehicle_fires(world: &mut World, config: &Config) -> Result<Battl
             .is_some_and(|values| super::advantages::enabled(values, "Toughness"));
         let rules = BattleVehicleImpactRules::configured(&config.battletech, toughness).criticals;
         for section in due {
-            let unit = Arc::make_mut(&mut candidate.btech.vehicles)
-                .get_mut(&id)
-                .unwrap();
+            let unit = candidate.btech.vehicles.get_mut(&id).unwrap();
             if unit.burning_sections.remove(&section).is_none() {
                 continue;
             }
@@ -371,9 +363,7 @@ pub fn advance_vehicle_fires(world: &mut World, config: &Config) -> Result<Battl
                     &broadcast.text,
                 ));
             }
-            let unit = Arc::make_mut(&mut candidate.btech.vehicles)
-                .get_mut(&id)
-                .unwrap();
+            let unit = candidate.btech.vehicles.get_mut(&id).unwrap();
             if amount > 1 && unit.sections()[&section].internal > 0 {
                 unit.burning_sections.insert(section, 60);
                 continue;
@@ -395,9 +385,7 @@ pub fn advance_vehicle_fires(world: &mut World, config: &Config) -> Result<Battl
                 ));
             }
         }
-        let unit = Arc::make_mut(&mut candidate.btech.vehicles)
-            .get_mut(&id)
-            .unwrap();
+        let unit = candidate.btech.vehicles.get_mut(&id).unwrap();
         if let Some(remaining) = &mut unit.extinguishing {
             *remaining -= 1;
             if *remaining == 0 {
@@ -417,7 +405,7 @@ pub fn advance_vehicle_fires(world: &mut World, config: &Config) -> Result<Battl
             }
         }
     }
-    candidate.btech.validate(&candidate)?;
+    candidate.btech.validate_action(&candidate)?;
     *world = candidate;
     Ok(BattleVehicleFireTick {
         notices,
@@ -446,10 +434,7 @@ pub fn begin_vehicle_extinguishing(
         unit.extinguishing.is_none(),
         "You're already trying to put out the fire!"
     );
-    Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap()
-        .extinguishing = Some(120);
+    world.btech.vehicles.get_mut(&id).unwrap().extinguishing = Some(120);
     Ok(BattleNotice {
         unit: id,
         text: "You begin to extinguish the fires!".into(),
@@ -462,17 +447,10 @@ pub fn begin_vehicle_extinguishing_action(
     id: ObjectId,
     pilot: ObjectId,
 ) -> Result<()> {
-    let before = scripts.world.borrow().clone();
-    let checkpoint = scripts.effects.checkpoint();
-    let result = (|| {
+    scripts.atomic(|_| {
         let notice = begin_vehicle_extinguishing(&mut scripts.world.borrow_mut(), id, pilot)?;
         super::notify_unit(scripts, notice)
-    })();
-    if result.is_err() {
-        *scripts.world.borrow_mut() = before;
-        scripts.effects.restore(checkpoint);
-    }
-    result
+    })
 }
 
 /// Native extinguishing shares the same transaction as Lua.
@@ -536,11 +514,7 @@ fn ignite_sections(
         if unit.sections()[&section].internal == 0 || unit.burning_sections.contains_key(&section) {
             continue;
         }
-        let amount = Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&target)
-            .unwrap()
-            .dice
-            .d6();
+        let amount = world.btech.vehicles.get_mut(&target).unwrap().dice.d6();
         effects.notices.push(BattleNotice {
             unit: target,
             text: format!("Your {} catches on fire!", section.name().replace('_', " ")),
@@ -554,9 +528,7 @@ fn ignite_sections(
         effects.notices.extend(damage.notices.clone());
         effects.broadcasts.extend(damage.broadcasts.clone());
         effects.damage.push(damage);
-        let unit = Arc::make_mut(&mut world.btech.vehicles)
-            .get_mut(&target)
-            .unwrap();
+        let unit = world.btech.vehicles.get_mut(&target).unwrap();
         unit.burning_sections.insert(section, 60);
     }
     Ok(effects)
@@ -589,92 +561,90 @@ pub fn resolve_vehicle_fire_exposure(
         world.btech.vehicles().contains_key(&id),
         "Vehicle is unavailable"
     );
-    let mut candidate = world.clone();
-    let vehicle = Arc::make_mut(&mut candidate.btech.vehicles)
-        .get_mut(&id)
-        .unwrap();
-    let roll = vehicle.dice.generic_roll();
-    let adjusted = roll + super::vehicle_motive_effects::modifier(vehicle.definition().movement);
-    let mut report = BattleVehicleFireExposure {
-        roll,
-        adjusted,
-        motive_roll: None,
-        effects: BattleVehicleFireEffects::default(),
-    };
-    if adjusted >= 8 {
-        report.effects.notices.push(BattleNotice {
-            unit: id,
-            text: "[fg=red bold]You drive through a wall of searing flames![reset]".into(),
-        });
-    }
-    match adjusted {
-        0..=7 => (),
-        8 | 9 => {
+    world.attempt(|world| {
+        let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
+        let roll = vehicle.dice.generic_roll();
+        let adjusted =
+            roll + super::vehicle_motive_effects::modifier(vehicle.definition().movement);
+        let mut report = BattleVehicleFireExposure {
+            roll,
+            adjusted,
+            motive_roll: None,
+            effects: BattleVehicleFireEffects::default(),
+        };
+        if adjusted >= 8 {
             report.effects.notices.push(BattleNotice {
                 unit: id,
-                text: "[fg=red bold]The fire damages your motive system![reset]".into(),
+                text: "[fg=red bold]You drive through a wall of searing flames![reset]".into(),
             });
-            let roll = vehicle.dice.generic_roll();
-            report.motive_roll = Some(roll);
-            let (motive, penalty) =
-                super::vehicle_motive_effects::outcome(vehicle.definition().movement, roll);
-            let (notices, broadcasts) =
-                super::vehicle_motive_effects::apply(vehicle, id, motive, penalty, Some(roll));
-            report.effects.notices.extend(notices);
-            report.effects.broadcasts.extend(broadcasts);
         }
-        10 | 11 => {
-            report.effects.notices.push(BattleNotice {
-                unit: id,
-                text: "[fg=red bold]The fire sweeps across your unit damaging it![reset]".into(),
-            });
-            // The reference samples all eight section slots, including absent and destroyed slots.
-            let sections = [
-                BattleVehicleSection::Left,
-                BattleVehicleSection::Right,
-                BattleVehicleSection::Front,
-                BattleVehicleSection::Rear,
-                BattleVehicleSection::Turret,
-            ];
-            for index in 0..8 {
-                let unit = Arc::make_mut(&mut candidate.btech.vehicles)
-                    .get_mut(&id)
-                    .unwrap();
-                let amount = unit.dice.d6();
-                let Some(&section) = sections.get(index) else {
-                    continue;
-                };
-                if unit
-                    .sections()
-                    .get(&section)
-                    .is_none_or(|state| state.internal == 0)
-                {
-                    continue;
+        match adjusted {
+            0..=7 => (),
+            8 | 9 => {
+                report.effects.notices.push(BattleNotice {
+                    unit: id,
+                    text: "[fg=red bold]The fire damages your motive system![reset]".into(),
+                });
+                let roll = vehicle.dice.generic_roll();
+                report.motive_roll = Some(roll);
+                let (motive, penalty) =
+                    super::vehicle_motive_effects::outcome(vehicle.definition().movement, roll);
+                let (notices, broadcasts) =
+                    super::vehicle_motive_effects::apply(vehicle, id, motive, penalty, Some(roll));
+                report.effects.notices.extend(notices);
+                report.effects.broadcasts.extend(broadcasts);
+            }
+            10 | 11 => {
+                report.effects.notices.push(BattleNotice {
+                    unit: id,
+                    text: "[fg=red bold]The fire sweeps across your unit damaging it![reset]"
+                        .into(),
+                });
+                // The reference samples all eight section slots, including absent and destroyed slots.
+                let sections = [
+                    BattleVehicleSection::Left,
+                    BattleVehicleSection::Right,
+                    BattleVehicleSection::Front,
+                    BattleVehicleSection::Rear,
+                    BattleVehicleSection::Turret,
+                ];
+                for index in 0..8 {
+                    let unit = world.btech.vehicles.get_mut(&id).unwrap();
+                    let amount = unit.dice.d6();
+                    let Some(&section) = sections.get(index) else {
+                        continue;
+                    };
+                    if unit
+                        .sections()
+                        .get(&section)
+                        .is_none_or(|state| state.internal == 0)
+                    {
+                        continue;
+                    }
+                    let damage = burn_damage(world, id, section, amount, rules, None)?;
+                    super::piloting::append_feedback(
+                        &mut report.effects.pilot_notices,
+                        damage.pilot_notices.iter().cloned(),
+                        report.effects.notices.len(),
+                    );
+                    report.effects.notices.extend(damage.notices.clone());
+                    report.effects.broadcasts.extend(damage.broadcasts.clone());
+                    report.effects.damage.push(damage);
                 }
-                let damage = burn_damage(&mut candidate, id, section, amount, rules, None)?;
+            }
+            _ => {
+                let effects = ignite_sections(world, id, rules, None)?;
+                report.effects.damage = effects.damage;
                 super::piloting::append_feedback(
                     &mut report.effects.pilot_notices,
-                    damage.pilot_notices.iter().cloned(),
+                    effects.pilot_notices.iter().cloned(),
                     report.effects.notices.len(),
                 );
-                report.effects.notices.extend(damage.notices.clone());
-                report.effects.broadcasts.extend(damage.broadcasts.clone());
-                report.effects.damage.push(damage);
+                report.effects.notices.extend(effects.notices);
+                report.effects.broadcasts.extend(effects.broadcasts);
             }
         }
-        _ => {
-            let effects = ignite_sections(&mut candidate, id, rules, None)?;
-            report.effects.damage = effects.damage;
-            super::piloting::append_feedback(
-                &mut report.effects.pilot_notices,
-                effects.pilot_notices.iter().cloned(),
-                report.effects.notices.len(),
-            );
-            report.effects.notices.extend(effects.notices);
-            report.effects.broadcasts.extend(effects.broadcasts);
-        }
-    }
-    candidate.btech.validate(&candidate)?;
-    *world = candidate;
-    Ok(report)
+        world.btech.validate_action(world)?;
+        Ok(report)
+    })
 }

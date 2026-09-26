@@ -1,7 +1,6 @@
 //! Shared scenario immunity for damage, with source-map and target-unit policy kept distinct.
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// Read the operator-imposed immunity independently of construction and cockpit power.
 pub fn battle_combat_safe(world: &World, id: ObjectId) -> Result<bool> {
@@ -25,11 +24,13 @@ pub fn set_battle_combat_safe(world: &mut World, id: ObjectId, enabled: bool) ->
             .is_some_and(|o| o.kind == Kind::Thing && !o.flags.contains(Flag::Going)),
         "Unit must be a live thing"
     );
-    if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
+    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         unit.combat_safe = enabled;
         return Ok(());
     }
-    Arc::make_mut(&mut world.btech.constructed)
+    world
+        .btech
+        .constructed
         .get_mut(&id)
         .context("Unit is not constructed")?
         .combat_safe = enabled;

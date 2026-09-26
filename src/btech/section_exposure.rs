@@ -6,7 +6,7 @@ use super::{
 use crate::{Flag, ObjectId, World};
 use anyhow::Result;
 use serde::Serialize;
-use std::{collections::BTreeSet, sync::Arc};
+use std::collections::BTreeSet;
 
 /// The environment that permanently disabled a surviving section.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -79,9 +79,7 @@ pub(super) fn disable_section(
         .filter(|(_, bin)| bin.location.section == section)
         .map(|(index, _)| index)
         .collect();
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     match cause {
         BattleSectionExposure::Water => {
             unit.flooded_sections.insert(section);
@@ -128,9 +126,7 @@ pub(super) fn disable_section(
             notices,
         });
     };
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     if unit.airborne() && unit.airborne_support_lost() {
         unit.hull_down = Default::default();
         unit.posture = BattlePosture::Prone;

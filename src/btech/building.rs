@@ -2,7 +2,6 @@
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Durable construction state of an interior map; zero maximum means no active structure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -94,9 +93,6 @@ pub fn set_building_state(
     );
     let record = world.btech.maps().get(&map).context("Map not found")?;
     ensure!(record.terrain_ready(), "Map terrain is unavailable");
-    Arc::make_mut(&mut world.btech.maps)
-        .get_mut(&map)
-        .unwrap()
-        .building = state;
+    world.btech.maps.get_mut(&map).unwrap().building = state;
     Ok(())
 }

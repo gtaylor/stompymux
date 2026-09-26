@@ -3,7 +3,6 @@ use super::{BattleMechChassis, BattleNotice, BattlePower, BattleSection, BattleU
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// Relative torso orientation; firing geometry uses the game's 59-degree offsets.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -215,11 +214,7 @@ fn rotate_torso_by_actor(
         }
         (_, direction) => direction,
     };
-    Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap()
-        .facing
-        .torso = torso;
+    world.btech.constructed.get_mut(&id).unwrap().facing.torso = torso;
     Ok(BattleNotice {
         unit: id,
         text: (match direction {
@@ -245,9 +240,7 @@ pub fn flip_arms(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<Bat
         unit.definition().has_special("FlipArms"),
         "You cannot flip the arms in this mech"
     );
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     unit.facing.arms_flipped = !unit.facing.arms_flipped;
     let flipped = unit.facing.arms_flipped;
     let _ = super::autopilot::manual_takeover(world, id);

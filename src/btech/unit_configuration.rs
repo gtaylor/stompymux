@@ -1,7 +1,6 @@
 //! Persistent Lua-visible administration metadata, independent of loaded runtime state.
 use crate::{ObjectId, World};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BattleUnitConfiguration {
@@ -25,8 +24,8 @@ pub fn set_unit_configuration(
     id: ObjectId,
     update: impl FnOnce(&mut BattleUnitConfiguration),
 ) {
-    let values = Arc::make_mut(&mut world.btech.unit_configuration);
-    let entry = values.entry(id).or_default();
+    let values = &mut world.btech.unit_configuration;
+    let entry = values.get_or_default(id);
     update(entry);
     if *entry == BattleUnitConfiguration::default() {
         values.remove(&id);

@@ -2,7 +2,6 @@
 use super::BattleJumpPath;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 /// Edit retained course values and, when airborne, redirect only the remaining flight.
 /// The enclosing unit-field transaction owns complete world validation and rollback.
@@ -68,9 +67,7 @@ pub(super) fn set(world: &mut World, id: ObjectId, heading: bool, value: &str) -
             cursor.redirect(path)?;
         }
     }
-    let unit = Arc::make_mut(&mut world.btech.constructed)
-        .get_mut(&id)
-        .unwrap();
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
     unit.last_jump = course;
     unit.flight = flight;
     Ok(())

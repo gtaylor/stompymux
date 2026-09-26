@@ -1,7 +1,6 @@
 //! Persistent pilot-selected turret tracking follows live unit or coordinate target selections.
 use crate::{CommandAction, CommandContext, CommandInput, CommandReport, ObjectId, World};
 use anyhow::{Context, Result, ensure};
-use std::sync::Arc;
 
 impl super::BattleVehicle {
     /// Selected automatic tracking mode, independent of current power and mechanical availability.
@@ -24,10 +23,7 @@ pub fn toggle_battle_automatic_turret(
         "You have no turret to autoturn!"
     );
     let enabled = !unit.automatic_turret;
-    Arc::make_mut(&mut world.btech.vehicles)
-        .get_mut(&id)
-        .unwrap()
-        .automatic_turret = enabled;
+    world.btech.vehicles.get_mut(&id).unwrap().automatic_turret = enabled;
     Ok(super::BattleNotice {
         unit: id,
         text: format!(
@@ -119,7 +115,7 @@ pub fn advance_battle_automatic_turrets(world: &mut World) {
     if updates.is_empty() {
         return;
     }
-    let vehicles = Arc::make_mut(&mut world.btech.vehicles);
+    let vehicles = &mut world.btech.vehicles;
     for (id, heading) in updates {
         vehicles.get_mut(&id).unwrap().turret_offset = heading;
     }
@@ -127,9 +123,7 @@ pub fn advance_battle_automatic_turrets(world: &mut World) {
 
 /// Trailing text is ignored; the domain operation owns the toggle and cockpit authority.
 pub(crate) fn command(ctx: &CommandContext<'_>, _input: &CommandInput) -> Result<CommandAction> {
-    let before = ctx.scripts.world.borrow().clone();
-    let checkpoint = ctx.scripts.effects.checkpoint();
-    let result = (|| {
+    let result = ctx.scripts.atomic(|before| {
         let id = before
             .objects
             .get(&ctx.player)
@@ -138,13 +132,9 @@ pub(crate) fn command(ctx: &CommandContext<'_>, _input: &CommandInput) -> Result
         let notice =
             toggle_battle_automatic_turret(&mut ctx.scripts.world.borrow_mut(), id, ctx.player)?;
         super::notify_unit(ctx.scripts, notice)
-    })();
+    });
     Ok(match result {
         Ok(()) => CommandAction::Continue,
-        Err(error) => {
-            *ctx.scripts.world.borrow_mut() = before;
-            ctx.scripts.effects.restore(checkpoint);
-            CommandAction::Report(CommandReport::Reply(format!("{error:#}")))
-        }
+        Err(error) => CommandAction::Report(CommandReport::Reply(format!("{error:#}"))),
     })
 }
