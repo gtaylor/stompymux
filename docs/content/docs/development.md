@@ -9,6 +9,42 @@ The Rust server lives in `src/`; game Lua modules, help content, maps, and
 unit templates live under `game/`. Work from `stompymux-rs/` so Cargo and the
 `justfile` resolve their paths correctly.
 
+## Set up your environment
+
+Run the setup entrypoint from the repository root:
+
+```sh
+.devcontainer/setup.sh
+```
+
+It detects which supported environment it is running in and runs the matching
+script from `.devcontainer/`:
+
+| Environment | Detected by | Script | What it does |
+| --- | --- | --- | --- |
+| CI | `GITHUB_ACTIONS=true` | `setup-ci.sh` | Verifies the devcontainer image has every required tool. |
+| Cloud | `CLAUDE_CODE_REMOTE=true` | `setup-cloud.sh` | Installs the toolchain (Node under `~/.local`, ahead of the image's Node on `PATH`), docs dependencies, and Codex. |
+| Local | anything else | `setup-local.sh` | Checks the toolchain, then installs docs dependencies, Codex, and Claude Code. |
+
+Claude Code cloud sessions run `setup.sh cloud` automatically through a
+`SessionStart` hook in `.claude/settings.json`; the hook does nothing outside
+the cloud.
+
+Pass `ci`, `local`, or `cloud` as the first argument (or set `STOMPYMUX_ENV`)
+to override detection.
+
+The devcontainer is optional for local development. When you open the
+repository in it, the image already contains the toolchain and
+`postCreateCommand` runs `setup.sh` for you. Outside the devcontainer, provide
+the toolchain yourself first; on Debian or Ubuntu the devcontainer installers
+can do it:
+
+```sh
+sudo .devcontainer/install-tools.sh
+.devcontainer/install-rust.sh
+.devcontainer/setup.sh
+```
+
 ## Rust server workflow
 
 Edit the relevant Rust module, then format and test the package:
