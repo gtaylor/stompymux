@@ -3,7 +3,7 @@ use crate::world::Kind;
 fn err(message: impl ToString) -> mlua::Error {
     super::super::error::failure("mux.arg.invalid", message)
 }
-use mlua::{AnyUserData, MetaMethod, Table, UserData, UserDataMethods, Value};
+use mlua::{MetaMethod, Table, UserData, UserDataMethods, Value};
 
 pub(super) struct Types;
 impl UserData for Types {

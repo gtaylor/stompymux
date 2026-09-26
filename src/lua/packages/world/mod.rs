@@ -301,7 +301,7 @@ pub(super) fn register(
                     .map_err(|e| super::error::failure("mux.arg.invalid", e))?;
             }
             "description" | "internal_description" => {
-                let mut value = match v {
+                let value = match v {
                     Value::Nil => None,
                     Value::String(value) => Some(value),
                     Value::Integer(value) => lua.coerce_string(Value::Integer(value))?,

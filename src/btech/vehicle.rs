@@ -416,14 +416,6 @@ impl BattleVehicle {
         super::unit::replace_critical_modes(modes, fire, ammunition);
         Ok(())
     }
-    /// Replace authored equipment through the vehicle constructor while retaining tactical state.
-    pub(super) fn replace_construction(
-        &mut self,
-        definition: BattleVehicleTemplate,
-        touched: &[super::VehicleCriticalLocation],
-    ) -> Result<()> {
-        self.replace_construction_mode(definition, touched, false)
-    }
 
     pub(super) fn replace_construction_contract(
         &mut self,

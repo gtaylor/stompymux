@@ -23,7 +23,6 @@ pub enum TraversalReason {
     MapUnavailable,
     UnitUnavailable,
     UnitNotPlaced,
-    UnsupportedUnit,
     NotAdjacent,
     ImpassableTerrain,
     ElevationTooSteep,

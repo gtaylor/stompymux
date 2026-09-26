@@ -12659,7 +12659,7 @@ fn check_armor_piercing_thresholds(
 ) {
     use stompymux_rs::*;
     for rear in [false, true] {
-        let arc = if rear {
+        let _arc = if rear {
             BattleHitArc::Rear
         } else {
             BattleHitArc::Front

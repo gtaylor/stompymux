@@ -67,7 +67,7 @@ async fn player_preferences_and_loadout_are_atomic_and_resettable() {
 /// arguments stay ignored because the C arity checks are minimums only.
 #[tokio::test(flavor = "current_thread")]
 async fn player_configuration_errors_match_the_c_argument_shapes() {
-    let (directory, config, s) = isolated_scripts().await;
+    let (directory, _config, s) = isolated_scripts().await;
     copy(
         &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/btech/mechs"),
         &directory.path().join("mechs"),

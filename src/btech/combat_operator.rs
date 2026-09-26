@@ -32,11 +32,6 @@ pub(super) fn controlled(world: &World, unit: ObjectId, actor: ObjectId) -> Resu
     controlled_by(world, unit, actor)
 }
 
-/// Admit a direct unit action issued by an attached ground autopilot.
-pub(crate) fn controlled_autopilot(world: &World, unit: ObjectId) -> Result<CombatOperator> {
-    controlled_by(world, unit, ControlActor::Autopilot)
-}
-
 fn controlled_by(world: &World, unit: ObjectId, actor: ControlActor) -> Result<CombatOperator> {
     if let ControlActor::Player(actor_id) = actor {
         let location = world
@@ -78,15 +73,6 @@ pub(super) fn controlled_mech(
         "Unit construction state is unavailable"
     );
     controlled(world, unit, actor)
-}
-
-/// Mech-only admission for autonomous direct fire.
-pub(crate) fn controlled_mech_autopilot(world: &World, unit: ObjectId) -> Result<CombatOperator> {
-    ensure!(
-        world.btech.constructed_units().contains_key(&unit),
-        "Unit construction state is unavailable"
-    );
-    controlled_autopilot(world, unit)
 }
 
 /// Resolve an owning cockpit or station without imposing operation-specific power or weapon gates.

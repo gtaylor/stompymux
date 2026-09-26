@@ -4,7 +4,7 @@ use super::bind;
 use crate::{config::Config, lua::err, text};
 use anyhow::Result;
 pub(super) use document::LuaDocument;
-use mlua::{FromLua, Lua, MultiValue, Table, Value};
+use mlua::{Lua, MultiValue, Table, Value};
 use std::{cell::Cell, rc::Rc, sync::Arc};
 
 /// Register native operations before the embedded facade is evaluated.

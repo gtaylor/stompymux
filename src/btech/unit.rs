@@ -568,15 +568,6 @@ impl BattleUnit {
         self.live_mass.invalidate();
         Ok(())
     }
-    /// Replace authored construction through the ordinary template validator while retaining
-    /// live tactical state. Administration callers use this after editing critical slots.
-    pub(super) fn replace_construction(
-        &mut self,
-        definition: BattleTemplate,
-        touched: &[super::CriticalLocation],
-    ) -> Result<()> {
-        self.replace_construction_mode(definition, touched, false)
-    }
 
     pub(super) fn replace_construction_contract(
         &mut self,

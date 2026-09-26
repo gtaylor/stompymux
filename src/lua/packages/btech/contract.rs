@@ -148,33 +148,6 @@ fn range_integer(
     ))
 }
 
-/// Validate a finite Lua number in an inclusive range.
-pub(super) fn number(
-    value: Value,
-    label: &str,
-    minimum: f64,
-    maximum: f64,
-    argument: usize,
-) -> mlua::Result<f64> {
-    let number = match value {
-        Value::Integer(value) => value as f64,
-        Value::Number(value) => value,
-        _ => {
-            return Err(argument_failure(
-                argument,
-                format!("{label} must be a number"),
-            ));
-        }
-    };
-    if number.is_finite() && (minimum..=maximum).contains(&number) {
-        return Ok(number);
-    }
-    Err(argument_failure(
-        argument,
-        format!("{label} must be a number from {minimum} to {maximum}"),
-    ))
-}
-
 /// Validate an exact Lua string with a byte-length bound.
 pub(super) fn string(
     value: Value,
@@ -210,17 +183,6 @@ pub(super) fn integer_field(
     argument: usize,
 ) -> mlua::Result<i64> {
     integer(field(table, name)?, name, minimum, maximum, argument)
-}
-
-/// Read and validate a finite numeric record field.
-pub(super) fn number_field(
-    table: &Table,
-    name: &str,
-    minimum: f64,
-    maximum: f64,
-    argument: usize,
-) -> mlua::Result<f64> {
-    number(field(table, name)?, name, minimum, maximum, argument)
 }
 
 /// Read and validate a boolean record field.
@@ -361,9 +323,4 @@ pub(super) fn operation_failure(reason: &str, message: impl ToString) -> mlua::E
         message,
         serde_json::json!({ "reason": reason }),
     )
-}
-
-/// Borrow the live world captured by contract registration without exposing the container type.
-pub(super) fn world(shared: &SharedWorld) -> std::cell::Ref<'_, World> {
-    shared.borrow()
 }

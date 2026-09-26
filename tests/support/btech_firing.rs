@@ -1,4 +1,5 @@
 //! Shared supported-chassis firing fixtures for sighting and anatomical targeting.
+#![allow(dead_code)] // Each test crate that includes this shared module uses a different subset.
 use crate::support;
 use stompymux_rs::*;
 

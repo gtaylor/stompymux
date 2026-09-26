@@ -61,29 +61,6 @@ pub(super) fn readout_by_actor(
     vehicle.motion().context("Unit is not placed")
 }
 
-/// Apply one checked throttle or heading request through existing native/Lua adapters.
-pub(super) fn set_control(
-    world: &mut World,
-    id: ObjectId,
-    pilot: ObjectId,
-    speed: Option<f64>,
-    heading: Option<f64>,
-    policy: super::SpeedPolicy,
-    free_fusion_fuel: bool,
-) -> Result<BattleNotice> {
-    let notice = set_control_by_actor(
-        world,
-        id,
-        super::combat_operator::ControlActor::Player(pilot),
-        speed,
-        heading,
-        policy,
-        free_fusion_fuel,
-    )?;
-    let _ = super::autopilot::manual_takeover(world, id);
-    Ok(notice)
-}
-
 pub(crate) fn set_control_by_actor(
     world: &mut World,
     id: ObjectId,
