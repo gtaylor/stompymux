@@ -1,5 +1,4 @@
 //! Shared supported-chassis firing fixtures for sighting and anatomical targeting.
-use crate::support;
 use stompymux_rs::*;
 
 /// Representative supported chassis, including fixed ground platforms and landed rotorcraft.
@@ -57,7 +56,7 @@ pub async fn fixture_with_supply(
     computer: bool,
     ammunition_flag: Option<&str>,
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {
-    let (dir, config, world) = support::isolated_world().await;
+    let (dir, config, world) = crate::isolated_world().await;
     let (world, shooter, target, index) = supply_fixture_on(
         world,
         &config,

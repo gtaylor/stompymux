@@ -1,7 +1,6 @@
 //! Integration suite for core 02 scenarios.
 
-#[path = "../support/mod.rs"]
-mod support;
+use stompymux_test_support as support;
 
 #[path = "../behavioral_audit.rs"]
 mod behavioral_audit;

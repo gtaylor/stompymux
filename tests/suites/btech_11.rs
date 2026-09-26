@@ -1,7 +1,6 @@
 //! Integration suite for btech 11 scenarios.
 
-#[path = "../support/mod.rs"]
-mod support;
+use stompymux_test_support as support;
 
 #[path = "../btech_active_probe.rs"]
 mod btech_active_probe;

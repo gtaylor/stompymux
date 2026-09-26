@@ -20,7 +20,7 @@ pub fn copy(source: &Path, target: &Path) {
 pub async fn isolated_world() -> (tempfile::TempDir, Config, World) {
     let directory = tempfile::tempdir().unwrap();
     copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
+        &Path::new(env!("CARGO_MANIFEST_DIR")).join("../fixtures/game"),
         directory.path(),
     );
     let config = Config::load(directory.path()).unwrap();

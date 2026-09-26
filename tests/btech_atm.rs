@@ -1,10 +1,9 @@
 //! ATM construction, typed ammunition markers and shared firing across supported chassis.
+use crate::support;
+use crate::support::btech_defense as defense;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_defense.rs"]
-mod defense;
-use crate::support;
-use crate::support::btech_firing as firing;
 
 /// Catalogue cluster rows and ammo markers preserve the reference's range and damage profile.
 #[test]

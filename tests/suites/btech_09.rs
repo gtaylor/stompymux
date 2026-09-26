@@ -1,7 +1,6 @@
 //! Integration suite for btech 09 scenarios.
 
-#[path = "../support/mod.rs"]
-mod support;
+use stompymux_test_support as support;
 
 #[path = "../btech_bridge_generation.rs"]
 mod btech_bridge_generation;

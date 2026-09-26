@@ -1,7 +1,6 @@
 //! Integration suite for btech 06 scenarios.
 
-#[path = "../support/mod.rs"]
-mod support;
+use stompymux_test_support as support;
 
 #[path = "../btech_aimed_target.rs"]
 mod btech_aimed_target;

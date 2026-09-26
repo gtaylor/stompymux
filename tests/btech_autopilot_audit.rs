@@ -6,8 +6,8 @@
 //! that is easy to regress during integration work.
 
 use crate::{
-    autopilot_support::{heartbeat_snapshots, heartbeat_snapshots_until},
     support,
+    support::autopilot::{heartbeat_snapshots, heartbeat_snapshots_until},
 };
 use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
 use stompymux_rs::btech::autopilot::observations;

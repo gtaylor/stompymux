@@ -1,7 +1,6 @@
 //! Integration suite for btech 08 scenarios.
 
-#[path = "../support/mod.rs"]
-mod support;
+use stompymux_test_support as support;
 
 #[path = "../btech_aim.rs"]
 mod btech_aim;

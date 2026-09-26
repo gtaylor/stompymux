@@ -1,7 +1,6 @@
 //! Integration suite for btech 03 scenarios.
 
-#[path = "../support/mod.rs"]
-mod support;
+use stompymux_test_support as support;
 
 #[path = "../btech_ammunition_templates.rs"]
 mod btech_ammunition_templates;

@@ -1,10 +1,9 @@
 //! Runtime weapon overrides share combat consumers, authority, rollback and restart semantics.
+use crate::support;
+use crate::support::btech_defense as defense;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_defense.rs"]
-mod defense;
-use crate::support;
-use crate::support::btech_firing as firing;
 
 /// Both anatomies expose the same saved countdown without changing the unit.
 fn recycle(world: &World, id: ObjectId, index: usize) -> Option<u16> {
