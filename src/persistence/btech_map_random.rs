@@ -1,6 +1,6 @@
 //! Durable map-owned randomness, independent of unit lifetime and player sessions.
 use super::write::{Cell, fields, row};
-use crate::{BattleDice, ObjectId, StoredBattleMap, World};
+use crate::{ObjectId, StoredBattleMap, World};
 use anyhow::{Context, Result, ensure};
 use sqlx::{Row, SqliteConnection};
 use std::collections::{BTreeMap, BTreeSet};
@@ -15,7 +15,7 @@ async fn installed(c: &mut SqliteConnection) -> Result<bool> {
         == 1)
 }
 
-/// Decode bounded streams and reject orphan records.
+/// Decode typed streams and reject orphan records.
 pub(super) async fn load(
     c: &mut SqliteConnection,
     maps: &mut BTreeMap<ObjectId, StoredBattleMap>,
@@ -24,17 +24,16 @@ pub(super) async fn load(
         return Ok(());
     }
     use futures_util::TryStreamExt;
-    let mut rows = sqlx::query("SELECT map_dbref,length(CAST(dice AS BLOB)) AS bytes,CASE WHEN length(CAST(dice AS BLOB))<=16384 THEN dice ELSE NULL END AS dice FROM btech_map_random").fetch(c);
+    let query = format!(
+        "SELECT map_dbref,{} FROM btech_map_random",
+        super::btech_dice::COLUMNS
+    );
+    let mut rows = sqlx::query(sqlx::AssertSqlSafe(query)).fetch(c);
     while let Some(row) = rows.try_next().await? {
         let map = maps
             .get_mut(&ObjectId(row.try_get("map_dbref")?))
             .context("Random stream references missing map")?;
-        ensure!(
-            row.try_get::<i64, _>("bytes")? <= 16384,
-            "Map random stream exceeds size limit"
-        );
-        let encoded: String = row.try_get("dice")?;
-        map.fire_dice = Some(serde_json::from_str::<BattleDice>(&encoded)?);
+        map.fire_dice = Some(super::btech_dice::read(&row)?);
     }
     Ok(())
 }
@@ -60,24 +59,26 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
                 .execute(&mut *c)
                 .await?;
         }
-        let encoded = serde_json::to_string(dice)?;
-        ensure!(
-            encoded.len() <= 16384,
-            "Map random stream exceeds size limit"
+        let query = format!(
+            "SELECT {} FROM btech_map_random WHERE map_dbref=?",
+            super::btech_dice::COLUMNS
         );
-        let previous: Option<String> =
-            sqlx::query_scalar("SELECT dice FROM btech_map_random WHERE map_dbref=?")
-                .bind(id.0)
-                .fetch_optional(&mut *c)
-                .await?;
+        let previous = match sqlx::query(sqlx::AssertSqlSafe(query))
+            .bind(id.0)
+            .fetch_optional(&mut *c)
+            .await?
+        {
+            Some(stored) => Some(fields(super::btech_dice::fields(&super::btech_dice::read(
+                &stored,
+            )?))),
+            None => None,
+        };
         row(
             c,
             "btech_map_random",
             fields([("map_dbref", Cell::Integer(id.0))]),
-            previous
-                .map(|dice| fields([("dice", Cell::Text(dice))]))
-                .as_ref(),
-            &fields([("dice", Cell::Text(encoded))]),
+            previous.as_ref(),
+            &fields(super::btech_dice::fields(dice)),
         )
         .await?;
         changed = true;

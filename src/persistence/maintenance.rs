@@ -95,6 +95,7 @@ pub(super) async fn cleanup(c: &mut SqliteConnection, purges: &BTreeSet<ObjectId
     super::btech_decorations::purge(c, purges).await?;
     super::btech_map_random::purge(c, purges).await?;
     super::btech_object_order::purge(c, purges).await?;
+    super::btech_sensor_recovery::purge(c, purges).await?;
     // Unknown foreign keys into object tombstones must not silently retain destroyed identities.
     let tables: Vec<String> =
         sqlx::query_scalar("SELECT name FROM sqlite_master WHERE type='table'")

@@ -7511,7 +7511,7 @@ async fn artillery_queue_server_save_failure_and_retry() {
     }).await;
 }
 
-/// Loading rejects a completed cursor still present in the persistent launch queue.
+/// The schema refuses a completed cursor, and loading rejects one longer than its launch allows.
 #[tokio::test]
 async fn artillery_queue_rejects_corrupt_saved_cursor() {
     use sqlx::Connection;
@@ -7532,22 +7532,26 @@ async fn artillery_queue_rejects_corrupt_saved_cursor() {
     )
     .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
-    let mut encoded = serde_json::to_value(world.btech.maps()[&map].artillery_shots()).unwrap();
-    encoded["0"]["flight"]["remaining"] = 0.into();
     let mut sql = sqlx::SqliteConnection::connect_with(
         &sqlx::sqlite::SqliteConnectOptions::new().filename(config.database()),
     )
     .await
     .unwrap();
-    sqlx::query("UPDATE btech_artillery SET shots=? WHERE map_dbref=?")
-        .bind(serde_json::to_string(&encoded).unwrap())
+    assert!(
+        sqlx::query("UPDATE btech_artillery SET remaining=0 WHERE map_dbref=?")
+            .bind(map.0)
+            .execute(&mut sql)
+            .await
+            .is_err()
+    );
+    sqlx::query("UPDATE btech_artillery SET remaining=60000 WHERE map_dbref=?")
         .bind(map.0)
         .execute(&mut sql)
         .await
         .unwrap();
     let error = persistence::load(&config.database()).await.unwrap_err();
     assert!(
-        format!("{error:#}").contains("Invalid queued artillery shot"),
+        format!("{error:#}").contains("Invalid artillery countdown"),
         "{error:#}"
     );
 }

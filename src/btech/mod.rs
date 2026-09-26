@@ -118,6 +118,7 @@ pub use critical::{BattleAmmunitionHazard, BattleCriticalLoss, destroy_unit_crit
 mod damage;
 mod dice;
 pub use damage::{BattleDamagePhase, BattleDamageResult, apply_damage_phase};
+pub(crate) use dice::BattleDiceState;
 pub use dice::{BattleDice, roll_unit_dice};
 mod equipment;
 pub(crate) mod fire_mode;

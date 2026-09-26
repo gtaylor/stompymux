@@ -155,6 +155,66 @@ pub(super) async fn delete(c: &mut SqliteConnection, table: &str, key: Fields) -
         .with_context(|| format!("removing {table} {key:?}"))?;
     Ok(())
 }
+/// Make the rows of `table` within `scope` match `desired`.
+///
+/// `scope` fixes leading key columns, such as the owning object, and may be empty to
+/// cover the whole table. Rows within it are identified by `keys`; `desired` maps each
+/// row's key values to its `columns`. Every key and column must hold an integer or NULL.
+/// Stored rows are read back first, so only changed columns are updated, new rows are
+/// inserted and rows absent from `desired` are deleted. Returns whether anything was
+/// written.
+pub(super) async fn sync_rows(
+    c: &mut SqliteConnection,
+    table: &str,
+    scope: &[(&'static str, i64)],
+    keys: &[&'static str],
+    columns: &[&'static str],
+    desired: &BTreeMap<Vec<i64>, Fields>,
+) -> Result<bool> {
+    let selected: Vec<&str> = keys.iter().chain(columns).copied().collect();
+    let mut query = QueryBuilder::new(format!("SELECT {} FROM {table}", selected.join(",")));
+    let scope_key: Fields = scope
+        .iter()
+        .map(|(name, value)| ((*name).into(), Cell::Integer(*value)))
+        .collect();
+    if !scope_key.is_empty() {
+        query.push(" WHERE ");
+        predicate(&mut query, &scope_key);
+    }
+    let mut stored = BTreeMap::new();
+    for entry in query.build().fetch_all(&mut *c).await? {
+        let key = keys
+            .iter()
+            .map(|name| entry.try_get::<i64, _>(*name))
+            .collect::<Result<Vec<_>, _>>()?;
+        let mut values = Fields::new();
+        for name in columns {
+            let value: Option<i64> = entry.try_get(*name)?;
+            values.insert((*name).into(), value.map_or(Cell::Null, Cell::Integer));
+        }
+        stored.insert(key, values);
+    }
+    let row_key = |values: &[i64]| {
+        let mut key = scope_key.clone();
+        key.extend(
+            keys.iter()
+                .zip(values)
+                .map(|(name, value)| ((*name).into(), Cell::Integer(*value))),
+        );
+        key
+    };
+    let mut changed = false;
+    for (key, values) in desired {
+        let previous = stored.remove(key);
+        changed |= row(c, table, row_key(key), previous.as_ref(), values).await?;
+    }
+    for key in stored.keys() {
+        delete(c, table, row_key(key)).await?;
+        changed = true;
+    }
+    Ok(changed)
+}
+
 /// Supported object fields; relationship-list slots are supplied from durable rows.
 fn object(o: &Object, links: LinkSlots) -> Fields {
     let mut result = fields([

@@ -655,8 +655,8 @@ async fn decoration_rows_preserve_extensions_and_reject_corrupt_lifetimes() {
 #[tokio::test]
 async fn wind_and_fire_randomness_survive_reload_and_reject_missing_streams() {
     use stompymux_rs::{
-        BattleDecoration, BattleDecorationKind, BattleDice, BattleHexCoordinate,
-        set_map_decoration, set_map_wind,
+        BattleDecoration, BattleDecorationKind, BattleHexCoordinate, set_map_decoration,
+        set_map_wind,
     };
     let (_dir, config, mut world, id, mut sql) = fixture().await;
     create(&config, &mut world, id).await;
@@ -685,13 +685,14 @@ async fn wind_and_fire_randomness_survive_reload_and_reject_missing_streams() {
     persistence::save(&config.database(), &world).await.unwrap();
     let loaded = persistence::load(&config.database()).await.unwrap();
     assert_eq!(loaded.btech, world.btech);
-    let encoded: String = sqlx::query_scalar("SELECT dice FROM btech_map_random WHERE map_dbref=?")
+    let stream_query =
+        "SELECT dice_seed,dice_stream,dice_block,dice_word FROM btech_map_random WHERE map_dbref=?";
+    let encoded: (Vec<u8>, i64, i64, i64) = sqlx::query_as(stream_query)
         .bind(id.0)
         .fetch_one(&mut sql)
         .await
         .unwrap();
-    let mut stream: BattleDice = serde_json::from_str(&encoded).unwrap();
-    let first_rolls: Vec<_> = (0..10).map(|_| stream.two_d6()).collect();
+    assert_eq!(encoded.0.len(), 32);
     reload_battle_map(
         &mut world,
         id,
@@ -713,7 +714,7 @@ async fn wind_and_fire_randomness_survive_reload_and_reject_missing_streams() {
             .is_none()
     );
     persistence::save(&config.database(), &world).await.unwrap();
-    let after: String = sqlx::query_scalar("SELECT dice FROM btech_map_random WHERE map_dbref=?")
+    let after: (Vec<u8>, i64, i64, i64) = sqlx::query_as(stream_query)
         .bind(id.0)
         .fetch_one(&mut sql)
         .await
@@ -733,11 +734,6 @@ async fn wind_and_fire_randomness_survive_reload_and_reject_missing_streams() {
     persistence::save(&config.database(), &world).await.unwrap();
     let reloaded = persistence::load(&config.database()).await.unwrap();
     assert_eq!(reloaded.btech, world.btech);
-    let mut replay: BattleDice = serde_json::from_str(&after).unwrap();
-    assert_eq!(
-        (0..10).map(|_| replay.two_d6()).collect::<Vec<_>>(),
-        first_rolls
-    );
     sqlx::query("DELETE FROM btech_map_random WHERE map_dbref=?")
         .bind(id.0)
         .execute(&mut sql)

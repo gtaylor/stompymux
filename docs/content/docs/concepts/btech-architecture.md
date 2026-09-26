@@ -105,6 +105,13 @@ Its tables are a storage format, not a direct serialization of Rust struct
 layouts. Fresh databases are initialized from the SQL schema files in
 `src/persistence/`.
 
+Saved BattleTech state uses typed columns with `CHECK` constraints, and newer
+tables are `STRICT`. Collections such as artillery queues, map-object
+traversal order, computer recovery events and autopilot orders and feedback
+are stored one row per entry, so a save touches only the entries that changed.
+Enums are stored as integer codes documented beside each table. Dice streams
+are stored as their generator key, stream, block and word columns.
+
 Units and vehicles are the exception: each row holds the record as JSON in two
 parts. `unit` holds the core (construction, damage, settings and contacts),
 which changes rarely, and `live` holds per-tick state such as motion, heat,

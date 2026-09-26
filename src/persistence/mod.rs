@@ -3,6 +3,7 @@ mod btech;
 mod btech_autopilot;
 mod btech_character;
 mod btech_decorations;
+mod btech_dice;
 mod btech_map_lifecycle;
 mod btech_map_random;
 mod btech_reactor;
