@@ -216,7 +216,8 @@ pub(super) fn validate_changes(
         expected.purge(purges);
     }
     for (id, map) in after.btech.maps() {
-        if expected.maps().get(id) == Some(map) {
+        if expected.maps.shares_entry(&after.btech.maps, id) || expected.maps().get(id) == Some(map)
+        {
             continue;
         }
         ensure!(
@@ -230,7 +231,7 @@ pub(super) fn validate_changes(
             );
             std::sync::Arc::make_mut(&mut expected.registrations).insert(*id, "MAP".into());
         }
-        expected.maps.insert(*id, map.clone());
+        expected.maps.share_entry_from(&after.btech.maps, id);
     }
     super::btech_gunner_stations::validate_changes(&mut expected, &after.btech)?;
     super::btech_units::validate_changes(&mut expected, &after.btech)?;
@@ -253,10 +254,18 @@ pub(super) fn validate_changes(
         );
         std::sync::Arc::make_mut(&mut expected.registrations).insert(*id, "MECH".into());
     }
-    for (&id, recovery) in after.btech.recoveries() {
-        expected.recoveries.insert(id, recovery.clone());
+    for id in after.btech.recoveries().keys() {
+        expected
+            .recoveries
+            .share_entry_from(&after.btech.recoveries, id);
     }
     for (&id, entries) in after.btech.character_values() {
+        if expected
+            .character_values
+            .shares_entry(&after.btech.character_values, &id)
+        {
+            continue;
+        }
         expected
             .character_values
             .get_or_default(id)
@@ -363,6 +372,9 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
         }
     }
     for (id, map) in after.btech.maps() {
+        if before.btech.maps.shares_entry(&after.btech.maps, id) {
+            continue;
+        }
         let previous = before.btech.maps().get(id);
         if previous == Some(map) {
             continue;

@@ -7,6 +7,7 @@ impl Server {
         if self.shutdown.is_some() {
             return;
         }
+        self.durable = None;
         let snapshot = self.scripts.world.borrow().clone();
         let result = match snapshot.validate(&self.config) {
             Ok(()) => {
@@ -65,6 +66,7 @@ impl Server {
                 self.shutdown_failed = true;
             }
         }
+        self.durable = None;
         let snapshot = self.scripts.world.borrow().clone();
         let result = match snapshot.validate(&self.config) {
             Ok(()) => {

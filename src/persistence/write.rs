@@ -212,9 +212,10 @@ fn scalar(s: &Scalar) -> Result<Fields> {
     ]))
 }
 /// Flatten only supported Lua keys, retaining no deferred data in the Rust world model.
-fn state(w: &World) -> BTreeMap<(i64, String, String), &Scalar> {
-    w.objects
-        .values()
+fn state<'a>(
+    objects: impl Iterator<Item = &'a Object>,
+) -> BTreeMap<(i64, String, String), &'a Scalar> {
+    objects
         .flat_map(|o| {
             o.state.iter().flat_map(move |(ns, values)| {
                 values
@@ -334,31 +335,25 @@ fn relationships(before: &World, after: &World, raw: &Links) -> Result<Links> {
     }
     Ok(links)
 }
-/// Apply a supported projection delta to an already-open write transaction.
-pub(super) async fn apply(c: &mut SqliteConnection, before: &World, after: &World) -> Result<()> {
-    apply_changes(c, before, after, None).await
-}
-/// Explicit maintenance writes may repair lists and remove only approved accounts.
-pub(super) async fn apply_changes(
+/// Write changed object rows, including the containment-list links that moves change.
+///
+/// An object still shared with `before` is unchanged, but its row also holds list links
+/// that a sibling's move can change, so it is skipped only when those links are
+/// unchanged too. Maintenance rewrites lists wholesale and checks every row.
+async fn save_objects(
     c: &mut SqliteConnection,
     before: &World,
     after: &World,
     maintenance: Option<&crate::dbck::RepairPlan>,
-) -> Result<()> {
-    super::btech::validate_changes(before, after, maintenance.map(|plan| &plan.purges))?;
-    ensure!(
-        before.objects.keys().all(|k| after.objects.contains_key(k)),
-        "object deletion is not supported; deferred rows must be preserved"
-    );
-    ensure!(
-        before
-            .accounts
-            .keys()
-            .all(|k| after.accounts.contains_key(k)
-                || maintenance.is_some_and(|plan| plan.purges.contains(k))),
-        "account deletion is not supported"
-    );
+) -> Result<bool> {
+    if maintenance.is_none() && before.objects.ptr_eq(&after.objects) {
+        return Ok(false);
+    }
+    // A new cycle must pass through an object whose location changed.
     for o in after.objects.values() {
+        if maintenance.is_none() && before.objects.shares_entry(&after.objects, &o.id) {
+            continue;
+        }
         let chain = after.containment_chain(o.location)?;
         ensure!(!chain.contains(&o.id), "containment cycle at #{}", o.id.0);
     }
@@ -387,10 +382,16 @@ pub(super) async fn apply_changes(
     };
     let mut changed = false;
     for (id, o) in &after.objects {
-        let mut old = before
-            .objects
-            .get(id)
-            .map(|o| object(o, raw.get(id).copied().unwrap_or_default()));
+        let stored = raw.get(id).copied().unwrap_or_default();
+        let linked = links.get(id).copied().unwrap_or_default();
+        if maintenance.is_none()
+            && before.objects.shares_entry(&after.objects, id)
+            && stored == linked
+            && !connected.contains(id)
+        {
+            continue;
+        }
+        let mut old = before.objects.get(id).map(|o| object(o, stored));
         if connected.contains(id)
             && let Some(old) = old.as_mut()
         {
@@ -401,10 +402,38 @@ pub(super) async fn apply_changes(
             "objects",
             fields([("dbref", Cell::Integer(id.0))]),
             old.as_ref(),
-            &object(o, links.get(id).copied().unwrap_or_default()),
+            &object(o, linked),
         )
         .await?;
     }
+    Ok(changed)
+}
+/// Apply a supported projection delta to an already-open write transaction, reporting
+/// whether any row changed.
+pub(super) async fn apply(c: &mut SqliteConnection, before: &World, after: &World) -> Result<bool> {
+    apply_changes(c, before, after, None).await
+}
+/// Explicit maintenance writes may repair lists and remove only approved accounts.
+pub(super) async fn apply_changes(
+    c: &mut SqliteConnection,
+    before: &World,
+    after: &World,
+    maintenance: Option<&crate::dbck::RepairPlan>,
+) -> Result<bool> {
+    super::btech::validate_changes(before, after, maintenance.map(|plan| &plan.purges))?;
+    ensure!(
+        before.objects.keys().all(|k| after.objects.contains_key(k)),
+        "object deletion is not supported; deferred rows must be preserved"
+    );
+    ensure!(
+        before
+            .accounts
+            .keys()
+            .all(|k| after.accounts.contains_key(k)
+                || maintenance.is_some_and(|plan| plan.purges.contains(k))),
+        "account deletion is not supported"
+    );
+    let mut changed = save_objects(c, before, after, maintenance).await?;
     for (id, a) in &after.accounts {
         let old = before.accounts.get(id).map(account);
         changed |= row(
@@ -444,8 +473,15 @@ pub(super) async fn apply_changes(
         }
     }
 
-    let old = state(before);
-    let new = state(after);
+    // An object still shared with the baseline carries the baseline's own Lua state.
+    let edited: Vec<ObjectId> = after
+        .objects
+        .keys()
+        .filter(|id| !before.objects.shares_entry(&after.objects, id))
+        .copied()
+        .collect();
+    let old = state(edited.iter().filter_map(|id| before.objects.get(id)));
+    let new = state(edited.iter().filter_map(|id| after.objects.get(id)));
     for (key, value) in &new {
         if old.get(key) == Some(value) {
             continue;
@@ -489,7 +525,8 @@ pub(super) async fn apply_changes(
         .next_id
         .max(before.next_id)
         .max(after.objects.keys().next_back().map_or(0, |id| id.0 + 1));
-    if changed || next != before.next_id || after.record_players != before.record_players {
+    changed |= next != before.next_id || after.record_players != before.record_players;
+    if changed {
         sqlx::query(
             "UPDATE snapshot SET db_top=max(db_top,?1),record_players=?2,dump_time=?3 WHERE id=1",
         )
@@ -499,5 +536,5 @@ pub(super) async fn apply_changes(
         .execute(&mut *c)
         .await?;
     }
-    Ok(())
+    Ok(changed)
 }

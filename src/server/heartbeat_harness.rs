@@ -47,6 +47,8 @@ impl HeartbeatHarness {
                 controls: Default::default(),
                 idle_recheck: false,
                 message_cache: Default::default(),
+                durable: None,
+                database_anchor: None,
             },
         })
     }

@@ -117,6 +117,8 @@ mod tests {
             controls: Default::default(),
             idle_recheck: false,
             message_cache: Default::default(),
+            durable: None,
+            database_anchor: None,
         };
         let (output, mut received) = mpsc::channel(128);
         let now = Instant::now();

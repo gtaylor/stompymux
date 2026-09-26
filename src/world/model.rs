@@ -58,7 +58,7 @@ impl Kind {
 }
 
 /// Persistent and transactional state for one world object.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Object {
     #[serde(skip)]
     pub generation: crate::state::Generation,
@@ -79,6 +79,14 @@ pub struct Object {
     pub flags: crate::flags::FlagSet,
     pub powers: crate::powers::PowerSet,
     pub state: crate::state::State,
+}
+
+/// Compare values that have no `PartialEq` by their saved form.
+fn serialized_eq<T: Serialize>(a: &T, b: &T) -> bool {
+    matches!(
+        (serde_json::to_vec(a), serde_json::to_vec(b)),
+        (Ok(a), Ok(b)) if a == b
+    )
 }
 
 /// Complete transactional world state.
@@ -117,6 +125,26 @@ impl World {
             *self = before;
         }
         result
+    }
+
+    /// True when nothing the database stores differs from `other`.
+    ///
+    /// Shared collections compare entry by entry with a pointer check first, so this is
+    /// cheap when little changed. It may report a difference in fields the database does
+    /// not store, but never misses one it does. Runtime-only fields (links, palette and
+    /// retired roll statistics) are ignored.
+    pub fn saved_state_eq(&self, other: &World) -> bool {
+        self.next_id == other.next_id
+            && self.record_players == other.record_players
+            && self.initialized == other.initialized
+            && self.objects == other.objects
+            && self.accounts == other.accounts
+            && self.channel_aliases == other.channel_aliases
+            && self.last_pages == other.last_pages
+            && self.btech == other.btech
+            && (self.channels.ptr_eq(&other.channels)
+                || serialized_eq(&self.channels, &other.channels))
+            && serialized_eq(&self.macros, &other.macros)
     }
 
     /// Resolve a player by dbref, display name, or account alias.

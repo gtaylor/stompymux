@@ -45,14 +45,25 @@ async fn save(c: &Config, s: &Scripts) -> anyhow::Result<()> {
     persistence::save(&c.database(), &snapshot).await
 }
 
+/// Open the database as the server would leave it, in write-ahead-log mode.
 async fn sql(c: &Config) -> SqliteConnection {
     SqliteConnection::connect_with(
         &sqlx::sqlite::SqliteConnectOptions::new()
             .filename(c.database())
-            .foreign_keys(false),
+            .foreign_keys(false)
+            .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal),
     )
     .await
     .unwrap()
+}
+
+/// Database file bytes with every committed write folded in from the write-ahead log.
+async fn settled_image(db: &mut SqliteConnection, c: &Config) -> Vec<u8> {
+    sqlx::query("PRAGMA wal_checkpoint(TRUNCATE)")
+        .execute(&mut *db)
+        .await
+        .unwrap();
+    std::fs::read(c.database()).unwrap()
 }
 
 #[tokio::test(flavor = "current_thread")]
@@ -155,9 +166,9 @@ async fn existing_rows_compact_with_extension_identity_and_restart() {
     let mut db = sql(&c).await;
     sqlx::raw_sql("ALTER TABLE macro_sets ADD COLUMN opaque BLOB; ALTER TABLE macro_entries ADD COLUMN opaque BLOB; INSERT INTO macro_sets VALUES(0,1,128,'same',X'00'),(1,1,128,'same',X'01'),(2,1,128,'same',X'02'); INSERT INTO macro_entries VALUES(2,0,'b','look',X'62'),(2,1,'d','global-hello',X'64'); INSERT INTO commac_entries VALUES(1,0,1,2,2,-1,-1),(2,1,2,1,-1,-1,-1);").execute(&mut db).await.unwrap();
     *s.world_mut() = persistence::load(&c.database()).await.unwrap();
-    let image = std::fs::read(c.database()).unwrap();
+    let image = settled_image(&mut db, &c).await;
     save(&c, &s).await.unwrap();
-    assert_eq!(std::fs::read(c.database()).unwrap(), image);
+    assert_eq!(settled_image(&mut db, &c).await, image);
     run(&s, &c, 1, ".clear");
     save(&c, &s).await.unwrap();
     let opaque: Vec<(i64, Vec<u8>)> =
@@ -274,10 +285,10 @@ async fn malformed_storage_fails_contextually_and_is_never_normalized() {
         let (_d, c, _s) = fixture().await;
         let mut db = sql(&c).await;
         sqlx::raw_sql(sql_text).execute(&mut db).await.unwrap();
-        let image = std::fs::read(c.database()).unwrap();
+        let image = settled_image(&mut db, &c).await;
         let error = persistence::load(&c.database()).await.unwrap_err();
         assert!(format!("{error:#}").contains(expected), "{error:#}");
-        assert_eq!(std::fs::read(c.database()).unwrap(), image);
+        assert_eq!(settled_image(&mut db, &c).await, image);
         db.close().await.unwrap();
     }
 }
@@ -336,11 +347,11 @@ async fn unknown_required_columns_refuse_insert_without_losing_existing_rows() {
         .execute(&mut db)
         .await
         .unwrap();
-    let image = std::fs::read(c.database()).unwrap();
+    let image = settled_image(&mut db, &c).await;
     run(&s, &c, 2, ".create rejected");
     let error = save(&c, &s).await.unwrap_err();
     assert!(format!("{error:#}").contains("writing macro set 0"));
-    assert_eq!(std::fs::read(c.database()).unwrap(), image);
+    assert_eq!(settled_image(&mut db, &c).await, image);
     assert!(
         persistence::load(&c.database())
             .await

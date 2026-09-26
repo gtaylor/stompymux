@@ -283,6 +283,33 @@ impl Default for AutopilotController {
 }
 
 impl AutopilotController {
+    /// Whether two controllers match in everything the database stores. Sensor memory
+    /// is not saved, so it is ignored. Every other field is named here, so adding a
+    /// field forces a decision about whether it is saved.
+    pub(crate) fn same_saved_state(&self, other: &Self) -> bool {
+        let Self {
+            config,
+            state,
+            blocking_reason,
+            revision,
+            next_order_id,
+            active,
+            queue,
+            feedback,
+            next_feedback_sequence,
+            sightings: _,
+        } = self;
+        *config == other.config
+            && *state == other.state
+            && *blocking_reason == other.blocking_reason
+            && *revision == other.revision
+            && *next_order_id == other.next_order_id
+            && *active == other.active
+            && *queue == other.queue
+            && *feedback == other.feedback
+            && *next_feedback_sequence == other.next_feedback_sequence
+    }
+
     /// Create a paused controller with no pending intent.
     pub fn new() -> Self {
         Self {

@@ -3,9 +3,15 @@
 use super::*;
 
 impl Server {
+    /// Validate and persist the live world, or restore `before` and roll back every
+    /// staged effect. Only rows that differ from the stored world are written.
     pub(super) async fn commit(&mut self, before: World) -> bool {
         let after = self.scripts.world.borrow().clone();
-        let mut saved = false;
+        let maintenance = self.scripts.effects.maintenance();
+        let requested = maintenance.is_some() || self.scripts.effects.save_requested();
+        // Maintenance rewrites rows from the stored world, so it leaves no trusted baseline.
+        let trusted = maintenance.is_none();
+        let durable = self.durable.take();
         let result = match self
             .scripts
             .effects
@@ -14,55 +20,73 @@ impl Server {
             .and_then(|()| after.validate(&self.config))
         {
             Err(e) => Err(e),
-            Ok(()) => match (serde_json::to_vec(&before), serde_json::to_vec(&after)) {
-                (Ok(a), Ok(b))
-                    if a == b
-                        && self.scripts.effects.maintenance().is_none()
-                        && !self.scripts.effects.save_requested() =>
-                {
-                    Ok(())
-                }
-                _ => {
-                    saved = true;
-                    persistence::persist_effects(
-                        self.config.database(),
-                        after,
-                        self.config.database.busy_timeout_ms,
-                        self.scripts.effects.maintenance(),
-                    )
-                    .await
-                }
-            },
+            // A transaction that changed nothing never touches the database.
+            Ok(()) if !requested && after.saved_state_eq(&before) => {
+                self.durable = durable;
+                return self.committed(false);
+            }
+            Ok(()) => {
+                persistence::persist_effects(
+                    self.config.database(),
+                    after.clone(),
+                    self.config.database.busy_timeout_ms,
+                    maintenance,
+                    durable.as_ref(),
+                )
+                .await
+            }
         };
-        if let Err(e) = result {
-            self.config.log(
-                &[
-                    crate::logging::Category::Checkpoints,
-                    crate::logging::Category::Problems,
-                ],
-                "DB",
-                "CHECK",
-                format!("Persistence failed: {e:#}"),
-            );
-            if self.shutdown.is_some() {
-                self.shutdown_failed = true;
-            }
-            *self.scripts.world.borrow_mut() = before;
-            self.reconcile_connections();
-            self.scripts.effects.rollback();
-            false
-        } else {
-            self.finish_maintenance();
-            if saved {
+        match result {
+            Err(e) => {
                 self.config.log(
-                    &[crate::logging::Category::Checkpoints],
+                    &[
+                        crate::logging::Category::Checkpoints,
+                        crate::logging::Category::Problems,
+                    ],
                     "DB",
-                    "SAVE",
-                    "World changes committed.",
+                    "CHECK",
+                    format!("Persistence failed: {e:#}"),
                 );
+                if self.shutdown.is_some() {
+                    self.shutdown_failed = true;
+                }
+                *self.scripts.world.borrow_mut() = before;
+                self.reconcile_connections();
+                self.scripts.effects.rollback();
+                false
             }
-            true
+            Ok(changed) => {
+                self.durable = trusted.then_some(after);
+                self.keep_database_open().await;
+                self.committed(changed || requested)
+            }
         }
+    }
+    /// Hold the database open between saves once a save has validated it; see
+    /// [`persistence::DatabaseAnchor`]. It is an optimization only, so a failure to open
+    /// it is left for later saves to report.
+    async fn keep_database_open(&mut self) {
+        if self.database_anchor.is_none() {
+            self.database_anchor = persistence::DatabaseAnchor::open(
+                &self.config.database(),
+                self.config.database.busy_timeout_ms,
+            )
+            .await
+            .ok();
+        }
+    }
+    /// Finish a successful commit, logging a save when rows were written or requested.
+    fn committed(&mut self, saved: bool) -> bool {
+        self.finish_maintenance();
+        if saved {
+            self.config.log(
+                &[crate::logging::Category::Checkpoints],
+                "DB",
+                "SAVE",
+                "World changes committed.",
+            );
+        }
+        true
     }
     /// Apply session effects only after the maintenance transaction is durable.
     pub(super) fn finish_maintenance(&mut self) {

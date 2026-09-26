@@ -45,6 +45,15 @@ debug and test builds only, so a broken operation fails where it happened.
 Commands that rely on validation to reject wizard or player input call
 `validate` directly.
 
+The server also keeps the world as it last saved it. Each commit writes only
+the rows that differ from that baseline, skipping every entry still shared
+with it, and a transaction that changed nothing never touches the database.
+After a failed save, a maintenance repair, or any write outside the ordinary
+commit path, the baseline is dropped and the next save reads the stored world
+instead. The database runs in write-ahead-log mode with full sync, and the
+server holds one idle connection open so SQLite folds the log back into the
+database at its normal checkpoint interval rather than after every save.
+
 The gameplay modules are organized around focused rules and state transitions:
 
 | Area | Examples in `src/btech/` |

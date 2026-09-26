@@ -141,7 +141,11 @@ pub(super) async fn save(
 
     let mut changed = false;
     for (&id, controller) in after.controllers() {
-        if before.controllers().get(&id) == Some(controller) {
+        if before
+            .controllers()
+            .get(&id)
+            .is_some_and(|old| old.same_saved_state(controller))
+        {
             continue;
         }
         let encoded = encode(id, controller)?;

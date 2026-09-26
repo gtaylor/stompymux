@@ -45,7 +45,9 @@ pub(super) async fn load(c: &mut SqliteConnection, state: &mut BtechState) -> Re
 /// Incorporate supported unit writes into the enclosing identity change validator.
 pub(super) fn validate_changes(expected: &mut BtechState, after: &BtechState) -> Result<()> {
     for (&id, unit) in after.constructed_units() {
-        if expected.constructed_units().get(&id) == Some(unit) {
+        if expected.constructed.shares_entry(&after.constructed, &id)
+            || expected.constructed_units().get(&id) == Some(unit)
+        {
             continue;
         }
         unit.validate()?;
@@ -62,7 +64,9 @@ pub(super) fn validate_changes(expected: &mut BtechState, after: &BtechState) ->
             Arc::make_mut(&mut expected.registrations).insert(id, "MECH".into());
         }
         expected.units.insert(id, unit.identity());
-        expected.constructed.insert(id, unit.clone());
+        expected
+            .constructed
+            .share_entry_from(&after.constructed, &id);
     }
     Ok(())
 }
@@ -70,15 +74,27 @@ pub(super) fn validate_changes(expected: &mut BtechState, after: &BtechState) ->
 /// Commit unit state and registration inside the world transaction after object creation.
 pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World) -> Result<bool> {
     let mut changed = false;
+    let mut table_ready = false;
     for (&id, unit) in after.btech.constructed_units() {
+        // A still-shared entry is the baseline's own record, unchanged by definition.
+        if before
+            .btech
+            .constructed
+            .shares_entry(&after.btech.constructed, &id)
+        {
+            continue;
+        }
         let previous = before.btech.constructed_units().get(&id);
         if previous == Some(unit) {
             continue;
         }
-        if !installed(c).await? {
-            sqlx::raw_sql(include_str!("btech_units.sql"))
-                .execute(&mut *c)
-                .await?;
+        if !table_ready {
+            if !installed(c).await? {
+                sqlx::raw_sql(include_str!("btech_units.sql"))
+                    .execute(&mut *c)
+                    .await?;
+            }
+            table_ready = true;
         }
         let encoded = serde_json::to_string(unit)?;
         ensure!(encoded.len() <= 1_048_576, "Unit state exceeds size limit");

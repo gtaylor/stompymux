@@ -80,6 +80,24 @@ impl<K: Ord, V> SharedMap<K, V> {
         self.0.last_key_value().map(|(key, value)| (key, &**value))
     }
 
+    /// True when both maps hold the very same allocation for `key`, which proves the
+    /// entry is unchanged without comparing it. An absent key is never shared.
+    pub fn shares_entry<Q>(&self, other: &Self, key: &Q) -> bool
+    where
+        K: Borrow<Q>,
+        Q: Ord + ?Sized,
+    {
+        match (self.0.get(key), other.0.get(key)) {
+            (Some(mine), Some(theirs)) => Arc::ptr_eq(mine, theirs),
+            _ => false,
+        }
+    }
+
+    /// True when both maps are the same allocation, so no entry can differ.
+    pub fn ptr_eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.0, &other.0)
+    }
+
     /// True when the key is present.
     pub fn contains_key<Q>(&self, key: &Q) -> bool
     where
@@ -109,6 +127,14 @@ impl<K: Ord + Clone, V: Clone> SharedMap<K, V> {
         V: Default,
     {
         Arc::make_mut(Arc::make_mut(&mut self.0).entry(key).or_default())
+    }
+
+    /// Insert `source`'s entry for `key`, sharing it instead of copying it. Does nothing
+    /// when `source` has no such entry.
+    pub fn share_entry_from(&mut self, source: &Self, key: &K) {
+        if let Some(value) = source.0.get(key) {
+            Arc::make_mut(&mut self.0).insert(key.clone(), Arc::clone(value));
+        }
     }
 
     /// Insert or replace an entry, returning the previous one.
@@ -189,9 +215,17 @@ impl<K: fmt::Debug, V: fmt::Debug> fmt::Debug for SharedMap<K, V> {
     }
 }
 
+/// Shared entries compare equal by pointer before any value comparison, so comparing a
+/// map with an edited copy of itself only inspects the entries that changed.
 impl<K: PartialEq, V: PartialEq> PartialEq for SharedMap<K, V> {
     fn eq(&self, other: &Self) -> bool {
-        Arc::ptr_eq(&self.0, &other.0) || self.0 == other.0
+        Arc::ptr_eq(&self.0, &other.0)
+            || (self.0.len() == other.0.len()
+                && self.0.iter().zip(other.0.iter()).all(
+                    |((mine_key, mine), (their_key, theirs))| {
+                        mine_key == their_key && (Arc::ptr_eq(mine, theirs) || mine == theirs)
+                    },
+                ))
     }
 }
 
@@ -295,6 +329,32 @@ mod tests {
         assert!(map.is_empty());
         assert_eq!(snapshot.len(), 1);
         assert_ne!(map, snapshot);
+    }
+
+    /// Sharing is visible per entry, survives copying an entry across, and never
+    /// changes what equality means.
+    #[test]
+    fn shared_entries_are_detected_and_copied_by_reference() {
+        let mut map: SharedMap<u32, String> = [(1, "one".to_owned()), (2, "two".to_owned())]
+            .into_iter()
+            .collect();
+        let snapshot = map.clone();
+        assert!(map.ptr_eq(&snapshot));
+        map.get_mut(&1).unwrap().push('!');
+        assert!(!map.ptr_eq(&snapshot));
+        assert!(!map.shares_entry(&snapshot, &1));
+        assert!(map.shares_entry(&snapshot, &2));
+        assert!(!map.shares_entry(&snapshot, &3));
+        let mut rebuilt = snapshot.clone();
+        rebuilt.share_entry_from(&map, &1);
+        assert!(rebuilt.shares_entry(&map, &1));
+        assert_eq!(rebuilt, map);
+        let equal_but_unshared: SharedMap<u32, String> =
+            [(1, "one!".to_owned()), (2, "two".to_owned())]
+                .into_iter()
+                .collect();
+        assert_eq!(equal_but_unshared, map);
+        assert_ne!(snapshot, map);
     }
 
     /// Serialization matches a plain `BTreeMap`, so persisted formats are unchanged.

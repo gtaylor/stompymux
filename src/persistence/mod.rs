@@ -18,9 +18,16 @@ mod maintenance;
 mod write;
 use crate::{accounts::Login, world::*};
 use anyhow::{Context, Result, ensure};
-use sqlx::{Connection, SqliteConnection, sqlite::SqliteConnectOptions};
+use sqlx::{
+    Connection, SqliteConnection,
+    sqlite::{SqliteConnectOptions, SqliteSynchronous},
+};
 use std::path::{Path, PathBuf};
 /// Open an operation-scoped connection without altering journal or foreign-key policy.
+///
+/// Every connection uses full sync, so a commit is on disk once it returns, even across
+/// a power loss. Writers switch a validated database to write-ahead-log mode with
+/// [`use_write_ahead_log`].
 async fn connect(
     path: &Path,
     timeout: u64,
@@ -33,9 +40,46 @@ async fn connect(
             .read_only(readonly)
             .create_if_missing(create)
             .foreign_keys(false)
+            .synchronous(SqliteSynchronous::Full)
             .busy_timeout(std::time::Duration::from_millis(timeout)),
     )
     .await?)
+}
+/// Put a validated database in write-ahead-log mode, which SQLite keeps in the file.
+///
+/// A commit then costs one sync of the log instead of the rollback journal's several.
+/// This must run outside a transaction, and only after validation, so that an empty or
+/// foreign file is never rewritten.
+async fn use_write_ahead_log(c: &mut SqliteConnection) -> Result<()> {
+    let mode: String = sqlx::query_scalar("PRAGMA journal_mode=WAL")
+        .fetch_one(&mut *c)
+        .await?;
+    ensure!(
+        mode.eq_ignore_ascii_case("wal"),
+        "SQLite kept journal mode {mode} instead of write-ahead logging"
+    );
+    Ok(())
+}
+/// An idle connection that keeps the database open between saves.
+///
+/// Each save opens and closes its own connection. In write-ahead-log mode SQLite copies
+/// the log back into the database whenever the last connection closes, which would cost
+/// every save a second round of syncs. While this connection is held, that copy happens
+/// only at SQLite's normal checkpoint interval.
+pub struct DatabaseAnchor {
+    _connection: SqliteConnection,
+}
+
+impl DatabaseAnchor {
+    /// Open the anchor for a database that a save has already validated. Reading the
+    /// schema joins the write-ahead log, which is what keeps the log open.
+    pub async fn open(path: &Path, timeout: u64) -> Result<Self> {
+        let mut connection = connect(path, timeout, false, false).await?;
+        validate(&mut connection).await?;
+        Ok(Self {
+            _connection: connection,
+        })
+    }
 }
 /// Drain the worker before returning, preserving the original operation error.
 async fn finish<T>(connection: SqliteConnection, result: Result<T>) -> Result<T> {
@@ -105,17 +149,39 @@ pub async fn save(path: &Path, world: &World) -> Result<()> {
 }
 /// Compare and write within one transaction; missing destinations are never created here.
 pub async fn save_with_timeout(path: &Path, world: &World, timeout: u64) -> Result<()> {
+    save_changes(path, None, world, timeout).await.map(|_| ())
+}
+/// Write `world` as a diff against `baseline`, the world this database last stored.
+///
+/// A baseline spares reading the whole database back before diffing, and lets the
+/// diff skip every entry the two worlds still share. Pass `None` unless the database
+/// is known to hold exactly `baseline`; the stored world is then read instead.
+/// Returns whether any row changed.
+pub(crate) async fn save_changes(
+    path: &Path,
+    baseline: Option<&World>,
+    world: &World,
+    timeout: u64,
+) -> Result<bool> {
     let mut c = connect(path, timeout, false, false).await?;
     let result = async {
+        validate(&mut c).await?;
+        use_write_ahead_log(&mut c).await?;
         let mut tx = c.begin_with("BEGIN IMMEDIATE").await?;
-        validate(&mut tx).await?;
-        let before = load::read(&mut tx).await?;
-        write::apply(&mut tx, &before, world).await?;
+        let stored;
+        let before = match baseline {
+            Some(baseline) => baseline,
+            None => {
+                stored = load::read(&mut tx).await?;
+                &stored
+            }
+        };
+        let changed = write::apply(&mut tx, before, world).await?;
         tx.commit().await?;
         world.macros.committed();
         // Unregister sanctions served their purpose once the teardown is durable.
         world.btech.retire_sanctions.borrow_mut().clear();
-        Ok(())
+        Ok(changed)
     }
     .await;
     finish(c, result).await
@@ -149,6 +215,7 @@ pub async fn initialize_with_timeout(path: &Path, world: &World, timeout: u64) -
     let result = async {
         let mut c = connect(path, timeout, false, false).await?;
         let result = async {
+            use_write_ahead_log(&mut c).await?;
             let mut tx = c.begin_with("BEGIN IMMEDIATE").await?;
             sqlx::raw_sql(include_str!("schema32.sql"))
                 .execute(&mut *tx)
@@ -204,8 +271,9 @@ where
 {
     let mut c = connect(path, timeout, false, false).await?;
     let result = async {
+        validate(&mut c).await?;
+        use_write_ahead_log(&mut c).await?;
         let mut tx = c.begin_with("BEGIN IMMEDIATE").await?;
-        validate(&mut tx).await?;
         let integrity: Vec<String> = sqlx::query_scalar("PRAGMA integrity_check")
             .fetch_all(&mut *tx)
             .await?;
@@ -290,14 +358,18 @@ pub async fn inspect_links(
 }
 
 /// Persist a callback's approved maintenance effects with all ordinary mutations.
+///
+/// Without maintenance, `baseline` is passed on to [`save_changes`]; maintenance always
+/// reads the stored world. Returns whether any row may have changed.
 pub(crate) async fn persist_effects(
     path: PathBuf,
     world: World,
     timeout: u64,
     report: Option<crate::dbck::DbCheckReport>,
-) -> Result<()> {
+    baseline: Option<&World>,
+) -> Result<bool> {
     let Some(mut report) = report else {
-        return persist(path, world, timeout).await;
+        return save_changes(&path, baseline, &world, timeout).await;
     };
     for id in &report.plan.purges {
         let o = world
@@ -326,7 +398,7 @@ pub(crate) async fn persist_effects(
         Ok((world, report))
     })
     .await
-    .map(|_| ())
+    .map(|_| true)
 }
 
 mod btech_values;

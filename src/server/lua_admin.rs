@@ -102,14 +102,14 @@ impl Server {
             self.snapshots_for(&candidate)?;
             let after = candidate.world.borrow().clone();
             after.validate(&self.config)?;
-            if serde_json::to_vec(&before)? != serde_json::to_vec(&after)?
-                || candidate.effects.maintenance().is_some()
-            {
+            if !after.saved_state_eq(&before) || candidate.effects.maintenance().is_some() {
+                self.durable = None;
                 persistence::persist_effects(
                     self.config.database(),
                     after,
                     self.config.database.busy_timeout_ms,
                     candidate.effects.maintenance(),
+                    None,
                 )
                 .await?;
             }

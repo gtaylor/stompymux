@@ -782,6 +782,88 @@ impl std::io::Write for GameplayDigest {
 }
 
 #[cfg(test)]
+mod persistence_tests {
+    use super::*;
+
+    /// Heartbeats save against the in-memory baseline instead of rereading the database.
+    /// After firing, damage, a terrain edit and object moves and creation between ticks,
+    /// a full comparison with the stored world must find nothing left to write, and the
+    /// stored containment lists must match the live world.
+    #[tokio::test]
+    async fn baseline_saves_leave_nothing_for_a_full_comparison() {
+        let root = copy_game_root().unwrap();
+        let config = Config::load(&root).unwrap();
+        let initial = persistence::load(&config.database()).await.unwrap();
+        let (mut world, map_id) =
+            fixture_world(&config, initial, BenchmarkScenario::Open, true, 16, 7).unwrap();
+        let east = world.create(&config, "East".into(), Kind::Room);
+        let west = world.create(&config, "West".into(), Kind::Room);
+        let cargo: Vec<_> = ["Crate", "Barrel", "Drum"]
+            .map(|name| world.create(&config, name.into(), Kind::Thing))
+            .into();
+        for id in &cargo {
+            world.objects.get_mut(id).unwrap().location = Some(east);
+        }
+        let relocate = |harness: &HeartbeatHarness, id, room| {
+            harness
+                .scripts()
+                .world_mut()
+                .objects
+                .get_mut(&id)
+                .unwrap()
+                .location = Some(room);
+        };
+        persistence::save(&config.database(), &world).await.unwrap();
+        let mut harness = HeartbeatHarness::new(config.clone(), world).unwrap();
+        let mut shots = 0;
+        for tick in 0..60 {
+            match tick {
+                10 => relocate(&harness, cargo[1], west),
+                20 => alter_benchmark_terrain(&mut harness, map_id, true),
+                30 => {
+                    let late = harness.scripts().world_mut().create(
+                        &config,
+                        "Late arrival".into(),
+                        Kind::Thing,
+                    );
+                    relocate(&harness, late, east);
+                    relocate(&harness, cargo[0], west);
+                }
+                40 => relocate(&harness, cargo[1], east),
+                _ => {}
+            }
+            let heartbeat = harness.step(1_000_000 + tick).await;
+            assert!(heartbeat.committed);
+            shots += heartbeat.autopilot.autonomous_shots;
+        }
+        assert!(shots > 0, "the workload must save combat damage");
+        let live = harness.world();
+        let written = persistence::save_changes(
+            &config.database(),
+            None,
+            &live,
+            config.database.busy_timeout_ms,
+        )
+        .await
+        .unwrap();
+        assert!(!written, "baseline saves left rows unwritten");
+        persistence::validate_lists(&config.database(), &live, config.database.busy_timeout_ms)
+            .await
+            .unwrap();
+        let stored = persistence::load(&config.database()).await.unwrap();
+        // Autopilot sensor memory deliberately does not survive a restart.
+        let [stored, live] = [&stored, &live].map(|world| {
+            let mut state = serde_json::to_value(&world.btech).unwrap();
+            for controller in state["controllers"].as_object_mut().unwrap().values_mut() {
+                controller.as_object_mut().unwrap().remove("sightings");
+            }
+            state
+        });
+        assert_eq!(stored, live);
+    }
+}
+
+#[cfg(test)]
 mod budget_tests {
     use super::*;
 

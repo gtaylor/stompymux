@@ -146,6 +146,7 @@ impl Server {
             return;
         }
         let before = self.scripts.world.borrow().clone();
+        self.durable = None;
         let result = persistence::repair(
             &self.config.database(),
             self.config.database.busy_timeout_ms,

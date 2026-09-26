@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Persistent authentication state associated with a player object.
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct Account {
     pub hash: Option<String>,
     pub alias: Option<String>,

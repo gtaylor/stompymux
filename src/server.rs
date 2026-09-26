@@ -89,4 +89,10 @@ struct Server {
     controls: crate::controls::Controls,
     idle_recheck: bool,
     message_cache: crate::message_cache::MessageCache,
+    /// The world as the database last stored it, used as the baseline for the next save.
+    /// `None` whenever that is uncertain, for example after a failed commit or a write
+    /// outside the ordinary commit path; the next save then reads the stored world.
+    durable: Option<World>,
+    /// Keeps the database open between saves once the first save has run.
+    database_anchor: Option<persistence::DatabaseAnchor>,
 }

@@ -44,6 +44,14 @@ cargo run -- serve --game-dir game-local
 
 The server reads `game-local/stompymux.toml` and saves supported world changes
 to the configured SQLite database. Run only one server against a given database.
+
+The database uses SQLite's write-ahead log. While the server runs, recent saves
+live in `stompymux.db-wal` beside the database, and SQLite folds them back into
+`stompymux.db` when the server stops. Copy or move the database only while the
+server is stopped, and if a crash left `stompymux.db-wal` or `stompymux.db-shm`
+behind, keep them with it. For a copy of a running game, use
+`sqlite3 stompymux.db ".backup copy.db"`.
+
 The stock configuration listens on `127.0.0.1:5555`. You can override the
 listener for one run:
 
