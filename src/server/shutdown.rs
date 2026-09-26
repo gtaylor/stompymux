@@ -88,5 +88,15 @@ impl Server {
             );
             self.shutdown_failed = true;
         }
+        if let Some(anchor) = self.database_anchor.take()
+            && let Err(e) = anchor.close().await
+        {
+            self.config.log(
+                &[crate::logging::Category::Problems],
+                "SHT",
+                "ERROR",
+                format!("Closing the database failed: {e:#}"),
+            );
+        }
     }
 }

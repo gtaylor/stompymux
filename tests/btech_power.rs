@@ -151,19 +151,9 @@ async fn override_requires_wizard_and_corrupt_countdowns_fail_loading() {
     )
     .await
     .unwrap();
-    let encoded: String = sqlx::query_scalar("SELECT unit FROM btech_units WHERE dbref=?")
-        .bind(id.0)
-        .fetch_one(&mut sql)
-        .await
-        .unwrap();
-    let mut unit: serde_json::Value = serde_json::from_str(&encoded).unwrap();
+    let mut unit = support::unit_record(&mut sql, "btech_units", id).await;
     unit["power"]["remaining"] = 0.into();
-    sqlx::query("UPDATE btech_units SET unit=? WHERE dbref=?")
-        .bind(unit.to_string())
-        .bind(id.0)
-        .execute(&mut sql)
-        .await
-        .unwrap();
+    support::store_unit_record(&mut sql, "btech_units", id, &unit).await;
     assert!(
         format!(
             "{:#}",
@@ -240,12 +230,7 @@ async fn startup_heat_limit_is_strict_durable_and_cannot_be_overridden() {
             )
             .await
             .unwrap();
-            sqlx::query("UPDATE btech_units SET unit = ? WHERE dbref = ?")
-                .bind(serde_json::to_string(&snapshot).unwrap())
-                .bind(id.0)
-                .execute(&mut sql)
-                .await
-                .unwrap();
+            support::store_unit_record(&mut sql, "btech_units", id, &snapshot).await;
             world = persistence::load(&config.database()).await.unwrap();
             let before = world.btech.clone();
             let result = start_battle_unit(&mut world, id, ObjectId(1), fast);

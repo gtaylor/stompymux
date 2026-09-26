@@ -9,6 +9,7 @@ mod btech_reactor;
 mod btech_recovery;
 mod btech_terrain;
 mod btech_unit_configuration;
+mod btech_unit_rows;
 mod btech_units;
 mod btech_vehicles;
 mod communication;
@@ -67,7 +68,7 @@ async fn use_write_ahead_log(c: &mut SqliteConnection) -> Result<()> {
 /// every save a second round of syncs. While this connection is held, that copy happens
 /// only at SQLite's normal checkpoint interval.
 pub struct DatabaseAnchor {
-    _connection: SqliteConnection,
+    connection: SqliteConnection,
 }
 
 impl DatabaseAnchor {
@@ -76,9 +77,13 @@ impl DatabaseAnchor {
     pub async fn open(path: &Path, timeout: u64) -> Result<Self> {
         let mut connection = connect(path, timeout, false, false).await?;
         validate(&mut connection).await?;
-        Ok(Self {
-            _connection: connection,
-        })
+        Ok(Self { connection })
+    }
+
+    /// Close the anchor. As the last connection, it folds the log back into the
+    /// database file, so a stopped server leaves no log behind.
+    pub async fn close(self) -> Result<()> {
+        Ok(self.connection.close().await?)
     }
 }
 /// Drain the worker before returning, preserving the original operation error.

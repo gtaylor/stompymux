@@ -10,7 +10,7 @@ mod reuse;
 mod server;
 pub use client::Client;
 pub use commands::{run_text, run_text_for_player};
-pub use database::stable_world;
+pub use database::{stable_world, store_unit_record, unit_record};
 pub use fixtures::{copy, isolated_scripts, isolated_world};
 pub use reuse::{attempt_heartbeat, install, restore_database, snapshot_database};
 pub use server::start;

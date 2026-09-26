@@ -105,6 +105,13 @@ Its tables are a storage format, not a direct serialization of Rust struct
 layouts. Fresh databases are initialized from the SQL schema files in
 `src/persistence/`.
 
+Units and vehicles are the exception: each row holds the record as JSON in two
+parts. `unit` holds the core (construction, damage, settings and contacts),
+which changes rarely, and `live` holds per-tick state such as motion, heat,
+timers and dice, with fields at their default value left out. A save rewrites
+only the part that changed, and loading merges the two. The `saved_parts!`
+lists in `unit.rs` and `vehicle.rs` decide which part each field belongs to.
+
 Map and template assets are decoded by BattleTech asset modules; their game
 files remain separate from the SQLite snapshot. Map writes are staged with
 other transaction effects and published after a successful world commit.
@@ -117,7 +124,11 @@ when it is used across the crate boundary, `src/lib.rs`. Adapt that operation
 at each needed entry point: a native command, Lua binding, or server tick.
 
 For durable state, update the `BtechState` or owned map/unit model, its
-validation, and the corresponding `src/persistence/btech_*.rs` adapter. Keep
+validation, and the corresponding `src/persistence/btech_*.rs` adapter. A new
+`BattleUnit` or `BattleVehicle` field must also be listed in its `saved_parts!`
+classification, which fails to compile until it is: `core` for data that
+changes rarely, `live` for per-tick state with a serde default, or
+`live_always` for per-tick state that is always written. Keep
 user-visible notices in the transaction so a failed save cannot announce an
 operation that did not commit. Unit tests live beside rules, and integration
 scenarios under `tests/` exercise command, Lua, tick, and persistence behavior.

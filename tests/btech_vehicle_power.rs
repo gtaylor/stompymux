@@ -146,19 +146,9 @@ async fn override_requires_wizard_and_corrupt_countdowns_fail_loading() {
     )
     .await
     .unwrap();
-    let encoded: String = sqlx::query_scalar("SELECT unit FROM btech_vehicles WHERE dbref=?")
-        .bind(id.0)
-        .fetch_one(&mut sql)
-        .await
-        .unwrap();
-    let mut unit: serde_json::Value = serde_json::from_str(&encoded).unwrap();
+    let mut unit = support::unit_record(&mut sql, "btech_vehicles", id).await;
     unit["power"]["remaining"] = 0.into();
-    sqlx::query("UPDATE btech_vehicles SET unit=? WHERE dbref=?")
-        .bind(unit.to_string())
-        .bind(id.0)
-        .execute(&mut sql)
-        .await
-        .unwrap();
+    support::store_unit_record(&mut sql, "btech_vehicles", id, &unit).await;
     assert!(
         format!(
             "{:#}",

@@ -257,6 +257,7 @@ struct VehicleRecord {
     #[serde(default)]
     detached_heading: f64,
     under_bridge: bool,
+    #[serde(default)]
     ground_elevation: Option<f64>,
     #[serde(default)]
     free_fall: Option<super::BattleFreeFall>,
@@ -275,7 +276,9 @@ struct VehicleRecord {
     automatic_turret: bool,
     turret_locked: bool,
     turret_jammed: bool,
+    #[serde(default)]
     turret_repairs: Vec<u8>,
+    #[serde(default)]
     crew_stun_remaining: u8,
     #[serde(default)]
     crew_stun_condition: Option<bool>,
@@ -290,7 +293,9 @@ struct VehicleRecord {
     transport_destroyed: bool,
     /// Tail rotor loss constrains flight controls without destroying the hull.
     tail_rotor_destroyed: bool,
+    #[serde(default)]
     vtol_fuel: Option<super::BattleVtolFuel>,
+    #[serde(default)]
     vtol_flight: Option<super::BattleVtolFlight>,
     /// Instant loss of the entire crew, independent of accumulated pilot injuries.
     crew_killed: bool,
@@ -316,9 +321,12 @@ struct VehicleRecord {
     friendly_fire_safety: bool,
     auto_fall: bool,
     ams_enabled: bool,
+    #[serde(default)]
     weapon_heat: f64,
+    #[serde(default)]
     inferno_remaining: u32,
     burning_sections: BTreeMap<BattleVehicleSection, u8>,
+    #[serde(default)]
     extinguishing: Option<u8>,
     #[serde(default)]
     building_entry: Option<super::BattleBuildingEntry>,
@@ -340,7 +348,9 @@ struct VehicleRecord {
     ammunition_modes: BTreeMap<usize, super::BattleAmmunitionMode>,
     #[serde(default)]
     ammunition_sections: BTreeMap<usize, BattleVehicleSection>,
+    #[serde(default)]
     unjam: Option<super::BattleUnjam>,
+    #[serde(default)]
     pod_removal: Option<u8>,
     jammed_weapons: std::collections::BTreeSet<usize>,
     #[serde(default)]
@@ -352,6 +362,129 @@ struct VehicleRecord {
     spent_launchers: std::collections::BTreeSet<usize>,
     dice: super::BattleDice,
 }
+
+// Live fields change routinely while a vehicle moves, fires and recovers; everything
+// else is construction, damage and settings, saved only when it changes.
+super::saved_parts::saved_parts!(BattleVehicle {
+    core: [
+        auxiliary_preferences,
+        base_movement_fields,
+        units_killed,
+        no_armor_warning,
+        no_ammunition_warning,
+        searchlight,
+        autocon_shutdown,
+        searchlight_warning,
+        illumination_observed,
+        display_name,
+        markings,
+        sixth_sense,
+        cockpit_links,
+        hardware,
+        self_destruct_safe,
+        self_destruct,
+        towable,
+        fortified,
+        observer,
+        weapons_hold,
+        combat_safe,
+        visibility,
+        contract_loadout,
+        administrative_raw,
+        definition,
+        sections,
+        detached,
+        map_slot,
+        battlefield_label,
+        preferred_id,
+        pilot,
+        under_bridge,
+        propulsion,
+        live_mass,
+        critical_conditions,
+        motive_speed_loss,
+        immobilized,
+        automatic_turret,
+        turret_locked,
+        turret_jammed,
+        crew_stun_condition,
+        pilot_injuries,
+        pilot_killed,
+        character_pilot,
+        flooded,
+        breached_sections,
+        transport_destroyed,
+        tail_rotor_destroyed,
+        crew_killed,
+        crew_recovery,
+        piloting_damage,
+        gunnery_damage,
+        lost_stabilizers,
+        lost_criticals,
+        brief,
+        tics,
+        signature,
+        scanner_perception,
+        radio,
+        radio_skill,
+        radio_experience_remaining,
+        experience,
+        friendly_fire_safety,
+        auto_fall,
+        ams_enabled,
+        burning_sections,
+        building_entry,
+        beacons,
+        artillery_adjustment,
+        c3_network,
+        c3i_network,
+        electronics,
+        spotter,
+        tag,
+        contacts,
+        fire_modes,
+        ammunition_modes,
+        ammunition_sections,
+        jammed_weapons,
+        component_failures,
+        weapon_failures,
+        powered_down_weapons,
+        spent_launchers,
+    ],
+    live: [
+        detached_heading,
+        turret_repairs,
+        aimed_section,
+        weapon_heat,
+        fired_recently,
+        shot_counters,
+        damage_counters,
+        last_startup,
+        crew_stun_remaining,
+        vtol_flight,
+        vtol_fuel,
+        free_fall,
+        orbital_drop,
+        ground_elevation,
+        hide_elapsed,
+        dig,
+        inferno_remaining,
+        extinguishing,
+        unjam,
+        pod_removal,
+        spotter_events,
+    ],
+    live_always: [
+        motion,
+        position,
+        power,
+        target_lock,
+        weapon_recycle,
+        turret_offset,
+        dice,
+        ammunition,
+    ],
+});
 
 impl BattleVehicle {
     pub(crate) fn administrative_raw(&self) -> Option<&super::AdministrativeRawUnit> {

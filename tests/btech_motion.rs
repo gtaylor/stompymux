@@ -6318,7 +6318,7 @@ async fn overheat_server_retries_shutdown_without_advancing_the_failed_clock_or_
         world.btech = serde_json::from_value(phase_state).unwrap();
         let expected = world.btech.clone();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
-        sqlx::query("CREATE TRIGGER reject_overheat BEFORE UPDATE ON btech_units WHEN json_extract(NEW.unit,'$.power.state') = 'off' BEGIN SELECT RAISE(ABORT,'overheat save failure'); END").execute(&mut sql).await.unwrap();
+        sqlx::query("CREATE TRIGGER reject_overheat BEFORE UPDATE ON btech_units WHEN COALESCE(json_extract(NEW.live,'$.power.state'), 'off') = 'off' BEGIN SELECT RAISE(ABORT,'overheat save failure'); END").execute(&mut sql).await.unwrap();
         let (_address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
         attempt_heartbeat().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech, before);
@@ -26374,7 +26374,7 @@ async fn unjam_character_server_tick_retries_failed_commit() {
         let scripts = Scripts::new(&config, shared.clone()).unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         // Reject completion before the server starts, while allowing login and countdown saves.
-        sqlx::raw_sql("CREATE TRIGGER deny_unjam BEFORE UPDATE ON btech_units WHEN json_extract(OLD.unit, '$.unjam') IS NOT NULL AND json_extract(NEW.unit, '$.unjam') IS NULL BEGIN SELECT RAISE(ABORT,'unjam failure'); END;").execute(&mut sql).await.unwrap();
+        sqlx::raw_sql("CREATE TRIGGER deny_unjam BEFORE UPDATE ON btech_units WHEN json_extract(OLD.live, '$.unjam') IS NOT NULL AND json_extract(NEW.live, '$.unjam') IS NULL BEGIN SELECT RAISE(ABORT,'unjam failure'); END;").execute(&mut sql).await.unwrap();
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let address = listener.local_addr().unwrap();
         let (shutdown, request) = tokio::sync::oneshot::channel();

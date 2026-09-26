@@ -795,7 +795,7 @@ mod persistence_tests {
         let config = Config::load(&root).unwrap();
         let initial = persistence::load(&config.database()).await.unwrap();
         let (mut world, map_id) =
-            fixture_world(&config, initial, BenchmarkScenario::Open, true, 16, 7).unwrap();
+            fixture_world(&config, initial, BenchmarkScenario::Open, true, 30, 7).unwrap();
         let east = world.create(&config, "East".into(), Kind::Room);
         let west = world.create(&config, "West".into(), Kind::Room);
         let cargo: Vec<_> = ["Crate", "Barrel", "Drum"]
@@ -850,6 +850,27 @@ mod persistence_tests {
         persistence::validate_lists(&config.database(), &live, config.database.busy_timeout_ms)
             .await
             .unwrap();
+        // Every unit and vehicle splits into saved parts that merge back unchanged.
+        fn round_trip<T>(record: &T) -> T
+        where
+            T: crate::btech::saved_parts::SavedParts + serde::de::DeserializeOwned,
+        {
+            let core = record.encode_saved_core().unwrap();
+            let live = record.encode_saved_live().unwrap();
+            serde_json::from_value(crate::btech::saved_parts::merge(&core, &live).unwrap()).unwrap()
+        }
+        for unit in live.btech.constructed_units().values() {
+            assert_eq!(&round_trip(unit), unit);
+        }
+        for vehicle in live.btech.vehicles().values() {
+            assert_eq!(&round_trip(vehicle), vehicle);
+        }
+        let (unit, vehicle) = (
+            live.btech.constructed_units().values().next().unwrap(),
+            live.btech.vehicles().values().next().unwrap(),
+        );
+        crate::btech::saved_parts::assert_defaulted_fields_load(unit);
+        crate::btech::saved_parts::assert_defaulted_fields_load(vehicle);
         let stored = persistence::load(&config.database()).await.unwrap();
         // Autopilot sensor memory deliberately does not survive a restart.
         let [stored, live] = [&stored, &live].map(|world| {

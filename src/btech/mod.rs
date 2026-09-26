@@ -573,6 +573,7 @@ pub use signature::{
 };
 
 mod recent_fire;
+pub(crate) mod saved_parts;
 pub use recent_fire::clear_recent_fire;
 
 mod tag;

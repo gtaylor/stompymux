@@ -1802,6 +1802,15 @@ async fn shutdown_origins_share_cleanup_and_stop_pipelined_commands() {
             .unwrap();
         assert!(status.success(), "{origin}");
         assert!(TcpStream::connect(&running.address).await.is_err());
+        // A clean stop folds the write-ahead log back into the database file.
+        for suffix in ["-wal", "-shm"] {
+            let mut log = c.database().into_os_string();
+            log.push(suffix);
+            assert!(
+                !std::path::Path::new(&log).exists(),
+                "{origin} left {suffix}"
+            );
+        }
         for client in [&mut first, &mut second, &mut pending] {
             let mut rest = Vec::new();
             tokio::time::timeout(Duration::from_secs(2), client.socket.read_to_end(&mut rest))

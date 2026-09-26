@@ -283,13 +283,13 @@ async fn tcp_jump_retries_failed_launch_and_flight_saves_then_resumes_after_rest
         sqlx::query("UPDATE player_state SET password_hash=? WHERE object_dbref=1").bind(accounts::hash("secret", &config).unwrap()).execute(&mut sql).await.unwrap();
         let (address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
         let mut client = jump_client(address).await;
-        sqlx::query(sqlx::AssertSqlSafe(format!("CREATE TRIGGER reject_launch BEFORE UPDATE ON btech_units WHEN NEW.dbref={} AND json_extract(NEW.unit,'$.flight.travelled')=0 BEGIN SELECT RAISE(ABORT,'launch failure'); END",id.0))).execute(&mut sql).await.unwrap();
+        sqlx::query(sqlx::AssertSqlSafe(format!("CREATE TRIGGER reject_launch BEFORE UPDATE ON btech_units WHEN NEW.dbref={} AND json_extract(NEW.live,'$.flight.travelled')=0 BEGIN SELECT RAISE(ABORT,'launch failure'); END",id.0))).execute(&mut sql).await.unwrap();
         client.send("jump 0 2").await;
         let failure = client.until("Unable to save your changes.").await;
         assert!(!failure.contains("You engage your jump jets."), "{failure}");
         assert!(persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].flight().is_none());
         sqlx::query("DROP TRIGGER reject_launch").execute(&mut sql).await.unwrap();
-        sqlx::query(sqlx::AssertSqlSafe(format!("CREATE TRIGGER reject_flight BEFORE UPDATE ON btech_units WHEN NEW.dbref={} AND json_extract(NEW.unit,'$.flight.travelled')>0 BEGIN SELECT RAISE(ABORT,'flight failure'); END",id.0))).execute(&mut sql).await.unwrap();
+        sqlx::query(sqlx::AssertSqlSafe(format!("CREATE TRIGGER reject_flight BEFORE UPDATE ON btech_units WHEN NEW.dbref={} AND json_extract(NEW.live,'$.flight.travelled')>0 BEGIN SELECT RAISE(ABORT,'flight failure'); END",id.0))).execute(&mut sql).await.unwrap();
         client.send("jump 0 2").await;
         client.until("You engage your jump jets.").await;
         let launched = persistence::load(&config.database()).await.unwrap();
@@ -304,7 +304,7 @@ async fn tcp_jump_retries_failed_launch_and_flight_saves_then_resumes_after_rest
         let cursor = saved.btech.constructed_units()[&id].flight().unwrap();
         assert!(cursor.travelled() > 0.0 && !cursor.arrived());
         // Hold the restored cursor while login runs; real heartbeat time can advance during I/O.
-        sqlx::query(sqlx::AssertSqlSafe(format!("CREATE TRIGGER hold_resume BEFORE UPDATE ON btech_units WHEN NEW.dbref={} AND json_extract(NEW.unit,'$.flight') IS NOT json_extract(OLD.unit,'$.flight') BEGIN SELECT RAISE(ABORT,'resume held'); END",id.0))).execute(&mut sql).await.unwrap();
+        sqlx::query(sqlx::AssertSqlSafe(format!("CREATE TRIGGER hold_resume BEFORE UPDATE ON btech_units WHEN NEW.dbref={} AND json_extract(NEW.live,'$.flight') IS NOT json_extract(OLD.live,'$.flight') BEGIN SELECT RAISE(ABORT,'resume held'); END",id.0))).execute(&mut sql).await.unwrap();
         let (address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
         let mut client = jump_client(address).await;
         let mut world = persistence::load(&config.database()).await.unwrap();
@@ -3054,7 +3054,7 @@ async fn tcp_free_fall_retries_shutdown_and_impact_saves_across_restart() {
         assert!(!output.contains("You start free-fall"), "{output}");
         assert!(!output.contains("All systems shut down"), "{output}");
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id], before);
-        sqlx::query(sqlx::AssertSqlSafe(format!("CREATE TRIGGER reject_impact BEFORE UPDATE ON btech_units WHEN NEW.dbref={} AND json_extract(OLD.unit,'$.free_fall') IS NOT NULL AND json_extract(NEW.unit,'$.free_fall') IS NULL BEGIN SELECT RAISE(ABORT,'impact failure'); END",id.0))).execute(&mut sql).await.unwrap();
+        sqlx::query(sqlx::AssertSqlSafe(format!("CREATE TRIGGER reject_impact BEFORE UPDATE ON btech_units WHEN NEW.dbref={} AND json_extract(OLD.live,'$.free_fall') IS NOT NULL AND json_extract(NEW.live,'$.free_fall') IS NULL BEGIN SELECT RAISE(ABORT,'impact failure'); END",id.0))).execute(&mut sql).await.unwrap();
         sqlx::query("DROP TRIGGER reject_shutdown").execute(&mut sql).await.unwrap();
         client.send("shutdown").await;
         client.until("You start free-fall").await;

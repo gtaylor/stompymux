@@ -76,43 +76,62 @@ pub(super) async fn row(
     before: Option<&Fields>,
     after: &Fields,
 ) -> Result<bool> {
-    let mut query;
     if let Some(before) = before {
-        let changed: Vec<_> = after
+        let mut changed = after
             .iter()
             .filter(|(name, value)| before.get(*name) != Some(*value))
-            .collect();
-        if changed.is_empty() {
+            .peekable();
+        if changed.peek().is_none() {
             return Ok(false);
         }
-        query = QueryBuilder::new(format!("UPDATE {table} SET "));
-        for (index, (name, value)) in changed.into_iter().enumerate() {
-            if index > 0 {
-                query.push(",");
-            }
-            query.push(name).push(" = ");
-            value.bind(&mut query);
-        }
-        query.push(" WHERE ");
-        predicate(&mut query, &key);
-    } else {
-        let all: Vec<_> = key.iter().chain(after.iter()).collect();
-        query = QueryBuilder::new(format!("INSERT INTO {table} ("));
-        for (index, (name, _)) in all.iter().enumerate() {
-            if index > 0 {
-                query.push(",");
-            }
-            query.push(name.as_str());
-        }
-        query.push(") VALUES (");
-        for (index, (_, value)) in all.iter().enumerate() {
-            if index > 0 {
-                query.push(",");
-            }
-            value.bind(&mut query);
-        }
-        query.push(")");
+        update(c, table, &key, changed).await?;
+        return Ok(true);
     }
+    let all: Vec<_> = key.iter().chain(after.iter()).collect();
+    let mut query = QueryBuilder::new(format!("INSERT INTO {table} ("));
+    for (index, (name, _)) in all.iter().enumerate() {
+        if index > 0 {
+            query.push(",");
+        }
+        query.push(name.as_str());
+    }
+    query.push(") VALUES (");
+    for (index, (_, value)) in all.iter().enumerate() {
+        if index > 0 {
+            query.push(",");
+        }
+        value.bind(&mut query);
+    }
+    query.push(")");
+    execute_one(c, table, &key, query).await?;
+    Ok(true)
+}
+/// Update the given columns of one existing row.
+pub(super) async fn update<'a>(
+    c: &mut SqliteConnection,
+    table: &str,
+    key: &Fields,
+    values: impl IntoIterator<Item = (&'a String, &'a Cell)>,
+) -> Result<()> {
+    let mut query = QueryBuilder::new(format!("UPDATE {table} SET "));
+    for (index, (name, value)) in values.into_iter().enumerate() {
+        if index > 0 {
+            query.push(",");
+        }
+        query.push(name).push(" = ");
+        value.bind(&mut query);
+    }
+    query.push(" WHERE ");
+    predicate(&mut query, key);
+    execute_one(c, table, key, query).await
+}
+/// Run a statement that must affect exactly one row.
+async fn execute_one(
+    c: &mut SqliteConnection,
+    table: &str,
+    key: &Fields,
+    mut query: QueryBuilder<Sqlite>,
+) -> Result<()> {
     let changed = query
         .build()
         .execute(&mut *c)
@@ -123,7 +142,7 @@ pub(super) async fn row(
         changed == 1,
         "expected one {table} row for {key:?}; found {changed}"
     );
-    Ok(true)
+    Ok(())
 }
 /// Delete a specifically removed owned key, never an entire table or object.
 pub(super) async fn delete(c: &mut SqliteConnection, table: &str, key: Fields) -> Result<()> {
