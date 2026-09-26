@@ -6,7 +6,10 @@ set -euo pipefail
 source "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
 
 if command -v rustup >/dev/null 2>&1; then
-  log "rustup already installed; ensuring rustfmt and clippy are present"
+  log "rustup already installed; ensuring a toolchain, rustfmt, and clippy are present"
+  if ! rustup show active-toolchain >/dev/null 2>&1; then
+    rustup default stable
+  fi
   rustup component add rustfmt clippy
   exit 0
 fi

@@ -23,14 +23,26 @@ script from `.devcontainer/`:
 | Environment | Detected by | Script | What it does |
 | --- | --- | --- | --- |
 | CI | `GITHUB_ACTIONS=true` | `setup-ci.sh` | Verifies the devcontainer image has every required tool. |
-| Cloud | `CLAUDE_CODE_REMOTE=true` | `setup-cloud.sh` | Installs the toolchain (Node under `~/.local`, ahead of the image's Node on `PATH`), docs dependencies, and Codex. |
+| Claude Code cloud | `CLAUDE_CODE_REMOTE=true` | `setup-claude-cloud.sh` | Installs the toolchain (Node under `~/.local`, ahead of the image's Node on `PATH`), docs dependencies, and Codex. |
+| Codex cloud | explicit `codex-cloud` argument | `setup-codex-cloud.sh` | Installs the toolchain (Node under `~/.local`, ahead of nvm's Node on `PATH`), Rust, docs dependencies, and Claude Code. |
 | Local | anything else | `setup-local.sh` | Checks the toolchain, then installs docs dependencies, Codex, and Claude Code. |
 
-Claude Code cloud sessions run `setup.sh cloud` automatically through a
+Claude Code cloud sessions run `setup.sh claude-cloud` automatically through a
 `SessionStart` hook in `.claude/settings.json`; the hook does nothing outside
 the cloud.
 
-Pass `ci`, `local`, or `cloud` as the first argument (or set `STOMPYMUX_ENV`)
+Codex cloud has no repository-level startup hook that runs with internet
+access, so configure it in the Codex environment settings instead. Set both the
+**Setup script** and the **Maintenance script** to:
+
+```sh
+.devcontainer/setup.sh codex-cloud
+```
+
+The script is safe to re-run. It persists `PATH` changes to `~/.bashrc`, since
+exports from the setup script do not reach the agent phase.
+
+Pass `ci`, `local`, `claude-cloud`, or `codex-cloud` as the first argument (or set `STOMPYMUX_ENV`)
 to override detection.
 
 The devcontainer is optional for local development. When you open the
