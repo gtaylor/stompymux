@@ -8,6 +8,8 @@ on:
     paths:
       - .devcontainer/Dockerfile
       - .devcontainer/install-tools.sh
+      - .devcontainer/install-rust.sh
+      - .devcontainer/lib.sh
       - .github/workflows/devcontainer-image.yml
 
 permissions:

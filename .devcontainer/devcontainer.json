@@ -6,5 +6,5 @@
 	},
 	"remoteUser": "vscode",
 	"forwardPorts": [5555, 1313],
-	"postCreateCommand": ".devcontainer/setup-devenv.sh"
+	"postCreateCommand": ".devcontainer/setup.sh"
 }

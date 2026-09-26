@@ -16,6 +16,10 @@ The optional [`just`](https://github.com/casey/just) task runner provides
 shortcuts for common commands. To build the documentation site, also install
 Node.js/npm, Go, and Hugo Extended 0.164.0 or newer.
 
+If you plan to work on StompyMUX itself, see
+[Development workflows](./development/#set-up-your-environment) for the
+`.devcontainer/setup.sh` script that prepares a development environment.
+
 ## Build the server
 
 From the `stompymux-rs/` directory of your checkout:
