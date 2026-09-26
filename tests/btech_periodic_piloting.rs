@@ -1,9 +1,7 @@
 //! Heartbeat control cadence, gravity stress and ordinary fall consequences replay from saved state.
-use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
 use crate::support;
+use crate::support::btech_firing as firing;
+use stompymux_rs::*;
 
 /// Actual heartbeat rolls are private to the captured pilot, with the reference empty-pilot fallback.
 #[tokio::test]

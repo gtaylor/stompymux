@@ -1,9 +1,8 @@
 //! All chassis share searchlight switching, beam geometry and persistence; exposure follows anatomy.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Add installed lighting without changing the fixture's other technologies.
 fn with_lamp(source: &str) -> String {

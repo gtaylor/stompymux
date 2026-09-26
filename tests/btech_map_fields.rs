@@ -1,9 +1,8 @@
 //! Map field edits share domain controls, native/Lua transactions and persistent state.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 #[tokio::test]
 async fn every_writable_field_matches_lua_and_restarts_across_chassis() {

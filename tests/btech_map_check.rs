@@ -1,9 +1,8 @@
 //! FIXMAP checks derived membership without unit lifecycle side effects.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 #[tokio::test]
 async fn map_check_preserves_each_chassis_and_matches_lua_after_restart() {

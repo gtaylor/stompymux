@@ -1,11 +1,9 @@
 //! Cross-chassis TAG ownership, equipment admission, native presentation and durable timers.
+use crate::support;
+use crate::support::btech_firing as firing;
+use firing::{edit, fixture_with_target, templates};
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
-use firing::{edit, fixture_with_target, templates};
 
 /// Install TAG in a spare section slot through the ordinary template validation path.
 fn install(world: &mut World, id: ObjectId, computer: bool) {

@@ -1,10 +1,9 @@
 //! Gauss power-down shares native/Lua controls, material safety and durable state across chassis.
+use crate::support;
+use crate::support::btech_firing;
+use btech_firing::{edit, fixture_with_supply, fixture_with_target, templates};
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod btech_firing;
-use crate::support;
-use btech_firing::{edit, fixture_with_supply, fixture_with_target, templates};
 
 /// Observe readiness through the chassis boundary without duplicating control rules.
 fn readiness(world: &World, id: ObjectId, index: usize) -> BattleWeaponReadiness {

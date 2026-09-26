@@ -1,9 +1,8 @@
 //! Runtime diagnostics measure saved Rust data and share the server's live-work admission.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Empty and active worlds expose measured counts without changing simulation state or dice.
 #[tokio::test]

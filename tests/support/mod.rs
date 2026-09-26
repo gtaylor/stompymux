@@ -1,6 +1,7 @@
 //! Shared integration-test infrastructure; scenarios own their world edits and fault injection.
 // Each integration-test binary imports this module independently and uses a subset.
 #![allow(dead_code, unused_imports)]
+pub mod btech_firing;
 mod client;
 mod commands;
 mod database;

@@ -1,9 +1,8 @@
 //! Registered gunners use shared launch and damage without replacing parent pilots or selections.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Build a claimed, settled station alongside the parent's equally settled lock.
 async fn fixture(

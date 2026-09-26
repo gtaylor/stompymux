@@ -1,8 +1,6 @@
 //! Surface entry notices use one rule for every mobile ground chassis and durable replay.
+use crate::support::btech_firing as firing;
 use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
 
 /// Ordinary structures report once per entered hex; concealed and dropship structures stay quiet.
 #[tokio::test]

@@ -1,9 +1,7 @@
 //! Durable radio observer links use the same lifecycle for every supported chassis.
-use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
 use crate::support;
+use crate::support::btech_firing as firing;
+use stompymux_rs::*;
 
 /// An empty Arrow IV still qualifies for a datalink, independently of firing admission.
 async fn fixture(

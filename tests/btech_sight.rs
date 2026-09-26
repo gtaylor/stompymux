@@ -3,8 +3,7 @@ use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
-#[path = "support/btech_firing.rs"]
-mod firing_support;
+use crate::support::btech_firing as firing_support;
 use firing_support::{edit, fixture_with_target, templates};
 
 /// Build an equipped shooter facing a visible target, with a selected unit lock.

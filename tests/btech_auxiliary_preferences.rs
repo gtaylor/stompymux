@@ -1,9 +1,8 @@
 //! Retained preference flags share configuration and persistence without changing combat behavior.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Native/Lua toggles and field bits share storage and survive restart across all chassis.
 #[tokio::test]

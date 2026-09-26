@@ -1,8 +1,7 @@
 //! Persisted drops share altitude ownership, scenario edits and deferred map cleanup across chassis.
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
 
 /// Author a drop through the same validated snapshot format used for restart.
 fn insert_drop(world: &mut World, id: ObjectId) {

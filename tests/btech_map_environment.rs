@@ -1,9 +1,8 @@
 //! SETCOND and Lua environmental updates drive existing live rules without copying unit state.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Native and Lua transitions retain unrelated map fields and exact unit state across all supported chassis.
 #[tokio::test]

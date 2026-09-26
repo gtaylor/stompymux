@@ -1,10 +1,8 @@
 //! Startup health projection shares arithmetic across every supported cockpit family.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// High health-derived counts survive startup; later tactical and IC injuries follow their own rules.
 #[tokio::test]

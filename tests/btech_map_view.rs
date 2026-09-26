@@ -1,9 +1,8 @@
 //! Map-only terrain views share rendering and clipping without cockpit or sensor side effects.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Source text preserves styled output for native/Lua publication comparisons.
 fn output(scripts: &Scripts) -> String {

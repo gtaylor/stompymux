@@ -1,10 +1,8 @@
 //! Reactor cascades retain the initiating kill without crediting self-attributed blast victims.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Read saved counters from either owning chassis store.
 fn kills(world: &World, id: ObjectId) -> i64 {

@@ -1,8 +1,6 @@
 //! Water aim depends on the attacker's terrain and physical elevation, independently of target cover.
+use crate::support::btech_firing as firing;
 use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
 
 /// Conventional preview rules preserve the water term without weapon arc overrides.
 fn rules() -> BattleAimRules {

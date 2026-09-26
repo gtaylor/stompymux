@@ -1,9 +1,8 @@
 //! Seasonal ice controls preserve shoreline rules, shared occupant effects and transactional replay.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Replace one base tile without disturbing units, overlays or the saved map stream.
 fn tile(world: &mut World, map: ObjectId, x: usize, y: usize, terrain: &str, elevation: u8) {

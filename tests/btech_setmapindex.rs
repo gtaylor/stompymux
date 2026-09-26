@@ -1,9 +1,8 @@
 //! Wizard map membership preserves removal/re-entry state and shares native/Lua rollback.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Removing a live unit persists its pose, supports immediate re-entry, then shuts down on update.
 #[tokio::test]

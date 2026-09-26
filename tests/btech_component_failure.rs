@@ -1,8 +1,7 @@
 //! Nonweapon failure codes round-trip through inspection without changing system operation.
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
 
 #[tokio::test]
 async fn component_failures_round_trip_without_changing_gameplay_on_any_chassis() {

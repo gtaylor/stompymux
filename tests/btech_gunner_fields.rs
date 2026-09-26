@@ -1,9 +1,8 @@
 //! Wizard station field editing, shared reports, independent coordinates and transactional persistence.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Field edits never mutate physical parent state and survive reload with exact integer semantics.
 #[tokio::test]

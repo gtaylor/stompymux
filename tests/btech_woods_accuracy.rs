@@ -1,9 +1,7 @@
 //! Configured occupied-woods accuracy uses shared terrain and elevation for every chassis.
-use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
 use crate::support;
+use crate::support::btech_firing as firing;
+use stompymux_rs::*;
 
 /// Standard aim policy with an explicit woods-damage switch.
 fn rules(enabled: bool) -> BattleAimRules {

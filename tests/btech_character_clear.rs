@@ -1,10 +1,8 @@
 //! Character clearing restores default stats without interrupting recovery or replacing dice.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Saved XP, use timestamps and health clear; recovery resumes from its existing stream.
 #[tokio::test]

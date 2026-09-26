@@ -1,13 +1,11 @@
 //! Player-owned recovery cadence, cockpit guards, restart and transactional retry.
+use crate::support;
+use crate::support::btech_firing as firing;
 use sqlx::Connection;
 use stompymux_rs::{
     BattleCharacter, BattleDice, BattlePower, ObjectId, World, advance_battle_recovery,
     check_character_consciousness, persistence, set_battle_character,
 };
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// A live pilot with maximum bruising and a reproducible recovery stream.
 async fn fixture() -> (tempfile::TempDir, stompymux_rs::Config, World, [u8; 32]) {

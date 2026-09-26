@@ -1,9 +1,8 @@
 //! Vehicle warning preferences share material thresholds and launcher accounting with Mechs.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Suppress critical side effects while retaining ordinary armor admission and warning ordering.
 fn rules() -> BattleVehicleCriticalRules {

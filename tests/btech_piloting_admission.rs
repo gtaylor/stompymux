@@ -1,8 +1,6 @@
 //! Shared control checks fail without dice for unconscious crews, including empty cockpits.
+use crate::support::btech_firing as firing;
 use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
 
 /// A real tactical injury starts the unit-owned recovery clock without a fictitious pilot.
 fn unconscious_crew(world: &mut World, unit: ObjectId) {

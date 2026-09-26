@@ -1,10 +1,8 @@
 //! Kill totals commit with the first attributed destruction across both chassis stores.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Read the durable owner directly, independently of field rendering.
 fn kills(world: &World, id: ObjectId) -> i64 {

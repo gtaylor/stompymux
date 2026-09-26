@@ -1,10 +1,8 @@
 //! Occupied woodland damage, terrain consequences and transactional cockpit feedback.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Activate the persisted server settings without changing unrelated fixture policy.
 fn configured(dir: &tempfile::TempDir, enabled: bool, glancing: bool) -> Config {

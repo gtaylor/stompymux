@@ -1,9 +1,7 @@
 //! Reference scan weapon columns, limited readiness disclosure and independent display numbering.
-use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
 use crate::support;
+use crate::support::btech_firing as firing;
+use stompymux_rs::*;
 
 /// An empty artillery mount is inspected by a separately piloted scanner with an acquired contact.
 async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {

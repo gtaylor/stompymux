@@ -1,8 +1,7 @@
 //! Station previews share targeting and aim arithmetic while preserving independently owned locks.
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
 
 /// Stable locks, coordinate intent and operator skills remain separate on every supported chassis.
 #[tokio::test]

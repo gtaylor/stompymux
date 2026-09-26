@@ -1,9 +1,8 @@
 //! Shutdown shares mechanical falls, host casualty publication and restart-safe descent across chassis.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Set a legal actual speed while leaving the requested throttle at rest.
 fn speed(world: &mut World, id: ObjectId, value: f64) {

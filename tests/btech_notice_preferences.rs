@@ -1,9 +1,8 @@
 //! Shared cockpit notice preferences preserve sensor facts, cursors and restart behavior.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Both notice preferences use native/Lua controls and actual delivery rules on every chassis.
 #[tokio::test]

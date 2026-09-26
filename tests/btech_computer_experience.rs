@@ -1,9 +1,7 @@
 //! Successful thermal overrides award Computer XP through the ordinary transactional skill service.
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
 
 /// Thermal admission uses the standard impact and movement policy in every scenario.
 fn rules() -> BattleOverheatRules {

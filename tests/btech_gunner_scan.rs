@@ -1,9 +1,8 @@
 //! Station scans retain physical sensors and warning identity with independent target and output ownership.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// A claimed station targeting a visible unit while its parent has no selected target.
 async fn fixture(

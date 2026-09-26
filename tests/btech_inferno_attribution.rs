@@ -1,10 +1,8 @@
 //! Initial inferno consequences retain the shooter; later fire pulses are self-attributed.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[allow(dead_code)]
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Read unit-owned totals independently of the attack result.
 fn field(world: &World, id: ObjectId, name: &str) -> serde_json::Value {

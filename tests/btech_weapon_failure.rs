@@ -1,7 +1,6 @@
 //! Temporary weapon conditions use the same state and recovery contract on every supported chassis.
+use crate::support::btech_firing as firing;
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
 
 /// Observe either owned unit through the common temporary-failure contract.
 fn failure(world: &World, id: ObjectId, index: usize) -> Option<BattleEquipmentFailure> {

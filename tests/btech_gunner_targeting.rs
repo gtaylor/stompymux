@@ -1,9 +1,8 @@
 //! Gunner selections share targeting rules while retaining independent state and timers.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// Create an independently occupied station without disturbing the parent's assigned pilot.
 fn station(

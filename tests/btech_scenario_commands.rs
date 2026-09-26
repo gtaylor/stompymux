@@ -1,9 +1,8 @@
 //! Native scenario command coverage reuses shared flamer and team controls across supported chassis.
+use crate::support;
+use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_firing.rs"]
-mod firing;
-use crate::support;
 
 /// HEAT is the same ordered flamer control as FLAMERHEAT, including failures and duplicate selections.
 #[tokio::test]

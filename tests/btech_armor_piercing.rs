@@ -80,9 +80,8 @@ fn armor_piercing_bins_have_half_capacity_without_double_halving() {
     );
 }
 
-#[path = "support/btech_firing.rs"]
-mod firing;
 use crate::support;
+use crate::support::btech_firing as firing;
 
 /// The reference AP spelling shares native admission, mode changes and switch policy on all chassis.
 #[tokio::test]
