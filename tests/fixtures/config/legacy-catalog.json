@@ -416,13 +416,6 @@
     "default": 1
   },
   {
-    "path": "battletech.maxtechtime",
-    "legacy_name": "btech_maxtechtime",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 600
-  },
-  {
     "path": "battletech.vtol_ice_causes_fire",
     "legacy_name": "btech_vtol_ice_causes_fire",
     "registry_type": "cf_int",
@@ -470,20 +463,6 @@
     "registry_type": "cf_int",
     "rust_type": "i64",
     "default": 1
-  },
-  {
-    "path": "battletech.variable_techtime",
-    "legacy_name": "btech_variable_techtime",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 0
-  },
-  {
-    "path": "battletech.techtime_mod",
-    "legacy_name": "btech_techtime_mod",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 0
   },
   {
     "path": "battletech.statengine_obj",

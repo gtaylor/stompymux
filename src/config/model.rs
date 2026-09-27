@@ -198,8 +198,6 @@ pub struct BattleTechConfig {
     pub mwpickup_action: i64,
     /// Configuration value for `standcareful`; defaults are centralized below.
     pub standcareful: i64,
-    /// Configuration value for `maxtechtime`; defaults are centralized below.
-    pub maxtechtime: i64,
     /// Configuration value for `vtol_ice_causes_fire`; defaults are centralized below.
     pub vtol_ice_causes_fire: i64,
     /// Configuration value for `glancing_blows`; defaults are centralized below.
@@ -214,10 +212,6 @@ pub struct BattleTechConfig {
     pub extended_gunnery: i64,
     /// Configuration value for `xploss_for_mw`; defaults are centralized below.
     pub xploss_for_mw: i64,
-    /// Configuration value for `variable_techtime`; defaults are centralized below.
-    pub variable_techtime: i64,
-    /// Configuration value for `techtime_mod`; defaults are centralized below.
-    pub techtime_mod: i64,
     /// Configuration value for `statengine_obj`; defaults are centralized below.
     pub statengine_obj: i64,
     /// All-conditions sensor band reach in hexes; weather and darkness do not shorten it.
@@ -283,7 +277,6 @@ impl Default for BattleTechConfig {
             transported_unit_death: 1,
             mwpickup_action: 1,
             standcareful: 1,
-            maxtechtime: 600,
             vtol_ice_causes_fire: 1,
             glancing_blows: 1,
             inferno_penalty: 0,
@@ -291,8 +284,6 @@ impl Default for BattleTechConfig {
             extended_piloting: 1,
             extended_gunnery: 1,
             xploss_for_mw: 1,
-            variable_techtime: 0,
-            techtime_mod: 0,
             statengine_obj: -1,
             sensor_range: 15,
             stackpole: 1,

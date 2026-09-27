@@ -320,11 +320,6 @@
     "permission": "CA_GOD"
   },
   {
-    "name": "btech_maxtechtime",
-    "parser": "cf_int",
-    "permission": "CA_GOD"
-  },
-  {
     "name": "btech_vtol_ice_causes_fire",
     "parser": "cf_int",
     "permission": "CA_GOD"
@@ -356,16 +351,6 @@
   },
   {
     "name": "btech_xploss_for_mw",
-    "parser": "cf_int",
-    "permission": "CA_GOD"
-  },
-  {
-    "name": "btech_variable_techtime",
-    "parser": "cf_int",
-    "permission": "CA_GOD"
-  },
-  {
-    "name": "btech_techtime_mod",
     "parser": "cf_int",
     "permission": "CA_GOD"
   },
