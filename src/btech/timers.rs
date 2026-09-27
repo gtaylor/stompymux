@@ -156,6 +156,8 @@ pub(crate) enum BattleTimer {
     PodRemoval = 37,
     /// `vtol_fuel.remaining`.
     VtolFuel = 38,
+    /// `target_lock.remaining`, for a unit or coordinate lock still settling.
+    TargetLock = 39,
 }
 
 /// Vehicle sections in slot order.
@@ -170,7 +172,7 @@ pub(crate) const VEHICLE_SECTIONS: [BattleVehicleSection; 6] = [
 
 impl BattleTimer {
     /// Every timer, in code order.
-    pub(crate) const ALL: [Self; 38] = [
+    pub(crate) const ALL: [Self; 39] = [
         Self::Startup,
         Self::OverheatElapsed,
         Self::OverheatPhase,
@@ -209,6 +211,7 @@ impl BattleTimer {
         Self::Extinguishing,
         Self::PodRemoval,
         Self::VtolFuel,
+        Self::TargetLock,
     ];
 
     /// The code stored in a timer row.
@@ -302,6 +305,7 @@ impl BattleTimer {
             Self::Extinguishing => fixed("/extinguishing"),
             Self::PodRemoval => fixed("/pod_removal"),
             Self::VtolFuel => fixed("/vtol_fuel/remaining"),
+            Self::TargetLock => fixed("/target_lock/remaining"),
         }
     }
 }

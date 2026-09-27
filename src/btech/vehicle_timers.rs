@@ -45,6 +45,9 @@ impl SavedTimers for BattleVehicle {
         for (index, remaining) in self.spotter_events.countdowns() {
             list.add(T::SpotterEvent, index as i64, remaining, Down);
         }
+        if let Some(lock) = self.target_lock {
+            list.add(T::TargetLock, 0, lock.remaining(), Down);
+        }
         list.add(T::Tag, 0, self.tag.remaining, Down);
         list.add(T::RadioExperience, 0, self.radio_experience_remaining, Down);
         list.add(T::CrewRecovery, 0, self.crew_recovery.remaining, Down);

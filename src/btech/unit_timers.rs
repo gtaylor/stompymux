@@ -149,6 +149,9 @@ impl SavedTimers for BattleUnit {
         if let Some(pending) = self.stealth.pending {
             list.add(T::Stealth, 0, pending.remaining, Down);
         }
+        if let Some(lock) = self.target_lock {
+            list.add(T::TargetLock, 0, lock.remaining(), Down);
+        }
         list.add(T::RadioExperience, 0, self.radio_experience_remaining, Down);
         list.add(T::CrewRecovery, 0, self.crew_recovery.remaining, Down);
         list.finish()
