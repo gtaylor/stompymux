@@ -1,9 +1,8 @@
 //! Landing-block commands share circular suitability and persist signed radii without touching units.
+use crate::support;
+use crate::support::btech_map_objects as map_objects;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_map_objects.rs"]
-mod map_objects;
-use crate::support;
 
 /// Newly authored blocks prepend without moving imported rows or their extension columns.
 #[tokio::test]

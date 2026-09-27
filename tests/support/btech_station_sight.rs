@@ -1,5 +1,4 @@
 //! Shared artillery sighting checks for both Mech and vehicle station fixtures.
-use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
@@ -25,7 +24,7 @@ pub fn check_artillery(
     let aim: i32 = lua
         .eval_callback(&format!("return {query}.target_number"))
         .unwrap();
-    let text = support::run_text(&native, config, gunner, 1, &format!("sight {index}"));
+    let text = crate::run_text(&native, config, gunner, 1, &format!("sight {index}"));
     assert!(text.contains(&format!("BTH: {aim}")), "{text}");
     assert_eq!(native.world().btech, lua.world().btech);
     let before = serde_json::to_value(&world.btech).unwrap();

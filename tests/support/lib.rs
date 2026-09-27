@@ -1,7 +1,13 @@
 //! Shared integration-test infrastructure; scenarios own their world edits and fault injection.
-// Each integration-test binary imports this module independently and uses a subset.
-#![allow(dead_code, unused_imports)]
+//!
+//! Built as a dev-dependency library so every integration suite links one copy and uses
+//! whichever subset of helpers its scenarios need.
+
+pub mod autopilot;
+pub mod btech_defense;
 pub mod btech_firing;
+pub mod btech_map_objects;
+pub mod btech_station_sight;
 mod client;
 mod commands;
 mod database;

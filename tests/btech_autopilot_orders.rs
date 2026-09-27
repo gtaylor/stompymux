@@ -4,8 +4,8 @@
 //! the long-lived orders that continuously make decisions during heartbeat ticks.
 
 use crate::{
-    autopilot_support::{heartbeat_snapshots, heartbeat_snapshots_until},
     support,
+    support::autopilot::{heartbeat_snapshots, heartbeat_snapshots_until},
 };
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::btech::{AutopilotOrder, AutopilotOrderState, AutopilotReason, AutopilotState};

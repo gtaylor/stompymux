@@ -20,13 +20,8 @@ async fn fixture(
     usize,
 ) {
     let target_source = include_str!("../game/mechs/AS7-D");
-    let (dir, config, mut world, parent, target, index) = if weapon.profile().ammunition_per_ton
-        == 0
-    {
-        firing::fixture_with_target(template, Some(weapon), target_source).await
-    } else {
-        firing::fixture_with_supply(template, Some(weapon), target_source, false, Some("")).await
-    };
+    let (dir, config, mut world, parent, target, index) =
+        firing::fixture_with_supply(template, Some(weapon), target_source, false, Some("")).await;
     let station = world.create(&config, "Station".into(), Kind::Thing);
     let gunner = world.create(&config, "Gunner".into(), Kind::Player);
     world.objects.get_mut(&gunner).unwrap().location = Some(station);
@@ -43,7 +38,6 @@ async fn fixture(
 
 /// Build a claimed, settled station on a supplied base world through one reused
 /// setup sandbox; identities stay stable because every scenario re-clones.
-#[allow(clippy::too_many_arguments)]
 fn station_fixture_on(
     base: &World,
     config: &Config,
@@ -53,27 +47,15 @@ fn station_fixture_on(
     arcs: i32,
 ) -> (World, ObjectId, ObjectId, ObjectId, ObjectId, usize) {
     let target_source = include_str!("../game/mechs/AS7-D");
-    let (mut world, parent, target, index) = if weapon.profile().ammunition_per_ton == 0 {
-        firing::supply_fixture_on(
-            base.clone(),
-            config,
-            template,
-            Some(weapon),
-            target_source,
-            false,
-            None,
-        )
-    } else {
-        firing::supply_fixture_on(
-            base.clone(),
-            config,
-            template,
-            Some(weapon),
-            target_source,
-            false,
-            Some(""),
-        )
-    };
+    let (mut world, parent, target, index) = firing::supply_fixture_on(
+        base.clone(),
+        config,
+        template,
+        Some(weapon),
+        target_source,
+        false,
+        Some(""),
+    );
     let station = world.create(config, "Station".into(), Kind::Thing);
     let gunner = world.create(config, "Gunner".into(), Kind::Player);
     world.objects.get_mut(&gunner).unwrap().location = Some(station);

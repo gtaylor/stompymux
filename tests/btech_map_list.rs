@@ -1,10 +1,9 @@
 //! Wizard map listings share unit order, object selection and atomic read-only publication.
+use crate::support;
 use crate::support::btech_firing as firing;
+use crate::support::btech_map_objects as map_objects;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-#[path = "support/btech_map_objects.rs"]
-mod map_objects;
-use crate::support;
 
 /// New effects prepend their kind's list, including replacements, independent of tile coordinates.
 #[tokio::test]

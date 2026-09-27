@@ -37,8 +37,7 @@ fn every_scenario_is_in_one_suite() {
     assert_eq!(assigned, scenarios);
 }
 
-#[path = "../support/mod.rs"]
-mod support;
+use stompymux_test_support as support;
 
 #[path = "../access.rs"]
 mod access;
