@@ -28,6 +28,20 @@ pub async fn isolated_world() -> (tempfile::TempDir, Config, World) {
     (directory, config, world)
 }
 
+/// Reload a copied fixture's configuration with a different clock save interval; the
+/// fixture itself saves the clock every second so tests can observe each heartbeat.
+pub fn with_clock_save_interval(directory: &Path, seconds: u64) -> Config {
+    let path = directory.join("stompymux.toml");
+    let text = std::fs::read_to_string(&path).unwrap();
+    let edited = text.replace(
+        "clock_save_interval = 1\n",
+        &format!("clock_save_interval = {seconds}\n"),
+    );
+    assert_ne!(text, edited, "fixture clock save interval not found");
+    std::fs::write(&path, edited).unwrap();
+    Config::load(directory).unwrap()
+}
+
 /// Copy the unchanged relational game fixture and initialize its Lua runtime.
 pub async fn isolated_scripts() -> (tempfile::TempDir, Config, Scripts) {
     let (directory, config, world) = isolated_world().await;

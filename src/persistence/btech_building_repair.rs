@@ -1,7 +1,11 @@
 //! Sparse durable building repair clocks, independent of wall time and terrain.
-use super::write::{Cell, fields, row};
+//!
+//! Each clock is stored as the simulation second of its next repair step, so a running
+//! clock causes no writes between steps.
+use super::btech_deadlines::Clock;
+use super::write::{Rows, fields, sync_rows};
 use crate::{ObjectId, StoredBattleMap, World};
-use anyhow::{Context, Result, ensure};
+use anyhow::{Context, Result};
 use sqlx::{Row, SqliteConnection};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -15,23 +19,24 @@ async fn installed(c: &mut SqliteConnection) -> Result<bool> {
         == 1)
 }
 
+/// Longest repair countdown, in seconds.
+const MAX_REMAINING: i64 = 120;
+
 /// Read the actual owned rows; inferred load-time clocks need not yet have a database row.
-async fn records(c: &mut SqliteConnection) -> Result<BTreeMap<ObjectId, u16>> {
+async fn records(c: &mut SqliteConnection, clock: Clock) -> Result<BTreeMap<ObjectId, u16>> {
     let mut clocks = BTreeMap::new();
     if !installed(c).await? {
         return Ok(clocks);
     }
-    use futures_util::TryStreamExt;
-    let mut rows =
-        sqlx::query("SELECT map_dbref,remaining FROM btech_building_repair ORDER BY map_dbref")
-            .fetch(c);
-    while let Some(row) = rows.try_next().await? {
+    for row in
+        sqlx::query("SELECT map_dbref,repairs_at FROM btech_building_repair ORDER BY map_dbref")
+            .fetch_all(c)
+            .await?
+    {
         let id = ObjectId(row.try_get("map_dbref")?);
-        let remaining = u16::try_from(row.try_get::<i64, _>("remaining")?)?;
-        ensure!(
-            (1..=120).contains(&remaining),
-            "Invalid building repair countdown"
-        );
+        let remaining = clock
+            .remaining(row.try_get("repairs_at")?, MAX_REMAINING)
+            .context("Invalid building repair countdown")?;
         clocks.insert(id, remaining);
     }
     Ok(clocks)
@@ -42,8 +47,9 @@ async fn records(c: &mut SqliteConnection) -> Result<BTreeMap<ObjectId, u16>> {
 pub(super) async fn load(
     c: &mut SqliteConnection,
     maps: &mut BTreeMap<ObjectId, StoredBattleMap>,
+    clock: Clock,
 ) -> Result<()> {
-    for (id, remaining) in records(c).await? {
+    for (id, remaining) in records(c, clock).await? {
         maps.get_mut(&id)
             .context("Repair references missing map")?
             .building_repair = Some(remaining);
@@ -68,39 +74,39 @@ pub(super) async fn load(
     Ok(())
 }
 
-/// Save countdown changes in the enclosing world transaction, preserving extension columns.
+/// Save countdown changes in the enclosing world transaction. The stored rows are read
+/// back because load-time clocks may not have a row yet; running clocks keep their rows.
 pub(super) async fn save(c: &mut SqliteConnection, after: &World) -> Result<bool> {
-    let stored = records(c).await?;
-    let mut changed = false;
-    for (&id, map) in after.btech.maps() {
-        let old = stored.get(&id).copied();
-        if old == map.building_repair {
-            continue;
-        }
-        if !installed(c).await? {
-            sqlx::raw_sql(include_str!("btech_building_repair.sql"))
-                .execute(&mut *c)
-                .await?;
-        }
-        if let Some(remaining) = map.building_repair {
-            row(
-                c,
-                "btech_building_repair",
-                fields([("map_dbref", Cell::Integer(id.0))]),
-                old.map(|value| fields([("remaining", Cell::Integer(i64::from(value)))]))
-                    .as_ref(),
-                &fields([("remaining", Cell::Integer(i64::from(remaining)))]),
-            )
-            .await?;
-        } else {
-            sqlx::query("DELETE FROM btech_building_repair WHERE map_dbref=?")
-                .bind(id.0)
-                .execute(&mut *c)
-                .await?;
-        }
-        changed = true;
+    let now = Clock::of(after);
+    let desired: Rows = after
+        .btech
+        .maps()
+        .iter()
+        .filter_map(|(&id, map)| {
+            let remaining = map.building_repair?;
+            Some((
+                vec![id.0],
+                fields([("repairs_at", now.deadline(remaining))]),
+            ))
+        })
+        .collect();
+    if desired.is_empty() && !installed(c).await? {
+        return Ok(false);
     }
-    Ok(changed)
+    if !installed(c).await? {
+        sqlx::raw_sql(include_str!("btech_building_repair.sql"))
+            .execute(&mut *c)
+            .await?;
+    }
+    sync_rows(
+        c,
+        "btech_building_repair",
+        &[],
+        &["map_dbref"],
+        &["repairs_at"],
+        &desired,
+    )
+    .await
 }
 
 /// Remove countdowns before their maps are purged.

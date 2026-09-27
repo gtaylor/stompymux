@@ -433,7 +433,16 @@ fn waiting_controller_polling_benchmark() {
 #[tokio::test(flavor = "current_thread")]
 async fn congestion_polling_rollback_discards_transient_work() {
     let root = super::super::benchmark::copy_game_root().unwrap();
+    // Store the clock every tick, so the rejected tick reaches the database.
+    let toml = root.path().join("stompymux.toml");
+    let text = std::fs::read_to_string(&toml).unwrap();
+    std::fs::write(
+        &toml,
+        text.replace("clock_save_interval = 60\n", "clock_save_interval = 1\n"),
+    )
+    .unwrap();
     let config = Config::load(&root).unwrap();
+    assert_eq!(config.database.clock_save_interval, 1);
     let world = crate::persistence::load(&config.database()).await.unwrap();
     let (_, world, ids) = crowded_world(config.clone(), world);
     crate::persistence::save(&config.database(), &world)

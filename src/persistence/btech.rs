@@ -90,6 +90,8 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
             },
         );
     }
+    let (turn_clock, simulation_seconds) = super::btech_turn_clock::load(c).await?;
+    let clock = super::btech_deadlines::Clock::at(simulation_seconds);
     super::btech_cargo_bay::load(c, &mut maps).await?;
     super::btech_terrain::load(c, &mut maps).await?;
     super::btech_entrances::load(c, &mut maps).await?;
@@ -99,11 +101,11 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
     super::btech_wrapping::load(c, &mut maps).await?;
     super::btech_minefields::load(c, &mut maps).await?;
     super::btech_map_bits::load(c, &mut maps).await?;
-    super::btech_building_repair::load(c, &mut maps).await?;
-    super::btech_decorations::load(c, &mut maps).await?;
+    super::btech_building_repair::load(c, &mut maps, clock).await?;
+    super::btech_decorations::load(c, &mut maps, clock).await?;
     super::btech_static_decorations::load(c, &mut maps).await?;
     super::btech_map_random::load(c, &mut maps).await?;
-    super::btech_artillery::load(c, &mut maps).await?;
+    super::btech_artillery::load(c, &mut maps, clock).await?;
     let (mut player_preferences, invalid_ui) = super::btech_view_preferences::load(c).await?;
     let (mut player_configuration, invalid_configuration) =
         super::btech_player_configuration::load(c).await?;
@@ -113,18 +115,17 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
     for player in invalid_ui.union(&invalid_configuration) {
         player_configuration.remove(player);
     }
-    let (turn_clock, simulation_seconds) = super::btech_turn_clock::load(c).await?;
     let mut state = BtechState {
         template_registry: Default::default(),
         retire_sanctions: Default::default(),
-        sensor_recoveries: super::btech_sensor_recovery::load(c).await?.into(),
+        sensor_recoveries: super::btech_sensor_recovery::load(c, clock).await?.into(),
         turn_clock,
         simulation_seconds,
-        gunner_stations: super::btech_gunner_stations::load(c).await?.into(),
+        gunner_stations: super::btech_gunner_stations::load(c, clock).await?.into(),
         inventories: super::btech_inventory::load(c).await?.into(),
         part_costs: super::btech_part_costs::load(c).await?.into(),
         weapon_settings: Default::default(),
-        reactor: super::btech_reactor::load(c).await?,
+        reactor: super::btech_reactor::load(c, clock).await?,
         wrecks: super::btech_wrecks::load(c).await?.into(),
         tows: super::btech_tows::load(c).await?.into(),
         player_preferences: player_preferences.into(),
@@ -134,7 +135,7 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
         skill_thresholds: Default::default(),
         character_values: super::btech_values::load(c).await?.into(),
         characters: super::btech_character::load(c).await?.into(),
-        recoveries: super::btech_recovery::load(c).await?.into(),
+        recoveries: super::btech_recovery::load(c, clock).await?.into(),
         constructed: Default::default(),
         vehicles: Default::default(),
         controllers: super::btech_autopilot::load(c).await?.into(),
@@ -143,8 +144,8 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
         maps: maps.into(),
         units: units.into(),
     };
-    super::btech_units::load(c, &mut state).await?;
-    super::btech_vehicles::load(c, &mut state).await?;
+    super::btech_units::load(c, &mut state, clock).await?;
+    super::btech_vehicles::load(c, &mut state, clock).await?;
     Ok(state)
 }
 
@@ -458,7 +459,6 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
     changed |= super::btech_recovery::save(c, before, after).await?;
     changed |= super::btech_reactor::save(c, before, after).await?;
     changed |= super::btech_sensor_recovery::save(c, before, after).await?;
-    changed |= super::btech_turn_clock::save(c, before, after).await?;
     changed |= super::btech_wrecks::save(c, before, after).await?;
     changed |= super::btech_decorations::save(c, before, after).await?;
     changed |= super::btech_static_decorations::save(c, before, after).await?;

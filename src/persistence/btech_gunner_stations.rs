@@ -1,4 +1,5 @@
 //! Selective ownership of station fields, TIC words and independently scheduled targeting state.
+use super::btech_deadlines::Clock;
 use super::write::{Cell, fields, row};
 use crate::{BattleGunnerStation, BtechState, ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -8,6 +9,7 @@ use std::{collections::BTreeMap, sync::Arc};
 /// Load station fields independently of whether the parent chassis is currently simulated.
 pub(super) async fn load(
     c: &mut SqliteConnection,
+    clock: Clock,
 ) -> Result<BTreeMap<ObjectId, BattleGunnerStation>> {
     let mut stations = BTreeMap::new();
     for row in sqlx::query("SELECT dbref,arcs,parent,gunner,target,target_x,target_y,target_z,lock_mode FROM btech_turrets ORDER BY dbref").fetch_all(&mut *c).await? {
@@ -34,16 +36,14 @@ pub(super) async fn load(
         "Incomplete turret TIC records"
     );
     if timers_installed(c).await? {
-        for row in sqlx::query("SELECT station_dbref,remaining FROM btech_gunner_lock_timers")
+        for row in sqlx::query("SELECT station_dbref,locks_at FROM btech_gunner_lock_timers")
             .fetch_all(&mut *c)
             .await?
         {
             let id = ObjectId(row.try_get("station_dbref")?);
-            let remaining = u8::try_from(row.try_get::<i64, _>("remaining")?)?;
-            ensure!(
-                (1..=8).contains(&remaining),
-                "Invalid gunner lock countdown"
-            );
+            let remaining = clock
+                .remaining(row.try_get("locks_at")?, 8)
+                .context("Invalid gunner lock countdown")?;
             stations
                 .get_mut(&id)
                 .context("Gunner timer has no station")?
@@ -161,9 +161,18 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
         changed = true;
     }
 
+    let (then, now) = (Clock::of(before), Clock::of(after));
     for (&id, station) in after.btech.gunner_stations() {
         let previous = before.btech.gunner_stations().get(&id);
-        if previous == Some(station) {
+        let lock = now.optional_deadline(station.lock_remaining);
+        let old_lock = previous.map(|old| then.optional_deadline(old.lock_remaining));
+        // A settling lock that counts down with the clock keeps its stored deadline.
+        if previous.is_some_and(|old| {
+            values(old) == values(station)
+                && old.tics == station.tics
+                && old.artillery_adjustment == station.artillery_adjustment
+        }) && old_lock.as_ref() == Some(&lock)
+        {
             continue;
         }
         if previous.is_none() {
@@ -184,37 +193,43 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
             &values(station),
         )
         .await?;
-        for (index, value) in station.tics.iter().enumerate() {
-            sqlx::query("INSERT INTO btech_turret_tics(turret_dbref,tic_index,value) VALUES(?,?,?) ON CONFLICT(turret_dbref,tic_index) DO UPDATE SET value=excluded.value")
-                .bind(id.0).bind(index as i64).bind(i64::from(*value)).execute(&mut *c).await?;
+        if previous.is_none_or(|old| old.tics != station.tics) {
+            for (index, value) in station.tics.iter().enumerate() {
+                sqlx::query("INSERT INTO btech_turret_tics(turret_dbref,tic_index,value) VALUES(?,?,?) ON CONFLICT(turret_dbref,tic_index) DO UPDATE SET value=excluded.value")
+                    .bind(id.0).bind(index as i64).bind(i64::from(*value)).execute(&mut *c).await?;
+            }
         }
-        if station.lock_remaining > 0 {
-            if !timers_installed(c).await? {
-                sqlx::raw_sql(include_str!("btech_gunner_locks.sql"))
+        if old_lock.as_ref() != Some(&lock) {
+            if let Cell::Integer(locks_at) = lock {
+                if !timers_installed(c).await? {
+                    sqlx::raw_sql(include_str!("btech_gunner_locks.sql"))
+                        .execute(&mut *c)
+                        .await?;
+                }
+                sqlx::query("INSERT INTO btech_gunner_lock_timers(station_dbref,locks_at) VALUES (?,?) ON CONFLICT(station_dbref) DO UPDATE SET locks_at=excluded.locks_at")
+                    .bind(id.0).bind(locks_at).execute(&mut *c).await?;
+            } else if timers_installed(c).await? {
+                sqlx::query("DELETE FROM btech_gunner_lock_timers WHERE station_dbref=?")
+                    .bind(id.0)
                     .execute(&mut *c)
                     .await?;
             }
-            sqlx::query("INSERT INTO btech_gunner_lock_timers(station_dbref,remaining) VALUES (?,?) ON CONFLICT(station_dbref) DO UPDATE SET remaining=excluded.remaining")
-                .bind(id.0).bind(i64::from(station.lock_remaining)).execute(&mut *c).await?;
-        } else if timers_installed(c).await? {
-            sqlx::query("DELETE FROM btech_gunner_lock_timers WHERE station_dbref=?")
-                .bind(id.0)
-                .execute(&mut *c)
-                .await?;
         }
-        if station.artillery_adjustment > 0 {
-            if !artillery_installed(c).await? {
-                sqlx::raw_sql(include_str!("btech_gunner_artillery.sql"))
+        if previous.is_none_or(|old| old.artillery_adjustment != station.artillery_adjustment) {
+            if station.artillery_adjustment > 0 {
+                if !artillery_installed(c).await? {
+                    sqlx::raw_sql(include_str!("btech_gunner_artillery.sql"))
+                        .execute(&mut *c)
+                        .await?;
+                }
+                sqlx::query("INSERT INTO btech_gunner_artillery(station_dbref,adjustment) VALUES (?,?) ON CONFLICT(station_dbref) DO UPDATE SET adjustment=excluded.adjustment")
+                    .bind(id.0).bind(i64::from(station.artillery_adjustment)).execute(&mut *c).await?;
+            } else if artillery_installed(c).await? {
+                sqlx::query("DELETE FROM btech_gunner_artillery WHERE station_dbref=?")
+                    .bind(id.0)
                     .execute(&mut *c)
                     .await?;
             }
-            sqlx::query("INSERT INTO btech_gunner_artillery(station_dbref,adjustment) VALUES (?,?) ON CONFLICT(station_dbref) DO UPDATE SET adjustment=excluded.adjustment")
-                .bind(id.0).bind(i64::from(station.artillery_adjustment)).execute(&mut *c).await?;
-        } else if artillery_installed(c).await? {
-            sqlx::query("DELETE FROM btech_gunner_artillery WHERE station_dbref=?")
-                .bind(id.0)
-                .execute(&mut *c)
-                .await?;
         }
         changed = true;
     }

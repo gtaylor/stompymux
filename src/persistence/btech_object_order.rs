@@ -1,7 +1,9 @@
 //! Shared persistence for map-object traversal without changing stable record identities.
-use super::write::{Cell, fields, row};
+//!
+//! Each traversal is stored as one row per step: `(map_dbref, position, ordinal)`.
+use super::write::{Cell, Fields, fields, sync_rows};
 use crate::{ObjectId, StoredBattleMap, World};
-use anyhow::{Context, Result, ensure};
+use anyhow::{Context, Result};
 use sqlx::{Row, SqliteConnection};
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -75,22 +77,29 @@ pub(super) async fn load(
     maps: &mut BTreeMap<ObjectId, StoredBattleMap>,
     kind: Kind,
 ) -> Result<()> {
-    use futures_util::TryStreamExt;
     if !exists(c, kind).await? {
         return Ok(());
     }
     let query = format!(
-        "SELECT map_dbref,ordinals_json FROM {} ORDER BY map_dbref",
+        "SELECT map_dbref,ordinal FROM {} ORDER BY map_dbref,position",
         kind.table()
     );
-    let mut rows = sqlx::query(sqlx::AssertSqlSafe(query.as_str())).fetch(c);
-    while let Some(row) = rows.try_next().await? {
+    let mut orders: BTreeMap<ObjectId, Vec<u32>> = BTreeMap::new();
+    for row in sqlx::query(sqlx::AssertSqlSafe(query))
+        .fetch_all(&mut *c)
+        .await?
+    {
+        let ordinal = u32::try_from(row.try_get::<i64, _>("ordinal")?)?;
+        orders
+            .entry(ObjectId(row.try_get("map_dbref")?))
+            .or_default()
+            .push(ordinal);
+    }
+    for (id, order) in orders {
         let map = maps
-            .get_mut(&ObjectId(row.try_get("map_dbref")?))
+            .get_mut(&id)
             .context("Map object order references missing map")?;
-        let encoded: String = row.try_get("ordinals_json")?;
-        ensure!(encoded.len() <= 12_000_002, "Map object order is too large");
-        *kind.order_mut(map) = Arc::new(serde_json::from_str(&encoded)?);
+        *kind.order_mut(map) = Arc::new(order);
     }
     Ok(())
 }
@@ -113,36 +122,35 @@ pub(super) async fn save(
             continue;
         }
         if !exists(c, kind).await? {
-            sqlx::query(sqlx::AssertSqlSafe(format!("CREATE TABLE {table} (map_dbref INTEGER PRIMARY KEY REFERENCES objects(dbref) ON DELETE CASCADE, ordinals_json TEXT NOT NULL)")))
-                .execute(&mut *c).await?;
-        }
-        if current.is_empty() {
             sqlx::query(sqlx::AssertSqlSafe(format!(
-                "DELETE FROM {table} WHERE map_dbref=?"
+                "CREATE TABLE {table} (\
+                 map_dbref INTEGER NOT NULL REFERENCES objects(dbref) ON DELETE CASCADE,\
+                 position INTEGER NOT NULL CHECK (position >= 0),\
+                 ordinal INTEGER NOT NULL CHECK (ordinal BETWEEN 0 AND 4294967295),\
+                 PRIMARY KEY (map_dbref, position)) STRICT, WITHOUT ROWID"
             )))
-            .bind(id.0)
             .execute(&mut *c)
             .await?;
-            changed = true;
-            continue;
         }
-        let previous = sqlx::query_scalar::<_, String>(sqlx::AssertSqlSafe(format!(
-            "SELECT ordinals_json FROM {table} WHERE map_dbref=?"
-        )))
-        .bind(id.0)
-        .fetch_optional(&mut *c)
-        .await?;
-        row(
+        let desired: BTreeMap<Vec<i64>, Fields> = current
+            .iter()
+            .enumerate()
+            .map(|(position, &ordinal)| {
+                (
+                    vec![position as i64],
+                    fields([("ordinal", Cell::Integer(i64::from(ordinal)))]),
+                )
+            })
+            .collect();
+        changed |= sync_rows(
             c,
             table,
-            fields([("map_dbref", Cell::Integer(id.0))]),
-            previous
-                .map(|value| fields([("ordinals_json", Cell::Text(value))]))
-                .as_ref(),
-            &fields([("ordinals_json", Cell::Text(serde_json::to_string(current)?))]),
+            &[("map_dbref", id.0)],
+            &["position"],
+            &["ordinal"],
+            &desired,
         )
         .await?;
-        changed = true;
     }
     Ok(changed)
 }

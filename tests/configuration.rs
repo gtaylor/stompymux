@@ -523,7 +523,7 @@ async fn supplied_configuration_parses_without_unknown_keys() {
     )
     .unwrap();
     let c = Config::load(d.path()).unwrap();
-    assert_eq!(KEYS.len(), 197);
+    assert_eq!(KEYS.len(), 198);
     assert_eq!(c.server.port, 5555);
     assert!(
         !c.warnings.iter().any(|w| w.contains("unknown")),

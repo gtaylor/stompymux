@@ -35,6 +35,28 @@ impl BattleRecovery {
             self.mode = BattleRecoveryMode::Tactical { injuries };
         }
     }
+    /// Rebuild saved state from its stored parts; callers validate the result.
+    pub(crate) fn from_saved(
+        mode: BattleRecoveryMode,
+        remaining: u8,
+        pain_resistance: bool,
+        toughness: bool,
+        dice: BattleDice,
+    ) -> Self {
+        Self {
+            mode,
+            remaining,
+            pain_resistance,
+            toughness,
+            dice,
+        }
+    }
+
+    /// The private random stream, exposed for storage.
+    pub(crate) fn dice(&self) -> &BattleDice {
+        &self.dice
+    }
+
     /// Establish a private replayable stream before any injury transaction.
     pub(super) fn fresh() -> Self {
         Self {

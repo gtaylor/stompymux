@@ -1,9 +1,29 @@
-//! Versioned player recovery persistence, installed only by an explicit native write.
-use super::write::{Cell, fields, row};
-use crate::{BattleRecovery, ObjectId, World};
-use anyhow::{Result, ensure};
-use sqlx::{Row, SqliteConnection};
+//! Typed player recovery persistence, installed only by an explicit native write.
+//!
+//! The recovery countdown is stored as the simulation second of the next check, so an
+//! unconscious player's row is rewritten only when a check rolls dice or reschedules.
+use super::btech_deadlines::Clock;
+use super::write::{Cell, Fields, fields, sync_rows};
+use crate::{BattleRecovery, BattleRecoveryMode, ObjectId, World};
+use anyhow::{Context, Result, bail};
+use sqlx::{Row, SqliteConnection, sqlite::SqliteRow};
 use std::collections::{BTreeMap, BTreeSet};
+
+/// Longest recovery countdown, in seconds.
+const MAX_REMAINING: i64 = 30;
+
+/// Stored columns besides the player.
+const COLUMNS: &[&str] = &[
+    "mode",
+    "tactical_injuries",
+    "recovers_at",
+    "pain_resistance",
+    "toughness",
+    "dice_seed",
+    "dice_stream",
+    "dice_block",
+    "dice_word",
+];
 
 /// Read-only extension detection for existing game databases.
 async fn installed(c: &mut SqliteConnection) -> Result<bool> {
@@ -15,29 +35,90 @@ async fn installed(c: &mut SqliteConnection) -> Result<bool> {
         == 1)
 }
 
-/// Decode bounded versioned records without inventing a replacement random stream.
-pub(super) async fn load(c: &mut SqliteConnection) -> Result<BTreeMap<ObjectId, BattleRecovery>> {
+/// Rebuild one record from its typed columns.
+fn decode(entry: &SqliteRow, clock: Clock) -> Result<BattleRecovery> {
+    let mode = match entry.try_get::<i64, _>("mode")? {
+        0 => BattleRecoveryMode::Ready,
+        1 => BattleRecoveryMode::Character,
+        2 => BattleRecoveryMode::Tactical {
+            injuries: u8::try_from(
+                entry
+                    .try_get::<Option<i64>, _>("tactical_injuries")?
+                    .context("Tactical recovery lacks an injury count")?,
+            )?,
+        },
+        other => bail!("Unknown recovery mode {other}"),
+    };
+    Ok(BattleRecovery::from_saved(
+        mode,
+        clock.optional_remaining(entry.try_get("recovers_at")?, MAX_REMAINING)?,
+        entry.try_get("pain_resistance")?,
+        entry.try_get("toughness")?,
+        super::btech_dice::read(entry)?,
+    ))
+}
+
+/// Owned column values for one record, relative to the saved clock.
+fn encode(recovery: &BattleRecovery, clock: Clock) -> Fields {
+    let (mode, injuries) = match recovery.mode {
+        BattleRecoveryMode::Ready => (0, Cell::Null),
+        BattleRecoveryMode::Character => (1, Cell::Null),
+        BattleRecoveryMode::Tactical { injuries } => (2, Cell::Integer(i64::from(injuries))),
+    };
+    let mut values = fields([
+        ("mode", Cell::Integer(mode)),
+        ("tactical_injuries", injuries),
+        ("recovers_at", clock.optional_deadline(recovery.remaining)),
+        (
+            "pain_resistance",
+            Cell::Integer(i64::from(recovery.pain_resistance)),
+        ),
+        ("toughness", Cell::Integer(i64::from(recovery.toughness))),
+    ]);
+    values.extend(fields(super::btech_dice::fields(recovery.dice())));
+    values
+}
+
+/// Decode typed records without inventing a replacement random stream.
+pub(super) async fn load(
+    c: &mut SqliteConnection,
+    clock: Clock,
+) -> Result<BTreeMap<ObjectId, BattleRecovery>> {
     let mut records = BTreeMap::new();
     if !installed(c).await? {
         return Ok(records);
     }
-    for entry in sqlx::query("SELECT player_dbref,state_version,length(CAST(recovery AS BLOB)) AS bytes,CASE WHEN length(CAST(recovery AS BLOB))<=16384 THEN recovery ELSE NULL END AS recovery FROM btech_character_recovery").fetch_all(c).await? {
-        ensure!(entry.try_get::<i64,_>("state_version")? == 1, "Unsupported recovery state version");
-        ensure!(entry.try_get::<i64,_>("bytes")? <= 16384, "Recovery state exceeds size limit");
-        let encoded: String = entry.try_get("recovery")?;
-        let recovery: BattleRecovery = serde_json::from_str(&encoded)?;
+    let query = format!(
+        "SELECT player_dbref,{} FROM btech_character_recovery",
+        COLUMNS.join(",")
+    );
+    for entry in sqlx::query(sqlx::AssertSqlSafe(query)).fetch_all(c).await? {
+        let recovery = decode(&entry, clock)?;
         recovery.validate()?;
         records.insert(ObjectId(entry.try_get("player_dbref")?), recovery);
     }
     Ok(records)
 }
 
-/// Update owned columns, retaining independent extensions on the same row.
+/// Write records whose stored form changed; a countdown in step with the clock does not.
 pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World) -> Result<bool> {
+    let (then, now) = (Clock::of(before), Clock::of(after));
     let mut changed = false;
     for (&id, recovery) in after.btech.recoveries() {
-        let previous = before.btech.recoveries().get(&id);
-        if previous == Some(recovery) {
+        let old = before.btech.recoveries().get(&id);
+        // An identical record keeps its deadline unless a countdown sat still while the
+        // clock moved.
+        if old == Some(recovery) && (then == now || recovery.remaining == 0) {
+            continue;
+        }
+        let desired = encode(recovery, now);
+        if before
+            .btech
+            .recoveries()
+            .get(&id)
+            .map(|old| encode(old, then))
+            == Some(desired.clone())
+        {
             continue;
         }
         if !installed(c).await? {
@@ -45,30 +126,15 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
                 .execute(&mut *c)
                 .await?;
         }
-        let old: Option<String> = sqlx::query_scalar(
-            "SELECT recovery FROM btech_character_recovery WHERE player_dbref=?",
-        )
-        .bind(id.0)
-        .fetch_optional(&mut *c)
-        .await?;
-        let old = old.map(|encoded| {
-            fields([
-                ("state_version", Cell::Integer(1)),
-                ("recovery", Cell::Text(encoded)),
-            ])
-        });
-        row(
+        changed |= sync_rows(
             c,
             "btech_character_recovery",
-            fields([("player_dbref", Cell::Integer(id.0))]),
-            old.as_ref(),
-            &fields([
-                ("state_version", Cell::Integer(1)),
-                ("recovery", Cell::Text(serde_json::to_string(recovery)?)),
-            ]),
+            &[("player_dbref", id.0)],
+            &[],
+            COLUMNS,
+            &BTreeMap::from([(Vec::new(), desired)]),
         )
         .await?;
-        changed = true;
     }
     Ok(changed)
 }

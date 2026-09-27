@@ -41,6 +41,31 @@ impl SensorRecovery {
     pub(crate) fn unit(&self) -> ObjectId {
         self.unit
     }
+
+    /// Rebuild a saved event; the enclosing world validation checks its bounds.
+    pub(crate) fn from_saved(unit: ObjectId, display: Display, value: u8, remaining: u8) -> Self {
+        Self {
+            unit,
+            display,
+            value,
+            remaining,
+        }
+    }
+
+    /// Display whose range recovers when the event completes.
+    pub(crate) fn display(&self) -> Display {
+        self.display
+    }
+
+    /// Range restored to the display on completion.
+    pub(crate) fn value(&self) -> u8 {
+        self.value
+    }
+
+    /// Seconds left before the display recovers.
+    pub(crate) fn remaining(&self) -> u8 {
+        self.remaining
+    }
 }
 
 /// Only started mobile chassis participate, independently of their actual current speed.

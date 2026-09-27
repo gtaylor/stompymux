@@ -32,6 +32,7 @@ impl Server {
                     self.config.database.busy_timeout_ms,
                     maintenance,
                     durable.as_ref(),
+                    self.config.database.clock_save_interval,
                 )
                 .await
             }

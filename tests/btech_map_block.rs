@@ -101,20 +101,12 @@ async fn landing_order_preserves_identity_replays_and_rejects_corruption() {
         persistence::load(&config.database()).await.unwrap().btech,
         world.btech
     );
-    for malformed in ["[2,2,4]", "[2,0]", "[2,0,99]"] {
-        sqlx::query("UPDATE btech_landing_order SET ordinals_json=? WHERE map_dbref=?")
-            .bind(malformed)
-            .bind(map.0)
-            .execute(&mut sql)
-            .await
-            .unwrap();
-        assert!(persistence::load(&config.database()).await.is_err());
+    for malformed in [&[2, 2, 4][..], &[2, 0], &[2, 0, 99], &[2, 0, 4]] {
+        store_landing_order(&mut sql, map, malformed).await;
+        if malformed != [2, 0, 4] {
+            assert!(persistence::load(&config.database()).await.is_err());
+        }
     }
-    sqlx::query("UPDATE btech_landing_order SET ordinals_json='[2,0,4]' WHERE map_dbref=?")
-        .bind(map.0)
-        .execute(&mut sql)
-        .await
-        .unwrap();
     world
         .objects
         .get_mut(&map)
@@ -358,5 +350,23 @@ async fn addblock_validation_and_full_width_saved_radii() {
                 .unwrap(),
             expected
         );
+    }
+}
+
+/// Replace a map's stored landing traversal with `order`, bypassing the game's validation.
+async fn store_landing_order(sql: &mut sqlx::SqliteConnection, map: ObjectId, order: &[u32]) {
+    sqlx::query("DELETE FROM btech_landing_order WHERE map_dbref=?")
+        .bind(map.0)
+        .execute(&mut *sql)
+        .await
+        .unwrap();
+    for (position, ordinal) in order.iter().enumerate() {
+        sqlx::query("INSERT INTO btech_landing_order(map_dbref,position,ordinal) VALUES(?,?,?)")
+            .bind(map.0)
+            .bind(position as i64)
+            .bind(i64::from(*ordinal))
+            .execute(&mut *sql)
+            .await
+            .unwrap();
     }
 }

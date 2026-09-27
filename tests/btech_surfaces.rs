@@ -7474,6 +7474,41 @@ async fn artillery_queue_late_arrival_rolls_back_all_shots() {
     assert!(scripts.drain_outbox().is_empty());
 }
 
+/// A flight counting down with the simulation clock is never rewritten; only its arrival
+/// touches the row.
+#[tokio::test]
+async fn artillery_flight_in_progress_leaves_its_row_unchanged() {
+    tokio::task::LocalSet::new().run_until(async {
+        use sqlx::Connection;
+        let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 3).await;
+        for (unit, pilot) in units.into_iter().zip([ObjectId(1), ObjectId(2)]) {
+            stop_battle_unit(&mut world, unit, pilot, rules()).unwrap();
+        }
+        let center = BattleHexCoordinate { x: 1, y: 1 };
+        enqueue_artillery(&mut world, map, units[0], BattleArtilleryFlight::new(center, center, BattleWeapon::LongTom, BattleArtilleryMode::Mine, true).unwrap()).unwrap();
+        let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
+        for _ in 0..7 { assert!(advance_artillery_action(&scripts, &config, rules()).unwrap().is_empty()); }
+        persistence::save(&config.database(), &scripts.world()).await.unwrap();
+        let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
+        sqlx::raw_sql("CREATE TABLE artillery_updates(n INTEGER); CREATE TRIGGER count_artillery_updates AFTER UPDATE ON btech_artillery BEGIN INSERT INTO artillery_updates VALUES(1); END;").execute(&mut sql).await.unwrap();
+        let (_address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        tokio::time::timeout(std::time::Duration::from_secs(6), async {
+            loop {
+                let loaded = persistence::load(&config.database()).await.unwrap();
+                if loaded.btech.maps()[&map].artillery_shots().is_empty() {
+                    assert_eq!(loaded.btech.maps()[&map].minefields().len(), 1);
+                    break;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            }
+        }).await.unwrap();
+        let updates: i64 = sqlx::query_scalar("SELECT count(*) FROM artillery_updates").fetch_one(&mut sql).await.unwrap();
+        assert_eq!(updates, 0);
+        shutdown.send(ShutdownRequest::Sigterm).unwrap();
+        task.await.unwrap().unwrap();
+    }).await;
+}
+
 /// The real server restores queued arrivals and their effects when a database delete fails, then retries once.
 #[tokio::test]
 async fn artillery_queue_server_save_failure_and_retry() {
@@ -7511,7 +7546,7 @@ async fn artillery_queue_server_save_failure_and_retry() {
     }).await;
 }
 
-/// Loading rejects a completed cursor still present in the persistent launch queue.
+/// The schema refuses a completed cursor, and loading rejects one longer than its launch allows.
 #[tokio::test]
 async fn artillery_queue_rejects_corrupt_saved_cursor() {
     use sqlx::Connection;
@@ -7532,22 +7567,26 @@ async fn artillery_queue_rejects_corrupt_saved_cursor() {
     )
     .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
-    let mut encoded = serde_json::to_value(world.btech.maps()[&map].artillery_shots()).unwrap();
-    encoded["0"]["flight"]["remaining"] = 0.into();
     let mut sql = sqlx::SqliteConnection::connect_with(
         &sqlx::sqlite::SqliteConnectOptions::new().filename(config.database()),
     )
     .await
     .unwrap();
-    sqlx::query("UPDATE btech_artillery SET shots=? WHERE map_dbref=?")
-        .bind(serde_json::to_string(&encoded).unwrap())
+    assert!(
+        sqlx::query("UPDATE btech_artillery SET arrives_at=0 WHERE map_dbref=?")
+            .bind(map.0)
+            .execute(&mut sql)
+            .await
+            .is_err()
+    );
+    sqlx::query("UPDATE btech_artillery SET arrives_at=60000 WHERE map_dbref=?")
         .bind(map.0)
         .execute(&mut sql)
         .await
         .unwrap();
     let error = persistence::load(&config.database()).await.unwrap_err();
     assert!(
-        format!("{error:#}").contains("Invalid queued artillery shot"),
+        format!("{error:#}").contains("Invalid artillery countdown"),
         "{error:#}"
     );
 }

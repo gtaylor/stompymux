@@ -51,7 +51,47 @@ impl std::fmt::Debug for BattleDice {
     }
 }
 
+/// Generator position as plain values, stored in typed database columns.
+///
+/// The stream offset is split into a 64-bit block counter and a word within that
+/// sixteen-word block, so every part fits a native SQLite integer.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) struct BattleDiceState {
+    /// ChaCha key.
+    pub seed: [u8; 32],
+    /// ChaCha nonce selecting one of the key's independent streams.
+    pub stream: u64,
+    /// Sixteen-word block containing the next output word.
+    pub block: u64,
+    /// Next output word within `block`, always below sixteen.
+    pub word: u8,
+}
+
 impl BattleDice {
+    /// Capture the generator position for typed storage.
+    pub(crate) fn saved_state(&self) -> BattleDiceState {
+        let Generator::ChaCha8(rng) = &self.generator;
+        let position = rng.get_word_pos();
+        BattleDiceState {
+            seed: rng.get_seed(),
+            stream: rng.get_stream(),
+            block: (position / 16) as u64,
+            word: (position % 16) as u8,
+        }
+    }
+
+    /// Restore a generator from typed storage, beginning a fresh diagnostic journal.
+    pub(crate) fn from_saved_state(state: BattleDiceState) -> Result<Self> {
+        ensure!(state.word < 16, "Dice word offset is out of range");
+        let mut rng = ChaCha8Rng::from_seed(state.seed);
+        rng.set_stream(state.stream);
+        rng.set_word_pos(u128::from(state.block) * 16 + u128::from(state.word));
+        Ok(Self {
+            generator: Generator::ChaCha8(Box::new(rng)),
+            generic_rolls: super::BattleRollStatistics::default(),
+        })
+    }
+
     /// Reproducible stream for isolated scenarios and deterministic rule tests.
     pub fn seeded(seed: [u8; 32]) -> Self {
         Self {
@@ -197,5 +237,22 @@ mod statistics_tests {
             restored.consciousness_roll(true)
         );
         assert_eq!(counted.generic_roll_statistics().total(), 0);
+    }
+
+    /// Typed storage restores the exact stream position, including mid-block offsets.
+    #[test]
+    fn saved_state_round_trips_stream_position() {
+        let mut dice = BattleDice::seeded([11; 32]);
+        for _ in 0..21 {
+            dice.two_d6();
+        }
+        let state = dice.saved_state();
+        assert!(state.word < 16);
+        let mut restored = BattleDice::from_saved_state(state).unwrap();
+        assert_eq!(restored, dice);
+        for _ in 0..40 {
+            assert_eq!(restored.two_d6(), dice.two_d6());
+        }
+        assert!(BattleDice::from_saved_state(BattleDiceState { word: 16, ..state }).is_err());
     }
 }

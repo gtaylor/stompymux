@@ -110,6 +110,7 @@ impl Server {
                     self.config.database.busy_timeout_ms,
                     candidate.effects.maintenance(),
                     None,
+                    self.config.database.clock_save_interval,
                 )
                 .await?;
             }

@@ -157,6 +157,7 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
         c.database.busy_timeout_ms,
         scripts.effects.maintenance(),
         None,
+        c.database.clock_save_interval,
     )
     .await?;
     if let Some(report) = scripts.effects.drain_maintenance() {

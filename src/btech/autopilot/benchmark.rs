@@ -843,6 +843,7 @@ mod persistence_tests {
             None,
             &live,
             config.database.busy_timeout_ms,
+            1,
         )
         .await
         .unwrap();
@@ -855,8 +856,8 @@ mod persistence_tests {
         where
             T: crate::btech::saved_parts::SavedParts + serde::de::DeserializeOwned,
         {
-            let core = record.encode_saved_core().unwrap();
-            let live = record.encode_saved_live().unwrap();
+            let core = record.saved_core_value().unwrap().to_string();
+            let live = record.saved_live_value().unwrap().to_string();
             serde_json::from_value(crate::btech::saved_parts::merge(&core, &live).unwrap()).unwrap()
         }
         for unit in live.btech.constructed_units().values() {

@@ -42,19 +42,14 @@ impl TryFrom<FlightRecord> for BattleArtilleryFlight {
     type Error = anyhow::Error;
 
     fn try_from(record: FlightRecord) -> Result<Self> {
-        let mut flight = Self::new(
+        Self::from_saved(
             record.origin,
             record.target,
             record.weapon,
             record.mode,
             record.hit,
-        )?;
-        ensure!(
-            record.remaining <= flight.remaining,
-            "Invalid artillery countdown"
-        );
-        flight.remaining = record.remaining;
-        Ok(flight)
+            record.remaining,
+        )
     }
 }
 
@@ -124,6 +119,26 @@ impl BattleArtilleryFlight {
             hit,
             remaining,
         })
+    }
+
+    /// Rebuild a saved flight, refusing a countdown longer than the launch allows.
+    pub(crate) fn from_saved(
+        origin: BattleHexCoordinate,
+        target: BattleHexCoordinate,
+        weapon: BattleWeapon,
+        mode: BattleArtilleryMode,
+        hit: bool,
+        remaining: u16,
+    ) -> Result<Self> {
+        let mut flight = Self::new(origin, target, weapon, mode, hit)?;
+        ensure!(remaining <= flight.remaining, "Invalid artillery countdown");
+        flight.remaining = remaining;
+        Ok(flight)
+    }
+
+    /// Whether the launch hit its aim point; misses scatter on arrival.
+    pub(crate) fn hit(&self) -> bool {
+        self.hit
     }
 
     /// Weapon identity is retained through arrival and supplies catalogue damage.

@@ -2,7 +2,10 @@
 mod btech;
 mod btech_autopilot;
 mod btech_character;
+mod btech_clocks;
+mod btech_deadlines;
 mod btech_decorations;
+mod btech_dice;
 mod btech_map_lifecycle;
 mod btech_map_random;
 mod btech_reactor;
@@ -154,9 +157,15 @@ pub async fn save(path: &Path, world: &World) -> Result<()> {
 }
 /// Compare and write within one transaction; missing destinations are never created here.
 pub async fn save_with_timeout(path: &Path, world: &World, timeout: u64) -> Result<()> {
-    save_changes(path, None, world, timeout).await.map(|_| ())
+    save_changes(path, None, world, timeout, 1)
+        .await
+        .map(|_| ())
 }
 /// Write `world` as a diff against `baseline`, the world this database last stored.
+///
+/// The simulation clock is stored alongside any other change, or alone once it is
+/// `clock_interval` seconds ahead of the stored clock; zero never stores it alone.
+/// Explicit saves and shutdown pass one, so they always store the current clock.
 ///
 /// A baseline spares reading the whole database back before diffing, and lets the
 /// diff skip every entry the two worlds still share. Pass `None` unless the database
@@ -167,6 +176,7 @@ pub(crate) async fn save_changes(
     baseline: Option<&World>,
     world: &World,
     timeout: u64,
+    clock_interval: u64,
 ) -> Result<bool> {
     let mut c = connect(path, timeout, false, false).await?;
     let result = async {
@@ -181,7 +191,7 @@ pub(crate) async fn save_changes(
                 &stored
             }
         };
-        let changed = write::apply(&mut tx, before, world).await?;
+        let changed = write::apply(&mut tx, before, world, clock_interval).await?;
         tx.commit().await?;
         world.macros.committed();
         // Unregister sanctions served their purpose once the teardown is durable.
@@ -234,7 +244,7 @@ pub async fn initialize_with_timeout(path: &Path, world: &World, timeout: u64) -
             sqlx::query("INSERT INTO snapshot VALUES(1,32,1,32,0,0,0,0,0)")
                 .execute(&mut *tx)
                 .await?;
-            write::apply(&mut tx, &World::default(), world).await?;
+            write::apply(&mut tx, &World::default(), world, 1).await?;
             tx.commit().await?;
             world.macros.committed();
             Ok(())
@@ -293,7 +303,7 @@ where
         let changes_before: i64 = sqlx::query_scalar("SELECT total_changes()")
             .fetch_one(&mut *tx)
             .await?;
-        write::apply_changes(&mut tx, &before, &after, Some(&report.plan)).await?;
+        write::apply_changes(&mut tx, &before, &after, Some(&report.plan), 1).await?;
         maintenance::cleanup(&mut tx, &report.plan.purges).await?;
         ensure!(
             sqlx::query("PRAGMA foreign_key_check")
@@ -372,9 +382,10 @@ pub(crate) async fn persist_effects(
     timeout: u64,
     report: Option<crate::dbck::DbCheckReport>,
     baseline: Option<&World>,
+    clock_interval: u64,
 ) -> Result<bool> {
     let Some(mut report) = report else {
-        return save_changes(&path, baseline, &world, timeout).await;
+        return save_changes(&path, baseline, &world, timeout, clock_interval).await;
     };
     for id in &report.plan.purges {
         let o = world

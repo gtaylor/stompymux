@@ -158,7 +158,7 @@ async fn prepending_preserves_auxiliary_columns_and_order_survives_removal() {
             .collect::<Vec<_>>(),
         vec![0, 9]
     );
-    sqlx::query("UPDATE btech_mine_order SET ordinals_json='[0,0]'")
+    sqlx::query("UPDATE btech_mine_order SET ordinal=0")
         .execute(&mut sql)
         .await
         .unwrap();

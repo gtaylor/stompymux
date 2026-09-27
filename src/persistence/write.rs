@@ -155,6 +155,102 @@ pub(super) async fn delete(c: &mut SqliteConnection, table: &str, key: Fields) -
         .with_context(|| format!("removing {table} {key:?}"))?;
     Ok(())
 }
+/// Rows of one table keyed by their key column values, as used by [`sync_rows`].
+pub(super) type Rows = BTreeMap<Vec<i64>, Fields>;
+
+/// Read one column of a fetched row as whichever SQL value it holds.
+fn read_cell(entry: &sqlx::sqlite::SqliteRow, name: &str) -> Result<Cell> {
+    use sqlx::{TypeInfo, ValueRef};
+    let raw = entry.try_get_raw(name)?;
+    if raw.is_null() {
+        return Ok(Cell::Null);
+    }
+    let kind = raw.type_info().name().to_owned();
+    Ok(match kind.as_str() {
+        "INTEGER" => Cell::Integer(entry.try_get(name)?),
+        "REAL" => Cell::Number(entry.try_get(name)?),
+        "TEXT" => Cell::Text(entry.try_get(name)?),
+        "BLOB" => Cell::Blob(entry.try_get(name)?),
+        other => anyhow::bail!("unsupported SQL value type {other} in column {name}"),
+    })
+}
+
+/// Make the rows of `table` within `scope` match `desired`.
+///
+/// `scope` fixes leading key columns, such as the owning object, and may be empty to
+/// cover the whole table. Rows within it are identified by `keys`; `desired` maps each
+/// row's key values to its `columns`. Keys must be integers; columns may hold any SQL
+/// value. Stored rows are read back first, so only changed columns are updated, new rows are
+/// inserted and rows absent from `desired` are deleted. Returns whether anything was
+/// written.
+pub(super) async fn sync_rows(
+    c: &mut SqliteConnection,
+    table: &str,
+    scope: &[(&'static str, i64)],
+    keys: &[&'static str],
+    columns: &[&'static str],
+    desired: &Rows,
+) -> Result<bool> {
+    let selected: Vec<&str> = keys.iter().chain(columns).copied().collect();
+    let mut query = QueryBuilder::new(format!("SELECT {} FROM {table}", selected.join(",")));
+    let scope_key: Fields = scope
+        .iter()
+        .map(|(name, value)| ((*name).into(), Cell::Integer(*value)))
+        .collect();
+    if !scope_key.is_empty() {
+        query.push(" WHERE ");
+        predicate(&mut query, &scope_key);
+    }
+    let mut stored = BTreeMap::new();
+    for entry in query.build().fetch_all(&mut *c).await? {
+        let key = keys
+            .iter()
+            .map(|name| entry.try_get::<i64, _>(*name))
+            .collect::<Result<Vec<_>, _>>()?;
+        let mut values = Fields::new();
+        for name in columns {
+            values.insert((*name).into(), read_cell(&entry, name)?);
+        }
+        stored.insert(key, values);
+    }
+    let row_key = |values: &[i64]| {
+        let mut key = scope_key.clone();
+        key.extend(
+            keys.iter()
+                .zip(values)
+                .map(|(name, value)| ((*name).into(), Cell::Integer(*value))),
+        );
+        key
+    };
+    let mut changed = false;
+    for (key, values) in desired {
+        let previous = stored.remove(key);
+        changed |= row(c, table, row_key(key), previous.as_ref(), values).await?;
+    }
+    for key in stored.keys() {
+        delete(c, table, row_key(key)).await?;
+        changed = true;
+    }
+    Ok(changed)
+}
+
+/// [`sync_rows`], skipped without touching the database when `desired` equals
+/// `previous`, the rows produced from the last saved world.
+pub(super) async fn sync_changed_rows(
+    c: &mut SqliteConnection,
+    table: &str,
+    scope: &[(&'static str, i64)],
+    keys: &[&'static str],
+    columns: &[&'static str],
+    previous: Option<&Rows>,
+    desired: &Rows,
+) -> Result<bool> {
+    if previous == Some(desired) {
+        return Ok(false);
+    }
+    sync_rows(c, table, scope, keys, columns, desired).await
+}
+
 /// Supported object fields; relationship-list slots are supplied from durable rows.
 fn object(o: &Object, links: LinkSlots) -> Fields {
     let mut result = fields([
@@ -428,9 +524,16 @@ async fn save_objects(
     Ok(changed)
 }
 /// Apply a supported projection delta to an already-open write transaction, reporting
-/// whether any row changed.
-pub(super) async fn apply(c: &mut SqliteConnection, before: &World, after: &World) -> Result<bool> {
-    apply_changes(c, before, after, None).await
+/// whether any row changed. The simulation clock is written alongside other changes,
+/// or alone once it is `clock_interval` seconds ahead of the stored clock (never when
+/// zero).
+pub(super) async fn apply(
+    c: &mut SqliteConnection,
+    before: &World,
+    after: &World,
+    clock_interval: u64,
+) -> Result<bool> {
+    apply_changes(c, before, after, None, clock_interval).await
 }
 /// Explicit maintenance writes may repair lists and remove only approved accounts.
 pub(super) async fn apply_changes(
@@ -438,6 +541,7 @@ pub(super) async fn apply_changes(
     before: &World,
     after: &World,
     maintenance: Option<&crate::dbck::RepairPlan>,
+    clock_interval: u64,
 ) -> Result<bool> {
     super::btech::validate_changes(before, after, maintenance.map(|plan| &plan.purges))?;
     ensure!(
@@ -540,6 +644,8 @@ pub(super) async fn apply_changes(
     changed |= super::communication::save(c, before, after).await?;
     changed |= super::macros::save(c, before, after).await?;
     changed |= super::btech::save(c, before, after).await?;
+    // The simulation clock goes last, since it is written alongside any other change.
+    changed |= super::btech_turn_clock::save(c, after, changed, clock_interval).await?;
     let next = after
         .next_id
         .max(before.next_id)
