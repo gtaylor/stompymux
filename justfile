@@ -28,9 +28,9 @@ test:
 # Compile-only pass over every target; skips codegen so it is the fastest way
 # to find type errors while iterating.
 
-# Type-check the library, binaries, and every test suite without building them.
+# Type-check the library, every binary (feature-gated ones included), and every test suite.
 check:
-    cargo check --all-targets
+    cargo check --all-targets --all-features
 
 # Only the library's own unit-test binary is built for this recipe.
 
