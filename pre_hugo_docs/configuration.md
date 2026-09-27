@@ -48,8 +48,7 @@ IPv4 or IPv6 literals. The compiled `server.port` default is 6250; the supplied
 file selects 5555. Port zero requests an ephemeral port.
 
 `database.game_database` defaults to `data/stompymux.db` and is the only live
-storage path. `serve` loads schema-32 relational tables there directly. `database.legacy_game_database` remains parseable but is deprecated
-and ignored. Existing Rust JSON snapshots are rejected and never converted or
+storage path. `serve` loads schema-32 relational tables there directly. Existing Rust JSON snapshots are rejected and never converted or
 merged.
 Changing configuration never moves files. A missing live database permits fresh
 bootstrap; an existing empty or malformed file requires explicit operator action.
@@ -89,8 +88,7 @@ rate/burst settings remain under their legacy `security` names.
 | `database.busy_timeout_ms` | 5000 | SQLite lock wait |
 | `database.bootstrap.credentials_file` | `bootstrap-credentials.txt` | Restricted bootstrap credential file |
 
-The other two additions are `server.listen_address` and
-`database.legacy_game_database`, described above. Protocol bytes, schema limits,
+The other addition is `server.listen_address`, described above. Protocol bytes, schema limits,
 cryptographic constants and socket read-buffer sizes remain implementation
 constants.
 

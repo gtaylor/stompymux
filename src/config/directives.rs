@@ -380,17 +380,7 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "btech_techtime_multiplier",
-        parser: "cf_techtime_multiplier",
-        permission: P::GOD,
-    },
-    Directive {
         name: "btech_statengine_obj",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_limitedrepairs",
         parser: "cf_int",
         permission: P::GOD,
     },
@@ -495,21 +485,6 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "dump_interval",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "dump_message",
-        parser: "cf_string",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "postdump_message",
-        parser: "cf_string",
-        permission: P::GOD,
-    },
-    Directive {
         name: "dump_offset",
         parser: "cf_int",
         permission: P::GOD,
@@ -527,11 +502,6 @@ pub const DIRECTIVES: &[Directive] = &[
     Directive {
         name: "forbid_site",
         parser: "cf_site",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "fork_dump",
-        parser: "cf_bool",
         permission: P::GOD,
     },
     Directive {
@@ -626,11 +596,6 @@ pub const DIRECTIVES: &[Directive] = &[
     },
     Directive {
         name: "bad_commands",
-        parser: "cf_bool_bit",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "buffer_alloc",
         parser: "cf_bool_bit",
         permission: P::GOD,
     },

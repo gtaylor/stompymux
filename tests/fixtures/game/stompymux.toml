@@ -20,20 +20,10 @@ include = ["aliases.toml"]
 clock_save_interval = 1
 # SQLite database file holding persistent game state.
 game_database = "data/stompymux.db"
-# Deprecated compatibility setting; ignored. game_database is the live database.
-legacy_game_database = "data/stompymux.db"
 # Directory containing BattleTech unit template files.
 mech_database = "mechs"
 # Directory containing map template files.
 map_database = "maps"
-# Seconds between automatic database dumps.
-dump_interval = 1200
-# Whether to use a child process when writing database dumps.
-fork_dump = true
-# Message displayed to players when a database dump begins.
-# dump_message = "BattletechMUX : Saving Database. Game will pause."
-# Message displayed to players after a database dump finishes.
-# postdump_message = "BattletechMUX : Database Saved."
 
 # -----------------------------------------------
 #  Lua runtime
@@ -94,9 +84,6 @@ osc8-demo-danger = 'color=white bg=red bold hover.bg=darkred disabled.strikethro
 [battletech]
 # Allow players to use LOADCARGO, UNLOADCARGO, MANIFEST, and STORES.
 allow_cargo_commands = true
-# Overall repair-time multiplier, from 0.0 through 10.0. Zero makes newly
-# started repairs complete on the event scheduler's next one-second tick.
-techtime_multiplier = 1.0
 # To-hit penalty applied when firing at a dug-in unit.
 digbonus = 2
 # Apply the dug-in to-hit penalty only when attacking a target's front side.
@@ -131,8 +118,6 @@ newterrain = 0
 newcharge = 1
 # Use skid-based piloting checks when colliding with cliffs or drops.
 skidcliff = 1
-# Require units to be stalled before non-wizard players can perform serious repairs.
-limitedrepairs = 1
 # Database object that stores destroyed units.
 usedmechstore = 3
 # Enable catastrophic explosions after a third engine critical hit.
@@ -265,8 +250,6 @@ all_commands = false
 suspect_commands = false
 # Write commands the server does not recognize.
 bad_commands = false
-# Write buffer-pool allocation and release activity.
-buffer_alloc = false
 # Write internal server bugs and crash reports.
 bugs = true
 # Write normal database checkpoint activity.

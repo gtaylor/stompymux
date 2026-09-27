@@ -88,9 +88,6 @@ impl Config {
                 .join(", ");
             format!("rendering configuration: {origins}")
         })?;
-        if config.origins.contains_key("database.legacy_game_database") {
-            config.warnings.push("database.legacy_game_database is deprecated and unused; database.game_database is the live schema-32 database".into());
-        }
         config.warnings.push("Configuration parsed completely; BattleTech and remaining legacy command-system settings are retained for future implementation.".into());
         Ok(config)
     }
@@ -129,7 +126,6 @@ impl Config {
         }
         for key in [
             "database.game_database",
-            "database.legacy_game_database",
             "lua.directory",
             "database.bootstrap.credentials_file",
         ] {

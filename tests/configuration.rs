@@ -41,7 +41,7 @@ async fn complete_legacy_catalog_and_compiled_defaults() {
     let (_d, c) = config("");
     let inventory: Vec<serde_json::Value> =
         serde_json::from_str(include_str!("fixtures/config/legacy-catalog.json")).unwrap();
-    assert_eq!(inventory.len(), 175);
+    assert_eq!(inventory.len(), 168);
     let expected: BTreeSet<_> = inventory
         .iter()
         .map(|v| v["path"].as_str().unwrap())
@@ -160,8 +160,6 @@ async fn malformed_known_values_and_cycles_are_rejected() {
     for text in [
         "lua.memory_limit=-1",
         "server.port=65536",
-        "battletech.techtime_multiplier=nan",
-        "battletech.techtime_multiplier=11.0",
         "colors.bad=[0,256,0]",
         "access.commands.foo=12",
         "sites.forbid=[{address='nope',mask='255.255.255.0'}]",
@@ -523,7 +521,7 @@ async fn supplied_configuration_parses_without_unknown_keys() {
     )
     .unwrap();
     let c = Config::load(d.path()).unwrap();
-    assert_eq!(KEYS.len(), 198);
+    assert_eq!(KEYS.len(), 190);
     assert_eq!(c.server.port, 5555);
     assert!(
         !c.warnings.iter().any(|w| w.contains("unknown")),

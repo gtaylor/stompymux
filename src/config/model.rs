@@ -12,16 +12,6 @@ pub struct DatabaseConfig {
     pub mech_database: PathBuf,
     /// Configuration value for `map_database`; defaults are centralized below.
     pub map_database: PathBuf,
-    /// Configuration value for `dump_interval`; defaults are centralized below.
-    pub dump_interval: i64,
-    /// Configuration value for `fork_dump`; defaults are centralized below.
-    pub fork_dump: bool,
-    /// Configuration value for `dump_message`; defaults are centralized below.
-    pub dump_message: String,
-    /// Configuration value for `postdump_message`; defaults are centralized below.
-    pub postdump_message: String,
-    /// Deprecated compatibility value; no runtime operation uses this path.
-    pub legacy_game_database: PathBuf,
     /// Configuration value for `busy_timeout_ms`; defaults are centralized below.
     pub busy_timeout_ms: u64,
     /// Most seconds the stored simulation clock may trail the running one. A heartbeat
@@ -37,11 +27,6 @@ impl Default for DatabaseConfig {
             game_database: PathBuf::from("data/stompymux.db"),
             mech_database: PathBuf::from("mechs"),
             map_database: PathBuf::from("maps"),
-            dump_interval: 3600,
-            fork_dump: true,
-            dump_message: "".into(),
-            postdump_message: "".into(),
-            legacy_game_database: PathBuf::from("data/stompymux.db"),
             busy_timeout_ms: 5000,
             clock_save_interval: 60,
             bootstrap: Default::default(),
@@ -233,14 +218,10 @@ pub struct BattleTechConfig {
     pub variable_techtime: i64,
     /// Configuration value for `techtime_mod`; defaults are centralized below.
     pub techtime_mod: i64,
-    /// Configuration value for `techtime_multiplier`; defaults are centralized below.
-    pub techtime_multiplier: f64,
     /// Configuration value for `statengine_obj`; defaults are centralized below.
     pub statengine_obj: i64,
     /// All-conditions sensor band reach in hexes; weather and darkness do not shorten it.
     pub sensor_range: i64,
-    /// Configuration value for `limitedrepairs`; defaults are centralized below.
-    pub limitedrepairs: i64,
     /// Configuration value for `stackpole`; defaults are centralized below.
     pub stackpole: i64,
     /// Configuration value for `phys_use_pskill`; defaults are centralized below.
@@ -312,10 +293,8 @@ impl Default for BattleTechConfig {
             xploss_for_mw: 1,
             variable_techtime: 0,
             techtime_mod: 0,
-            techtime_multiplier: 1.0,
             statengine_obj: -1,
             sensor_range: 15,
-            limitedrepairs: 0,
             stackpole: 1,
             phys_use_pskill: 1,
             erange: 1,
@@ -604,8 +583,6 @@ pub struct LoggingTopics {
     pub suspect_commands: bool,
     /// Configuration value for `bad_commands`; defaults are centralized below.
     pub bad_commands: bool,
-    /// Configuration value for `buffer_alloc`; defaults are centralized below.
-    pub buffer_alloc: bool,
     /// Configuration value for `bugs`; defaults are centralized below.
     pub bugs: bool,
     /// Configuration value for `checkpoints`; defaults are centralized below.
@@ -636,7 +613,6 @@ impl Default for LoggingTopics {
             all_commands: false,
             suspect_commands: false,
             bad_commands: false,
-            buffer_alloc: false,
             bugs: true,
             checkpoints: true,
             config_changes: true,

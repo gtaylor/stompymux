@@ -373,7 +373,7 @@ fn category_catalog_matches_compiled_c_fixture() {
     let c = Config::load(d.path()).unwrap();
     let catalog: Vec<serde_json::Value> =
         serde_json::from_str(include_str!("fixtures/config/legacy-catalog.json")).unwrap();
-    assert_eq!(logging::CATEGORIES.len(), 16);
+    assert_eq!(logging::CATEGORIES.len(), 15);
     for (category, name, min) in logging::CATEGORIES {
         let row = catalog
             .iter()

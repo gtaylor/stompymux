@@ -2,10 +2,6 @@
 database.game_database = "data/custom-rust.db"
 database.mech_database = "mechs"
 database.map_database = "maps"
-database.dump_interval = 3600
-database.fork_dump = true
-database.dump_message = ""
-database.postdump_message = ""
 database.bootstrap.objects = {"0" = {"type" = "room", "name" = "Limbo", "wizard" = false}, "1" = {"type" = "player", "name" = "GOD", "wizard" = true}, "2" = {"type" = "player", "name" = "Wizard", "wizard" = true}, "3" = {"type" = "room", "name" = "Used Mech Store", "wizard" = false}, "4" = {"type" = "room", "name" = "Starter Room", "wizard" = false}, "5" = {"type" = "room", "name" = "Afterlife", "wizard" = false}}
 lua.directory = "lua"
 lua.memory_limit = 67108864
@@ -68,9 +64,7 @@ battletech.extended_gunnery = 1
 battletech.xploss_for_mw = 1
 battletech.variable_techtime = 0
 battletech.techtime_mod = 0
-battletech.techtime_multiplier = 1.0
 battletech.statengine_obj = -1
-battletech.limitedrepairs = 0
 battletech.stackpole = 1
 battletech.phys_use_pskill = 1
 battletech.erange = 1
@@ -149,7 +143,6 @@ logging.topics.accounting = false
 logging.topics.all_commands = false
 logging.topics.suspect_commands = false
 logging.topics.bad_commands = false
-logging.topics.buffer_alloc = false
 logging.topics.bugs = true
 logging.topics.checkpoints = true
 logging.topics.config_changes = true
@@ -175,6 +168,5 @@ sites.forbid = [{"address" = "192.0.2.0", "mask" = "255.255.255.0"}, {"address" 
 sites.suspect = []
 sites.trust = []
 sites.permit = [{"address" = "2001:db8::", "mask" = "ffff:ffff::"}]
-database.legacy_game_database = "data/source.db"
 server.listen_address = "::1"
 runtime.input_line_limit = 512

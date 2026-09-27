@@ -153,7 +153,7 @@ local function run(descriptor_id)
     },
     config = {
       max_players = capture(function() return mux.config.get('max_players') end),
-      fork_dump = capture(function() return mux.config.get('fork_dump') end),
+      space_compress = capture(function() return mux.config.get('space_compress') end),
       game_database = capture(function() return mux.config.get('game_database') end),
       unknown = capture(function() return mux.config.get('parity_absent_directive') end),
       section_name = capture(function() return mux.config.get('mux') end),

@@ -2,8 +2,7 @@
 
 Server diagnostics use `[logging.topics]` and `[logging].log_options`. Topics
 follow the C registry and compiled defaults. A combined event is printed once if
-any of its categories is enabled. `buffer_alloc` is retained for inspection but
-has no Rust allocator instrumentation. BattleTech logging is not implemented.
+any of its categories is enabled. BattleTech logging is not implemented.
 
 Headers use local time, the game name and C category/subcategory alignment.
 `timestamp`, `flags` and `location` control decorations. Styling is stripped and

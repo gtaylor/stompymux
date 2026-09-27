@@ -8,14 +8,13 @@ use crate::{
 use anyhow::Result;
 pub use worker::{FileRequest, Logger};
 
-/// C event categories; unavailable allocator instrumentation remains metadata only.
+/// C event categories that can be switched on or off under `logging.topics`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Category {
     Accounting,
     AllCommands,
     SuspectCommands,
     BadCommands,
-    BufferAlloc,
     Bugs,
     Checkpoints,
     ConfigChanges,
@@ -34,7 +33,6 @@ pub const CATEGORIES: &[(Category, &str, usize)] = &[
     (Category::AllCommands, "all_commands", 2),
     (Category::SuspectCommands, "suspect_commands", 2),
     (Category::BadCommands, "bad_commands", 2),
-    (Category::BufferAlloc, "buffer_alloc", 3),
     (Category::Bugs, "bugs", 3),
     (Category::Checkpoints, "checkpoints", 2),
     (Category::ConfigChanges, "config_changes", 2),
@@ -56,7 +54,6 @@ impl Category {
             Self::AllCommands => t.all_commands,
             Self::SuspectCommands => t.suspect_commands,
             Self::BadCommands => t.bad_commands,
-            Self::BufferAlloc => t.buffer_alloc,
             Self::Bugs => t.bugs,
             Self::Checkpoints => t.checkpoints,
             Self::ConfigChanges => t.config_changes,
@@ -165,13 +162,8 @@ pub fn report(c: &Config) -> String {
     let mut lines = vec!["Events Logged:".into()];
     lines.extend(CATEGORIES.iter().map(|(v, name, _)| {
         format!(
-            "{name}: {}{}",
-            if v.enabled(c) { "enabled" } else { "disabled" },
-            if *v == Category::BufferAlloc {
-                " (no allocator instrumentation)"
-            } else {
-                ""
-            }
+            "{name}: {}",
+            if v.enabled(c) { "enabled" } else { "disabled" }
         )
     }));
     lines.push("Information Logged:".into());

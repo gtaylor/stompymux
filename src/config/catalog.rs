@@ -28,30 +28,6 @@ pub const KEYS: &[KeySpec] = &[
         bounds: None,
     },
     KeySpec {
-        path: "database.dump_interval",
-        legacy: "dump_interval",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
-        path: "database.fork_dump",
-        legacy: "fork_dump",
-        kind: "bool",
-        bounds: None,
-    },
-    KeySpec {
-        path: "database.dump_message",
-        legacy: "dump_message",
-        kind: "String",
-        bounds: None,
-    },
-    KeySpec {
-        path: "database.postdump_message",
-        legacy: "postdump_message",
-        kind: "String",
-        bounds: None,
-    },
-    KeySpec {
         path: "database.bootstrap.objects",
         legacy: "bootstrap_object",
         kind: "BTreeMap<BootstrapId, BootstrapObject>",
@@ -424,20 +400,8 @@ pub const KEYS: &[KeySpec] = &[
         bounds: Some((-2147483648.0, 2147483647.0)),
     },
     KeySpec {
-        path: "battletech.techtime_multiplier",
-        legacy: "btech_techtime_multiplier",
-        kind: "f64",
-        bounds: Some((0.0, 10.0)),
-    },
-    KeySpec {
         path: "battletech.statengine_obj",
         legacy: "btech_statengine_obj",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
-        path: "battletech.limitedrepairs",
-        legacy: "btech_limitedrepairs",
         kind: "i64",
         bounds: Some((-2147483648.0, 2147483647.0)),
     },
@@ -910,12 +874,6 @@ pub const KEYS: &[KeySpec] = &[
         bounds: None,
     },
     KeySpec {
-        path: "logging.topics.buffer_alloc",
-        legacy: "buffer_alloc",
-        kind: "bool",
-        bounds: None,
-    },
-    KeySpec {
         path: "logging.topics.bugs",
         legacy: "bugs",
         kind: "bool",
@@ -1063,12 +1021,6 @@ pub const KEYS: &[KeySpec] = &[
         path: "sites.permit",
         legacy: "permit_site",
         kind: "Vec<SiteRule>",
-        bounds: None,
-    },
-    KeySpec {
-        path: "database.legacy_game_database",
-        legacy: "",
-        kind: "PathBuf",
         bounds: None,
     },
     KeySpec {

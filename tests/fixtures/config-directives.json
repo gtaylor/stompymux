@@ -370,17 +370,7 @@
     "permission": "CA_GOD"
   },
   {
-    "name": "btech_techtime_multiplier",
-    "parser": "cf_techtime_multiplier",
-    "permission": "CA_GOD"
-  },
-  {
     "name": "btech_statengine_obj",
-    "parser": "cf_int",
-    "permission": "CA_GOD"
-  },
-  {
-    "name": "btech_limitedrepairs",
     "parser": "cf_int",
     "permission": "CA_GOD"
   },
@@ -485,21 +475,6 @@
     "permission": "CA_GOD"
   },
   {
-    "name": "dump_interval",
-    "parser": "cf_int",
-    "permission": "CA_GOD"
-  },
-  {
-    "name": "dump_message",
-    "parser": "cf_string",
-    "permission": "CA_GOD"
-  },
-  {
-    "name": "postdump_message",
-    "parser": "cf_string",
-    "permission": "CA_GOD"
-  },
-  {
     "name": "dump_offset",
     "parser": "cf_int",
     "permission": "CA_GOD"
@@ -517,11 +492,6 @@
   {
     "name": "forbid_site",
     "parser": "cf_site",
-    "permission": "CA_GOD"
-  },
-  {
-    "name": "fork_dump",
-    "parser": "cf_bool",
     "permission": "CA_GOD"
   },
   {
@@ -616,11 +586,6 @@
   },
   {
     "name": "bad_commands",
-    "parser": "cf_bool_bit",
-    "permission": "CA_GOD"
-  },
-  {
-    "name": "buffer_alloc",
     "parser": "cf_bool_bit",
     "permission": "CA_GOD"
   },
