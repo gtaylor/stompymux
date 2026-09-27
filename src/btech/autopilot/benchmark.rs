@@ -784,6 +784,119 @@ impl std::io::Write for GameplayDigest {
 #[cfg(test)]
 mod persistence_tests {
     use super::*;
+    use crate::ObjectId;
+
+    /// Collect every whole-number value in `value` with its JSON pointer.
+    fn integers(value: &serde_json::Value, path: &mut String, found: &mut Vec<(String, i64)>) {
+        match value {
+            serde_json::Value::Number(number) => {
+                if let Some(number) = number.as_i64().filter(|_| !number.is_f64()) {
+                    found.push((path.clone(), number));
+                }
+            }
+            serde_json::Value::Array(items) => {
+                for (index, item) in items.iter().enumerate() {
+                    let length = path.len();
+                    path.push('/');
+                    path.push_str(&index.to_string());
+                    integers(item, path, found);
+                    path.truncate(length);
+                }
+            }
+            serde_json::Value::Object(fields) => {
+                for (key, item) in fields {
+                    let length = path.len();
+                    path.push('/');
+                    path.push_str(&key.replace('~', "~0").replace('/', "~1"));
+                    integers(item, path, found);
+                    path.truncate(length);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Every whole number in the stored parts of every unit and vehicle, keyed by record
+    /// and JSON pointer. Declared timers read as zero here, so anything that still counts
+    /// is a counter the timer inventory misses.
+    fn stored_integers(world: &World) -> std::collections::BTreeMap<(ObjectId, String), i64> {
+        use crate::persistence::btech_unit_rows::blanked_parts;
+        let mut found = std::collections::BTreeMap::new();
+        let mut collect = |id: ObjectId, parts: (serde_json::Value, serde_json::Value)| {
+            let mut values = Vec::new();
+            integers(&parts.0, &mut String::new(), &mut values);
+            integers(&parts.1, &mut String::new(), &mut values);
+            for (path, value) in values {
+                found.insert((id, path), value);
+            }
+        };
+        for (&id, unit) in world.btech.constructed_units() {
+            collect(id, blanked_parts(unit).unwrap());
+        }
+        for (&id, vehicle) in world.btech.vehicles() {
+            collect(id, blanked_parts(vehicle).unwrap());
+        }
+        found
+    }
+
+    /// Whole numbers that legitimately move by one on consecutive seconds without being
+    /// clocks: a dice stream advances with every roll, and a unit crossing a hex a second
+    /// steps its coordinates and its walked distance.
+    const NOT_CLOCKS: &[&str] = &["dice", "position", "movement_experience"];
+
+    /// Every value that counts once per second in a saved record is a declared timer.
+    ///
+    /// The timer inventory in `unit_timers.rs` and `vehicle_timers.rs` is written by
+    /// hand, and a counter it misses costs a row rewrite every tick without failing any
+    /// other test. Over the benchmark workload, with units moving, firing, heating and
+    /// taking damage, the stored parts are compared tick to tick: a value that moves by
+    /// exactly one per second for five seconds running is such a counter.
+    #[tokio::test]
+    async fn running_counters_are_declared_timers() {
+        let root = copy_game_root().unwrap();
+        let config = Config::load(&root).unwrap();
+        let initial = persistence::load(&config.database()).await.unwrap();
+        let (world, _) =
+            fixture_world(&config, initial, BenchmarkScenario::Open, true, 30, 7).unwrap();
+        persistence::save(&config.database(), &world).await.unwrap();
+        let mut harness = HeartbeatHarness::new(config, world).unwrap();
+        let mut previous = stored_integers(&harness.world());
+        let mut runs: std::collections::BTreeMap<(ObjectId, String), (i64, u32)> =
+            Default::default();
+        let mut counters = std::collections::BTreeSet::new();
+        for tick in 1..=90 {
+            assert!(harness.step(1_000_000 + tick).await.committed);
+            let current = stored_integers(&harness.world());
+            for (key, value) in &current {
+                let Some(before) = previous.get(key) else {
+                    continue;
+                };
+                let delta = value - before;
+                let run = runs.entry(key.clone()).or_insert((0, 0));
+                *run = if delta.abs() == 1 && run.0 == delta {
+                    (delta, run.1 + 1)
+                } else if delta.abs() == 1 {
+                    (delta, 1)
+                } else {
+                    (0, 0)
+                };
+                let field = key
+                    .1
+                    .trim_start_matches('/')
+                    .split('/')
+                    .next()
+                    .unwrap_or("");
+                if run.1 >= 5 && !NOT_CLOCKS.contains(&field) {
+                    counters.insert(key.clone());
+                }
+            }
+            previous = current;
+        }
+        assert!(
+            counters.is_empty(),
+            "values counting once per second without a declared timer: {counters:#?}"
+        );
+    }
 
     /// Heartbeats save against the in-memory baseline instead of rereading the database.
     /// After firing, damage, a terrain edit and object moves and creation between ticks,
