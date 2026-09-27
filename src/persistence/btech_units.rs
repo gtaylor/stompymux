@@ -17,9 +17,6 @@ pub(super) async fn load(
     state: &mut BtechState,
     clock: super::btech_deadlines::Clock,
 ) -> Result<()> {
-    if !super::btech_unit_rows::installed(c, TABLE).await? {
-        return Ok(());
-    }
     let mut units = BTreeMap::new();
     for (id, unit) in super::btech_unit_rows::load::<BattleUnit>(c, TABLE, clock).await? {
         unit.validate()?;
@@ -78,7 +75,6 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
     let (changed, inserted) = super::btech_unit_rows::save(
         c,
         TABLE,
-        include_str!("btech_units.sql"),
         &before.btech.constructed,
         &after.btech.constructed,
         super::btech_deadlines::Clock::of(before),
@@ -93,14 +89,5 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
 
 /// Remove owned state during the same explicit object-purge transaction.
 pub(super) async fn purge(c: &mut SqliteConnection, ids: &BTreeSet<ObjectId>) -> Result<()> {
-    if !super::btech_unit_rows::installed(c, TABLE).await? {
-        return Ok(());
-    }
-    for id in ids {
-        sqlx::query("DELETE FROM btech_units WHERE dbref=?")
-            .bind(id.0)
-            .execute(&mut *c)
-            .await?;
-    }
-    Ok(())
+    super::write::purge_rows(c, TABLE, "dbref", ids).await
 }

@@ -3,10 +3,9 @@
 //! Each controller is one typed row in `btech_autopilot_controllers`, with child rows
 //! for its orders, patrol waypoints and feedback history. Saves compare against the
 //! stored rows, so recording feedback inserts one row and advancing an order rewrites
-//! only its changed progress columns. The tables are an optional extension installed
-//! on first save; loading a database without them yields an empty controller set.
+//! only its changed progress columns.
 
-use super::write::{Cell, Fields, fields, sync_rows};
+use super::write::{Cell, Fields, sync_rows};
 use crate::btech::BattlePosition;
 use crate::btech::autopilot::{
     AutopilotConfig, AutopilotController, AutopilotFeedback, AutopilotFeedbackEvent,
@@ -146,16 +145,6 @@ codes!(AutopilotOrderState, order_state_code, order_state_from_code {
     Canceled = 4,
 });
 
-/// The extension is intentionally optional.  Reads must never create schema.
-async fn installed(c: &mut SqliteConnection) -> Result<bool> {
-    Ok(sqlx::query_scalar::<_, i64>(
-        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='btech_autopilot_controllers'",
-    )
-    .fetch_one(&mut *c)
-    .await?
-        == 1)
-}
-
 /// Store an unsigned counter, refusing values beyond SQLite's integer range.
 fn unsigned(value: u64) -> Result<Cell> {
     Ok(Cell::Integer(
@@ -218,7 +207,7 @@ fn get_position(row: &SqliteRow, prefix: &str) -> Result<Option<BattlePosition>>
 fn encode_controller(controller: &AutopilotController) -> Result<Fields> {
     let config = &controller.config;
     let range = config.preferred_range;
-    Ok(fields([
+    Ok(Fields::from([
         (
             "speed_percent",
             Cell::Integer(i64::from(config.speed_percent)),
@@ -287,7 +276,7 @@ fn encode_order(record: &AutopilotOrderRecord, queue_position: Option<usize>) ->
     }
     let progress = &record.progress;
     let origin = progress.attack_move_origin;
-    fields([
+    Fields::from([
         (
             "queue_position",
             optional(queue_position.map(|position| position as i64)),
@@ -338,7 +327,7 @@ fn encode_order(record: &AutopilotOrderRecord, queue_position: Option<usize>) ->
 
 /// Owned columns for one feedback record.
 fn encode_feedback(record: &AutopilotFeedback) -> Result<Fields> {
-    Ok(fields([
+    Ok(Fields::from([
         ("simulation_time", Cell::Integer(record.simulation_time)),
         (
             "order_id",
@@ -404,14 +393,10 @@ fn decode_order(row: &SqliteRow, waypoints: Vec<BattlePosition>) -> Result<Autop
     })
 }
 
-/// Load all Rust controllers without installing or modifying the extension.
+/// Load all Rust controllers.
 pub(super) async fn load(
     c: &mut SqliteConnection,
 ) -> Result<BTreeMap<ObjectId, AutopilotController>> {
-    if !installed(c).await? {
-        return Ok(BTreeMap::new());
-    }
-
     let mut waypoints: BTreeMap<(i64, i64), Vec<BattlePosition>> = BTreeMap::new();
     for row in sqlx::query(
         "SELECT unit_dbref,order_id,map_dbref,x,y FROM btech_autopilot_controller_waypoints
@@ -588,7 +573,7 @@ async fn sync_controller(
                 for (index, point) in points.iter().enumerate() {
                     waypoints.insert(
                         vec![order, index as i64],
-                        fields([
+                        Fields::from([
                             ("map_dbref", Cell::Integer(point.map.0)),
                             ("x", Cell::Integer(i64::from(point.x))),
                             ("y", Cell::Integer(i64::from(point.y))),
@@ -655,12 +640,6 @@ pub(super) async fn save(
     if before.controllers().is_empty() && after.controllers().is_empty() {
         return Ok(false);
     }
-    if !installed(c).await? {
-        sqlx::raw_sql(include_str!("btech_autopilot.sql"))
-            .execute(&mut *c)
-            .await?;
-    }
-
     let mut changed = false;
     for (&id, controller) in after.controllers().iter() {
         let previous = before.controllers().get(&id);
@@ -683,7 +662,7 @@ pub(super) async fn save(
 
 /// Remove controller rows for objects explicitly purged by maintenance.
 pub(super) async fn purge(c: &mut SqliteConnection, ids: &BTreeSet<ObjectId>) -> Result<()> {
-    if ids.is_empty() || !installed(c).await? {
+    if ids.is_empty() {
         return Ok(());
     }
     for id in ids {

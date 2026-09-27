@@ -1,7 +1,7 @@
 //! Shared persistence for map-object traversal without changing stable record identities.
 //!
 //! Each traversal is stored as one row per step: `(map_dbref, position, ordinal)`.
-use super::write::{Cell, Fields, fields, sync_rows};
+use super::write::{Cell, Fields, purge_rows, sync_rows};
 use crate::{ObjectId, StoredBattleMap, World};
 use anyhow::{Context, Result};
 use sqlx::{Row, SqliteConnection};
@@ -43,30 +43,10 @@ impl Kind {
     }
 }
 
-/// Inspection of shared reference databases does not create Rust-owned tables.
-async fn exists(c: &mut SqliteConnection, kind: Kind) -> Result<bool> {
-    Ok(sqlx::query_scalar::<_, i64>(
-        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name=?",
-    )
-    .bind(kind.table())
-    .fetch_one(c)
-    .await?
-        != 0)
-}
-
-/// Remove owned rows before dependency checks, tolerating absent optional tables.
+/// Remove owned rows before dependency checks.
 pub(super) async fn purge(c: &mut SqliteConnection, ids: &BTreeSet<ObjectId>) -> Result<()> {
     for kind in [Kind::Mine, Kind::Landing] {
-        if !exists(c, kind).await? {
-            continue;
-        }
-        let query = format!("DELETE FROM {} WHERE map_dbref=?", kind.table());
-        for id in ids {
-            sqlx::query(sqlx::AssertSqlSafe(query.as_str()))
-                .bind(id.0)
-                .execute(&mut *c)
-                .await?;
-        }
+        purge_rows(c, kind.table(), "map_dbref", ids).await?;
     }
     Ok(())
 }
@@ -77,9 +57,6 @@ pub(super) async fn load(
     maps: &mut BTreeMap<ObjectId, StoredBattleMap>,
     kind: Kind,
 ) -> Result<()> {
-    if !exists(c, kind).await? {
-        return Ok(());
-    }
     let query = format!(
         "SELECT map_dbref,ordinal FROM {} ORDER BY map_dbref,position",
         kind.table()
@@ -121,24 +98,13 @@ pub(super) async fn save(
         {
             continue;
         }
-        if !exists(c, kind).await? {
-            sqlx::query(sqlx::AssertSqlSafe(format!(
-                "CREATE TABLE {table} (\
-                 map_dbref INTEGER NOT NULL REFERENCES objects(dbref) ON DELETE CASCADE,\
-                 position INTEGER NOT NULL CHECK (position >= 0),\
-                 ordinal INTEGER NOT NULL CHECK (ordinal BETWEEN 0 AND 4294967295),\
-                 PRIMARY KEY (map_dbref, position)) STRICT, WITHOUT ROWID"
-            )))
-            .execute(&mut *c)
-            .await?;
-        }
         let desired: BTreeMap<Vec<i64>, Fields> = current
             .iter()
             .enumerate()
             .map(|(position, &ordinal)| {
                 (
                     vec![position as i64],
-                    fields([("ordinal", Cell::Integer(i64::from(ordinal)))]),
+                    Fields::from([("ordinal", Cell::Integer(i64::from(ordinal)))]),
                 )
             })
             .collect();

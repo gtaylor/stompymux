@@ -147,63 +147,71 @@ impl Server {
         }
         let before = self.scripts.world.borrow().clone();
         self.durable = None;
-        let result = persistence::repair(
-            &self.config.database(),
-            self.config.database.busy_timeout_ms,
-            |raw| {
-                crate::lua::transactions::with_cause(&self.scripts.lua, cause, || {
-                    let (repaired, mut report) = crate::dbck::plan(&before, raw, &self.config)?;
-                    *self.scripts.world.borrow_mut() = repaired;
-                    crate::lua::maintenance::apply_relocations(
-                        &self.scripts,
-                        &before,
-                        &report,
-                        |object| {
-                            session.and_then(|_| {
-                                self.sessions
-                                    .iter()
-                                    .find(|(_, s)| s.player == Some(object))
-                                    .map(|(id, _)| id.0)
-                            })
-                        },
-                    )?;
-                    if let Some(nested) = self.scripts.effects.maintenance() {
-                        report.plan.purges.extend(nested.plan.purges);
-                        report.plan.detachments.extend(nested.plan.detachments);
-                        report.findings.extend(nested.findings);
-                    }
-                    let after = self.scripts.world.borrow().clone();
-                    after.validate(&self.config)?;
-                    for id in &report.plan.purges {
-                        let o = after
-                            .objects
-                            .get(id)
-                            .context("callback removed tombstone")?;
-                        anyhow::ensure!(
-                            o.kind == Kind::Garbage
-                                && o.flags == [crate::flags::Flag::Going].into_iter().collect()
-                                && o.powers == Default::default()
-                                && o.state.is_empty()
-                                && !after.accounts.contains_key(id),
-                            "callback changed purged object #{}",
-                            id.0
-                        );
-                    }
-                    report.plan.links = crate::dbck::rebuild_links(&after, &report.plan.links);
-                    report.plan.list_changes = report
-                        .plan
-                        .links
-                        .iter()
-                        .filter(|(id, links)| raw.get(id) != Some(*links))
-                        .map(|(id, _)| *id)
-                        .collect();
-                    Ok((after, report))
-                })
-            },
-        )
-        .await;
+        let result = match self.take_database().await {
+            Err(error) => Err(error),
+            Ok(mut database) => {
+                let result = database
+                    .repair(|raw| {
+                        crate::lua::transactions::with_cause(&self.scripts.lua, cause, || {
+                            let (repaired, mut report) =
+                                crate::dbck::plan(&before, raw, &self.config)?;
+                            *self.scripts.world.borrow_mut() = repaired;
+                            crate::lua::maintenance::apply_relocations(
+                                &self.scripts,
+                                &before,
+                                &report,
+                                |object| {
+                                    session.and_then(|_| {
+                                        self.sessions
+                                            .iter()
+                                            .find(|(_, s)| s.player == Some(object))
+                                            .map(|(id, _)| id.0)
+                                    })
+                                },
+                            )?;
+                            if let Some(nested) = self.scripts.effects.maintenance() {
+                                report.plan.purges.extend(nested.plan.purges);
+                                report.plan.detachments.extend(nested.plan.detachments);
+                                report.findings.extend(nested.findings);
+                            }
+                            let after = self.scripts.world.borrow().clone();
+                            after.validate(&self.config)?;
+                            for id in &report.plan.purges {
+                                let o = after
+                                    .objects
+                                    .get(id)
+                                    .context("callback removed tombstone")?;
+                                anyhow::ensure!(
+                                    o.kind == Kind::Garbage
+                                        && o.flags
+                                            == [crate::flags::Flag::Going].into_iter().collect()
+                                        && o.powers == Default::default()
+                                        && o.state.is_empty()
+                                        && !after.accounts.contains_key(id),
+                                    "callback changed purged object #{}",
+                                    id.0
+                                );
+                            }
+                            report.plan.links =
+                                crate::dbck::rebuild_links(&after, &report.plan.links);
+                            report.plan.list_changes = report
+                                .plan
+                                .links
+                                .iter()
+                                .filter(|(id, links)| raw.get(id) != Some(*links))
+                                .map(|(id, _)| *id)
+                                .collect();
+                            Ok((after, report))
+                        })
+                    })
+                    .await;
+                self.restore_database(database, &result);
+                result
+            }
+        };
         match result {
-            Ok(report) => {
+            Ok((report, links)) => {
+                self.scripts.world.borrow_mut().links = links;
                 self.scripts.effects.drain_maintenance();
                 for finding in &report.findings {
                     self.config.log(

@@ -1,20 +1,47 @@
-//! Direct asynchronous schema-32 persistence with selective, atomic updates.
+//! Schema-32 SQLite persistence: one relational database, written as a diff against the
+//! world it last stored.
+//!
+//! Reads use short-lived read-only connections. Writes go through a [`Database`], which
+//! the server keeps open for its whole run: the schema is validated and the write-ahead
+//! log enabled once, prepared statements stay cached, and SQLite folds the log back into
+//! the database at its normal checkpoint interval instead of after every save.
 mod btech;
+mod btech_artillery;
 mod btech_autopilot;
+mod btech_building_repair;
+mod btech_building_routes;
+mod btech_cargo_bay;
 mod btech_character;
 mod btech_clocks;
 mod btech_deadlines;
 mod btech_decorations;
 mod btech_dice;
+mod btech_entrances;
+mod btech_inventory;
+mod btech_landing_exclusions;
+mod btech_map_bits;
 mod btech_map_lifecycle;
+mod btech_map_links;
 mod btech_map_random;
+mod btech_minefields;
+mod btech_object_order;
+mod btech_part_costs;
+mod btech_player_configuration;
 mod btech_reactor;
 mod btech_recovery;
+mod btech_sensor_recovery;
+mod btech_static_decorations;
 mod btech_terrain;
+mod btech_tows;
+mod btech_turn_clock;
 mod btech_unit_configuration;
 mod btech_unit_rows;
 mod btech_units;
+mod btech_values;
 mod btech_vehicles;
+mod btech_view_preferences;
+mod btech_wrapping;
+mod btech_wrecks;
 mod communication;
 mod load;
 mod macros;
@@ -26,12 +53,37 @@ use sqlx::{
     Connection, SqliteConnection,
     sqlite::{SqliteConnectOptions, SqliteSynchronous},
 };
-use std::path::{Path, PathBuf};
-/// Open an operation-scoped connection without altering journal or foreign-key policy.
+use std::path::Path;
+pub use write::Saved;
+
+/// The Rust-owned tables, created by [`initialize`] and required by every later open.
+const TABLES: &[&str] = &[
+    "btech_simulation_clock",
+    "btech_units",
+    "btech_vehicles",
+    "btech_map_terrain",
+    "btech_map_terrain_codes",
+    "btech_mine_order",
+    "btech_landing_order",
+    "btech_map_decorations",
+    "btech_map_random",
+    "btech_building_repair",
+    "btech_artillery",
+    "btech_tows",
+    "btech_wrecks",
+    "btech_character_recovery",
+    "btech_sensor_recovery",
+    "btech_reactor_clock",
+    "btech_autopilot_controllers",
+    "btech_autopilot_controller_orders",
+    "btech_autopilot_controller_waypoints",
+    "btech_autopilot_controller_feedback",
+];
+
+/// Open a connection without altering journal or foreign-key policy.
 ///
 /// Every connection uses full sync, so a commit is on disk once it returns, even across
-/// a power loss. Writers switch a validated database to write-ahead-log mode with
-/// [`use_write_ahead_log`].
+/// a power loss.
 async fn connect(
     path: &Path,
     timeout: u64,
@@ -49,6 +101,7 @@ async fn connect(
     )
     .await?)
 }
+
 /// Put a validated database in write-ahead-log mode, which SQLite keeps in the file.
 ///
 /// A commit then costs one sync of the log instead of the rollback journal's several.
@@ -64,32 +117,8 @@ async fn use_write_ahead_log(c: &mut SqliteConnection) -> Result<()> {
     );
     Ok(())
 }
-/// An idle connection that keeps the database open between saves.
-///
-/// Each save opens and closes its own connection. In write-ahead-log mode SQLite copies
-/// the log back into the database whenever the last connection closes, which would cost
-/// every save a second round of syncs. While this connection is held, that copy happens
-/// only at SQLite's normal checkpoint interval.
-pub struct DatabaseAnchor {
-    connection: SqliteConnection,
-}
 
-impl DatabaseAnchor {
-    /// Open the anchor for a database that a save has already validated. Reading the
-    /// schema joins the write-ahead log, which is what keeps the log open.
-    pub async fn open(path: &Path, timeout: u64) -> Result<Self> {
-        let mut connection = connect(path, timeout, false, false).await?;
-        validate(&mut connection).await?;
-        Ok(Self { connection })
-    }
-
-    /// Close the anchor. As the last connection, it folds the log back into the
-    /// database file, so a stopped server leaves no log behind.
-    pub async fn close(self) -> Result<()> {
-        Ok(self.connection.close().await?)
-    }
-}
-/// Drain the worker before returning, preserving the original operation error.
+/// Close a connection, preserving the operation's own error over a close error.
 async fn finish<T>(connection: SqliteConnection, result: Result<T>) -> Result<T> {
     let closed = connection.close().await;
     match result {
@@ -107,13 +136,12 @@ async fn finish<T>(connection: SqliteConnection, result: Result<T>) -> Result<T>
 
 /// Validate the storage contract without altering tables, pragmas or metadata.
 async fn validate(c: &mut SqliteConnection) -> Result<()> {
-    let snapshot: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='snapshot'",
-    )
-    .fetch_one(&mut *c)
-    .await?;
+    let tables: Vec<String> =
+        sqlx::query_scalar("SELECT name FROM sqlite_master WHERE type='table'")
+            .fetch_all(&mut *c)
+            .await?;
     ensure!(
-        snapshot == 1,
+        tables.iter().any(|name| name == "snapshot"),
         "expected schema-32 relational storage; database.game_database must point to stompymux.db, not a Rust JSON snapshot or empty database; no automatic conversion is performed"
     );
     let version: i64 = sqlx::query_scalar("SELECT schema_version FROM snapshot WHERE id=1")
@@ -123,8 +151,19 @@ async fn validate(c: &mut SqliteConnection) -> Result<()> {
         version == 32,
         "unsupported database schema {version}; expected 32"
     );
+    let missing: Vec<&str> = TABLES
+        .iter()
+        .copied()
+        .filter(|table| !tables.iter().any(|name| name == table))
+        .collect();
+    ensure!(
+        missing.is_empty(),
+        "database lacks the tables {}; create a fresh database instead of reusing one from an older build",
+        missing.join(", ")
+    );
     Ok(())
 }
+
 /// Load the live relational database using the centralized timeout.
 pub async fn load(path: &Path) -> Result<World> {
     load_with_timeout(
@@ -133,6 +172,7 @@ pub async fn load(path: &Path) -> Result<World> {
     )
     .await
 }
+
 /// Load one consistent read-only snapshot without creating missing storage.
 pub async fn load_with_timeout(path: &Path, timeout: u64) -> Result<World> {
     let mut c = connect(path, timeout, true, false).await?;
@@ -146,43 +186,67 @@ pub async fn load_with_timeout(path: &Path, timeout: u64) -> Result<World> {
     .await;
     finish(c, result).await
 }
-/// Persist only supported changes against the durable relational baseline.
-pub async fn save(path: &Path, world: &World) -> Result<()> {
-    save_with_timeout(
-        path,
-        world,
-        crate::config::DatabaseConfig::default().busy_timeout_ms,
-    )
-    .await
-}
-/// Compare and write within one transaction; missing destinations are never created here.
-pub async fn save_with_timeout(path: &Path, world: &World, timeout: u64) -> Result<()> {
-    save_changes(path, None, world, timeout, 1)
-        .await
-        .map(|_| ())
-}
-/// Write `world` as a diff against `baseline`, the world this database last stored.
+
+/// The open write connection to a validated database.
 ///
-/// The simulation clock is stored alongside any other change, or alone once it is
-/// `clock_interval` seconds ahead of the stored clock; zero never stores it alone.
-/// Explicit saves and shutdown pass one, so they always store the current clock.
-///
-/// A baseline spares reading the whole database back before diffing, and lets the
-/// diff skip every entry the two worlds still share. Pass `None` unless the database
-/// is known to hold exactly `baseline`; the stored world is then read instead.
-/// Returns whether any row changed.
-pub(crate) async fn save_changes(
-    path: &Path,
-    baseline: Option<&World>,
-    world: &World,
-    timeout: u64,
-    clock_interval: u64,
-) -> Result<bool> {
-    let mut c = connect(path, timeout, false, false).await?;
-    let result = async {
-        validate(&mut c).await?;
-        use_write_ahead_log(&mut c).await?;
-        let mut tx = c.begin_with("BEGIN IMMEDIATE").await?;
+/// The server keeps one for its whole run and drops it after a failed write, so the next
+/// save opens a fresh one. Closing it as the last connection folds the write-ahead log
+/// back into the database file, so a stopped server leaves no log behind.
+pub struct Database {
+    connection: SqliteConnection,
+}
+
+impl Database {
+    /// Open, validate and switch to write-ahead logging. Missing destinations are never
+    /// created here.
+    ///
+    /// CONNECTED is session state. Zero is stored for it on every save, and any stale
+    /// value an unclean stop left behind is cleared here so the stored rows match the
+    /// world the server saves against.
+    pub async fn open(path: &Path, timeout: u64) -> Result<Self> {
+        let mut connection = connect(path, timeout, false, false).await?;
+        let result = async {
+            validate(&mut connection).await?;
+            use_write_ahead_log(&mut connection).await?;
+            sqlx::query("UPDATE objects SET has_connected_flag=0 WHERE has_connected_flag<>0")
+                .execute(&mut connection)
+                .await?;
+            Ok(())
+        }
+        .await;
+        if let Err(error) = result {
+            let _ = connection.close().await;
+            return Err(error);
+        }
+        Ok(Self { connection })
+    }
+
+    /// Close the connection.
+    pub async fn close(self) -> Result<()> {
+        Ok(self.connection.close().await?)
+    }
+
+    /// Store every change of `world` against the stored world, including the clock.
+    pub async fn save(&mut self, world: &World) -> Result<Saved> {
+        self.save_changes(None, world, 1).await
+    }
+
+    /// Write `world` as a diff against `baseline`, the world this database last stored.
+    ///
+    /// The simulation clock is stored alongside any other change, or alone once it is
+    /// `clock_interval` seconds ahead of the stored clock; zero never stores it alone.
+    /// Explicit saves and shutdown pass one, so they always store the current clock.
+    ///
+    /// A baseline spares reading the whole database back before diffing, and lets the
+    /// diff skip every entry the two worlds still share. Pass `None` unless the database
+    /// is known to hold exactly `baseline`; the stored world is then read instead.
+    pub async fn save_changes(
+        &mut self,
+        baseline: Option<&World>,
+        world: &World,
+        clock_interval: u64,
+    ) -> Result<Saved> {
+        let mut tx = self.connection.begin_with("BEGIN IMMEDIATE").await?;
         let stored;
         let before = match baseline {
             Some(baseline) => baseline,
@@ -191,20 +255,157 @@ pub(crate) async fn save_changes(
                 &stored
             }
         };
-        let changed = write::apply(&mut tx, before, world, clock_interval).await?;
+        let saved = write::apply(&mut tx, before, world, clock_interval).await?;
         tx.commit().await?;
         world.macros.committed();
         // Unregister sanctions served their purpose once the teardown is durable.
         world.btech.retire_sanctions.borrow_mut().clear();
-        Ok(changed)
+        Ok(saved)
     }
-    .await;
-    finish(c, result).await
+
+    /// Persist a callback's approved maintenance effects with all ordinary mutations.
+    ///
+    /// Without maintenance, `baseline` is passed on to [`Self::save_changes`];
+    /// maintenance always reads the stored world.
+    pub async fn persist_effects(
+        &mut self,
+        world: &World,
+        report: Option<crate::dbck::DbCheckReport>,
+        baseline: Option<&World>,
+        clock_interval: u64,
+    ) -> Result<Saved> {
+        let Some(mut report) = report else {
+            return self.save_changes(baseline, world, clock_interval).await;
+        };
+        for id in &report.plan.purges {
+            let o = world
+                .objects
+                .get(id)
+                .context("callback removed a tombstone")?;
+            ensure!(
+                o.kind == crate::world::Kind::Garbage
+                    && o.flags == [crate::flags::Flag::Going].into_iter().collect()
+                    && o.powers == Default::default()
+                    && o.state.is_empty()
+                    && !world.accounts.contains_key(id),
+                "callback changed purged object #{}",
+                id.0
+            );
+        }
+        let world = world.clone();
+        let links = self
+            .repair(|raw| {
+                report.plan.links = crate::dbck::rebuild_links(&world, &report.plan.links);
+                report.plan.list_changes = report
+                    .plan
+                    .links
+                    .iter()
+                    .filter(|(id, links)| raw.get(id) != Some(*links))
+                    .map(|(id, _)| *id)
+                    .collect();
+                Ok((world, report))
+            })
+            .await?
+            .1;
+        Ok(Saved {
+            changed: true,
+            links,
+        })
+    }
+
+    /// Check, plan, run world callbacks and persist maintenance under one transaction.
+    /// The caller owns restoring its in-memory snapshot if any stage fails. Returns the
+    /// report and the containment links the database holds afterwards.
+    pub async fn repair<F>(
+        &mut self,
+        apply: F,
+    ) -> Result<(crate::dbck::DbCheckReport, std::sync::Arc<Links>)>
+    where
+        F: FnOnce(&Links) -> Result<(World, crate::dbck::DbCheckReport)>,
+    {
+        let mut tx = self.connection.begin_with("BEGIN IMMEDIATE").await?;
+        let integrity: Vec<String> = sqlx::query_scalar("PRAGMA integrity_check")
+            .fetch_all(&mut *tx)
+            .await?;
+        ensure!(
+            integrity == ["ok"],
+            "SQLite integrity check failed: {}",
+            integrity.join("; ")
+        );
+        let before = load::read(&mut tx).await?;
+        let (after, report) = apply(&before.links)?;
+        let changes_before: i64 = sqlx::query_scalar("SELECT total_changes()")
+            .fetch_one(&mut *tx)
+            .await?;
+        let saved = write::apply_changes(&mut tx, &before, &after, Some(&report.plan), 1).await?;
+        maintenance::cleanup(&mut tx, &report.plan.purges).await?;
+        ensure!(
+            sqlx::query("PRAGMA foreign_key_check")
+                .fetch_all(&mut *tx)
+                .await?
+                .is_empty(),
+            "database repair blocked by an unresolved foreign-key dependency"
+        );
+        let changes_after: i64 = sqlx::query_scalar("SELECT total_changes()")
+            .fetch_one(&mut *tx)
+            .await?;
+        if changes_after > changes_before {
+            sqlx::query("UPDATE snapshot SET dump_time=? WHERE id=1")
+                .bind(crate::clock::wall_time())
+                .execute(&mut *tx)
+                .await?;
+        }
+        tx.commit().await?;
+        after.macros.committed();
+        Ok((report, saved.links))
+    }
 }
-/// Persist an owned world after releasing world-thread RefCell borrows.
-pub async fn persist(path: PathBuf, world: World, timeout: u64) -> Result<()> {
-    save_with_timeout(&path, &world, timeout).await
+
+/// Store every change of `world` through a connection opened for this save alone.
+pub async fn save(path: &Path, world: &World) -> Result<()> {
+    save_with_timeout(
+        path,
+        world,
+        crate::config::DatabaseConfig::default().busy_timeout_ms,
+    )
+    .await
 }
+
+/// [`save`] with an explicit busy timeout.
+pub async fn save_with_timeout(path: &Path, world: &World, timeout: u64) -> Result<()> {
+    let mut database = Database::open(path, timeout).await?;
+    let result = database.save(world).await;
+    finish(database.connection, result).await.map(|_| ())
+}
+
+/// [`Database::persist_effects`] through a connection opened for this save alone, for
+/// writers that run before or outside the server's own connection.
+pub async fn persist_effects(
+    path: &Path,
+    world: &World,
+    timeout: u64,
+    report: Option<crate::dbck::DbCheckReport>,
+    clock_interval: u64,
+) -> Result<Saved> {
+    let mut database = Database::open(path, timeout).await?;
+    let result = database
+        .persist_effects(world, report, None, clock_interval)
+        .await;
+    finish(database.connection, result).await
+}
+
+/// [`Database::repair`] through a connection opened for this repair alone.
+pub async fn repair<F>(path: &Path, timeout: u64, apply: F) -> Result<crate::dbck::DbCheckReport>
+where
+    F: FnOnce(&Links) -> Result<(World, crate::dbck::DbCheckReport)>,
+{
+    let mut database = Database::open(path, timeout).await?;
+    let result = database.repair(apply).await;
+    finish(database.connection, result)
+        .await
+        .map(|(report, _)| report)
+}
+
 /// Exclusively create a fresh schema-32 destination with centralized timeout.
 pub async fn initialize(path: &Path, world: &World) -> Result<()> {
     initialize_with_timeout(
@@ -214,6 +415,7 @@ pub async fn initialize(path: &Path, world: &World) -> Result<()> {
     )
     .await
 }
+
 /// Create schema and bootstrap state atomically; close SQLite before failed-file cleanup.
 pub async fn initialize_with_timeout(path: &Path, world: &World, timeout: u64) -> Result<()> {
     if let Some(parent) = path.parent() {
@@ -235,10 +437,7 @@ pub async fn initialize_with_timeout(path: &Path, world: &World, timeout: u64) -
             sqlx::raw_sql(include_str!("schema32.sql"))
                 .execute(&mut *tx)
                 .await?;
-            sqlx::raw_sql(include_str!("btech_units.sql"))
-                .execute(&mut *tx)
-                .await?;
-            sqlx::raw_sql(include_str!("btech_terrain.sql"))
+            sqlx::raw_sql(include_str!("btech_schema.sql"))
                 .execute(&mut *tx)
                 .await?;
             sqlx::query("INSERT INTO snapshot VALUES(1,32,1,32,0,0,0,0,0)")
@@ -258,6 +457,7 @@ pub async fn initialize_with_timeout(path: &Path, world: &World, timeout: u64) -
     }
     result
 }
+
 /// Keep the newest history entries within schema capacity and the configured total limit.
 pub fn trim_history(history: &mut Vec<Login>, limit: usize) {
     let (mut successes, mut failures, mut total) = (0, 0, 0);
@@ -276,57 +476,6 @@ pub fn trim_history(history: &mut Vec<Login>, limit: usize) {
         true
     });
     history.reverse();
-}
-
-/// Check, plan, run world callbacks and persist maintenance under one SQLite transaction.
-/// The caller owns restoring its in-memory snapshot if any stage fails.
-pub async fn repair<F>(path: &Path, timeout: u64, apply: F) -> Result<crate::dbck::DbCheckReport>
-where
-    F: FnOnce(&crate::world::Links) -> Result<(World, crate::dbck::DbCheckReport)>,
-{
-    let mut c = connect(path, timeout, false, false).await?;
-    let result = async {
-        validate(&mut c).await?;
-        use_write_ahead_log(&mut c).await?;
-        let mut tx = c.begin_with("BEGIN IMMEDIATE").await?;
-        let integrity: Vec<String> = sqlx::query_scalar("PRAGMA integrity_check")
-            .fetch_all(&mut *tx)
-            .await?;
-        ensure!(
-            integrity == ["ok"],
-            "SQLite integrity check failed: {}",
-            integrity.join("; ")
-        );
-        let before = load::read(&mut tx).await?;
-        let raw = maintenance::links(&mut tx).await?;
-        let (after, report) = apply(&raw)?;
-        let changes_before: i64 = sqlx::query_scalar("SELECT total_changes()")
-            .fetch_one(&mut *tx)
-            .await?;
-        write::apply_changes(&mut tx, &before, &after, Some(&report.plan), 1).await?;
-        maintenance::cleanup(&mut tx, &report.plan.purges).await?;
-        ensure!(
-            sqlx::query("PRAGMA foreign_key_check")
-                .fetch_all(&mut *tx)
-                .await?
-                .is_empty(),
-            "database repair blocked by an unresolved foreign-key dependency"
-        );
-        let changes_after: i64 = sqlx::query_scalar("SELECT total_changes()")
-            .fetch_one(&mut *tx)
-            .await?;
-        if changes_after > changes_before {
-            sqlx::query("UPDATE snapshot SET dump_time=? WHERE id=1")
-                .bind(crate::clock::wall_time())
-                .execute(&mut *tx)
-                .await?;
-        }
-        tx.commit().await?;
-        after.macros.committed();
-        Ok(report)
-    }
-    .await;
-    finish(c, result).await
 }
 
 /// Startup requires consistent legacy lists; repairing them requires explicit @dbck in an existing session.
@@ -372,84 +521,18 @@ pub async fn inspect_links(
     finish(c, result).await
 }
 
-/// Persist a callback's approved maintenance effects with all ordinary mutations.
-///
-/// Without maintenance, `baseline` is passed on to [`save_changes`]; maintenance always
-/// reads the stored world. Returns whether any row may have changed.
-pub(crate) async fn persist_effects(
-    path: PathBuf,
-    world: World,
-    timeout: u64,
-    report: Option<crate::dbck::DbCheckReport>,
-    baseline: Option<&World>,
-    clock_interval: u64,
-) -> Result<bool> {
-    let Some(mut report) = report else {
-        return save_changes(&path, baseline, &world, timeout, clock_interval).await;
-    };
-    for id in &report.plan.purges {
-        let o = world
-            .objects
-            .get(id)
-            .context("callback removed a tombstone")?;
-        ensure!(
-            o.kind == crate::world::Kind::Garbage
-                && o.flags == [crate::flags::Flag::Going].into_iter().collect()
-                && o.powers == Default::default()
-                && o.state.is_empty()
-                && !world.accounts.contains_key(id),
-            "callback changed purged object #{}",
-            id.0
-        );
-    }
-    repair(&path, timeout, |raw| {
-        report.plan.links = crate::dbck::rebuild_links(&world, &report.plan.links);
-        report.plan.list_changes = report
-            .plan
-            .links
-            .iter()
-            .filter(|(id, links)| raw.get(id) != Some(*links))
-            .map(|(id, _)| *id)
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The required table list names exactly the tables the schema file creates.
+    #[test]
+    fn required_tables_match_the_schema_file() {
+        let created: Vec<&str> = include_str!("btech_schema.sql")
+            .lines()
+            .filter_map(|line| line.strip_prefix("CREATE TABLE "))
+            .map(|rest| rest.split_whitespace().next().unwrap())
             .collect();
-        Ok((world, report))
-    })
-    .await
-    .map(|_| true)
+        assert_eq!(created, TABLES);
+    }
 }
-
-mod btech_values;
-
-mod btech_entrances;
-
-mod btech_artillery;
-mod btech_building_repair;
-
-mod btech_minefields;
-
-mod btech_landing_exclusions;
-mod btech_map_bits;
-mod btech_object_order;
-
-mod btech_player_configuration;
-mod btech_view_preferences;
-
-mod btech_wrapping;
-
-mod btech_building_routes;
-
-mod btech_tows;
-
-mod btech_wrecks;
-
-mod btech_inventory;
-mod btech_part_costs;
-
-mod btech_cargo_bay;
-
-mod btech_static_decorations;
-
-mod btech_map_links;
-
-mod btech_turn_clock;
-
-mod btech_sensor_recovery;

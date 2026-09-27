@@ -150,16 +150,16 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
     let after = scripts.world.borrow().clone();
     after.validate(c)?;
     after.validate_player_zone(c)?;
-    // Also clears stale stored CONNECTED values; unchanged durable fields are not rewritten.
-    persistence::persist_effects(
-        c.database(),
-        after,
+    // Unchanged durable fields are not rewritten.
+    let saved = persistence::persist_effects(
+        &c.database(),
+        &after,
         c.database.busy_timeout_ms,
         scripts.effects.maintenance(),
-        None,
         c.database.clock_save_interval,
     )
     .await?;
+    scripts.world.borrow_mut().links = saved.links;
     if let Some(report) = scripts.effects.drain_maintenance() {
         for finding in report.findings {
             c.log(

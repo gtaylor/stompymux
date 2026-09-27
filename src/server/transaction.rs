@@ -6,7 +6,7 @@ impl Server {
     /// Validate and persist the live world, or restore `before` and roll back every
     /// staged effect. Only rows that differ from the stored world are written.
     pub(super) async fn commit(&mut self, before: World) -> bool {
-        let after = self.scripts.world.borrow().clone();
+        let mut after = self.scripts.world.borrow().clone();
         let maintenance = self.scripts.effects.maintenance();
         let requested = maintenance.is_some() || self.scripts.effects.save_requested();
         // Maintenance rewrites rows from the stored world, so it leaves no trusted baseline.
@@ -26,19 +26,20 @@ impl Server {
                 return self.committed(false);
             }
             Ok(()) => {
-                persistence::persist_effects(
-                    self.config.database(),
-                    after.clone(),
-                    self.config.database.busy_timeout_ms,
-                    maintenance,
-                    durable.as_ref(),
-                    self.config.database.clock_save_interval,
-                )
-                .await
+                let interval = self.config.database.clock_save_interval;
+                match self.database().await {
+                    Err(e) => Err(e),
+                    Ok(database) => {
+                        database
+                            .persist_effects(&after, maintenance, durable.as_ref(), interval)
+                            .await
+                    }
+                }
             }
         };
         match result {
             Err(e) => {
+                self.database = None;
                 self.config.log(
                     &[
                         crate::logging::Category::Checkpoints,
@@ -56,26 +57,49 @@ impl Server {
                 self.scripts.effects.rollback();
                 false
             }
-            Ok(changed) => {
+            Ok(saved) => {
+                // The stored containment order is now this, for the next save's diff and
+                // for commands that list objects in stored order.
+                after.links = saved.links.clone();
+                self.scripts.world.borrow_mut().links = saved.links;
                 self.durable = trusted.then_some(after);
-                self.keep_database_open().await;
-                self.committed(changed || requested)
+                self.committed(saved.changed || requested)
             }
         }
     }
-    /// Hold the database open between saves once a save has validated it; see
-    /// [`persistence::DatabaseAnchor`]. It is an optimization only, so a failure to open
-    /// it is left for later saves to report.
-    async fn keep_database_open(&mut self) {
-        if self.database_anchor.is_none() {
-            self.database_anchor = persistence::DatabaseAnchor::open(
-                &self.config.database(),
-                self.config.database.busy_timeout_ms,
-            )
-            .await
-            .ok();
+
+    /// The write connection, opened on first use and kept for the rest of the run.
+    pub(super) async fn database(&mut self) -> anyhow::Result<&mut persistence::Database> {
+        if self.database.is_none() {
+            self.database = Some(
+                persistence::Database::open(
+                    &self.config.database(),
+                    self.config.database.busy_timeout_ms,
+                )
+                .await?,
+            );
+        }
+        Ok(self.database.as_mut().expect("database just opened"))
+    }
+
+    /// Take the write connection out of the server for a write whose callback needs the
+    /// rest of the server; put it back with [`Self::restore_database`] on success.
+    pub(super) async fn take_database(&mut self) -> anyhow::Result<persistence::Database> {
+        self.database().await?;
+        Ok(self.database.take().expect("database just opened"))
+    }
+
+    /// Keep a connection taken with [`Self::take_database`] when its write succeeded.
+    pub(super) fn restore_database<T>(
+        &mut self,
+        database: persistence::Database,
+        result: &anyhow::Result<T>,
+    ) {
+        if result.is_ok() {
+            self.database = Some(database);
         }
     }
+
     /// Finish a successful commit, logging a save when rows were written or requested.
     fn committed(&mut self, saved: bool) -> bool {
         self.finish_maintenance();

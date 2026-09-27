@@ -30,8 +30,8 @@ async fn landing_order_preserves_identity_replays_and_rejects_corruption() {
         .execute(&mut sql)
         .await
         .unwrap();
-    // Reference imports have ordinal traversal and no Rust order table.
-    sqlx::query("DROP TABLE btech_landing_order")
+    // Reference imports have ordinal traversal and no Rust order rows.
+    sqlx::query("DELETE FROM btech_landing_order")
         .execute(&mut sql)
         .await
         .unwrap();

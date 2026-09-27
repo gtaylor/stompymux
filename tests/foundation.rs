@@ -1858,7 +1858,9 @@ async fn shutdown_write_failures_cancel_commands_but_fail_signal_exit_status() {
         )
         .await
         .unwrap();
-        sqlx::raw_sql("UPDATE objects SET has_connected_flag=1 WHERE dbref=2; CREATE TRIGGER shutdown_fail BEFORE UPDATE ON objects BEGIN SELECT RAISE(FAIL,'shutdown write failure'); END;").execute(&mut sql).await.unwrap();
+        // A shutdown save diffs against the stored world, so a stale stored name forces a
+        // write of the object row, which the trigger then refuses.
+        sqlx::raw_sql("UPDATE objects SET name='Stale' WHERE dbref=2; CREATE TRIGGER shutdown_fail BEFORE UPDATE ON objects BEGIN SELECT RAISE(FAIL,'shutdown write failure'); END;").execute(&mut sql).await.unwrap();
         if origin == "command" {
             client.send("@shutdown").await;
             client.until("Shutdown cancelled").await;

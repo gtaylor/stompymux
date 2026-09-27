@@ -1,5 +1,5 @@
 //! Selective schema-32 channel, alias and last-page persistence; unrelated macro data is preserved.
-use super::write::{Cell, Fields, delete, fields, row};
+use super::write::{Cell, Fields, delete, row};
 use crate::{
     communication::{ChannelAlias, ChannelMessage, Membership},
     world::{ObjectId, World},
@@ -102,7 +102,7 @@ fn records(w: &World, table: &str) -> BTreeMap<(String, i64), Fields> {
                 for (i, u) in c.users.iter().enumerate() {
                     out.insert(
                         (name.clone(), i as i64),
-                        fields([
+                        Fields::from([
                             ("who", Cell::Integer(u.who.0)),
                             ("is_on", Cell::Integer(i64::from(u.listening))),
                         ]),
@@ -115,7 +115,7 @@ fn records(w: &World, table: &str) -> BTreeMap<(String, i64), Fields> {
                 for (i, m) in c.history.iter().enumerate() {
                     out.insert(
                         (name.clone(), i as i64),
-                        fields([
+                        Fields::from([
                             ("sent_at", Cell::Integer(m.at)),
                             ("message", Cell::Text(m.message.clone())),
                         ]),
@@ -128,7 +128,7 @@ fn records(w: &World, table: &str) -> BTreeMap<(String, i64), Fields> {
                 for (i, a) in aliases.iter().enumerate() {
                     out.insert(
                         (who.0.to_string(), i as i64),
-                        fields([
+                        Fields::from([
                             ("alias", Cell::Text(a.alias.clone())),
                             ("channel_name", Cell::Text(a.channel.clone())),
                         ]),
@@ -141,7 +141,7 @@ fn records(w: &World, table: &str) -> BTreeMap<(String, i64), Fields> {
                 for (i, id) in recipients.iter().enumerate() {
                     out.insert(
                         (who.0.to_string(), i as i64),
-                        fields([("recipient_dbref", Cell::Integer(id.0))]),
+                        Fields::from([("recipient_dbref", Cell::Integer(id.0))]),
                     );
                 }
             }
@@ -184,7 +184,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
                 "player_last_page_recipients" => "player_dbref",
                 _ => "channel_name",
             };
-            fields([
+            Fields::from([
                 (
                     column,
                     if column == "channel_name" {
@@ -223,7 +223,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
         delete(
             c,
             "comsys_channels",
-            fields([("name", Cell::Text(name.clone()))]),
+            Fields::from([("name", Cell::Text(name.clone()))]),
         )
         .await?;
         changed = true;
@@ -248,19 +248,19 @@ async fn stored_records(
             _ => r.try_get("channel_name")?,
         };
         let value = match table {
-            "comsys_channel_users" => fields([
+            "comsys_channel_users" => Fields::from([
                 ("who", Cell::Integer(r.try_get("who")?)),
                 ("is_on", Cell::Integer(r.try_get("is_on")?)),
             ]),
-            "comsys_channel_messages" => fields([
+            "comsys_channel_messages" => Fields::from([
                 ("sent_at", Cell::Integer(r.try_get("sent_at")?)),
                 ("message", Cell::Text(r.try_get("message")?)),
             ]),
-            "commac_aliases" => fields([
+            "commac_aliases" => Fields::from([
                 ("alias", Cell::Text(r.try_get("alias")?)),
                 ("channel_name", Cell::Text(r.try_get("channel_name")?)),
             ]),
-            "player_last_page_recipients" => fields([(
+            "player_last_page_recipients" => Fields::from([(
                 "recipient_dbref",
                 Cell::Integer(r.try_get("recipient_dbref")?),
             )]),

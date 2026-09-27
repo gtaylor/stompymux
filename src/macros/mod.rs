@@ -41,7 +41,7 @@ impl RowOrigin {
 }
 
 /// Known access bits, retaining uninterpreted bits during mode edits.
-#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MacroModes(pub i64);
 
 impl MacroModes {
@@ -59,7 +59,8 @@ impl MacroModes {
     }
 }
 
-/// An alias and its unparsed command template.
+/// An alias and its unparsed command template. Equality ignores the row origin, which
+/// is bookkeeping about storage rather than saved state.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MacroEntry {
     #[serde(skip)]
@@ -67,6 +68,14 @@ pub struct MacroEntry {
     pub alias: String,
     pub expansion: String,
 }
+
+impl PartialEq for MacroEntry {
+    fn eq(&self, other: &Self) -> bool {
+        self.alias == other.alias && self.expansion == other.expansion
+    }
+}
+
+impl Eq for MacroEntry {}
 
 /// Never-reused runtime identity, independent of mutable catalog numbers.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -79,7 +88,8 @@ impl Default for MacroSetId {
     }
 }
 
-/// Shared set, indexed by its position in the catalog.
+/// Shared set, indexed by its position in the catalog. Equality compares the saved
+/// fields only, never the runtime identity or row origin.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MacroSet {
     /// Runtime identity survives snapshots but is never serialized.
@@ -92,6 +102,17 @@ pub struct MacroSet {
     pub description: String,
     pub entries: Vec<MacroEntry>,
 }
+
+impl PartialEq for MacroSet {
+    fn eq(&self, other: &Self) -> bool {
+        self.owner == other.owner
+            && self.modes == other.modes
+            && self.description == other.description
+            && self.entries == other.entries
+    }
+}
+
+impl Eq for MacroSet {}
 
 impl MacroSet {
     pub fn readable(&self, player: ObjectId, wizard: bool) -> bool {
@@ -111,7 +132,7 @@ pub struct MacroSlots {
 }
 
 /// Transaction-owned macro state. Runtime row origins are not persistent game data.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PlayerMacros {
     pub sets: Vec<MacroSet>,
     pub players: BTreeMap<ObjectId, MacroSlots>,

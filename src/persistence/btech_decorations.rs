@@ -3,7 +3,7 @@
 //! Running countdowns are stored as the simulation second they end, so burning and
 //! smoking tiles cause no writes between spread, burnout and expiry events.
 use super::btech_deadlines::Clock;
-use super::write::{Cell, fields, row};
+use super::write::{Cell, Fields, purge_rows, row};
 use crate::{BattleDecoration, BattleDecorationKind, ObjectId, StoredBattleMap, World};
 use anyhow::{Context, Result, bail, ensure};
 use sqlx::{Row, SqliteConnection};
@@ -12,25 +12,12 @@ use std::{
     sync::Arc,
 };
 
-/// Detect the owned table without modifying a database during inspection.
-async fn installed(c: &mut SqliteConnection) -> Result<bool> {
-    Ok(sqlx::query_scalar::<_, i64>(
-        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='btech_map_decorations'",
-    )
-    .fetch_one(c)
-    .await?
-        == 1)
-}
-
 /// Load bounded markers after terrain decoding, rejecting orphaned or invalid positions.
 pub(super) async fn load(
     c: &mut SqliteConnection,
     maps: &mut BTreeMap<ObjectId, StoredBattleMap>,
     clock: Clock,
 ) -> Result<()> {
-    if !installed(c).await? {
-        return Ok(());
-    }
     use futures_util::TryStreamExt;
     let mut rows = sqlx::query(
         "SELECT map_dbref,tile,kind,remaining,expires_at,object_duration,creation_order,spreads_at FROM btech_map_decorations ORDER BY map_dbref,tile",
@@ -116,11 +103,6 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
         if removed.is_empty() && updated.is_empty() {
             continue;
         }
-        if !installed(c).await? {
-            sqlx::raw_sql(include_str!("btech_decorations.sql"))
-                .execute(&mut *c)
-                .await?;
-        }
         for index in removed {
             sqlx::query("DELETE FROM btech_map_decorations WHERE map_dbref=? AND tile=?")
                 .bind(id.0)
@@ -132,7 +114,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
             row(
                 c,
                 "btech_map_decorations",
-                fields([
+                Fields::from([
                     ("map_dbref", Cell::Integer(id.0)),
                     ("tile", Cell::Integer(i64::from(index))),
                 ]),
@@ -156,9 +138,9 @@ fn lifetime_running(effect: BattleDecoration) -> bool {
 
 /// Persist the stable kind spelling, the lifetime as a value or deadline, and any pending
 /// spread as a deadline.
-fn values(effect: BattleDecoration, clock: Clock) -> BTreeMap<String, Cell> {
+fn values(effect: BattleDecoration, clock: Clock) -> Fields {
     let running = lifetime_running(effect);
-    fields([
+    Fields::from([
         (
             "kind",
             Cell::Text(
@@ -201,14 +183,5 @@ fn values(effect: BattleDecoration, clock: Clock) -> BTreeMap<String, Cell> {
 
 /// Remove markers before the owning map identity is purged.
 pub(super) async fn purge(c: &mut SqliteConnection, ids: &BTreeSet<ObjectId>) -> Result<()> {
-    if !installed(c).await? {
-        return Ok(());
-    }
-    for id in ids {
-        sqlx::query("DELETE FROM btech_map_decorations WHERE map_dbref=?")
-            .bind(id.0)
-            .execute(&mut *c)
-            .await?;
-    }
-    Ok(())
+    purge_rows(c, "btech_map_decorations", "map_dbref", ids).await
 }

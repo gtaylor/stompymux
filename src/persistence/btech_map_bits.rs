@@ -1,5 +1,5 @@
 //! Typed ownership of packed lookup rows, preserving zero rows and validating complete imports.
-use super::write::{Cell, fields, row};
+use super::write::{Cell, Fields, row};
 use crate::{ObjectId, StoredBattleMap, World};
 use anyhow::{Context, Result, ensure};
 use sqlx::{Row, SqliteConnection};
@@ -93,15 +93,15 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
                 row(
                     c,
                     "btech_map_bits",
-                    fields([
+                    Fields::from([
                         ("map_dbref", Cell::Integer(id.0)),
                         ("y", Cell::Integer(i64::from(y))),
                         ("byte_index", Cell::Integer(index as i64)),
                     ]),
                     previous
-                        .map(|value| fields([("value", Cell::Integer(i64::from(value)))]))
+                        .map(|value| Fields::from([("value", Cell::Integer(i64::from(value)))]))
                         .as_ref(),
-                    &fields([("value", Cell::Integer(i64::from(value)))]),
+                    &Fields::from([("value", Cell::Integer(i64::from(value)))]),
                 )
                 .await?;
                 changed = true;

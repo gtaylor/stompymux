@@ -14,49 +14,24 @@ use sqlx::SqliteConnection;
 /// Length of one turn, in seconds.
 const TURN: i64 = 30;
 
-/// Table definition, installed by the first write.
-const SCHEMA: &str = "CREATE TABLE IF NOT EXISTS btech_simulation_clock (
-    id INTEGER PRIMARY KEY CHECK (id = 1),
-    seconds INTEGER NOT NULL CHECK (seconds >= 0),
-    phase_offset INTEGER NOT NULL CHECK (phase_offset BETWEEN 0 AND 29)
-) STRICT";
-
-/// Whether the clock table exists; reads never install it.
-async fn installed(c: &mut SqliteConnection) -> Result<bool> {
-    Ok(sqlx::query_scalar::<_, i64>(
-        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='btech_simulation_clock'",
-    )
-    .fetch_one(c)
-    .await?
-        == 1)
-}
-
 /// The phase's offset from the simulation clock.
 fn phase_offset(world: &World) -> i64 {
     (i64::from(u8::from(world.btech.turn_clock)) - world.btech.simulation_seconds).rem_euclid(TURN)
 }
 
-/// The stored second and phase offset; a missing table stands for second and phase zero.
+/// The stored second and phase offset; a missing row stands for second and phase zero.
 async fn stored(c: &mut SqliteConnection) -> Result<(i64, i64)> {
-    if !installed(c).await? {
-        return Ok((0, 0));
-    }
     Ok(
         sqlx::query_as("SELECT seconds,phase_offset FROM btech_simulation_clock WHERE id=1")
-            .fetch_one(&mut *c)
-            .await?,
+            .fetch_optional(&mut *c)
+            .await?
+            .unwrap_or((0, 0)),
     )
 }
 
-/// Optional extension reads never create schema or advance offline simulation.
+/// Read the clock without advancing offline simulation.
 pub(super) async fn load(c: &mut SqliteConnection) -> Result<(TurnClock, i64)> {
-    if !installed(c).await? {
-        return Ok((TurnClock::default(), 0));
-    }
-    let (seconds, offset): (i64, i64) =
-        sqlx::query_as("SELECT seconds,phase_offset FROM btech_simulation_clock WHERE id=1")
-            .fetch_one(&mut *c)
-            .await?;
+    let (seconds, offset) = stored(c).await?;
     ensure!(seconds >= 0, "Invalid simulation time");
     let phase = u8::try_from((seconds + offset).rem_euclid(TURN))?;
     Ok((phase.try_into()?, seconds))
@@ -82,7 +57,6 @@ pub(super) async fn save(
     if !changed && offset == current.1 && !due {
         return Ok(false);
     }
-    sqlx::query(SCHEMA).execute(&mut *c).await?;
     sqlx::query(
         "INSERT INTO btech_simulation_clock(id,seconds,phase_offset) VALUES(1,?,?) \
          ON CONFLICT(id) DO UPDATE SET seconds=excluded.seconds,phase_offset=excluded.phase_offset",
@@ -99,13 +73,26 @@ mod tests {
     use super::*;
     use sqlx::Connection;
 
+    /// Whether the clock row exists.
+    async fn has_row(c: &mut SqliteConnection) -> bool {
+        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM btech_simulation_clock")
+            .fetch_one(c)
+            .await
+            .unwrap()
+            == 1
+    }
+
     /// The phase is rebuilt from the clock, and clock-only changes are not written alone.
     #[tokio::test]
     async fn clock_rows_follow_other_writes_and_keep_the_phase() {
         let mut db = SqliteConnection::connect("sqlite::memory:").await.unwrap();
+        sqlx::raw_sql(include_str!("btech_schema.sql"))
+            .execute(&mut db)
+            .await
+            .unwrap();
         let (phase, seconds) = load(&mut db).await.unwrap();
         assert_eq!((u8::from(phase), seconds), (0, 0));
-        assert!(!installed(&mut db).await.unwrap());
+        assert!(!has_row(&mut db).await);
         let at = |seconds: i64, phase: u8| {
             let mut world = World::default();
             world.btech.simulation_seconds = seconds;
@@ -117,9 +104,9 @@ mod tests {
             (seconds, u8::from(phase))
         };
 
-        // The clock at its start needs no table; a phase out of step with it is stored.
+        // The clock at its start needs no row; a phase out of step with it is stored.
         assert!(!save(&mut db, &at(0, 0), true, 0).await.unwrap());
-        assert!(!installed(&mut db).await.unwrap());
+        assert!(!has_row(&mut db).await);
         assert!(save(&mut db, &at(100, 14), false, 0).await.unwrap());
         assert_eq!(read(&mut db).await, (100, 14));
 

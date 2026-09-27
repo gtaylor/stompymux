@@ -1,59 +1,50 @@
 //! Persist the bounded initial reactor window alongside unit-owned damage windows.
+//!
+//! The window's closing second is stored in `btech_reactor_clock`; a window counting down
+//! with the clock is not rewritten. A database without the row holds a fresh world, whose
+//! window has not started closing.
 use super::{btech_deadlines::Clock, write::Cell};
 use crate::{World, btech::reactor_instability::BattleReactorState};
 use anyhow::Result;
 use sqlx::SqliteConnection;
 
-/// Detect this native extension without modifying a database during load.
-async fn installed(c: &mut SqliteConnection) -> Result<bool> {
-    Ok(sqlx::query_scalar::<_, i64>(
-        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='btech_reactor_clock'",
-    )
-    .fetch_one(c)
-    .await?
-        == 1)
-}
-
 /// Longest startup window, in seconds.
 const MAX_REMAINING: i64 = 31;
 
-/// Table definition, installed by the first write. `closes_at` is the simulation second
-/// the startup window closes, or NULL once it has closed.
-const SCHEMA: &str = "CREATE TABLE IF NOT EXISTS btech_reactor_clock (
-    id INTEGER PRIMARY KEY CHECK (id = 1),
-    closes_at INTEGER CHECK (closes_at > 0)
-) STRICT";
+/// The stored closing second, if a row exists.
+async fn stored(c: &mut SqliteConnection) -> Result<Option<Option<i64>>> {
+    Ok(
+        sqlx::query_scalar("SELECT closes_at FROM btech_reactor_clock WHERE id=1")
+            .fetch_optional(c)
+            .await?,
+    )
+}
 
 /// A fresh world starts at event tick zero; an existing clock never reopens on reload.
 pub(super) async fn load(c: &mut SqliteConnection, clock: Clock) -> Result<BattleReactorState> {
     let mut state = BattleReactorState::default();
-    if installed(c).await? {
-        let closes_at: Option<i64> =
-            sqlx::query_scalar("SELECT closes_at FROM btech_reactor_clock WHERE id=1")
-                .fetch_one(c)
-                .await?;
+    if let Some(closes_at) = stored(c).await? {
         state.startup_remaining = clock.optional_remaining(closes_at, MAX_REMAINING)?;
     }
     state.validate()?;
     Ok(state)
 }
 
-/// Save the window's closing second; a window counting down with the clock is not rewritten.
+/// Save the window's closing second when it changed, or when a window that has started
+/// counting down has no row yet.
 pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World) -> Result<bool> {
     let remaining = after.btech.reactor.startup_remaining;
     let closes_at = Clock::of(after).optional_deadline(remaining);
     let previous = Clock::of(before).optional_deadline(before.btech.reactor.startup_remaining);
-    // Without a table a load starts a fresh window, so only a window that has begun
-    // counting down needs a row.
-    let unchanged = if installed(c).await? {
-        previous == closes_at
-    } else {
-        remaining == BattleReactorState::default().startup_remaining
-    };
-    if unchanged {
-        return Ok(false);
+    if previous == closes_at {
+        // A fresh world's untouched window needs no row, and a row that exists already
+        // holds this deadline.
+        if remaining == BattleReactorState::default().startup_remaining
+            || stored(c).await?.is_some()
+        {
+            return Ok(false);
+        }
     }
-    sqlx::query(SCHEMA).execute(&mut *c).await?;
     let closes_at = match closes_at {
         Cell::Integer(second) => Some(second),
         _ => None,

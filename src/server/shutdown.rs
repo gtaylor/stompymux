@@ -2,6 +2,16 @@
 use super::*;
 
 impl Server {
+    /// Validate and store a whole snapshot against the stored world, clock included.
+    async fn save_snapshot(&mut self, snapshot: World) -> anyhow::Result<()> {
+        snapshot.validate(&self.config)?;
+        let result = self.database().await?.save(&snapshot).await;
+        if result.is_err() {
+            self.database = None;
+        }
+        result.map(|_| ())
+    }
+
     /// Validate and save before accepting command shutdown; signals proceed on failure.
     pub(super) async fn request_shutdown(&mut self, request: ShutdownRequest) {
         if self.shutdown.is_some() {
@@ -9,17 +19,7 @@ impl Server {
         }
         self.durable = None;
         let snapshot = self.scripts.world.borrow().clone();
-        let result = match snapshot.validate(&self.config) {
-            Ok(()) => {
-                persistence::persist(
-                    self.config.database(),
-                    snapshot,
-                    self.config.database.busy_timeout_ms,
-                )
-                .await
-            }
-            Err(e) => Err(e),
-        };
+        let result = self.save_snapshot(snapshot).await;
         if let Err(e) = result {
             self.config.log(
                 &[crate::logging::Category::Problems],
@@ -68,17 +68,7 @@ impl Server {
         }
         self.durable = None;
         let snapshot = self.scripts.world.borrow().clone();
-        let result = match snapshot.validate(&self.config) {
-            Ok(()) => {
-                persistence::persist(
-                    self.config.database(),
-                    snapshot,
-                    self.config.database.busy_timeout_ms,
-                )
-                .await
-            }
-            Err(e) => Err(e),
-        };
+        let result = self.save_snapshot(snapshot).await;
         if let Err(e) = result {
             self.config.log(
                 &[crate::logging::Category::Problems],
@@ -88,8 +78,8 @@ impl Server {
             );
             self.shutdown_failed = true;
         }
-        if let Some(anchor) = self.database_anchor.take()
-            && let Err(e) = anchor.close().await
+        if let Some(database) = self.database.take()
+            && let Err(e) = database.close().await
         {
             self.config.log(
                 &[crate::logging::Category::Problems],

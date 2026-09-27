@@ -3,7 +3,7 @@
 //! Each queued shot is one typed row holding its arrival second, so a flight in progress
 //! causes no writes until it lands.
 use super::btech_deadlines::Clock;
-use super::write::{Cell, Fields, Rows, fields, sync_changed_rows};
+use super::write::{Cell, Fields, Rows, purge_rows, sync_changed_rows};
 use crate::{
     BattleArtilleryFlight, BattleArtilleryMode, BattleArtilleryShot, BattleHexCoordinate,
     BattleWeapon, ObjectId, StoredBattleMap, World,
@@ -24,16 +24,6 @@ const COLUMNS: &[&str] = &[
     "hit",
     "arrives_at",
 ];
-
-/// Detect saved queues without modifying databases on read.
-async fn installed(c: &mut SqliteConnection) -> Result<bool> {
-    Ok(sqlx::query_scalar::<_, i64>(
-        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='btech_artillery'",
-    )
-    .fetch_one(c)
-    .await?
-        == 1)
-}
 
 /// Stored code for a payload.
 fn mode_code(mode: BattleArtilleryMode) -> i64 {
@@ -59,7 +49,7 @@ fn mode_from_code(code: i64) -> Result<BattleArtilleryMode> {
 /// Owned column values for one shot, relative to the saved clock.
 fn encode(shot: &BattleArtilleryShot, clock: Clock) -> Fields {
     let flight = &shot.flight;
-    fields([
+    Fields::from([
         ("shooter_dbref", Cell::Integer(shot.shooter.0)),
         ("origin_x", Cell::Integer(i64::from(flight.origin().x))),
         ("origin_y", Cell::Integer(i64::from(flight.origin().y))),
@@ -107,9 +97,6 @@ pub(super) async fn load(
     maps: &mut BTreeMap<ObjectId, StoredBattleMap>,
     clock: Clock,
 ) -> Result<()> {
-    if !installed(c).await? {
-        return Ok(());
-    }
     let query = format!(
         "SELECT map_dbref,shot_id,{} FROM btech_artillery ORDER BY map_dbref,shot_id",
         COLUMNS.join(",")
@@ -162,11 +149,6 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
         if previous.as_ref() == Some(&desired) {
             continue;
         }
-        if !installed(c).await? {
-            sqlx::raw_sql(include_str!("btech_artillery.sql"))
-                .execute(&mut *c)
-                .await?;
-        }
         changed |= sync_changed_rows(
             c,
             "btech_artillery",
@@ -183,14 +165,5 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
 
 /// Remove queued shots before map identities are purged.
 pub(super) async fn purge(c: &mut SqliteConnection, ids: &BTreeSet<ObjectId>) -> Result<()> {
-    if !installed(c).await? {
-        return Ok(());
-    }
-    for id in ids {
-        sqlx::query("DELETE FROM btech_artillery WHERE map_dbref=?")
-            .bind(id.0)
-            .execute(&mut *c)
-            .await?;
-    }
-    Ok(())
+    purge_rows(c, "btech_artillery", "map_dbref", ids).await
 }

@@ -312,7 +312,7 @@ pub(super) async fn ensure_mech_registration(
 
 /// Write changed maps after their world objects exist, preserving unowned columns.
 pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World) -> Result<bool> {
-    use super::write::{Cell, fields, row};
+    use super::write::{Cell, Fields, row};
     let mut changed = super::btech_map_lifecycle::save(c, before, after).await?;
     // MECH-role teardown removes the whole unit record: the reference snapshot rebuild
     // drops registration, unit and identity rows together when the special object is
@@ -390,7 +390,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
             row(
                 c,
                 "btech_maps",
-                fields([("dbref", Cell::Integer(id.0))]),
+                Fields::from([("dbref", Cell::Integer(id.0))]),
                 previous.map(map_fields).as_ref(),
                 &values,
             )
@@ -418,7 +418,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
         row(
             c,
             "btech_maps",
-            fields([("dbref", Cell::Integer(id.0))]),
+            Fields::from([("dbref", Cell::Integer(id.0))]),
             previous.map(map_fields).as_ref(),
             &values,
         )
@@ -427,9 +427,9 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
             row(
                 c,
                 "btech_special_registrations",
-                fields([("dbref", Cell::Integer(id.0))]),
+                Fields::from([("dbref", Cell::Integer(id.0))]),
                 None,
-                &fields([("special_type", Cell::Text("MAP".into()))]),
+                &Fields::from([("special_type", Cell::Text("MAP".into()))]),
             )
             .await?;
         }
@@ -465,7 +465,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
     changed |= super::btech_landing_exclusions::save(c, before, after).await?;
     changed |= super::btech_wrapping::save(c, before, after).await?;
     changed |= super::btech_minefields::save(c, before, after).await?;
-    changed |= super::btech_building_repair::save(c, after).await?;
+    changed |= super::btech_building_repair::save(c, before, after).await?;
     changed |= super::btech_artillery::save(c, before, after).await?;
     changed |= super::btech_map_bits::save(c, before, after).await?;
     Ok(changed)
@@ -473,8 +473,8 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
 
 /// The explicitly owned columns of a map identity.
 fn map_fields(map: &StoredBattleMap) -> super::write::Fields {
-    use super::write::{Cell, fields};
-    fields([
+    use super::write::{Cell, Fields};
+    Fields::from([
         (
             "first_free",
             Cell::Integer(i64::from(map.membership_extent)),

@@ -1,9 +1,9 @@
-//! Typed player recovery persistence, installed only by an explicit native write.
+//! Typed player recovery persistence.
 //!
 //! The recovery countdown is stored as the simulation second of the next check, so an
 //! unconscious player's row is rewritten only when a check rolls dice or reschedules.
 use super::btech_deadlines::Clock;
-use super::write::{Cell, Fields, fields, sync_rows};
+use super::write::{Cell, Fields, purge_rows, sync_rows};
 use crate::{BattleRecovery, BattleRecoveryMode, ObjectId, World};
 use anyhow::{Context, Result, bail};
 use sqlx::{Row, SqliteConnection, sqlite::SqliteRow};
@@ -24,16 +24,6 @@ const COLUMNS: &[&str] = &[
     "dice_block",
     "dice_word",
 ];
-
-/// Read-only extension detection for existing game databases.
-async fn installed(c: &mut SqliteConnection) -> Result<bool> {
-    Ok(sqlx::query_scalar::<_, i64>(
-        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='btech_character_recovery'",
-    )
-    .fetch_one(c)
-    .await?
-        == 1)
-}
 
 /// Rebuild one record from its typed columns.
 fn decode(entry: &SqliteRow, clock: Clock) -> Result<BattleRecovery> {
@@ -65,7 +55,7 @@ fn encode(recovery: &BattleRecovery, clock: Clock) -> Fields {
         BattleRecoveryMode::Character => (1, Cell::Null),
         BattleRecoveryMode::Tactical { injuries } => (2, Cell::Integer(i64::from(injuries))),
     };
-    let mut values = fields([
+    let mut values = Fields::from([
         ("mode", Cell::Integer(mode)),
         ("tactical_injuries", injuries),
         ("recovers_at", clock.optional_deadline(recovery.remaining)),
@@ -75,7 +65,7 @@ fn encode(recovery: &BattleRecovery, clock: Clock) -> Fields {
         ),
         ("toughness", Cell::Integer(i64::from(recovery.toughness))),
     ]);
-    values.extend(fields(super::btech_dice::fields(recovery.dice())));
+    values.extend(super::btech_dice::fields(recovery.dice()));
     values
 }
 
@@ -85,9 +75,6 @@ pub(super) async fn load(
     clock: Clock,
 ) -> Result<BTreeMap<ObjectId, BattleRecovery>> {
     let mut records = BTreeMap::new();
-    if !installed(c).await? {
-        return Ok(records);
-    }
     let query = format!(
         "SELECT player_dbref,{} FROM btech_character_recovery",
         COLUMNS.join(",")
@@ -121,11 +108,6 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
         {
             continue;
         }
-        if !installed(c).await? {
-            sqlx::raw_sql(include_str!("btech_recovery.sql"))
-                .execute(&mut *c)
-                .await?;
-        }
         changed |= sync_rows(
             c,
             "btech_character_recovery",
@@ -141,14 +123,5 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
 
 /// Explicit cleanup before object tombstones replace player identities.
 pub(super) async fn purge(c: &mut SqliteConnection, ids: &BTreeSet<ObjectId>) -> Result<()> {
-    if !installed(c).await? {
-        return Ok(());
-    }
-    for id in ids {
-        sqlx::query("DELETE FROM btech_character_recovery WHERE player_dbref=?")
-            .bind(id.0)
-            .execute(&mut *c)
-            .await?;
-    }
-    Ok(())
+    purge_rows(c, "btech_character_recovery", "player_dbref", ids).await
 }

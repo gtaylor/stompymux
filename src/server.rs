@@ -93,6 +93,7 @@ struct Server {
     /// `None` whenever that is uncertain, for example after a failed commit or a write
     /// outside the ordinary commit path; the next save then reads the stored world.
     durable: Option<World>,
-    /// Keeps the database open between saves once the first save has run.
-    database_anchor: Option<persistence::DatabaseAnchor>,
+    /// The write connection, opened by the first save and dropped after a failed one so
+    /// the next save opens afresh. See [`persistence::Database`].
+    database: Option<persistence::Database>,
 }

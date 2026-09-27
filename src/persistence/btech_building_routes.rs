@@ -1,5 +1,5 @@
 //! Selective persistence of return-map links and interior arrival points in map-object rows.
-use super::write::{Cell, Fields, fields, row};
+use super::write::{Cell, Fields, row};
 use crate::{
     BattleBuildingEntryPoint, BattleBuildingExit, BattleHexCoordinate, ObjectId, StoredBattleMap,
     World,
@@ -74,7 +74,7 @@ fn routes(map: &StoredBattleMap) -> BTreeMap<(i64, u32), Fields> {
     let exits = map.building_exits().iter().map(|(&ordinal, exit)| {
         (
             (5, ordinal),
-            fields([
+            Fields::from([
                 ("object_dbref", Cell::Integer(exit.destination.0)),
                 ("x", Cell::Integer(i64::from(exit.coordinate.x))),
                 ("y", Cell::Integer(i64::from(exit.coordinate.y))),
@@ -87,7 +87,7 @@ fn routes(map: &StoredBattleMap) -> BTreeMap<(i64, u32), Fields> {
     let points = map.building_entry_points().iter().map(|(&ordinal, point)| {
         (
             (6, ordinal),
-            fields([
+            Fields::from([
                 ("x", Cell::Integer(i64::from(point.coordinate.x))),
                 ("y", Cell::Integer(i64::from(point.coordinate.y))),
                 ("data_char", Cell::Integer(i64::from(point.direction))),
@@ -133,7 +133,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
             row(
                 c,
                 "btech_map_objects",
-                fields([
+                Fields::from([
                     ("map_dbref", Cell::Integer(id.0)),
                     ("object_type", Cell::Integer(kind)),
                     ("ordinal", Cell::Integer(i64::from(ordinal))),

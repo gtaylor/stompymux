@@ -8,7 +8,7 @@
 //! Loading merges both parts, restores clock-driven values and decodes one record.
 use super::btech_clocks::{Clocks, field};
 use super::btech_deadlines::Clock;
-use super::write::{Cell, Fields, fields, row, update};
+use super::write::{Cell, Fields, row, update};
 use crate::btech::saved_parts::{SavedParts, merge};
 use crate::{ObjectId, SharedMap};
 use anyhow::{Context, Result, ensure};
@@ -22,17 +22,6 @@ const MAX_PART_BYTES: usize = 1_048_576;
 /// Fields whose numbers never count with the clock. A dice stream's position moves only
 /// with rolls, and a roll that happens to match the elapsed seconds is not a count.
 const NEVER_COUNTING: &[&str] = &["dice"];
-
-/// Whether `table` exists; reads never install it implicitly.
-pub(super) async fn installed(c: &mut SqliteConnection, table: &str) -> Result<bool> {
-    Ok(sqlx::query_scalar::<_, i64>(
-        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name=?",
-    )
-    .bind(table)
-    .fetch_one(c)
-    .await?
-        == 1)
-}
 
 /// Read every row of `table`, merging each row's parts into one record as of `clock`.
 pub(super) async fn load<T: SavedParts + DeserializeOwned>(
@@ -105,13 +94,12 @@ async fn stored_core(c: &mut SqliteConnection, table: &str, id: ObjectId) -> Res
         .await?)
 }
 
-/// Write each record whose stored form differs, installing `table` from `schema` on
-/// first use. `then` and `now` are the simulation seconds of `before` and `after`.
-/// Returns whether anything was written and which records were new rows.
+/// Write each record whose stored form differs. `then` and `now` are the simulation
+/// seconds of `before` and `after`. Returns whether anything was written and which
+/// records were new rows.
 pub(super) async fn save<T: SavedParts>(
     c: &mut SqliteConnection,
     table: &str,
-    schema: &'static str,
     before: &SharedMap<ObjectId, T>,
     after: &SharedMap<ObjectId, T>,
     then: Clock,
@@ -119,7 +107,6 @@ pub(super) async fn save<T: SavedParts>(
 ) -> Result<(bool, Vec<ObjectId>)> {
     let mut changed = false;
     let mut inserted = Vec::new();
-    let mut table_ready = false;
     let (then, now) = (then.seconds(), now.seconds());
     let is_core = |path: &str| T::CORE_FIELDS.contains(&field(path).as_str());
     for (&id, record) in after.iter() {
@@ -132,12 +119,6 @@ pub(super) async fn save<T: SavedParts>(
         let live_same = previous.is_some_and(|old| old.same_saved_live(record));
         if core_same && live_same && then == now {
             continue;
-        }
-        if !table_ready {
-            if !installed(c, table).await? {
-                sqlx::raw_sql(schema).execute(&mut *c).await?;
-            }
-            table_ready = true;
         }
         let stored = match previous {
             Some(_) => stored(c, table, id).await?,
@@ -166,7 +147,7 @@ pub(super) async fn save<T: SavedParts>(
                 now,
             )?;
             if stored.as_ref().is_none_or(|stored| stored.live != text) {
-                values.insert("live".into(), bounded(text)?);
+                values.insert("live", bounded(text)?);
             }
         }
         if !core_same || moved(true) || stored.is_none() {
@@ -180,20 +161,20 @@ pub(super) async fn save<T: SavedParts>(
                 now,
             )?;
             if stored.is_none() || stored_core(c, table, id).await? != text {
-                values.insert("unit".into(), bounded(text)?);
+                values.insert("unit", bounded(text)?);
             }
         }
         if stored.is_none() || &clocks != stored_clocks {
-            values.insert("clocks".into(), Cell::Text(clocks.encode()));
+            values.insert("clocks", Cell::Text(clocks.encode()));
         }
         if values.is_empty() {
             continue;
         }
-        let key = fields([("dbref", Cell::Integer(id.0))]);
+        let key = Fields::from([("dbref", Cell::Integer(id.0))]);
         if stored.is_some() {
             update(c, table, &key, &values).await?;
         } else {
-            values.insert("state_version".into(), Cell::Integer(1));
+            values.insert("state_version", Cell::Integer(1));
             row(c, table, key, None, &values).await?;
             inserted.push(id);
         }

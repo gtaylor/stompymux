@@ -1,5 +1,5 @@
 //! Selective macro persistence with explicit row moves that retain unknown columns.
-use super::write::{Cell, Fields, fields, row};
+use super::write::{Cell, Fields, row};
 use crate::{
     macros::{MacroEntry, MacroModes, MacroSet, MacroSlots, RowOrigin},
     world::{ObjectId, World},
@@ -95,7 +95,7 @@ pub(super) async fn load(c: &mut SqliteConnection, w: &mut World) -> Result<()> 
 }
 
 fn set_fields(set: &MacroSet) -> Fields {
-    fields([
+    Fields::from([
         ("owner", Cell::Integer(set.owner.0)),
         ("status", Cell::Integer(set.modes.0)),
         ("description", Cell::Text(set.description.clone())),
@@ -103,7 +103,7 @@ fn set_fields(set: &MacroSet) -> Fields {
 }
 
 fn entry_fields(entry: &MacroEntry) -> Fields {
-    fields([
+    Fields::from([
         ("alias", Cell::Text(entry.alias.clone())),
         ("expansion", Cell::Text(entry.expansion.clone())),
     ])
@@ -111,7 +111,7 @@ fn entry_fields(entry: &MacroEntry) -> Fields {
 
 fn slot_fields(slots: &MacroSlots) -> Fields {
     let cell = |v: Option<usize>| Cell::Integer(v.map_or(-1, |i| i as i64));
-    fields([
+    Fields::from([
         ("curmac", cell(slots.current)),
         ("macro_slot_0", cell(slots.slots[0])),
         ("macro_slot_1", cell(slots.slots[1])),
@@ -209,7 +209,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
         changed |= row(
             c,
             "macro_sets",
-            fields([("set_index", Cell::Integer(index as i64))]),
+            Fields::from([("set_index", Cell::Integer(index as i64))]),
             previous.map(set_fields).as_ref(),
             &set_fields(set),
         )
@@ -267,7 +267,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
             changed |= row(
                 c,
                 "macro_entries",
-                fields([
+                Fields::from([
                     ("set_index", Cell::Integer(index as i64)),
                     ("position", Cell::Integer(position as i64)),
                 ]),
@@ -295,7 +295,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
             .map(|r| -> Result<Fields> {
                 let mut f = Fields::new();
                 for key in slot_fields(slots).keys() {
-                    f.insert(key.clone(), Cell::Integer(r.try_get(key.as_str())?));
+                    f.insert(*key, Cell::Integer(r.try_get(*key)?));
                 }
                 Ok(f)
             })
@@ -303,7 +303,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
         changed |= row(
             c,
             "commac_entries",
-            fields([("who", Cell::Integer(who.0))]),
+            Fields::from([("who", Cell::Integer(who.0))]),
             previous.as_ref(),
             &slot_fields(slots),
         )
@@ -319,7 +319,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
         changed |= row(
             c,
             "commac_entries",
-            fields([("who", Cell::Integer(who.0))]),
+            Fields::from([("who", Cell::Integer(who.0))]),
             Some(&slot_fields(&old.players[who])),
             &slot_fields(&MacroSlots::default()),
         )

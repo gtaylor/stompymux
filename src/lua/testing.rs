@@ -275,18 +275,16 @@ async fn invoke(
     let saved = async {
         s.effects.validate()?;
         after.validate(c)?;
-        if serde_json::to_vec(&before)? != serde_json::to_vec(&after)?
-            || s.effects.maintenance().is_some()
-        {
-            persistence::persist_effects(
-                c.database(),
-                after,
+        if !after.saved_state_eq(&before) || s.effects.maintenance().is_some() {
+            let saved = persistence::persist_effects(
+                &c.database(),
+                &after,
                 c.database.busy_timeout_ms,
                 s.effects.maintenance(),
-                None,
                 c.database.clock_save_interval,
             )
             .await?;
+            s.world.borrow_mut().links = saved.links;
         }
         Ok::<_, anyhow::Error>(())
     }

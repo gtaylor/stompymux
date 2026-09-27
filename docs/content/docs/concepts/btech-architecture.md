@@ -50,9 +50,15 @@ the rows that differ from that baseline, skipping every entry still shared
 with it, and a transaction that changed nothing never touches the database.
 After a failed save, a maintenance repair, or any write outside the ordinary
 commit path, the baseline is dropped and the next save reads the stored world
-instead. The database runs in write-ahead-log mode with full sync, and the
-server holds one idle connection open so SQLite folds the log back into the
-database at its normal checkpoint interval rather than after every save.
+instead. The baseline also carries the containment-list slots as stored, so a
+save never reads the object table back to order contents and exits.
+
+The server writes through one connection kept open for its whole run
+(`persistence::Database`): the schema is validated and write-ahead logging
+enabled once, prepared statements stay cached, and SQLite folds the log back
+into the database at its normal checkpoint interval rather than after every
+save. The connection is dropped after a failed write, so the next save opens a
+fresh one. Reads use short-lived read-only connections.
 
 The gameplay modules are organized around focused rules and state transitions:
 
@@ -103,7 +109,10 @@ maps, units, vehicles, characters, and other saved features. The persistence
 layer validates supported changes and writes them in a database transaction.
 Its tables are a storage format, not a direct serialization of Rust struct
 layouts. Fresh databases are initialized from the SQL schema files in
-`src/persistence/`.
+`src/persistence/`: `schema32.sql` for the reference tables and
+`btech_schema.sql` for every Rust-owned table. Opening a database checks that
+all of them exist; there is no lazy table creation and no upgrade of databases
+from older builds.
 
 Saved BattleTech state uses typed columns with `CHECK` constraints, and newer
 tables are `STRICT`. Collections such as artillery queues, map-object

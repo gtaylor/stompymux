@@ -1,5 +1,5 @@
 //! Selective persistence of shared parts inventories in the game directory's economy table.
-use super::write::{Cell, fields, row};
+use super::write::{Cell, Fields, row};
 use crate::{BattleInventoryEntry, ObjectId, World};
 use anyhow::{Result, ensure};
 use sqlx::{Row, SqliteConnection};
@@ -55,18 +55,19 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
             if previous == Some(*entry) {
                 continue;
             }
-            let previous = previous
-                .map(|entry| fields([("quantity", Cell::Integer(i64::from(entry.quantity)))]));
+            let previous = previous.map(|entry| {
+                Fields::from([("quantity", Cell::Integer(i64::from(entry.quantity)))])
+            });
             row(
                 c,
                 "btech_economy_parts",
-                fields([
+                Fields::from([
                     ("object_dbref", Cell::Integer(object.0)),
                     ("part_id", Cell::Integer(i64::from(entry.part_id))),
                     ("brand_id", Cell::Integer(i64::from(entry.brand_id))),
                 ]),
                 previous.as_ref(),
-                &fields([("quantity", Cell::Integer(i64::from(entry.quantity)))]),
+                &Fields::from([("quantity", Cell::Integer(i64::from(entry.quantity)))]),
             )
             .await?;
         }

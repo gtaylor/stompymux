@@ -1,5 +1,5 @@
 //! Selective persistence of authored links and cardinal entrance modes, separate from runtime routes.
-use super::write::{Cell, Fields, fields, row};
+use super::write::{Cell, Fields, row};
 use crate::{
     BattleHexCoordinate, BattleMapEntrance, BattleMapLink, ObjectId, StoredBattleMap, World,
 };
@@ -91,7 +91,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
         row(
             c,
             "btech_map_links",
-            fields([("child_dbref", Cell::Integer(child.0))]),
+            Fields::from([("child_dbref", Cell::Integer(child.0))]),
             old.map(link_fields).as_ref(),
             &link_fields(link),
         )
@@ -110,7 +110,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
             let previous = stored
                 .as_ref()
                 .map(|record| -> Result<Fields> {
-                    Ok(fields([
+                    Ok(Fields::from([
                         ("mode", Cell::Integer(record.try_get("mode")?)),
                         ("x", Cell::Integer(record.try_get("x")?)),
                         ("y", Cell::Integer(record.try_get("y")?)),
@@ -127,7 +127,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
             row(
                 c,
                 "btech_map_entrances",
-                fields([
+                Fields::from([
                     ("child_dbref", Cell::Integer(child.0)),
                     ("direction", Cell::Integer(direction as i64)),
                 ]),
@@ -143,7 +143,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
 
 /// Encode the placement fields owned by an authored parent link.
 fn link_fields(link: BattleMapLink) -> Fields {
-    fields([
+    Fields::from([
         ("parent_dbref", Cell::Integer(link.parent.0)),
         ("x", Cell::Integer(i64::from(link.coordinate.x))),
         ("y", Cell::Integer(i64::from(link.coordinate.y))),
@@ -153,12 +153,12 @@ fn link_fields(link: BattleMapLink) -> Fields {
 /// Encode only the fields used by the selected entrance mode.
 fn entrance_fields(entrance: BattleMapEntrance) -> Fields {
     match entrance {
-        BattleMapEntrance::None => fields([("mode", Cell::Integer(0))]),
-        BattleMapEntrance::Offset { distance } => fields([
+        BattleMapEntrance::None => Fields::from([("mode", Cell::Integer(0))]),
+        BattleMapEntrance::Offset { distance } => Fields::from([
             ("mode", Cell::Integer(1)),
             ("offset", Cell::Integer(i64::from(distance))),
         ]),
-        BattleMapEntrance::Exact { coordinate } => fields([
+        BattleMapEntrance::Exact { coordinate } => Fields::from([
             ("mode", Cell::Integer(2)),
             ("x", Cell::Integer(i64::from(coordinate.x))),
             ("y", Cell::Integer(i64::from(coordinate.y))),

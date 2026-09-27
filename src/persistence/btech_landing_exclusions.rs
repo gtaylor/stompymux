@@ -1,5 +1,5 @@
 //! Selective persistence of typed landing exclusions in the shared map-object table.
-use super::write::{Cell, fields, row};
+use super::write::{Cell, Fields, row};
 use crate::{BattleHexCoordinate, BattleLandingExclusion, ObjectId, StoredBattleMap, World};
 use anyhow::{Context, Result, ensure};
 use sqlx::{Row, SqliteConnection};
@@ -78,7 +78,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
             row(
                 c,
                 "btech_map_objects",
-                fields([
+                Fields::from([
                     ("map_dbref", Cell::Integer(id.0)),
                     ("object_type", Cell::Integer(9)),
                     ("ordinal", Cell::Integer(i64::from(ordinal))),
@@ -98,7 +98,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
 
 /// Persist the complete landing exclusion definition without repurposing other map-object fields.
 fn zone_fields(zone: BattleLandingExclusion) -> super::write::Fields {
-    fields([
+    Fields::from([
         ("x", Cell::Integer(i64::from(zone.coordinate.x))),
         ("y", Cell::Integer(i64::from(zone.coordinate.y))),
         ("object_dbref", Cell::Integer(zone.owner.0)),

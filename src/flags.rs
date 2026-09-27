@@ -40,6 +40,31 @@ pub enum MutationPolicy {
     Session,
 }
 impl Flag {
+    /// The `objects` table column that stores this flag.
+    pub fn column(self) -> &'static str {
+        match self {
+            Self::Ansi => "has_ansi_flag",
+            Self::Audible => "has_audible_flag",
+            Self::Auditorium => "has_auditorium_flag",
+            Self::Blind => "has_blind_flag",
+            Self::Connected => "has_connected_flag",
+            Self::Dark => "has_dark_flag",
+            Self::Floating => "has_floating_flag",
+            Self::Gagged => "has_gagged_flag",
+            Self::Going => "has_going_flag",
+            Self::Halted => "has_halted_flag",
+            Self::InCharacter => "has_in_character_flag",
+            Self::Light => "has_light_flag",
+            Self::Monitor => "has_monitor_flag",
+            Self::NoCommand => "has_no_command_flag",
+            Self::Safe => "has_safe_flag",
+            Self::Suspect => "has_suspect_flag",
+            Self::Transparent => "has_transparent_flag",
+            Self::Wizard => "has_wizard_flag",
+            Self::Zombie => "has_zombie_flag",
+        }
+    }
+
     /// Return the canonical spelling used by world objects.
     pub fn world_name(&self) -> String {
         serde_json::to_value(self)
