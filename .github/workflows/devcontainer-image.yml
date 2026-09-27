@@ -10,6 +10,7 @@ on:
       - .devcontainer/install-tools.sh
       - .devcontainer/install-rust.sh
       - .devcontainer/lib.sh
+      - rust-toolchain.toml
       - .github/workflows/devcontainer-image.yml
 
 permissions:

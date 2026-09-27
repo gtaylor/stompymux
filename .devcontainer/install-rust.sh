@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
-# Install the stable Rust toolchain via rustup for the current (non-root) user.
+# Install the pinned Rust toolchain (RUST_VERSION in lib.sh) via rustup for the
+# current user and make it the default.
 set -euo pipefail
 
 # shellcheck source=.devcontainer/lib.sh
 source "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
 
-if command -v rustup >/dev/null 2>&1; then
-  log "rustup already installed; ensuring a toolchain, rustfmt, and clippy are present"
-  if ! rustup show active-toolchain >/dev/null 2>&1; then
-    rustup default stable
-  fi
-  rustup component add rustfmt clippy
-  exit 0
+if ! command -v rustup >/dev/null 2>&1; then
+  log "Installing rustup"
+  rustup_init="$(mktemp)"
+  trap 'rm -f "$rustup_init"' EXIT
+  curl "${CURL_OPTIONS[@]}" https://sh.rustup.rs --output "$rustup_init"
+  sh "$rustup_init" -y --profile minimal --default-toolchain none
+  # shellcheck source=/dev/null
+  source "$HOME/.cargo/env"
 fi
 
-rustup_init="$(mktemp)"
-trap 'rm -f "$rustup_init"' EXIT
-
-curl "${CURL_OPTIONS[@]}" https://sh.rustup.rs --output "$rustup_init"
-sh "$rustup_init" -y --profile minimal --component rustfmt,clippy
+log "Installing Rust $RUST_VERSION"
+rustup toolchain install "$RUST_VERSION" --profile minimal --component rustfmt,clippy
+rustup default "$RUST_VERSION"

@@ -8,6 +8,11 @@ DEVCONTAINER_DIR="$REPOSITORY_ROOT/.devcontainer"
 # Tools every environment needs to build, test, and check the project.
 REQUIRED_TOOLS=(cargo rustfmt just stylua node npm go hugo)
 
+# Rust toolchain pinned by rust-toolchain.toml at the repository root. The
+# devcontainer image is built without the repository, so the version is repeated
+# here; check_rust_toolchain fails setup when the two disagree.
+RUST_VERSION="1.98.1"
+
 # Tools that improve the editing experience but are not needed by `just checks`.
 OPTIONAL_TOOLS=(lua-language-server)
 
@@ -53,6 +58,24 @@ require_tools() {
   missing="$(missing_tools "${REQUIRED_TOOLS[@]}")"
   if [[ -n "$missing" ]]; then
     die "missing required tools: $(paste -sd ' ' <<<"$missing")"
+  fi
+  check_rust_toolchain
+}
+
+# Exits with an error unless rust-toolchain.toml pins RUST_VERSION and the rustc
+# that cargo uses inside the repository is that version.
+check_rust_toolchain() {
+  local toolchain_file="$REPOSITORY_ROOT/rust-toolchain.toml"
+  local pinned
+  pinned="$(sed -n 's/^channel = "\(.*\)"$/\1/p' "$toolchain_file")"
+  if [[ "$pinned" != "$RUST_VERSION" ]]; then
+    die "rust-toolchain.toml pins '$pinned' but .devcontainer/lib.sh expects '$RUST_VERSION'"
+  fi
+
+  local active
+  active="$(cd -- "$REPOSITORY_ROOT" && rustc --version)"
+  if [[ "$active" != "rustc $RUST_VERSION "* ]]; then
+    die "expected rustc $RUST_VERSION in the repository, found: $active"
   fi
 }
 

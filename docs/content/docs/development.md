@@ -23,7 +23,7 @@ script from `.devcontainer/`:
 | Environment | Detected by | Script | What it does |
 | --- | --- | --- | --- |
 | CI | `GITHUB_ACTIONS=true` | `setup-ci.sh` | Verifies the devcontainer image has every required tool. |
-| Claude Code cloud | `CLAUDE_CODE_REMOTE=true` | `setup-claude-cloud.sh` | Installs the toolchain (Node under `~/.local`, ahead of the image's Node on `PATH`), docs dependencies, and Codex. |
+| Claude Code cloud | `CLAUDE_CODE_REMOTE=true` | `setup-claude-cloud.sh` | Installs the toolchain (Node under `~/.local`, ahead of the image's Node on `PATH`), Rust, docs dependencies, and Codex. |
 | Codex cloud | explicit `codex-cloud` argument | `setup-codex-cloud.sh` | Installs the toolchain (Node under `~/.local`, ahead of nvm's Node on `PATH`), Rust, docs dependencies, and Claude Code. |
 | Local | anything else | `setup-local.sh` | Checks the toolchain, then installs docs dependencies, Codex, and Claude Code. |
 

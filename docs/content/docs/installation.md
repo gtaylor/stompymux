@@ -7,10 +7,12 @@ weight: 10
 
 ## Requirements
 
-StompyMUX currently targets Linux. Install a current stable Rust toolchain
-(including Cargo), a C compiler and `make` for vendored LuaJIT, and Git for
-obtaining the source. SQLite and LuaJIT are built through Cargo dependencies;
-you do not need to install their development headers separately.
+StompyMUX currently targets Linux. Install [rustup](https://rustup.rs/);
+`rust-toolchain.toml` pins the Rust version (currently 1.98.1), and rustup
+installs it on first use. You also need a C compiler and `make` for vendored
+LuaJIT, and Git for obtaining the source. SQLite and LuaJIT are built through
+Cargo dependencies; you do not need to install their development headers
+separately.
 
 The optional [`just`](https://github.com/casey/just) task runner provides
 shortcuts for common commands. To build the documentation site, also install

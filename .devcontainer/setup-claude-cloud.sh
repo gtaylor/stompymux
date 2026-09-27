@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
 # Set up a Claude Code cloud session. These run as root on the stock Ubuntu cloud
-# image rather than in the devcontainer, which already provides Rust, Go, and the
-# claude CLI. The remaining tools are installed here; Node goes under ~/.local so
-# it takes precedence over the image's own Node on PATH.
+# image rather than in the devcontainer. The image already provides rustup, Go,
+# and the claude CLI. The remaining tools and the pinned Rust toolchain are
+# installed here; Node goes under ~/.local so it takes precedence over the
+# image's own Node on PATH.
 set -euo pipefail
 
 # shellcheck source=.devcontainer/lib.sh
 source "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
 
 install_cloud_toolchain
+
+log "Installing Rust"
+bash "$DEVCONTAINER_DIR/install-rust.sh"
 
 # The image's /etc/profile.d/nodejs.sh prepends its own Node for login shells;
 # this drop-in sorts after it so ours stays first.

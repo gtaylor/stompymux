@@ -1,0 +1,7 @@
+# Pins the Rust toolchain for every environment. rustup reads this file and
+# installs the pinned version on first use. Keep the channel in sync with
+# RUST_VERSION in .devcontainer/lib.sh, which the setup scripts check.
+[toolchain]
+channel = "1.98.1"
+profile = "minimal"
+components = ["rustfmt", "clippy"]
