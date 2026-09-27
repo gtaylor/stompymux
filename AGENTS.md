@@ -20,6 +20,11 @@ stompymux-rs is a Rust rewrite of stompymux, a C-based MUD server that includes 
 ## Core workflow
 
 1. Make your changes.
+1. While iterating, build and run only what your change touches. A full `cargo test` compiles the 200k-line library twice plus sixteen integration suite binaries, so it costs many minutes even for a one-line edit; use it once at the end, not after every edit.
+   - `just check` type-checks every target without codegen (fastest feedback on compile errors).
+   - `just test-unit <filter>` runs unit tests in `src/`; only the library's unit-test binary is built.
+   - `just test-scenario <name>` runs one scenario file from `tests/` (for example `just test-scenario btech_status`); only its suite binary is built. `just list-scenarios` shows which suite includes which scenario.
+   - `just test-suite <suite> [filter]` runs one suite from `tests/suites/`.
 1. Run `cargo fmt` and `cargo test` before handing back to the human.
 
 ## Rust rules

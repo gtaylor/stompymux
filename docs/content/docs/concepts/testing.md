@@ -13,13 +13,17 @@ cargo test
 
 `just test` runs the same command. `just checks` also runs Rust formatting,
 Lua formatting, generated Lua type and API documentation checks, and the test
-suite. To run a narrower test, use a test-name filter or select an integration
-test target:
+suite. A bare test-name filter such as `cargo test btech_los` still builds
+every test binary before filtering, so prefer selecting the target as well.
+The scenario files under `tests/` are grouped into suite binaries under
+`tests/suites/`; `just test-scenario` locates the right suite for you:
 
 ```sh
-cargo test btech_los
-cargo test btech_los_range
-cargo test btech_visibility
+just test-unit btech::los             # unit tests in src/ matching a name
+just test-scenario btech_los_range    # one scenario file from tests/
+just test-scenario btech_visibility perception
+just test-suite btech_08              # one whole suite
+just list-scenarios                   # map of suites to scenario files
 ```
 
 The BattleTech LOS scenarios are Rust tests, including `btech_los_range`,

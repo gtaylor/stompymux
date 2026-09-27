@@ -57,10 +57,17 @@ tokio = { version = "1.53.1", features = ["test-util"] }
 [profile.dev]
 debug = "line-tables-only"
 
+# `cargo test` compiles the whole library twice (unit-test binary plus the
+# rlib the suites link) and sixteen suite binaries. Light optimization keeps
+# the BattleTech simulations quick at run time; incremental compilation makes
+# an edit-and-retest cycle cost seconds instead of a full crate rebuild; and
+# skipping rustc's local ThinLTO pass removes roughly 40% of each crate's
+# codegen time for a few percent of test run time.
 [profile.test]
 opt-level = 1
 debug = "line-tables-only"
-incremental = false
+incremental = true
+lto = "off"
 
 [profile.test.package."*"]
 debug = 0
