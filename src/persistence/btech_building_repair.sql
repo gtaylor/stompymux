@@ -1,5 +1,6 @@
--- Committed simulation countdown for interior-map construction repair.
+-- Committed simulation countdown for interior-map construction repair, stored as the
+-- simulation second the next repair step happens.
 CREATE TABLE btech_building_repair (
     map_dbref INTEGER PRIMARY KEY REFERENCES objects(dbref) ON DELETE CASCADE,
-    remaining INTEGER NOT NULL CHECK(remaining BETWEEN 1 AND 120)
-);
+    repairs_at INTEGER NOT NULL CHECK (repairs_at > 0)
+) STRICT;

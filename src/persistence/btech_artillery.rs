@@ -1,7 +1,9 @@
 //! Durable map-owned artillery queues, saved with impact effects and map randomness.
 //!
-//! Each queued shot is one typed row, so a ticking countdown rewrites a single column.
-use super::write::{Cell, Fields, fields, sync_rows};
+//! Each queued shot is one typed row holding its arrival second, so a flight in progress
+//! causes no writes until it lands.
+use super::btech_deadlines::Clock;
+use super::write::{Cell, Fields, Rows, fields, sync_changed_rows};
 use crate::{
     BattleArtilleryFlight, BattleArtilleryMode, BattleArtilleryShot, BattleHexCoordinate,
     BattleWeapon, ObjectId, StoredBattleMap, World,
@@ -21,7 +23,7 @@ const COLUMNS: &[&str] = &[
     "weapon_part_id",
     "mode",
     "hit",
-    "remaining",
+    "arrives_at",
 ];
 
 /// Detect saved queues without modifying databases on read.
@@ -55,8 +57,8 @@ fn mode_from_code(code: i64) -> Result<BattleArtilleryMode> {
     })
 }
 
-/// Owned column values for one shot.
-fn encode(shot: &BattleArtilleryShot) -> Fields {
+/// Owned column values for one shot, relative to the saved clock.
+fn encode(shot: &BattleArtilleryShot, clock: Clock) -> Fields {
     let flight = &shot.flight;
     fields([
         ("shooter_dbref", Cell::Integer(shot.shooter.0)),
@@ -74,12 +76,12 @@ fn encode(shot: &BattleArtilleryShot) -> Fields {
         ),
         ("mode", Cell::Integer(mode_code(flight.mode()))),
         ("hit", Cell::Integer(i64::from(flight.hit()))),
-        ("remaining", Cell::Integer(i64::from(flight.remaining()))),
+        ("arrives_at", clock.deadline(flight.remaining())),
     ])
 }
 
 /// Rebuild one shot, revalidating its flight.
-fn decode(entry: &SqliteRow) -> Result<BattleArtilleryShot> {
+fn decode(entry: &SqliteRow, clock: Clock) -> Result<BattleArtilleryShot> {
     let coordinate = |x: &str, y: &str| -> Result<BattleHexCoordinate> {
         Ok(BattleHexCoordinate {
             x: i32::try_from(entry.try_get::<i64, _>(x)?)?,
@@ -102,7 +104,7 @@ fn decode(entry: &SqliteRow) -> Result<BattleArtilleryShot> {
             weapon,
             mode_from_code(entry.try_get("mode")?)?,
             entry.try_get("hit")?,
-            u16::try_from(entry.try_get::<i64, _>("remaining")?)?,
+            clock.remaining(entry.try_get("arrives_at")?, i64::from(u16::MAX))?,
         )?,
     })
 }
@@ -111,6 +113,7 @@ fn decode(entry: &SqliteRow) -> Result<BattleArtilleryShot> {
 pub(super) async fn load(
     c: &mut SqliteConnection,
     maps: &mut BTreeMap<ObjectId, StoredBattleMap>,
+    clock: Clock,
 ) -> Result<()> {
     if !installed(c).await? {
         return Ok(());
@@ -126,7 +129,10 @@ pub(super) async fn load(
     {
         let map = ObjectId(entry.try_get("map_dbref")?);
         let id = u32::try_from(entry.try_get::<i64, _>("shot_id")?)?;
-        queues.entry(map).or_default().insert(id, decode(&entry)?);
+        queues
+            .entry(map)
+            .or_default()
+            .insert(id, decode(&entry, clock)?);
     }
     for (id, shots) in queues {
         maps.get_mut(&id)
@@ -136,14 +142,32 @@ pub(super) async fn load(
     Ok(())
 }
 
-/// Save queue changes in the same transaction as every arrival consequence.
+/// Rows for one map's queue, relative to `clock`.
+fn rows(shots: &BTreeMap<u32, BattleArtilleryShot>, clock: Clock) -> Rows {
+    shots
+        .iter()
+        .map(|(&shot, record)| (vec![i64::from(shot)], encode(record, clock)))
+        .collect()
+}
+
+/// Save queue changes in the same transaction as every arrival consequence. Flights
+/// counting down in step with the clock keep their rows unchanged.
 pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World) -> Result<bool> {
+    let (then, now) = (Clock::of(before), Clock::of(after));
     let mut changed = false;
     for (&id, map) in after.btech.maps() {
         let old = before.btech.maps().get(&id).map(|map| &map.artillery_shots);
-        if old.is_some_and(|old| old == &map.artillery_shots)
-            || (old.is_none() && map.artillery_shots.is_empty())
-        {
+        // Identical queues keep their deadlines unless the clock moved under a flight.
+        let unchanged = match old {
+            None => map.artillery_shots.is_empty(),
+            Some(old) => old == &map.artillery_shots && (then == now || old.is_empty()),
+        };
+        if unchanged {
+            continue;
+        }
+        let previous = old.map(|old| rows(old, then));
+        let desired = rows(&map.artillery_shots, now);
+        if previous.as_ref() == Some(&desired) {
             continue;
         }
         if !installed(c).await? {
@@ -151,17 +175,13 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
                 .execute(&mut *c)
                 .await?;
         }
-        let desired = map
-            .artillery_shots
-            .iter()
-            .map(|(&shot, record)| (vec![i64::from(shot)], encode(record)))
-            .collect();
-        changed |= sync_rows(
+        changed |= sync_changed_rows(
             c,
             "btech_artillery",
             &[("map_dbref", id.0)],
             &["shot_id"],
             COLUMNS,
+            previous.as_ref(),
             &desired,
         )
         .await?;

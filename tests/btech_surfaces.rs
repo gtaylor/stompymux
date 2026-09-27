@@ -7474,6 +7474,38 @@ async fn artillery_queue_late_arrival_rolls_back_all_shots() {
     assert!(scripts.drain_outbox().is_empty());
 }
 
+/// A flight counting down with the simulation clock commits each tick without rewriting its row.
+#[tokio::test]
+async fn artillery_flight_in_progress_leaves_its_row_unchanged() {
+    tokio::task::LocalSet::new().run_until(async {
+        use sqlx::Connection;
+        let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 3).await;
+        for (unit, pilot) in units.into_iter().zip([ObjectId(1), ObjectId(2)]) {
+            stop_battle_unit(&mut world, unit, pilot, rules()).unwrap();
+        }
+        let center = BattleHexCoordinate { x: 1, y: 1 };
+        enqueue_artillery(&mut world, map, units[0], BattleArtilleryFlight::new(center, center, BattleWeapon::LongTom, BattleArtilleryMode::Mine, true).unwrap()).unwrap();
+        persistence::save(&config.database(), &world).await.unwrap();
+        let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
+        sqlx::query("CREATE TRIGGER deny_artillery_update BEFORE UPDATE ON btech_artillery BEGIN SELECT RAISE(ABORT,'artillery rewritten'); END").execute(&mut sql).await.unwrap();
+        let (_address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            loop {
+                let loaded = persistence::load(&config.database()).await.unwrap();
+                if loaded.btech.simulation_time() >= world.btech.simulation_time() + 2 {
+                    let flight = &loaded.btech.maps()[&map].artillery_shots()[&0].flight;
+                    let saved = &world.btech.maps()[&map].artillery_shots()[&0].flight;
+                    assert!(flight.remaining() < saved.remaining());
+                    break;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            }
+        }).await.unwrap();
+        shutdown.send(ShutdownRequest::Sigterm).unwrap();
+        task.await.unwrap().unwrap();
+    }).await;
+}
+
 /// The real server restores queued arrivals and their effects when a database delete fails, then retries once.
 #[tokio::test]
 async fn artillery_queue_server_save_failure_and_retry() {
@@ -7538,13 +7570,13 @@ async fn artillery_queue_rejects_corrupt_saved_cursor() {
     .await
     .unwrap();
     assert!(
-        sqlx::query("UPDATE btech_artillery SET remaining=0 WHERE map_dbref=?")
+        sqlx::query("UPDATE btech_artillery SET arrives_at=0 WHERE map_dbref=?")
             .bind(map.0)
             .execute(&mut sql)
             .await
             .is_err()
     );
-    sqlx::query("UPDATE btech_artillery SET remaining=60000 WHERE map_dbref=?")
+    sqlx::query("UPDATE btech_artillery SET arrives_at=60000 WHERE map_dbref=?")
         .bind(map.0)
         .execute(&mut sql)
         .await

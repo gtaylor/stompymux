@@ -84,13 +84,14 @@ async fn missing_timer_is_recovered_read_only_and_first_save_inserts_it() {
         assert_eq!(rows, 0, "Loading must not mutate the database");
         // Even an unchanged save must materialize an inferred countdown.
         persistence::save(&config.database(), &world).await.unwrap();
-        let remaining: i64 =
-            sqlx::query_scalar("SELECT remaining FROM btech_building_repair WHERE map_dbref=?")
+        // The countdown is stored as its deadline on the (unstarted) simulation clock.
+        let repairs_at: i64 =
+            sqlx::query_scalar("SELECT repairs_at FROM btech_building_repair WHERE map_dbref=?")
                 .bind(interior.0)
                 .fetch_one(&mut sql)
                 .await
                 .unwrap();
-        assert_eq!(remaining, 120);
+        assert_eq!(repairs_at, world.btech.simulation_time() + 120);
         sqlx::query("ALTER TABLE btech_building_repair ADD COLUMN note TEXT DEFAULT 'keep'")
             .execute(&mut sql)
             .await

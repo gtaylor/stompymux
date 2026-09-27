@@ -2,6 +2,7 @@
 mod btech;
 mod btech_autopilot;
 mod btech_character;
+mod btech_deadlines;
 mod btech_decorations;
 mod btech_dice;
 mod btech_map_lifecycle;

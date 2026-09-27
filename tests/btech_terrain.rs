@@ -648,7 +648,7 @@ async fn decoration_rows_preserve_extensions_and_reject_corrupt_lifetimes() {
         persistence::load(&config.database()).await.unwrap().btech,
         before
     );
-    sqlx::raw_sql("DROP TRIGGER reject_decoration_update; PRAGMA ignore_check_constraints=ON; UPDATE btech_map_decorations SET remaining=-1;").execute(&mut sql).await.unwrap();
+    sqlx::raw_sql("DROP TRIGGER reject_decoration_update; PRAGMA ignore_check_constraints=ON; UPDATE btech_map_decorations SET remaining=-1, expires_at=NULL;").execute(&mut sql).await.unwrap();
     assert!(persistence::load(&config.database()).await.is_err());
 }
 

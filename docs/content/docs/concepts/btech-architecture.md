@@ -112,6 +112,16 @@ are stored one row per entry, so a save touches only the entries that changed.
 Enums are stored as integer codes documented beside each table. Dice streams
 are stored as their generator key, stream, block and word columns.
 
+Countdowns in those tables are stored as deadlines on the simulation clock
+(`btech_simulation_clock`) rather than as seconds remaining: artillery
+arrivals, computer and consciousness recovery, building repair, gunner lock
+settling, fire spread and burnout, smoke expiry and the reactor startup window.
+A timer counting down in step with the clock keeps the same deadline, so its row
+is written only when it starts, is rescheduled or finishes. Loading subtracts
+the saved clock to rebuild each countdown. The clock stops while the server is
+down, so timers resume rather than expiring during downtime. The shared
+conversion lives in `src/persistence/btech_deadlines.rs`.
+
 Units and vehicles are the exception: each row holds the record as JSON in two
 parts. `unit` holds the core (construction, damage, settings and contacts),
 which changes rarely, and `live` holds per-tick state such as motion, heat,
