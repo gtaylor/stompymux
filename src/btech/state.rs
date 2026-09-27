@@ -363,9 +363,6 @@ pub struct BtechState {
     /// Committed simulation seconds; never advanced by wall time or loading.
     #[serde(default)]
     pub(crate) simulation_seconds: i64,
-    /// Independently occupied weapon-control stations.
-    #[serde(default)]
-    pub(crate) gunner_stations: SharedMap<ObjectId, super::BattleGunnerStation>,
     /// Ground autopilot intent keyed by the directly controlled unit.
     #[serde(default)]
     pub(crate) controllers: SharedMap<ObjectId, super::autopilot::AutopilotController>,
@@ -499,7 +496,6 @@ impl BtechState {
         let _loadouts = super::loadout_context::LoadoutScope::state(self);
         ensure!(self.simulation_seconds >= 0, "Invalid simulation time");
         super::autopilot::validate_controllers(&self.controllers)?;
-        super::gunner_station::validate(world)?;
         super::battlefield_identity::validate(self)?;
         self.weapon_settings.validate()?;
         super::inventory::validate(world)?;
@@ -926,25 +922,8 @@ impl BtechState {
         if ids.is_empty() {
             return;
         }
-        self.gunner_stations
-            .retain(|station, _| !ids.contains(station));
         self.controllers.retain(|unit, _| !ids.contains(unit));
         self.autopilot_plans.retain(|unit, _| !ids.contains(unit));
-        for station in self.gunner_stations.values_mut() {
-            if ids.contains(&station.parent) || ids.contains(&station.target) {
-                station.lock_remaining = 0;
-                station.artillery_adjustment = 0;
-            }
-            for reference in [
-                &mut station.parent,
-                &mut station.gunner,
-                &mut station.target,
-            ] {
-                if ids.contains(reference) {
-                    *reference = ObjectId(-1);
-                }
-            }
-        }
         let unplaced: BTreeSet<_> = self
             .constructed
             .iter()

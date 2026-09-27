@@ -128,7 +128,7 @@ pub(super) fn action_with_range(
             observer_range,
         )?;
         super::channels::publish(scripts, config, &building.experience_messages)?;
-        super::notify_unit_text(scripts, source.owner, &building.text)?;
+        super::notify_unit_text(scripts, source.unit, &building.text)?;
         let mines = scan_with_range(
             &mut scripts.world.borrow_mut(),
             observer,
@@ -139,7 +139,7 @@ pub(super) fn action_with_range(
         )?;
         super::channels::publish(scripts, config, &mines.experience_messages)?;
         let recipient = if mines.found {
-            super::BattleMessageTarget::Unit(source.owner)
+            super::BattleMessageTarget::Unit(source.unit)
         } else {
             super::BattleMessageTarget::Player(pilot)
         };

@@ -23,7 +23,7 @@ pub(super) fn turret_line(turret: f64, heading: f64, stationary: bool) -> String
     layout::turret_line(turret, heading, stationary)
 }
 
-/// Display policies shared by cockpit, gunner and observer reports.
+/// Display policies shared by cockpit and observer reports.
 #[derive(Clone, Copy)]
 pub(crate) struct StatusRules {
     pub speed: super::SpeedPolicy,
@@ -125,7 +125,7 @@ pub(crate) fn unit_status_configured(
     render_source(world, id.into(), options, rules)
 }
 
-/// Resolve occupant authority while retaining independent station targeting.
+/// Resolve occupant authority before rendering the unit's status.
 pub(crate) fn for_operator(
     world: &World,
     owner: ObjectId,
@@ -137,7 +137,7 @@ pub(crate) fn for_operator(
     render_source(world, source, options, rules)
 }
 
-/// Physical facts come from the parent; targeting comes from the operator's selection.
+/// Render physical facts and targeting for one unit.
 fn render_source(
     world: &World,
     source: TargetSource,

@@ -1,4 +1,4 @@
-//! Occupant contact reports share physical visibility and independently owned target selection.
+//! Occupant contact reports share physical visibility and the unit's target selection.
 use crate::{ObjectId, Scripts};
 use anyhow::{Context, Result};
 
@@ -92,7 +92,7 @@ pub(crate) fn report(
     };
     drop(world);
     if include_buildings {
-        for building in super::building_contacts(scripts, source.owner, viewer)? {
+        for building in super::building_contacts(scripts, source.unit, viewer)? {
             if lines.len() < 250 {
                 lines.push((building.range + 20_000.0, building.styled_text()));
             }

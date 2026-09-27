@@ -23,9 +23,6 @@ mod btech_computer_experience;
 #[path = "../btech_critical_report.rs"]
 mod btech_critical_report;
 
-#[path = "../btech_gunner_stations.rs"]
-mod btech_gunner_stations;
-
 #[path = "../btech_half_ton.rs"]
 mod btech_half_ton;
 

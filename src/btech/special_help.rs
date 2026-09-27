@@ -101,7 +101,6 @@ impl BattleSpecialType {
             Self::Debug => "DEBUG",
             Self::Map => "MAP",
             Self::Autopilot => "AUTOPILOT",
-            Self::Turret => "TURRET",
         }
     }
 }

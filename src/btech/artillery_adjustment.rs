@@ -19,52 +19,23 @@ impl BattleVehicle {
 
 /// Retargeting invalidates this unit's correction and that of same-map units using it as an observer.
 pub(super) fn reset(world: &mut World, id: ObjectId) {
-    reset_links(world, id, true, true, false);
+    reset_links(world, id, true, true);
 }
 
 /// SPOT resets only observers' dependents when stopping, or its own correction on direct selection.
 pub(super) fn spotter_change(world: &mut World, id: ObjectId, next: Option<ObjectId>) {
     if next.is_some_and(|target| target != id) {
-        reset_links(world, id, true, false, true);
+        reset_links(world, id, true, false);
     } else if next.is_none() && super::spotter::selected(world, id) == Some(id) {
-        reset_links(world, id, false, true, false);
+        reset_links(world, id, false, true);
     }
 }
 
 /// Share same-map dependency traversal while keeping each action's reset scope explicit.
-fn reset_links(
-    world: &mut World,
-    id: ObjectId,
-    own: bool,
-    dependents: bool,
-    cockpit_stations: bool,
-) {
+fn reset_links(world: &mut World, id: ObjectId, own: bool, dependents: bool) {
     let map = super::scanner::scanner_unit(world, id)
         .and_then(|unit| unit.position)
         .map(|position| position.map);
-    let stations: Vec<_> = world
-        .btech
-        .gunner_stations()
-        .iter()
-        .filter_map(|(&station_id, station)| {
-            let parent = super::scanner::scanner_unit(world, station.parent);
-            ((own && (station_id == id || cockpit_stations && station.parent == id))
-                || (dependents
-                    && station.parent != id
-                    && map.is_some()
-                    && parent.and_then(|unit| unit.position).map(|p| p.map) == map
-                    && super::spotter::selected(world, station.parent) == Some(id)))
-            .then_some(station_id)
-        })
-        .collect();
-    for id in stations {
-        world
-            .btech
-            .gunner_stations
-            .get_mut(&id)
-            .unwrap()
-            .artillery_adjustment = 0;
-    }
     for (&unit_id, unit) in &mut world.btech.vehicles {
         if (own && unit_id == id)
             || (dependents
@@ -97,15 +68,6 @@ pub(super) fn observe_miss(
     pattern: &BattleArtilleryImpactPattern,
 ) -> Result<Vec<BattleNotice>> {
     let shooter = source.unit;
-    if source.owner != shooter
-        && !world
-            .btech
-            .gunner_stations()
-            .get(&source.owner)
-            .is_some_and(|station| station.parent == shooter)
-    {
-        return Ok(Vec::new());
-    }
     if !pattern.missed {
         return Ok(Vec::new());
     }
@@ -123,7 +85,7 @@ pub(super) fn observe_miss(
             _ => None,
         })
     };
-    if targeting(source.owner) != Some(pattern.target)
+    if targeting(source.unit) != Some(pattern.target)
         && !selected
             .as_ref()
             .is_some_and(|(id, _)| targeting(*id) == Some(pattern.target))
@@ -161,7 +123,7 @@ pub(super) fn observe_miss(
         let shooter_name = unit.label().unwrap_or_else(|| format!("#{}", shooter.0));
         vec![
             BattleNotice {
-                unit: source.owner,
+                unit: source.unit,
                 text: format!("{observer_name} sent you some trajectory-correction data."),
             },
             BattleNotice {
@@ -172,10 +134,7 @@ pub(super) fn observe_miss(
     } else {
         Vec::new()
     };
-    if source.owner != shooter {
-        let station = world.btech.gunner_stations.get_mut(&source.owner).unwrap();
-        station.artillery_adjustment = station.artillery_adjustment.wrapping_add(1);
-    } else if let Some(unit) = world.btech.vehicles.get_mut(&shooter) {
+    if let Some(unit) = world.btech.vehicles.get_mut(&shooter) {
         unit.artillery_adjustment = unit.artillery_adjustment.wrapping_add(1);
     } else {
         let unit = world.btech.constructed.get_mut(&shooter).unwrap();

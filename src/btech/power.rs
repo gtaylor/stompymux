@@ -519,7 +519,7 @@ pub(super) fn autopilot_controlled_vehicle(world: &World, id: ObjectId) -> Resul
     Ok(())
 }
 
-/// Shared operator health gate for cockpit and station control.
+/// Shared operator health gate for cockpit control.
 pub(super) fn control_health(world: &World, pilot: ObjectId) -> Result<()> {
     ensure!(!world.btech.unconscious(pilot), "You are unconscious");
     Ok(())
@@ -539,7 +539,7 @@ pub(super) fn controlled_running_unit(
     require_running_unit(world, shooter)
 }
 
-/// Physical combat availability shared by cockpit and independently admitted station operators.
+/// Physical combat availability shared by cockpit and autopilot operators.
 pub(super) fn require_running_unit(world: &World, shooter: ObjectId) -> Result<()> {
     let unit = super::scanner::scanner_unit(world, shooter).context("Unit is unavailable")?;
     ensure!(!unit.destroyed, "Unit is destroyed");

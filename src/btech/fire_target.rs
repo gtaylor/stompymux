@@ -24,23 +24,22 @@ impl From<Option<ObjectId>> for BattleFireTarget {
     }
 }
 
-/// Physical equipment and independently owned selection used throughout target and aim resolution.
+/// Physical equipment whose selection is used throughout target and aim resolution.
 #[derive(Debug, Clone, Copy)]
 pub(super) struct TargetSource {
     pub unit: ObjectId,
-    pub owner: ObjectId,
 }
 
 impl From<ObjectId> for TargetSource {
     fn from(unit: ObjectId) -> Self {
-        Self { unit, owner: unit }
+        Self { unit }
     }
 }
 
 impl TargetSource {
-    /// Read one selection without consulting the physical unit's cockpit as a fallback.
+    /// Read the unit's current target selection.
     pub fn selection(self, world: &World) -> Option<super::BattleTargetSelection> {
-        super::targeting::selection(world, self.owner)
+        super::targeting::selection(world, self.unit)
     }
 }
 
@@ -189,7 +188,7 @@ pub(super) fn resolve_conventional_for_source(
     Ok(ResolvedFireTarget::Unit { unit, coordinate })
 }
 
-/// Stealth lock admission belongs to the acting station; team safeties belong to physical equipment.
+/// Stealth lock admission and team safeties for the shooting unit.
 pub(super) fn check_target_safety_for_source(
     world: &World,
     targeting: TargetSource,

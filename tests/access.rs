@@ -255,8 +255,6 @@ fn c_catalog_defaults() {
                 | "pilot"
                 | "prone"
                 | "unpilot"
-                | "initialize"
-                | "deinitialize"
                 | "startup"
                 | "shutdown"
                 | "heading"

@@ -54,7 +54,7 @@
 //|function btech_character.state(player) end
 // lua-types-end
 
-// lua-types-begin btech 00417
+// lua-types-begin btech 00416
 //|---Publish a wizard-only skill leaderboard without changing XP.
 //|---@param actor integer
 //|---@param skill string Canonical skill name or alias.
@@ -62,7 +62,7 @@
 //|function btech_character.xptop(actor, skill) end
 // lua-types-end
 
-// lua-types-begin btech 00475
+// lua-types-begin btech 00445
 //|---Add signed skill experience using the shared C range semantics.
 //|---@param character DbRef|Object Player object.
 //|---@param skill string Canonical name or alias.
@@ -70,7 +70,7 @@
 //|function btech_character.add_skill_experience(character, skill, amount) end
 // lua-types-end
 
-// lua-types-begin btech 00476
+// lua-types-begin btech 00446
 //|---Return ordered value definitions of one kind; a supplied player filters unsaved
 //|---skills and advantages while attributes stay complete.
 //|---@param kind string Char_value, Char_skill, Char_advantage or Char_attribute.
@@ -79,14 +79,14 @@
 //|function btech_character.catalog(kind, character) end
 // lua-types-end
 
-// lua-types-begin btech 00477
+// lua-types-begin btech 00447
 //|---Read the configured runtime experience threshold of one skill.
 //|---@param skill string Canonical name or alias.
 //|---@return integer threshold
 //|function btech_character.experience_threshold(skill) end
 // lua-types-end
 
-// lua-types-begin btech 00478
+// lua-types-begin btech 00448
 //|---Replace the stored unsigned 32-bit skill experience.
 //|---@param character DbRef|Object Player object.
 //|---@param skill string
@@ -94,7 +94,7 @@
 //|function btech_character.set_skill_experience(character, skill, experience) end
 // lua-types-end
 
-// lua-types-begin btech 00479
+// lua-types-begin btech 00449
 //|---Set the raw skill amount needed for the requested target; rejects non-skills and
 //|---unreachable targets.
 //|---@param character DbRef|Object Player object.
@@ -103,7 +103,7 @@
 //|function btech_character.set_skill_target(character, skill, target) end
 // lua-types-end
 
-// lua-types-begin btech 00480
+// lua-types-begin btech 00450
 //|---Set one character value by name or code, preserving the C unsigned-byte storage.
 //|---@param character DbRef|Object Player object.
 //|---@param value string|integer Character-value name or code.
@@ -111,7 +111,7 @@
 //|function btech_character.set_value(character, value, amount) end
 // lua-types-end
 
-// lua-types-begin btech 00481
+// lua-types-begin btech 00451
 //|---Read one character value; skills additionally report target and experience progress.
 //|---@param character DbRef|Object Player object.
 //|---@param value string|integer Character-value name, prefix or code.

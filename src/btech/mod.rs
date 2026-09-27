@@ -1323,19 +1323,11 @@ pub use stock_selection::{BattlePartForm, part_catalogue, part_forms};
 mod operator_settings;
 pub use operator_settings::{edit_skill_threshold, edit_weapon_settings};
 
-pub(crate) mod gunner_station;
-pub use gunner_station::{
-    BattleGunnerAim, BattleGunnerContext, BattleGunnerStation, gunner_context,
-    gunner_station_action, register_gunner_station,
-};
-
 mod combat_operator;
 
 mod field_bits;
 mod field_report;
-pub(crate) mod gunner_fields;
 mod preference_fields;
-pub use gunner_fields::{set_gunner_field, view_gunner_fields};
 
 pub(crate) mod runtime_stats;
 pub(crate) mod simulation_pending;

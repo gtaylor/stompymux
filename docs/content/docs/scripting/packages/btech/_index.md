@@ -18,7 +18,6 @@ no_list: true
 | [`btech.character`](character/) | Character values, skills, and experience. |
 | [`btech.database`](database/) | Explicit BattleTech world checkpoints. |
 | [`btech.error`](error/) | Checked BattleTech error-code symbols. |
-| [`btech.gunner`](gunner/) | Gunner station registration, ownership, and inspection. |
 | [`btech.inventory`](inventory/) | Loose-parts inventory and stock changes. |
 | [`btech.map`](map/) | Maps, geometry, line of sight, placement, and messaging. |
 | [`btech.parts`](parts/) | Part catalogue and stores. |

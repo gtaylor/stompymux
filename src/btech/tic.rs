@@ -96,21 +96,8 @@ pub(super) fn selection(text: &str, limit: usize) -> Result<Vec<usize>> {
     Ok(selected.into_iter().collect())
 }
 
-/// Station TIC commands are reserved no-ops and do not expose parent cockpit groups.
-fn station_command(ctx: &CommandContext<'_>) -> bool {
-    let world = ctx.scripts.world();
-    world
-        .objects
-        .get(&ctx.player)
-        .and_then(|player| player.location)
-        .is_some_and(|id| world.btech.gunner_stations().contains_key(&id))
-}
-
 /// Native membership commands reuse the same domain operations exposed to Lua.
 pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<CommandAction> {
-    if station_command(ctx) {
-        return Ok(CommandAction::Continue);
-    }
     let result = (|| -> Result<String> {
         let mut args = input.args.split_whitespace();
         let group_text = args.next().context("Supply a TIC number")?;
@@ -293,9 +280,6 @@ pub(crate) fn fire_command(
     ctx: &CommandContext<'_>,
     input: &CommandInput,
 ) -> Result<CommandAction> {
-    if station_command(ctx) {
-        return Ok(CommandAction::Continue);
-    }
     let result = (|| {
         let id = ctx
             .scripts

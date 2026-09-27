@@ -547,7 +547,7 @@ pub fn aim_modifiers(
     aim_modifiers_for_source(world, shooter.into(), target, weapon_index, gunnery, rules)
 }
 
-/// Shared aim arithmetic for both cockpit and separately owned station selections.
+/// Shared aim arithmetic for a unit's own selection.
 /// Inspection only: no dice are drawn and no firing permission is implied.
 pub(super) fn aim_modifiers_for_source(
     world: &World,

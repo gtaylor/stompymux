@@ -455,9 +455,8 @@ Use `mechprefs SLWarn ON` to receive external searchlight entry/exit warnings, `
 
 ### Viewing unit markings
 
-From a running cockpit or initialized gunner station, `view AA` displays the
-markings of contact AA. `view` uses your selected unit; a gunner uses the station's
-selection. The contact must still be visible with unblocked line of sight.
+From a running cockpit, `view AA` displays the markings of contact AA. `view`
+uses your selected unit. The contact must still be visible with unblocked line of sight.
 Viewing does not acquire contacts, spend dice or require detailed scan range.
 If the target has no description, the reply is `That target has no markings.`
 

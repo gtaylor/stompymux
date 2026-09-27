@@ -79,7 +79,7 @@ async fn actor_location_and_linked_inventory_order_survive_restart() {
     .unwrap();
     world.objects.get_mut(&actor).unwrap().location = Some(map);
     let first = world.create(&config, "Autopilot help".into(), Kind::Thing);
-    let second = world.create(&config, "Turret help".into(), Kind::Thing);
+    let second = world.create(&config, "Debug help".into(), Kind::Thing);
     for id in [first, second] {
         world.objects.get_mut(&id).unwrap().location = Some(actor);
     }
@@ -89,7 +89,7 @@ async fn actor_location_and_linked_inventory_order_survive_restart() {
     )
     .await
     .unwrap();
-    for (id, kind) in [(actor, "DEBUG"), (first, "AUTOPILOT"), (second, "TURRET")] {
+    for (id, kind) in [(actor, "DEBUG"), (first, "AUTOPILOT"), (second, "DEBUG")] {
         sqlx::query("INSERT INTO btech_special_registrations(dbref,special_type) VALUES(?,?)")
             .bind(id.0)
             .bind(kind)
@@ -121,7 +121,7 @@ async fn actor_location_and_linked_inventory_order_survive_restart() {
     for (exclude, expected) in [
         (None, Some(BattleSpecialType::Debug)),
         (Some(actor), Some(BattleSpecialType::Map)),
-        (Some(map), Some(BattleSpecialType::Turret)),
+        (Some(map), Some(BattleSpecialType::Debug)),
         (Some(second), Some(BattleSpecialType::Autopilot)),
         (Some(first), None),
     ] {

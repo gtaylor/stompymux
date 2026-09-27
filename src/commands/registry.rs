@@ -441,32 +441,6 @@ impl CommandRegistry {
                 SwitchPolicy::Reject("removestuff takes no switches."),
                 false,
             ),
-            CommandDefinition::native("@setturret", P::WIZARD, |ctx, input| {
-                crate::btech::gunner_fields::command(ctx, input, true)
-            })
-            .policy(SwitchPolicy::Reject("@SETTURRET takes no switches."), false),
-            CommandDefinition::native("@viewturret", P::WIZARD, |ctx, input| {
-                crate::btech::gunner_fields::command(ctx, input, false)
-            })
-            .policy(
-                SwitchPolicy::Reject("@VIEWTURRET takes no switches."),
-                false,
-            ),
-            CommandDefinition::native(
-                "initialize",
-                P::EVERYONE,
-                crate::btech::gunner_station::initialize_command,
-            )
-            .policy(SwitchPolicy::Reject("INITIALIZE takes no switches."), false),
-            CommandDefinition::native(
-                "deinitialize",
-                P::EVERYONE,
-                crate::btech::gunner_station::deinitialize_command,
-            )
-            .policy(
-                SwitchPolicy::Reject("DEINITIALIZE takes no switches."),
-                false,
-            ),
             CommandDefinition::native("setteam", P::WIZARD, crate::btech::scenario_team::command)
                 .policy(SwitchPolicy::Reject("SETTEAM takes no switches."), false),
             CommandDefinition::native(

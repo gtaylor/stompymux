@@ -209,59 +209,6 @@ async fn delivery_checks_current_active_pilot() {
     }
 }
 
-/// A gunner's lock draws from its physical unit while leaving the pilot's selection untouched.
-#[tokio::test]
-async fn gunner_locks_use_parent_dice_and_coordinate_locks_do_not_warn() {
-    use std::{cell::RefCell, rc::Rc};
-    for template in firing::templates() {
-        let (_dir, config, mut world, source, target, _) =
-            firing::fixture_with_target(&template, None, &template).await;
-        let pilot = recipient(&config, &mut world, target);
-        let station = world.create(&config, "Gunner station".into(), Kind::Thing);
-        let gunner = world.create(&config, "Gunner".into(), Kind::Player);
-        register_gunner_station(&mut world, ObjectId(1), station, source, 5).unwrap();
-        world.objects.get_mut(&gunner).unwrap().location = Some(station);
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        gunner_station_action(&scripts, station, gunner, true).unwrap();
-        let (initial, after) = dice(Some(1));
-        firing::edit(&mut scripts.world_mut(), source, |s| {
-            s["dice"] = serde_json::to_value(&initial).unwrap()
-        });
-        let selection = state(&scripts.world(), source)["target_lock"].clone();
-        scripts
-            .eval_callback::<()>(&format!(
-                "btech.gunner.lock_hex({},{},0,10,'H')",
-                station.0, gunner.0
-            ))
-            .unwrap();
-        assert_eq!(
-            state(&scripts.world(), source)["dice"],
-            serde_json::to_value(initial).unwrap()
-        );
-        assert!(
-            state(&scripts.world(), target)["sixth_sense"]["pending"]
-                .as_array()
-                .unwrap()
-                .is_empty()
-        );
-        scripts
-            .eval_callback::<()>(&format!(
-                "btech.gunner.lock({},{},{})",
-                station.0, gunner.0, target.0
-            ))
-            .unwrap();
-        assert_eq!(state(&scripts.world(), source)["target_lock"], selection);
-        assert_eq!(
-            state(&scripts.world(), source)["dice"],
-            serde_json::to_value(after).unwrap()
-        );
-        assert_eq!(
-            advance_battle_sixth_sense(&mut scripts.world_mut()),
-            vec![(pilot, "You have a bad feeling about this..".into())]
-        );
-    }
-}
-
 /// Startup samples the advantage at completion; edits during normal operation leave the cache alone.
 #[tokio::test]
 async fn startup_captures_the_current_pilots_advantage() {

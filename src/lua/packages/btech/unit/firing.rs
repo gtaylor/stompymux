@@ -1,22 +1,14 @@
-//! Firing commands: sight and fire actions with gunner-station variants, plus TIC management.
+//! Firing commands: sight and fire actions, plus TIC management.
 
 use super::super::*;
 
 /// Register this package slice on the private native table.
 pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::Result<()> {
-    for (name, station) in [("unit_sight", false), ("gunner_sight", true)] {
+    {
         let sighting_world = world.clone();
         let sight = lua.create_function(
             move |lua, (unit, pilot, weapon, target): (i64, i64, usize, Value)| {
                 crate::lua::transactions::require(lua)?;
-                if station {
-                    crate::gunner_context(
-                        &sighting_world.borrow(),
-                        ObjectId(unit),
-                        ObjectId(pilot),
-                    )
-                    .map_err(mlua::Error::external)?;
-                }
                 crate::lua::transactions::run(lua, &sighting_world, || {
                     let config = crate::lua::configuration(lua);
                     let scripts = crate::Scripts::services(lua)?;
@@ -33,17 +25,16 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 })
             },
         )?;
-        native.set(name, error::wrap(lua, sight, "btech.operation.failed")?)?;
+        native.set(
+            "unit_sight",
+            error::wrap(lua, sight, "btech.operation.failed")?,
+        )?;
     }
-    for (name, station) in [("unit_fire", false), ("gunner_fire", true)] {
+    {
         let firing_world = world.clone();
         let fire = lua.create_function(
             move |lua, (unit, pilot, weapon, target): (i64, i64, usize, Value)| {
                 crate::lua::transactions::require(lua)?;
-                if station {
-                    crate::gunner_context(&firing_world.borrow(), ObjectId(unit), ObjectId(pilot))
-                        .map_err(mlua::Error::external)?;
-                }
                 crate::lua::transactions::run(lua, &firing_world, || {
                     let config = crate::lua::configuration(lua);
                     let scripts = crate::Scripts::services(lua)?;
@@ -60,7 +51,10 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 })
             },
         )?;
-        native.set(name, error::wrap(lua, fire, "btech.operation.failed")?)?;
+        native.set(
+            "unit_fire",
+            error::wrap(lua, fire, "btech.operation.failed")?,
+        )?;
     }
     let tic_fire = lua.create_function(
         move |lua, (unit, pilot, groups, target): (i64, i64, Vec<usize>, Value)| {

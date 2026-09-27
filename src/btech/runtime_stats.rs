@@ -11,13 +11,11 @@ pub struct BattleRuntimeStats {
     pub scanner_observers: usize,
     pub reactor_startup_remaining: u8,
     pub artillery_shots: usize,
-    pub station_locks: usize,
     pub maps: usize,
     pub mechs: usize,
     pub vehicles: usize,
-    pub stations: usize,
     pub registration_kinds: BTreeMap<String, usize>,
-    /// Inline sizes of the state root and live map/unit/station records, excluding their heap storage.
+    /// Inline sizes of the state root and live map and unit records, excluding their heap storage.
     pub inline_record_bytes: usize,
     /// Exact compact JSON encoding size; this is a representation size, not process memory usage.
     pub encoded_state_bytes: u64,
@@ -69,15 +67,9 @@ pub fn runtime_stats(
             .values()
             .map(|map| map.artillery_shots.len())
             .sum(),
-        station_locks: state
-            .gunner_stations()
-            .values()
-            .filter(|station| station.lock_remaining > 0)
-            .count(),
         maps: state.maps().len(),
         mechs: state.constructed_units().len(),
         vehicles: state.vehicles().len(),
-        stations: state.gunner_stations().len(),
         registration_kinds,
         inline_record_bytes: std::mem::size_of_val(state)
             + state
@@ -92,11 +84,6 @@ pub fn runtime_stats(
                 .sum::<usize>()
             + state
                 .vehicles()
-                .values()
-                .map(std::mem::size_of_val)
-                .sum::<usize>()
-            + state
-                .gunner_stations()
                 .values()
                 .map(std::mem::size_of_val)
                 .sum::<usize>(),
@@ -119,20 +106,18 @@ pub(crate) fn command(
         let stats = runtime_stats(&ctx.scripts.world(), ctx.config, ctx.player)?;
         if !memory {
             return Ok(format!(
-                "BattleTech simulation interval: 1 second\nSimulation work pending: {}\nScanner observers: {}\nArtillery shots in flight: {}\nStation locks settling: {}\nReactor startup grace: {} seconds",
+                "BattleTech simulation interval: 1 second\nSimulation work pending: {}\nScanner observers: {}\nArtillery shots in flight: {}\nReactor startup grace: {} seconds",
                 stats.simulation_pending,
                 stats.scanner_observers,
                 stats.artillery_shots,
-                stats.station_locks,
                 stats.reactor_startup_remaining
             ));
         }
         let mut text = format!(
-            "BattleTech records: {} maps, {} Mechs, {} vehicles, {} stations\nInline record bytes (heap excluded): {}\nEncoded state bytes (JSON): {}\nAllocator totals: unavailable",
+            "BattleTech records: {} maps, {} Mechs, {} vehicles\nInline record bytes (heap excluded): {}\nEncoded state bytes (JSON): {}\nAllocator totals: unavailable",
             stats.maps,
             stats.mechs,
             stats.vehicles,
-            stats.stations,
             stats.inline_record_bytes,
             stats.encoded_state_bytes
         );

@@ -202,7 +202,6 @@ fn subpackage_description(path: &str) -> Option<&'static str> {
         "btech/character" => Some("Character values, skills, and experience."),
         "btech/database" => Some("Explicit BattleTech world checkpoints."),
         "btech/error" => Some("Checked BattleTech error-code symbols."),
-        "btech/gunner" => Some("Gunner station registration, ownership, and inspection."),
         "btech/inventory" => Some("Loose-parts inventory and stock changes."),
         "btech/map" => Some("Maps, geometry, line of sight, placement, and messaging."),
         "btech/parts" => Some("Part catalogue and stores."),

@@ -93,7 +93,6 @@ fn select(ctx: &CommandContext<'_>, line: &str) -> Option<Selection> {
             Some("MAP") => Special::Map,
             Some("DEBUG") => Special::Debug,
             Some("AUTOPILOT") => Special::Autopilot,
-            Some("TURRET") => Special::Turret,
             _ => continue,
         };
         let class = world
@@ -119,20 +118,7 @@ fn select(ctx: &CommandContext<'_>, line: &str) -> Option<Selection> {
                     CommandReport::Reply("Sorry, that command is restricted!".into()),
                 )));
             }
-            if kind == Special::Turret
-                && matches!(
-                    command.name(),
-                    "ADDTIC" | "DELTIC" | "CLEARTIC" | "LISTTIC" | "FIRETIC"
-                )
-            {
-                return Some(Selection::Reply(CommandAction::Continue));
-            }
-            let routed = matches!(kind, Special::Map | Special::Debug)
-                || kind == Special::Turret
-                    && matches!(
-                        command.name(),
-                        "@SETTURRET" | "@VIEWTURRET" | "INITIALIZE" | "DEINITIALIZE"
-                    );
+            let routed = matches!(kind, Special::Map | Special::Debug);
             return routed.then(|| {
                 Selection::Object(
                     kind,

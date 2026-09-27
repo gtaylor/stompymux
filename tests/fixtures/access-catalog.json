@@ -460,14 +460,6 @@
       "c_permissions": "CA_WIZARD",
       "switch_table": "nullptr"
     },
-    "@setturret": {
-      "c_permissions": "CA_WIZARD",
-      "switch_table": "nullptr"
-    },
-    "@viewturret": {
-      "c_permissions": "CA_WIZARD",
-      "switch_table": "nullptr"
-    },
     "@setmap": {
       "c_permissions": "CA_WIZARD",
       "switch_table": "nullptr"
@@ -1169,8 +1161,6 @@
     "fixturret": "Everyone; running vehicle, conscious assigned pilot and jammed unlocked turret required",
     "turret": "Everyone; running vehicle, assigned pilot and surviving unlocked turret required",
     "speed": "Everyone; running unit and assigned pilot required",
-    "initialize": "Everyone; station presence and supported parent required, occupied stations reject takeover",
-    "deinitialize": "Everyone; present registered gunner and supported parent required",
     "startup": "Everyone; assigned pilot required, override requires Wizard",
     "shutdown": "Everyone; assigned pilot required",
     "pilot": "Everyone; cockpit access uses the unit USE policy and physical presence",

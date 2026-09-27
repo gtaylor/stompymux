@@ -5,7 +5,7 @@ linkTitle: "view"
 manualLinkTitle: "view"
 ---
 
-View escaped markings through running cockpit/gunner contact and unblocked-LOS admission.
+View escaped markings through running cockpit contact and unblocked-LOS admission.
 No scan-range limit; omitted target uses this operator's selected unit.
 
 ## Signature
@@ -18,7 +18,7 @@ btech.unit.view(unit, actor, target)
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `unit` | `integer` | Cockpit or gunner station. |
+| `unit` | `integer` | Cockpit unit. |
 | `actor` | `integer` |  |
 | `target?` | `integer` |  |
 

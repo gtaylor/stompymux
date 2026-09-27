@@ -311,8 +311,6 @@ fn resolve_shot_inner(
         super::loadout_context::LoadoutScope::participants(&world.btech, [shooter, target]);
     let character = effects.character;
     let operator = super::combat_operator::controlled_mech(world, shooter, pilot)?;
-    let mut rules = rules;
-    rules.aim = operator.aim_rules(rules.aim);
     let character_shooter = character && world.objects[&shooter].flags.contains(Flag::InCharacter);
     let shooter_toughness = if character_shooter {
         world.btech.constructed_units()[&shooter]
@@ -386,9 +384,6 @@ fn resolve_shot_inner(
         target,
         selected_weapon,
     )?;
-    if !self_cooling {
-        operator.check_arc(world, target)?;
-    }
     let loadout = attacker.loadout()?;
     ensure!(
         attacker
@@ -414,7 +409,7 @@ fn resolve_shot_inner(
     );
     let mut aim_dice = attacker.dice.clone();
     let prepared = super::gatling::prepare(world, shooter, weapon_index, &mut aim_dice)?;
-    let gunnery = operator.gunnery(world, weapon_index, rules.extended_gunnery)?;
+    let gunnery = super::unit_gunnery_target(world, shooter, weapon_index, rules.extended_gunnery)?;
     let mut aim = super::aim::aim_modifiers_for_source(
         world,
         operator.source,

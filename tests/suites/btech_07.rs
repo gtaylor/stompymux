@@ -17,12 +17,6 @@ mod btech_electronics;
 #[path = "../btech_fortification.rs"]
 mod btech_fortification;
 
-#[path = "../btech_gunner_aim.rs"]
-mod btech_gunner_aim;
-
-#[path = "../btech_gunner_fire.rs"]
-mod btech_gunner_fire;
-
 #[path = "../btech_gyros.rs"]
 mod btech_gyros;
 

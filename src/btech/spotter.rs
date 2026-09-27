@@ -300,7 +300,7 @@ pub(super) fn active_observer(world: &World, firer: ObjectId) -> Result<ObjectId
     Ok(spotter)
 }
 
-/// Resolve observer participation using the selected operator's lock and the parent's datalink.
+/// Resolve observer participation using the unit's lock and datalink.
 pub(super) fn indirect_target_for_source(
     world: &World,
     source: super::fire_target::TargetSource,
@@ -334,7 +334,7 @@ fn uses_observer(
         ))
 }
 
-/// Resolve observer participation using the selected operator's lock and the parent's datalink.
+/// Resolve observer participation using the unit's lock and datalink.
 pub(super) fn indirect_hex_for_source(
     world: &World,
     source: super::fire_target::TargetSource,

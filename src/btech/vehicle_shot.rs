@@ -55,8 +55,7 @@ pub(super) fn check_with_dice(
     dice: &mut super::BattleDice,
 ) -> Result<(BattleAimModifiers, super::gatling::GatlingPreparation)> {
     let operator = super::combat_operator::controlled(world, shooter, pilot)?;
-    let mut rules = admission.rules;
-    rules.aim = operator.aim_rules(rules.aim);
+    let rules = admission.rules;
     let attacker = world
         .btech
         .vehicles()
@@ -117,9 +116,6 @@ pub(super) fn check_with_dice(
         target,
         mount.weapon,
     )?;
-    if !self_cooling {
-        operator.check_arc(world, target)?;
-    }
     if attacker.ammunition_mode(weapon_index)? == super::BattleAmmunitionMode::Stinger {
         ensure!(
             super::stinger::target_airborne(world, target),
@@ -139,7 +135,7 @@ pub(super) fn check_with_dice(
         "Target is outside weapon arc"
     );
     let prepared = super::gatling::prepare(world, shooter, weapon_index, dice)?;
-    let gunnery = operator.gunnery(world, weapon_index, rules.extended_gunnery)?;
+    let gunnery = super::unit_gunnery_target(world, shooter, weapon_index, rules.extended_gunnery)?;
     let aim = super::aim::aim_modifiers_for_source(
         world,
         operator.source,

@@ -128,7 +128,7 @@ pub(super) fn action_with_range(
             observer_range,
         )?;
         super::channels::publish(scripts, config, &report.experience_messages)?;
-        super::notify_unit_text(scripts, source.owner, &report.text)?;
+        super::notify_unit_text(scripts, source.unit, &report.text)?;
         Ok(report)
     })
 }

@@ -10,9 +10,6 @@ use std::{collections::BTreeMap, sync::Arc};
 #[serde(deny_unknown_fields)]
 pub struct BattleArtilleryShot {
     pub shooter: ObjectId,
-    /// Historical targeting owner; absent for cockpit launches. Loss never cancels the shell.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub station: Option<ObjectId>,
     pub flight: BattleArtilleryFlight,
 }
 
@@ -34,9 +31,7 @@ impl StoredBattleMap {
         );
         for shot in self.artillery_shots.values() {
             ensure!(
-                shot.shooter.0 >= 0
-                    && shot.station.is_none_or(|id| id.0 >= 0)
-                    && shot.flight.remaining() > 0,
+                shot.shooter.0 >= 0 && shot.flight.remaining() > 0,
                 "Invalid queued artillery shot"
             );
             for coordinate in [shot.flight.origin(), shot.flight.target()] {
@@ -65,26 +60,6 @@ pub fn enqueue_artillery(
     shooter: ObjectId,
     flight: BattleArtilleryFlight,
 ) -> Result<u32> {
-    enqueue_for_source(world, map, shooter.into(), flight)
-}
-
-/// Retain physical shell attribution separately from independently owned trajectory correction.
-pub(super) fn enqueue_for_source(
-    world: &mut World,
-    map: ObjectId,
-    source: super::fire_target::TargetSource,
-    flight: BattleArtilleryFlight,
-) -> Result<u32> {
-    let shooter = source.unit;
-    let station = (source.owner != shooter).then_some(source.owner);
-    ensure!(
-        station.is_none_or(|id| world
-            .btech
-            .gunner_stations()
-            .get(&id)
-            .is_some_and(|station| station.parent == shooter)),
-        "Artillery station does not control shooter"
-    );
     ensure!(
         world
             .objects
@@ -126,14 +101,8 @@ pub(super) fn enqueue_for_source(
         .unwrap_or(0);
     world.attempt(|world| {
         let record = world.btech.maps.get_mut(&map).unwrap();
-        Arc::make_mut(&mut record.artillery_shots).insert(
-            ordinal,
-            BattleArtilleryShot {
-                shooter,
-                station,
-                flight,
-            },
-        );
+        Arc::make_mut(&mut record.artillery_shots)
+            .insert(ordinal, BattleArtilleryShot { shooter, flight });
         record.validate_artillery()?;
         Ok(ordinal)
     })
@@ -175,10 +144,7 @@ pub fn advance_artillery_action(
                     (
                         map,
                         ordinal,
-                        super::fire_target::TargetSource {
-                            unit: shot.shooter,
-                            owner: shot.station.unwrap_or(shot.shooter),
-                        },
+                        super::fire_target::TargetSource::from(shot.shooter),
                         shot.flight.clone(),
                     )
                 })

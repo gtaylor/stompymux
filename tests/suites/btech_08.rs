@@ -20,12 +20,6 @@ mod btech_fall_heading;
 #[path = "../btech_forms.rs"]
 mod btech_forms;
 
-#[path = "../btech_gunner_fields.rs"]
-mod btech_gunner_fields;
-
-#[path = "../btech_gunner_scan.rs"]
-mod btech_gunner_scan;
-
 #[path = "../btech_heat_cutoff.rs"]
 mod btech_heat_cutoff;
 

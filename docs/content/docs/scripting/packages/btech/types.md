@@ -1008,7 +1008,6 @@ Alias: `{class: "mech", section: string}|{class: "ground_vehicle"|"vtol", sectio
 
 ## BattleTechInspection
 
-- `gunner`: `btech.gunner` — Station registration, ownership and inspection.
 - `database`: `btech.database` — Explicit world checkpoints.
 - `cargo`: `table` — Cockpit stock reports and transfers.
 - `inventory`: `table` — Shared loose-parts stock.
@@ -1417,13 +1416,11 @@ Alias: `"follow_brief" | "include" | "exclude"`
 - `scanner_observers`: `integer`
 - `reactor_startup_remaining`: `integer`
 - `artillery_shots`: `integer`
-- `station_locks`: `integer`
 - `maps`: `integer`
 - `mechs`: `integer`
 - `vehicles`: `integer`
-- `stations`: `integer`
 - `registration_kinds`: `table<string, integer>`
-- `inline_record_bytes`: `integer` — Root/map/unit/station inline sizes only; heap storage excluded.
+- `inline_record_bytes`: `integer` — Root/map/unit inline sizes only; heap storage excluded.
 - `encoded_state_bytes`: `integer` — Exact compact JSON encoding size, not allocator usage.
 
 ## BattleUnitField
