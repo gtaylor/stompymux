@@ -184,15 +184,13 @@ pub(super) fn register(lua: &Lua, api: &Table, world: &SharedWorld) -> mlua::Res
                         },
                     ));
                 }
-                if key.as_ref() == "home" {
-                    if id == target {
-                        return Err(super::super::error::argument_failure(
-                            lua,
-                            2,
-                            "mux.object.invalid",
-                            "object cannot be its own home",
-                        ));
-                    }
+                if key.as_ref() == "home" && id == target {
+                    return Err(super::super::error::argument_failure(
+                        lua,
+                        2,
+                        "mux.object.invalid",
+                        "object cannot be its own home",
+                    ));
                 }
                 if key.as_ref() == "zone" && !matches!(target_kind, Kind::Room | Kind::Thing) {
                     return Err(super::super::error::argument_failure(

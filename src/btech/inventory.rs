@@ -115,7 +115,7 @@ pub fn set_inventory_quantity_action(
             brand_id,
             quantity,
         )?;
-        let previous = inventory(&before, object)?
+        let previous = inventory(before, object)?
             .iter()
             .find(|row| row.key() == (part_id, brand_id))
             .map_or(0, |row| row.quantity);

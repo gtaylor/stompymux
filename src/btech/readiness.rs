@@ -162,7 +162,7 @@ impl BattleUnit {
             carried_club: self
                 .carried_club()
                 .is_some_and(|arm| arm.section() == section),
-            posture_failure: self.prone_support_failure(&loadout, section),
+            posture_failure: self.prone_support_failure(loadout, section),
             covered: false,
         })
     }

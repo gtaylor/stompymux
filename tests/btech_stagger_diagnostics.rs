@@ -81,7 +81,8 @@ async fn stagger_diagnostic_order_audience_and_rollback() {
                         && text.source() == "You make a piloting skill roll!"),
                     !assigned
                 );
-                persistence::save(&config.database(), &scripts.world())
+                let world_snapshot = scripts.world().clone();
+                persistence::save(&config.database(), &world_snapshot)
                     .await
                     .unwrap();
                 let loaded = persistence::load(&config.database()).await.unwrap();

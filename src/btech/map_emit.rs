@@ -26,7 +26,7 @@ pub fn emit_map_action(
 ) -> Result<Vec<ObjectId>> {
     scripts.atomic(|before| {
         ensure!(
-            crate::authority::is_wizard(&before, actor),
+            crate::authority::is_wizard(before, actor),
             "Permission denied."
         );
         ensure!(
@@ -43,7 +43,7 @@ pub fn emit_map_action(
             !text.contains('\0'),
             "message contains an embedded NUL byte"
         );
-        let units = recipients(&before, map)?;
+        let units = recipients(before, map)?;
         for &unit in &units {
             crate::notification::send(
                 &scripts.world(),

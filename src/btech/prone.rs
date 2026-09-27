@@ -51,7 +51,7 @@ pub fn prone_action(
             super::evacuation::publish_section_exposure_consequences(scripts, config, flood)?;
         }
         super::evacuation::publish_mine_consequences(scripts, config, &report.mines)?;
-        super::evacuation::publish_new_casualties(scripts, config, &before)?;
+        super::evacuation::publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(report)
     })

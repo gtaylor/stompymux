@@ -257,7 +257,7 @@ fn blast_arc(bearing: f64, heading: f64) -> BattleHitArc {
     if angle > 120.0 && angle < 240.0 {
         return BattleHitArc::Rear;
     }
-    if angle > 300.0 || angle < 60.0 {
+    if !(60.0..=300.0).contains(&angle) {
         return BattleHitArc::Front;
     }
     if angle > 180.0 {

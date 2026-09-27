@@ -353,7 +353,7 @@ pub fn set_map_index_action(
 ) -> Result<BattleMapIndexReport> {
     scripts.atomic(|before| {
         ensure!(
-            crate::authority::is_wizard(&before, actor),
+            crate::authority::is_wizard(before, actor),
             "Permission denied."
         );
         ensure!(map.0 >= -1, "Invalid map index!");

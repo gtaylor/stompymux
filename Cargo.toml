@@ -54,6 +54,11 @@ sha2 = "0.11.0"
 stompymux-test-support = { path = "tests/support" }
 tokio = { version = "1.53.1", features = ["test-util"] }
 
+# Autopilot and contract helpers pass world, unit, and tuning state explicitly
+# rather than bundling them into single-use structs.
+[lints.clippy]
+too_many_arguments = "allow"
+
 [profile.dev]
 debug = "line-tables-only"
 

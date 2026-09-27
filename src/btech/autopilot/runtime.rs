@@ -123,7 +123,7 @@ impl AutopilotRuntimeMetrics {
 
 /// Runtime-only execution state.  It is intentionally excluded from the
 /// serialized controller and rebuilt after a restart from the active order.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub(crate) struct AutopilotPlan {
     pub(crate) engagement: Option<super::engagement::Engagement>,
     pub(crate) pursuit: super::interception::Pursuit,
@@ -145,32 +145,6 @@ pub(crate) struct AutopilotPlan {
     pub(crate) yielding: Option<(Hex, i64)>,
     pub(crate) terrain_revision: usize,
     pub(crate) mobility_revision: u64,
-}
-
-impl Default for AutopilotPlan {
-    fn default() -> Self {
-        Self {
-            engagement: None,
-            pursuit: Default::default(),
-            fallback: false,
-            congestion: Default::default(),
-            steering: Default::default(),
-            order_id: 0,
-            goal: None,
-            search: None,
-            replacement_pending: false,
-            route: Vec::new(),
-            route_index: 0,
-            last_hex: None,
-            best_waypoint_distance: None,
-            stagnant_ticks: 0,
-            recovery_attempts: 0,
-            steering_grace: 0,
-            yielding: None,
-            terrain_revision: 0,
-            mobility_revision: 0,
-        }
-    }
 }
 
 // AStarSearch contains a binary heap and is deliberately not comparable.  The
@@ -806,7 +780,6 @@ fn advance_controller(
         .is_some_and(|p| {
             checked_initial.unwrap_or_else(|| usable(Hex::new(p.x, p.y)).unwrap_or(false))
         });
-    drop(usable);
     if let Some(metrics) = metrics.as_deref_mut() {
         metrics.geometry_checks += geometry_used;
     }
@@ -822,10 +795,10 @@ fn advance_controller(
             existing_plan.pursuit.settle();
         }
     }
-    if engagement.is_some_and(|e| e.aim != e.target) {
-        if let Some(m) = metrics.as_deref_mut().filter(|m| m.capture_outcomes) {
-            m.prediction_ticks += 1;
-        }
+    if engagement.is_some_and(|e| e.aim != e.target)
+        && let Some(m) = metrics.as_deref_mut().filter(|m| m.capture_outcomes)
+    {
+        m.prediction_ticks += 1;
     }
     let directive = if let Some(e) = engagement {
         Directive {

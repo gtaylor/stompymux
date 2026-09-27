@@ -13,7 +13,7 @@ pub fn list_map_action(
 ) -> Result<()> {
     scripts.atomic(|before| {
         ensure!(
-            crate::authority::is_wizard(&before, actor),
+            crate::authority::is_wizard(before, actor),
             "Permission denied."
         );
         ensure!(
@@ -57,10 +57,10 @@ pub fn list_map_action(
             notify("--------------------------------------------")?;
         } else {
             notify("--- Mechs on Map ---")?;
-            let units = super::map_slots::all_unit_order(&before, map)?;
+            let units = super::map_slots::all_unit_order(before, map)?;
             for id in &units {
                 let unit =
-                    super::scanner::scanner_unit(&before, *id).context("Unit is unavailable")?;
+                    super::scanner::scanner_unit(before, *id).context("Unit is unavailable")?;
                 let label = unit.label().context("Unit has no battlefield ID")?;
                 notify(&format!("Mech DB Number: {} : [{label}]\tValid Data", id.0))?;
             }

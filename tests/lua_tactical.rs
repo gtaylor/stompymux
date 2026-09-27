@@ -117,7 +117,8 @@ async fn tactical_snapshots_are_detached_sorted_and_use_committed_time() {
     "#,
         )
         .unwrap();
-    persistence::save(&config.database(), &scripts.world())
+    let world_snapshot = scripts.world().clone();
+    persistence::save(&config.database(), &world_snapshot)
         .await
         .unwrap();
     let loaded = persistence::load(&config.database()).await.unwrap();
@@ -267,7 +268,8 @@ async fn completed_tactical_order_stays_completed_after_restart() {
     "#,
         )
         .unwrap();
-    persistence::save(&config.database(), &scripts.world())
+    let world_snapshot = scripts.world().clone();
+    persistence::save(&config.database(), &world_snapshot)
         .await
         .unwrap();
     let mut harness = HeartbeatHarness::new(config.clone(), scripts.world().clone()).unwrap();

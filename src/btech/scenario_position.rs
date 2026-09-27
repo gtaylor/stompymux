@@ -28,7 +28,7 @@ pub fn set_coordinates_action(
 ) -> Result<BattleScenarioPositionReport> {
     scripts.atomic(|before| {
         ensure!(
-            crate::authority::is_wizard(&before, actor),
+            crate::authority::is_wizard(before, actor),
             "Permission denied."
         );
         ensure!(
@@ -39,7 +39,7 @@ pub fn set_coordinates_action(
                     && !object.flags.contains(Flag::Going)),
             "Unit is unavailable"
         );
-        let original = super::scanner::scanner_unit(&before, unit)
+        let original = super::scanner::scanner_unit(before, unit)
             .context("Unit construction state is unavailable")?
             .position
             .context("Unit is not on a battlefield")?;

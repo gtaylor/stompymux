@@ -5,7 +5,7 @@ use anyhow::{Context, Result};
 /// Apply or inspect the safety setting inside one state-and-output checkpoint.
 fn action(scripts: &Scripts, id: ObjectId, pilot: ObjectId, argument: &str) -> Result<()> {
     scripts.atomic(|before| {
-        super::radio::controlled(&before, id, pilot)?;
+        super::radio::controlled(before, id, pilot)?;
         let enabled = match argument.trim().to_ascii_lowercase().as_str() {
             "on" => Some(true),
             "off" => Some(false),
@@ -23,7 +23,7 @@ fn action(scripts: &Scripts, id: ObjectId, pilot: ObjectId, argument: &str) -> R
                 },
             )?;
         } else {
-            let text = if super::auxiliary_preferences::mw_safety(&before, id)? {
+            let text = if super::auxiliary_preferences::mw_safety(before, id)? {
                 "Weapon safeties are [bold][fg=green]ON[reset]"
             } else {
                 "Weapon safeties are [bold][fg=red]OFF[reset]"

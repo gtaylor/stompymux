@@ -45,7 +45,7 @@ fn ground_unit(lua: &Lua, shared: &SharedWorld, value: Value) -> mlua::Result<Ob
     ))
 }
 
-fn controller<'a>(world: &'a crate::World, id: ObjectId) -> mlua::Result<&'a AutopilotController> {
+fn controller(world: &crate::World, id: ObjectId) -> mlua::Result<&AutopilotController> {
     world.btech.controllers().get(&id).ok_or_else(|| {
         error::failure(
             "mux.object.unavailable",

@@ -380,7 +380,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
         if previous.is_none() {
             // Fixed map initialization defaults; unrelated fields are never rewritten on reload.
             for (name, value) in [("reserved", 0), ("moves", 0)] {
-                values.insert(name.into(), Cell::Integer(value));
+                values.insert(name, Cell::Integer(value));
             }
         }
         // Conditions can change on occupied maps without rewriting terrain or deferred objects.

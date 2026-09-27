@@ -12,6 +12,9 @@ use super::super::{
 use crate::{ObjectId, World};
 use std::collections::BTreeMap;
 
+/// Per-hex `(occupants, friendly occupants)` counts keyed by `(x, y)`.
+type OccupancyCounts = BTreeMap<(u16, u16), (usize, usize)>;
+
 /// A reason for an assessment.  Reasons on an eligible transition describe the
 /// principal terrain or occupancy penalty; `Eligible` means no special penalty
 /// was needed.
@@ -85,7 +88,7 @@ fn assess_with_occupancy(
     unit_id: ObjectId,
     from: BattlePosition,
     to: BattlePosition,
-    cached_occupancy: Option<&BTreeMap<(u16, u16), (usize, usize)>>,
+    cached_occupancy: Option<&OccupancyCounts>,
 ) -> TraversalAssessment {
     if from.map != to.map {
         return TraversalAssessment::blocked(TraversalReason::WrongMap);
@@ -186,7 +189,7 @@ pub struct GroundTraversal<'a> {
     pub world: &'a World,
     pub unit_id: ObjectId,
     pub map: ObjectId,
-    occupancy: BTreeMap<(u16, u16), (usize, usize)>,
+    occupancy: OccupancyCounts,
     congested: std::cell::RefCell<super::congestion::Cells>,
 }
 
@@ -409,11 +412,7 @@ pub(crate) fn watched_clearance(
 /// Snapshot only occupancy that the moving unit is allowed to know.  Friendly
 /// units are known from their team membership; enemy placement affects routing
 /// only after the moving unit has an acquired sensor contact for that unit.
-fn known_occupancy(
-    world: &World,
-    moving: ObjectId,
-    map: ObjectId,
-) -> BTreeMap<(u16, u16), (usize, usize)> {
+fn known_occupancy(world: &World, moving: ObjectId, map: ObjectId) -> OccupancyCounts {
     filtered_occupancy(world, moving, map, None)
 }
 
@@ -422,7 +421,7 @@ fn filtered_occupancy(
     moving: ObjectId,
     map: ObjectId,
     cells: Option<&super::congestion::Cells>,
-) -> BTreeMap<(u16, u16), (usize, usize)> {
+) -> OccupancyCounts {
     let Some(moving_team) = team(world, moving) else {
         return BTreeMap::new();
     };

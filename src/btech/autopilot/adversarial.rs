@@ -163,7 +163,7 @@ fn script(world: &mut World, id: ObjectId, tick: usize, cap: f64) -> Result<bool
     }
     let motion = steering::motion(world, id).context("Scripted unit has no motion")?;
     let goal = crate::BattleHexCoordinate {
-        x: if (tick / 60) % 2 == 0 { 9 } else { 2 },
+        x: if (tick / 60).is_multiple_of(2) { 9 } else { 2 },
         y: 3,
     }
     .center();
@@ -663,20 +663,20 @@ pub async fn run_policy(
                                 awaiting_contact.remove(&id);
                             }
                         }
-                        if matches!(name, "crossing" | "occluded") {
-                            if script(
+                        if matches!(name, "crossing" | "occluded")
+                            && script(
                                 &mut world,
                                 target,
                                 tick,
                                 if name == "occluded" { 53.75 } else { 25.0 },
-                            )? {
-                                participants
-                                    .iter_mut()
-                                    .find(|p| p.id == target)
-                                    .unwrap()
-                                    .result
-                                    .script_rejections += 1;
-                            }
+                            )?
+                        {
+                            participants
+                                .iter_mut()
+                                .find(|p| p.id == target)
+                                .unwrap()
+                                .result
+                                .script_rejections += 1;
                         }
                         if name == "bottleneck"
                             && tick
@@ -902,10 +902,11 @@ pub async fn run_policy(
                         if cleared {
                             p.result.clearance_tick.get_or_insert(tick);
                         }
-                        if let Some(clear) = p.result.clearance_tick {
-                            if progress && tick > clear {
-                                p.result.recovery_ticks.get_or_insert(tick - clear);
-                            }
+                        if let Some(clear) = p.result.clearance_tick
+                            && progress
+                            && tick > clear
+                        {
+                            p.result.recovery_ticks.get_or_insert(tick - clear);
                         }
                         p.result.replans += metrics
                             .autopilot
@@ -919,20 +920,19 @@ pub async fn run_policy(
                             c.early_starts += counters.early_starts;
                             c.timed_starts += counters.timed_starts;
                             c.deferrals += counters.resource_deferrals;
-                            if let Some(clear) = c.first_watched_clearance {
-                                if counters.early_starts + counters.timed_starts > 0 {
-                                    c.clearance_to_search
-                                        .get_or_insert(tick.saturating_sub(clear));
-                                }
+                            if let Some(clear) = c.first_watched_clearance
+                                && counters.early_starts + counters.timed_starts > 0
+                            {
+                                c.clearance_to_search
+                                    .get_or_insert(tick.saturating_sub(clear));
                             }
                         }
-                        if let Some(c) = p.result.congestion.as_mut() {
-                            if let Some(clear) = c.first_watched_clearance {
-                                if distance > 0.02 {
-                                    c.clearance_to_movement
-                                        .get_or_insert(tick.saturating_sub(clear));
-                                }
-                            }
+                        if let Some(c) = p.result.congestion.as_mut()
+                            && let Some(clear) = c.first_watched_clearance
+                            && distance > 0.02
+                        {
+                            c.clearance_to_movement
+                                .get_or_insert(tick.saturating_sub(clear));
                         }
                         let controller = &world.btech.controllers()[&p.id];
                         if controller.state() == AutopilotState::Blocked {

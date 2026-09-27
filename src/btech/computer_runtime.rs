@@ -293,7 +293,7 @@ pub fn advance_battle_computer_failures_action(scripts: &Scripts, config: &Confi
                 }
             }
         }
-        super::evacuation::publish_new_casualties(scripts, config, &before)?;
+        super::evacuation::publish_new_casualties(scripts, config, before)?;
         scripts.world().validate_action(config)?;
         scripts.effects.validate()?;
         Ok(())

@@ -198,10 +198,11 @@ impl AdaptivePursuit {
                 self.last_motion = Some(now);
                 self.vector = Some(v);
                 self.transitions = self.transitions.saturating_add(1).min(3);
-            } else if let (Some(last), Some(cadence)) = (self.last_motion, self.cadence) {
-                if self.transitions >= 3 && now - last > cadence + 1 {
-                    self.reset_episode("motion_paused");
-                }
+            } else if let (Some(last), Some(cadence)) = (self.last_motion, self.cadence)
+                && self.transitions >= 3
+                && now - last > cadence + 1
+            {
+                self.reset_episode("motion_paused");
             }
         }
         self.samples.retain(|s| now - s.0 <= 64);
@@ -409,10 +410,10 @@ impl AdaptivePursuit {
         let mut scenarios = Vec::new();
         for p in candidates {
             if let Some((moving, stopped)) = score(p, v, if p == last { 0.0 } else { model.error })
+                && moving.is_finite()
+                && stopped.is_finite()
             {
-                if moving.is_finite() && stopped.is_finite() {
-                    scenarios.push((p, moving, stopped));
-                }
+                scenarios.push((p, moving, stopped));
             }
         }
         let best_moving = scenarios.iter().map(|s| s.1).fold(f64::INFINITY, f64::min);

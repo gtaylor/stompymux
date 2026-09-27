@@ -50,10 +50,10 @@ pub(super) fn attach(
         return Ok(report);
     };
     let vehicle = world.btech.vehicles.get_mut(&target).unwrap();
-    if !vehicle
+    if vehicle
         .sections()
         .get(&hit.section)
-        .is_some_and(|state| state.internal > 0)
+        .is_none_or(|state| state.internal == 0)
     {
         return Ok(report);
     }

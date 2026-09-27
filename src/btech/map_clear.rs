@@ -34,7 +34,7 @@ fn clear(
 ) -> Result<Vec<ObjectId>> {
     scripts.atomic(|before| {
         ensure!(
-            crate::authority::is_wizard(&before, actor),
+            crate::authority::is_wizard(before, actor),
             "Permission denied."
         );
         ensure!(
@@ -45,7 +45,7 @@ fn clear(
                     && (teardown || !object.flags.contains(crate::Flag::Going))),
             "Map is unavailable"
         );
-        let units = super::map_slots::all_unit_order(&before, map)?;
+        let units = super::map_slots::all_unit_order(before, map)?;
         for &id in &units {
             super::notify_message(
                 scripts,
@@ -126,8 +126,7 @@ pub(crate) fn debug_command(
     let map = input
         .args
         .split([' ', '\t'])
-        .filter(|arg| !arg.is_empty())
-        .next()
+        .find(|arg| !arg.is_empty())
         .and_then(|arg| arg.parse::<i64>().ok());
     let Some(map) = map.map(ObjectId) else {
         return Ok(crate::CommandAction::Report(crate::CommandReport::Reply(

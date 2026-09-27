@@ -30,7 +30,7 @@ pub fn stop_unit_action(
     pilot: ObjectId,
 ) -> Result<Vec<super::BattleNotice>> {
     scripts.atomic(|before| {
-        super::power::check_shutdown_control(&before, id, pilot)?;
+        super::power::check_shutdown_control(before, id, pilot)?;
         let mut effects = ShutdownEffects::default();
         let notices = super::power::stop_admitted_in_action(
             &mut scripts.world_mut(),
@@ -40,7 +40,7 @@ pub fn stop_unit_action(
         )?;
         super::piloting::publish_ordered_notices(scripts, &notices, &effects.pilot_notices)?;
         publish(scripts, config, &effects)?;
-        super::evacuation::publish_new_casualties(scripts, config, &before)?;
+        super::evacuation::publish_new_casualties(scripts, config, before)?;
         scripts.world().validate_action(config)?;
         scripts.effects.validate()?;
         Ok(notices)

@@ -125,7 +125,7 @@ pub(super) fn register(lua: &Lua, api: &Table, world: &SharedWorld) -> mlua::Res
     api.set(
         "object_tostring",
         lua.create_function(|lua, args: mlua::MultiValue| {
-            let value = args.get(0);
+            let value = args.front();
             let Some(Value::UserData(value)) = value else {
                 return Ok((
                     false,
@@ -142,7 +142,7 @@ pub(super) fn register(lua: &Lua, api: &Table, world: &SharedWorld) -> mlua::Res
                     Value::String(lua.create_string(native_type_error_message(
                         1,
                         "btmux.object",
-                        args.get(0),
+                        args.front(),
                     ))?),
                 ));
             };
@@ -155,7 +155,7 @@ pub(super) fn register(lua: &Lua, api: &Table, world: &SharedWorld) -> mlua::Res
     api.set(
         "object_equal",
         lua.create_function(|lua, args: mlua::MultiValue| {
-            let left_value = args.get(0);
+            let left_value = args.front();
             let Some(Value::UserData(left_value)) = left_value else {
                 return Ok((
                     false,
@@ -172,7 +172,7 @@ pub(super) fn register(lua: &Lua, api: &Table, world: &SharedWorld) -> mlua::Res
                     Value::String(lua.create_string(native_type_error_message(
                         1,
                         "btmux.object",
-                        args.get(0),
+                        args.front(),
                     ))?),
                 ));
             };
@@ -390,13 +390,13 @@ impl UserData for Set {
             ))
         });
         m.add_function("__tostring", |_, args: mlua::MultiValue| {
-            let value = args.get(0);
+            let value = args.front();
             let Some(Value::UserData(value)) = value else {
                 return Err(native_type_error(1, "btmux.object_flags", value));
             };
             let set = value
                 .borrow::<Set>()
-                .map_err(|_| native_type_error(1, "btmux.object_flags", args.get(0)))?;
+                .map_err(|_| native_type_error(1, "btmux.object_flags", args.front()))?;
             let id = set.owner.id()?;
             Ok(format!(
                 "{}(#{})",

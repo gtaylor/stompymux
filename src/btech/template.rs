@@ -170,10 +170,10 @@ impl BattleTemplate {
         // saved definitions and later construction edits restored verbatim.
         let quad = chassis == super::BattleMechChassis::Quad;
         for section in BattleSection::ALL {
-            if let Some(expected) = Self::chart_internal(template.tons, section, quad) {
-                if let Some(layout) = template.sections.get_mut(&section) {
-                    layout.internal = expected;
-                }
+            if let Some(expected) = Self::chart_internal(template.tons, section, quad)
+                && let Some(layout) = template.sections.get_mut(&section)
+            {
+                layout.internal = expected;
             }
         }
         Ok(template)

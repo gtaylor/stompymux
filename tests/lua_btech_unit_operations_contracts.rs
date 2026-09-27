@@ -178,7 +178,7 @@ async fn unit_operation_boundaries_reject_going_objects() {
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let saved = scripts
         .inspect_lua()
-        .load(&format!("return mux.world.object({})", id.0))
+        .load(format!("return mux.world.object({})", id.0))
         .eval::<mlua::Value>()
         .unwrap();
     scripts

@@ -58,8 +58,8 @@ pub(super) fn unregister(
 ) -> Result<()> {
     scripts.atomic(|before| {
         ensure!(
-            crate::authority::is_wizard(&before, actor)
-                && crate::authority::controls(&before, actor, map),
+            crate::authority::is_wizard(before, actor)
+                && crate::authority::controls(before, actor, map),
             "permission denied."
         );
         super::map_clear::teardown(scripts, config, actor, map)?;

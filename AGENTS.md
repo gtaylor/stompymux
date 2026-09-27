@@ -25,7 +25,7 @@ stompymux-rs is a Rust rewrite of stompymux, a C-based MUD server that includes 
    - `just test-unit <filter>` runs unit tests in `src/`; only the library's unit-test binary is built.
    - `just test-scenario <name>` runs one scenario file from `tests/` (for example `just test-scenario btech_status`); only its suite binary is built. `just list-scenarios` shows which suite includes which scenario.
    - `just test-suite <suite> [filter]` runs one suite from `tests/suites/`.
-1. Run `cargo fmt` and `cargo test` before handing back to the human.
+1. Run `cargo fmt`, `just lint`, and `cargo test` before handing back to the human. CI runs `just checks`, which fails on any clippy warning.
 
 ## Rust rules
 

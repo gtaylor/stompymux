@@ -85,7 +85,7 @@ pub fn set_map_hex_action(
 ) -> Result<BattleMapHexChange> {
     scripts.atomic(|before| {
         ensure!(
-            crate::authority::is_wizard(&before, actor),
+            crate::authority::is_wizard(before, actor),
             "Permission denied."
         );
         ensure!(

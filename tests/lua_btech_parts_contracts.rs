@@ -152,9 +152,10 @@ async fn stores_costs_rollback_persistence_and_checking_match_contract() {
         before
     );
 
+    let world_snapshot = scripts.world().clone();
     persistence::save_with_timeout(
         &config.database(),
-        &scripts.world(),
+        &world_snapshot,
         config.database.busy_timeout_ms,
     )
     .await

@@ -195,7 +195,8 @@ async fn membership_span_survives_holes_reuse_and_restart() {
             assert!(list.contains(&format!("{count} Mechs On Map")));
             assert!(list.contains(&format!("{span} is first free slot, according to db.")));
             assert_eq!(scripts.world().btech, before);
-            persistence::save(&config.database(), &scripts.world())
+            let world_snapshot = scripts.world().clone();
+            persistence::save(&config.database(), &world_snapshot)
                 .await
                 .unwrap();
             let loaded = persistence::load(&config.database()).await.unwrap();

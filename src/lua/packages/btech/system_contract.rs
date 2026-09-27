@@ -31,7 +31,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             let zone = contract::require_object(
                 lua,
                 &world,
-                args.get(0).cloned().unwrap_or(Value::Nil),
+                args.front().cloned().unwrap_or(Value::Nil),
                 1,
             )?;
             let ids: Vec<_> = world

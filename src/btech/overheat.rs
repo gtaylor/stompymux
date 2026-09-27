@@ -579,7 +579,7 @@ fn shutdown_check(world: &mut World, id: ObjectId, heat: f64) -> Result<BattleHe
             computer: true,
         });
     }
-    let target = if heat >= 30.0 || heat < 14.0 {
+    let target = if !(14.0..30.0).contains(&heat) {
         13
     } else if heat >= 26.0 {
         10

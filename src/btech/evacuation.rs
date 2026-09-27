@@ -158,7 +158,7 @@ fn impact_action(
         } else {
             super::resolve_impact(&mut scripts.world.borrow_mut(), unit, hit, damage)?
         };
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(report)
     })
@@ -176,7 +176,7 @@ pub fn injure_character_pilot_action(
         let report =
             super::injure_character_pilot(&mut scripts.world.borrow_mut(), unit, hits, toughness)?;
         super::character_pilot::notify_injury(scripts, &report)?;
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(report)
     })
@@ -365,7 +365,7 @@ fn vehicle_damage_action<T>(
         )?;
         for broadcast in effects.broadcasts {
             for notice in
-                super::broadcast::observer_notices(&before, broadcast.unit, &broadcast.text)
+                super::broadcast::observer_notices(before, broadcast.unit, &broadcast.text)
             {
                 super::notify_unit(scripts, notice)?;
             }
@@ -373,7 +373,7 @@ fn vehicle_damage_action<T>(
         for injury in effects.injuries {
             super::character_pilot::notify_injury(scripts, &injury)?;
         }
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(report)
     })
@@ -400,7 +400,7 @@ pub fn flood_unit_action(
         for report in &reports {
             publish_section_exposure_consequences(scripts, config, report)?;
         }
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(reports)
     })
@@ -505,7 +505,7 @@ pub fn land_action(
         let report =
             super::landing::land_in_action(&mut scripts.world.borrow_mut(), unit, pilot, rules)?;
         publish_movement_consequences(scripts, config, &report)?;
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(())
     })
@@ -603,7 +603,7 @@ pub(super) fn fall_unit_contract_action(
     rules: super::BattleFallRules,
 ) -> Result<super::BattleFallReport> {
     scripts.atomic(|before| {
-        let tons = super::administrative_unit_tonnage(&before, unit)
+        let tons = super::administrative_unit_tonnage(before, unit)
             .context("unit tonnage is unavailable")?;
         let character = before
             .objects
@@ -622,7 +622,7 @@ pub(super) fn fall_unit_contract_action(
         report.append_notices(unit, &mut notices, &mut private);
         super::piloting::publish_ordered_notices(scripts, &notices, &private)?;
         publish_fall_consequences(scripts, config, &report)?;
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(report)
     })
@@ -647,7 +647,7 @@ pub fn break_surface_action(
         )?;
         super::piloting::publish_ordered_notices(scripts, &report.notices, &report.pilot_notices)?;
         publish_surface_consequences(scripts, config, &report)?;
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(report)
     })
@@ -673,7 +673,7 @@ pub fn break_ice_upward_action(
         )?;
         super::piloting::publish_ordered_notices(scripts, &report.notices, &report.pilot_notices)?;
         publish_surface_consequences(scripts, config, &report)?;
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(report)
     })
@@ -727,13 +727,13 @@ fn movement_action(
         let arrivals = super::building_actions::dispatch_boundary_exits(scripts, &mut report)?;
         report.notices.extend(super::hiding::movement_changes(
             &mut scripts.world.borrow_mut(),
-            &before,
+            before,
         ));
         publish_movement_consequences(scripts, config, &report)?;
         if orbital {
             super::orbital_drop_movement::advance_in_action(scripts, config, rules)?;
         }
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(arrivals)
     })
@@ -778,7 +778,7 @@ pub fn stacking_action(
         )?;
         super::piloting::publish_ordered_notices(scripts, &notices, &private)?;
         publish_stacking_consequences(scripts, config, &effects)?;
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(notices)
     })
@@ -830,7 +830,7 @@ pub fn physical_attack_action(
         )?;
         super::piloting::publish_ordered_notices(scripts, &report.notices, &report.pilot_notices)?;
         publish_physical_consequences(scripts, config, &report)?;
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(report)
     })
@@ -875,7 +875,7 @@ pub fn arm_attack_action(
         for attack in &report.attacks {
             publish_physical_consequences(scripts, config, attack)?;
         }
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(report)
     })
@@ -899,7 +899,7 @@ pub fn charge_action(
         )?;
         super::piloting::publish_ordered_notices(scripts, &report.notices, &report.pilot_notices)?;
         publish_charge_consequences(scripts, config, &report)?;
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(report)
     })
@@ -946,7 +946,7 @@ pub fn mutual_charge_action(
                 publish_charge_consequences(scripts, config, collision)?;
             }
         }
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(report)
     })
@@ -969,7 +969,7 @@ pub fn dfa_action(
         )?;
         super::piloting::publish_ordered_notices(scripts, &report.notices, &report.pilot_notices)?;
         publish_dfa_consequences(scripts, config, &report)?;
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(report)
     })
@@ -1029,7 +1029,7 @@ pub fn stand_action(
         if let Some(fall) = &report.fall {
             publish_fall_consequences(scripts, config, fall)?;
         }
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(report)
     })
@@ -1060,7 +1060,7 @@ pub fn stagger_action(
                 publish_fall_consequences(scripts, config, fall)?;
             }
         }
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(reports)
     })
@@ -1083,7 +1083,7 @@ pub fn ammunition_explosion_action(
         )?;
         super::piloting::publish_ordered_notices(scripts, &report.notices, &report.pilot_notices)?;
         publish_impact_consequences(scripts, config, &report)?;
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(report)
     })
@@ -1123,7 +1123,7 @@ pub fn overheat_action(
                 publish_fall_consequences(scripts, config, fall)?;
             }
         }
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(reports)
     })
@@ -1148,7 +1148,7 @@ pub fn salvo_action(
             rules,
         )?;
         publish_salvo_consequences(scripts, config, &report, true)?;
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(report)
     })
@@ -1216,7 +1216,7 @@ pub fn shot_action(
         super::piloting::publish_ordered_notices(scripts, &notices, &private)?;
         super::channels::publish_shot(scripts, config, &report)?;
         publish_shot_consequences(scripts, config, &report)?;
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(report)
     })
@@ -1389,7 +1389,7 @@ pub(super) fn attempt_configured_firing_action(
                 }
             }
         }
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(Ok(action.report))
     })
@@ -1453,7 +1453,7 @@ pub fn resolve_mine_blast_action(
         )?;
         super::piloting::publish_ordered_notices(scripts, &report.notices, &report.pilot_notices)?;
         publish_mine_blast_consequences(scripts, config, &report)?;
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(report)
     })
@@ -1551,7 +1551,7 @@ pub fn detonate_command_mines_action(
         for blast in &report.blasts {
             publish_mine_blast_consequences(scripts, config, blast)?;
         }
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(report)
     })
@@ -1605,7 +1605,7 @@ fn vehicle_fall_action_inner_with_tonnage(
 ) -> Result<super::BattleVehicleFallReport> {
     scripts.atomic(|before| {
         let tons = administrative_tonnage
-            .then(|| super::administrative_unit_tonnage(&before, unit))
+            .then(|| super::administrative_unit_tonnage(before, unit))
             .flatten();
         let report = super::vehicle_fall::resolve_material_signed_with_tonnage(
             &mut scripts.world.borrow_mut(),
@@ -1617,7 +1617,7 @@ fn vehicle_fall_action_inner_with_tonnage(
         )?;
         super::piloting::publish_ordered_notices(scripts, &report.notices, &report.pilot_notices)?;
         publish_vehicle_fall_consequences(scripts, config, &report)?;
-        publish_new_casualties(scripts, config, &before)?;
+        publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(report)
     })

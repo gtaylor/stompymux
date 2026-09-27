@@ -38,16 +38,12 @@ const DEFAULT_NEXT_ID: u64 = 1;
 /// How an attached controller chooses weapons during an order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum AutopilotFireMode {
+    #[default]
     Hold,
     AssignedTarget,
     Opportunistic,
-}
-
-impl Default for AutopilotFireMode {
-    fn default() -> Self {
-        Self::Hold
-    }
 }
 
 impl AutopilotFireMode {
@@ -143,17 +139,13 @@ impl AutopilotConfigPatch {
 /// Controller lifecycle.  Paused and blocked controllers retain their intent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum AutopilotState {
+    #[default]
     Paused,
     Idle,
     Executing,
     Blocked,
-}
-
-impl Default for AutopilotState {
-    fn default() -> Self {
-        Self::Paused
-    }
 }
 
 impl AutopilotState {

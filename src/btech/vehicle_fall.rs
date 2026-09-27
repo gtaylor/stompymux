@@ -235,7 +235,7 @@ pub(super) fn resolve_material_signed_with_tonnage(
                 id,
                 arc,
                 super::vehicle_impact::ImpactRequest {
-                    amount: u32::from(amount),
+                    amount,
                     armor_piercing: None,
                     rear: arc == BattleHitArc::Rear,
                     attacker: None,

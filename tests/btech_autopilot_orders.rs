@@ -77,7 +77,8 @@ async fn tracked_wheeled_and_hover_vehicles_accept_and_drive_move_orders() {
                     "#,
                 ).unwrap();
             }
-            let snapshots = heartbeat_snapshots_until(&config, &scripts.world().clone(), 120, |world| {
+            let world_snapshot = scripts.world().clone();
+            let snapshots = heartbeat_snapshots_until(&config, &world_snapshot, 120, |world| {
                 units.iter().all(|id| world.btech.vehicles()[id].position().unwrap().y < 5)
             }).await;
             let latest = snapshots.last().unwrap();

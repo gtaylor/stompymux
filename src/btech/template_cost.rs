@@ -331,13 +331,14 @@ pub fn raw_template_base_cost(world: &World, template: &RawTemplate) -> Result<u
     }
 }
 
+/// A catalogue part paired with the classification flags `inspection_template_part` reports.
+type InspectionFlags = (inspection::InspectionPart, bool, bool);
+
 /// Build the combat-supported portion of a template while retaining every
 /// catalogue part that native inspection and economy code can price without a
 /// combat implementation. Structural split links remain in the clone because
 /// the supported weapon resolver consumes them.
-fn inspection_loadout(
-    template: &BattleTemplate,
-) -> Result<(BattleLoadout, Vec<(inspection::InspectionPart, bool, bool)>)> {
+fn inspection_loadout(template: &BattleTemplate) -> Result<(BattleLoadout, Vec<InspectionFlags>)> {
     let normalized = inspection::inspection_compatible_template(template);
     if let Ok(loadout) = BattleLoadout::resolve(&normalized) {
         return Ok((loadout, Vec::new()));

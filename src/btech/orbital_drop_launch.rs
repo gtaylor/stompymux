@@ -24,7 +24,7 @@ pub fn initiate_action(
 ) -> Result<BattleOrbitalInsertion> {
     scripts.atomic(|before| {
         ensure!(
-            crate::authority::is_wizard(&before, actor),
+            crate::authority::is_wizard(before, actor),
             "Permission denied."
         );
         ensure!(
@@ -46,8 +46,8 @@ pub fn initiate_action(
                     .and_then(BattleVehicle::orbital_drop)
             });
         ensure!(existing.is_none(), "OOD already in progress!");
-        super::towing::require_detached(&before, id)?;
-        let original = super::scanner::scanner_unit(&before, id)
+        super::towing::require_detached(before, id)?;
+        let original = super::scanner::scanner_unit(before, id)
             .context("Unit construction state is unavailable")?
             .position
             .context("Unit is not on a battlefield")?;

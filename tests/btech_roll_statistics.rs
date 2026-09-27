@@ -87,7 +87,8 @@ async fn rolls_command_reports_live_checks_and_resets_on_restart() {
             assert_eq!(serde_json::to_value(&*scripts.world()).unwrap(), before);
             assert!(scripts.outbox().is_empty());
         }
-        persistence::save(&config.database(), &scripts.world())
+        let world_snapshot = scripts.world().clone();
+        persistence::save(&config.database(), &world_snapshot)
             .await
             .unwrap();
         let loaded = persistence::load(&config.database()).await.unwrap();

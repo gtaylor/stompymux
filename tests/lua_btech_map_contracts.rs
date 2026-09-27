@@ -282,7 +282,7 @@ async fn going_handles_and_checking_mode_preserve_object_and_mutation_boundaries
             "saved_map",
             scripts
                 .inspect_lua()
-                .load(&format!("return mux.world.object({})", map.0))
+                .load(format!("return mux.world.object({})", map.0))
                 .eval::<mlua::Value>()
                 .unwrap(),
         )

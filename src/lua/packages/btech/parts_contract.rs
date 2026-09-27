@@ -894,10 +894,9 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             let selected = optional_category(value(&arguments, 0), 1)?;
             let world = shared.borrow();
             let result = lua.create_table()?;
-            let mut output = 1;
-            for form in records.iter().filter(|form| {
+            for (output, form) in (1..).zip(records.iter().filter(|form| {
                 selected.is_none_or(|selected| selected == part_category(form.part_id))
-            }) {
+            })) {
                 result.raw_set(
                     output,
                     push_part(
@@ -910,7 +909,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                         },
                     )?,
                 )?;
-                output += 1;
             }
             Ok(result)
         })?,
@@ -943,12 +941,11 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             }
             let world = shared.borrow();
             let result = lua.create_table()?;
-            let mut output = 1;
-            for form in records.iter().filter(|form| {
+            for (output, form) in (1..).zip(records.iter().filter(|form| {
                 wildcard(&query, form.short_name.as_bytes())
                     || wildcard(&query, form.long_name.as_bytes())
                     || wildcard(&query, form.very_long_name.as_bytes())
-            }) {
+            })) {
                 result.raw_set(
                     output,
                     push_part(
@@ -961,7 +958,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                         },
                     )?,
                 )?;
-                output += 1;
             }
             Ok(result)
         })?,

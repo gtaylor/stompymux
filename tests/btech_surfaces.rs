@@ -7488,7 +7488,8 @@ async fn artillery_flight_in_progress_leaves_its_row_unchanged() {
         enqueue_artillery(&mut world, map, units[0], BattleArtilleryFlight::new(center, center, BattleWeapon::LongTom, BattleArtilleryMode::Mine, true).unwrap()).unwrap();
         let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
         for _ in 0..7 { assert!(advance_artillery_action(&scripts, &config, rules()).unwrap().is_empty()); }
-        persistence::save(&config.database(), &scripts.world()).await.unwrap();
+        let world_snapshot = scripts.world().clone();
+        persistence::save(&config.database(), &world_snapshot).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::raw_sql("CREATE TABLE artillery_updates(n INTEGER); CREATE TRIGGER count_artillery_updates AFTER UPDATE ON btech_artillery BEGIN INSERT INTO artillery_updates VALUES(1); END;").execute(&mut sql).await.unwrap();
         let (_address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;

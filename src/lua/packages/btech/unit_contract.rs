@@ -130,6 +130,9 @@ fn vehicle_section(
 }
 
 /// Native suspension factor by locomotion and tonnage (C mech_consistency.c susp_factor).
+///
+/// The tonnage tables rely on first-match-wins ordering of half-open ranges.
+#[allow(clippy::match_overlapping_arm)]
 fn suspension_factor(movement: crate::RawMovement, tons: i32) -> i32 {
     match movement {
         crate::RawMovement::Tracked => 0,
@@ -699,7 +702,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
                 );
             }
             let Some(unit) = borrowed.btech.constructed_units().get(&id) else {
-                return Ok(lua.create_table()?);
+                return lua.create_table();
             };
             let selected = crate::btech::inspect_unit_tic(unit, tic as usize)
                 .map_err(mlua::Error::external)?;

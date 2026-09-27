@@ -76,12 +76,11 @@ pub fn choose_target(
                     .then_with(|| right.range.total_cmp(&left.range))
                     .then_with(|| right.unit.cmp(&left.unit))
             })?;
-    if let Some(current) = current {
-        if let Some((old, old_score)) = scored.iter().find(|(contact, _)| contact.unit == current) {
-            if best_score < old_score * 1.2 {
-                return Some(old.unit);
-            }
-        }
+    if let Some(current) = current
+        && let Some((old, old_score)) = scored.iter().find(|(contact, _)| contact.unit == current)
+        && best_score < old_score * 1.2
+    {
+        return Some(old.unit);
     }
     Some(best.unit)
 }
@@ -152,12 +151,11 @@ mod tests {
                 .then_with(|| right.range.total_cmp(&left.range))
                 .then_with(|| right.unit.cmp(&left.unit))
         })?;
-        if let Some(current) = current {
-            if let Some(old) = hostile.iter().find(|contact| contact.unit == current) {
-                if score(best.range) < score(old.range) * 1.2 {
-                    return Some(current);
-                }
-            }
+        if let Some(current) = current
+            && let Some(old) = hostile.iter().find(|contact| contact.unit == current)
+            && score(best.range) < score(old.range) * 1.2
+        {
+            return Some(current);
         }
         Some(best.unit)
     }

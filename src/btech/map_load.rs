@@ -78,7 +78,7 @@ fn load_map_state_action(
 ) -> Result<()> {
     scripts.atomic(|before| {
         ensure!(
-            crate::authority::is_wizard(&before, actor),
+            crate::authority::is_wizard(before, actor),
             "Permission denied."
         );
         ensure!(
@@ -103,10 +103,10 @@ fn load_map_state_action(
             },
         )?;
         asset.generate_bridges()?;
-        let units = super::map_slots::all_unit_order(&before, id)?;
+        let units = super::map_slots::all_unit_order(before, id)?;
         let mut occupied = BTreeSet::new();
         for unit in units {
-            let position = super::scanner::scanner_unit(&before, unit)
+            let position = super::scanner::scanner_unit(before, unit)
                 .context("Unit is unavailable")?
                 .position
                 .context("Unit is not placed")?;

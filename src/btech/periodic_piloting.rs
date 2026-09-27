@@ -248,7 +248,7 @@ pub fn advance_periodic_piloting_action(
                 super::evacuation::publish_impact_consequences(scripts, config, impact)?;
             }
         }
-        super::evacuation::publish_new_casualties(scripts, config, &before)?;
+        super::evacuation::publish_new_casualties(scripts, config, before)?;
         scripts.world().validate_action(config)?;
         Ok(reports)
     })

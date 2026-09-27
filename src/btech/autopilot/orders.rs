@@ -132,18 +132,14 @@ impl AutopilotOrder {
 /// Lifecycle state for a submitted order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum AutopilotOrderState {
+    #[default]
     Queued,
     Running,
     Succeeded,
     Failed,
     Canceled,
-}
-
-impl Default for AutopilotOrderState {
-    fn default() -> Self {
-        Self::Queued
-    }
 }
 
 /// Small, durable execution cursor.  Paths and search frontiers remain transient.

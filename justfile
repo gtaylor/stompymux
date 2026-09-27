@@ -4,7 +4,7 @@ stylua := env("STYLUA", "stylua")
 
 default: checks
 
-checks: fmt-check check-lua-types check-lua-docs test
+checks: fmt-check lint check-lua-types check-lua-docs test
 
 fmt: fmt-lua fmt-rust
 
@@ -31,6 +31,10 @@ test:
 # Type-check the library, every binary (feature-gated ones included), and every test suite.
 check:
     cargo check --all-targets --all-features
+
+# Run clippy over every target and feature; any warning fails the recipe.
+lint:
+    cargo clippy --all-targets --all-features --locked -- -D warnings
 
 # Only the library's own unit-test binary is built for this recipe.
 

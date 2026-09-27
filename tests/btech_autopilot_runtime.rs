@@ -64,7 +64,8 @@ async fn move_order_reaches_destination_and_starts_hold_order() {
                     map = map.0,
                 ))
                 .unwrap();
-            persistence::save(&config.database(), &scripts.world())
+            let world_snapshot = scripts.world().clone();
+            persistence::save(&config.database(), &world_snapshot)
                 .await
                 .unwrap();
             drop(scripts);
@@ -171,7 +172,8 @@ async fn controller_intent_revision_and_queue_survive_persistence_restart() {
         ))
         .unwrap();
     let before = scripts.world().btech.controllers()[&unit].clone();
-    persistence::save(&config.database(), &scripts.world())
+    let world_snapshot = scripts.world().clone();
+    persistence::save(&config.database(), &world_snapshot)
         .await
         .unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
