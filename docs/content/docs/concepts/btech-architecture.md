@@ -140,20 +140,22 @@ Explicit saves and shutdown always store the current clock.
 Units and vehicles are the exception to typed columns: each row holds the
 record as JSON in two parts. `unit` holds the core (construction, damage,
 settings and contacts), which changes rarely, and `live` holds frequently
-changing state such as motion, heat, timers and dice, with fields at their
-default value left out. The `saved_parts!` lists in `unit.rs` and `vehicle.rs`
-decide which part each field belongs to. Whole-number values that count once
-per second in either part, such as weapon recycle, stun, lock settling and the
-overheat and stagger clocks, are stored in the row's `clocks` column as the
-second they reach zero or started counting (plus a cycle length for counts
-that wrap, such as thirty-second phases), with a placeholder in the JSON
-(`src/persistence/btech_clocks.rs`). Forms are chosen by observing that a value
-changed by one per elapsed second, so no per-field rules are needed; a count
-that pauses or is changed by an event is stored as a plain number again. A save
-compares each part's stored text and rewrites only what differs, so a running
-unit that is standing still is not rewritten each tick; its remaining writes
-are real changes such as the dice rolled by turn-boundary checks. Moving units
-still write their motion every tick.
+changing state such as motion, heat and dice, with fields at their default
+value left out. The `saved_parts!` lists in `unit.rs` and `vehicle.rs` decide
+which part each field belongs to. The values that count once per second in
+either part, such as weapon recycle, stun, startup, hiding and the overheat and
+stagger clocks, are declared in `src/btech/timers.rs`, `unit_timers.rs` and
+`vehicle_timers.rs` together with how each moves at the moment of saving:
+counting down, counting up, wrapping around a thirty-second cycle, or held
+still, for example weapon recycle on a shut-down unit. They read as zero in the
+JSON and are stored one row each in `btech_unit_timers` and
+`btech_vehicle_timers`, as the held value or the simulation second at which the
+counter reaches or was zero, so a running counter's row does not change from
+tick to tick. A save compares each part's stored text and each timer row with
+the baseline world and writes only what differs, so a running unit that is
+standing still is not written each tick; its remaining writes are real changes
+such as the dice rolled by turn-boundary checks. Moving units still write their
+motion every tick.
 
 Map and template assets are decoded by BattleTech asset modules; their game
 files remain separate from the SQLite snapshot. Map writes are staged with

@@ -12,7 +12,6 @@ mod btech_building_repair;
 mod btech_building_routes;
 mod btech_cargo_bay;
 mod btech_character;
-mod btech_clocks;
 mod btech_deadlines;
 mod btech_decorations;
 mod btech_dice;
@@ -60,7 +59,9 @@ pub use write::Saved;
 const TABLES: &[&str] = &[
     "btech_simulation_clock",
     "btech_units",
+    "btech_unit_timers",
     "btech_vehicles",
+    "btech_vehicle_timers",
     "btech_map_terrain",
     "btech_map_terrain_codes",
     "btech_mine_order",

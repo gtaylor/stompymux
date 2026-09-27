@@ -10,15 +10,18 @@ use std::{
 /// The table holding these records.
 const TABLE: &str = "btech_units";
 
-/// Read complete records, merged from each row's core and live parts, without
-/// interpreting deferred C runtime fields.
+/// The table holding their counters.
+const TIMERS: &str = "btech_unit_timers";
+
+/// Read complete records, merged from each row's core and live parts and their timer rows,
+/// without interpreting deferred C runtime fields.
 pub(super) async fn load(
     c: &mut SqliteConnection,
     state: &mut BtechState,
     clock: super::btech_deadlines::Clock,
 ) -> Result<()> {
     let mut units = BTreeMap::new();
-    for (id, unit) in super::btech_unit_rows::load::<BattleUnit>(c, TABLE, clock).await? {
+    for (id, unit) in super::btech_unit_rows::load::<BattleUnit>(c, TABLE, TIMERS, clock).await? {
         unit.validate()?;
         ensure!(
             !state.units.contains_key(&id) && !state.maps.contains_key(&id),
@@ -75,6 +78,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
     let (changed, inserted) = super::btech_unit_rows::save(
         c,
         TABLE,
+        TIMERS,
         &before.btech.constructed,
         &after.btech.constructed,
         super::btech_deadlines::Clock::of(before),
@@ -89,5 +93,6 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
 
 /// Remove owned state during the same explicit object-purge transaction.
 pub(super) async fn purge(c: &mut SqliteConnection, ids: &BTreeSet<ObjectId>) -> Result<()> {
+    super::write::purge_rows(c, TIMERS, "dbref", ids).await?;
     super::write::purge_rows(c, TABLE, "dbref", ids).await
 }

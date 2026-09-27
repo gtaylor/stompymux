@@ -14,31 +14,46 @@ CREATE TABLE btech_simulation_clock (
     phase_offset INTEGER NOT NULL CHECK (phase_offset BETWEEN 0 AND 29)
 ) STRICT;
 
--- btech_units.rs and btech_unit_rows.rs.
--- Rust-owned unit state, versioned independently of deferred tables. `unit` holds the
--- rarely changing core and `live` the frequently changing part; together they form one
--- record. `clocks` stores values that count once per simulation second as clock forms
--- (see btech_clocks.rs); their places in `unit` and `live` hold a placeholder.
+-- btech_units.rs and btech_unit_rows.rs: Rust-owned unit state, versioned independently of
+-- deferred tables. `unit` holds the rarely changing core and `live` the frequently
+-- changing part; together they form one record. Values that count once per simulation
+-- second are stored in btech_unit_timers and read as zero in the parts.
 CREATE TABLE btech_units (
     dbref INTEGER PRIMARY KEY REFERENCES objects(dbref) ON DELETE CASCADE,
     state_version INTEGER NOT NULL CHECK (state_version = 1),
     unit TEXT NOT NULL,
-    live TEXT NOT NULL DEFAULT '{}',
-    clocks TEXT NOT NULL DEFAULT '{}'
+    live TEXT NOT NULL DEFAULT '{}'
 ) STRICT;
+-- One row per counter of a unit record (see src/btech/timers.rs). `timer` is a
+-- BattleTimer code and `slot` its weapon index, section slot or queue position, else zero.
+-- `motion` is 0 (held), 1 (counting down), 2 (counting up) or 3 (wrapping); `anchor` is
+-- the held value, the simulation second a countdown reaches zero, or the second a count
+-- was zero, taken modulo the cycle when wrapping.
+CREATE TABLE btech_unit_timers (
+    dbref INTEGER NOT NULL REFERENCES btech_units(dbref) ON DELETE CASCADE,
+    timer INTEGER NOT NULL CHECK (timer > 0),
+    slot INTEGER NOT NULL CHECK (slot >= 0),
+    motion INTEGER NOT NULL CHECK (motion BETWEEN 0 AND 3),
+    anchor INTEGER NOT NULL,
+    PRIMARY KEY (dbref, timer, slot)
+) STRICT, WITHOUT ROWID;
 
--- btech_vehicles.rs and btech_unit_rows.rs.
--- Owned Rust ground-vehicle state, committed with its MUX object and registration.
--- `unit` holds the rarely changing core and `live` the frequently changing part.
--- `clocks` stores values that count once per simulation second as clock forms (see
--- btech_clocks.rs); their places in `unit` and `live` hold a placeholder.
+-- btech_vehicles.rs and btech_unit_rows.rs: owned Rust ground-vehicle state, committed with
+-- its MUX object and registration, in the same core, live and timer form as btech_units.
 CREATE TABLE btech_vehicles (
     dbref INTEGER PRIMARY KEY REFERENCES objects(dbref) ON DELETE CASCADE,
     state_version INTEGER NOT NULL CHECK (state_version = 1),
     unit TEXT NOT NULL,
-    live TEXT NOT NULL DEFAULT '{}',
-    clocks TEXT NOT NULL DEFAULT '{}'
+    live TEXT NOT NULL DEFAULT '{}'
 ) STRICT;
+CREATE TABLE btech_vehicle_timers (
+    dbref INTEGER NOT NULL REFERENCES btech_vehicles(dbref) ON DELETE CASCADE,
+    timer INTEGER NOT NULL CHECK (timer > 0),
+    slot INTEGER NOT NULL CHECK (slot >= 0),
+    motion INTEGER NOT NULL CHECK (motion BETWEEN 0 AND 3),
+    anchor INTEGER NOT NULL,
+    PRIMARY KEY (dbref, timer, slot)
+) STRICT, WITHOUT ROWID;
 
 -- btech_terrain.rs.
 -- Per-map encoding version and code dictionary. Maps without a header remain ambiguous.

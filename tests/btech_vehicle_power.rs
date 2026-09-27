@@ -146,7 +146,7 @@ async fn override_requires_wizard_and_corrupt_countdowns_fail_loading() {
     )
     .await
     .unwrap();
-    let mut unit = support::unit_record(&mut sql, "btech_vehicles", id).await;
+    let mut unit = support::unit_record(&config.database(), "btech_vehicles", id).await;
     unit["power"]["remaining"] = 0.into();
     support::store_unit_record(&mut sql, "btech_vehicles", id, &unit).await;
     assert!(
@@ -172,7 +172,9 @@ async fn server_tick_retries_failed_countdowns_without_publishing_completion() {
         client.send("startup override").await;
         client.until("Startup Cycle commencing").await;
         let mut sql=SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database()).foreign_keys(false)).await.unwrap();
-        sqlx::query("CREATE TRIGGER deny_tick BEFORE UPDATE ON btech_vehicles BEGIN SELECT RAISE(ABORT,'tick failure'); END").execute(&mut sql).await.unwrap();
+        // A running countdown keeps its timer row still, so refuse the tick's commit where
+        // every save leaves its mark: the snapshot stamp.
+        sqlx::query("CREATE TRIGGER deny_tick BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(ABORT,'tick failure'); END").execute(&mut sql).await.unwrap();
         let initial=persistence::load(&config.database()).await.unwrap().btech.vehicles()[&id].power();
         tokio::time::sleep(std::time::Duration::from_millis(1200)).await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.vehicles()[&id].power(),initial);

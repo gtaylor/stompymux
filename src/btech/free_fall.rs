@@ -63,6 +63,11 @@ pub enum BattleFreeFallStep {
 }
 
 impl BattleFreeFall {
+    /// Committed seconds until the next descent event.
+    pub(super) fn remaining(self) -> u8 {
+        self.remaining
+    }
+
     /// Begin at the unit's integer altitude; the first event is due in three seconds.
     pub fn new(elevation: i32) -> Self {
         Self {
