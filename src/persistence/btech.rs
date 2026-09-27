@@ -121,7 +121,6 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
         sensor_recoveries: super::btech_sensor_recovery::load(c, clock).await?.into(),
         turn_clock,
         simulation_seconds,
-        gunner_stations: super::btech_gunner_stations::load(c, clock).await?.into(),
         inventories: super::btech_inventory::load(c).await?.into(),
         part_costs: super::btech_part_costs::load(c).await?.into(),
         weapon_settings: Default::default(),
@@ -176,7 +175,6 @@ pub(super) fn validate_changes(
         &mut expected,
         &crate::btech::map_lifecycle::removed(before, after)?,
     );
-    super::btech_gunner_stations::forget_removed(&mut expected, &after.btech)?;
     // DEBUG has no domain record; retire it before admitting a replacement role.
     for (id, kind) in before.btech.registrations() {
         if kind == "DEBUG"
@@ -234,7 +232,6 @@ pub(super) fn validate_changes(
         }
         expected.maps.share_entry_from(&after.btech.maps, id);
     }
-    super::btech_gunner_stations::validate_changes(&mut expected, &after.btech)?;
     super::btech_units::validate_changes(&mut expected, &after.btech)?;
     super::btech_vehicles::validate_changes(&mut expected, &after.btech)?;
     // A standalone @btech MECH registration carries no unit row until a template
@@ -351,7 +348,6 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
             changed = true;
         }
     }
-    changed |= super::btech_gunner_stations::save(c, before, after).await?;
     for (id, kind) in after.btech.registrations() {
         if kind == "DEBUG"
             && before.btech.registrations().get(id).map(String::as_str) != Some("DEBUG")

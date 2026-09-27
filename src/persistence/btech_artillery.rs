@@ -15,7 +15,6 @@ use std::collections::{BTreeMap, BTreeSet};
 /// Stored columns besides the map and shot identifiers.
 const COLUMNS: &[&str] = &[
     "shooter_dbref",
-    "station_dbref",
     "origin_x",
     "origin_y",
     "target_x",
@@ -62,10 +61,6 @@ fn encode(shot: &BattleArtilleryShot, clock: Clock) -> Fields {
     let flight = &shot.flight;
     fields([
         ("shooter_dbref", Cell::Integer(shot.shooter.0)),
-        (
-            "station_dbref",
-            shot.station.map_or(Cell::Null, |id| Cell::Integer(id.0)),
-        ),
         ("origin_x", Cell::Integer(i64::from(flight.origin().x))),
         ("origin_y", Cell::Integer(i64::from(flight.origin().y))),
         ("target_x", Cell::Integer(i64::from(flight.target().x))),
@@ -95,9 +90,6 @@ fn decode(entry: &SqliteRow, clock: Clock) -> Result<BattleArtilleryShot> {
         .with_context(|| format!("Unknown artillery weapon {part}"))?;
     Ok(BattleArtilleryShot {
         shooter: ObjectId(entry.try_get("shooter_dbref")?),
-        station: entry
-            .try_get::<Option<i64>, _>("station_dbref")?
-            .map(ObjectId),
         flight: BattleArtilleryFlight::from_saved(
             coordinate("origin_x", "origin_y")?,
             coordinate("target_x", "target_y")?,

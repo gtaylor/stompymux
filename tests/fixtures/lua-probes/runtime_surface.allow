@@ -3,7 +3,7 @@
 # The C btech package installs exactly nine subpackages (unit, map, player,
 # parts, character, repair, system, template, autopilot) plus error. The Rust
 # facade additionally exposes native-command groups (runtime, cargo, weapon,
-# inventory, gunner, database), the documented btech.errors alias of
+# inventory, database), the documented btech.errors alias of
 # btech.error.codes (docs/lua-parts-contracts.md), and extension unit
 # commands (including the checking-gated weapon_states) inside btech.unit.
 # Policy preserves documented Rust extensions; these entries classify each
@@ -11,7 +11,6 @@
 namespaces.btech.keys="string:cargo"
 namespaces.btech.keys="string:database"
 namespaces.btech.keys="string:errors"
-namespaces.btech.keys="string:gunner"
 namespaces.btech.keys="string:inventory"
 namespaces.btech.keys="string:runtime"
 namespaces.btech.keys="string:weapon"

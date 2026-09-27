@@ -20,8 +20,8 @@ mod btech_character_list;
 #[path = "../btech_flechette.rs"]
 mod btech_flechette;
 
-#[path = "../btech_gunner_skills.rs"]
-mod btech_gunner_skills;
+#[path = "../btech_vtol_gunnery.rs"]
+mod btech_vtol_gunnery;
 
 #[path = "../btech_impact.rs"]
 mod btech_impact;

@@ -1,6 +1,5 @@
 //! Vehicle artillery uses the common host firing transaction and persistent flight queue.
 use crate::support;
-use crate::support::btech_station_sight as station_sight;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
@@ -414,93 +413,5 @@ async fn vehicle_artillery_explicit_mixed_spotters_share_targets_and_correction_
         .unwrap();
         assert_eq!(state.btech.vehicles()[&shooter].artillery_adjustment(), 0);
         state.validate(&config).unwrap();
-    }
-}
-
-/// Vehicle station artillery delegates to the same paid launch and map-owned flight queue.
-#[tokio::test]
-async fn vehicle_station_artillery_preserves_parent_selection() {
-    let tracked = include_str!("../game/mechs/Marksman");
-    let mut templates: Vec<_> = [
-        tracked.to_owned(),
-        tracked.replace("{ Track }", "{ Wheel }"),
-        tracked.replace("{ Track }", "{ Hover }"),
-        tracked
-            .replace("{ Track }", "{ None }")
-            .replace("{ 64.50 }", "{ 0 }"),
-    ]
-    .iter()
-    .map(|source| BattleVehicleTemplate::parse(source).unwrap())
-    .collect();
-    let mut vtol = BattleVehicleTemplate::parse(include_str!("../game/mechs/Kestrel")).unwrap();
-    let section = vtol.sections.get_mut(&BattleVehicleSection::Front).unwrap();
-    section.criticals.clear();
-    for (slot, equipment, data) in [(0, "IS.Sniper", "-"), (1, "Ammo_IS.Sniper", "10")] {
-        section.criticals.insert(
-            slot,
-            CriticalDefinition {
-                equipment: equipment.into(),
-                data: data.into(),
-                modes: vec![],
-                brand: None,
-            },
-        );
-    }
-    templates.push(vtol);
-    for template in templates {
-        let (_dir, config, mut world, map, parent, index) =
-            fixture_template(&["Smoke"], template).await;
-        let station = world.create(&config, "Station".into(), Kind::Thing);
-        let gunner = world.create(&config, "Gunner".into(), Kind::Player);
-        world.objects.get_mut(&gunner).unwrap().location = Some(station);
-        register_gunner_station(&mut world, ObjectId(1), station, parent, 1).unwrap();
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        gunner_station_action(&scripts, station, gunner, true).unwrap();
-        select_battle_hex_target(
-            &mut scripts.world_mut(),
-            station,
-            gunner,
-            BattleHexCoordinate { x: 1, y: 0 },
-            BattleHexTargetMode::Hex,
-        )
-        .unwrap();
-        select_battle_target(&mut scripts.world_mut(), parent, ObjectId(1), None).unwrap();
-        let initial = scripts.world().clone();
-        let sight_number =
-            station_sight::check_artillery(&config, &initial, station, gunner, index);
-        let native = Scripts::new(&config, Rc::new(RefCell::new(initial.clone()))).unwrap();
-        let report: mlua::Table = scripts
-            .eval_callback(&format!(
-                "return btech.gunner.fire({},{},{index})",
-                station.0, gunner.0
-            ))
-            .unwrap();
-        assert!(report.get::<bool>("launched").unwrap());
-        assert_eq!(
-            report
-                .get::<mlua::Table>("aim")
-                .unwrap()
-                .get::<i32>("target_number")
-                .unwrap(),
-            sight_number
-        );
-        let text = support::run_text(&native, &config, gunner, 1, &format!("fire {index}"));
-        assert!(text.contains("You fire Sniper at (1,0)"), "{text}");
-        assert_eq!(native.world().btech, scripts.world().btech);
-        assert!(
-            scripts.world().btech.vehicles()[&parent]
-                .target_selection()
-                .is_none()
-        );
-        assert_eq!(
-            scripts.world().btech.maps()[&map].artillery_shots()[&0].station,
-            Some(station)
-        );
-        let fired = scripts.world().clone();
-        persistence::save(&config.database(), &fired).await.unwrap();
-        assert_eq!(
-            persistence::load(&config.database()).await.unwrap().btech,
-            fired.btech
-        );
     }
 }

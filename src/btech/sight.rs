@@ -54,7 +54,7 @@ pub(super) fn action(
         {
             super::notify_unit_text(
                 scripts,
-                operator.source.owner,
+                operator.source.unit,
                 &format!(
                     "Using range data from {}",
                     super::command_network::display_id(&scripts.world.borrow(), shooter, source)?
@@ -92,7 +92,7 @@ pub(super) fn action(
         };
         super::notify_unit_text(
             scripts,
-            operator.source.owner,
+            operator.source.unit,
             &format!("You aim {name} at {destination} - {number}{cover}"),
         )?;
         Ok(report)
@@ -181,7 +181,7 @@ fn resolve(
     check_busy(world, shooter)?;
     // Sighting still draws preparation intensity, with no supply check or cap.
     let gatling_roll = (mode == BattleFireMode::Gatling).then(|| dice.d6());
-    let rules = operator.aim_rules(BattleAimRules::configured(&config.battletech));
+    let rules = BattleAimRules::configured(&config.battletech);
     let (target, coordinate, aim, number, distance, partial_cover) = match target {
         None => {
             let prepared =
@@ -196,14 +196,18 @@ fn resolve(
             )
         }
         Some(super::fire_target::ResolvedFireTarget::Hex(hex)) => {
-            operator.check_point_arc(world, hex.center())?;
             check_bearing(world, operator.source, index, hex, rules)?;
             let aim = super::hex_aim::modifiers_for_source(
                 world,
                 operator.source,
                 hex,
                 index,
-                operator.gunnery(world, index, config.battletech.extended_gunnery != 0)?,
+                super::unit_gunnery_target(
+                    world,
+                    shooter,
+                    index,
+                    config.battletech.extended_gunnery != 0,
+                )?,
                 rules,
             )?;
             ensure!(aim.visible, "Target hex is not visible");
@@ -222,10 +226,13 @@ fn resolve(
             unit: target,
             coordinate,
         }) => {
-            operator.check_arc(world, target)?;
             check_unit_target(world, operator.source, target, index, weapon, rules)?;
-            let gunnery =
-                operator.gunnery(world, index, config.battletech.extended_gunnery != 0)?;
+            let gunnery = super::unit_gunnery_target(
+                world,
+                shooter,
+                index,
+                config.battletech.extended_gunnery != 0,
+            )?;
             let aim = super::aim::aim_modifiers_for_source(
                 world,
                 operator.source,

@@ -14,9 +14,6 @@ mod btech_character;
 #[path = "../btech_damage.rs"]
 mod btech_damage;
 
-#[path = "../btech_gunner_reports.rs"]
-mod btech_gunner_reports;
-
 #[path = "../btech_inferno_attribution.rs"]
 mod btech_inferno_attribution;
 

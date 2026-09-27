@@ -1,10 +1,10 @@
-//! Explicit cockpit destinations compose with registered stations through one nonrecursive audience.
+//! Explicit cockpit destinations form one nonrecursive audience.
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
-/// Three named destinations retain deferred references independently of station ownership.
+/// Three named destinations retain deferred references.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub(super) struct CockpitLinks(pub [ObjectId; 3]);
 
@@ -52,18 +52,11 @@ pub(super) fn set(
     Ok(())
 }
 
-/// Resolve live room audiences once, excluding the source and duplicate explicit or registered links.
+/// Resolve live room audiences once, excluding the source and duplicate links.
 pub(super) fn audiences(world: &World, parent: ObjectId) -> BTreeSet<ObjectId> {
     links(world, parent)
         .0
         .into_iter()
-        .chain(
-            world
-                .btech
-                .gunner_stations()
-                .iter()
-                .filter_map(|(id, station)| (station.parent == parent).then_some(*id)),
-        )
         .filter(|id| {
             id.0 > 0
                 && *id != parent

@@ -7,7 +7,6 @@ pub mod autopilot;
 pub mod btech_defense;
 pub mod btech_firing;
 pub mod btech_map_objects;
-pub mod btech_station_sight;
 mod client;
 mod commands;
 mod database;

@@ -152,9 +152,9 @@
 // lua-types-end
 
 // lua-types-begin btech 00073
-//|---View escaped markings through running cockpit/gunner contact and unblocked-LOS admission.
+//|---View escaped markings through running cockpit contact and unblocked-LOS admission.
 //|---No scan-range limit; omitted target uses this operator's selected unit.
-//|---@param unit integer Cockpit or gunner station.
+//|---@param unit integer Cockpit unit.
 //|---@param actor integer
 //|---@param target? integer
 //|---@return string text Styled report safe for normal output.
@@ -605,7 +605,7 @@
 //|function btech_unit.hide(dbref, pilot) end
 // lua-types-end
 
-// lua-types-begin btech 00249
+// lua-types-begin btech 00248
 //|---Set the unit's downhill cliff preference; requires its present pilot.
 //|---@param dbref integer
 //|---@param player integer
@@ -614,7 +614,7 @@
 //|function btech_unit.auto_fall(dbref, player, enabled) end
 // lua-types-end
 
-// lua-types-begin btech 00250
+// lua-types-begin btech 00249
 //|---Toggle an intact, recycled flamer between damage and heat-transfer modes; stages cockpit notices.
 //|---@param dbref integer
 //|---@param pilot integer Conscious assigned pilot; scripts own authority to act for them.
@@ -623,7 +623,7 @@
 //|function btech_unit.flamerheat(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00251
+// lua-types-begin btech 00250
 //|---Toggle an intact, recycled LB-X autocannon between slug and cluster ammunition; stages cockpit notices.
 //|---@param dbref integer
 //|---@param pilot integer Conscious assigned pilot; scripts own authority to act for them.
@@ -632,7 +632,7 @@
 //|function btech_unit.lbx(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00252
+// lua-types-begin btech 00251
 //|---Toggle an intact recycled artillery launcher between normal and cluster rounds; rejects smoke/mine selection.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -641,7 +641,7 @@
 //|function btech_unit.cluster(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00257
+// lua-types-begin btech 00256
 //|---Toggle Artemis-compatible ammunition; requires a live linked controller and a recycled missile launcher.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -650,7 +650,7 @@
 //|function btech_unit.artemis(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00259
+// lua-types-begin btech 00258
 //|---Begin timed feed recovery; stages cockpit feedback and participates in callback rollback.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -659,7 +659,7 @@
 //|function btech_unit.unjam(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00260
+// lua-types-begin btech 00259
 //|---Toggle hotloading on a supported recycled indirect-fire launcher; stages cockpit feedback.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -668,7 +668,7 @@
 //|function btech_unit.hotload(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00261
+// lua-types-begin btech 00260
 //|---Toggle one- or two-round Ultra autocannon firing; stages cockpit feedback.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -677,7 +677,7 @@
 //|function btech_unit.ultra(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00262
+// lua-types-begin btech 00261
 //|---Toggle rapid two-round conventional or light autocannon firing.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -686,7 +686,7 @@
 //|function btech_unit.rapidfire(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00263
+// lua-types-begin btech 00262
 //|---Set rotary burst length; repeated selection stays enabled and returns false.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -696,7 +696,7 @@
 //|function btech_unit.rac(dbref, pilot, weapon, rounds) end
 // lua-types-end
 
-// lua-types-begin btech 00264
+// lua-types-begin btech 00263
 //|---Toggle gatling machine-gun fire, with cockpit feedback.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -705,7 +705,7 @@
 //|function btech_unit.gattling(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00265
+// lua-types-begin btech 00264
 //|---Toggle armor-piercing autocannon ammunition with cockpit feedback.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -714,7 +714,7 @@
 //|function btech_unit.armorpiercing(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00266
+// lua-types-begin btech 00265
 //|---Toggle caseless autocannon ammunition with cockpit feedback.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -723,7 +723,7 @@
 //|function btech_unit.caseless(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00267
+// lua-types-begin btech 00266
 //|---Toggle incendiary autocannon ammunition with cockpit feedback.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -732,7 +732,7 @@
 //|function btech_unit.incendiary(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00268
+// lua-types-begin btech 00267
 //|---Toggle inferno missile ammunition with cockpit feedback.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -741,7 +741,7 @@
 //|function btech_unit.inferno(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00269
+// lua-types-begin btech 00268
 //|---Toggle Precision autocannon ammunition with cockpit feedback.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -750,7 +750,7 @@
 //|function btech_unit.precision(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00270
+// lua-types-begin btech 00269
 //|---Toggle Flechette autocannon ammunition with cockpit feedback.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -759,7 +759,7 @@
 //|function btech_unit.flechette(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00271
+// lua-types-begin btech 00270
 //|---Set the assigned pilot's unit illumination-warning preference.
 //|---@param dbref integer
 //|---@param player integer
@@ -768,7 +768,7 @@
 //|function btech_unit.searchlight_warning(dbref, player, enabled) end
 // lua-types-end
 
-// lua-types-begin btech 00272
+// lua-types-begin btech 00271
 //|---Set the assigned pilot's armor warning preference.
 //|---@param dbref integer
 //|---@param player integer
@@ -777,7 +777,7 @@
 //|function btech_unit.armor_warning(dbref, player, enabled) end
 // lua-types-end
 
-// lua-types-begin btech 00273
+// lua-types-begin btech 00272
 //|---Set the assigned pilot's ammunition warning preference.
 //|---@param dbref integer
 //|---@param player integer
@@ -786,7 +786,7 @@
 //|function btech_unit.ammunition_warning(dbref, player, enabled) end
 // lua-types-end
 
-// lua-types-begin btech 00274
+// lua-types-begin btech 00273
 //|---Set MechWarrior safety; requires the assigned pilot in the cockpit.
 //|---@param dbref integer
 //|---@param player integer
@@ -795,7 +795,7 @@
 //|function btech_unit.mw_safety(dbref, player, enabled) end
 // lua-types-end
 
-// lua-types-begin btech 00275
+// lua-types-begin btech 00274
 //|---Set the retained BTHDebug preference; requires the assigned pilot in the cockpit.
 //|---@param dbref integer
 //|---@param player integer
@@ -804,7 +804,7 @@
 //|function btech_unit.bth_debug(dbref, player, enabled) end
 // lua-types-end
 
-// lua-types-begin btech 00276
+// lua-types-begin btech 00275
 //|---Set the assigned pilot's friendly-fire safety. Coolant guns are exempt.
 //|---@param dbref integer
 //|---@param player integer
@@ -813,7 +813,7 @@
 //|function btech_unit.friendly_fire_safety(dbref, player, enabled) end
 // lua-types-end
 
-// lua-types-begin btech 00277
+// lua-types-begin btech 00276
 //|---Read-only cockpit status as styled-text source with escaped literal fields. Select armor, info, weapons, heat, short or AIWHS. N/NW select the compact export.
 //|---@param dbref integer
 //|---@param options string?
@@ -821,7 +821,7 @@
 //|function btech_unit.status(dbref, options) end
 // lua-types-end
 
-// lua-types-begin btech 00281
+// lua-types-begin btech 00280
 //|---Inspect durable equipment condition; empty ammunition, shutdown and recycle do not imply damage.
 //|---Requires a trusted callback transaction. Returned rows are detached from saved unit state.
 //|---@param dbref integer
@@ -829,7 +829,7 @@
 //|function btech_unit.weapon_diagnostics(dbref) end
 // lua-types-end
 
-// lua-types-begin btech 00283
+// lua-types-begin btech 00282
 //|---Inspect distinct installed weapon types in first-installation order, including destroyed mounts.
 //|---Requires a trusted callback transaction. Range columns follow the server's extended-range setting.
 //|---@param dbref integer
@@ -837,7 +837,7 @@
 //|function btech_unit.weapon_specifications(dbref) end
 // lua-types-end
 
-// lua-types-begin btech 00286
+// lua-types-begin btech 00285
 //|---Inspect equipment by cockpit section alias. The trusted query requires a callback transaction.
 //|---Rows are detached from saved state; native CRITSTATUS separately requires a conscious assigned pilot.
 //|---@param dbref integer
@@ -846,7 +846,7 @@
 //|function btech_unit.criticals(dbref, section) end
 // lua-types-end
 
-// lua-types-begin btech 00287
+// lua-types-begin btech 00286
 //|---Attempt a biped kick; rolls back damage, falls, recovery and notices with the callback.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -856,7 +856,7 @@
 //|function btech_unit.kick(dbref, pilot, leg, target) end
 // lua-types-end
 
-// lua-types-begin btech 00288
+// lua-types-begin btech 00287
 //|---Attempt one or both arms in left-to-right order. Default selection is both.
 //|---Unavailable arms are reported separately when another arm attacks; an entirely rejected action raises an error.
 //|---Impact failures and callback aborts roll back the complete action and staged messages.
@@ -868,7 +868,7 @@
 //|function btech_unit.punch(dbref, pilot, arms, target) end
 // lua-types-end
 
-// lua-types-begin btech 00289
+// lua-types-begin btech 00288
 //|---Attempt a leg trip. A hit forces target balance; a miss has no balance check. No direct impact damage.
 //|---Both legs and hips must be usable; the target must be standing and not rising.
 //|---@param dbref integer
@@ -879,7 +879,7 @@
 //|function btech_unit.trip(dbref, pilot, leg, target) end
 // lua-types-end
 
-// lua-types-begin btech 00290
+// lua-types-begin btech 00289
 //|---Attempt an axe swing. Default selection tries equipped arms left first; an accepted swing blocks the other arm through recovery.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -889,7 +889,7 @@
 //|function btech_unit.axe(dbref, pilot, arms, target) end
 // lua-types-end
 
-// lua-types-begin btech 00291
+// lua-types-begin btech 00290
 //|---Attempt a sword swing with the same selection and transaction rules as axe.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -899,7 +899,7 @@
 //|function btech_unit.sword(dbref, pilot, arms, target) end
 // lua-types-end
 
-// lua-types-begin btech 00292
+// lua-types-begin btech 00291
 //|---Attempt a mace swing. A missed swing requires an attacker piloting check with a +2 modifier.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -909,7 +909,7 @@
 //|function btech_unit.mace(dbref, pilot, arms, target) end
 // lua-types-end
 
-// lua-types-begin btech 00293
+// lua-types-begin btech 00292
 //|---Attempt a dual-saw attack; seven operational parts required, fixed seven base damage without TSM boost.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -919,7 +919,7 @@
 //|function btech_unit.saw(dbref, pilot, arms, target) end
 // lua-types-end
 
-// lua-types-begin btech 00294
+// lua-types-begin btech 00293
 //|---Attempt claw attacks, left then right by default; each accepted arm starts its own recovery.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -929,7 +929,7 @@
 //|function btech_unit.claw(dbref, pilot, arms, target) end
 // lua-types-end
 
-// lua-types-begin btech 00295
+// lua-types-begin btech 00294
 //|---Grab a tree in a selected arm (left first by default), or drop it with '-'.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -938,7 +938,7 @@
 //|function btech_unit.grabclub(dbref, pilot, arm) end
 // lua-types-end
 
-// lua-types-begin btech 00296
+// lua-types-begin btech 00295
 //|---Swing a club using both arms; a carried tree shatters on a hit. Forest terrain supplies an immediate tree.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -947,7 +947,7 @@
 //|function btech_unit.club(dbref, pilot, target) end
 // lua-types-end
 
-// lua-types-begin btech 00297
+// lua-types-begin btech 00296
 //|---Select a charge target without starting movement. Nil uses the current target; '-' cancels.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -956,7 +956,7 @@
 //|function btech_unit.charge(dbref, pilot, target) end
 // lua-types-end
 
-// lua-types-begin btech 00298
+// lua-types-begin btech 00297
 //|---Attempt a DFA jump using the shared pre-launch stagger check. Nil uses the current target lock.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -965,7 +965,7 @@
 //|function btech_unit.dfa(dbref, pilot, target) end
 // lua-types-end
 
-// lua-types-begin btech 00299
+// lua-types-begin btech 00298
 //|---Toggle automatic anti-missile defense, or set an explicit enabled state.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -974,7 +974,7 @@
 //|function btech_unit.ams(dbref, pilot, enabled) end
 // lua-types-end
 
-// lua-types-begin btech 00300
+// lua-types-begin btech 00299
 //|---Toggle Narc-compatible ammunition on a missile weapon.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -983,7 +983,7 @@
 //|function btech_unit.narc(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00301
+// lua-types-begin btech 00300
 //|---Toggle explosive ammunition on a Narc launcher.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -992,7 +992,7 @@
 //|function btech_unit.explosive(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00303
+// lua-types-begin btech 00302
 //|---Toggle the corresponding suite mode inside the callback transaction.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1000,7 +1000,7 @@
 //|function btech_unit.ecm(dbref, pilot) end
 // lua-types-end
 
-// lua-types-begin btech 00304
+// lua-types-begin btech 00303
 //|---Toggle the corresponding suite mode inside the callback transaction.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1008,7 +1008,7 @@
 //|function btech_unit.eccm(dbref, pilot) end
 // lua-types-end
 
-// lua-types-begin btech 00305
+// lua-types-begin btech 00304
 //|---Toggle the corresponding suite mode inside the callback transaction.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1016,7 +1016,7 @@
 //|function btech_unit.angelecm(dbref, pilot) end
 // lua-types-end
 
-// lua-types-begin btech 00306
+// lua-types-begin btech 00305
 //|---Toggle the corresponding suite mode inside the callback transaction.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1024,7 +1024,7 @@
 //|function btech_unit.angeleccm(dbref, pilot) end
 // lua-types-end
 
-// lua-types-begin btech 00307
+// lua-types-begin btech 00306
 //|---Select iNarc homing (-), explosive (X), haywire (Y), ECM (E), or Nemesis (Z) ammunition.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1034,7 +1034,7 @@
 //|function btech_unit.inarc(dbref, pilot, weapon, selector) end
 // lua-types-end
 
-// lua-types-begin btech 00309
+// lua-types-begin btech 00308
 //|---Inspect pod effects on all sections, or return an empty list when none are attached.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1042,7 +1042,7 @@
 //|function btech_unit.pods(dbref, pilot) end
 // lua-types-end
 
-// lua-types-begin btech 00310
+// lua-types-begin btech 00309
 //|---Swat one iNarc pod; a failed attempt deals self-damage. H selects homing, Y haywire, E ECM.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1052,7 +1052,7 @@
 //|function btech_unit.removepod(dbref, pilot, section, kind) end
 // lua-types-end
 
-// lua-types-begin btech 00311
+// lua-types-begin btech 00310
 //|---Begin the vehicle crew's saved 60-second action; ordinary Narc pods remain attached.
 //|---The assigned conscious pilot must be running and placed, with no forward motion or conflicting crew action. VTOLs must be landed (launch preparation is still landed).
 //|---@param dbref integer
@@ -1061,7 +1061,7 @@
 //|function btech_unit.removepods(dbref, pilot) end
 // lua-types-end
 
-// lua-types-begin btech 00313
+// lua-types-begin btech 00312
 //|---Request a thirty-second stealth armor switch inside the callback transaction.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1069,7 +1069,7 @@
 //|function btech_unit.stealth(dbref, pilot) end
 // lua-types-end
 
-// lua-types-begin btech 00314
+// lua-types-begin btech 00313
 //|---Request a thirty-second null signature system switch inside the callback transaction.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1077,7 +1077,7 @@
 //|function btech_unit.nss(dbref, pilot) end
 // lua-types-end
 
-// lua-types-begin btech 00315
+// lua-types-begin btech 00314
 //|---Toggle semi-guided ammunition on a supported recycled missile launcher.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1086,7 +1086,7 @@
 //|function btech_unit.sguided(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00316
+// lua-types-begin btech 00315
 //|---Toggle Stinger ammunition on a supported recycled missile launcher.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1095,7 +1095,7 @@
 //|function btech_unit.stinger(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00317
+// lua-types-begin btech 00316
 //|---Select an acquired friendly spotter; use own dbref to declare spotting, or nil to stop.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1104,7 +1104,7 @@
 //|function btech_unit.spot(dbref, pilot, spotter) end
 // lua-types-end
 
-// lua-types-begin btech 00319
+// lua-types-begin btech 00318
 //|---Select valid map coordinates without requiring visibility. Unit-at-hex fire uses its current occupant; empty-hex and terrain attacks remain unimplemented.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1115,7 +1115,7 @@
 //|function btech_unit.lock_hex(dbref, pilot, x, y, mode) end
 // lua-types-end
 
-// lua-types-begin btech 00321
+// lua-types-begin btech 00320
 //|---Inspect empty-terrain aim without dice, expenditure, or a fictitious target unit.
 //|---@param dbref integer
 //|---@param weapon integer
@@ -1125,7 +1125,7 @@
 //|function btech_unit.aim_hex(dbref, weapon, x, y) end
 // lua-types-end
 
-// lua-types-begin btech 00322
+// lua-types-begin btech 00321
 //|---Set a channel frequency without transmitting. Transactional; assigned conscious pilot required.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1135,7 +1135,7 @@
 //|function btech_unit.radio_frequency(dbref, pilot, channel, frequency) end
 // lua-types-end
 
-// lua-types-begin btech 00323
+// lua-types-begin btech 00322
 //|---Save a title, truncated to fifteen bytes at a UTF-8 boundary. Transactional.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1145,7 +1145,7 @@
 //|function btech_unit.radio_title(dbref, pilot, channel, title) end
 // lua-types-end
 
-// lua-types-begin btech 00324
+// lua-types-begin btech 00323
 //|---Replace channel mode: D digital, U muted, E relay; optional color letter. Transactional.
 //|---Relay requires digital mode and capable hardware. Empty selects analog with no flags.
 //|---@param dbref integer
@@ -1156,7 +1156,7 @@
 //|function btech_unit.radio_mode(dbref, pilot, channel, mode) end
 // lua-types-end
 
-// lua-types-begin btech 00328
+// lua-types-begin btech 00327
 //|---Transmit using the selected channel; delivery and command mines commit together.
 //|---Requires a conscious assigned cockpit pilot and no stun. Shutdown radios remain usable.
 //|---@param dbref integer
@@ -1167,7 +1167,7 @@
 //|function btech_unit.radio_send(dbref, pilot, channel, message) end
 // lua-types-end
 
-// lua-types-begin btech 00330
+// lua-types-begin btech 00329
 //|---Send to an acquired visible target; the source must be running and not an observer.
 //|---A shutdown target receives no message. This does not use channel frequencies or detonate mines.
 //|---@param dbref integer
@@ -1178,7 +1178,7 @@
 //|function btech_unit.radio_target(dbref, pilot, target, message) end
 // lua-types-end
 
-// lua-types-begin btech 00331
+// lua-types-begin btech 00330
 //|---Inspect an acquired visible target without changing contacts or consuming dice.
 //|---Stages a warning to running targets unless the scanning unit is an observer.
 //|---Requires the conscious assigned pilot, a running unit and operational scanners.
@@ -1191,7 +1191,7 @@
 //|function btech_unit.scan(dbref, pilot, target, options) end
 // lua-types-end
 
-// lua-types-begin btech 00332
+// lua-types-begin btech 00331
 //|---Scan the first acquired visible occupant at a coordinate in saved map order.
 //|---Uses the unit-scan report and warning path; empty and unacquired hexes share one reply.
 //|---@param dbref integer Scanner unit dbref.
@@ -1203,7 +1203,7 @@
 //|function btech_unit.scan_hex(dbref, pilot, x, y, options) end
 // lua-types-end
 
-// lua-types-begin btech 00334
+// lua-types-begin btech 00333
 //|---Scan a structure entrance and publish its integrity report to cockpit occupants.
 //|---Hidden structures require an active in-character perception roll; invisible ones stay undetected.
 //|---Dice, experience and output commit together. Explicit coordinates retain observer range limits.
@@ -1215,7 +1215,7 @@
 //|function btech_unit.scan_building(dbref, pilot, x, y) end
 // lua-types-end
 
-// lua-types-begin btech 00337
+// lua-types-begin btech 00336
 //|---Scan buildings then mines in one transaction and publish both phases.
 //|---Failed mine recognition is private to the pilot; success reaches cockpit occupants.
 //|---@param dbref integer Scanner unit dbref.
@@ -1226,7 +1226,7 @@
 //|function btech_unit.scan_terrain(dbref, pilot, x, y) end
 // lua-types-end
 
-// lua-types-begin btech 00339
+// lua-types-begin btech 00338
 //|---Scan the saved unit or coordinate target without advancing its lock countdown.
 //|---Unit reports are returned; building/hex reports also publish cockpit output.
 //|---Selected coordinates allow observer distance exemptions while retaining visibility checks.
@@ -1237,7 +1237,7 @@
 //|function btech_unit.scan_selected(dbref, pilot, options) end
 // lua-types-end
 
-// lua-types-begin btech 00340
+// lua-types-begin btech 00339
 //|---Return a silent brief report of an acquired visible unit, with no armor or weapon details.
 //|---Requires a conscious assigned pilot, running unit and working scanners. Direct reports
 //|---do not impose the detailed scan radius. No dice, contacts or output are changed.
@@ -1248,7 +1248,7 @@
 //|function btech_unit.report(dbref, pilot, target) end
 // lua-types-end
 
-// lua-types-begin btech 00342
+// lua-types-begin btech 00341
 //|---Resolve display centering only; this does not render or disclose terrain or occupants.
 //|---Arguments are empty, a contact label/dbref, or integer bearing and signed distance.
 //|---@param dbref integer Scanner unit dbref.
@@ -1259,7 +1259,7 @@
 //|function btech_unit.view_center(dbref, pilot, kind, arguments) end
 // lua-types-end
 
-// lua-types-begin btech 00345
+// lua-types-begin btech 00344
 //|---Resolve display bounds only, without rendering or disclosing terrain/occupants.
 //|---@param dbref integer Scanner unit dbref.
 //|---@param pilot integer
@@ -1270,7 +1270,7 @@
 //|function btech_unit.viewport(dbref, pilot, kind, arguments, dimensions) end
 // lua-types-end
 
-// lua-types-begin btech 00347
+// lua-types-begin btech 00346
 //|---Render long-range terrain, elevation or currently visible acquired units.
 //|---Mode initials match native LRS; descriptive API mode names are also accepted.
 //|---Dark maps mask unseen terrain. Rendering consumes no dice and sends no notices.
@@ -1282,7 +1282,7 @@
 //|function btech_unit.lrsmap(dbref, pilot, mode, arguments) end
 // lua-types-end
 
-// lua-types-begin btech 00349
+// lua-types-begin btech 00348
 //|---Render standard, C/T (mech/tank cliffs), B (landing zones), M (mines), L (visible), or U (underlying) tactical maps.
 //|---Uses shared cockpit/display admission; no acquisition rolls, notices or state changes.
 //|---@param dbref integer Scanner unit dbref.
@@ -1292,7 +1292,7 @@
 //|function btech_unit.tactical(dbref, pilot, arguments) end
 // lua-types-end
 
-// lua-types-begin btech 00351
+// lua-types-begin btech 00350
 //|---Measure from continuous motion to the current hex center without scanner hardware.
 //|---@param dbref integer
 //|---@param pilot integer Conscious assigned pilot of a running unit.
@@ -1300,7 +1300,7 @@
 //|function btech_unit.findcenter(dbref, pilot) end
 // lua-types-end
 
-// lua-types-begin btech 00353
+// lua-types-begin btech 00352
 //|---Show the radius-two local map and units within the selected center hex.
 //|---@param dbref integer
 //|---@param pilot integer Conscious assigned pilot of a running unit.
@@ -1309,7 +1309,7 @@
 //|function btech_unit.navigate(dbref, pilot, arguments) end
 // lua-types-end
 
-// lua-types-begin btech 00361
+// lua-types-begin btech 00360
 //|---List visible structures using silent identify_building locks. Failed evaluations roll back side effects.
 //|---@param unit integer
 //|---@param pilot integer Conscious assigned pilot of a running unit.
@@ -1317,7 +1317,7 @@
 //|function btech_unit.building_contacts(unit, pilot) end
 // lua-types-end
 
-// lua-types-begin btech 00364
+// lua-types-begin btech 00363
 //|---Query unit display settings or edit A/C independently. Edits notify occupants.
 //|---Requires conscious cockpit occupant; shutdown is allowed. Errors roll back state and notices.
 //|---@param unit integer
@@ -1327,7 +1327,7 @@
 //|function btech_unit.brief(unit, pilot, arguments) end
 // lua-types-end
 
-// lua-types-begin btech 00365
+// lua-types-begin btech 00364
 //|---Set whether routine contact notices include shutdown targets. Acquisition is unchanged.
 //|---@param dbref integer
 //|---@param player integer Assigned cockpit pilot.
@@ -1336,7 +1336,7 @@
 //|function btech_unit.autocon_shutdown(dbref, player, enabled) end
 // lua-types-end
 
-// lua-types-begin btech 00366
+// lua-types-begin btech 00365
 //|---Request a six-second lateral change; requires an intact quad and its assigned pilot.
 //|---@param dbref integer
 //|---@param player integer
@@ -1345,7 +1345,7 @@
 //|function btech_unit.lateral(dbref, player, direction) end
 // lua-types-end
 
-// lua-types-begin btech 00368
+// lua-types-begin btech 00367
 //|---Pivot left/right on a piloting check; a failed attempt falls.
 //|---@param dbref integer
 //|---@param player integer
@@ -1354,7 +1354,7 @@
 //|function btech_unit.bootlegger(dbref, player, direction) end
 // lua-types-end
 
-// lua-types-begin btech 00370
+// lua-types-begin btech 00369
 //|---Estimate travel to explicit x y or the selected ordinary hex and notify cockpit occupants.
 //|---@param dbref integer
 //|---@param player integer
@@ -1363,7 +1363,7 @@
 //|function btech_unit.eta(dbref, player, coordinates) end
 // lua-types-end
 
-// lua-types-begin btech 00372
+// lua-types-begin btech 00371
 //|---Read a compass bearing to the default target, x y, or x0 y0 x1 y1.
 //|---@param dbref integer
 //|---@param player integer
@@ -1372,7 +1372,7 @@
 //|function btech_unit.bearing(dbref, player, coordinates) end
 // lua-types-end
 
-// lua-types-begin btech 00374
+// lua-types-begin btech 00373
 //|---Read range to default target, x y, or between x0 y0 and x1 y1.
 //|---@param dbref integer
 //|---@param player integer
@@ -1381,7 +1381,7 @@
 //|function btech_unit.range_report(dbref, player, coordinates) end
 // lua-types-end
 
-// lua-types-begin btech 00376
+// lua-types-begin btech 00375
 //|---Measure a default target, destination x/y[/z], or origin and destination x/y[/z].
 //|---@param dbref integer
 //|---@param player integer
@@ -1390,7 +1390,7 @@
 //|function btech_unit.vector(dbref, player, coordinates) end
 // lua-types-end
 
-// lua-types-begin btech 00377
+// lua-types-begin btech 00376
 //|---Start or stop ammunition dumping; weapon numbers are zero based and slots one based.
 //|---@param dbref integer
 //|---@param player integer
@@ -1399,7 +1399,7 @@
 //|function btech_unit.dump(dbref, player, selection) end
 // lua-types-end
 
-// lua-types-begin btech 00379
+// lua-types-begin btech 00378
 //|---Toggle MASC and adjust the desired throttle proportionally.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1407,7 +1407,7 @@
 //|function btech_unit.masc(dbref, pilot) end
 // lua-types-end
 
-// lua-types-begin btech 00380
+// lua-types-begin btech 00379
 //|---Toggle the supercharger and adjust the desired throttle proportionally.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1415,7 +1415,7 @@
 //|function btech_unit.supercharger(dbref, pilot) end
 // lua-types-end
 
-// lua-types-begin btech 00381
+// lua-types-begin btech 00380
 //|---Join a visible friendly unit's C3i network by battlefield ID, or leave with "-".
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1425,7 +1425,7 @@
 //|function btech_unit.c3i(dbref, pilot, target) end
 // lua-types-end
 
-// lua-types-begin btech 00382
+// lua-types-begin btech 00381
 //|---Send text to available C3i peers and echo it to your cockpit. Requires an active transaction.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1435,7 +1435,7 @@
 //|function btech_unit.c3i_message(dbref, pilot, message) end
 // lua-types-end
 
-// lua-types-begin btech 00384
+// lua-types-begin btech 00383
 //|---Inspect running, unjammed peers without requiring visual contact or publishing output.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1444,7 +1444,7 @@
 //|function btech_unit.c3i_network(dbref, pilot) end
 // lua-types-end
 
-// lua-types-begin btech 00386
+// lua-types-begin btech 00385
 //|---Inspect direct and network sightings without acquiring contacts or publishing output.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1453,7 +1453,7 @@
 //|function btech_unit.c3i_targets(dbref, pilot) end
 // lua-types-end
 
-// lua-types-begin btech 00387
+// lua-types-begin btech 00386
 //|---Join a visible friendly classic C3 network, or leave with "-". Capacity depends on working masters.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1463,7 +1463,7 @@
 //|function btech_unit.c3(dbref, pilot, target) end
 // lua-types-end
 
-// lua-types-begin btech 00388
+// lua-types-begin btech 00387
 //|---Send to available classic C3 peers using current master capacity; echo to your cockpit.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1473,7 +1473,7 @@
 //|function btech_unit.c3_message(dbref, pilot, message) end
 // lua-types-end
 
-// lua-types-begin btech 00389
+// lua-types-begin btech 00388
 //|---Inspect classic C3 peers using active master capacity; emits no messages.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1482,7 +1482,7 @@
 //|function btech_unit.c3_network(dbref, pilot) end
 // lua-types-end
 
-// lua-types-begin btech 00390
+// lua-types-begin btech 00389
 //|---Inspect direct and classic C3 target sightings without acquiring contacts.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1491,7 +1491,7 @@
 //|function btech_unit.c3_targets(dbref, pilot) end
 // lua-types-end
 
-// lua-types-begin btech 00391
+// lua-types-begin btech 00390
 //|---Inspect or set a running vehicle turret's absolute heading. Set accepts integer degrees. Transactional.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1500,7 +1500,7 @@
 //|function btech_unit.turret(dbref, pilot, heading) end
 // lua-types-end
 
-// lua-types-begin btech 00392
+// lua-types-begin btech 00391
 //|--- Begin a 60-second turret repair, blocking fire until pending attempts finish.
 //|---@param unit integer
 //|---@param pilot integer
@@ -1508,7 +1508,7 @@
 //|function btech_unit.fixturret(unit, pilot) end
 // lua-types-end
 
-// lua-types-begin btech 00393
+// lua-types-begin btech 00392
 //|---Begin a two-minute attempt to put out vehicle section fires while shut down.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1516,7 +1516,7 @@
 //|function btech_unit.extinguish(dbref, pilot) end
 // lua-types-end
 
-// lua-types-begin btech 00394
+// lua-types-begin btech 00393
 //|---Pick up a visible unit using shared towing, shutdown and terrain rules.
 //|---@param dbref integer Carrier unit.
 //|---@param pilot integer Conscious assigned pilot; scripts own authority to act for them.
@@ -1525,7 +1525,7 @@
 //|function btech_unit.pickup(dbref, pilot, target) end
 // lua-types-end
 
-// lua-types-begin btech 00395
+// lua-types-begin btech 00394
 //|---Release the carrier's tow; elevated targets begin forced descent.
 //|---@param dbref integer Carrier unit.
 //|---@param pilot integer Conscious assigned pilot.
@@ -1533,7 +1533,7 @@
 //|function btech_unit.dropoff(dbref, pilot) end
 // lua-types-end
 
-// lua-types-begin btech 00396
+// lua-types-begin btech 00395
 //|---Inspect or set scenario permission to tow this unit out of character.
 //|---Trusted scripts own authorization for edits; this is not a pilot preference.
 //|---Disabling permission does not release an existing tow.
@@ -1543,7 +1543,7 @@
 //|function btech_unit.towable(dbref, enabled) end
 // lua-types-end
 
-// lua-types-begin btech 00397
+// lua-types-begin btech 00396
 //|---Begin twenty seconds of digging in a stopped tracked or wheeled vehicle.
 //|---Completed cover permits only turret weapons; requesting movement leaves cover.
 //|---@param dbref integer
@@ -1552,7 +1552,7 @@
 //|function btech_unit.dig(dbref, pilot) end
 // lua-types-end
 
-// lua-types-begin btech 00398
+// lua-types-begin btech 00397
 //|---Lower a quad, raise it with "-", or cancel its pending change with "stop".
 //|---@param dbref integer
 //|---@param pilot integer Conscious assigned pilot; scripts own authority to act for them.
@@ -1561,7 +1561,7 @@
 //|function btech_unit.hulldown(dbref, pilot, argument) end
 // lua-types-end
 
-// lua-types-begin btech 00399
+// lua-types-begin btech 00398
 //|---Inspect or set scenario fortification. Trusted scripts own authorization.
 //|---Enabling requires settled motion, no tow relationship, no building-entry request,
 //|---and a landed unit. Disabling does not restart any action.
@@ -1571,7 +1571,7 @@
 //|function btech_unit.fortified(dbref, enabled) end
 // lua-types-end
 
-// lua-types-begin btech 00400
+// lua-types-begin btech 00399
 //|---Inspect or set observer role. Trusted scripts own authorization; cockpit pilots cannot grant this role.
 //|---@param dbref integer
 //|---@param enabled boolean? Omit to inspect the saved role.
@@ -1579,7 +1579,7 @@
 //|function btech_unit.observer(dbref, enabled) end
 // lua-types-end
 
-// lua-types-begin btech 00401
+// lua-types-begin btech 00400
 //|---Read or change operator weapons hold inside a trusted callback transaction.
 //|---Hold blocks fire and TIC admission before argument decoding or loss of cover.
 //|---The setting persists through shutdown and restart; aborted callbacks restore it.
@@ -1589,7 +1589,7 @@
 //|function btech_unit.weapons_hold(dbref, enabled) end
 // lua-types-end
 
-// lua-types-begin btech 00402
+// lua-types-begin btech 00401
 //|---Detonate a Mech reactor in a trusted callback; damage, sensor flashes and casualties commit together.
 //|---This scenario action bypasses cockpit self-destruct configuration and countdown admission.
 //|---@param dbref integer
@@ -1597,7 +1597,7 @@
 //|function btech_unit.reactor_explode(dbref) end
 // lua-types-end
 
-// lua-types-begin btech 00403
+// lua-types-begin btech 00402
 //|---Start or stop cockpit self-destruction. Engagement releases the pilot assignment.
 //|---The same argument grammar, configuration and override checks apply as the native explode command.
 //|---@param dbref integer
@@ -1607,7 +1607,7 @@
 //|function btech_unit.explode(dbref, pilot, argument) end
 // lua-types-end
 
-// lua-types-begin btech 00404
+// lua-types-begin btech 00403
 //|---Set scenario protection from new ammunition self-destruct requests; admitted timers continue.
 //|---@param dbref integer
 //|---@param enabled boolean
@@ -1615,7 +1615,7 @@
 //|function btech_unit.explode_safe(dbref, enabled) end
 // lua-types-end
 
-// lua-types-begin btech 00405
+// lua-types-begin btech 00404
 //|---Read or replace trusted scenario visibility. Both fields are required when replacing it.
 //|---Clairvoyance bypasses visibility checks; ordinary sensor acquisition still rejects invisible targets.
 //|---@param dbref integer
@@ -1624,7 +1624,7 @@
 //|function btech_unit.visibility(dbref, flags) end
 // lua-types-end
 
-// lua-types-begin btech 00406
+// lua-types-begin btech 00405
 //|---Read or change scenario combat immunity in a trusted callback transaction.
 //|---@param dbref integer
 //|---@param enabled boolean|nil Omit to inspect.
@@ -1632,7 +1632,7 @@
 //|function btech_unit.combat_safe(dbref, enabled) end
 // lua-types-end
 
-// lua-types-begin btech 00407
+// lua-types-begin btech 00406
 //|---Select Swarm missiles; unused missiles can retarget friendly units, including the launcher.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1641,7 +1641,7 @@
 //|function btech_unit.fireswarm(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00408
+// lua-types-begin btech 00407
 //|---Select Swarm-1 missiles; secondary targets must belong to another team.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1650,7 +1650,7 @@
 //|function btech_unit.fireswarm1(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00411
+// lua-types-begin btech 00410
 //|---Alias of cluster: select artillery cluster rounds, rejecting a different selected artillery payload.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1659,7 +1659,7 @@
 //|function btech_unit.firecluster(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00412
+// lua-types-begin btech 00411
 //|---Select missile Smoke rounds. This cockpit control does not select artillery payloads.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1668,7 +1668,7 @@
 //|function btech_unit.firesmoke(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00413
+// lua-types-begin btech 00412
 //|---Select missile Mine rounds, which bypass AMS and retain ordinary missile damage.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -1677,7 +1677,7 @@
 //|function btech_unit.firemine(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00451
+// lua-types-begin btech 00421
 //|---Wizard-only predictive firing using fixed horizontal target orders and normal weapon launches.
 //|---Sets the cockpit hex target. Does not simulate future damage or order changes.
 //|---@param dbref integer Shooter unit
@@ -1688,7 +1688,7 @@
 //|function btech_unit.snipe(dbref, player, target, selection) end
 // lua-types-end
 
-// lua-types-begin btech 00454
+// lua-types-begin btech 00424
 //|---Wizard field inspection using optional 1/4 column selector and case-insensitive prefix.
 //|---@param actor integer
 //|---@param unit integer
@@ -1697,7 +1697,7 @@
 //|function btech_unit.fields(actor, unit, arguments) end
 // lua-types-end
 
-// lua-types-begin btech 00455
+// lua-types-begin btech 00425
 //|---Wizard named edits; accepts identity, team, xpmod, VTOL fuel, sensor/radio hardware and Mech thermal fields.
 //|---@param actor integer
 //|---@param unit integer
@@ -1706,42 +1706,42 @@
 //|function btech_unit.set_field(actor, unit, field, value) end
 // lua-types-end
 
-// lua-types-begin btech 00508
+// lua-types-begin btech 00478
 //|---Install one technology code on the unit.
 //|---@param unit DbRef|Object
 //|---@param technology BattleTechnologyCode Typed constant from btech.unit.technology.
 //|function btech_unit.add_technology(unit, technology) end
 // lua-types-end
 
-// lua-types-begin btech 00509
+// lua-types-begin btech 00479
 //|---Remove one installed technology code.
 //|---@param unit DbRef|Object
 //|---@param technology BattleTechnologyCode Typed constant from btech.unit.technology.
 //|function btech_unit.remove_technology(unit, technology) end
 // lua-types-end
 
-// lua-types-begin btech 00510
+// lua-types-begin btech 00480
 //|---Remove every technology in one group.
 //|---@param unit DbRef|Object
 //|---@param group BattleTechnologyGroup Typed constant from btech.unit.technology_groups.
 //|function btech_unit.clear_technologies(unit, group) end
 // lua-types-end
 
-// lua-types-begin btech 00511
+// lua-types-begin btech 00481
 //|---List configured and inferred unit technologies.
 //|---@param unit DbRef|Object
 //|---@return BattleTechnology[] technologies
 //|function btech_unit.technologies(unit) end
 // lua-types-end
 
-// lua-types-begin btech 00512
+// lua-types-begin btech 00482
 //|---Apply a C-contract damage request to a live unit.
 //|---@param unit DbRef|Object
 //|---@param request table Damage request record.
 //|function btech_unit.apply_damage(unit, request) end
 // lua-types-end
 
-// lua-types-begin btech 00513
+// lua-types-begin btech 00483
 //|---Read current, original and rear armor values; an omitted section reports the totals.
 //|---@param unit DbRef|Object
 //|---@param section? BattleSection Typed section constant from btech.unit.sections.
@@ -1749,21 +1749,21 @@
 //|function btech_unit.armor(unit, section) end
 // lua-types-end
 
-// lua-types-begin btech 00514
+// lua-types-begin btech 00484
 //|---Read the assigned pilot object, or nil when the cockpit is unassigned.
 //|---@param unit DbRef|Object
 //|---@return Object|nil pilot
 //|function btech_unit.assigned_pilot(unit) end
 // lua-types-end
 
-// lua-types-begin btech 00515
+// lua-types-begin btech 00485
 //|---Read offensive, defensive and total Battle Value.
 //|---@param unit DbRef|Object
 //|---@return BattleBattleValue value
 //|function btech_unit.battle_value(unit) end
 // lua-types-end
 
-// lua-types-begin btech 00516
+// lua-types-begin btech 00486
 //|---List one section's critical slots with resolved parts, modes and ammunition state.
 //|---@param unit DbRef|Object
 //|---@param section BattleSection Typed section constant from btech.unit.sections.
@@ -1771,42 +1771,42 @@
 //|function btech_unit.critical_slots(unit, section) end
 // lua-types-end
 
-// lua-types-begin btech 00517
+// lua-types-begin btech 00487
 //|---Read the engine rating and suspension factor.
 //|---@param unit DbRef|Object
 //|---@return BattleEngine engine
 //|function btech_unit.engine(unit) end
 // lua-types-end
 
-// lua-types-begin btech 00518
+// lua-types-begin btech 00488
 //|---List installed equipment in catalogue order.
 //|---@param unit DbRef|Object
 //|---@return BattlePartStack[] parts
 //|function btech_unit.installed_parts(unit) end
 // lua-types-end
 
-// lua-types-begin btech 00519
+// lua-types-begin btech 00489
 //|---List carried ammunition stock in catalogue order.
 //|---@param unit DbRef|Object
 //|---@return BattlePartStack[] parts
 //|function btech_unit.payload(unit) end
 // lua-types-end
 
-// lua-types-begin btech 00520
+// lua-types-begin btech 00490
 //|---Replace the unit definition from a saved template reference.
 //|---@param unit DbRef|Object
 //|---@param reference string Relative name under database.mech_database.
 //|function btech_unit.load_template(unit, reference) end
 // lua-types-end
 
-// lua-types-begin btech 00521
+// lua-types-begin btech 00491
 //|---Save the unit definition under a template reference in the mech database.
 //|---@param unit DbRef|Object
 //|---@param reference string Relative name under database.mech_database.
 //|function btech_unit.save_template(unit, reference) end
 // lua-types-end
 
-// lua-types-begin btech 00522
+// lua-types-begin btech 00492
 //|---Run one shared piloting check; returns whether it succeeded.
 //|---@param unit DbRef|Object
 //|---@param options table Situational modifier request.
@@ -1814,27 +1814,27 @@
 //|function btech_unit.piloting_check(unit, options) end
 // lua-types-end
 
-// lua-types-begin btech 00523
+// lua-types-begin btech 00493
 //|---Read the saved two-letter battlefield ID preference, or nil when unset.
 //|---@param unit DbRef|Object
 //|---@return string|nil id
 //|function btech_unit.preferred_id(unit) end
 // lua-types-end
 
-// lua-types-begin btech 00524
+// lua-types-begin btech 00494
 //|---List configured radio channels with active mode names.
 //|---@param unit DbRef|Object
 //|---@return BattleRadioChannelReport[] channels
 //|function btech_unit.radio_channels(unit) end
 // lua-types-end
 
-// lua-types-begin btech 00525
+// lua-types-begin btech 00495
 //|---Restore destroyed critical slots to their original equipment.
 //|---@param unit DbRef|Object
 //|function btech_unit.reset_critical_slots(unit) end
 // lua-types-end
 
-// lua-types-begin btech 00526
+// lua-types-begin btech 00496
 //|---Refill one ammunition bin to its installed capacity.
 //|---@param unit DbRef|Object
 //|---@param section BattleSection Typed section constant from btech.unit.sections.
@@ -1842,13 +1842,13 @@
 //|function btech_unit.restock_ammunition(unit, section, slot) end
 // lua-types-end
 
-// lua-types-begin btech 00527
+// lua-types-begin btech 00497
 //|---Restore armor, internal structure, critical slots and ammunition to template values.
 //|---@param unit DbRef|Object
 //|function btech_unit.restore(unit) end
 // lua-types-end
 
-// lua-types-begin btech 00528
+// lua-types-begin btech 00498
 //|---Read a section's damage condition.
 //|---@param unit DbRef|Object
 //|---@param section BattleSection Typed section constant from btech.unit.sections.
@@ -1856,28 +1856,28 @@
 //|function btech_unit.section_condition(unit, section) end
 // lua-types-end
 
-// lua-types-begin btech 00533
+// lua-types-begin btech 00503
 //|---Install a weapon into explicit critical slots.
 //|---@param unit DbRef|Object
 //|---@param request BattleWeaponInstall
 //|function btech_unit.install_weapon(unit, request) end
 // lua-types-end
 
-// lua-types-begin btech 00534
+// lua-types-begin btech 00504
 //|---Install or clear non-weapon equipment in one critical slot.
 //|---@param unit DbRef|Object
 //|---@param request BattleSpecialInstall
 //|function btech_unit.install_special(unit, request) end
 // lua-types-end
 
-// lua-types-begin btech 00535
+// lua-types-begin btech 00505
 //|---Configure one ammunition bin's half-ton flag and selected modes.
 //|---@param unit DbRef|Object
 //|---@param request BattleAmmunitionConfiguration
 //|function btech_unit.configure_ammunition(unit, request) end
 // lua-types-end
 
-// lua-types-begin btech 00536
+// lua-types-begin btech 00506
 //|---Replace the selected fire and ammunition modes of one mounted weapon.
 //|---@param unit DbRef|Object
 //|---@param weapon_number integer Zero-based stable weapon number.
@@ -1885,7 +1885,7 @@
 //|function btech_unit.set_weapon_modes(unit, weapon_number, modes) end
 // lua-types-end
 
-// lua-types-begin btech 00537
+// lua-types-begin btech 00507
 //|---Patch armor values on one section.
 //|---@param unit DbRef|Object
 //|---@param section BattleSection Typed section constant from btech.unit.sections.
@@ -1893,14 +1893,14 @@
 //|function btech_unit.set_armor(unit, section, patch) end
 // lua-types-end
 
-// lua-types-begin btech 00538
+// lua-types-begin btech 00508
 //|---Assign or clear the saved pilot; the player need not enter the cockpit.
 //|---@param unit DbRef|Object
 //|---@param pilot DbRef|Object|nil Player object.
 //|function btech_unit.set_assigned_pilot(unit, pilot) end
 // lua-types-end
 
-// lua-types-begin btech 00539
+// lua-types-begin btech 00509
 //|---Set cargo space and the maximum carried tonnage.
 //|---@param unit DbRef|Object
 //|---@param space integer
@@ -1908,84 +1908,84 @@
 //|function btech_unit.set_cargo_capacity(unit, space, maximum_tons) end
 // lua-types-end
 
-// lua-types-begin btech 00540
+// lua-types-begin btech 00510
 //|---Set the installed heat-sink count.
 //|---@param unit DbRef|Object
 //|---@param count integer
 //|function btech_unit.set_heat_sinks(unit, count) end
 // lua-types-end
 
-// lua-types-begin btech 00541
+// lua-types-begin btech 00511
 //|---Set the jump speed in movement points.
 //|---@param unit DbRef|Object
 //|---@param movement_points number
 //|function btech_unit.set_jump_speed(unit, movement_points) end
 // lua-types-end
 
-// lua-types-begin btech 00542
+// lua-types-begin btech 00512
 //|---Set the long-range sensor ceiling in hexes.
 //|---@param unit DbRef|Object
 //|---@param range integer
 //|function btech_unit.set_long_range_sensor_range(unit, range) end
 // lua-types-end
 
-// lua-types-begin btech 00543
+// lua-types-begin btech 00513
 //|---Set the tactical sensor range in hexes.
 //|---@param unit DbRef|Object
 //|---@param range integer
 //|function btech_unit.set_tactical_range(unit, range) end
 // lua-types-end
 
-// lua-types-begin btech 00544
+// lua-types-begin btech 00514
 //|---Set the scan range in hexes.
 //|---@param unit DbRef|Object
 //|---@param range integer
 //|function btech_unit.set_scan_range(unit, range) end
 // lua-types-end
 
-// lua-types-begin btech 00545
+// lua-types-begin btech 00515
 //|---Set the radio range in hexes.
 //|---@param unit DbRef|Object
 //|---@param range integer
 //|function btech_unit.set_radio_range(unit, range) end
 // lua-types-end
 
-// lua-types-begin btech 00546
+// lua-types-begin btech 00516
 //|---Set the maximum ground speed in movement points.
 //|---@param unit DbRef|Object
 //|---@param movement_points number
 //|function btech_unit.set_max_speed(unit, movement_points) end
 // lua-types-end
 
-// lua-types-begin btech 00547
+// lua-types-begin btech 00517
 //|---Replace the movement class.
 //|---@param unit DbRef|Object
 //|---@param movement_type BattleMovementType Typed constant from btech.unit.movement_types.
 //|function btech_unit.set_movement_type(unit, movement_type) end
 // lua-types-end
 
-// lua-types-begin btech 00548
+// lua-types-begin btech 00518
 //|---Set the unit tonnage.
 //|---@param unit DbRef|Object
 //|---@param tons integer
 //|function btech_unit.set_tonnage(unit, tons) end
 // lua-types-end
 
-// lua-types-begin btech 00549
+// lua-types-begin btech 00519
 //|---Replace the unit class.
 //|---@param unit DbRef|Object
 //|---@param unit_type BattleUnitType Typed constant from btech.unit.types.
 //|function btech_unit.set_unit_type(unit, unit_type) end
 // lua-types-end
 
-// lua-types-begin btech 00550
+// lua-types-begin btech 00520
 //|---Set the radio quality grade.
 //|---@param unit DbRef|Object
 //|---@param quality integer
 //|function btech_unit.set_radio_quality(unit, quality) end
 // lua-types-end
 
-// lua-types-begin btech 00551
+// lua-types-begin btech 00521
 //|---Remove the object's BattleTech registration and forget its configuration
 //|---references. Rust extension without a C Lua counterpart: the reference exposes
 //|---teardown only through the native wizard command, and this binding shares that
@@ -1997,21 +1997,21 @@
 //|function btech_unit.unregister(unit) end
 // lua-types-end
 
-// lua-types-begin btech 00552
+// lua-types-begin btech 00522
 //|---Read the damage-adjusted maximum speed in movement points.
 //|---@param unit DbRef|Object
 //|---@return number movement_points
 //|function btech_unit.effective_max_speed(unit) end
 // lua-types-end
 
-// lua-types-begin btech 00553
+// lua-types-begin btech 00523
 //|---Read the damage-adjusted maximum speed in kilometers per hour.
 //|---@param unit DbRef|Object
 //|---@return number kilometers_per_hour
 //|function btech_unit.effective_max_speed_kph(unit) end
 // lua-types-end
 
-// lua-types-begin btech 00554
+// lua-types-begin btech 00524
 //|---List the weapons of one trigger group in mounting order.
 //|---@param unit DbRef|Object
 //|---@param tic integer Group number from 0 through 3.

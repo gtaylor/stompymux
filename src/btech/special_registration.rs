@@ -28,11 +28,6 @@ pub(crate) fn unregister_special(
     }
     let mut world = scripts.world_mut();
     match existing.as_deref() {
-        // The turret lifecycle's SPECIAL_FREE case is empty (ds_turret.c:276).
-        Some("TURRET") => {
-            world.btech.gunner_stations.remove(&id);
-            Arc::make_mut(&mut world.btech.registrations).remove(&id);
-        }
         // newfreemech SPECIAL_FREE (mech_restrict.c:437) releases battlefield
         // membership, contacts, tow links and scheduled events before the tree
         // entry disappears; wreck_cleanup::forget performs the same disposal.
@@ -84,7 +79,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
         }
         ensure!(
             !kind.trim().is_empty(),
-            "Specify MECH, DEBUG, MAP, AUTOPILOT, or TURRET."
+            "Specify MECH, DEBUG, MAP, or AUTOPILOT."
         );
         ensure!(
             world.objects.get(&id).is_some_and(
@@ -95,10 +90,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
         let requested = kind.trim();
         let kind = requested.to_ascii_uppercase();
         ensure!(
-            matches!(
-                kind.as_str(),
-                "MECH" | "DEBUG" | "MAP" | "AUTOPILOT" | "TURRET"
-            ),
+            matches!(kind.as_str(), "MECH" | "DEBUG" | "MAP" | "AUTOPILOT"),
             "invalid BTech type {}.",
             requested
         );
@@ -112,10 +104,6 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
         }
         match kind.as_str() {
             "DEBUG" => {
-                Arc::make_mut(&mut world.btech.registrations).insert(id, kind.clone());
-            }
-            "TURRET" => {
-                world.btech.gunner_stations.insert(id, Default::default());
                 Arc::make_mut(&mut world.btech.registrations).insert(id, kind.clone());
             }
             "MAP" => {

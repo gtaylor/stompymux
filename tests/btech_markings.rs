@@ -108,45 +108,18 @@ async fn markings_configuration_validates_and_rolls_back() {
     }
 }
 
-/// Ordinary gunners use their own selection; the same command in a map room remains wizard-only.
+/// The VIEW command in a map room remains wizard-only for ordinary players.
 #[tokio::test]
-async fn markings_keep_gunner_selection_and_map_view_authority_separate() {
+async fn markings_map_view_is_wizard_only() {
     for source in firing::templates() {
-        let (_dir, config, mut world, parent, target, _) =
+        let (_dir, config, mut world, parent, _, _) =
             firing::fixture_with_target(&source, None, &source).await;
-        let station = world.create(&config, "Station".into(), Kind::Thing);
-        let gunner = world.create(&config, "Gunner".into(), Kind::Player);
-        register_gunner_station(&mut world, ObjectId(1), station, parent, 5).unwrap();
-        world.objects.get_mut(&gunner).unwrap().location = Some(station);
-        set_battle_unit_markings(&mut world, ObjectId(1), target, "Red star").unwrap();
+        let player = world.create(&config, "Player".into(), Kind::Player);
         let map = world.btech.units()[&parent].map.unwrap();
+        world.objects.get_mut(&player).unwrap().location = Some(map);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        gunner_station_action(&scripts, station, gunner, true).unwrap();
-        select_battle_target(&mut scripts.world_mut(), station, gunner, Some(target)).unwrap();
-        select_battle_target(&mut scripts.world_mut(), parent, ObjectId(1), None).unwrap();
-        scripts.drain_outbox();
-        let before = scripts.world().btech.clone();
-        assert_eq!(
-            support::run_text(&scripts, &config, gunner, 1, "view"),
-            "Red star"
-        );
-        let lua: String = scripts
-            .eval_callback(&format!(
-                "return btech.unit.view({},{})",
-                station.0, gunner.0
-            ))
-            .unwrap();
-        assert_eq!(lua, "Red star");
-        assert_eq!(scripts.world().btech, before);
-        gunner_station_action(&scripts, station, gunner, false).unwrap();
-        scripts
-            .world_mut()
-            .objects
-            .get_mut(&gunner)
-            .unwrap()
-            .location = Some(map);
         assert!(
-            support::run_text(&scripts, &config, gunner, 1, "view 0 0")
+            support::run_text(&scripts, &config, player, 1, "view 0 0")
                 .contains("Sorry, that command is restricted!")
         );
     }

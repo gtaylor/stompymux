@@ -1,11 +1,10 @@
-//! Generic special-object commands dispatch to the same map, station and unit field services.
+//! Generic special-object commands dispatch to the same map and unit field services.
 use crate::{CommandAction, CommandContext, CommandInput, CommandReport};
 use anyhow::{Context, Result, bail};
 
 /// Registered field-service families.
 enum FieldObjectKind {
     Map,
-    Station,
     Unit,
 }
 
@@ -25,8 +24,6 @@ pub(crate) fn command(
                 .context("Player has no location")?;
             let kind = if world.btech.maps().contains_key(&id) {
                 FieldObjectKind::Map
-            } else if world.btech.gunner_stations().contains_key(&id) {
-                FieldObjectKind::Station
             } else if world.btech.constructed_units().contains_key(&id)
                 || world.btech.vehicles().contains_key(&id)
             {
@@ -47,9 +44,6 @@ pub(crate) fn command(
                     field,
                     value,
                 )?,
-                FieldObjectKind::Station => {
-                    super::set_gunner_field(ctx.scripts, ctx.config, ctx.player, id, field, value)?
-                }
                 FieldObjectKind::Unit => super::set_unit_field_action(
                     ctx.scripts,
                     ctx.config,
@@ -69,9 +63,6 @@ pub(crate) fn command(
                         id,
                         &input.args,
                     )?;
-                }
-                FieldObjectKind::Station => {
-                    super::view_gunner_fields(ctx.scripts, ctx.player, id, &input.args)?;
                 }
                 FieldObjectKind::Unit => {
                     super::view_unit_fields_action(

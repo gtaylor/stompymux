@@ -53,9 +53,6 @@ mod btech_rockets;
 #[path = "../btech_scan_summary.rs"]
 mod btech_scan_summary;
 
-#[path = "../btech_turret_lifecycle.rs"]
-mod btech_turret_lifecycle;
-
 #[path = "../btech_vehicle_aim.rs"]
 mod btech_vehicle_aim;
 

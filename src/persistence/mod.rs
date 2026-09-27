@@ -450,8 +450,6 @@ mod btech_static_decorations;
 
 mod btech_map_links;
 
-mod btech_gunner_stations;
-
 mod btech_turn_clock;
 
 mod btech_sensor_recovery;

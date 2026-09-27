@@ -369,7 +369,7 @@ pub fn weapon_specification_text(world: &World, id: ObjectId, extended: bool) ->
     ))
 }
 
-/// Resolve report equipment through cockpit or station admission without granting pilot controls.
+/// Resolve report equipment through cockpit admission without granting pilot controls.
 pub(super) fn cockpit(
     ctx: &crate::CommandContext<'_>,
     conscious: bool,
@@ -381,12 +381,6 @@ pub(super) fn cockpit(
         .get(&ctx.player)
         .and_then(|player| player.location)
         .context("Enter a unit first")?;
-    let station = world.btech.gunner_stations().contains_key(&id);
-    let id = if station {
-        super::gunner_station::gunner_context(&world, id, ctx.player)?.parent
-    } else {
-        id
-    };
     if conscious {
         ensure!(!world.btech.unconscious(ctx.player), "You are unconscious");
     }
@@ -394,7 +388,7 @@ pub(super) fn cockpit(
         super::scanner::scanner_unit(&world, id).is_some(),
         "Unit construction state is unavailable"
     );
-    if require_pilot && !station {
+    if require_pilot {
         super::radio::controlled(&world, id, ctx.player)?;
     }
     Ok(id)

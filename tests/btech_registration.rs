@@ -57,7 +57,7 @@ async fn debug_registration_round_trip_and_idempotence() {
     for (command, expected) in [
         (
             format!("@btech/register #{}", tool.0),
-            "Specify MECH, DEBUG, MAP, AUTOPILOT, or TURRET.".to_owned(),
+            "Specify MECH, DEBUG, MAP, or AUTOPILOT.".to_owned(),
         ),
         (
             format!("@btech/register #{}=MAP", tool.0),

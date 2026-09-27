@@ -54,7 +54,7 @@ pub(super) fn resolve_in_action(
     index: usize,
     requested: BattleFireTarget,
 ) -> Result<super::firing::BattleFiringAction> {
-    let operator = super::combat_operator::controlled(world, shooter, pilot)?;
+    super::combat_operator::controlled(world, shooter, pilot)?;
     let PreparedArtillery {
         map,
         coordinate,
@@ -117,10 +117,10 @@ pub(super) fn resolve_in_action(
         true,
     )?;
     let queued_shot = if launched {
-        Some(super::artillery_queue::enqueue_for_source(
+        Some(super::artillery_queue::enqueue_artillery(
             &mut candidate,
             map,
-            operator.source,
+            shooter,
             BattleArtilleryFlight::new(origin, coordinate, weapon, mode, hit)?,
         )?)
     } else {
@@ -211,7 +211,7 @@ pub(super) fn prepare(
         BattleFireTarget::Hex { coordinate } => Some(coordinate),
         _ => None,
     };
-    let (position, motion, weapon, ammunition, spotter, mut adjustment) = if vehicle {
+    let (position, motion, weapon, ammunition, spotter, adjustment) = if vehicle {
         let unit = &world.btech.vehicles()[&shooter];
         ensure!(!unit.is_destroyed(), "Unit is destroyed");
         unit.check_spotter_fire(shooter, index)?;
@@ -243,9 +243,6 @@ pub(super) fn prepare(
         Some(BattleTargetSelection::Hex(lock)) => (None, Some(lock)),
         None => (None, None),
     };
-    if let Some(station) = operator.station {
-        adjustment = world.btech.gunner_stations()[&station.station].artillery_adjustment;
-    }
     let position = position.context("Shooter is not placed")?;
     let motion = motion.context("Shooter is not placed")?;
     let map = position.map;
@@ -305,12 +302,11 @@ pub(super) fn prepare(
             || spotter.is_some(),
         "That hex target is not in your direct line of sight and you do not have a spotter set!!"
     );
-    operator.check_point_arc(world, coordinate.center())?;
     let bearing = motion.point.bearing(coordinate.center())?.unwrap_or(180.0);
     let rules = BattleShotRules::configured(&config.battletech, false);
     ensure!(
         observer.is_some()
-            || operator.aim_rules(rules.aim).override_weapon_arcs
+            || rules.aim.override_weapon_arcs
             || if vehicle {
                 world.btech.vehicles()[&shooter].weapon_bears_on(index, bearing)?
             } else {
@@ -346,11 +342,7 @@ pub(super) fn prepare(
         extended_range: rules.aim.extended_ranges,
         submerged,
         visible,
-        gunnery: if let Some(station) = operator.station {
-            station.artillery_gunnery_target(world)?
-        } else {
-            unit_artillery_gunnery_target(world, shooter)?
-        },
+        gunnery: unit_artillery_gunnery_target(world, shooter)?,
         observer,
         adjustment,
     })?;

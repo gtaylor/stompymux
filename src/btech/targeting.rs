@@ -156,43 +156,18 @@ fn controlled_by_actor(
     Ok(())
 }
 
-/// Resolve independent selection ownership while retaining the parent's shared sensor rules.
+/// Admit a player's control of the unit whose selection and sensors are used.
 fn controlled_source(world: &World, owner: ObjectId, actor: ObjectId) -> Result<ObjectId> {
-    controlled_source_by_actor(
+    controlled_by_actor(
         world,
         owner,
         super::combat_operator::ControlActor::Player(actor),
-    )
-}
-
-fn controlled_source_by_actor(
-    world: &World,
-    owner: ObjectId,
-    actor: super::combat_operator::ControlActor,
-) -> Result<ObjectId> {
-    if world.btech.gunner_stations().contains_key(&owner) {
-        let super::combat_operator::ControlActor::Player(actor) = actor else {
-            anyhow::bail!("Autopilot cannot operate an independent gunner station")
-        };
-        let context = super::gunner_context(world, owner, actor)?;
-        super::power::control_health(world, actor)?;
-        let source =
-            super::scanner::scanner_unit(world, context.parent).context("Unit is unavailable")?;
-        ensure!(
-            source.power == BattlePower::Running && !source.destroyed,
-            "Start the unit first"
-        );
-        return Ok(context.parent);
-    }
-    controlled_by_actor(world, owner, actor)?;
+    )?;
     Ok(owner)
 }
 
 /// Read the owning construction's unit or coordinate selection.
 pub(super) fn selection(world: &World, unit: ObjectId) -> Option<BattleTargetSelection> {
-    if let Some(station) = world.btech.gunner_stations().get(&unit) {
-        return station.target_selection();
-    }
     world.btech.vehicles().get(&unit).map_or_else(
         || {
             world
@@ -211,10 +186,6 @@ pub(super) fn set_selection(
     unit: ObjectId,
     selection: Option<BattleTargetSelection>,
 ) {
-    if let Some(station) = world.btech.gunner_stations.get_mut(&unit) {
-        station.set_target_selection(selection);
-        return;
-    }
     super::artillery_adjustment::reset(world, unit);
     if let Some(vehicle) = world.btech.vehicles.get_mut(&unit) {
         vehicle.target_lock = selection;
@@ -228,19 +199,8 @@ pub(super) fn set_selection(
         .target_lock = selection;
 }
 
-/// Explicit station arc control bypasses the ordinary sensor-settling delay.
-fn settling_delay(world: &World, owner: ObjectId) -> u8 {
-    if world
-        .btech
-        .gunner_stations()
-        .get(&owner)
-        .is_some_and(|station| station.arcs != 0)
-    {
-        0
-    } else {
-        8
-    }
-}
+/// Seconds a newly selected lock takes to settle.
+const SETTLING_DELAY: u8 = 8;
 
 /// Administrative selection bypasses acquisition, but retains battlefield identity and settling.
 /// The caller owns wizard admission and atomic validation/publication.
@@ -268,11 +228,15 @@ pub(super) fn set_administrative_target(
             "Invalid target lock battlefield"
         );
     }
-    let remaining = settling_delay(world, unit);
     set_selection(
         world,
         unit,
-        target.map(|target| BattleTargetSelection::Unit(BattleTargetLock { target, remaining })),
+        target.map(|target| {
+            BattleTargetSelection::Unit(BattleTargetLock {
+                target,
+                remaining: SETTLING_DELAY,
+            })
+        }),
     );
     Ok(())
 }
@@ -296,18 +260,20 @@ pub fn select_target(
     if let Some(target) = target {
         super::sixth_sense::schedule(world, source, target)?;
     }
-    let remaining = settling_delay(world, unit);
     set_selection(
         world,
         unit,
-        target.map(|target| BattleTargetSelection::Unit(BattleTargetLock { target, remaining })),
+        target.map(|target| {
+            BattleTargetSelection::Unit(BattleTargetLock {
+                target,
+                remaining: SETTLING_DELAY,
+            })
+        }),
     );
     let notice = BattleNotice {
         unit,
-        text: (if target.is_some() && remaining > 0 {
+        text: (if target.is_some() {
             "Target set; sensors are acquiring a stable lock."
-        } else if target.is_some() {
-            "Target set."
         } else {
             "All locks cleared."
         })
@@ -323,8 +289,8 @@ pub(crate) fn select_target_autopilot(
     unit: ObjectId,
     target: Option<ObjectId>,
 ) -> Result<BattleNotice> {
-    let source =
-        controlled_source_by_actor(world, unit, super::combat_operator::ControlActor::Autopilot)?;
+    controlled_by_actor(world, unit, super::combat_operator::ControlActor::Autopilot)?;
+    let source = unit;
     if let Some(target) = target {
         ensure!(
             super::visible_contacts(world, source)?
@@ -334,18 +300,20 @@ pub(crate) fn select_target_autopilot(
         );
         super::sixth_sense::schedule(world, source, target)?;
     }
-    let remaining = settling_delay(world, unit);
     set_selection(
         world,
         unit,
-        target.map(|target| BattleTargetSelection::Unit(BattleTargetLock { target, remaining })),
+        target.map(|target| {
+            BattleTargetSelection::Unit(BattleTargetLock {
+                target,
+                remaining: SETTLING_DELAY,
+            })
+        }),
     );
     Ok(BattleNotice {
         unit,
-        text: (if target.is_some() && remaining > 0 {
+        text: (if target.is_some() {
             "Target set; sensors are acquiring a stable lock."
-        } else if target.is_some() {
-            "Target set."
         } else {
             "All locks cleared."
         })
@@ -365,26 +333,16 @@ pub fn select_hex_target(
     let position = super::scanner::scanner_unit(world, source)
         .and_then(|state| state.position)
         .context("Unit is not on a battlefield")?;
-    if world.btech.gunner_stations().contains_key(&unit) {
-        i16::try_from(hex.x).context("Station X coordinate is out of range")?;
-        i16::try_from(hex.y).context("Station Y coordinate is out of range")?;
-    }
-    let elevation = world.btech.maps()[&position.map]
-        .hex(i64::from(hex.x), i64::from(hex.y))?
-        .elevation;
-    let remaining = settling_delay(world, unit);
+    world.btech.maps()[&position.map].hex(i64::from(hex.x), i64::from(hex.y))?;
     set_selection(
         world,
         unit,
         Some(BattleTargetSelection::Hex(BattleHexLock {
             hex,
             mode,
-            remaining,
+            remaining: SETTLING_DELAY,
         })),
     );
-    if let Some(station) = world.btech.gunner_stations.get_mut(&unit) {
-        station.target_coordinates[2] = i16::from(elevation);
-    }
     let purpose = match mode {
         BattleHexTargetMode::UnitAtHex => "at",
         BattleHexTargetMode::Hex => "to hex at",
@@ -417,13 +375,6 @@ pub fn advance_target_locks(world: &mut World) -> Vec<BattleNotice> {
                 .iter()
                 .map(|(&id, unit)| (id, unit.target_selection())),
         )
-        .chain(
-            world
-                .btech
-                .gunner_stations()
-                .iter()
-                .map(|(&id, station)| (id, station.target_selection())),
-        )
         .collect::<std::collections::BTreeMap<_, _>>()
         .into_iter()
         .filter_map(|(id, lock)| {
@@ -431,17 +382,12 @@ pub fn advance_target_locks(world: &mut World) -> Vec<BattleNotice> {
             if lock.remaining() == 0 {
                 return None;
             }
-            let source = world
-                .btech
-                .gunner_stations()
-                .get(&id)
-                .map_or(id, |station| station.parent);
             let message = if lock.remaining() != 1 {
                 None
             } else {
                 match lock {
                     BattleTargetSelection::Unit(lock) => {
-                        super::visible_contact(world, source, lock.target)
+                        super::visible_contact(world, id, lock.target)
                             .ok()
                             .flatten()
                             .map(|_| {
@@ -461,9 +407,7 @@ pub fn advance_target_locks(world: &mut World) -> Vec<BattleNotice> {
     let mut notices = Vec::new();
     for (id, mut lock, message) in updates {
         lock.advance();
-        if let Some(station) = world.btech.gunner_stations.get_mut(&id) {
-            station.lock_remaining = lock.remaining();
-        } else if let Some(vehicle) = world.btech.vehicles.get_mut(&id) {
+        if let Some(vehicle) = world.btech.vehicles.get_mut(&id) {
             vehicle.target_lock = Some(lock);
         } else {
             world.btech.constructed.get_mut(&id).unwrap().target_lock = Some(lock);

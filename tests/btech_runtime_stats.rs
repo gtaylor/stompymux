@@ -19,35 +19,25 @@ async fn runtime_statistics_match_live_state_native_lua_and_restart() {
             .unwrap()
             .simulation_pending
     );
-    assert_eq!(
-        (empty.mechs, empty.vehicles, empty.maps, empty.stations),
-        (0, 0, 0, 0)
-    );
+    assert_eq!((empty.mechs, empty.vehicles, empty.maps), (0, 0, 0));
     for template in firing::templates() {
         let (_dir, config, mut world, parent, target, _) =
             firing::fixture_with_target(&template, Some(BattleWeapon::MediumLaser), &template)
                 .await;
-        let station = world.create(&config, "Station".into(), Kind::Thing);
-        let gunner = world.create(&config, "Gunner".into(), Kind::Player);
-        world.objects.get_mut(&gunner).unwrap().location = Some(station);
-        register_gunner_station(&mut world, ObjectId(1), station, parent, 0).unwrap();
+        let player = world.create(&config, "Player".into(), Kind::Player);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        gunner_station_action(&scripts, station, gunner, true).unwrap();
+        select_battle_target(&mut scripts.world_mut(), parent, ObjectId(1), Some(target)).unwrap();
         scripts.drain_outbox();
-        select_battle_target(&mut scripts.world_mut(), station, gunner, Some(target)).unwrap();
         let before = scripts.world().btech.clone();
         let stats = battle_runtime_stats(&scripts.world(), &config, ObjectId(1)).unwrap();
         assert!(stats.simulation_pending);
         assert_eq!(stats.mechs + stats.vehicles, 2);
-        assert_eq!(stats.stations, 1);
-        assert_eq!(stats.station_locks, 1);
         assert_eq!(stats.artillery_shots, 0);
         assert_eq!(
             stats.encoded_state_bytes,
             serde_json::to_vec(&before).unwrap().len() as u64
         );
         assert!(stats.inline_record_bytes > std::mem::size_of_val(&before));
-        assert_eq!(stats.registration_kinds["TURRET"], 1);
         let lua: mlua::Table = scripts
             .eval_callback("return btech.runtime.stats(1)")
             .unwrap();
@@ -56,7 +46,7 @@ async fn runtime_statistics_match_live_state_native_lua_and_restart() {
             serde_json::to_value(&stats).unwrap()
         );
         let events = support::run_text(&scripts, &config, ObjectId(1), 1, "eventstats");
-        assert!(events.contains("Station locks settling: 1"), "{events}");
+        assert!(events.contains("Artillery shots in flight: 0"), "{events}");
         let memory = support::run_text(&scripts, &config, ObjectId(1), 1, "memstats LONG");
         assert!(
             memory.contains(&format!(
@@ -65,12 +55,14 @@ async fn runtime_statistics_match_live_state_native_lua_and_restart() {
             )),
             "{memory}"
         );
-        assert!(memory.contains("TURRET: 1 registrations"));
+        for (kind, count) in &stats.registration_kinds {
+            assert!(memory.contains(&format!("{kind}: {count} registrations")));
+        }
         assert!(memory.contains("Allocator totals: unavailable"));
-        assert!(battle_runtime_stats(&scripts.world(), &config, gunner).is_err());
+        assert!(battle_runtime_stats(&scripts.world(), &config, player).is_err());
         assert!(
             scripts
-                .eval_callback::<mlua::Table>(&format!("return btech.runtime.stats({})", gunner.0))
+                .eval_callback::<mlua::Table>(&format!("return btech.runtime.stats({})", player.0))
                 .is_err()
         );
         assert_eq!(scripts.world().btech, before);

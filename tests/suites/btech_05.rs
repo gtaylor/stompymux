@@ -11,15 +11,6 @@ mod btech_c3_hardware;
 #[path = "../btech_clan_energy.rs"]
 mod btech_clan_energy;
 
-#[path = "../btech_gunner_contacts.rs"]
-mod btech_gunner_contacts;
-
-#[path = "../btech_gunner_targeting.rs"]
-mod btech_gunner_targeting;
-
-#[path = "../btech_gunner_tic.rs"]
-mod btech_gunner_tic;
-
 #[path = "../btech_jump_heading.rs"]
 mod btech_jump_heading;
 

@@ -1,4 +1,4 @@
-//! Detailed unit state, placement, relationship, movement-state, and station-status native bindings.
+//! Detailed unit state, placement, relationship, and movement-state native bindings.
 
 use super::*;
 
@@ -532,48 +532,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     native.set(
         "unit_status",
         error::wrap(lua, status, "btech.operation.failed")?,
-    )?;
-    let shared = world.clone();
-    let station_status = lua.create_function(
-        move |lua, (station, gunner, options): (i64, i64, Option<String>)| {
-            crate::lua::transactions::require(lua)?;
-            let world = shared.borrow();
-            crate::gunner_context(&world, ObjectId(station), ObjectId(gunner))
-                .map_err(mlua::Error::external)?;
-            crate::btech::status::for_operator(
-                &world,
-                ObjectId(station),
-                ObjectId(gunner),
-                options.as_deref().unwrap_or(""),
-                crate::btech::status::StatusRules::configured(&crate::lua::configuration(lua)),
-            )
-            .map_err(mlua::Error::external)
-        },
-    )?;
-    native.set(
-        "gunner_status",
-        error::wrap(lua, station_status, "btech.operation.failed")?,
-    )?;
-    let station_contacts = lua.create_function(
-        move |lua, (station, gunner, options): (i64, i64, Option<String>)| {
-            crate::lua::transactions::require(lua)?;
-            let scripts = crate::Scripts::services(lua)?;
-            crate::gunner_context(&scripts.world(), ObjectId(station), ObjectId(gunner))
-                .map_err(mlua::Error::external)?;
-            crate::lua::transactions::run(lua, &scripts.world, || {
-                crate::btech::contact_report::report(
-                    &scripts,
-                    ObjectId(station),
-                    ObjectId(gunner),
-                    options.as_deref().unwrap_or(""),
-                )
-                .map_err(mlua::Error::external)
-            })
-        },
-    )?;
-    native.set(
-        "gunner_contacts",
-        error::wrap(lua, station_contacts, "btech.operation.failed")?,
     )?;
     Ok(())
 }

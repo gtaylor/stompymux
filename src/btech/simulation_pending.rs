@@ -6,11 +6,6 @@ pub(crate) fn pending(world: &World, config: &Config, has_scanner_observers: boo
     super::autopilot::runtime::pending(world)
         || super::computer_runtime::pending(world, config)
         || super::sixth_sense::pending(world)
-        || world
-            .btech
-            .gunner_stations()
-            .values()
-            .any(|station| station.lock_remaining > 0)
         || world.btech.vehicles().values().any(|unit| {
             (unit.detached && unit.power() != crate::BattlePower::Off)
                 || unit.vtol_flight().is_some_and(|flight| {

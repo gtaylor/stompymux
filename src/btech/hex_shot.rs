@@ -78,8 +78,6 @@ fn resolve_hex_shot_inner(
 ) -> Result<BattleHexShotReport> {
     let operator = super::combat_operator::controlled(world, shooter, pilot)?;
     let vehicle = world.btech.vehicles().contains_key(&shooter);
-    let mut rules = rules;
-    rules.aim = operator.aim_rules(rules.aim);
     let object = world
         .objects
         .get(&shooter)
@@ -156,11 +154,10 @@ fn resolve_hex_shot_inner(
         operator.source,
         coordinate,
         weapon_index,
-        operator.gunnery(world, weapon_index, rules.extended_gunnery)?,
+        super::unit_gunnery_target(world, shooter, weapon_index, rules.extended_gunnery)?,
         rules.aim,
     )?;
     ensure!(aim.visible, "Target hex is not visible");
-    operator.check_point_arc(world, coordinate.center())?;
     if aim.mode == BattleHexTargetMode::UnitAtHex {
         ensure!(
             hex_occupant(world, shooter, coordinate)?.is_none(),

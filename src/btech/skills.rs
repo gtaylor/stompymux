@@ -126,7 +126,7 @@ pub fn gunnery_target(
 }
 
 /// Use the present connected pilot's skill, or the reference's default target six.
-/// This query does not establish authority to fire; station actions provide their own operator.
+/// This query does not establish authority to fire.
 pub fn unit_gunnery_target(
     world: &World,
     unit: ObjectId,

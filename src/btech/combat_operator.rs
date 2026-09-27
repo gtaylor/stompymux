@@ -1,6 +1,6 @@
 //! Explicit weapon-operator admission, independent of movement and cockpit ownership.
 use crate::{ObjectId, World};
-use anyhow::{Context, Result, ensure};
+use anyhow::{Result, ensure};
 
 /// The source of a control request.  A tactical autopilot is admitted through
 /// the same mechanical checks as a cockpit operator, but it has no character
@@ -15,10 +15,9 @@ pub(super) enum ControlActor {
 #[derive(Clone, Copy)]
 pub(super) struct CombatOperator {
     pub source: super::fire_target::TargetSource,
-    pub station: Option<super::BattleGunnerContext>,
 }
 
-/// Revalidate weapon authority at each mechanical boundary without substituting the parent pilot.
+/// Revalidate weapon authority at each mechanical boundary.
 pub(super) fn controlled(world: &World, unit: ObjectId, actor: ObjectId) -> Result<CombatOperator> {
     // Internal autopilot adapters use the controlled unit as their actor token.
     // A real cockpit occupant is always a distinct player object, so this
@@ -34,20 +33,6 @@ pub(super) fn controlled(world: &World, unit: ObjectId, actor: ObjectId) -> Resu
 
 fn controlled_by(world: &World, unit: ObjectId, actor: ControlActor) -> Result<CombatOperator> {
     if let ControlActor::Player(actor_id) = actor {
-        let location = world
-            .objects
-            .get(&actor_id)
-            .and_then(|object| object.location);
-        if let Some(station) = location.filter(|id| world.btech.gunner_stations().contains_key(id))
-        {
-            let context = super::gunner_context(world, station, actor_id)?;
-            ensure!(context.parent == unit, "Station does not control this unit");
-            super::power::control_health(world, actor_id)?;
-            return Ok(CombatOperator {
-                source: context.target_source(world)?,
-                station: Some(context),
-            });
-        }
         super::radio::controlled(world, unit, actor_id)?;
     } else {
         if world.btech.vehicles().contains_key(&unit) {
@@ -58,7 +43,6 @@ fn controlled_by(world: &World, unit: ObjectId, actor: ControlActor) -> Result<C
     }
     Ok(CombatOperator {
         source: unit.into(),
-        station: None,
     })
 }
 
@@ -75,14 +59,9 @@ pub(super) fn controlled_mech(
     controlled(world, unit, actor)
 }
 
-/// Resolve an owning cockpit or station without imposing operation-specific power or weapon gates.
+/// Resolve an owning cockpit without imposing operation-specific power or weapon gates.
 pub(super) fn for_owner(world: &World, owner: ObjectId, actor: ObjectId) -> Result<CombatOperator> {
-    let unit = if world.btech.gunner_stations().contains_key(&owner) {
-        super::gunner_context(world, owner, actor)?.parent
-    } else {
-        owner
-    };
-    controlled(world, unit, actor)
+    controlled(world, owner, actor)
 }
 
 /// Resolve the equipment owner and admit running controls without requiring permission to fire.
@@ -101,75 +80,4 @@ pub(super) fn admit(world: &World, owner: ObjectId, actor: ObjectId) -> Result<C
     let operator = admit_running(world, owner, actor)?;
     super::weapons_hold::check(world, operator.source.unit)?;
     Ok(operator)
-}
-
-impl CombatOperator {
-    /// Apply only this station's override; a cockpit retains the supplied ordinary policy.
-    pub fn aim_rules(self, mut rules: super::BattleAimRules) -> super::BattleAimRules {
-        if let Some(station) = self.station {
-            rules.override_weapon_arcs = station.arcs != 0;
-        }
-        rules
-    }
-
-    /// Share chassis/family skills while keeping the gunner distinct from the parent pilot.
-    pub fn gunnery(self, world: &World, index: usize, extended: bool) -> Result<i16> {
-        if let Some(station) = self.station {
-            return station.gunnery_target(world, index, extended);
-        }
-        super::unit_gunnery_target(world, self.source.unit, index, extended)
-    }
-
-    /// A nonzero station mask admits only its assigned hull/torso or turret directions.
-    /// Zero retains the ordinary mounting checks in the enclosing shot.
-    pub fn check_arc(self, world: &World, target: ObjectId) -> Result<()> {
-        if self.station.is_none_or(|station| station.arcs == 0) {
-            return Ok(());
-        }
-        let bearing = super::unit_range(world, self.source.unit, target)?
-            .bearing
-            .unwrap_or(180.0);
-        self.check_bearing(world, bearing)
-    }
-
-    /// Terrain and unit targets share the same directional ownership check.
-    pub fn check_point_arc(self, world: &World, target: super::BattlePoint) -> Result<()> {
-        if self.station.is_none_or(|station| station.arcs == 0) {
-            return Ok(());
-        }
-        let point = super::scanner::scanner_unit(world, self.source.unit)
-            .and_then(|unit| unit.point)
-            .context("Shooter is not placed")?;
-        self.check_bearing(world, point.bearing(target)?.unwrap_or(180.0))
-    }
-
-    /// Apply the assigned mask after geometry has supplied a continuous bearing.
-    fn check_bearing(self, world: &World, bearing: f64) -> Result<()> {
-        let station = self.station.context("Station is unavailable")?;
-        let source = super::scanner::scanner_unit(world, self.source.unit)
-            .context("Shooter is unavailable")?;
-        let heading = source.heading.context("Shooter is not placed")?;
-        let mut mask = match source.facing.contact_arc(heading, bearing)? {
-            super::BattleContactArc::Front => 1,
-            super::BattleContactArc::Left => 2,
-            super::BattleContactArc::Right => 4,
-            super::BattleContactArc::Rear => 8,
-        };
-        if let Some(turret) = world
-            .btech
-            .vehicles()
-            .get(&self.source.unit)
-            .and_then(|unit| unit.turret_heading())
-        {
-            let angle = (bearing.round() - turret.trunc()).rem_euclid(360.0);
-            if angle <= 30.0 || angle >= 330.0 {
-                mask |= 16;
-            }
-        }
-        ensure!(
-            station.arcs & mask != 0,
-            "You do not control that firing arc"
-        );
-        Ok(())
-    }
 }

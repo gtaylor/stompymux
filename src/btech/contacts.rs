@@ -92,8 +92,7 @@ pub fn update_contact(
 
 /// Commit an already computed perception. New targets are acquired at once, except hidden
 /// hostile units, which need a probe or a successful search; known targets are retained for
-/// as long as any channel still reaches them. Loss clears the observer's lock and any station
-/// selections on the target.
+/// as long as any channel still reaches them. Loss clears the observer's lock on the target.
 pub(super) fn apply_contact(
     world: &mut World,
     observer: ObjectId,
@@ -144,13 +143,6 @@ pub(super) fn apply_contact(
         (true, true) => BattleContactTransition::Retained,
         (true, false) => BattleContactTransition::Lost,
     };
-    if contact.is_none() {
-        for station in world.btech.gunner_stations.values_mut() {
-            if station.parent == observer && station.target == target {
-                station.set_target_selection(None);
-            }
-        }
-    }
     let contacts = if world.btech.vehicles().contains_key(&observer) {
         let unit = world
             .btech
@@ -214,13 +206,6 @@ pub(super) fn relocate_observations(world: &mut World, id: ObjectId) -> Vec<supe
 
 /// Share acquisition invalidation while allowing same-map edits to keep outgoing selections.
 fn invalidate_observations(state: &mut super::BtechState, id: ObjectId, preserve_selection: bool) {
-    for station in state.gunner_stations.values_mut() {
-        if (station.parent == id && !preserve_selection)
-            || (station.parent != id && station.target == id)
-        {
-            station.set_target_selection(None);
-        }
-    }
     for (observer, vehicle) in state.vehicles.iter_mut() {
         if *observer == id {
             vehicle.contacts.clear();

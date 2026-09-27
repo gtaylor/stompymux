@@ -32,13 +32,10 @@ const OWNED: &[(&str, &str)] = &[
     ("btech_mech_sections", "mech_dbref"),
     ("btech_mech_stagger_damage", "mech_dbref"),
     ("btech_mech_tics", "mech_dbref"),
-    ("btech_mech_turrets", "mech_dbref"),
     ("btech_mech_unit_aux", "mech_dbref"),
     ("btech_mechs", "dbref"),
     ("btech_player_configuration", "player_dbref"),
     ("btech_special_registrations", "dbref"),
-    ("btech_turret_tics", "turret_dbref"),
-    ("btech_turrets", "dbref"),
     ("btech_unit_configuration", "object_dbref"),
     ("btech_repair_events", "mech_dbref"),
     ("player_login_history", "player_dbref"),
@@ -91,7 +88,6 @@ pub(super) async fn cleanup(c: &mut SqliteConnection, purges: &BTreeSet<ObjectId
     super::btech_tows::purge(c, purges).await?;
     super::btech_wrecks::purge(c, purges).await?;
     super::btech_recovery::purge(c, purges).await?;
-    super::btech_gunner_stations::purge(c, purges).await?;
     super::btech_decorations::purge(c, purges).await?;
     super::btech_map_random::purge(c, purges).await?;
     super::btech_object_order::purge(c, purges).await?;
@@ -155,7 +151,6 @@ pub(super) async fn cleanup(c: &mut SqliteConnection, purges: &BTreeSet<ObjectId
             ("btech_map_links", "parent_dbref"),
             ("btech_map_objects", "object_dbref"),
             ("btech_mech_c3_nodes", "node_dbref"),
-            ("btech_mech_turrets", "turret_dbref"),
         ] {
             sqlx::query(sqlx::AssertSqlSafe(format!(
                 "DELETE FROM {table} WHERE {column}=?"
@@ -177,9 +172,6 @@ pub(super) async fn cleanup(c: &mut SqliteConnection, purges: &BTreeSet<ObjectId
             ("btech_mech_bays", "bay_dbref"),
             ("btech_mech_positions", "pilot"),
             ("btech_mech_stagger_damage", "attacker_dbref"),
-            ("btech_turrets", "parent"),
-            ("btech_turrets", "gunner"),
-            ("btech_turrets", "target"),
             ("btech_mech_runtime", "charge_target"),
             ("btech_mech_runtime", "dfa_target"),
             ("btech_mech_runtime", "target"),

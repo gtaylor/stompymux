@@ -114,8 +114,8 @@ are stored as their generator key, stream, block and word columns.
 
 Countdowns in those tables are stored as deadlines on the simulation clock
 (`btech_simulation_clock`) rather than as seconds remaining: artillery
-arrivals, computer and consciousness recovery, building repair, gunner lock
-settling, fire spread and burnout, smoke expiry and the reactor startup window.
+arrivals, computer and consciousness recovery, building repair, fire
+spread and burnout, smoke expiry and the reactor startup window.
 A timer counting down in step with the clock keeps the same deadline, so its row
 is written only when it starts, is rescheduled or finishes. Loading subtracts
 the saved clock to rebuild each countdown. The clock stops while the server is

@@ -10,7 +10,6 @@ pub enum BattleSpecialType {
     Debug,
     Map,
     Autopilot,
-    Turret,
 }
 
 /// Unit classes accepted by the reference's signed command masks.
@@ -122,7 +121,6 @@ mod tests {
             (BattleSpecialType::Debug, 9),
             (BattleSpecialType::Map, 26),
             (BattleSpecialType::Autopilot, 7),
-            (BattleSpecialType::Turret, 25),
         ] {
             assert_eq!(kind.commands().len(), count);
             let mut names = std::collections::BTreeSet::new();

@@ -322,8 +322,6 @@ async fn special_field_commands_scenario(f: &UnitFields) {
         .position()
         .unwrap()
         .map;
-    let station = world.create(&config, "Station".into(), Kind::Thing);
-    register_gunner_station(&mut world, ObjectId(1), station, unit, 0).unwrap();
     stop_battle_unit(
         &mut world,
         unit,
@@ -333,7 +331,6 @@ async fn special_field_commands_scenario(f: &UnitFields) {
     .unwrap();
     for (id, set, view, assignment) in [
         (map, "@setmap", "@viewmap", "mapname A field with spaces"),
-        (station, "@setturret", "@viewturret", "arcs 31"),
         (unit, "@setmech", "@viewmech", "team 7"),
     ] {
         let mut base = world.clone();

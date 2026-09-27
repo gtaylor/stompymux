@@ -79,12 +79,8 @@ The legacy AUTOPILOT registration role does not manage the new unit-attached
 controller; use the in-game `btech.autopilot` Lua API. Use the unit-creation
 commands above for supported constructed units.
 
-`@btech/register #44=TURRET` creates an unattached gunner station. Its parent and
-gunner fields initially contain zero; use the gunner field controls to configure
-it before operating parent equipment. `@btech/unregister #44` removes the station,
-its targeting timers and saved TIC words, preserving the object and occupants.
-Re-registering an existing TURRET does not reset it. Explicit unregister/register
-changes among DEBUG, MAP and TURRET can be committed in one save.
+Explicit unregister/register changes between DEBUG and MAP can be committed in
+one save.
 
 Supported Mechs, ground vehicles and VTOLs have movement and combat controls;
 see `help piloting` and `help flight`. Full gameplay parity remains under
@@ -741,8 +737,8 @@ input. Lua `btech.inventory.forms(actor)` returns the same ordered forms with
 part and brand IDs as detached data; it does not publish the text report.
 
 `eventstats` reports whether the one-second simulation currently has work,
-scanner-observer count, artillery shots in flight, and station locks settling.
-`memstats [long]` reports live map/unit/station counts, inline record sizes, and
+scanner-observer count, and artillery shots in flight.
+`memstats [long]` reports live map and unit counts, inline record sizes, and
 exact compact JSON state size. These sizes exclude heap allocation accounting;
 allocator totals are unavailable. `long` adds registration counts by type.
 Lua exposes the same detached measurements through `btech.runtime.stats(actor)`.
@@ -900,7 +896,7 @@ hardware bits, and VTOL remaining and original fuel capacity. Sensor damage uses
 the same range reductions as cockpit scans.
 
 `@viewspecial` and `@setspecial` select the same field service from your location:
-map, gunner station or physical unit. They accept the same arguments as the
+map or physical unit. They accept the same arguments as the
 corresponding type-specific field commands. All four commands require wizard
 permission and reject switches.
 
@@ -951,16 +947,12 @@ also accept an empty string, which remains empty after restart.
 identity is unknown. Friendly contacts do not count. The field reads saved
 observations without triggering a scan or consuming random state.
 
-Registered gunner stations receive their parent's cockpit notices through the
-shared unit message route. Private player reports remain private. Unavailable
-stations are skipped, and station relays do not recursively follow parent links.
-
 `@setmech turret0 <dbref>`, `turret1`, and `turret2` add explicit cockpit-notice
 destinations. Their initial value is -1. Positive references to available rooms
-or things receive notices alongside registered gunner stations. Duplicate and
-self-links do not add copies, and relaying is nonrecursive. Unresolved references
-remain saved and inspectable; assigning a destination does not change its
-station parent or grant control of weapons.
+or things receive the unit's cockpit notices. Private player reports remain
+private. Duplicate and self-links do not add copies, and relaying is nonrecursive.
+Unresolved references remain saved and inspectable; assigning a destination does
+not grant control of weapons.
 
 `@setmech displayname Silver Fox` sets the unit's presentation name, independently
 of `mechname` and `mechref`. Status and identified contacts use the override;

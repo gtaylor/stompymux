@@ -78,7 +78,7 @@ pub fn eta_action(
     scripts.atomic(|_| {
         let report = eta(&scripts.world(), unit, viewer, arguments)?;
         let source = super::brief::display_source(&scripts.world(), unit, viewer)?;
-        super::notify_unit_text(scripts, source.owner, &report.text)?;
+        super::notify_unit_text(scripts, source.unit, &report.text)?;
         Ok(report)
     })
 }

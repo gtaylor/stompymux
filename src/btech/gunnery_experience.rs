@@ -251,12 +251,8 @@ pub fn gunnery_experience_eligible(
         return false;
     }
     world.objects.get(&pilot).is_some_and(|object| {
-        let cockpit = object.location == Some(attacker) && source.pilot == Some(pilot);
-        let station = object.location.is_some_and(|location| {
-            super::gunner_context(world, location, pilot)
-                .is_ok_and(|context| context.parent == attacker)
-        });
-        (cockpit || station)
+        object.location == Some(attacker)
+            && source.pilot == Some(pilot)
             && object.flags.contains(Flag::Connected)
             && !object.flags.contains(Flag::Going)
     })

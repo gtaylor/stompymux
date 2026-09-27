@@ -1111,13 +1111,6 @@ pub use btech::{
     edit_weapon_settings as edit_battle_weapon_settings,
 };
 
-pub use btech::{
-    BattleGunnerAim, BattleGunnerContext, BattleGunnerStation, gunner_context,
-    gunner_station_action, register_gunner_station,
-};
-
-pub use btech::{set_gunner_field, view_gunner_fields};
-
 pub use btech::{BattleRuntimeStats, runtime_stats as battle_runtime_stats};
 
 pub use btech::set_team_action as set_battle_team_action;

@@ -123,16 +123,12 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         "unit_lock",
         error::wrap(lua, lock, "btech.operation.failed")?,
     )?;
-    for (name, station_only) in [("unit_lock_hex", false), ("gunner_lock_hex", true)] {
+    {
         let lock_hex = lua.create_function(
             move |lua, (unit, pilot, x, y, mode): (i64, i64, i32, i32, Option<String>)| {
                 crate::lua::transactions::require(lua)?;
                 let scripts = crate::Scripts::services(lua)?;
                 crate::lua::transactions::run(lua, &scripts.world, || {
-                    if station_only {
-                        crate::gunner_context(&scripts.world(), ObjectId(unit), ObjectId(pilot))
-                            .map_err(mlua::Error::external)?;
-                    }
                     let mode = mode
                         .as_deref()
                         .map(str::parse)
@@ -152,7 +148,10 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 })
             },
         )?;
-        native.set(name, error::wrap(lua, lock_hex, "btech.operation.failed")?)?;
+        native.set(
+            "unit_lock_hex",
+            error::wrap(lua, lock_hex, "btech.operation.failed")?,
+        )?;
     }
     Ok(())
 }

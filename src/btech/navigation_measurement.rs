@@ -20,7 +20,7 @@ pub(super) struct Segment {
     pub destination: Endpoint,
     pub prefix: String,
     pub map: ObjectId,
-    /// Physical observing unit, including when the request originates at a station.
+    /// Physical observing unit.
     pub observer: ObjectId,
 }
 

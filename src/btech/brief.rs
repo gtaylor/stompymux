@@ -215,31 +215,13 @@ pub(super) fn display_access(
     Ok(())
 }
 
-/// Read-only reports may use a registered station's selection with its parent's physical state.
+/// Read-only reports use the owning unit's selection and physical state.
 /// Ordinary cockpit occupants retain passenger access; this does not admit mutable display controls.
 pub(super) fn display_source(
     world: &World,
     owner: ObjectId,
     viewer: ObjectId,
 ) -> Result<super::fire_target::TargetSource> {
-    let station = if world.btech.gunner_stations().contains_key(&owner) {
-        Some(owner)
-    } else {
-        world
-            .objects
-            .get(&viewer)
-            .and_then(|player| player.location)
-            .filter(|id| world.btech.gunner_stations().contains_key(id))
-    };
-    if let Some(station) = station {
-        let context = super::gunner_context(world, station, viewer)?;
-        ensure!(
-            owner == station || owner == context.parent,
-            "Station does not control this unit"
-        );
-        super::power::control_health(world, viewer)?;
-        return context.target_source(world);
-    }
     display_access(world, owner, viewer, true)?;
     Ok(owner.into())
 }

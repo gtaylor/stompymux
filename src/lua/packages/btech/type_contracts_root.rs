@@ -1115,18 +1115,12 @@
 // lua-types-end
 
 // lua-types-begin btech 00246
-//|---@class btech.gunner
-//|local btech_gunner = {}
-// lua-types-end
-
-// lua-types-begin btech 00247
 //|---Wizard runtime diagnostics.
 //|local btech_runtime = {}
 // lua-types-end
 
-// lua-types-begin btech 00248
+// lua-types-begin btech 00247
 //|---@class BattleTechInspection
-//|---@field gunner btech.gunner Station registration, ownership and inspection.
 //|---@field database btech.database Explicit world checkpoints.
 //|---@field cargo table Cockpit stock reports and transfers.
 //|---@field inventory table Shared loose-parts stock.
@@ -1143,7 +1137,6 @@
 //|---@field tactical BtechTacticalAPI Filtered group observations and atomic intentions.
 //|---@field errors table Structured btech error-code tree from mux.error.code_tree('btech').
 //|btech = {
-//|  gunner = btech_gunner,
 //|  runtime = btech_runtime,
 //|  database = btech_database,
 //|  cargo = btech_cargo,
@@ -1157,7 +1150,7 @@
 //|}
 // lua-types-end
 
-// lua-types-begin btech 00253
+// lua-types-begin btech 00252
 //|---@class BattleAmmunitionAdjustment
 //|---@field location BattleCriticalLocation
 //|---@field supplied integer Authored initial quantity.
@@ -1165,7 +1158,7 @@
 //|---@field inferred_half_ton boolean Construction would infer a half-ton bin.
 // lua-types-end
 
-// lua-types-begin btech 00254
+// lua-types-begin btech 00253
 //|---@class BattleTemplateCheck
 //|---@field chassis "biped"|"quad"|nil Parsed anatomy, independent of simulation readiness.
 //|---@field name string
@@ -1177,7 +1170,7 @@
 //|---@field ammunition_adjustments BattleAmmunitionAdjustment[] Changes on successful construction.
 // lua-types-end
 
-// lua-types-begin btech 00256
+// lua-types-begin btech 00255
 //|---@class BattleArtemisController
 //|---@field location {section: BattleSectionName|BattleVehicleSectionName, slot: integer} Zero-based controller position.
 //|---@field link integer One-based template launcher slot; zero is unassigned.
@@ -1185,17 +1178,17 @@
 //|---@field operational boolean Controller is available under the unit’s equipment damage rules.
 // lua-types-end
 
-// lua-types-begin btech 00258
+// lua-types-begin btech 00257
 //|---@class BattleUnjam
 //|---@field weapon_index integer Zero-based weapon number.
 //|---@field remaining integer Committed seconds remaining, 1 through 60.
 // lua-types-end
 
-// lua-types-begin btech 00278
+// lua-types-begin btech 00277
 //|---@alias BattleEquipmentCondition 'empty'|'operational'|'damaged'|'disabled'|'broken'|'destroyed'|'jammed'|'shorted'|'ammo_jam'
 // lua-types-end
 
-// lua-types-begin btech 00279
+// lua-types-begin btech 00278
 //|---@class BattleWeaponDamageEffects
 //|---@field moderate integer General accuracy penalty.
 //|---@field ranging integer Accuracy penalty beyond short range.
@@ -1206,7 +1199,7 @@
 //|---@field feed_locked boolean Prevents changing ammunition modes.
 // lua-types-end
 
-// lua-types-begin btech 00280
+// lua-types-begin btech 00279
 //|---@class BattleWeaponDiagnostic
 //|---@field index integer Zero-based installed mount number, including destroyed mounts.
 //|---@field weapon string Catalogue weapon identifier (snake case).
@@ -1219,7 +1212,7 @@
 //|---@field preferred_ammunition_section string?
 // lua-types-end
 
-// lua-types-begin btech 00282
+// lua-types-begin btech 00281
 //|---@class BattleWeaponSpecification
 //|---@field weapon BattleWeapon Catalogue weapon identifier (snake case).
 //|---@field ammunition BattleAmmunitionMode MMLs have separate normal (SRM) and mml_lrm rows.
@@ -1233,7 +1226,7 @@
 //|---@field recycle_seconds integer Effective runtime value for new activations.
 // lua-types-end
 
-// lua-types-begin btech 00284
+// lua-types-begin btech 00283
 //|---@class BattleCriticalInspection
 //|---@field slot integer Zero-based physical slot; native labels add one.
 //|---@field equipment string Resolved display name, including configured manufacturer and bin mode.
@@ -1249,14 +1242,14 @@
 //|---@field controls_slot integer? Authored Artemis display label, already one-based.
 // lua-types-end
 
-// lua-types-begin btech 00285
+// lua-types-begin btech 00284
 //|---@class BattleCriticalReport
 //|---@field section string Stable Mech or vehicle section identity.
 //|---@field name string Chassis-specific display heading.
 //|---@field slots BattleCriticalInspection[] All six or twelve physical slots, including empty ones.
 // lua-types-end
 
-// lua-types-begin btech 00302
+// lua-types-begin btech 00301
 //|---@alias BattleElectronicMode "off"|"ecm"|"eccm"
 //|---@class BattleElectronicField
 //|---@field protected boolean
@@ -1270,7 +1263,7 @@
 //|---@field field BattleElectronicField
 // lua-types-end
 
-// lua-types-begin btech 00308
+// lua-types-begin btech 00307
 //|---@class BattlePodRow
 //|---@field section BattleSection|BattleVehicleSectionName
 //|---@field destroyed boolean
@@ -1287,7 +1280,7 @@
 //|---@field notices BattleNotice[]
 // lua-types-end
 
-// lua-types-begin btech 00312
+// lua-types-begin btech 00311
 //|---@class BattleSignatureTransition
 //|---@field enabled boolean
 //|---@field remaining integer
@@ -1296,14 +1289,14 @@
 //|---@field pending BattleSignatureTransition|nil
 // lua-types-end
 
-// lua-types-begin btech 00318
+// lua-types-begin btech 00317
 //|---@class BattleHexLock
 //|---@field hex {x: integer, y: integer}
 //|---@field mode 'unit_at_hex'|'hex'|'building'|'ignite'|'clear'
 //|---@field remaining integer Eight seconds to settle; zero is settled.
 // lua-types-end
 
-// lua-types-begin btech 00320
+// lua-types-begin btech 00319
 //|---@class BattleHexAimModifiers: BattleAimModifiers
 //|---@field hex {x: integer, y: integer}
 //|---@field mode 'unit_at_hex'|'hex'|'building'|'ignite'|'clear'
@@ -1312,7 +1305,7 @@
 //|---@field subtotal integer|nil Nil beyond weapon range; numeric aim alone does not authorize firing.
 // lua-types-end
 
-// lua-types-begin btech 00325
+// lua-types-begin btech 00324
 //|---@class BattleRadioReception
 //|---@field receiver integer
 //|---@field channel integer Zero-based receiving channel.
@@ -1321,13 +1314,13 @@
 //|---@field text string Formatted cockpit message.
 // lua-types-end
 
-// lua-types-begin btech 00326
+// lua-types-begin btech 00325
 //|---@class BattleChannelMessage
 //|---@field channel "debug"|"economy"|"attack_experience"|"experience"|"piloting_experience"|"frequencies"|"zero_frequencies"|"map_errors"
 //|---@field text string
 // lua-types-end
 
-// lua-types-begin btech 00327
+// lua-types-begin btech 00326
 //|---@class BattleRadioTransmission
 //|---@field delivery {mode: 'analog'|'digital', report: {sender: integer, map: integer, frequency: integer, receptions: BattleRadioReception[], interfered_receivers: integer[]?, scans: {receiver: integer, channel: integer, previous: integer, frequency: integer}[]?, notifications: BattleNotice[]?}}
 //|---@field mines table Ordered frequency-matched command-mine report and consequences.
@@ -1335,53 +1328,53 @@
 //|---@field experience_messages BattleChannelMessage[] Accepted communication XP diagnostics.
 // lua-types-end
 
-// lua-types-begin btech 00329
+// lua-types-begin btech 00328
 //|---@class BattleTargetedRadioReport
 //|---@field sender integer
 //|---@field target integer
 //|---@field notices {unit: integer, text: string}[] Captured sender echo and powered-recipient message.
 // lua-types-end
 
-// lua-types-begin btech 00333
+// lua-types-begin btech 00332
 //|---@class BattleBuildingScan
 //|---@field text string Cockpit reply; undiscovered and missing buildings share one message.
 //|---@field experience_messages BattleChannelMessage[] Accepted perception diagnostics.
 // lua-types-end
 
-// lua-types-begin btech 00335
+// lua-types-begin btech 00334
 //|---@class BattleMineScan
 //|---@field found boolean Successful recognition only; configuration is never disclosed.
 //|---@field text string
 //|---@field experience_messages BattleChannelMessage[]
 // lua-types-end
 
-// lua-types-begin btech 00336
+// lua-types-begin btech 00335
 //|---@class BattleHexScan
 //|---@field building BattleBuildingScan
 //|---@field mines BattleMineScan
 // lua-types-end
 
-// lua-types-begin btech 00338
+// lua-types-begin btech 00337
 //|---@class BattleSelectedScan
 //|---@field kind 'unit'|'building'|'hex'
 //|---@field report string|BattleBuildingScan|BattleHexScan
 // lua-types-end
 
-// lua-types-begin btech 00341
+// lua-types-begin btech 00340
 //|---@class BattleViewPosition
 //|---@field map integer Scanner battlefield dbref.
 //|---@field center {x: integer, y: integer} Requested center before viewport clipping.
 //|---@field maximum_range integer Damage-adjusted display hardware radius.
 // lua-types-end
 
-// lua-types-begin btech 00343
+// lua-types-begin btech 00342
 //|---@class BattleViewDimensions
 //|---@field tactical_width integer? Requested columns, 5..40; default 21.
 //|---@field tactical_height integer? Requested rows, 5..24; default 14.
 //|---@field long_range_height integer? Requested rows, 10..40; default 11.
 // lua-types-end
 
-// lua-types-begin btech 00344
+// lua-types-begin btech 00343
 //|---@class BattleViewport
 //|---@field map integer
 //|---@field requested_center {x: integer, y: integer}
@@ -1391,19 +1384,19 @@
 //|---@field maximum_range integer
 // lua-types-end
 
-// lua-types-begin btech 00346
+// lua-types-begin btech 00345
 //|---@class BattleLongRangeMap
 //|---@field viewport BattleViewport
 //|---@field text string Filtered staggered-row display.
 // lua-types-end
 
-// lua-types-begin btech 00348
+// lua-types-begin btech 00347
 //|---@class BattleTacticalMap
 //|---@field viewport BattleViewport
 //|---@field text string Styled hex display with acquired two-character contact labels.
 // lua-types-end
 
-// lua-types-begin btech 00350
+// lua-types-begin btech 00349
 //|---@class BattleHexCenterReport
 //|---@field coordinate BattleHexCoordinate
 //|---@field elevation integer
@@ -1412,17 +1405,17 @@
 //|---@field text string Shared native readout.
 // lua-types-end
 
-// lua-types-begin btech 00352
+// lua-types-begin btech 00351
 //|---@class BattleNavigationReport
 //|---@field center BattleHexCoordinate Requested local map center.
 //|---@field text string Styled local map, continuous-position plot and live readouts.
 // lua-types-end
 
-// lua-types-begin btech 00355
+// lua-types-begin btech 00354
 //|---@alias BattleBuildingContactMode "follow_brief" | "include" | "exclude"
 // lua-types-end
 
-// lua-types-begin btech 00356
+// lua-types-begin btech 00355
 //|---@class BattleContactPreferences
 //|---@field include_dead boolean Defaults false.
 //|---@field include_shutdown boolean Defaults true.
@@ -1432,14 +1425,14 @@
 //|---@field buildings BattleBuildingContactMode Defaults "exclude"; applies to native contacts +, independently of unit filtering.
 // lua-types-end
 
-// lua-types-begin btech 00358
+// lua-types-begin btech 00357
 //|---@class BattleContactOptions
 //|---@field buildings boolean Include building contacts for native output.
 //|---@field preferences BattleContactPreferences Decoded unit categories.
 //|---@field ignored string[] Unrecognized characters in encounter order.
 // lua-types-end
 
-// lua-types-begin btech 00360
+// lua-types-begin btech 00359
 //|---@class BattleBuildingContact
 //|---@field detection BattleDetectionChannel|nil Whether the sensor band or sight reaches the entrance.
 //|---@field short_text string Plain compact row after identification locks.
@@ -1457,20 +1450,20 @@
 //|---@field status string Blank, x (restricted), X (safe/restricted command center), or C (command center).
 // lua-types-end
 
-// lua-types-begin btech 00362
+// lua-types-begin btech 00361
 //|---@class BattleBriefSettings
 //|---@field contacts integer Contact mode 0..3; defaults 1.
 //|---@field automatic integer Routine notice mode 0..6; defaults 0.
 // lua-types-end
 
-// lua-types-begin btech 00363
+// lua-types-begin btech 00362
 //|---@class BattleBriefReport
 //|---@field settings BattleBriefSettings
 //|---@field changed boolean An edit was requested; query is false.
 //|---@field text string Query or cockpit confirmation.
 // lua-types-end
 
-// lua-types-begin btech 00367
+// lua-types-begin btech 00366
 //|---@class BattleBootleggerReport
 //|---@field modifier integer Situational difficulty and failed-fall severity.
 //|---@field check BattlePilotingCheck
@@ -1478,7 +1471,7 @@
 //|---@field notices BattleNotice[]
 // lua-types-end
 
-// lua-types-begin btech 00369
+// lua-types-begin btech 00368
 //|---@class BattleEtaReport
 //|---@field coordinate BattleHexCoordinate
 //|---@field range number Horizontal range.
@@ -1486,7 +1479,7 @@
 //|---@field text string
 // lua-types-end
 
-// lua-types-begin btech 00371
+// lua-types-begin btech 00370
 //|---@class BattleBearingReport
 //|---@field origin BattlePoint
 //|---@field destination BattlePoint
@@ -1494,14 +1487,14 @@
 //|---@field text string
 // lua-types-end
 
-// lua-types-begin btech 00373
+// lua-types-begin btech 00372
 //|---@class BattleRangeReport
 //|---@field horizontal number Horizontal distance in hexes.
 //|---@field spatial number Spatial distance after dark-map terrain masking.
 //|---@field text string
 // lua-types-end
 
-// lua-types-begin btech 00375
+// lua-types-begin btech 00374
 //|---@class BattleVectorReport
 //|---@field horizontal number
 //|---@field spatial number
@@ -1510,7 +1503,7 @@
 //|---@field text string
 // lua-types-end
 
-// lua-types-begin btech 00378
+// lua-types-begin btech 00377
 //|---@class BattleBoosterState
 //|---@field enabled boolean
 //|---@field counter integer
@@ -1518,7 +1511,7 @@
 //|---@field failed boolean Hardware failure persists through shutdown.
 // lua-types-end
 
-// lua-types-begin btech 00383
+// lua-types-begin btech 00382
 //|---@class BattleNetworkStatusRow
 //|---@field unit integer
 //|---@field label string
@@ -1533,7 +1526,7 @@
 //|---@field internal_percent integer
 // lua-types-end
 
-// lua-types-begin btech 00385
+// lua-types-begin btech 00384
 //|---@class BattleNetworkTargetRow
 //|---@field unit integer
 //|---@field label string
@@ -1554,7 +1547,7 @@
 //|---@field selected boolean
 // lua-types-end
 
-// lua-types-begin btech 00409
+// lua-types-begin btech 00408
 //|---@class BattleSwarmHop
 //|---@field target integer
 //|---@field incoming integer
@@ -1563,7 +1556,7 @@
 //|---@field salvo {kind: 'mech'|'vehicle', report: table}|nil Absent for a secondary miss.
 // lua-types-end
 
-// lua-types-begin btech 00410
+// lua-types-begin btech 00409
 //|---@class BattleSwarmReport
 //|---@field launched integer
 //|---@field remaining integer
@@ -1573,35 +1566,33 @@
 //|---@field broadcasts BattleNotice[]
 // lua-types-end
 
-// lua-types-begin btech 00414
+// lua-types-begin btech 00413
 //|---@class BattleWeaponDamage
 //|---@field location {section: BattleSectionName, slot: integer}
 //|---@field effects ("moderate"|"focus"|"crystal"|"ranging"|"barrel"|"feed")[] Distinct component effects; empty means superficial damage.
 // lua-types-end
 
-// lua-types-begin btech 00449
+// lua-types-begin btech 00419
 //|---@class BattleRuntimeStats
 //|---@field simulation_pending boolean Same work predicate as the server's one-second simulation tick.
 //|---@field scanner_observers integer
 //|---@field reactor_startup_remaining integer
 //|---@field artillery_shots integer
-//|---@field station_locks integer
 //|---@field maps integer
 //|---@field mechs integer
 //|---@field vehicles integer
-//|---@field stations integer
 //|---@field registration_kinds table<string, integer>
-//|---@field inline_record_bytes integer Root/map/unit/station inline sizes only; heap storage excluded.
+//|---@field inline_record_bytes integer Root/map/unit inline sizes only; heap storage excluded.
 //|---@field encoded_state_bytes integer Exact compact JSON encoding size, not allocator usage.
 // lua-types-end
 
-// lua-types-begin btech 00452
+// lua-types-begin btech 00422
 //|---@class BattleUnitField
 //|---@field name string Full field name, independent of display width.
 //|---@field value string|nil Available field value; nil displays as n/a.
 // lua-types-end
 
-// lua-types-begin btech 00453
+// lua-types-begin btech 00423
 //|---@class BattleUnitFieldReport
 //|---@field unit integer
 //|---@field columns integer
@@ -1609,11 +1600,11 @@
 //|---@field text string Literal report text, already published to the actor.
 // lua-types-end
 
-// lua-types-begin btech 00456
+// lua-types-begin btech 00426
 //|-- C-parity contract surface shared by several groups below.
 // lua-types-end
 
-// lua-types-begin btech 00457
+// lua-types-begin btech 00427
 //|---Typed unit-layout section constant from btech.unit.sections.
 //|---@class BattleSection
 //|---Typed unit class constant from btech.unit.types.
@@ -1634,13 +1625,13 @@
 //|---@class BattleLightLevel
 // lua-types-end
 
-// lua-types-begin btech 00458
+// lua-types-begin btech 00428
 //|---@class BattleValuePair
 //|---@field current integer
 //|---@field original integer
 // lua-types-end
 
-// lua-types-begin btech 00459
+// lua-types-begin btech 00429
 //|---@class BattleArmorStatus
 //|---@field section? BattleSection Omitted when the request did not select one.
 //|---@field armor BattleValuePair
@@ -1648,13 +1639,13 @@
 //|---@field rear_armor BattleValuePair
 // lua-types-end
 
-// lua-types-begin btech 00460
+// lua-types-begin btech 00430
 //|---@class BattleAmmunitionStatus
 //|---@field rounds integer
 //|---@field capacity integer
 // lua-types-end
 
-// lua-types-begin btech 00461
+// lua-types-begin btech 00431
 //|---@class BattleWeaponStats
 //|---@field kind string
 //|---@field heat integer
@@ -1669,7 +1660,7 @@
 //|---@field battle_value integer
 // lua-types-end
 
-// lua-types-begin btech 00462
+// lua-types-begin btech 00432
 //|---@class BattlePartDefinition
 //|---@field id integer Stable catalogue part identifier.
 //|---@field brand integer Manufacturer identifier.
@@ -1683,23 +1674,23 @@
 //|---@field weapon? BattleWeaponStats Present for weapon parts.
 // lua-types-end
 
-// lua-types-begin btech 00463
+// lua-types-begin btech 00433
 //|---@alias BattlePartRef BattlePartDefinition|integer|string
 // lua-types-end
 
-// lua-types-begin btech 00464
+// lua-types-begin btech 00434
 //|---@class BattlePartStack
 //|---@field part BattlePartDefinition
 //|---@field quantity integer
 // lua-types-end
 
-// lua-types-begin btech 00465
+// lua-types-begin btech 00435
 //|---@class BattlePartCategory
 //|---@field code string
 //|---@field name string
 // lua-types-end
 
-// lua-types-begin btech 00466
+// lua-types-begin btech 00436
 //|---@class BattleCriticalSlot
 //|---@field section BattleSection
 //|---@field slot integer
@@ -1713,7 +1704,7 @@
 //|---@field ammunition_modes BattleAmmunitionModeConstant[]
 // lua-types-end
 
-// lua-types-begin btech 00467
+// lua-types-begin btech 00437
 //|---@class BattleMountedWeapon
 //|---@field number integer Zero-based stable weapon number.
 //|---@field section BattleSection
@@ -1725,13 +1716,13 @@
 //|---@field operational boolean
 // lua-types-end
 
-// lua-types-begin btech 00468
+// lua-types-begin btech 00438
 //|---@class BattleEngine
 //|---@field rating integer
 //|---@field suspension_factor integer
 // lua-types-end
 
-// lua-types-begin btech 00469
+// lua-types-begin btech 00439
 //|---@class BattleRadioChannelReport
 //|---@field channel integer One-based channel position.
 //|---@field frequency integer Frequency from 0 through 999999.
@@ -1739,14 +1730,14 @@
 //|---@field modes string[] Active mode names: digital, mute, relay, information, scan.
 // lua-types-end
 
-// lua-types-begin btech 00470
+// lua-types-begin btech 00440
 //|---@class BattleBattleValue
 //|---@field total number
 //|---@field offensive number
 //|---@field defensive number
 // lua-types-end
 
-// lua-types-begin btech 00471
+// lua-types-begin btech 00441
 //|---@class BattleTechnology
 //|---@field code BattleTechnologyCode
 //|---@field name string
@@ -1754,11 +1745,11 @@
 //|---@field source "configured"|"inferred"
 // lua-types-end
 
-// lua-types-begin btech 00472
+// lua-types-begin btech 00442
 //|-- C-parity character value and progress contracts.
 // lua-types-end
 
-// lua-types-begin btech 00473
+// lua-types-begin btech 00443
 //|---@class BattleCharacterValueDefinition
 //|---@field code integer
 //|---@field name string
@@ -1766,7 +1757,7 @@
 //|---@field default_experience_threshold integer
 // lua-types-end
 
-// lua-types-begin btech 00474
+// lua-types-begin btech 00444
 //|---@class BattleCharacterValueReport
 //|---@field definition BattleCharacterValueDefinition
 //|---@field amount integer
@@ -1775,11 +1766,11 @@
 //|---@field experience_to_next_level? integer
 // lua-types-end
 
-// lua-types-begin btech 00482
+// lua-types-begin btech 00452
 //|-- C-parity personal-combat and player-preference contracts.
 // lua-types-end
 
-// lua-types-begin btech 00483
+// lua-types-begin btech 00453
 //|---@class BattlePersonalCombatArmor
 //|---@field head integer
 //|---@field torso integer
@@ -1787,20 +1778,20 @@
 //|---@field feet integer
 // lua-types-end
 
-// lua-types-begin btech 00484
+// lua-types-begin btech 00454
 //|---@class BattlePersonalCombatEquipment
 //|---@field weapon BattlePartDefinition
 //|---@field ammunition? integer
 // lua-types-end
 
-// lua-types-begin btech 00485
+// lua-types-begin btech 00455
 //|---@class BattlePersonalCombatLoadout
 //|---@field armor BattlePersonalCombatArmor
 //|---@field right? BattlePersonalCombatEquipment
 //|---@field left? BattlePersonalCombatEquipment
 // lua-types-end
 
-// lua-types-begin btech 00486
+// lua-types-begin btech 00456
 //|---@class BattleUiPreferencesState
 //|---@field tactical_height integer
 //|---@field tactical_width integer
@@ -1814,15 +1805,15 @@
 //|---@field configured boolean
 // lua-types-end
 
-// lua-types-begin btech 00493
+// lua-types-begin btech 00463
 //|-- C-parity template inspection contracts.
 // lua-types-end
 
-// lua-types-begin btech 00507
+// lua-types-begin btech 00477
 //|-- C-parity unit inspection and administration contracts.
 // lua-types-end
 
-// lua-types-begin btech 00529
+// lua-types-begin btech 00499
 //|---@class BattleWeaponInstall
 //|---@field part BattlePartRef Weapon part reference.
 //|---@field section BattleSection
@@ -1832,7 +1823,7 @@
 //|---@field one_shot? boolean
 // lua-types-end
 
-// lua-types-begin btech 00530
+// lua-types-begin btech 00500
 //|---@class BattleAmmunitionConfiguration
 //|---@field weapon BattlePartRef Launcher part reference.
 //|---@field section BattleSection
@@ -1841,13 +1832,13 @@
 //|---@field ammunition_modes? BattleAmmunitionModeConstant[]
 // lua-types-end
 
-// lua-types-begin btech 00531
+// lua-types-begin btech 00501
 //|---@class BattleWeaponModes
 //|---@field fire_modes? BattleFireModeConstant[]
 //|---@field ammunition_modes? BattleAmmunitionModeConstant[]
 // lua-types-end
 
-// lua-types-begin btech 00532
+// lua-types-begin btech 00502
 //|---@class BattleSpecialInstall
 //|---@field part? BattlePartRef Omit to empty the slot.
 //|---@field section BattleSection
@@ -1855,23 +1846,23 @@
 //|---@field auxiliary_data? integer
 // lua-types-end
 
-// lua-types-begin btech 00555
+// lua-types-begin btech 00525
 //|-- C-parity part catalogue contracts.
 // lua-types-end
 
-// lua-types-begin btech 00556
+// lua-types-begin btech 00526
 //|local btech_parts = {}
 // lua-types-end
 
-// lua-types-begin btech 00565
+// lua-types-begin btech 00535
 //|-- C-parity repair contracts.
 // lua-types-end
 
-// lua-types-begin btech 00566
+// lua-types-begin btech 00536
 //|local btech_repair = {}
 // lua-types-end
 
-// lua-types-begin btech 00567
+// lua-types-begin btech 00537
 //|---@class BattleRepairArmorRequest
 //|---@field operation BattleRepairOperation
 //|---@field section BattleSection
@@ -1893,23 +1884,23 @@
 //|---@field section BattleSection
 // lua-types-end
 
-// lua-types-begin btech 00568
+// lua-types-begin btech 00538
 //|---@alias BattleImmediateRepair BattleRepairArmorRequest|BattleRepairInternalRequest|BattleRepairRearArmorRequest|BattleRepairPartRequest|BattleRepairReattachRequest
 // lua-types-end
 
-// lua-types-begin btech 00572
+// lua-types-begin btech 00542
 //|-- C-parity world telemetry contracts.
 // lua-types-end
 
-// lua-types-begin btech 00573
+// lua-types-begin btech 00543
 //|local btech_system = {}
 // lua-types-end
 
-// lua-types-begin btech 00576
+// lua-types-begin btech 00546
 //|-- Typed autopilot constants and unit-attached controller operations.
 // lua-types-end
 
-// lua-types-begin btech 00577
+// lua-types-begin btech 00547
 //|---@class BattleAutopilotOrderName
 //|---@class BattleAutopilotSubmissionMode
 //|---@class BattleAutopilotFireMode
@@ -2055,18 +2046,18 @@
 //|---@field feedback fun(unit: integer, after_sequence?: integer): BattleAutopilotFeedbackPage
 // lua-types-end
 
-// lua-types-begin btech 00578
+// lua-types-begin btech 00548
 //|local btech_autopilot = {} ---@type BtechAutopilotAPI
 // lua-types-end
 
-// lua-types-begin btech 00579
+// lua-types-begin btech 00549
 //|btech.parts = btech_parts
 //|btech.repair = btech_repair
 //|btech.system = btech_system
 //|btech.autopilot = btech_autopilot
 // lua-types-end
 
-// lua-types-begin btech 00580
+// lua-types-begin btech 00550
 //|---@class BattleTacticalUnitSnapshot
 //|---@field unit integer Assigned friendly unit ID.
 //|---@field revision integer Management revision used for stale-intention protection.
@@ -2112,6 +2103,6 @@
 //|btech.tactical = btech_tactical
 // lua-types-end
 
-// lua-types-begin btech 00581
+// lua-types-begin btech 00551
 //|return btech
 // lua-types-end

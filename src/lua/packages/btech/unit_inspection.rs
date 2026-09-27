@@ -1,4 +1,4 @@
-//! Unit weapon, diagnostic, critical, aiming, and gunner inspection native bindings.
+//! Unit weapon, diagnostic, critical, and aiming inspection native bindings.
 
 use super::*;
 
@@ -101,43 +101,5 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         "unit_target",
         error::wrap(lua, target, "btech.operation.failed")?,
     )?;
-    // Station facade guards reuse installed display bindings and preserve their argument grammar.
-    for method in [
-        "bearing",
-        "range_report",
-        "vector",
-        "eta",
-        "findcenter",
-        "tactical",
-        "lrsmap",
-        "navigate",
-        "scan",
-        "report",
-        "scan_hex",
-        "scan_building",
-        "scan_terrain",
-        "scan_selected",
-    ] {
-        let measure: mlua::Function = native.get(format!("unit_{method}"))?;
-        let shared = world.clone();
-        let station_measure = lua.create_function(move |lua, arguments: mlua::MultiValue| {
-            crate::lua::transactions::require(lua)?;
-            let station = <i64 as mlua::FromLua>::from_lua(
-                arguments.front().cloned().unwrap_or(Value::Nil),
-                lua,
-            )?;
-            let gunner = <i64 as mlua::FromLua>::from_lua(
-                arguments.get(1).cloned().unwrap_or(Value::Nil),
-                lua,
-            )?;
-            crate::gunner_context(&shared.borrow(), ObjectId(station), ObjectId(gunner))
-                .map_err(mlua::Error::external)?;
-            measure.call::<Value>(arguments)
-        })?;
-        native.set(
-            format!("gunner_{method}"),
-            error::wrap(lua, station_measure, "btech.operation.failed")?,
-        )?;
-    }
     Ok(())
 }

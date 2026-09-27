@@ -113,13 +113,9 @@ pub fn building_contacts(
     })
 }
 
-/// Revalidate the original operator and physical parent after identification callbacks.
+/// Revalidate the original operator after identification callbacks.
 fn admission(world: &World, source: TargetSource, pilot: ObjectId) -> Result<ObjectId> {
-    let current = super::brief::display_source(world, source.owner, pilot)?;
-    ensure!(
-        current.owner == source.owner && current.unit == source.unit,
-        "Station ownership changed during identification"
-    );
+    super::brief::display_source(world, source.unit, pilot)?;
     let observer = source.unit;
     let unit = super::scanner::scanner_unit(world, observer).context("Scanner is unavailable")?;
     ensure!(

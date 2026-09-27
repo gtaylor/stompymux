@@ -324,7 +324,7 @@ fn display_id(world: &World, id: ObjectId) -> String {
     )
 }
 
-/// Preserve station-specific selections and visibility when showing a target.
+/// Show the source's selected target and its visibility.
 fn targeting(
     lines: &mut Vec<String>,
     world: &World,
@@ -381,7 +381,7 @@ fn targeting(
                     false
                 };
                 let arc = if turret { "Turret" } else { arc };
-                let aim = btech::aimed_target::aimed_section(world, source.owner)?
+                let aim = btech::aimed_target::aimed_section(world, source.unit)?
                     .filter(|a| a.matches(world, lock.target));
                 let location = match aim {
                     Some(BattleAimSelection::Mech(s)) => s.name().replace('_', " "),

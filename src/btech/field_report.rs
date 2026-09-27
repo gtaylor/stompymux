@@ -1,4 +1,4 @@
-//! Shared wizard field-list layout and prefix filtering for maps and weapon stations.
+//! Shared wizard field-list layout and prefix filtering for maps and units.
 
 /// Decode the common one/two/four-column selector and case-insensitive field prefix.
 pub(super) fn options(arguments: &str) -> (usize, String) {
