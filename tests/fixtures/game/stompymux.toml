@@ -16,6 +16,8 @@ include = ["aliases.toml"]
 # -----------------------------------------------
 
 [database]
+# Tests observe each heartbeat through the database, so the clock is saved every second.
+clock_save_interval = 1
 # SQLite database file holding persistent game state.
 game_database = "data/stompymux.db"
 # Deprecated compatibility setting; ignored. game_database is the live database.

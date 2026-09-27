@@ -253,7 +253,7 @@ async fn server_failure_and_recovery_queue_commit_together() {
         persistence::save(&config.database(), &world).await.unwrap();
         let before = world.btech.vehicles()[&unit].clone();
         let mut sql = SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
-        sqlx::query("CREATE TRIGGER deny_computer BEFORE UPDATE ON btech_turn_clock BEGIN SELECT RAISE(ABORT,'computer save failure'); END").execute(&mut sql).await.unwrap();
+        sqlx::query("CREATE TRIGGER deny_computer BEFORE UPDATE ON btech_simulation_clock BEGIN SELECT RAISE(ABORT,'computer save failure'); END").execute(&mut sql).await.unwrap();
         let (addr, shutdown, task, _) = support::start(&config, Rc::new(Cell::new(1))).await;
         let mut client = support::Client { socket: tokio::net::TcpStream::connect(addr).await.unwrap(), pending: Vec::new() };
         client.until("Who are you? ").await;

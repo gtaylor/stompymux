@@ -86,3 +86,6 @@ mod btech_vtol_critical;
 
 #[path = "../btech_woods_damage.rs"]
 mod btech_woods_damage;
+
+#[path = "../btech_writes.rs"]
+mod btech_writes;

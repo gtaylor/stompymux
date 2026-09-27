@@ -284,6 +284,7 @@ async fn invoke(
                 c.database.busy_timeout_ms,
                 s.effects.maintenance(),
                 None,
+                c.database.clock_save_interval,
             )
             .await?;
         }

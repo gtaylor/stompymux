@@ -524,9 +524,16 @@ async fn save_objects(
     Ok(changed)
 }
 /// Apply a supported projection delta to an already-open write transaction, reporting
-/// whether any row changed.
-pub(super) async fn apply(c: &mut SqliteConnection, before: &World, after: &World) -> Result<bool> {
-    apply_changes(c, before, after, None).await
+/// whether any row changed. The simulation clock is written alongside other changes,
+/// or alone once it is `clock_interval` seconds ahead of the stored clock (never when
+/// zero).
+pub(super) async fn apply(
+    c: &mut SqliteConnection,
+    before: &World,
+    after: &World,
+    clock_interval: u64,
+) -> Result<bool> {
+    apply_changes(c, before, after, None, clock_interval).await
 }
 /// Explicit maintenance writes may repair lists and remove only approved accounts.
 pub(super) async fn apply_changes(
@@ -534,6 +541,7 @@ pub(super) async fn apply_changes(
     before: &World,
     after: &World,
     maintenance: Option<&crate::dbck::RepairPlan>,
+    clock_interval: u64,
 ) -> Result<bool> {
     super::btech::validate_changes(before, after, maintenance.map(|plan| &plan.purges))?;
     ensure!(
@@ -636,6 +644,8 @@ pub(super) async fn apply_changes(
     changed |= super::communication::save(c, before, after).await?;
     changed |= super::macros::save(c, before, after).await?;
     changed |= super::btech::save(c, before, after).await?;
+    // The simulation clock goes last, since it is written alongside any other change.
+    changed |= super::btech_turn_clock::save(c, after, changed, clock_interval).await?;
     let next = after
         .next_id
         .max(before.next_id)

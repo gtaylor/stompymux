@@ -24,6 +24,10 @@ pub struct DatabaseConfig {
     pub legacy_game_database: PathBuf,
     /// Configuration value for `busy_timeout_ms`; defaults are centralized below.
     pub busy_timeout_ms: u64,
+    /// Most seconds the stored simulation clock may trail the running one. A heartbeat
+    /// that changes nothing else stores the clock once this many seconds have passed;
+    /// zero stores it only alongside other changes. Bounds the idle time a crash loses.
+    pub clock_save_interval: u64,
     /// Configuration value for `bootstrap`; defaults are centralized below.
     pub bootstrap: BootstrapConfig,
 }
@@ -39,6 +43,7 @@ impl Default for DatabaseConfig {
             postdump_message: "".into(),
             legacy_game_database: PathBuf::from("data/stompymux.db"),
             busy_timeout_ms: 5000,
+            clock_save_interval: 60,
             bootstrap: Default::default(),
         }
     }

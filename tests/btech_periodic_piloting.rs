@@ -370,7 +370,7 @@ async fn server_clock_and_fall_retry_are_one_transaction() {
         persistence::save(&config.database(),&world).await.unwrap();
         let before = world.btech.constructed_units()[&unit].clone();
         let mut sql = SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database()).foreign_keys(false)).await.unwrap();
-        sqlx::query("CREATE TRIGGER deny_phase BEFORE UPDATE ON btech_turn_clock BEGIN SELECT RAISE(ABORT,'phase failure'); END").execute(&mut sql).await.unwrap();
+        sqlx::query("CREATE TRIGGER deny_phase BEFORE UPDATE ON btech_simulation_clock BEGIN SELECT RAISE(ABORT,'phase failure'); END").execute(&mut sql).await.unwrap();
         let (addr,shutdown,task,_) = support::start(&config,Rc::new(Cell::new(1))).await;
         let mut client = support::Client {socket:tokio::net::TcpStream::connect(addr).await.unwrap(),pending:Vec::new()};
         client.until("Who are you? ").await; client.send("#1").await; client.until("Password: ").await; client.send("secret").await; client.until("Sighter").await;
@@ -483,55 +483,70 @@ async fn gravity_success_and_disabled_special_rules_preserve_material() {
     }
 }
 
-/// Idle ticks commit the global clock atomically, wrap at thirty, and resume without offline catch-up.
+/// Idle ticks advance the clock without writing, a clean shutdown stores it, the phase
+/// wraps at thirty, and a restart resumes without offline catch-up.
 #[tokio::test(flavor = "current_thread")]
-async fn idle_clock_wraps_retries_and_resumes_from_saved_phase() {
+async fn idle_clock_wraps_is_stored_at_shutdown_and_resumes_from_saved_phase() {
     use sqlx::{Connection, SqliteConnection};
     use std::{cell::Cell, rc::Rc, time::Duration};
-    tokio::task::LocalSet::new().run_until(async {
-        let (_dir, config, mut world) = support::isolated_world().await;
-        assert!(world.btech.constructed_units().is_empty());
-        assert!(world.btech.vehicles().is_empty());
-        // Expire the separate startup grace so the host takes its otherwise-idle branch.
-        for _ in 0..31 { advance_battle_reactor_windows(&mut world); }
-        assert!(!battle_reactor_windows_pending(&world));
-        phase(&mut world, 29);
-        persistence::save(&config.database(), &world).await.unwrap();
-        let mut sql = SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
-        sqlx::query("CREATE TRIGGER deny_idle_phase BEFORE UPDATE ON btech_turn_clock BEGIN SELECT RAISE(ABORT,'idle phase failure'); END").execute(&mut sql).await.unwrap();
-        let (_, shutdown, task, _) = support::start(&config, Rc::new(Cell::new(1))).await;
-        tokio::time::sleep(Duration::from_millis(1200)).await;
-        assert_eq!(persistence::load(&config.database()).await.unwrap().btech, world.btech);
-        sqlx::query("DROP TRIGGER deny_idle_phase").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(Duration::from_secs(5), async {
-            loop {
-                let saved = persistence::load(&config.database()).await.unwrap();
-                if serde_json::to_value(&saved.btech).unwrap()["turn_clock"] == 0 { break; }
-                tokio::time::sleep(Duration::from_millis(25)).await;
+    tokio::task::LocalSet::new()
+        .run_until(async {
+            let (dir, _, mut world) = support::isolated_world().await;
+            // The shipped default; the test fixture saves the clock every second.
+            let config = support::with_clock_save_interval(dir.path(), 60);
+            assert!(world.btech.constructed_units().is_empty());
+            assert!(world.btech.vehicles().is_empty());
+            // Expire the separate startup grace so the host takes its otherwise-idle branch.
+            for _ in 0..31 {
+                advance_battle_reactor_windows(&mut world);
             }
-        }).await.unwrap();
-        shutdown.send(ShutdownRequest::Sigterm).unwrap(); task.await.unwrap().unwrap();
-        phase(&mut world, 0);
-        let mut expected = serde_json::to_value(&world.btech).unwrap();
-        expected["simulation_seconds"] = 1.into();
-        world.btech = serde_json::from_value(expected).unwrap();
-        assert_eq!(persistence::load(&config.database()).await.unwrap().btech, world.btech);
-        // A large wall-clock change must not simulate thousands of offline turns.
-        let (_, shutdown, task, _) = support::start(&config, Rc::new(Cell::new(900_000))).await;
-        tokio::time::timeout(Duration::from_secs(5), async {
-            loop {
-                let saved = persistence::load(&config.database()).await.unwrap();
-                let tick = serde_json::to_value(&saved.btech).unwrap()["turn_clock"].as_u64().unwrap();
-                assert!(tick <= 1);
-                if tick == 1 { break; }
-                tokio::time::sleep(Duration::from_millis(25)).await;
-            }
-        }).await.unwrap();
-        shutdown.send(ShutdownRequest::Sigterm).unwrap(); task.await.unwrap().unwrap();
-        phase(&mut world, 1);
-        let mut expected = serde_json::to_value(&world.btech).unwrap();
-        expected["simulation_seconds"] = 2.into();
-        world.btech = serde_json::from_value(expected).unwrap();
-        assert_eq!(persistence::load(&config.database()).await.unwrap().btech, world.btech);
-    }).await;
+            assert!(!battle_reactor_windows_pending(&world));
+            phase(&mut world, 29);
+            persistence::save(&config.database(), &world).await.unwrap();
+            let mut sql = SqliteConnection::connect_with(
+                &sqlx::sqlite::SqliteConnectOptions::new().filename(config.database()),
+            )
+            .await
+            .unwrap();
+            let saved: i64 = sqlx::query_scalar("PRAGMA data_version")
+                .fetch_one(&mut sql)
+                .await
+                .unwrap();
+            let (_, shutdown, task, _) = support::start(&config, Rc::new(Cell::new(1))).await;
+            tokio::time::sleep(Duration::from_millis(2200)).await;
+            let current: i64 = sqlx::query_scalar("PRAGMA data_version")
+                .fetch_one(&mut sql)
+                .await
+                .unwrap();
+            assert_eq!(current, saved, "idle ticks wrote to the database");
+            assert_eq!(
+                persistence::load(&config.database()).await.unwrap().btech,
+                world.btech
+            );
+            shutdown.send(ShutdownRequest::Sigterm).unwrap();
+            task.await.unwrap().unwrap();
+            let stored = persistence::load(&config.database()).await.unwrap();
+            let seconds = stored.btech.simulation_time();
+            assert!(seconds >= 2, "shutdown did not store the idle clock");
+            let phase_at = |saved: &World| {
+                serde_json::to_value(&saved.btech).unwrap()["turn_clock"]
+                    .as_i64()
+                    .unwrap()
+            };
+            assert_eq!(phase_at(&stored), (29 + seconds) % 30);
+            // A large wall-clock change must not simulate thousands of offline turns.
+            let (_, shutdown, task, _) = support::start(&config, Rc::new(Cell::new(900_000))).await;
+            tokio::time::sleep(Duration::from_millis(1200)).await;
+            shutdown.send(ShutdownRequest::Sigterm).unwrap();
+            task.await.unwrap().unwrap();
+            let resumed = persistence::load(&config.database()).await.unwrap();
+            let elapsed = resumed.btech.simulation_time() - seconds;
+            assert!(
+                (1..=3).contains(&elapsed),
+                "restart simulated {elapsed} seconds"
+            );
+            assert_eq!(phase_at(&resumed), (29 + seconds + elapsed) % 30);
+            sql.close().await.unwrap();
+        })
+        .await;
 }

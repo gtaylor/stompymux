@@ -23,6 +23,10 @@ game_database = "data/stompymux.db"
 # legacy_game_database = "data/stompymux.db"
 # Maximum time SQLite waits for a database lock, in milliseconds.
 busy_timeout_ms = 5000
+# Most seconds the saved simulation clock may trail the running game while nothing else
+# changes. Idle heartbeats write nothing until this interval passes, so a crash loses at
+# most this much idle time. Zero saves the clock only alongside other changes.
+clock_save_interval = 60
 # Directory containing BattleTech unit template files.
 mech_database = "mechs"
 # Directory containing map template files.

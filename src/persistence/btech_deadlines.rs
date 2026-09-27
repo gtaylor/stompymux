@@ -28,6 +28,11 @@ impl Clock {
         Self(seconds)
     }
 
+    /// The simulation second itself.
+    pub(super) fn seconds(self) -> i64 {
+        self.0
+    }
+
     /// Deadline of a running countdown with at least one second left.
     pub(super) fn deadline(self, remaining: impl Into<i64>) -> Cell {
         Cell::Integer(self.0.saturating_add(remaining.into()))

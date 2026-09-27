@@ -1078,6 +1078,12 @@ pub const KEYS: &[KeySpec] = &[
         bounds: Some((1.0, 2147483647.0)),
     },
     KeySpec {
+        path: "database.clock_save_interval",
+        legacy: "",
+        kind: "u64",
+        bounds: Some((0.0, 2147483647.0)),
+    },
+    KeySpec {
         path: "database.bootstrap.credentials_file",
         legacy: "",
         kind: "PathBuf",

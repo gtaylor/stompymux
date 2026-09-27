@@ -16,11 +16,13 @@ pub(crate) trait SavedParts {
     fn same_saved_core(&self, other: &Self) -> bool;
     /// Whether the frequently changing part matches `other`.
     fn same_saved_live(&self, other: &Self) -> bool;
-    /// Encode the rarely changing part with the record's own field names.
-    fn encode_saved_core(&self) -> serde_json::Result<String>;
-    /// Encode the frequently changing part with the record's own field names, leaving
-    /// out fields at their default value, which load back as that default.
-    fn encode_saved_live(&self) -> serde_json::Result<String>;
+    /// Names of the fields saved in the rarely changing part.
+    const CORE_FIELDS: &'static [&'static str];
+    /// The rarely changing part as a JSON object keyed by the record's own field names.
+    fn saved_core_value(&self) -> serde_json::Result<serde_json::Value>;
+    /// The frequently changing part as a JSON object keyed by the record's own field
+    /// names, leaving out fields at their default value, which load back as that default.
+    fn saved_live_value(&self) -> serde_json::Result<serde_json::Value>;
 }
 
 /// Serializes the rarely changing part of a record.
@@ -76,12 +78,14 @@ macro_rules! saved_parts {
                 true $(&& *$live == other.$live)* $(&& *$always == other.$always)*
             }
 
-            fn encode_saved_core(&self) -> serde_json::Result<String> {
-                serde_json::to_string(&$crate::btech::saved_parts::SavedCore(self))
+            const CORE_FIELDS: &'static [&'static str] = &[$(stringify!($core)),*];
+
+            fn saved_core_value(&self) -> serde_json::Result<serde_json::Value> {
+                serde_json::to_value(&$crate::btech::saved_parts::SavedCore(self))
             }
 
-            fn encode_saved_live(&self) -> serde_json::Result<String> {
-                serde_json::to_string(&$crate::btech::saved_parts::SavedLive(self))
+            fn saved_live_value(&self) -> serde_json::Result<serde_json::Value> {
+                serde_json::to_value(&$crate::btech::saved_parts::SavedLive(self))
             }
         }
 
@@ -124,8 +128,7 @@ where
         value.as_object_mut().unwrap().remove(*field);
         let loaded: T = serde_json::from_value(value)
             .unwrap_or_else(|error| panic!("{field} has no serde default: {error}"));
-        let live: serde_json::Value =
-            serde_json::from_str(&loaded.encode_saved_live().unwrap()).unwrap();
+        let live: serde_json::Value = loaded.saved_live_value().unwrap();
         assert!(
             live.get(*field).is_none(),
             "{field} does not load as its default"
@@ -172,8 +175,8 @@ mod tests {
         assert!(!sample.same_saved_core(&hit));
         assert!(sample.same_saved_live(&hit));
 
-        let core = moved.encode_saved_core().unwrap();
-        let live = moved.encode_saved_live().unwrap();
+        let core = moved.saved_core_value().unwrap().to_string();
+        let live = moved.saved_live_value().unwrap().to_string();
         assert!(!core.contains("heat") && !live.contains("armor"));
         let merged: Sample = serde_json::from_value(merge(&core, &live).unwrap()).unwrap();
         assert_eq!(merged, moved);
@@ -181,7 +184,7 @@ mod tests {
         // A live field at its default is left out and loads back as that default.
         let mut cooled = moved.clone();
         cooled.heat = 0;
-        let live = cooled.encode_saved_live().unwrap();
+        let live = cooled.saved_live_value().unwrap().to_string();
         assert!(!live.contains("heat"));
         let merged: Sample = serde_json::from_value(merge(&core, &live).unwrap()).unwrap();
         assert_eq!(merged, cooled);

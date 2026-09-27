@@ -12,12 +12,16 @@ const TABLE: &str = "btech_units";
 
 /// Read complete records, merged from each row's core and live parts, without
 /// interpreting deferred C runtime fields.
-pub(super) async fn load(c: &mut SqliteConnection, state: &mut BtechState) -> Result<()> {
+pub(super) async fn load(
+    c: &mut SqliteConnection,
+    state: &mut BtechState,
+    clock: super::btech_deadlines::Clock,
+) -> Result<()> {
     if !super::btech_unit_rows::installed(c, TABLE).await? {
         return Ok(());
     }
     let mut units = BTreeMap::new();
-    for (id, unit) in super::btech_unit_rows::load::<BattleUnit>(c, TABLE).await? {
+    for (id, unit) in super::btech_unit_rows::load::<BattleUnit>(c, TABLE, clock).await? {
         unit.validate()?;
         ensure!(
             !state.units.contains_key(&id) && !state.maps.contains_key(&id),
@@ -77,6 +81,8 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
         include_str!("btech_units.sql"),
         &before.btech.constructed,
         &after.btech.constructed,
+        super::btech_deadlines::Clock::of(before),
+        super::btech_deadlines::Clock::of(after),
     )
     .await?;
     for id in inserted {

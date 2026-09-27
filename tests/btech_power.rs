@@ -279,8 +279,8 @@ async fn idle_map_smoke_ticks_retry_failed_saves_and_expire() {
         sqlx::raw_sql("CREATE TRIGGER deny_smoke_update BEFORE UPDATE ON btech_map_decorations BEGIN SELECT RAISE(ABORT,'smoke update failure'); END; CREATE TRIGGER deny_smoke_delete BEFORE DELETE ON btech_map_decorations BEGIN SELECT RAISE(ABORT,'smoke delete failure'); END;").execute(&mut sql).await.unwrap();
         let (_addr, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
         tokio::time::sleep(std::time::Duration::from_millis(2200)).await;
-        // The first tick commits without touching the row, since the smoke's expiry deadline
-        // is unchanged; the expiry tick that must delete the row keeps failing.
+        // The first tick only stores the clock, since the smoke's expiry deadline is fixed;
+        // the expiry tick that must delete the row keeps failing.
         let loaded = persistence::load(&config.database()).await.unwrap();
         assert_eq!(loaded.btech.maps()[&map].decoration(coordinate).unwrap(), Some(BattleDecoration { remaining: 1, ..smoke }));
         sqlx::raw_sql("DROP TRIGGER deny_smoke_update; DROP TRIGGER deny_smoke_delete;").execute(&mut sql).await.unwrap();

@@ -7474,7 +7474,8 @@ async fn artillery_queue_late_arrival_rolls_back_all_shots() {
     assert!(scripts.drain_outbox().is_empty());
 }
 
-/// A flight counting down with the simulation clock commits each tick without rewriting its row.
+/// A flight counting down with the simulation clock is never rewritten; only its arrival
+/// touches the row.
 #[tokio::test]
 async fn artillery_flight_in_progress_leaves_its_row_unchanged() {
     tokio::task::LocalSet::new().run_until(async {
@@ -7485,22 +7486,24 @@ async fn artillery_flight_in_progress_leaves_its_row_unchanged() {
         }
         let center = BattleHexCoordinate { x: 1, y: 1 };
         enqueue_artillery(&mut world, map, units[0], BattleArtilleryFlight::new(center, center, BattleWeapon::LongTom, BattleArtilleryMode::Mine, true).unwrap()).unwrap();
-        persistence::save(&config.database(), &world).await.unwrap();
+        let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
+        for _ in 0..7 { assert!(advance_artillery_action(&scripts, &config, rules()).unwrap().is_empty()); }
+        persistence::save(&config.database(), &scripts.world()).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
-        sqlx::query("CREATE TRIGGER deny_artillery_update BEFORE UPDATE ON btech_artillery BEGIN SELECT RAISE(ABORT,'artillery rewritten'); END").execute(&mut sql).await.unwrap();
+        sqlx::raw_sql("CREATE TABLE artillery_updates(n INTEGER); CREATE TRIGGER count_artillery_updates AFTER UPDATE ON btech_artillery BEGIN INSERT INTO artillery_updates VALUES(1); END;").execute(&mut sql).await.unwrap();
         let (_address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        tokio::time::timeout(std::time::Duration::from_secs(5), async {
+        tokio::time::timeout(std::time::Duration::from_secs(6), async {
             loop {
                 let loaded = persistence::load(&config.database()).await.unwrap();
-                if loaded.btech.simulation_time() >= world.btech.simulation_time() + 2 {
-                    let flight = &loaded.btech.maps()[&map].artillery_shots()[&0].flight;
-                    let saved = &world.btech.maps()[&map].artillery_shots()[&0].flight;
-                    assert!(flight.remaining() < saved.remaining());
+                if loaded.btech.maps()[&map].artillery_shots().is_empty() {
+                    assert_eq!(loaded.btech.maps()[&map].minefields().len(), 1);
                     break;
                 }
                 tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             }
         }).await.unwrap();
+        let updates: i64 = sqlx::query_scalar("SELECT count(*) FROM artillery_updates").fetch_one(&mut sql).await.unwrap();
+        assert_eq!(updates, 0);
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;

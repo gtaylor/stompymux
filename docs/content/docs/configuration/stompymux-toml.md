@@ -93,6 +93,16 @@ set to `false`, the commands remain listed in BTech help but return
 `Permission denied.` without reading or changing cargo. Wizards may change the
 live value with `@admin btech_allow_cargo_commands=<boolean>`.
 
+## Saving the simulation clock
+
+BattleTech timers are stored relative to the simulation clock, so a heartbeat
+that changes nothing but the clock needs no database write. While the game is
+otherwise idle, `database.clock_save_interval` (default 60 seconds) bounds how
+far the stored clock may trail the running one: a crash restores the world as
+of the last stored second, losing at most that much idle time. Zero stores the
+clock only alongside other changes. Explicit saves and shutdown always store
+the current clock.
+
 ## New database bootstrap
 
 When `database.game_database` does not exist, startup creates the configured

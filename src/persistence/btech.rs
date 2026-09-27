@@ -144,8 +144,8 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
         maps: maps.into(),
         units: units.into(),
     };
-    super::btech_units::load(c, &mut state).await?;
-    super::btech_vehicles::load(c, &mut state).await?;
+    super::btech_units::load(c, &mut state, clock).await?;
+    super::btech_vehicles::load(c, &mut state, clock).await?;
     Ok(state)
 }
 
@@ -459,7 +459,6 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
     changed |= super::btech_recovery::save(c, before, after).await?;
     changed |= super::btech_reactor::save(c, before, after).await?;
     changed |= super::btech_sensor_recovery::save(c, before, after).await?;
-    changed |= super::btech_turn_clock::save(c, before, after).await?;
     changed |= super::btech_wrecks::save(c, before, after).await?;
     changed |= super::btech_decorations::save(c, before, after).await?;
     changed |= super::btech_static_decorations::save(c, before, after).await?;
