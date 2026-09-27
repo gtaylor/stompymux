@@ -73,12 +73,29 @@ to load a new Rust binary. `just build`, `just test`, and `just build-and-run`
 are shortcuts; the last command uses the default `game/` directory.
 
 Unit tests live beside their implementations. Integration scenarios and
-fixtures live in `tests/`. To run one scenario, find its suite in
-`tests/suites/` and filter by its module name, for example:
+fixtures live in `tests/`; the scenarios are grouped into sixteen consolidated
+suites under `tests/suites/`, and each suite is its own test binary. A full
+`cargo test` builds the library twice (once as the unit-test binary and once
+for the suites to link), plus all sixteen suite binaries, so it is the slowest
+loop available. While iterating, build and run only what your change touches:
 
 ```sh
-cargo test --test btech_08 btech_status::
+just check                          # type-check every target, no codegen
+just test-unit btech::los        # unit tests in src/, filtered by name
+just test-scenario btech_status     # one scenario file from tests/
+just test-suite btech_08 status     # one suite, filtered by test name
+just list-scenarios                 # which suite includes which scenario
 ```
+
+`just test-scenario` finds the suite that includes the scenario module and
+runs `cargo test --test <suite> <scenario>::`, so only that suite's binary is
+built. Run the whole suite with `just test` before handing work back.
+
+The test profile in `Cargo.toml` compiles incrementally, so after the first
+full build a small edit rebuilds in well under a minute; the incremental
+caches under `target/` take several gigabytes, and `cargo clean` throws them
+away along with the fifteen-minute cold build, so avoid it unless the target
+directory is corrupt.
 
 `just checks` runs formatting, generated Lua type and API documentation checks,
 and the Rust test suite.

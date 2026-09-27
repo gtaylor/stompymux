@@ -25,6 +25,51 @@ fmt-check-rust:
 test:
     cargo test
 
+# Compile-only pass over every target; skips codegen so it is the fastest way
+# to find type errors while iterating.
+
+# Type-check the library, every binary (feature-gated ones included), and every test suite.
+check:
+    cargo check --all-targets --all-features
+
+# Only the library's own unit-test binary is built for this recipe.
+
+# Run the unit tests beside the sources in src/, e.g. `just test-unit btech::los`.
+test-unit *filter:
+    cargo test --lib -- {{filter}}
+
+# Only that suite's binary is built, not the other fifteen.
+
+# Run one integration suite from tests/suites/, e.g. `just test-suite btech_08 status`.
+test-suite suite *filter:
+    cargo test --test {{suite}} -- {{filter}}
+
+# Finds the suite in tests/suites/ that includes the scenario module so only
+# that suite is built, then filters the run to the scenario's tests.
+
+# Run one scenario file from tests/ by module name, e.g. `just test-scenario btech_status`.
+test-scenario scenario *filter:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    suite="$(grep -l -E '^mod {{scenario}};$' tests/suites/*.rs | head -n 1 || true)"
+    if [[ -z "$suite" ]]; then
+        echo "error: no suite in tests/suites/ includes scenario '{{scenario}}'" >&2
+        echo "hint: run 'just list-scenarios' to see scenario names" >&2
+        exit 2
+    fi
+    name="$(basename "$suite" .rs)"
+    echo "==> {{scenario}} lives in suite $name"
+    cargo test --test "$name" -- "{{scenario}}::{{filter}}"
+
+# List every consolidated suite and the scenario files it includes.
+list-scenarios:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for suite in tests/suites/*.rs; do
+        echo "$(basename "$suite" .rs):"
+        grep -E '^mod [a-z0-9_]+;$' "$suite" | sed -E 's/^mod ([a-z0-9_]+);$/  \1/'
+    done
+
 build:
     cargo build
 
