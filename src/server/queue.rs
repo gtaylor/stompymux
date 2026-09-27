@@ -216,7 +216,7 @@ mod tests {
                 idle_recheck: false,
                 message_cache: Default::default(),
                 durable: None,
-                database_anchor: None,
+                database: None,
             },
         )
     }

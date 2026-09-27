@@ -1,5 +1,5 @@
 //! Selective persistence of typed minefields in the shared map-object table.
-use super::write::{Cell, fields, row};
+use super::write::{Cell, Fields, row};
 use crate::{
     BattleHexCoordinate, BattleMineKind, BattleMinefield, ObjectId, StoredBattleMap, World,
 };
@@ -72,7 +72,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
             row(
                 c,
                 "btech_map_objects",
-                fields([
+                Fields::from([
                     ("map_dbref", Cell::Integer(id.0)),
                     ("object_type", Cell::Integer(3)),
                     ("ordinal", Cell::Integer(i64::from(ordinal))),
@@ -92,7 +92,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
 
 /// Persist the complete mine definition without repurposing other map-object fields.
 fn mine_fields(mine: BattleMinefield) -> super::write::Fields {
-    fields([
+    Fields::from([
         ("x", Cell::Integer(i64::from(mine.coordinate.x))),
         ("y", Cell::Integer(i64::from(mine.coordinate.y))),
         ("object_dbref", Cell::Integer(mine.owner.0)),

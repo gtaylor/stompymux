@@ -38,9 +38,9 @@ pub(super) async fn read(c: &mut SqliteConnection) -> Result<World> {
         let mut flags = crate::flags::FlagSet::default();
         let mut powers = crate::powers::PowerSet::default();
         for flag in crate::flags::ALL {
-            let column = format!("has_{}_flag", flag.world_name().to_ascii_lowercase());
+            let column = flag.column();
             let value: i64 = r
-                .try_get(column.as_str())
+                .try_get(column)
                 .with_context(|| format!("object #{}: {column}", object_id.0))?;
             ensure!(
                 value == 0 || value == 1,

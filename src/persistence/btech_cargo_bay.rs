@@ -1,5 +1,5 @@
 //! Selective persistence of map cargo locations in the existing game-directory table.
-use super::write::{Cell, fields, row};
+use super::write::{Cell, Fields, row};
 use crate::{BattleCargoTransferPoint, ObjectId, StoredBattleMap, World};
 use anyhow::{Context, Result, ensure};
 use sqlx::{Row, SqliteConnection};
@@ -56,7 +56,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
         row(
             c,
             "btech_map_cargo_configuration",
-            fields([("map_dbref", Cell::Integer(id.0))]),
+            Fields::from([("map_dbref", Cell::Integer(id.0))]),
             old.map(point_fields).as_ref(),
             &point_fields(point),
         )
@@ -67,7 +67,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
 
 /// Owned point columns use the same representation for inserts and updates.
 fn point_fields(point: BattleCargoTransferPoint) -> super::write::Fields {
-    fields([
+    Fields::from([
         ("x", Cell::Integer(i64::from(point.x))),
         ("y", Cell::Integer(i64::from(point.y))),
         ("reveal_hint", Cell::Integer(i64::from(point.reveal_hint))),

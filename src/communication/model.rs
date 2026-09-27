@@ -119,7 +119,8 @@ pub struct ChannelMessage {
     pub message: String,
 }
 
-/// Durable channel state plus runtime handle and online ordering.
+/// Durable channel state plus runtime handle and online ordering. Equality compares the
+/// durable fields only.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Channel {
     pub name: String,
@@ -137,6 +138,19 @@ pub struct Channel {
     #[serde(skip)]
     pub online_initialized: bool,
 }
+
+impl PartialEq for Channel {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+            && self.object == other.object
+            && self.flags == other.flags
+            && self.messages == other.messages
+            && self.users == other.users
+            && self.history == other.history
+    }
+}
+
+impl Eq for Channel {}
 
 impl Channel {
     pub fn new(name: String) -> Self {

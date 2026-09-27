@@ -26,6 +26,14 @@ impl BattleSpotterEvents {
         !self.events.is_empty()
     }
 
+    /// Each pending event's queue position and remaining seconds, for timer storage.
+    pub(super) fn countdowns(&self) -> impl Iterator<Item = (usize, u16)> + '_ {
+        self.events
+            .iter()
+            .enumerate()
+            .map(|(index, event)| (index, event.remaining))
+    }
+
     /// Validate bounded persisted clocks and finite captured positions.
     pub(super) fn validate(&self) -> Result<()> {
         ensure!(self.events.len() <= 1024, "Too many pending spotter events");

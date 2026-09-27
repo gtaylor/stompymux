@@ -1,25 +1,13 @@
 //! Durable shared wreck timers and selective removal of retired simulation identities.
+use super::write::purge_rows;
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 use sqlx::{Row, SqliteConnection};
 use std::collections::{BTreeMap, BTreeSet};
 
-/// Detect the optional extension without writing during load.
-async fn installed(c: &mut SqliteConnection) -> Result<bool> {
-    Ok(sqlx::query_scalar::<_, i64>(
-        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='btech_wrecks'",
-    )
-    .fetch_one(c)
-    .await?
-        == 1)
-}
-
 /// Load bounded countdowns; domain validation checks the associated unit's condition.
 pub(super) async fn load(c: &mut SqliteConnection) -> Result<BTreeMap<ObjectId, u8>> {
     let mut timers = BTreeMap::new();
-    if !installed(c).await? {
-        return Ok(timers);
-    }
     let count: i64 = sqlx::query_scalar("SELECT count(*) FROM btech_wrecks")
         .fetch_one(&mut *c)
         .await?;
@@ -43,18 +31,10 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
     if !retired.is_empty() {
         super::btech_units::purge(c, &retired).await?;
         super::btech_vehicles::purge(c, &retired).await?;
-    }
-    for id in &retired {
-        sqlx::query("DELETE FROM btech_special_registrations WHERE dbref=?")
-            .bind(id.0)
-            .execute(&mut *c)
-            .await?;
+        purge_rows(c, "btech_special_registrations", "dbref", &retired).await?;
     }
     if before.btech.wrecks == after.btech.wrecks {
         return Ok(!retired.is_empty());
-    }
-    if !installed(c).await? {
-        sqlx::query("CREATE TABLE btech_wrecks (dbref INTEGER PRIMARY KEY REFERENCES objects(dbref), remaining INTEGER NOT NULL CHECK(remaining BETWEEN 1 AND 10))").execute(&mut *c).await?;
     }
     let removed = before
         .btech
@@ -75,14 +55,5 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
 
 /// Remove timers before ordinary object purges, including maps' unrelated occupants only when deleted.
 pub(super) async fn purge(c: &mut SqliteConnection, ids: &BTreeSet<ObjectId>) -> Result<()> {
-    if ids.is_empty() || !installed(c).await? {
-        return Ok(());
-    }
-    for id in ids {
-        sqlx::query("DELETE FROM btech_wrecks WHERE dbref=?")
-            .bind(id.0)
-            .execute(&mut *c)
-            .await?;
-    }
-    Ok(())
+    purge_rows(c, "btech_wrecks", "dbref", ids).await
 }

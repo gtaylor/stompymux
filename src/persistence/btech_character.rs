@@ -1,5 +1,5 @@
 //! Selective writes for character health/attributes, preserving skills and independent columns.
-use super::write::{Cell, Fields, fields, row};
+use super::write::{Cell, Fields, row};
 use crate::{BattleCharacter, ObjectId, World};
 use anyhow::Result;
 use sqlx::{Row, SqliteConnection};
@@ -34,7 +34,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
         row(
             c,
             "btech_character_state",
-            fields([("player_dbref", Cell::Integer(id.0))]),
+            Fields::from([("player_dbref", Cell::Integer(id.0))]),
             old.as_ref(),
             &character_fields(profile),
         )
@@ -46,7 +46,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
 
 /// Explicit column ownership avoids replacing character rows and cascading skill deletion.
 fn character_fields(profile: &BattleCharacter) -> Fields {
-    fields([
+    Fields::from([
         ("bruise", Cell::Integer(i64::from(profile.bruise))),
         ("lethal", Cell::Integer(i64::from(profile.lethal))),
         ("build", Cell::Integer(i64::from(profile.build))),

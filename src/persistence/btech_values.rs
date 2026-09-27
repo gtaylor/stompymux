@@ -1,5 +1,5 @@
 //! Selective named character-value persistence without replacing parent health records.
-use super::write::{Cell, fields, row};
+use super::write::{Cell, Fields, row};
 use crate::{BattleCharacterValue, ObjectId, World};
 use anyhow::Result;
 use sqlx::{Row, SqliteConnection};
@@ -23,7 +23,7 @@ pub(super) async fn load(
 /// Update only changed values, preserving unowned columns and other named entries.
 pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World) -> Result<bool> {
     let values = |value: &BattleCharacterValue| {
-        fields([
+        Fields::from([
             ("value", Cell::Integer(i64::from(value.value))),
             ("xp", Cell::Integer(i64::from(value.experience))),
             ("last_used", Cell::Integer(value.last_used)),
@@ -43,7 +43,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
             row(
                 c,
                 "btech_character_values",
-                fields([
+                Fields::from([
                     ("player_dbref", Cell::Integer(player.0)),
                     ("value_name", Cell::Text(name.clone())),
                 ]),

@@ -838,16 +838,13 @@ mod persistence_tests {
         }
         assert!(shots > 0, "the workload must save combat damage");
         let live = harness.world();
-        let written = persistence::save_changes(
-            &config.database(),
-            None,
-            &live,
-            config.database.busy_timeout_ms,
-            1,
-        )
-        .await
-        .unwrap();
-        assert!(!written, "baseline saves left rows unwritten");
+        let mut database =
+            persistence::Database::open(&config.database(), config.database.busy_timeout_ms)
+                .await
+                .unwrap();
+        let saved = database.save_changes(None, &live, 1).await.unwrap();
+        database.close().await.unwrap();
+        assert!(!saved.changed, "baseline saves left rows unwritten");
         persistence::validate_lists(&config.database(), &live, config.database.busy_timeout_ms)
             .await
             .unwrap();

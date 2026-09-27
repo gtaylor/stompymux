@@ -575,6 +575,9 @@ pub use signature::{
 
 mod recent_fire;
 pub(crate) mod saved_parts;
+pub(crate) mod timers;
+mod unit_timers;
+mod vehicle_timers;
 pub use recent_fire::clear_recent_fire;
 
 mod tag;

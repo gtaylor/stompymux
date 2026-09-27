@@ -2240,7 +2240,8 @@ async fn target_lock_server_completion_retries_failed_commit() {
         persistence::save(&config.database(), &world).await.unwrap();
         let before = world.btech.clone();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
-        sqlx::query("CREATE TRIGGER deny_lock BEFORE UPDATE ON btech_units BEGIN SELECT RAISE(ABORT,'lock failure'); END").execute(&mut sql).await.unwrap();
+        // The lock settling removes a timer row; refuse the commit at the snapshot stamp.
+        sqlx::query("CREATE TRIGGER deny_lock BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(ABORT,'lock failure'); END").execute(&mut sql).await.unwrap();
         let (_address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
         attempt_heartbeat().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech, before);

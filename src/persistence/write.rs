@@ -4,7 +4,10 @@ use crate::{
 };
 use anyhow::{Context, Result, ensure};
 use sqlx::{QueryBuilder, Row, Sqlite, SqliteConnection};
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    sync::Arc,
+};
 
 /// SQL values for explicitly owned columns; unknown columns never enter a write set.
 #[derive(Clone, Debug, PartialEq)]
@@ -15,6 +18,7 @@ pub(super) enum Cell {
     Text(String),
     Blob(Vec<u8>),
 }
+
 impl Cell {
     /// Bind values without interpolating user-controlled SQL.
     fn bind(&self, q: &mut QueryBuilder<Sqlite>) {
@@ -37,37 +41,44 @@ impl Cell {
         }
     }
 }
-/// Known column/value projection of a row.
-pub(super) type Fields = BTreeMap<String, Cell>;
-/// Convert fixed, code-owned column names into a field map.
-pub(super) fn fields(items: impl IntoIterator<Item = (&'static str, Cell)>) -> Fields {
-    items
-        .into_iter()
-        .map(|(key, value)| (key.into(), value))
-        .collect()
+
+/// Known column/value projection of a row. Column names are code-owned constants.
+pub(super) type Fields = BTreeMap<&'static str, Cell>;
+
+/// What a save wrote and the containment links the database now holds.
+pub struct Saved {
+    /// Whether any row changed.
+    pub changed: bool,
+    /// The stored list slots of every object, the baseline for the next save.
+    pub links: Arc<Links>,
 }
+
 /// Encode the legacy negative-reference sentinel for newly written references.
 fn reference(id: Option<ObjectId>) -> Cell {
     Cell::Integer(id.map_or(-1, |id| id.0))
 }
+
 /// Nullable legacy text fields.
 fn text(value: &Option<String>) -> Cell {
     value.as_ref().map_or(Cell::Null, |s| Cell::Text(s.clone()))
 }
+
 /// Nullable timestamps.
 fn integer(value: Option<i64>) -> Cell {
     value.map_or(Cell::Null, Cell::Integer)
 }
+
 /// Append primary-key predicates, using only schema-owned identifiers.
 fn predicate(q: &mut QueryBuilder<Sqlite>, key: &Fields) {
     for (index, (name, value)) in key.iter().enumerate() {
         if index > 0 {
             q.push(" AND ");
         }
-        q.push(name).push(" = ");
+        q.push(*name).push(" = ");
         value.bind(q);
     }
 }
+
 /// Insert new rows or update only changed supported fields. Never use REPLACE.
 pub(super) async fn row(
     c: &mut SqliteConnection,
@@ -93,7 +104,7 @@ pub(super) async fn row(
         if index > 0 {
             query.push(",");
         }
-        query.push(name.as_str());
+        query.push(**name);
     }
     query.push(") VALUES (");
     for (index, (_, value)) in all.iter().enumerate() {
@@ -106,25 +117,27 @@ pub(super) async fn row(
     execute_one(c, table, &key, query).await?;
     Ok(true)
 }
+
 /// Update the given columns of one existing row.
 pub(super) async fn update<'a>(
     c: &mut SqliteConnection,
     table: &str,
     key: &Fields,
-    values: impl IntoIterator<Item = (&'a String, &'a Cell)>,
+    values: impl IntoIterator<Item = (&'a &'static str, &'a Cell)>,
 ) -> Result<()> {
     let mut query = QueryBuilder::new(format!("UPDATE {table} SET "));
     for (index, (name, value)) in values.into_iter().enumerate() {
         if index > 0 {
             query.push(",");
         }
-        query.push(name).push(" = ");
+        query.push(*name).push(" = ");
         value.bind(&mut query);
     }
     query.push(" WHERE ");
     predicate(&mut query, key);
     execute_one(c, table, key, query).await
 }
+
 /// Run a statement that must affect exactly one row.
 async fn execute_one(
     c: &mut SqliteConnection,
@@ -144,6 +157,7 @@ async fn execute_one(
     );
     Ok(())
 }
+
 /// Delete a specifically removed owned key, never an entire table or object.
 pub(super) async fn delete(c: &mut SqliteConnection, table: &str, key: Fields) -> Result<()> {
     let mut query = QueryBuilder::new(format!("DELETE FROM {table} WHERE "));
@@ -155,6 +169,27 @@ pub(super) async fn delete(c: &mut SqliteConnection, table: &str, key: Fields) -
         .with_context(|| format!("removing {table} {key:?}"))?;
     Ok(())
 }
+
+/// Delete every row of `table` whose `column` names one of `ids`, as object purges do.
+pub(super) async fn purge_rows(
+    c: &mut SqliteConnection,
+    table: &'static str,
+    column: &'static str,
+    ids: &BTreeSet<ObjectId>,
+) -> Result<()> {
+    for id in ids {
+        // Table and column names are code-owned constants; the identifier is bound.
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "DELETE FROM {table} WHERE {column}=?"
+        )))
+        .bind(id.0)
+        .execute(&mut *c)
+        .await
+        .with_context(|| format!("purging #{} from {table}.{column}", id.0))?;
+    }
+    Ok(())
+}
+
 /// Rows of one table keyed by their key column values, as used by [`sync_rows`].
 pub(super) type Rows = BTreeMap<Vec<i64>, Fields>;
 
@@ -195,7 +230,7 @@ pub(super) async fn sync_rows(
     let mut query = QueryBuilder::new(format!("SELECT {} FROM {table}", selected.join(",")));
     let scope_key: Fields = scope
         .iter()
-        .map(|(name, value)| ((*name).into(), Cell::Integer(*value)))
+        .map(|(name, value)| (*name, Cell::Integer(*value)))
         .collect();
     if !scope_key.is_empty() {
         query.push(" WHERE ");
@@ -209,7 +244,7 @@ pub(super) async fn sync_rows(
             .collect::<Result<Vec<_>, _>>()?;
         let mut values = Fields::new();
         for name in columns {
-            values.insert((*name).into(), read_cell(&entry, name)?);
+            values.insert(*name, read_cell(&entry, name)?);
         }
         stored.insert(key, values);
     }
@@ -218,7 +253,7 @@ pub(super) async fn sync_rows(
         key.extend(
             keys.iter()
                 .zip(values)
-                .map(|(name, value)| ((*name).into(), Cell::Integer(*value))),
+                .map(|(name, value)| (*name, Cell::Integer(*value))),
         );
         key
     };
@@ -252,8 +287,10 @@ pub(super) async fn sync_changed_rows(
 }
 
 /// Supported object fields; relationship-list slots are supplied from durable rows.
+///
+/// CONNECTED is session state: it is stored as zero however the object is flagged.
 fn object(o: &Object, links: LinkSlots) -> Fields {
-    let mut result = fields([
+    let mut result = Fields::from([
         ("name", Cell::Text(o.name.clone())),
         ("type", Cell::Integer(o.kind.code())),
         (
@@ -289,15 +326,16 @@ fn object(o: &Object, links: LinkSlots) -> Fields {
     ]);
     for flag in crate::flags::ALL {
         result.insert(
-            format!("has_{}_flag", flag.world_name().to_ascii_lowercase()),
+            flag.column(),
             Cell::Integer(i64::from(flag != Flag::Connected && o.flags.contains(flag))),
         );
     }
     result
 }
+
 /// Account columns exclude all deferred player and BattleTech state.
 fn account(a: &Account) -> Fields {
-    fields([
+    Fields::from([
         ("password_hash", text(&a.hash)),
         ("alias", text(&a.alias)),
         ("last_login", integer(a.last_login)),
@@ -310,6 +348,7 @@ fn account(a: &Account) -> Fields {
         ),
     ])
 }
+
 /// Preserve legacy numeric type tags; newly written strings use byte-preserving blobs.
 fn scalar(s: &Scalar) -> Result<Fields> {
     let (tag, value) = match s {
@@ -321,11 +360,12 @@ fn scalar(s: &Scalar) -> Result<Fields> {
         }
         Scalar::String(v) => (1, Cell::Blob(v.clone())),
     };
-    Ok(fields([
+    Ok(Fields::from([
         ("value_type", Cell::Integer(tag)),
         ("value", value),
     ]))
 }
+
 /// Flatten only supported Lua keys, retaining no deferred data in the Rust world model.
 fn state<'a>(
     objects: impl Iterator<Item = &'a Object>,
@@ -340,14 +380,16 @@ fn state<'a>(
         })
         .collect()
 }
+
 /// Primary key of a Lua scalar row.
 fn state_key(key: &(i64, String, String)) -> Fields {
-    fields([
+    Fields::from([
         ("object_dbref", Cell::Integer(key.0)),
         ("namespace", Cell::Text(key.1.clone())),
         ("key", Cell::Text(key.2.clone())),
     ])
 }
+
 /// Legacy history is newest-first separately for successes and failures.
 fn history(a: &Account) -> BTreeMap<(i64, i64), Fields> {
     let mut result = BTreeMap::new();
@@ -362,7 +404,7 @@ fn history(a: &Account) -> BTreeMap<(i64, i64), Fields> {
         {
             result.insert(
                 (i64::from(!success), index as i64),
-                fields([
+                Fields::from([
                     ("occurred_at", Cell::Integer(login.at)),
                     ("host", Cell::Text(login.host.clone())),
                 ]),
@@ -371,14 +413,16 @@ fn history(a: &Account) -> BTreeMap<(i64, i64), Fields> {
     }
     result
 }
+
 /// Primary key of a bounded history slot.
 fn history_key(id: ObjectId, key: (i64, i64)) -> Fields {
-    fields([
+    Fields::from([
         ("player_dbref", Cell::Integer(id.0)),
         ("outcome", Cell::Integer(key.0)),
         ("position", Cell::Integer(key.1)),
     ])
 }
+
 /// Validate and update only containment lists whose membership actually changed.
 fn relationships(before: &World, after: &World, raw: &Links) -> Result<Links> {
     let mut links = raw.clone();
@@ -450,19 +494,22 @@ fn relationships(before: &World, after: &World, raw: &Links) -> Result<Links> {
     }
     Ok(links)
 }
-/// Write changed object rows, including the containment-list links that moves change.
+
+/// Write changed object rows, including the containment-list links that moves change,
+/// and return the links the database holds afterwards.
 ///
-/// An object still shared with `before` is unchanged, but its row also holds list links
-/// that a sibling's move can change, so it is skipped only when those links are
-/// unchanged too. Maintenance rewrites lists wholesale and checks every row.
+/// `before.links` holds the list slots as stored, so nothing is read back. An object
+/// still shared with `before` is unchanged, but its row also holds list links that a
+/// sibling's move can change, so it is skipped only when those links are unchanged too.
+/// Maintenance rewrites lists wholesale and checks every row.
 async fn save_objects(
     c: &mut SqliteConnection,
     before: &World,
     after: &World,
     maintenance: Option<&crate::dbck::RepairPlan>,
-) -> Result<bool> {
+) -> Result<(bool, Arc<Links>)> {
     if maintenance.is_none() && before.objects.ptr_eq(&after.objects) {
-        return Ok(false);
+        return Ok((false, before.links.clone()));
     }
     // A new cycle must pass through an object whose location changed.
     for o in after.objects.values() {
@@ -472,28 +519,10 @@ async fn save_objects(
         let chain = after.containment_chain(o.location)?;
         ensure!(!chain.contains(&o.id), "containment cycle at #{}", o.id.0);
     }
-    let mut raw = BTreeMap::new();
-    let mut connected = BTreeSet::new();
-    for r in sqlx::query("SELECT dbref,contents,exits,next,has_connected_flag FROM objects")
-        .fetch_all(&mut *c)
-        .await?
-    {
-        let id = ObjectId(r.try_get("dbref")?);
-        raw.insert(
-            id,
-            LinkSlots {
-                contents: r.try_get("contents")?,
-                exits: r.try_get("exits")?,
-                next: r.try_get("next")?,
-            },
-        );
-        if r.try_get::<i64, _>("has_connected_flag")? != 0 {
-            connected.insert(id);
-        }
-    }
+    let raw = &*before.links;
     let links = match maintenance {
         Some(plan) => plan.links.clone(),
-        None => relationships(before, after, &raw)?,
+        None => relationships(before, after, raw)?,
     };
     let mut changed = false;
     for (id, o) in &after.objects {
@@ -502,39 +531,34 @@ async fn save_objects(
         if maintenance.is_none()
             && before.objects.shares_entry(&after.objects, id)
             && stored == linked
-            && !connected.contains(id)
         {
             continue;
         }
-        let mut old = before.objects.get(id).map(|o| object(o, stored));
-        if connected.contains(id)
-            && let Some(old) = old.as_mut()
-        {
-            old.insert("has_connected_flag".into(), Cell::Integer(1));
-        }
+        let old = before.objects.get(id).map(|o| object(o, stored));
         changed |= row(
             c,
             "objects",
-            fields([("dbref", Cell::Integer(id.0))]),
+            Fields::from([("dbref", Cell::Integer(id.0))]),
             old.as_ref(),
             &object(o, linked),
         )
         .await?;
     }
-    Ok(changed)
+    Ok((changed, Arc::new(links)))
 }
-/// Apply a supported projection delta to an already-open write transaction, reporting
-/// whether any row changed. The simulation clock is written alongside other changes,
-/// or alone once it is `clock_interval` seconds ahead of the stored clock (never when
-/// zero).
+
+/// Apply a supported projection delta to an already-open write transaction. The
+/// simulation clock is written alongside other changes, or alone once it is
+/// `clock_interval` seconds ahead of the stored clock (never when zero).
 pub(super) async fn apply(
     c: &mut SqliteConnection,
     before: &World,
     after: &World,
     clock_interval: u64,
-) -> Result<bool> {
+) -> Result<Saved> {
     apply_changes(c, before, after, None, clock_interval).await
 }
+
 /// Explicit maintenance writes may repair lists and remove only approved accounts.
 pub(super) async fn apply_changes(
     c: &mut SqliteConnection,
@@ -542,7 +566,7 @@ pub(super) async fn apply_changes(
     after: &World,
     maintenance: Option<&crate::dbck::RepairPlan>,
     clock_interval: u64,
-) -> Result<bool> {
+) -> Result<Saved> {
     super::btech::validate_changes(before, after, maintenance.map(|plan| &plan.purges))?;
     ensure!(
         before.objects.keys().all(|k| after.objects.contains_key(k)),
@@ -556,13 +580,13 @@ pub(super) async fn apply_changes(
                 || maintenance.is_some_and(|plan| plan.purges.contains(k))),
         "account deletion is not supported"
     );
-    let mut changed = save_objects(c, before, after, maintenance).await?;
+    let (mut changed, links) = save_objects(c, before, after, maintenance).await?;
     for (id, a) in &after.accounts {
         let old = before.accounts.get(id).map(account);
         changed |= row(
             c,
             "player_state",
-            fields([("object_dbref", Cell::Integer(id.0))]),
+            Fields::from([("object_dbref", Cell::Integer(id.0))]),
             old.as_ref(),
             &account(a),
         )
@@ -577,7 +601,7 @@ pub(super) async fn apply_changes(
         // Compare actual legacy slots, not a reconstructed ordering of the loaded history.
         let mut old = BTreeMap::new();
         for r in sqlx::query("SELECT outcome,position,occurred_at,host FROM player_login_history WHERE player_dbref=?1").bind(id.0).fetch_all(&mut *c).await? {
-            old.insert((r.try_get::<i64,_>("outcome")?,r.try_get::<i64,_>("position")?),fields([("occurred_at",Cell::Integer(r.try_get("occurred_at")?)),("host",Cell::Text(r.try_get("host")?))]));
+            old.insert((r.try_get::<i64,_>("outcome")?,r.try_get::<i64,_>("position")?),Fields::from([("occurred_at",Cell::Integer(r.try_get("occurred_at")?)),("host",Cell::Text(r.try_get("host")?))]));
         }
         let new = history(a);
         for (key, values) in &new {
@@ -625,7 +649,7 @@ pub(super) async fn apply_changes(
     }
     for (name, ch) in &after.channels {
         let channel = |ch: &Channel| {
-            fields([
+            Fields::from([
                 ("type", Cell::Integer(ch.flags.0)),
                 ("num_messages", Cell::Integer(ch.messages)),
                 ("chan_obj", reference(ch.object)),
@@ -635,7 +659,7 @@ pub(super) async fn apply_changes(
         changed |= row(
             c,
             "comsys_channels",
-            fields([("name", Cell::Text(name.clone()))]),
+            Fields::from([("name", Cell::Text(name.clone()))]),
             old.as_ref(),
             &channel(ch),
         )
@@ -661,5 +685,5 @@ pub(super) async fn apply_changes(
         .execute(&mut *c)
         .await?;
     }
-    Ok(changed)
+    Ok(Saved { changed, links })
 }

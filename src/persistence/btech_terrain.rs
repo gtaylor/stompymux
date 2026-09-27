@@ -1,30 +1,16 @@
 //! Per-map versioned terrain dictionaries and atomic, selective grid writes.
-use super::write::{Cell, fields, row};
+use super::write::{Cell, Fields, purge_rows, row};
 use crate::{BattleHex, ObjectId, StoredBattleMap, Terrain};
 use anyhow::{Context, Result, ensure};
 use futures_util::TryStreamExt;
 use sqlx::{Row, SqliteConnection};
 use std::collections::{BTreeMap, BTreeSet};
 
-/// Detect the complete extension without changing a read-only database.
-async fn installed(c: &mut SqliteConnection) -> Result<bool> {
-    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM sqlite_master WHERE type='table' AND name IN ('btech_map_terrain','btech_map_terrain_codes')")
-        .fetch_one(c).await?;
-    ensure!(
-        count == 0 || count == 2,
-        "Incomplete BattleTech terrain dictionary schema"
-    );
-    Ok(count == 2)
-}
-
 /// Decode only maps marked as dictionary-backed; ambiguous maps retain their opaque rows.
 pub(super) async fn load(
     c: &mut SqliteConnection,
     maps: &mut BTreeMap<ObjectId, StoredBattleMap>,
 ) -> Result<()> {
-    if !installed(c).await? {
-        return Ok(());
-    }
     let orphans: i64 = sqlx::query_scalar("SELECT count(*) FROM btech_map_terrain_codes AS c LEFT JOIN btech_map_terrain AS t ON t.map_dbref=c.map_dbref WHERE t.map_dbref IS NULL")
         .fetch_one(&mut *c).await?;
     ensure!(orphans == 0, "Terrain dictionary contains orphan codes");
@@ -118,11 +104,6 @@ pub(super) async fn save(
         .as_ref()
         .context("Map requires decoded terrain")?;
     map.validate()?;
-    if !installed(c).await? {
-        sqlx::raw_sql(include_str!("btech_terrain.sql"))
-            .execute(&mut *c)
-            .await?;
-    }
     let mut dictionary = BTreeMap::new();
     let mut occupied = BTreeSet::new();
     for entry in
@@ -156,13 +137,14 @@ pub(super) async fn save(
             .bind(id.0)
             .fetch_optional(&mut *c)
             .await?;
-    let old_header = header.map(|version| fields([("encoding_version", Cell::Integer(version))]));
+    let old_header =
+        header.map(|version| Fields::from([("encoding_version", Cell::Integer(version))]));
     row(
         c,
         "btech_map_terrain",
-        fields([("map_dbref", Cell::Integer(id.0))]),
+        Fields::from([("map_dbref", Cell::Integer(id.0))]),
         old_header.as_ref(),
-        &fields([("encoding_version", Cell::Integer(1))]),
+        &Fields::from([("encoding_version", Cell::Integer(1))]),
     )
     .await?;
     // Keep existing assignments and unowned columns, including currently unused codes.
@@ -170,12 +152,12 @@ pub(super) async fn save(
         row(
             c,
             "btech_map_terrain_codes",
-            fields([
+            Fields::from([
                 ("map_dbref", Cell::Integer(id.0)),
                 ("code", Cell::Integer(code)),
             ]),
             None,
-            &fields([
+            &Fields::from([
                 ("terrain", Cell::Text(hex.terrain.symbol().to_string())),
                 ("elevation", Cell::Integer(i64::from(hex.elevation))),
             ]),
@@ -206,17 +188,17 @@ pub(super) async fn save(
         let y = index as i64 / map.width;
         let old = previous
             .get(&(x, y))
-            .map(|code| fields([("value", Cell::Integer(*code))]));
+            .map(|code| Fields::from([("value", Cell::Integer(*code))]));
         row(
             c,
             "btech_map_hexes",
-            fields([
+            Fields::from([
                 ("map_dbref", Cell::Integer(id.0)),
                 ("x", Cell::Integer(x)),
                 ("y", Cell::Integer(y)),
             ]),
             old.as_ref(),
-            &fields([("value", Cell::Integer(dictionary[hex]))]),
+            &Fields::from([("value", Cell::Integer(dictionary[hex]))]),
         )
         .await?;
     }
@@ -225,18 +207,6 @@ pub(super) async fn save(
 
 /// Remove dictionary-owned children during the same transaction that purges their maps.
 pub(super) async fn purge(c: &mut SqliteConnection, ids: &BTreeSet<ObjectId>) -> Result<()> {
-    if !installed(c).await? {
-        return Ok(());
-    }
-    for id in ids {
-        sqlx::query("DELETE FROM btech_map_terrain_codes WHERE map_dbref=?")
-            .bind(id.0)
-            .execute(&mut *c)
-            .await?;
-        sqlx::query("DELETE FROM btech_map_terrain WHERE map_dbref=?")
-            .bind(id.0)
-            .execute(&mut *c)
-            .await?;
-    }
-    Ok(())
+    purge_rows(c, "btech_map_terrain_codes", "map_dbref", ids).await?;
+    purge_rows(c, "btech_map_terrain", "map_dbref", ids).await
 }

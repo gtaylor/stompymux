@@ -68,7 +68,7 @@ pub async fn run_with_clocks(
         idle_recheck: false,
         message_cache: Default::default(),
         durable: None,
-        database_anchor: None,
+        database: None,
     };
     server.cleaning = crate::cleaning::Cleaning::new(
         cleaning_now(),

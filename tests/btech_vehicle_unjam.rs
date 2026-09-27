@@ -261,7 +261,8 @@ async fn idle_vehicle_feed_countdown_retries_failed_server_commits() {
         assert!(battle_contact_observers(&world).is_empty());
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
-        sqlx::raw_sql("CREATE TRIGGER deny_unjam BEFORE UPDATE ON btech_vehicles BEGIN SELECT RAISE(ABORT,'unjam failure'); END;").execute(&mut sql).await.unwrap();
+        // A running countdown keeps its timer row still; refuse the commit at the snapshot stamp.
+        sqlx::raw_sql("CREATE TRIGGER deny_unjam BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(ABORT,'unjam failure'); END;").execute(&mut sql).await.unwrap();
         let (_address, shutdown, server, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
         tokio::time::sleep(std::time::Duration::from_millis(1200)).await;
         let saved = persistence::load(&config.database()).await.unwrap();

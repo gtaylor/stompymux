@@ -12,14 +12,20 @@ async fn data_version(db: &mut sqlx::SqliteConnection) -> i64 {
         .unwrap()
 }
 
-/// Running units standing still, one settling a target lock, reach a steady state in
-/// which heartbeats commit without touching the database, then reload exactly. The only
-/// writes left are the turn-boundary ticks, whose periodic checks roll dice.
+/// Running units standing still, one settling a target lock and one recycling a weapon,
+/// reach a steady state in which heartbeats commit without touching the database, then
+/// reload exactly. The only writes left are the turn-boundary ticks, whose periodic
+/// checks roll dice.
 #[tokio::test(flavor = "current_thread")]
 async fn running_units_standing_still_write_nothing_per_tick() {
     let templates = firing::templates();
     for template in [&templates[0], &templates[2]] {
-        let (dir, _, world, _, _, _) = firing::fixture_with_target(template, None, template).await;
+        let (dir, _, mut world, shooter, _, index) =
+            firing::fixture_with_target(template, None, template).await;
+        // A weapon recycling for longer than the test runs holds its timer row still.
+        firing::edit(&mut world, shooter, |record| {
+            record["weapon_recycle"] = serde_json::json!({ index.to_string(): 120 });
+        });
         // The shipped default; the test fixture saves the clock every second.
         let config = support::with_clock_save_interval(dir.path(), 60);
         persistence::save(&config.database(), &world).await.unwrap();

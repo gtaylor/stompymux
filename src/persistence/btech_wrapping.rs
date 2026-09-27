@@ -1,5 +1,5 @@
 //! Selective ownership of linked-map marker identity and coordinates; auxiliary payloads remain intact.
-use super::write::{Cell, fields, row};
+use super::write::{Cell, Fields, row};
 use crate::{BattleHexCoordinate, BattleLinkedMarker, ObjectId, StoredBattleMap, World};
 use anyhow::{Context, Result, ensure};
 use sqlx::{Row, SqliteConnection};
@@ -65,7 +65,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
             row(
                 c,
                 "btech_map_objects",
-                fields([
+                Fields::from([
                     ("map_dbref", Cell::Integer(id.0)),
                     ("object_type", Cell::Integer(7)),
                     ("ordinal", Cell::Integer(i64::from(ordinal))),
@@ -84,7 +84,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
 
 /// Coordinates are metadata for selection, not destinations for boundary traversal.
 fn marker_fields(marker: BattleLinkedMarker) -> super::write::Fields {
-    fields([
+    Fields::from([
         ("x", Cell::Integer(i64::from(marker.coordinate.x))),
         ("y", Cell::Integer(i64::from(marker.coordinate.y))),
         ("object_dbref", Cell::Integer(marker.object.0)),

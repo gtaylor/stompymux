@@ -1,5 +1,5 @@
 //! Stored decoration ownership preserves auxiliary map-object payloads during terrain edits.
-use super::write::{Cell, fields, row};
+use super::write::{Cell, Fields, row};
 use crate::{
     BattleHexCoordinate, BattleStaticDecoration, BattleStaticDecorationKind, ObjectId,
     StoredBattleMap, Terrain, World,
@@ -81,7 +81,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
                 row(
                     c,
                     "btech_map_objects",
-                    fields([
+                    Fields::from([
                         ("map_dbref", Cell::Integer(id.0)),
                         ("object_type", Cell::Integer(kind.index() as i64)),
                         ("ordinal", Cell::Integer(i64::from(ordinal))),
@@ -101,7 +101,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
 
 /// Persist restoration metadata and the operator-visible record payload together.
 fn decoration_fields(decoration: BattleStaticDecoration) -> super::write::Fields {
-    fields([
+    Fields::from([
         ("x", Cell::Integer(i64::from(decoration.coordinate.x))),
         ("y", Cell::Integer(i64::from(decoration.coordinate.y))),
         ("object_dbref", Cell::Integer(decoration.object.0)),

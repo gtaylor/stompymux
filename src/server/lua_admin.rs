@@ -104,15 +104,24 @@ impl Server {
             after.validate(&self.config)?;
             if !after.saved_state_eq(&before) || candidate.effects.maintenance().is_some() {
                 self.durable = None;
-                persistence::persist_effects(
-                    self.config.database(),
-                    after,
-                    self.config.database.busy_timeout_ms,
-                    candidate.effects.maintenance(),
-                    None,
-                    self.config.database.clock_save_interval,
-                )
-                .await?;
+                let interval = self.config.database.clock_save_interval;
+                let maintenance = candidate.effects.maintenance();
+                let saved = match self.database().await {
+                    Ok(database) => {
+                        database
+                            .persist_effects(&after, maintenance, None, interval)
+                            .await
+                    }
+                    Err(error) => Err(error),
+                };
+                let saved = match saved {
+                    Ok(saved) => saved,
+                    Err(error) => {
+                        self.database = None;
+                        return Err(error);
+                    }
+                };
+                candidate.world.borrow_mut().links = saved.links;
             }
             Ok(Some(candidate))
         }

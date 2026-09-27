@@ -16,8 +16,6 @@ pub(crate) trait SavedParts {
     fn same_saved_core(&self, other: &Self) -> bool;
     /// Whether the frequently changing part matches `other`.
     fn same_saved_live(&self, other: &Self) -> bool;
-    /// Names of the fields saved in the rarely changing part.
-    const CORE_FIELDS: &'static [&'static str];
     /// The rarely changing part as a JSON object keyed by the record's own field names.
     fn saved_core_value(&self) -> serde_json::Result<serde_json::Value>;
     /// The frequently changing part as a JSON object keyed by the record's own field
@@ -77,8 +75,6 @@ macro_rules! saved_parts {
                 let Self { $($core: _,)* $($live,)* $($always,)* } = self;
                 true $(&& *$live == other.$live)* $(&& *$always == other.$always)*
             }
-
-            const CORE_FIELDS: &'static [&'static str] = &[$(stringify!($core)),*];
 
             fn saved_core_value(&self) -> serde_json::Result<serde_json::Value> {
                 serde_json::to_value(&$crate::btech::saved_parts::SavedCore(self))

@@ -32,9 +32,9 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, SqliteConnect
     (dir, config, world, id, sql)
 }
 
-/// Read how many extension tables exist, without triggering schema installation.
-async fn extension_tables(sql: &mut SqliteConnection) -> i64 {
-    sqlx::query_scalar("SELECT count(*) FROM sqlite_master WHERE type='table' AND name IN ('btech_map_terrain','btech_map_terrain_codes')").fetch_one(sql).await.unwrap()
+/// Count the stored terrain dictionary rows, headers and codes together.
+async fn terrain_rows(sql: &mut SqliteConnection) -> i64 {
+    sqlx::query_scalar("SELECT (SELECT count(*) FROM btech_map_terrain) + (SELECT count(*) FROM btech_map_terrain_codes)").fetch_one(sql).await.unwrap()
 }
 
 /// Persist the asymmetric map through the same domain operation used by native commands and Lua.
@@ -52,9 +52,9 @@ async fn create(config: &Config, world: &mut World, id: ObjectId) {
 #[tokio::test]
 async fn dictionary_round_trip_is_per_map_and_preserves_unowned_columns() {
     let (_dir, config, mut world, id, mut sql) = fixture().await;
-    assert_eq!(extension_tables(&mut sql).await, 0);
+    assert_eq!(terrain_rows(&mut sql).await, 0);
     create(&config, &mut world, id).await;
-    assert_eq!(extension_tables(&mut sql).await, 2);
+    assert!(terrain_rows(&mut sql).await > 0);
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     let map = &loaded.btech.maps()[&id];
     assert!(map.terrain_ready());
@@ -187,7 +187,8 @@ async fn dictionary_round_trip_is_per_map_and_preserves_unowned_columns() {
 async fn ambiguous_maps_require_explicit_reload_and_purge_removes_dictionaries() {
     let (_dir, config, mut world, id, mut sql) = fixture().await;
     create(&config, &mut world, id).await;
-    sqlx::raw_sql("DROP TABLE btech_map_terrain_codes; DROP TABLE btech_map_terrain; UPDATE btech_map_hexes SET value=231;").execute(&mut sql).await.unwrap();
+    // A map without a dictionary header, as a reference import leaves it, stays ambiguous.
+    sqlx::raw_sql("DELETE FROM btech_map_terrain_codes; DELETE FROM btech_map_terrain; UPDATE btech_map_hexes SET value=231;").execute(&mut sql).await.unwrap();
     let mut world = persistence::load(&config.database()).await.unwrap();
     assert!(!world.btech.maps()[&id].terrain_ready());
     assert!(
@@ -199,7 +200,7 @@ async fn ambiguous_maps_require_explicit_reload_and_purge_removes_dictionaries()
     );
     world.objects.get_mut(&id).unwrap().description = Some("unrelated MUX change".into());
     persistence::save(&config.database(), &world).await.unwrap();
-    assert_eq!(extension_tables(&mut sql).await, 0);
+    assert_eq!(terrain_rows(&mut sql).await, 0);
     assert_eq!(
         sqlx::query_scalar::<_, i64>("SELECT min(value) FROM btech_map_hexes")
             .fetch_one(&mut sql)
@@ -255,7 +256,6 @@ async fn ambiguous_maps_require_explicit_reload_and_purge_removes_dictionaries()
             0
         );
     }
-    assert_eq!(extension_tables(&mut sql).await, 2);
     sql.close().await.unwrap();
 }
 
@@ -326,7 +326,7 @@ async fn corrupt_dictionary_backed_maps_never_fall_back_to_guessed_or_asset_terr
             .await
             .unwrap_err()
             .to_string()
-            .contains("Incomplete BattleTech terrain")
+            .contains("lacks the tables btech_map_terrain_codes")
     );
     sql.close().await.unwrap();
 }
@@ -406,7 +406,7 @@ async fn server_rolls_back_schema_and_output_on_failed_creation_then_recovers() 
         client.send(&format!("@btech map-create #{}=asymmetric.map",id.0)).await;
         let text=client.until("Unable to save your changes.").await;
         assert!(!text.contains("created from"));
-        assert_eq!(extension_tables(&mut sql).await,0);
+        assert_eq!(terrain_rows(&mut sql).await,0);
         assert!(!persistence::load(&config.database()).await.unwrap().btech.maps().contains_key(&id));
         client.send(&format!("@btech inspect #{}",id.0)).await;
         client.until("No saved BattleTech identity").await;

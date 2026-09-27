@@ -386,7 +386,7 @@ mod tests {
             idle_recheck: false,
             message_cache: Default::default(),
             durable: None,
-            database_anchor: None,
+            database: None,
         };
         let mut outputs = Vec::new();
         for (id, p) in [(1, Some(ObjectId(1))), (2, Some(ObjectId(2))), (3, None)] {

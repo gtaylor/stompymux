@@ -81,14 +81,6 @@ pub struct Object {
     pub state: crate::state::State,
 }
 
-/// Compare values that have no `PartialEq` by their saved form.
-fn serialized_eq<T: Serialize>(a: &T, b: &T) -> bool {
-    matches!(
-        (serde_json::to_vec(a), serde_json::to_vec(b)),
-        (Ok(a), Ok(b)) if a == b
-    )
-}
-
 /// Complete transactional world state.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct World {
@@ -142,9 +134,8 @@ impl World {
             && self.channel_aliases == other.channel_aliases
             && self.last_pages == other.last_pages
             && self.btech == other.btech
-            && (self.channels.ptr_eq(&other.channels)
-                || serialized_eq(&self.channels, &other.channels))
-            && serialized_eq(&self.macros, &other.macros)
+            && self.channels == other.channels
+            && self.macros == other.macros
     }
 
     /// Resolve a player by dbref, display name, or account alias.
