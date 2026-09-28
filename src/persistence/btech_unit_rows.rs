@@ -11,7 +11,7 @@
 use super::btech_deadlines::Clock;
 use super::write::{Cell, Fields, Rows, row, sync_changed_rows, update};
 use crate::btech::saved_parts::{SavedParts, merge};
-use crate::btech::timers::{BattleTimer, SavedTimers, TimerMotion, blank, restore};
+use crate::btech::timers::{BattleTimer, SavedTimer, SavedTimers, TimerMotion, blank, restore};
 use crate::{ObjectId, SharedMap};
 use anyhow::{Context, Result, bail, ensure};
 use serde::de::DeserializeOwned;
@@ -74,22 +74,48 @@ fn timer_rows<T: SavedTimers>(record: &T, now: i64) -> Result<Rows> {
     Ok(rows)
 }
 
-/// A record's core and live parts as stored: JSON with every counter blanked.
+/// One of the two stored parts of a record.
+#[derive(Clone, Copy)]
+enum Part {
+    Core,
+    Live,
+}
+
+impl Part {
+    /// The column holding the part.
+    fn column(self) -> &'static str {
+        match self {
+            Self::Core => "unit",
+            Self::Live => "live",
+        }
+    }
+
+    /// The part as stored: JSON with every counter in `timers` blanked.
+    fn value<T: SavedParts>(self, record: &T, timers: &[SavedTimer]) -> Result<serde_json::Value> {
+        let mut value = match self {
+            Self::Core => record.saved_core_value()?,
+            Self::Live => record.saved_live_value()?,
+        };
+        blank(&mut value, timers)?;
+        Ok(value)
+    }
+
+    /// The part's stored text.
+    fn text<T: SavedParts>(self, record: &T, timers: &[SavedTimer]) -> Result<Cell> {
+        bounded(serde_json::to_string(&self.value(record, timers)?)?)
+    }
+}
+
+/// A record's core and live parts as stored, for the running-counter audit.
+#[cfg(test)]
 pub(crate) fn blanked_parts<T: SavedParts + SavedTimers>(
     record: &T,
 ) -> Result<(serde_json::Value, serde_json::Value)> {
     let timers = record.saved_timers();
-    let mut core = record.saved_core_value()?;
-    let mut live = record.saved_live_value()?;
-    blank(&mut core, &timers)?;
-    blank(&mut live, &timers)?;
-    Ok((core, live))
-}
-
-/// The stored text of a record's parts.
-fn parts<T: SavedParts + SavedTimers>(record: &T) -> Result<(String, String)> {
-    let (core, live) = blanked_parts(record)?;
-    Ok((serde_json::to_string(&core)?, serde_json::to_string(&live)?))
+    Ok((
+        Part::Core.value(record, &timers)?,
+        Part::Live.value(record, &timers)?,
+    ))
 }
 
 /// Read every record of `table`, merging each row's parts and restoring its counters from
@@ -184,33 +210,40 @@ pub(super) async fn save<T: SavedParts + SavedTimers>(
         let key = Fields::from([("dbref", Cell::Integer(id.0))]);
         match previous {
             None => {
-                let (core, live) = parts(record)?;
+                let timers = record.saved_timers();
                 let values = Fields::from([
                     ("state_version", Cell::Integer(1)),
-                    ("unit", bounded(core)?),
-                    ("live", bounded(live)?),
+                    ("unit", Part::Core.text(record, &timers)?),
+                    ("live", Part::Live.text(record, &timers)?),
                 ]);
                 row(c, table, key, None, &values).await?;
                 inserted.push(id);
                 changed = true;
             }
             Some(old) => {
-                // Field equality is cheap; the blanked text settles whether a change was
-                // only a running counter.
-                if !old.same_saved_core(record) || !old.same_saved_live(record) {
-                    let (core, live) = parts(record)?;
-                    let (old_core, old_live) = parts(old)?;
-                    let mut values = Fields::new();
-                    if core != old_core {
-                        values.insert("unit", bounded(core)?);
+                // Field equality is cheap and rules most parts out; only a part whose
+                // fields differ is serialized, for both records, to settle whether the
+                // change was only a running counter.
+                let mut values = Fields::new();
+                let (mut timers, mut old_timers) = (None, None);
+                for (part, same) in [
+                    (Part::Core, old.same_saved_core(record)),
+                    (Part::Live, old.same_saved_live(record)),
+                ] {
+                    if same {
+                        continue;
                     }
-                    if live != old_live {
-                        values.insert("live", bounded(live)?);
+                    let text =
+                        part.text(record, timers.get_or_insert_with(|| record.saved_timers()))?;
+                    let previous =
+                        part.text(old, old_timers.get_or_insert_with(|| old.saved_timers()))?;
+                    if text != previous {
+                        values.insert(part.column(), text);
                     }
-                    if !values.is_empty() {
-                        update(c, table, &key, &values).await?;
-                        changed = true;
-                    }
+                }
+                if !values.is_empty() {
+                    update(c, table, &key, &values).await?;
+                    changed = true;
                 }
             }
         }
