@@ -532,7 +532,8 @@ attack early if you are already in the target's hex.
 
 ### Anti-missile defense
 
-`ams` toggles all installed anti-missile systems on the unit. Defense starts off.
+`ams` toggles all installed anti-missile systems on the unit. Defense starts on
+for newly built units with AMS installed.
 A running unit with defense enabled automatically uses one ready mount against
 an incoming missile attack that reaches its base target number. Missed attacks
 preserve defensive ammunition, heat and recycle time. Defensive weapons cannot

@@ -28,7 +28,7 @@ fn construction_sets_original_protection_and_independent_ammunition() {
             .count(),
         4
     );
-    assert!(!ams.ams_enabled());
+    assert!(ams.ams_enabled());
     for source in [
         JENNER.replace("FlipArms", "TripleStrengthMyomer"),
         JENNER.replace("Computer", "UnknownField"),
