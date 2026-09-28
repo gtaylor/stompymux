@@ -638,6 +638,7 @@ Alias: `"front" | "right" | "rear" | "left"`
 - `name`: `string` — Chassis name, or "something" for unidentified signals.
 - `friendly`: `boolean` — Identified and on the same team as observer.
 - `range`: `BattleRange`
+- `network_range`: `number|nil` — Closest usable command-network sighting distance; nil without an active network.
 - `heading`: `number` — Travel axis including lateral offset; reverse speed travels opposite this axis.
 - `speed`: `number` — Current kph.
 
@@ -1367,26 +1368,6 @@ Alias: `"follow_brief" | "include" | "exclude"`
 - `heading`: `integer`
 - `armor_percent`: `integer`
 - `internal_percent`: `integer`
-
-## BattleNetworkTargetRow
-
-- `unit`: `integer`
-- `label`: `string`
-- `name`: `string`
-- `identified`: `boolean`
-- `friendly`: `boolean` — Actual team relationship; identification controls display color.
-- `detection`: `BattleDetectionChannel|nil` — How the requester itself perceives the target; nil for network-only sightings.
-- `weapon_arc`: `string`
-- `coordinate`: `BattleHexCoordinate`
-- `elevation`: `integer`
-- `range`: `number` — Physical spatial range.
-- `network_range`: `{kind: "c3"|"c3i", distance: number, source: integer|nil}`
-- `bearing`: `integer`
-- `speed`: `number`
-- `heading`: `integer`
-- `status`: `string` — Five condition columns; blank without a clear sighting.
-- `destroyed`: `boolean`
-- `selected`: `boolean`
 
 ## BattleSwarmHop
 

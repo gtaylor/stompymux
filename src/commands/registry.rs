@@ -721,23 +721,11 @@ impl CommandRegistry {
             CommandDefinition::native("bootlegger", P::EVERYONE, crate::btech::bootlegger::command)
                 .policy(SwitchPolicy::Reject("bootlegger takes no switches."), false),
             CommandDefinition::native(
-                "c3targets",
-                P::EVERYONE,
-                crate::btech::network_targets::c3_command,
-            )
-            .policy(SwitchPolicy::Reject("c3targets takes no switches."), false),
-            CommandDefinition::native(
                 "c3network",
                 P::EVERYONE,
                 crate::btech::network_status::c3_command,
             )
             .policy(SwitchPolicy::Reject("c3network takes no switches."), false),
-            CommandDefinition::native(
-                "c3itargets",
-                P::EVERYONE,
-                crate::btech::network_targets::command,
-            )
-            .policy(SwitchPolicy::Reject("c3itargets takes no switches."), false),
             CommandDefinition::native(
                 "c3inetwork",
                 P::EVERYONE,

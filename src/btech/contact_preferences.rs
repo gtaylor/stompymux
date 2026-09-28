@@ -91,7 +91,7 @@ pub(super) fn filtered_for_source(
     source: super::fire_target::TargetSource,
     preferences: BattleContactPreferences,
 ) -> Result<Vec<super::BattleContactView>> {
-    let contacts = super::visible_contacts(world, source.unit)?;
+    let contacts = super::displayed_contacts(world, source.unit)?;
     let selected = source
         .selection(world)
         .and_then(|selection| match selection {

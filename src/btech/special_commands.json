@@ -884,8 +884,8 @@
     },
     {
       "class_mask": 0,
-      "syntax": "C3 [ID|-]",
-      "description": "Joins/Leaves a C3 network which the target mech is in. You will be assigned to a master computer within the network.",
+      "syntax": "C3 [ID|-|+]",
+      "description": "Networks form automatically. ID joins a specific network, - disconnects and holds you out, + resumes automatic linking.",
       "restricted": false,
       "category": false
     },
@@ -898,13 +898,6 @@
     },
     {
       "class_mask": 0,
-      "syntax": "C3TARGETS",
-      "description": "Shows available C3 targeting information",
-      "restricted": false,
-      "category": false
-    },
-    {
-      "class_mask": 0,
       "syntax": "C3NETWORK",
       "description": "Displays information about your C3 network",
       "restricted": false,
@@ -912,8 +905,8 @@
     },
     {
       "class_mask": 0,
-      "syntax": "C3I [ID|-]",
-      "description": "Joins/Leaves the C3i network connected to the target",
+      "syntax": "C3I [ID|-|+]",
+      "description": "Networks form automatically. ID joins a specific network, - disconnects and holds you out, + resumes automatic linking.",
       "restricted": false,
       "category": false
     },
@@ -921,13 +914,6 @@
       "class_mask": 0,
       "syntax": "C3IMESSAGE <MSG>",
       "description": "Sends a message to all others in your C3i network",
-      "restricted": false,
-      "category": false
-    },
-    {
-      "class_mask": 0,
-      "syntax": "C3ITARGETS",
-      "description": "Shows available C3i targeting information",
       "restricted": false,
       "category": false
     },

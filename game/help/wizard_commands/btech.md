@@ -152,12 +152,25 @@ battlefield map is in-character. Failed actions leave no partial diagnostic hist
 Mechs and ground vehicles share C3/C3i connections, messages, reports and range
 assistance. Vehicle command computers use one equipment slot each.
 
-`c3i <ID>` connects your running C3i-equipped unit to a visible friendly unit's
-network. `c3i -` disconnects. A network holds six units; disconnect before joining
-a different one. Hostile ECM prevents changing connections. Shutdown preserves
-membership, while loss of the computer, a team change, or leaving the map removes
-it. C3i uses the closest usable member for aiming range, while your own weapon
-reach, minimum range, and firing visibility still apply.
+Networks form on their own. Every heartbeat, each running unit with working C3i
+that is not yet linked joins a C3i network of friendly units on the same map,
+filling the network with the most room first; a network holds six units. Classic
+C3 works the same way, except that each working master computer contributes
+three peer slots (twelve units total) and a network only forms around a master:
+slaves wait until a master with room is available. Units on different maps or
+teams never share a network. Existing memberships are never rearranged, so a
+network keeps its members until they lose the computer, change team, leave the
+map, or disconnect. Shutdown preserves membership. Every unit hears
+`C3i network established with N units.` when its network forms and
+`<unit> connects to your C3i network.` when someone joins later.
+
+`c3i -` disconnects and holds your unit out of automatic linking until you run
+`c3i +`, which resumes it and links immediately where a network has room.
+`c3i <ID>` joins a visible friendly unit's specific network by hand. `c3`, `c3 -`,
+`c3 +` and `c3 <ID>` do the same for classic C3; the two families are held and
+resumed independently. Hostile ECM prevents changing connections by hand. C3i
+uses the closest usable member for aiming range, while your own weapon reach,
+minimum range, and firing visibility still apply.
 
 `c3imessage <text>` sends to available members of your C3i network and echoes to
 your cockpit. Shutdown, hostile ECM, and unconscious pilots prevent reception.
@@ -169,18 +182,11 @@ and remaining armor and structure. It works without visual contact. Shutdown or
 ECM prevents a peer from reporting; an unconscious pilot does not.
 
 
-`c3itargets` privately lists targets seen by you or available C3i peers. `r:` is
-physical range; `c:` is shared targeting range. P/S markers describe your own
-sensors. Peer sightings can identify targets, but do not grant your unit a firing
-lock or replace normal firing visibility.
-
-
-`c3 <ID>` joins a visible friendly classic C3 network; `c3 -` leaves. Each working
-master computer contributes three peer slots, with a twelve-unit total limit.
-Two slaves need a master before they can connect. C3 and C3i memberships are
-independent. Classic C3 now supplies aiming range assistance and takes priority
-over C3i when both are connected. Unavailable masters reduce usable capacity.
-
+Targets seen by your available network peers appear directly in `contacts`; see
+`help contacts`. Classic C3 supplies aiming range assistance and takes priority
+over C3i when both are connected. C3 and C3i memberships are independent, and
+unavailable masters reduce usable classic capacity without removing saved
+membership.
 
 
 `c3message <text>` sends to available classic C3 peers and echoes to your cockpit.
@@ -188,9 +194,8 @@ Shutdown, hostile ECM, or an unconscious pilot prevents reception. Unavailable
 masters reduce message capacity without removing saved membership. C3 and C3i
 messages use separate audiences.
 
-`c3network` privately displays classic C3 peer status; `c3targets` displays targets
-seen by you or available classic C3 peers. These use the same columns as their
-C3i counterparts. Shutdown and ECM reduce available master capacity; unconscious
+`c3network` privately displays classic C3 peer status using the same columns as
+`c3inetwork`. Shutdown and ECM reduce available master capacity; unconscious
 pilots still supply automatic status and sightings. Saved membership is retained.
 
 Radios with extra capabilities can use `setchannelmode A=DI` to display relay
@@ -746,7 +751,8 @@ All three operations require wizard authority.
 
 Inside a physical unit, `setteam <number>` changes its team. The unit must be on a
 map; the value is a signed 32-bit integer, with negatives normalized to zero.
-Changing teams clears its C3/C3i network assignment. The unit's hiding and
+Changing teams clears its C3/C3i network assignment; the next heartbeat links it
+with its new team. The unit's hiding and
 scenario-lighting state are preserved. Lua uses `btech.unit.set_team(actor, unit, team)`.
 
 Inside a physical unit, `@losemit <message>` broadcasts an emote to running units

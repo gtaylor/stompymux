@@ -7,6 +7,7 @@ use anyhow::{Context, Result};
 pub(super) struct NetworkUnit<'a> {
     pub c3_network: Option<u64>,
     pub c3i_network: Option<u64>,
+    pub automation: BattleNetworkAutomation,
     scanner: super::scanner::ScannerUnit<'a>,
     pilot: Option<ObjectId>,
     motion: Option<BattleMotion>,
@@ -63,28 +64,17 @@ impl NetworkUnit<'_> {
     pub fn name(&self) -> &str {
         self.scanner.name
     }
-    /// Contact arcs use the same facing convention as other tactical displays.
-    pub fn facing(&self) -> BattleFacing {
-        self.scanner.facing
-    }
-    /// Whole-unit destruction state.
-    pub fn is_destroyed(&self) -> bool {
-        self.scanner.destroyed
-    }
-    /// Selected unit target, if any.
-    pub fn selected(&self) -> Option<ObjectId> {
-        self.scanner.selected
-    }
 }
 
 /// Read a participant without borrowing either construction type into network rules.
 pub(super) fn unit(world: &World, id: ObjectId) -> Result<NetworkUnit<'_>> {
     let scanner = super::scanner::scanner_unit(world, id).context("Unit not found")?;
-    let (c3_network, c3i_network, pilot, motion, computer, protection) =
+    let (c3_network, c3i_network, automation, pilot, motion, computer, protection) =
         if let Some(unit) = world.btech.vehicles().get(&id) {
             (
                 unit.c3_network,
                 unit.c3i_network,
+                unit.network_automation,
                 unit.pilot(),
                 unit.motion(),
                 ComputerSource::Vehicle(unit),
@@ -98,6 +88,7 @@ pub(super) fn unit(world: &World, id: ObjectId) -> Result<NetworkUnit<'_>> {
             (
                 unit.c3_network,
                 unit.c3i_network,
+                unit.network_automation,
                 unit.pilot(),
                 unit.motion(),
                 ComputerSource::Mech(unit),
@@ -110,6 +101,7 @@ pub(super) fn unit(world: &World, id: ObjectId) -> Result<NetworkUnit<'_>> {
     Ok(NetworkUnit {
         c3_network,
         c3i_network,
+        automation,
         pilot,
         motion,
         computer,
@@ -149,6 +141,34 @@ pub(super) fn set_link(
         BattleCommandNetwork::C3 => classic,
         BattleCommandNetwork::C3i => improved,
     } = value;
+}
+
+/// Record whether the server may link one family automatically for this unit.
+pub(super) fn set_automation(
+    world: &mut World,
+    id: ObjectId,
+    kind: BattleCommandNetwork,
+    enabled: bool,
+) {
+    let automation = if world.btech.vehicles().contains_key(&id) {
+        &mut world
+            .btech
+            .vehicles
+            .get_mut(&id)
+            .unwrap()
+            .network_automation
+    } else {
+        &mut world
+            .btech
+            .constructed
+            .get_mut(&id)
+            .unwrap()
+            .network_automation
+    };
+    *match kind {
+        BattleCommandNetwork::C3 => &mut automation.c3,
+        BattleCommandNetwork::C3i => &mut automation.c3i,
+    } = enabled;
 }
 
 /// Sum remaining and original protection, including rear armor where the chassis has it.

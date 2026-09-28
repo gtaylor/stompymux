@@ -29,7 +29,7 @@ impl BattleCommandNetwork {
         }
     }
     /// Read the identity in this family's independent namespace.
-    fn link(self, unit: &super::network_unit::NetworkUnit<'_>) -> Option<u64> {
+    pub(super) fn link(self, unit: &super::network_unit::NetworkUnit<'_>) -> Option<u64> {
         match self {
             Self::C3 => unit.c3_network,
             Self::C3i => unit.c3i_network,
@@ -181,6 +181,61 @@ pub(super) fn validate(world: &World) -> Result<()> {
     Ok(())
 }
 
+/// Pilot intent for one network control command.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BattleNetworkRequest {
+    /// Join the named unit's network; automatic management is left as it was.
+    Join(ObjectId),
+    /// Disconnect and hold the unit out of automatic management.
+    Leave,
+    /// Resume automatic management and link immediately where possible.
+    Automatic,
+}
+
+/// Apply a pilot's request: manual join, held disconnect, or return to automatic linking.
+/// All admission, capacity checks, and membership edits succeed or roll back together.
+pub fn request_for(
+    world: &mut World,
+    id: ObjectId,
+    pilot: ObjectId,
+    request: BattleNetworkRequest,
+    kind: BattleCommandNetwork,
+) -> Result<Vec<BattleNotice>> {
+    match request {
+        BattleNetworkRequest::Join(target) => join_leave_for(world, id, pilot, Some(target), kind),
+        BattleNetworkRequest::Leave => {
+            let mut notices = join_leave_for(world, id, pilot, None, kind)?;
+            super::network_unit::set_automation(world, id, kind, false);
+            let name = kind.name();
+            notices.push(BattleNotice {
+                unit: id,
+                text: format!(
+                    "Automatic {name} linking is off until you run {} +.",
+                    name.to_ascii_lowercase()
+                ),
+            });
+            Ok(notices)
+        }
+        BattleNetworkRequest::Automatic => {
+            ready_for(world, id, pilot, kind)?;
+            let mut candidate = world.clone();
+            super::network_unit::set_automation(&mut candidate, id, kind, true);
+            let mut notices = super::network_topology::reconcile_for(&mut candidate, kind)?;
+            if kind.link(&network_unit(&candidate, id)?).is_none() {
+                notices.push(BattleNotice {
+                    unit: id,
+                    text: format!(
+                        "Automatic {} linking resumed; no network is available yet.",
+                        kind.name()
+                    ),
+                });
+            }
+            *world = candidate;
+            Ok(notices)
+        }
+    }
+}
+
 /// Join a visible friendly unit's network, or disconnect with None, without publishing notices.
 /// All admission, capacity checks, and membership edits succeed or roll back together.
 pub fn join_leave_for(
@@ -293,14 +348,16 @@ pub fn control(
 ) -> Result<Vec<BattleNotice>> {
     let words: Vec<_> = arguments.split_whitespace().collect();
     ensure!(words.len() == 1, "Invalid number of arguments to function!");
-    let target = if words[0] == "-" {
-        None
-    } else {
-        let world = scripts.world();
-        Some(super::radio_targeted::target(&world, id, words[0])?)
+    let request = match words[0] {
+        "-" => BattleNetworkRequest::Leave,
+        "+" => BattleNetworkRequest::Automatic,
+        label => {
+            let world = scripts.world();
+            BattleNetworkRequest::Join(super::radio_targeted::target(&world, id, label)?)
+        }
     };
     scripts.atomic(|_| {
-        let notices = join_leave_for(&mut scripts.world_mut(), id, pilot, target, kind)?;
+        let notices = request_for(&mut scripts.world_mut(), id, pilot, request, kind)?;
         for notice in &notices {
             super::notify_unit(scripts, notice.clone())?;
         }

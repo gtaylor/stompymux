@@ -154,6 +154,8 @@ pub struct BattleVehicle {
     pub(super) artillery_adjustment: u8,
     pub(super) c3_network: Option<u64>,
     pub(super) c3i_network: Option<u64>,
+    /// Which network families the server may link automatically.
+    pub(super) network_automation: super::BattleNetworkAutomation,
     pub(super) electronics: super::BattleElectronics,
     pub(super) spotter: Option<crate::ObjectId>,
     pub(super) spotter_events: super::BattleSpotterEvents,
@@ -337,6 +339,8 @@ struct VehicleRecord {
     artillery_adjustment: u8,
     c3_network: Option<u64>,
     c3i_network: Option<u64>,
+    #[serde(default)]
+    network_automation: super::BattleNetworkAutomation,
     electronics: super::BattleElectronics,
     spotter: Option<crate::ObjectId>,
     #[serde(default)]
@@ -438,6 +442,7 @@ super::saved_parts::saved_parts!(BattleVehicle {
         artillery_adjustment,
         c3_network,
         c3i_network,
+        network_automation,
         electronics,
         spotter,
         tag,
@@ -934,6 +939,7 @@ impl BattleVehicle {
             artillery_adjustment: 0,
             c3_network: None,
             c3i_network: None,
+            network_automation: Default::default(),
             electronics: Default::default(),
             spotter: None,
             spotter_events: Default::default(),
@@ -1974,6 +1980,7 @@ impl TryFrom<VehicleRecord> for BattleVehicle {
         );
         vehicle.c3_network = record.c3_network;
         vehicle.c3i_network = record.c3i_network;
+        vehicle.network_automation = record.network_automation;
         vehicle.electronics = record.electronics;
         vehicle.reconcile_electronics();
         ensure!(

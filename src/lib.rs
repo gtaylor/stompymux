@@ -67,6 +67,7 @@ pub use btech::{
     check_character_consciousness, check_template as check_battle_template,
     contact_observers as battle_contact_observers, create_map as create_battle_map,
     create_unit as create_battle_unit, destroy_unit_critical as destroy_battle_critical,
+    displayed_contact as displayed_battle_contact, displayed_contacts as displayed_battle_contacts,
     electronic_field as battle_electronic_field,
     electronic_fields_pending as battle_electronic_fields_pending,
     explode_ammunition as explode_battle_ammunition, flip_arms as flip_battle_arms,
@@ -649,16 +650,15 @@ pub use btech::network_status::{
     status as battle_c3i_status,
 };
 
-/// Combined direct and network target sightings.
-pub use btech::network_targets::{
-    BattleNetworkTargetReport, BattleNetworkTargetRow, c3_targets as battle_c3_targets,
-    targets as battle_c3i_targets,
+/// Automatic command-network formation and its per-unit opt-out.
+pub use btech::{
+    BattleNetworkAutomation, reconcile_command_networks as reconcile_battle_command_networks,
 };
 
 /// Classic C3 membership using the shared command-network model.
 pub use btech::command_network::{
-    BattleCommandNetwork, c3 as battle_c3, c3_members as battle_c3_members,
-    join_leave_c3 as join_leave_battle_c3,
+    BattleCommandNetwork, BattleNetworkRequest, c3 as battle_c3, c3_members as battle_c3_members,
+    join_leave_c3 as join_leave_battle_c3, request_for as request_battle_network,
 };
 
 /// Classic C3 communication through the shared network delivery engine.
