@@ -207,7 +207,8 @@ pub mod authority;
 pub mod clock;
 
 pub use btech::{
-    BattleSearchlight, advance_searchlights as advance_battle_searchlights,
+    BattleSearchlight, BattleSearchlightMode, advance_searchlights as advance_battle_searchlights,
+    set_searchlight_mode as set_battle_searchlight_mode,
     toggle_searchlight as toggle_battle_searchlight, unit_illuminated as battle_unit_illuminated,
 };
 

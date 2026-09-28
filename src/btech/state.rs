@@ -1275,8 +1275,12 @@ pub fn set_map_visibility(
         "Map terrain is ambiguous; reload it first"
     );
     let map = world.btech.maps.get_mut(&id).unwrap();
+    let previous = map.light;
     map.light = light.stored();
     map.visibility = i64::from(visibility);
     map.maximum_visibility = (map.visibility * 3).clamp(24, 60);
+    if previous != map.light {
+        super::searchlight::reconcile_map(world, id);
+    }
     Ok(())
 }

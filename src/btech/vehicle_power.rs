@@ -228,6 +228,7 @@ pub(super) fn advance(world: &mut World, now: i64) -> Vec<BattleNotice> {
         })
         .collect();
     let mut notices = Vec::new();
+    let mut online = Vec::new();
     for (&id, unit) in world.btech.vehicles.iter_mut() {
         let BattlePower::Starting { .. } = unit.power else {
             continue;
@@ -248,6 +249,7 @@ pub(super) fn advance(world: &mut World, now: i64) -> Vec<BattleNotice> {
             unit.sixth_sense.enabled = perception[&id].2;
             unit.radio_skill = perception[&id].1;
             unit.radio_experience_remaining = 0;
+            online.push(id);
         }
         let text = match (remaining, unit.definition().movement) {
             (25, BattleVehicleMovement::Stationary) => "Main reactor is now online.",
@@ -269,6 +271,10 @@ pub(super) fn advance(world: &mut World, now: i64) -> Vec<BattleNotice> {
             unit: id,
             text: text.into(),
         });
+    }
+    // Shutdown extinguishes the lamp; restore whatever its mode asks for.
+    for id in online {
+        super::searchlight::reconcile(world, id);
     }
     notices
 }

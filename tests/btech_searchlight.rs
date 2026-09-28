@@ -419,3 +419,152 @@ async fn terrain_beams_reach_beyond_unit_illumination_and_stop_at_obstructions()
         .insert(Flag::Going);
     assert!(!battle_hex_illuminated(&world, map, distant).unwrap());
 }
+
+/// Read the lamp's persisted switch state.
+fn lamp_state(world: &World, id: ObjectId) -> BattleSearchlight {
+    world.btech.constructed_units()[&id].searchlight()
+}
+
+/// Automatic lamps follow map darkness, cancel reversed switches and re-evaluate on map changes.
+#[tokio::test]
+async fn automatic_lamps_follow_map_light_changes_and_transfers() {
+    let (_dir, config, mut world, lamp, _, map) = fixture().await;
+    assert_eq!(lamp_state(&world, lamp).mode, BattleSearchlightMode::Auto);
+    assert_eq!(lamp_state(&world, lamp).remaining, 0);
+    set_battle_map_visibility(&mut world, map, BattleLight::Twilight, 30).unwrap();
+    assert_eq!(lamp_state(&world, lamp).remaining, 0);
+    set_battle_map_visibility(&mut world, map, BattleLight::Night, 30).unwrap();
+    assert_eq!(lamp_state(&world, lamp).remaining, 5);
+    for _ in 0..4 {
+        advance_battle_searchlights(&mut world);
+    }
+    let notices = advance_battle_searchlights(&mut world);
+    assert!(notices.iter().any(|n| n.text.contains("full power")));
+    assert!(lamp_state(&world, lamp).on);
+    // Visibility-only edits leave the lamp alone.
+    set_battle_map_visibility(&mut world, map, BattleLight::Night, 10).unwrap();
+    assert_eq!(lamp_state(&world, lamp).remaining, 0);
+    // Daylight starts a cool-down; nightfall before it expires cancels it.
+    set_battle_map_visibility(&mut world, map, BattleLight::Day, 30).unwrap();
+    assert_eq!(lamp_state(&world, lamp).remaining, 5);
+    advance_battle_searchlights(&mut world);
+    set_battle_map_visibility(&mut world, map, BattleLight::Night, 30).unwrap();
+    assert_eq!(lamp_state(&world, lamp).remaining, 0);
+    assert!(lamp_state(&world, lamp).on);
+    set_battle_map_visibility(&mut world, map, BattleLight::Day, 30).unwrap();
+    for _ in 0..5 {
+        advance_battle_searchlights(&mut world);
+    }
+    assert!(!lamp_state(&world, lamp).on);
+
+    // Moving to a dark battlefield warms the lamp up.
+    let dark = world.create(&config, "Dark field".into(), Kind::Room);
+    let terrain = format!("5 40\n{}", ".0.0.0.0.0\n".repeat(40));
+    create_battle_map(
+        &mut world,
+        dark,
+        "dark.map",
+        BattleMapAsset::parse(&terrain).unwrap(),
+    )
+    .unwrap();
+    set_battle_map_visibility(&mut world, dark, BattleLight::Night, 30).unwrap();
+    transfer_battle_unit(
+        &mut world,
+        lamp,
+        BattlePosition {
+            map: dark,
+            x: 2,
+            y: 20,
+        },
+    )
+    .unwrap();
+    assert_eq!(lamp_state(&world, lamp).remaining, 5);
+    for _ in 0..5 {
+        advance_battle_searchlights(&mut world);
+    }
+    assert!(lamp_state(&world, lamp).on);
+
+    // Shutdown extinguishes the lamp; completing startup relights it.
+    stop_battle_unit(
+        &mut world,
+        lamp,
+        ObjectId(1),
+        BattleMovementRules::STANDARD.fall,
+    )
+    .unwrap();
+    assert!(!lamp_state(&world, lamp).on);
+    assign_battle_pilot(&mut world, lamp, ObjectId(1)).unwrap();
+    start_battle_unit(&mut world, lamp, ObjectId(1), true).unwrap();
+    for _ in 0..4 {
+        advance_battle_units(&mut world, 0);
+    }
+    assert_eq!(lamp_state(&world, lamp).remaining, 0);
+    advance_battle_units(&mut world, 0);
+    assert_eq!(lamp_state(&world, lamp).remaining, 5);
+    persistence::save(&config.database(), &world).await.unwrap();
+    assert_eq!(
+        persistence::load(&config.database()).await.unwrap().btech,
+        world.btech
+    );
+}
+
+/// Explicit modes hold their state through light changes; toggling leaves automatic mode.
+#[tokio::test]
+async fn manual_modes_override_automatic_switching() {
+    let (_dir, config, world, lamp, _, map) = fixture().await;
+    let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
+    assert!(
+        support::run_text(&scripts, &config, ObjectId(1), 1, "slite bogus")
+            .contains("slite [on|off|auto]")
+    );
+    assert!(support::run_text(&scripts, &config, ObjectId(1), 1, "slite off").contains("stay off"));
+    assert_eq!(
+        lamp_state(&scripts.world(), lamp).mode,
+        BattleSearchlightMode::Off
+    );
+    set_battle_map_visibility(&mut scripts.world_mut(), map, BattleLight::Night, 30).unwrap();
+    assert_eq!(lamp_state(&scripts.world(), lamp).remaining, 0);
+    let text = support::run_text(&scripts, &config, ObjectId(1), 1, "slite auto");
+    assert!(
+        text.contains("at night") && text.contains("warm up"),
+        "{text}"
+    );
+    assert_eq!(lamp_state(&scripts.world(), lamp).remaining, 5);
+    // Choosing "on" while already warming up keeps the pending switch.
+    let text = support::run_text(&scripts, &config, ObjectId(1), 1, "slite on");
+    assert!(
+        text.contains("stay on") && !text.contains("warm up"),
+        "{text}"
+    );
+    assert_eq!(lamp_state(&scripts.world(), lamp).remaining, 5);
+    // Turning it off mid warm-up cancels the switch.
+    assert!(
+        support::run_text(&scripts, &config, ObjectId(1), 1, "slite off").contains("cancelled")
+    );
+    assert_eq!(lamp_state(&scripts.world(), lamp).remaining, 0);
+    // A bare toggle is a manual choice.
+    scripts
+        .eval_callback::<()>(&format!(
+            "btech.unit.slite({},1,btech.unit.searchlight_modes.AUTO)",
+            lamp.0
+        ))
+        .unwrap();
+    assert_eq!(
+        lamp_state(&scripts.world(), lamp).mode,
+        BattleSearchlightMode::Auto
+    );
+    assert_eq!(lamp_state(&scripts.world(), lamp).remaining, 5);
+    support::run_text(&scripts, &config, ObjectId(1), 1, "slite");
+    assert_eq!(
+        lamp_state(&scripts.world(), lamp).mode,
+        BattleSearchlightMode::On
+    );
+    assert!(
+        scripts
+            .eval_callback::<()>(&format!(
+                "btech.unit.slite({},1,btech.map.light_levels.DAY)",
+                lamp.0
+            ))
+            .is_err()
+    );
+}

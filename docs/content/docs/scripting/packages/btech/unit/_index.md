@@ -243,6 +243,7 @@ no_list: true
 - [`btech.unit.detection_channels`](detection_channels/)
 - [`btech.unit.fire_modes`](fire_modes/)
 - [`btech.unit.movement_types`](movement_types/)
+- [`btech.unit.searchlight_modes`](searchlight_modes/)
 - [`btech.unit.sections`](sections/)
 - [`btech.unit.technology`](technology/)
 - [`btech.unit.technology_groups`](technology_groups/)

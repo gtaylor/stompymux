@@ -1003,8 +1003,11 @@ pub(crate) fn facing_command(
                 ensure!(argument.is_empty(), "Usage: stealth");
                 super::toggle_stealth(&mut world, unit, ctx.player)?
             } else if input.name == "slite" {
-                ensure!(argument.is_empty(), "Usage: slite");
-                super::toggle_searchlight(&mut world, unit, ctx.player)?
+                if argument.is_empty() {
+                    super::toggle_searchlight(&mut world, unit, ctx.player)?
+                } else {
+                    super::set_searchlight_mode(&mut world, unit, ctx.player, argument.parse()?)?
+                }
             } else if input.name == "fliparms" {
                 ensure!(argument.is_empty(), "Usage: fliparms");
                 super::flip_arms(&mut world, unit, ctx.player)?

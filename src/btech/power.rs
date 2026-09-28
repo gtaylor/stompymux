@@ -407,6 +407,8 @@ pub fn advance_units(world: &mut World, now: i64) -> Vec<BattleNotice> {
                     .into_iter()
                     .map(|(unit, text)| BattleNotice { unit, text }),
             );
+            // Shutdown extinguishes the lamp; restore whatever its mode asks for.
+            super::searchlight::reconcile(world, id);
         }
     }
     notices

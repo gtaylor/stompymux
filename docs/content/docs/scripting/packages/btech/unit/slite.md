@@ -5,12 +5,15 @@ linkTitle: "slite"
 manualLinkTitle: "slite"
 ---
 
-Schedule a five-second searchlight toggle; repeated calls preserve the pending switch.
+Without a mode, schedule a five-second manual toggle; repeated calls preserve the pending switch.
+With a mode, select it and steer the lamp toward it. AUTO lights the lamp at night and
+extinguishes it otherwise, re-evaluated when map light changes, the unit changes maps or
+finishes starting up.
 
 ## Signature
 
 ```lua
-btech.unit.slite(dbref, pilot)
+btech.unit.slite(dbref, pilot, mode)
 ```
 
 ## Parameters
@@ -19,6 +22,7 @@ btech.unit.slite(dbref, pilot)
 | --- | --- | --- |
 | `dbref` | `integer` |  |
 | `pilot` | `integer` |  |
+| `mode?` | `BattleSearchlightMode` | Typed constant from btech.unit.searchlight_modes. |
 
 ## Returns
 

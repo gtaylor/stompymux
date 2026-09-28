@@ -163,7 +163,8 @@ async fn vehicle_lamp_damage_shares_rolls_and_cancels_pending_switches() {
                 BattleSearchlight {
                     destroyed: true,
                     on: false,
-                    remaining: 0
+                    remaining: 0,
+                    mode: BattleSearchlightMode::Auto,
                 }
             );
             assert!(toggle_battle_searchlight(&mut destroyed, id, ObjectId(1)).is_err());

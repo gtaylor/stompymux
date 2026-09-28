@@ -128,7 +128,7 @@ lighting and weather visibility (0–60 hexes). For example,
 of the map. Units may remain on the map; terrain is unchanged. `inspect` displays
 light as 0 (night), 1 (twilight), or 2 (day), plus visibility and the line-of-sight
 ceiling. Sensors reach fifteen hexes in any conditions; beyond that, visibility
-sets how far units see (see `help line of sight`). Failed saves leave the previous conditions in effect.
+sets how far units see (see `help line of sight`). Failed saves leave the previous conditions in effect. Moving a map into or out of night switches running automatic searchlights on that map on or off.
 
 `@btech inspect` includes a placed unit's signed elevation. This follows its
 current altitude, including jumping and height retained after terrain collapses.
@@ -975,7 +975,7 @@ contact-list filtering or loss-of-lock warnings. The corresponding Lua unit
 setters use the same cockpit authorization and state.
 
 Installed vehicle and VTOL searchlights now use `slite`, including the five-second
-warm-up/cool-down and the existing Lua control. Forward beams illuminate units
+warm-up/cool-down, the `auto`/`on`/`off` modes and the existing Lua control. Forward beams illuminate units
 and terrain; status shows lamp damage and switch timing. Shutdown cuts lamp power.
 Front hits can destroy ground-vehicle lamps, canceling pending switching; VTOL
 lamps do not use that ground-only hit rule.

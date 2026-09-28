@@ -354,7 +354,7 @@
 //|---@field weapons_hold boolean Operator-imposed firing restriction; mechanical readiness is independent.
 //|---@field visibility {invisible: boolean, clairvoyant: boolean} Operator visibility state.
 //|---@field battlefield_id string? Current battlefield identity; absent without map membership.
-//|---@field searchlight {on: boolean, destroyed: boolean, remaining: integer} Hardware and pending five-second switch.
+//|---@field searchlight {on: boolean, destroyed: boolean, remaining: integer, mode: "auto"|"on"|"off"} Hardware, pending five-second switch and switching policy.
 //|---@field fired_recently boolean Launched a weapon since the last heartbeat.
 //|---@field spotter integer? Self ID while spotting, otherwise the selected observer.
 //|---@field artillery_adjustment integer Saved correction for the current artillery target.
@@ -440,7 +440,7 @@
 //|---@class BattleVehicleState: BattleTransportState, BattleRadioState
 //|---@field armor_warning boolean Armor severity warnings; enabled by default.
 //|---@field ammunition_warning boolean Low-ammunition warnings; enabled by default.
-//|---@field searchlight {on: boolean, destroyed: boolean, remaining: integer} Hardware and pending five-second switch.
+//|---@field searchlight {on: boolean, destroyed: boolean, remaining: integer, mode: "auto"|"on"|"off"} Hardware, pending five-second switch and switching policy.
 //|---@field autocon_shutdown boolean Include shutdown targets in routine contact notices.
 //|---@field searchlight_warning boolean Announce external illumination transitions.
 //|---@field mw_safety boolean MechWarrior safety; enabled when startup completes.
@@ -1623,6 +1623,8 @@
 //|---@class BattleRepairOperation
 //|---Typed battlefield light constant from btech.map.light_levels.
 //|---@class BattleLightLevel
+//|---Typed searchlight switching policy from btech.unit.searchlight_modes.
+//|---@class BattleSearchlightMode
 // lua-types-end
 
 // lua-types-begin btech 00428
