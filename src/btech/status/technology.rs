@@ -90,13 +90,18 @@ pub(super) fn lines(world: &World, id: ObjectId) -> Result<Vec<String>> {
     }
     if installed_light {
         parts.push(format!(
-            "SLITE({})  ",
+            "SLITE({}{})  ",
             if light.destroyed {
                 "[fg=red bold]XX[reset]"
             } else if light.on {
                 "[fg=green bold]On[reset]"
             } else {
                 "[fg=green]Off[reset]"
+            },
+            if !light.destroyed && light.mode == super::super::BattleSearchlightMode::Auto {
+                "/Auto"
+            } else {
+                ""
             }
         ));
     }

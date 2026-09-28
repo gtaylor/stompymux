@@ -1,7 +1,7 @@
 +++
 title = "Piloting BattleMechs"
 description = "Enter a unit and take or release its cockpit"
-keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "unjam", "stinger", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "incendiary", "precision", "flechette", "jump", "dfa", "death from above", "land", "mechprefs", "autofall", "ams", "pods", "removepod", "removepods", "extinguish"]
+keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "unjam", "stinger", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "incendiary", "precision", "flechette", "jump", "dfa", "death from above", "land", "mechprefs", "autofall", "ams", "pods", "removepod", "removepods", "extinguish"]
 article_tags = ["show_in_index"]
 +++
 
@@ -441,7 +441,13 @@ remains, destroying the mount and causing internal damage.
 
 ### Searchlights
 
-On a running unit fitted with `Searchlight`, `slite` starts a five-second on/off switch. Repeating the command preserves its countdown. Lua uses `btech.unit.slite(unit, pilot)`; `btech.unit.state(unit).searchlight` reports hardware and switch state. Switches and damage survive restart.
+Units fitted with `Searchlight` start in automatic mode: the lamp switches on when the battlefield is at night and off in twilight or daylight, where it gives no benefit. Automatic lamps react when an administrator changes the map's light, when the unit moves to another battlefield, and when the unit finishes starting up. Every switch takes five seconds.
+
+- `slite auto` returns to automatic switching.
+- `slite on` and `slite off` hold the lamp on or off regardless of light.
+- `slite` alone toggles a running lamp and leaves automatic mode. Repeating it preserves the pending countdown.
+
+The mode can be chosen while shut down and applies once systems are online. `status` shows `SLITE(On/Auto)` or `SLITE(Off/Auto)` for automatic lamps. Lua uses `btech.unit.slite(unit, pilot[, mode])` with a constant from `btech.unit.searchlight_modes` (`AUTO`, `ON`, `OFF`); omitting the mode toggles. `btech.unit.state(unit).searchlight` reports hardware, switch state and mode. Modes, switches and damage survive restart.
 
 An intact active lamp illuminates its carrier and targets within 30 hexes in its forward torso arc, subject to terrain, woods and water obstruction. Illumination follows current positions and facing and feeds optical detection and aiming. Front torso hits can destroy the lamp and cancel its switch.
 
@@ -526,7 +532,8 @@ attack early if you are already in the target's hex.
 
 ### Anti-missile defense
 
-`ams` toggles all installed anti-missile systems on the unit. Defense starts off.
+`ams` toggles all installed anti-missile systems on the unit. Defense starts on
+for newly built units with AMS installed.
 A running unit with defense enabled automatically uses one ready mount against
 an incoming missile attack that reaches its base target number. Missed attacks
 preserve defensive ammunition, heat and recycle time. Defensive weapons cannot

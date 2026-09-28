@@ -902,7 +902,8 @@ impl BattleUnit {
             stealth: Default::default(),
             electronics: Default::default(),
             beacons: Default::default(),
-            ams_enabled: false,
+            // Anti-missile defense is purely reactive, so installed systems start armed.
+            ams_enabled: loadout.weapons.iter().any(|mount| mount.weapon.is_ams()),
             flight: None,
             free_fall: None,
             orbital_drop: None,

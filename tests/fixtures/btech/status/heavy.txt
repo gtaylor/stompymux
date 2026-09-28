@@ -15,7 +15,7 @@ Speed:        0 KPH  Heading:        0 deg     Heat Sinks:        18
 Des. Speed:   0 KPH  Des. Heading:   0 deg     Heat Dissipation:   0 deg C.
 Temp: |.............|.....|......................|
   
-AdvTech: SLITE(Off)  
+AdvTech: SLITE(Off/Auto)  
 LARM: Ready RARM: Ready LLEG: Ready RLEG: Ready 
 ==================WEAPON SYSTEMS===========================AMMUNITION========
 ------ Weapon --------- [##] Location ---- Status ||--- Ammo Type ---- Rounds

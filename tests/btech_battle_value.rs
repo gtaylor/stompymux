@@ -164,7 +164,7 @@ fn anti_missile_system_value_and_mass() {
             weapon.ammunition_explosion_damage(capacity),
             u32::from(capacity) * 2
         );
-        assert!(!equipped.ams_enabled());
+        assert!(equipped.ams_enabled());
         score(&equipped, 215.0, defensive);
         equipped
             .destroy_critical(CriticalLocation {

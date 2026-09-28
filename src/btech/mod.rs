@@ -409,7 +409,8 @@ pub use broadcast::{BattleMessageTarget, observer_messages};
 
 mod searchlight;
 pub use searchlight::{
-    BattleSearchlight, advance_searchlights, toggle_searchlight, unit_illuminated,
+    BattleSearchlight, BattleSearchlightMode, advance_searchlights, set_searchlight_mode,
+    toggle_searchlight, unit_illuminated,
 };
 
 pub use preferences::set_searchlight_warning;

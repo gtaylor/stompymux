@@ -10,6 +10,64 @@ pub struct BattleSearchlight {
     pub on: bool,
     pub destroyed: bool,
     pub remaining: u8,
+    /// Occupant-selected switching policy; automatic lamps follow battlefield darkness.
+    #[serde(default)]
+    pub mode: BattleSearchlightMode,
+}
+
+/// How the lamp chooses its state. Automatic lamps switch on at night and off otherwise,
+/// re-evaluated only when map light changes, the carrier changes maps or finishes starting up.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BattleSearchlightMode {
+    #[default]
+    Auto,
+    On,
+    Off,
+}
+
+impl BattleSearchlightMode {
+    /// Decode the Lua constant value, where zero is automatic.
+    pub fn from_stored(value: i64) -> Result<Self> {
+        Ok(match value {
+            0 => Self::Auto,
+            1 => Self::On,
+            2 => Self::Off,
+            _ => anyhow::bail!("Searchlight mode must be 0, 1 or 2"),
+        })
+    }
+
+    /// Encode this mode as its Lua constant value.
+    pub fn stored(self) -> i64 {
+        match self {
+            Self::Auto => 0,
+            Self::On => 1,
+            Self::Off => 2,
+        }
+    }
+
+    /// Lowercase name used by commands and status displays.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::On => "on",
+            Self::Off => "off",
+        }
+    }
+}
+
+impl std::str::FromStr for BattleSearchlightMode {
+    type Err = anyhow::Error;
+
+    /// Parse the `slite` command argument.
+    fn from_str(value: &str) -> Result<Self> {
+        match value.trim().to_ascii_lowercase().as_str() {
+            "auto" => Ok(Self::Auto),
+            "on" => Ok(Self::On),
+            "off" => Ok(Self::Off),
+            _ => anyhow::bail!("Usage: slite [on|off|auto]"),
+        }
+    }
 }
 
 impl BattleSearchlight {
@@ -133,6 +191,7 @@ fn inferno(world: &World, id: ObjectId) -> u32 {
 }
 
 /// Request a guarded toggle; repeated requests preserve the existing transition.
+/// Toggling is a manual choice, so the lamp leaves automatic mode and holds the new target.
 pub fn toggle_searchlight(
     world: &mut World,
     id: ObjectId,
@@ -147,6 +206,12 @@ pub fn toggle_searchlight(
         "Your searchlight has been destroyed already!"
     );
     let on = lamp.on;
+    // Both a fresh and an already pending switch end with the lamp inverted.
+    hardware_mut(world, id).mode = if on {
+        BattleSearchlightMode::Off
+    } else {
+        BattleSearchlightMode::On
+    };
     let text = if lamp.remaining > 0 {
         if on {
             "Your searchlight is already in the process of turning off."
@@ -167,6 +232,113 @@ pub fn toggle_searchlight(
     };
     let _ = super::autopilot::manual_takeover(world, id);
     Ok(notice)
+}
+
+/// Select a switching policy and immediately steer the lamp toward it.
+/// The mode may be chosen while powered down; it then applies once startup completes.
+pub fn set_searchlight_mode(
+    world: &mut World,
+    id: ObjectId,
+    pilot: ObjectId,
+    mode: BattleSearchlightMode,
+) -> Result<BattleNotice> {
+    super::radio::controlled(world, id, pilot)?;
+    let (lamp, installed) = hardware(world, id).context("Unit is unavailable")?;
+    ensure!(installed, "Your 'mech isn't equipped with searchlight!");
+    ensure!(
+        !lamp.destroyed,
+        "Your searchlight has been destroyed already!"
+    );
+    hardware_mut(world, id).mode = mode;
+    let mut text = match mode {
+        BattleSearchlightMode::Auto => {
+            "Your searchlight will now switch on at night and off otherwise.".to_owned()
+        }
+        BattleSearchlightMode::On => "Your searchlight is now set to stay on.".to_owned(),
+        BattleSearchlightMode::Off => "Your searchlight is now set to stay off.".to_owned(),
+    };
+    match reconcile(world, id) {
+        Some(SearchlightAdjustment::WarmUp) => text.push_str(" It starts to warm up."),
+        Some(SearchlightAdjustment::CoolDown) => text.push_str(" It starts to cool down."),
+        Some(SearchlightAdjustment::Cancelled) => {
+            text.push_str(" Its pending switch is cancelled.")
+        }
+        None => {}
+    }
+    let _ = super::autopilot::manual_takeover(world, id);
+    Ok(BattleNotice { unit: id, text })
+}
+
+/// How [`reconcile`] steered a lamp toward its mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum SearchlightAdjustment {
+    WarmUp,
+    CoolDown,
+    Cancelled,
+}
+
+/// The state a lamp's mode asks for, or `None` when automatic mode has no battlefield to read.
+fn desired(world: &World, id: ObjectId, mode: BattleSearchlightMode) -> Option<bool> {
+    match mode {
+        BattleSearchlightMode::On => Some(true),
+        BattleSearchlightMode::Off => Some(false),
+        BattleSearchlightMode::Auto => {
+            let position = super::scanner::scanner_unit(world, id)?.position?;
+            let light = world.btech.maps().get(&position.map)?.light_level().ok()?;
+            Some(light == super::BattleLight::Night)
+        }
+    }
+}
+
+/// Schedule or cancel a five-second switch so an intact, running lamp converges on its mode.
+/// Called from events that can change the answer rather than from the simulation tick; the
+/// tick's switch completion publishes the result.
+pub(super) fn reconcile(world: &mut World, id: ObjectId) -> Option<SearchlightAdjustment> {
+    let (lamp, installed) = hardware(world, id)?;
+    if !installed || lamp.destroyed {
+        return None;
+    }
+    let scanner = super::scanner::scanner_unit(world, id)?;
+    if scanner.power != BattlePower::Running
+        || scanner.destroyed
+        || world
+            .objects
+            .get(&id)
+            .is_none_or(|o| o.flags.contains(crate::Flag::Going))
+    {
+        return None;
+    }
+    let want = desired(world, id, lamp.mode)?;
+    let pending = lamp.remaining > 0;
+    if (lamp.on != pending) == want {
+        return None;
+    }
+    let lamp = hardware_mut(world, id);
+    if pending {
+        // The lamp already shows the wanted state; drop the switch away from it.
+        lamp.remaining = 0;
+        return Some(SearchlightAdjustment::Cancelled);
+    }
+    lamp.remaining = 5;
+    Some(if want {
+        SearchlightAdjustment::WarmUp
+    } else {
+        SearchlightAdjustment::CoolDown
+    })
+}
+
+/// Re-evaluate every lamp on one battlefield after its light level changes.
+pub(super) fn reconcile_map(world: &mut World, map: ObjectId) {
+    let ids: Vec<_> = emitter_ids(world)
+        .filter(|&id| {
+            super::scanner::scanner_unit(world, id)
+                .and_then(|unit| unit.position)
+                .is_some_and(|position| position.map == map)
+        })
+        .collect();
+    for id in ids {
+        reconcile(world, id);
+    }
 }
 
 /// Advance switches atomically with the server tick; an unpowered expiry leaves the lamp unchanged.
@@ -419,6 +591,7 @@ pub(super) fn strike(
         super::broadcast::observer_notices(world, id, "'s searchlight is blown apart!");
     *hardware_mut(world, id) = BattleSearchlight {
         destroyed: true,
+        mode: lamp.mode,
         ..Default::default()
     };
     Some((

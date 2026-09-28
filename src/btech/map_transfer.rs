@@ -221,5 +221,7 @@ pub(super) fn place(
     };
     world.btech.units.insert(id, identity);
     world.objects.get_mut(&id).unwrap().location = Some(position.map);
+    // A new battlefield may be darker or brighter than the one the unit left.
+    super::searchlight::reconcile(world, id);
     Ok(())
 }

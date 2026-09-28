@@ -304,7 +304,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `weapons_hold`: `boolean` — Operator-imposed firing restriction; mechanical readiness is independent.
 - `visibility`: `{invisible: boolean, clairvoyant: boolean}` — Operator visibility state.
 - `battlefield_id`: `string?` — Current battlefield identity; absent without map membership.
-- `searchlight`: `{on: boolean, destroyed: boolean, remaining: integer}` — Hardware and pending five-second switch.
+- `searchlight`: `{on: boolean, destroyed: boolean, remaining: integer, mode: "auto"|"on"|"off"}` — Hardware, pending five-second switch and switching policy.
 - `fired_recently`: `boolean` — Launched a weapon since the last heartbeat.
 - `spotter`: `integer?` — Self ID while spotting, otherwise the selected observer.
 - `artillery_adjustment`: `integer` — Saved correction for the current artillery target.
@@ -387,7 +387,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 
 - `armor_warning`: `boolean` — Armor severity warnings; enabled by default.
 - `ammunition_warning`: `boolean` — Low-ammunition warnings; enabled by default.
-- `searchlight`: `{on: boolean, destroyed: boolean, remaining: integer}` — Hardware and pending five-second switch.
+- `searchlight`: `{on: boolean, destroyed: boolean, remaining: integer, mode: "auto"|"on"|"off"}` — Hardware, pending five-second switch and switching policy.
 - `autocon_shutdown`: `boolean` — Include shutdown targets in routine contact notices.
 - `searchlight_warning`: `boolean` — Announce external illumination transitions.
 - `mw_safety`: `boolean` — MechWarrior safety; enabled when startup completes.

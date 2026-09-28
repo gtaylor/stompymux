@@ -921,7 +921,8 @@ impl BattleVehicle {
             experience: Default::default(),
             friendly_fire_safety: false,
             auto_fall: false,
-            ams_enabled: false,
+            // Anti-missile defense is purely reactive, so installed systems start armed.
+            ams_enabled: loadout.weapons.iter().any(|mount| mount.weapon.is_ams()),
             weapon_heat: 0.0,
             inferno_remaining: 0,
             burning_sections: BTreeMap::new(),

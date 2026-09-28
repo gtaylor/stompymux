@@ -218,16 +218,36 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
         "unit_stealth",
         error::wrap(lua, stealth, "btech.operation.failed")?,
     )?;
-    let searchlight = lua.create_function(move |lua, (unit, pilot): (i64, i64)| {
+    let searchlight = lua.create_function(move |lua, (unit, pilot, mode): (i64, i64, Value)| {
         crate::lua::transactions::require(lua)?;
+        let mode = match mode {
+            Value::Nil => None,
+            mode => Some(
+                crate::BattleSearchlightMode::from_stored(i64::from(constants::require(
+                    mode,
+                    3,
+                    "mode",
+                    &constants::SEARCHLIGHT_MODES,
+                )?))
+                .map_err(mlua::Error::external)?,
+            ),
+        };
         let scripts = crate::Scripts::services(lua)?;
         crate::lua::transactions::run(lua, &scripts.world, || {
-            let notice = crate::toggle_battle_searchlight(
-                &mut scripts.world.borrow_mut(),
-                ObjectId(unit),
-                ObjectId(pilot),
-            )
+            let mut world = scripts.world.borrow_mut();
+            let notice = match mode {
+                None => {
+                    crate::toggle_battle_searchlight(&mut world, ObjectId(unit), ObjectId(pilot))
+                }
+                Some(mode) => crate::set_battle_searchlight_mode(
+                    &mut world,
+                    ObjectId(unit),
+                    ObjectId(pilot),
+                    mode,
+                ),
+            }
             .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")))?;
+            drop(world);
             crate::btech::notify_unit(&scripts, notice)
                 .map_err(|e| error::failure("btech.operation.failed", e))?;
             Ok(true)

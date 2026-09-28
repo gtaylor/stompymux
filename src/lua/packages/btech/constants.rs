@@ -960,6 +960,25 @@ pub(super) static LIGHT_LEVELS: Catalog = Catalog {
     ],
 };
 
+/// Searchlight switching policies accepted by `btech.unit.slite`; zero is automatic.
+pub(super) static SEARCHLIGHT_MODES: Catalog = Catalog {
+    qualified_name: "btech.unit.searchlight_modes",
+    entries: &[
+        Entry {
+            name: "AUTO",
+            value: 0,
+        },
+        Entry {
+            name: "ON",
+            value: 1,
+        },
+        Entry {
+            name: "OFF",
+            value: 2,
+        },
+    ],
+};
+
 /// How a unit currently perceives a contact, as reported on contact rows and aim breakdowns.
 pub(super) static DETECTION_CHANNELS: StringCatalog = StringCatalog {
     qualified_name: "btech.unit.detection_channels",
@@ -1274,6 +1293,7 @@ pub(super) fn install(lua: &Lua, package: &Table) -> mlua::Result<()> {
         ("technology_groups", &TECHNOLOGY_GROUPS),
         ("fire_modes", &FIRE_MODES),
         ("ammunition_modes", &AMMUNITION_MODES),
+        ("searchlight_modes", &SEARCHLIGHT_MODES),
     ] {
         unit.raw_set(name, namespace(lua, catalog)?)?;
     }
@@ -1346,5 +1366,16 @@ mod tests {
             );
         }
         assert_eq!(LIGHT_LEVELS.entries.len(), 3);
+    }
+
+    /// Searchlight mode constants decode to the matching mode and command spelling.
+    #[test]
+    fn searchlight_mode_catalog_matches_modes() {
+        for entry in SEARCHLIGHT_MODES.entries {
+            let mode = crate::BattleSearchlightMode::from_stored(i64::from(entry.value)).unwrap();
+            assert_eq!(mode.stored(), i64::from(entry.value));
+            assert_eq!(mode.name(), entry.name.to_ascii_lowercase());
+        }
+        assert_eq!(SEARCHLIGHT_MODES.entries.len(), 3);
     }
 }

@@ -339,7 +339,7 @@ function btech_unit.inspect(dbref) end
 ---@field weapons_hold boolean Operator-imposed firing restriction; mechanical readiness is independent.
 ---@field visibility {invisible: boolean, clairvoyant: boolean} Operator visibility state.
 ---@field battlefield_id string? Current battlefield identity; absent without map membership.
----@field searchlight {on: boolean, destroyed: boolean, remaining: integer} Hardware and pending five-second switch.
+---@field searchlight {on: boolean, destroyed: boolean, remaining: integer, mode: "auto"|"on"|"off"} Hardware, pending five-second switch and switching policy.
 ---@field fired_recently boolean Launched a weapon since the last heartbeat.
 ---@field spotter integer? Self ID while spotting, otherwise the selected observer.
 ---@field artillery_adjustment integer Saved correction for the current artillery target.
@@ -419,7 +419,7 @@ function btech_unit.inspect(dbref) end
 ---@class BattleVehicleState: BattleTransportState, BattleRadioState
 ---@field armor_warning boolean Armor severity warnings; enabled by default.
 ---@field ammunition_warning boolean Low-ammunition warnings; enabled by default.
----@field searchlight {on: boolean, destroyed: boolean, remaining: integer} Hardware and pending five-second switch.
+---@field searchlight {on: boolean, destroyed: boolean, remaining: integer, mode: "auto"|"on"|"off"} Hardware, pending five-second switch and switching policy.
 ---@field autocon_shutdown boolean Include shutdown targets in routine contact notices.
 ---@field searchlight_warning boolean Announce external illumination transitions.
 ---@field mw_safety boolean MechWarrior safety; enabled when startup completes.
@@ -1628,11 +1628,15 @@ function btech_unit.sight(dbref, pilot, weapon, target) end
 ---@return boolean
 function btech_unit.rottorso(dbref, pilot, direction) end
 
----Schedule a five-second searchlight toggle; repeated calls preserve the pending switch.
+---Without a mode, schedule a five-second manual toggle; repeated calls preserve the pending switch.
+---With a mode, select it and steer the lamp toward it. AUTO lights the lamp at night and
+---extinguishes it otherwise, re-evaluated when map light changes, the unit changes maps or
+---finishes starting up.
 ---@param dbref integer
 ---@param pilot integer
+---@param mode? BattleSearchlightMode Typed constant from btech.unit.searchlight_modes.
 ---@return boolean
-function btech_unit.slite(dbref, pilot) end
+function btech_unit.slite(dbref, pilot, mode) end
 
 ---Toggle forward/backward arms on a capable standing, running chassis.
 ---@param dbref integer
@@ -3177,6 +3181,8 @@ function btech_unit.set_field(actor, unit, field, value) end
 ---@class BattleRepairOperation
 ---Typed battlefield light constant from btech.map.light_levels.
 ---@class BattleLightLevel
+---Typed searchlight switching policy from btech.unit.searchlight_modes.
+---@class BattleSearchlightMode
 
 ---@class BattleValuePair
 ---@field current integer
