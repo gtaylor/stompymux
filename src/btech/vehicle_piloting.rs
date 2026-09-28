@@ -58,6 +58,7 @@ pub(super) fn roll(
         skill,
         damage,
         cockpit,
+        armor: 0,
         situational: modifier,
         absent_character_pilot,
         target,

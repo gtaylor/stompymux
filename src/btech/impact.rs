@@ -960,7 +960,10 @@ impl<'a> ImpactContext<'a> {
         if vented == 0 || self.unit().sections()[&section].internal == 0 {
             return Ok(());
         }
-        let vented = self.unit().armor_damage(vented);
+        let vented = self
+            .unit()
+            .hardened_hit(section, true, vented)
+            .map_or(vented, |(removed, _)| removed);
         let armor = self.damage_phase(section, vented, BattleDamagePhase::Armor { rear: true })?;
         self.record_phase(armor)?;
         if self.rules.is_some() {
@@ -1436,12 +1439,15 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
             context.strike_searchlight(section, rear);
             let previous_warning =
                 super::combat_warnings::armor_level(context.unit(), section, rear);
-            // Hardened armor halves the damage before armor absorbs it; overflow stays halved.
-            let hardened = context.unit().armor_damage(damage);
-            let armor =
-                context.damage_phase(section, hardened, BattleDamagePhase::Armor { rear })?;
+            // Hardened armor points each stop two damage; overflow passes at full value.
+            let hardened = context.unit().hardened_hit(section, rear, damage);
+            let armor = context.damage_phase(
+                section,
+                hardened.map_or(damage, |(removed, _)| removed),
+                BattleDamagePhase::Armor { rear },
+            )?;
             let warning = super::combat_warnings::armor_level(context.unit(), section, rear);
-            damage = armor.remaining;
+            damage = hardened.map_or(armor.remaining, |(_, overflow)| overflow);
             let ap = match weapon_effect {
                 Some(WeaponEffect::ArmorPiercing(weapon)) => Some(weapon),
                 _ => None,

@@ -89,6 +89,8 @@ async fn armor_penetration_uses_one_entry_roll_and_applies_material_modifiers() 
         ("", 40, 40, 0, 0),
         ("", 43, 43, 3, 3),
         ("HardenedArmor_Tech", 81, 41, 1, 1),
+        // Forty hardened points stop eighty; the other five pass at full value.
+        ("HardenedArmor_Tech", 85, 43, 5, 5),
         ("ReinforcedInternal_Tech", 43, 43, 3, 2),
         ("CompositeInternal_Tech", 43, 43, 3, 6),
     ] {
@@ -664,4 +666,15 @@ async fn rotor_divisor_preserves_minimum_internal_damage_and_restart() {
             1
         );
     }
+}
+
+/// Hardened armor costs a vehicle one flank MP.
+#[tokio::test]
+async fn hardened_armor_reduces_vehicle_flank_speed() {
+    let standard = include_str!("../game/mechs/Demolisher");
+    let hardened = standard.replace("ICEEngine_Tech", "ICEEngine_Tech HardenedArmor_Tech");
+    let (_dir, _config, world, id) = fixture(standard).await;
+    let base = world.btech.vehicles()[&id].maximum_speed();
+    let (_dir, _config, world, id) = fixture(&hardened).await;
+    assert_eq!(world.btech.vehicles()[&id].maximum_speed(), base - 10.75);
 }

@@ -1102,10 +1102,14 @@ path, battle value, mass and parsing.
 or its abbreviation, as the reference template loader does. Cost helpers accept both
 spellings too.
 
-- **Hardened armor** (`HardenedArmor_Tech`/`HARM`): conventional Mech armor damage is
-  halved, rounding up, before armor absorbs it, and overflow stays halved. This matches
-  the reference damage code and the existing vehicle rule. Armor weighs eight points
-  per ton.
+- **Hardened armor** (`HardenedArmor_Tech`/`HARM`) follows the tabletop rules on Mechs and
+  vehicles. Each remaining point stops two damage, so a hit removes half its damage in armor
+  (rounding up). Damage beyond twice the remaining armor passes on at full value. The
+  reference instead halved the whole hit, overflow included. Hardened armor costs one
+  running (Mech) or flank (vehicle) MP, 10.75 kph off the speed ceiling. Because walking
+  speed derives from that ceiling, the walking threshold also drops by two-thirds of an MP.
+  Mech piloting rolls made while running get +1 (`BattlePilotingCheck::armor`). Armor
+  weighs eight points per ton.
 - **Reinforced structure** (`ReinforcedInternal_Tech`/`RINT`) halves internal damage,
   rounding up. **Composite structure** (`CompositeInternal_Tech`/`CINT`) doubles it.
   Overflow keeps the modified value, as in the reference. Reinforced structure weighs

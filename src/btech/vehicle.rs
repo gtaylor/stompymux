@@ -1089,8 +1089,17 @@ impl BattleVehicle {
         {
             return 0.0;
         }
+        // Hardened armor costs one flank MP.
+        let hardened = if self
+            .definition
+            .has_technology(super::BattleTechnology::HardenedArmor)
+        {
+            10.75
+        } else {
+            0.0
+        };
         self.propulsion
-            .maximum((self.definition.max_speed - self.motive_speed_loss).max(0.0))
+            .maximum((self.definition.max_speed - self.motive_speed_loss - hardened).max(0.0))
     }
 
     /// Apply an explicit motive consequence; damage adapters own notices and the enclosing transaction.

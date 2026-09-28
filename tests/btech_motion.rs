@@ -9929,6 +9929,41 @@ async fn small_cockpit_piloting_mass_and_restart() {
     }
 }
 
+/// Hardened armor costs one running MP and adds one to piloting rolls only while running.
+#[tokio::test]
+async fn hardened_armor_slows_running_and_hampers_piloting() {
+    use stompymux_rs::*;
+    let (_dir, _config, mut world, id, _target) = shot_fixture().await;
+    let standard = world.btech.constructed_units()[&id]
+        .mobility()
+        .maximum_speed;
+    let mut definition = world.btech.constructed_units()[&id].definition().clone();
+    let value = definition.attributes.entry("specials".into()).or_default();
+    value.push_str(" HardenedArmor_Tech");
+    let mut state = serde_json::to_value(&world.btech).unwrap();
+    state["constructed"][id.0.to_string()]["definition"] =
+        serde_json::to_value(definition).unwrap();
+    world.btech = serde_json::from_value(state).unwrap();
+    let hardened = world.btech.constructed_units()[&id]
+        .mobility()
+        .maximum_speed;
+    assert_eq!(hardened, standard - 10.75);
+    for (speed, armor) in [(0.0, 0), (hardened * 2.0 / 3.0, 0), (hardened, 1)] {
+        let mut state = serde_json::to_value(&world.btech).unwrap();
+        state["constructed"][id.0.to_string()]["motion"]["speed"] = serde_json::json!(speed);
+        world.btech = serde_json::from_value(state).unwrap();
+        let check = roll_battle_piloting(&mut world, id, 0, true).unwrap();
+        assert_eq!(check.armor, armor, "speed {speed}");
+        assert_eq!(
+            check.target,
+            i32::from(check.skill)
+                + i32::from(check.damage)
+                + i32::from(check.cockpit)
+                + i32::from(armor)
+        );
+    }
+}
+
 /// Artemis V guidance makes Artemis rounds one easier to hit; ordinary Artemis IV does not.
 #[tokio::test]
 async fn artemis_v_guidance_improves_aim() {

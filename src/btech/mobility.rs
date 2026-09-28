@@ -12,7 +12,10 @@ pub struct BattleMobility {
 impl BattleUnit {
     /// Recompute mobility from facts instead of accumulating mutable penalties after each hit.
     pub fn mobility(&self) -> BattleMobility {
-        let baseline = self.propulsion.baseline(self.definition().max_speed);
+        // Hardened armor costs one running MP before damage adjusts the ceiling.
+        let baseline = (self.propulsion.baseline(self.definition().max_speed)
+            - self.hardened_speed_penalty())
+        .max(0.0);
         let chassis = self.chassis();
         let legs = chassis.legs();
         let missing = self.unavailable_legs();

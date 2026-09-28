@@ -495,8 +495,8 @@ async fn technology_fixture(
     (dir, config, world, id)
 }
 
-/// Hardened armor halves armor damage; reinforced structure halves and composite structure
-/// doubles internal damage. Full names and reference abbreviations behave the same.
+/// Each hardened armor point stops two damage and overflow passes at full value; reinforced
+/// structure halves and composite structure doubles internal damage. Full names and reference abbreviations behave the same.
 #[tokio::test]
 async fn armor_and_structure_technologies_modify_mech_damage() {
     // Left arm: 4 armor and 6 internal structure on the Jenner.
@@ -504,8 +504,9 @@ async fn armor_and_structure_technologies_modify_mech_damage() {
         ("", 2, 2, 6),
         ("HardenedArmor_Tech", 2, 3, 6),
         ("HARM", 2, 3, 6),
-        // Hardened halves 12 to 6: four armor, then two internal.
-        ("HardenedArmor_Tech", 12, 0, 4),
+        // Four hardened points stop eight of twelve; four reach the structure.
+        ("HardenedArmor_Tech", 12, 0, 2),
+        ("HARM", 9, 0, 5),
         ("", 6, 0, 4),
         ("ReinforcedInternal_Tech", 6, 0, 5),
         ("RINT", 6, 0, 5),
