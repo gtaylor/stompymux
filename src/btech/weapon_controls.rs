@@ -99,15 +99,73 @@ pub(super) fn toggle_ammunition_mode(
     index: usize,
     selected: super::BattleAmmunitionMode,
 ) -> super::BattleAmmunitionMode {
-    let modes = ammunition_modes_mut(world, id);
-    let current = modes.get(&index).copied().unwrap_or_default();
-    let mode = if current == selected {
-        super::BattleAmmunitionMode::Normal
+    let current = ammunition_modes_mut(world, id)
+        .get(&index)
+        .copied()
+        .unwrap_or_default();
+    let mode = if !weapon(world, id, index).is_some_and(super::BattleWeapon::is_mml) {
+        if current == selected {
+            super::BattleAmmunitionMode::Normal
+        } else {
+            selected
+        }
+    } else if selected == super::BattleAmmunitionMode::MmlLrm {
+        // The family control keeps a compatible special round and otherwise falls back to normal.
+        let long_range = !current.is_mml_lrm();
+        current
+            .with_mml_family(long_range)
+            .or_else(|| super::BattleAmmunitionMode::Normal.with_mml_family(long_range))
+            .unwrap_or_default()
     } else {
-        selected
+        let munition = if current.munition() == selected.munition() {
+            super::BattleAmmunitionMode::Normal
+        } else {
+            selected.munition()
+        };
+        current.with_munition(munition)
     };
     set_ammunition_mode(world, id, index, mode);
     mode
+}
+
+/// Whether a cockpit control may select `munition` for this weapon. MML launchers also require
+/// the round to exist in the currently selected short- or long-range family.
+pub(super) fn selectable_munition(
+    world: &World,
+    id: ObjectId,
+    index: usize,
+    munition: super::BattleAmmunitionMode,
+) -> bool {
+    let Some(weapon) = weapon(world, id, index) else {
+        return false;
+    };
+    if !weapon.is_mml() {
+        return munition.supports(weapon);
+    }
+    let current = if let Some(vehicle) = world.btech.vehicles().get(&id) {
+        vehicle.ammunition_mode(index)
+    } else {
+        world.btech.constructed_units()[&id].ammunition_mode(index)
+    };
+    current.is_ok_and(|current| munition.with_mml_family(current.is_mml_lrm()).is_some())
+}
+
+/// The mounted weapon at `index` for either unit class.
+fn weapon(world: &World, id: ObjectId, index: usize) -> Option<super::BattleWeapon> {
+    if let Some(vehicle) = world.btech.vehicles().get(&id) {
+        return vehicle
+            .loadout()
+            .ok()?
+            .weapons
+            .get(index)
+            .map(|mount| mount.weapon);
+    }
+    let unit = world.btech.constructed_units().get(&id)?;
+    unit.loadout()
+        .ok()?
+        .weapons
+        .get(index)
+        .map(|mount| mount.weapon)
 }
 
 /// Select the owning class's firing-mode storage after authorization.

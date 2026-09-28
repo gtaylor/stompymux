@@ -116,7 +116,7 @@ pub(super) fn check_with_dice(
         target,
         mount.weapon,
     )?;
-    if attacker.ammunition_mode(weapon_index)? == super::BattleAmmunitionMode::Stinger {
+    if attacker.ammunition_mode(weapon_index)?.munition() == super::BattleAmmunitionMode::Stinger {
         ensure!(
             super::stinger::target_airborne(world, target),
             "Stinger missiles can only engage airborne targets!"

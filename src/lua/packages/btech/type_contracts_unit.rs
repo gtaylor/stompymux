@@ -406,7 +406,7 @@
 //|---@param dbref integer
 //|---@param pilot integer
 //|---@param weapon integer Zero-based weapon number.
-//|---@return BattleAmmunitionMode normal for SRM, mml_lrm for LRM.
+//|---@return BattleAmmunitionMode The selected supply: SRM rounds, or mml_lrm and its mml_lrm_* special rounds for LRM.
 //|function btech_unit.mml(dbref, pilot, weapon) end
 // lua-types-end
 

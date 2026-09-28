@@ -25,7 +25,9 @@ pub fn toggle_missile_rounds(
         "Rocket launchers' mode cannot be altered!"
     );
     ensure!(
-        ready.weapon.profile().missiles > 0 && !ready.weapon.is_artillery(),
+        ready.weapon.profile().missiles > 0
+            && !ready.weapon.is_artillery()
+            && super::weapon_controls::selectable_munition(world, id, index, mode),
         "Invalid weapon type!"
     );
     Ok(super::weapon_controls::toggle_ammunition_mode(

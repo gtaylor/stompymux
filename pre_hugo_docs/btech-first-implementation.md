@@ -47,7 +47,6 @@ has corrected flags. Neither requires a reference-server workaround.
   restored. Interactions with towing, crew recovery and full reconstruction
   ordering still need dedicated acceptance. Prefer normal damage/gameplay
   services for live scenarios until that follow-up is complete.
-- MML LRM ammunition combined with special-ammunition flags is unsupported.
 - Compatibility and readiness markers that describe full parity remain
   conservative; do not infer that a parsed or registered object is simulated,
   or flip a marker merely because one scenario passes.
@@ -104,7 +103,6 @@ gap, not an assertion that it is broken.
 | 1 | Define direct `status`, `critstatus` and `mechtype` transitions before adding setters. | Explicit supported transition matrix, shared validation, no masks that contradict material state, and native/Lua authorization, rollback and restart tests on every affected chassis. Keep current rejection until then. |
 | 1 | Broaden mixed combat and lifecycle acceptance. | End-to-end Mech/ground/VTOL battles cover casualties, observer messages, tow partners, cleanup, interrupted actions and failed persistence commits. Extend existing duel/scenario tests instead of creating another combat harness. |
 | 2 | Complete construction/equipment/configuration and command-argument parity audits. | Refresh the shipped-template audit; verify configuration consumers, equipment combinations and command admission against the intended behavior. Record deliberate differences and retain explicit rejection of unsupported equipment. |
-| 2 | Add combined MML LRM special ammunition if desired. | One shared ammunition representation drives selection, matching bins, range, damage, guidance, interception, hazards, mass, reports and persistence across chassis. |
 | 2 | Consolidate historical documentation and improve compatibility reporting. | Replace chronological claims with subsystem contracts and distinguish parsing, construction, playable simulation and full parity without changing runtime admission accidentally. |
 | 3 | Measure sustained server load and large battles. | Reproducible workloads report tick latency, persistence cost and memory use; optimize measured problems without splitting shared mechanics or weakening transactions. |
 

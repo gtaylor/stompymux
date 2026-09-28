@@ -24,4 +24,4 @@ btech.unit.mml(dbref, pilot, weapon)
 
 ## Returns
 
-- `BattleAmmunitionMode normal for SRM, mml_lrm for LRM.`
+- `BattleAmmunitionMode The selected supply: SRM rounds, or mml_lrm and its mml_lrm_* special rounds for LRM.`

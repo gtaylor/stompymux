@@ -6,7 +6,7 @@ use anyhow::{Result, ensure};
 impl BattleAmmunitionMode {
     /// Cockpit feedback shared by native commands and Lua.
     pub(crate) fn stinger_message(self, index: usize) -> String {
-        if self == Self::Stinger {
+        if self.munition() == Self::Stinger {
             return format!("Weapon {index} has been set to fire stinger missiles.");
         }
         format!("Weapon {index} has been set to fire normal missiles")
@@ -20,9 +20,14 @@ pub fn toggle_stinger(
     pilot: ObjectId,
     index: usize,
 ) -> Result<BattleAmmunitionMode> {
-    let ready = super::weapon_controls::ready_weapon(world, id, pilot, index)?;
+    super::weapon_controls::ready_weapon(world, id, pilot, index)?;
     ensure!(
-        ready.weapon.supports_semiguided(),
+        super::weapon_controls::selectable_munition(
+            world,
+            id,
+            index,
+            BattleAmmunitionMode::Stinger
+        ),
         "That weapon cannot be set STINGER!"
     );
     Ok(super::weapon_controls::toggle_ammunition_mode(

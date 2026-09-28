@@ -77,7 +77,7 @@ impl BattleWeapon {
             profile.minimum_range = 0;
         }
         let maximum = self.effective_range_for_ammunition(extended, ammunition)
-            + if ammunition == super::BattleAmmunitionMode::Stinger {
+            + if ammunition.munition() == super::BattleAmmunitionMode::Stinger {
                 7
             } else {
                 0
@@ -821,7 +821,7 @@ pub(super) fn target_modifiers(
         distance,
         rules.extended_movement,
     )?);
-    let friendly_tag = ammunition == super::BattleAmmunitionMode::SemiGuided
+    let friendly_tag = ammunition.munition() == super::BattleAmmunitionMode::SemiGuided
         && super::tagged_by(world, target).is_some_and(|tagger| {
             tagger != shooter
                 && super::scanner::scanner_unit(world, tagger)
@@ -860,7 +860,7 @@ pub(super) fn target_modifiers(
             + i8::from(moving_aircraft),
         beacon_accuracy: -i8::from(
             super::narc::has_beacon(world, target, super::BattleBeaconKind::Homing)
-                && ammunition == super::BattleAmmunitionMode::Narc
+                && ammunition.munition() == super::BattleAmmunitionMode::Narc
                 && !weapon.is_narc(),
         ),
         concealed: defender.concealed,
@@ -897,7 +897,7 @@ fn airborne_ammunition_adjustment(
     flying: bool,
     cocoon: bool,
 ) -> i8 {
-    match ammunition {
+    match ammunition.munition() {
         super::BattleAmmunitionMode::Cluster if rotorcraft => -2,
         super::BattleAmmunitionMode::Stinger if flying => -3,
         super::BattleAmmunitionMode::Stinger if cocoon => -1,

@@ -214,8 +214,26 @@ fn fire_mode(bits: &[i32]) -> BattleFireMode {
         BattleFireMode::Normal
     }
 }
+/// Project the first round bit; an MML family bit selects the matching long-range supply.
 fn ammo_mode(bits: &[i32]) -> BattleAmmunitionMode {
-    match bits.first().copied().unwrap_or(0) {
+    let long_range = bits.contains(&4194304);
+    let round = munition_mode(
+        bits.iter()
+            .copied()
+            .find(|&bit| bit != 4194304)
+            .unwrap_or(0),
+    );
+    if !long_range {
+        return round;
+    }
+    round
+        .with_mml_family(true)
+        .unwrap_or(BattleAmmunitionMode::MmlLrm)
+}
+
+/// The round selected by one reference ammunition bit, excluding the MML family bit.
+fn munition_mode(bit: i32) -> BattleAmmunitionMode {
+    match bit {
         1 | 8 => BattleAmmunitionMode::Cluster,
         16 => BattleAmmunitionMode::Mine,
         32 => BattleAmmunitionMode::Smoke,
@@ -235,7 +253,6 @@ fn ammo_mode(bits: &[i32]) -> BattleAmmunitionMode {
         524288 => BattleAmmunitionMode::SemiGuided,
         1048576 => BattleAmmunitionMode::ExtendedRange,
         2097152 => BattleAmmunitionMode::HighExplosive,
-        4194304 => BattleAmmunitionMode::MmlLrm,
         _ => BattleAmmunitionMode::Normal,
     }
 }

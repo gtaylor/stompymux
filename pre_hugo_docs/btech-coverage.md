@@ -630,8 +630,8 @@ MML-3/5/7/9 implement functioning combat as requested, deliberately departing
 from the reference's missing missile-hit tables. Shared launcher rules select
 SRM or LRM profiles for range, cluster damage, supply, interception and ammunition
 hazards across supported chassis. Native/Lua selection, firing, rollback and
-restart are covered in `tests/btech_mml.rs`. Combined `MML_LRM` and special-round
-flags remain unsupported; see the functioning MML section in `btech-delivery.md`.
+restart are covered in `tests/btech_mml.rs`. Long-range special rounds are
+described in the MML LRM special rounds section of `btech-delivery.md`.
 
 
 Seventeen Clan energy identities now use shared construction and firing.

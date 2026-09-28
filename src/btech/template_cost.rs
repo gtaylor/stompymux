@@ -510,7 +510,7 @@ pub fn template_base_cost(world: &World, template: &BattleTemplate) -> Result<u6
         } else {
             (cost
                 * (u64::from(bin.capacity) / per)
-                * if bin.mode == BattleAmmunitionMode::Artemis {
+                * if bin.mode.munition() == BattleAmmunitionMode::Artemis {
                     2
                 } else {
                     1
@@ -689,7 +689,7 @@ pub fn vehicle_template_base_cost(world: &World, template: &BattleVehicleTemplat
         } else {
             (cost
                 * (u64::from(bin.capacity) / per)
-                * if bin.mode == BattleAmmunitionMode::Artemis {
+                * if bin.mode.munition() == BattleAmmunitionMode::Artemis {
                     2
                 } else {
                     1

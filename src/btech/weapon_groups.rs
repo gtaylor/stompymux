@@ -106,13 +106,13 @@ pub(super) fn roll_weapon_groups(
             BattleAmmunitionMode::Normal
         } else if guidance_blocked
             && matches!(
-                mode,
+                mode.munition(),
                 BattleAmmunitionMode::Artemis | BattleAmmunitionMode::Narc
             )
         {
-            BattleAmmunitionMode::Normal
-        } else if mode == BattleAmmunitionMode::Narc && target_beacon {
-            BattleAmmunitionMode::Artemis
+            mode.with_munition(BattleAmmunitionMode::Normal)
+        } else if mode.munition() == BattleAmmunitionMode::Narc && target_beacon {
+            mode.with_munition(BattleAmmunitionMode::Artemis)
         } else {
             mode
         };

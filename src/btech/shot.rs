@@ -344,7 +344,7 @@ fn resolve_shot_inner(
     } else {
         effects.coordinate
     };
-    if attacker.ammunition_mode(weapon_index)? == super::BattleAmmunitionMode::Stinger {
+    if attacker.ammunition_mode(weapon_index)?.munition() == super::BattleAmmunitionMode::Stinger {
         ensure!(coordinate.is_none(), "Stinger missiles cannot shoot hexes!");
         ensure!(
             super::stinger::target_airborne(world, target),

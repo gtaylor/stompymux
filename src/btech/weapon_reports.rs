@@ -330,7 +330,7 @@ pub fn weapon_specification_text(world: &World, id: ObjectId, extended: bool) ->
     let rows = rows.into_iter().map(|row| {
         let family = if !row.weapon.is_mml() {
             ""
-        } else if row.ammunition == super::BattleAmmunitionMode::MmlLrm {
+        } else if row.ammunition.is_mml_lrm() {
             " (LRM)"
         } else {
             " (SRM)"

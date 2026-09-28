@@ -70,8 +70,7 @@ its rejection, recoil, rollback and persistence tests are part of acceptance.
 
    The weapon-catalogue comparison now has simulated implementations for
    IS MML 3/5/7/9, Clan ATM 3/6/9/12 and Clan Streak LRM 5/10/15/20, with
-   acceptance recorded below. Combined MML LRM special-ammunition flags remain
-   unsupported. The 25 non-simulated weapon stock entries are personal or infantry
+   acceptance recorded below, including MML LRM special rounds. The 25 non-simulated weapon stock entries are personal or infantry
    equipment within the deferred unit scope. Construction of shipped templates
    alone does not prove combat parity.
 
@@ -2265,9 +2264,7 @@ families across all 49 supported shooter/defender chassis pairs. Shared cluster
 tests exercise hotload and glancing rolls plus interception over 256 seeds.
 Mixed Mech/vehicle observer tests verify SRM rejection and LRM admission.
 
-Combined `MML_LRM` plus special-ammunition flags are not implemented. Existing
-SRM Artemis, Narc and Inferno modes use the shared controls; LRM special supplies
-need an explicit representation if added. This delivery does not close the
+Long-range special rounds are described in the next section. This delivery does not close the
 broader command/configuration/scenario acceptance audit.
 
 Full-suite verification: 2,079 distinct passing tests across
@@ -2285,6 +2282,31 @@ All-target Clippy with warnings denied passes (`target/mml-clippy.log`). The
 source-order cleanup it requested was followed by the focused observer library
 test (`target/mml-spotter-final.log`). Formatting, diff checks and the Lua type
 mirror comparison pass. The `btmux-khi` reference tree remains unchanged.
+
+## MML LRM special rounds
+
+An `MML_LRM` bin may also carry one LRM-compatible special round: Artemis IV
+(`Artemis/Mine`), Narc (`Narc/Smoke`), `Swarm`, `Swarm1`, `Sguided` or `Stinger`.
+Each pairing is its own ammunition mode (`mml_lrm_artemis`, `mml_lrm_narc`,
+`mml_lrm_swarm`, `mml_lrm_swarm1`, `mml_lrm_semi_guided`, `mml_lrm_stinger`), so
+bin matching, persistence, inspection bits and Lua projection work exactly as
+they do for other modes. `BattleAmmunitionMode::munition` gives the round for
+rules that key on it, and `is_mml_lrm` gives the family for range, damage,
+five-point grouping, indirect fire and ammunition hazards.
+
+SRM-family MMLs keep Artemis, Narc, Inferno, smoke and mine rounds. They still
+refuse LRM-only Swarm, semi-guided and Stinger rounds, and the LRM family refuses
+SRM-only rounds such as Inferno. The round controls (`artemis`, `narc`, `swarm`,
+`swarm1`, `sguided`, `stinger`) choose within the currently selected family.
+The `mml` control switches family and keeps a round both families carry; if the
+new family cannot carry the round, it falls back to that family's normal round.
+
+Guidance fallbacks keep the family. Blocked Artemis or Narc guidance fires plain
+LRM rounds, a Narc beacon upgrades Narc rounds to the LRM Artemis cluster bonus,
+and losing an Artemis controller drops only the round selection. Unit tests
+cover flag parsing in either order, family combination rules and LRM grouping
+under guidance. `tests/btech_mml.rs` covers selection, rejection, firing,
+Stinger target restrictions and restart on every supported chassis.
 
 ## Loose-inventory consistency cleanup
 
