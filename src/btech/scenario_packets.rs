@@ -31,7 +31,7 @@ pub fn damage_action(
     request: BattleScenarioSalvo,
 ) -> Result<BattleScenarioSalvoReport> {
     scripts.atomic(|before| {
-        super::scenario_damage::admit(&before, actor, unit, request.damage)?;
+        super::scenario_damage::admit(before, actor, unit, request.damage)?;
         ensure!(request.clusters > 0, "Invalid cluster size!");
         ensure!(
             request.clusters <= request.damage,
@@ -100,7 +100,7 @@ pub fn damage_action(
         }
         super::piloting::publish_ordered_notices(scripts, &notices, &private)?;
         super::evacuation::publish_blast_consequences(scripts, config, &report.impacts, None)?;
-        super::evacuation::publish_new_casualties(scripts, config, &before)?;
+        super::evacuation::publish_new_casualties(scripts, config, before)?;
         scripts.world().validate_action(config)?;
         Ok(report)
     })

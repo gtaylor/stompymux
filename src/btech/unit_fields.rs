@@ -462,7 +462,7 @@ pub fn set_unit_field_action(
     value: &str,
 ) -> Result<()> {
     scripts.atomic(|before| {
-        admission(&before, actor, id)?;
+        admission(before, actor, id)?;
         ensure!(
             ![
                 "mapindex",
@@ -722,7 +722,7 @@ pub fn set_unit_field_action(
                 super::cockpit_links::set(&mut scripts.world_mut(), id, slot, destination)?;
             }
             "team" => {
-                let mut signature = super::scanner::scanner_unit(&before, id).unwrap().signature;
+                let mut signature = super::scanner::scanner_unit(before, id).unwrap().signature;
                 signature.team = value
                     .trim()
                     .parse::<i32>()

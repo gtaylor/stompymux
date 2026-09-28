@@ -257,7 +257,7 @@ pub fn advance_boosters_action(scripts: &Scripts, config: &Config) -> Result<Vec
         for fall in &falls {
             super::evacuation::publish_fall_consequences(scripts, config, fall)?;
         }
-        super::evacuation::publish_new_casualties(scripts, config, &before)?;
+        super::evacuation::publish_new_casualties(scripts, config, before)?;
         scripts.world().validate_action(config)?;
         Ok(notices)
     })

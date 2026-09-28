@@ -327,7 +327,7 @@ pub fn remove_pod_action(
         if let Some(impact) = &report.impact {
             super::evacuation::publish_impact_consequences(scripts, config, impact)?;
         }
-        super::evacuation::publish_new_casualties(scripts, config, &before)?;
+        super::evacuation::publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(report)
     })

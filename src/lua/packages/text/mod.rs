@@ -30,7 +30,7 @@ pub(super) fn register(
                 format!("invalid styled-text markup: {error}"),
             )
         })?;
-        Ok(Value::String(lua.create_string(&s)?))
+        Ok(Value::String(lua.create_string(s)?))
     });
     let p = palette.clone();
     bind!(lua, api, "width", move |lua, values: mlua::MultiValue| {
@@ -178,7 +178,7 @@ pub(super) fn register(
         "printable_ascii",
         |_, values: mlua::MultiValue| {
             // C luaL_checktype raises the ordinary '?'-named string type error.
-            let Some(Value::String(s)) = values.get(0) else {
+            let Some(Value::String(s)) = values.front() else {
                 return Err(super::error::plain_type_error(
                     1,
                     "string",

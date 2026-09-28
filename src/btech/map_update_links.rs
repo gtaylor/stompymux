@@ -38,7 +38,7 @@ pub fn update_map_links_action(
 ) -> Result<BattleMapLinkUpdate> {
     scripts.atomic(|before| {
         ensure!(
-            crate::authority::is_wizard(&before, actor),
+            crate::authority::is_wizard(before, actor),
             "Permission denied."
         );
         ensure!(

@@ -274,7 +274,7 @@ fn launch_action(
         if let Some(fall) = effects.fall {
             super::evacuation::publish_fall_consequences(scripts, config, &fall)?;
         }
-        super::evacuation::publish_new_casualties(scripts, config, &before)?;
+        super::evacuation::publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(())
     })
@@ -324,7 +324,7 @@ fn launch(
     );
     ensure!(!unit.airborne(), "You're already airborne!");
     ensure!(
-        !unit.free_fall().is_some_and(|fall| !fall.grounded()),
+        unit.free_fall().is_none_or(|fall| fall.grounded()),
         "You cannot jump while falling!"
     );
     ensure!(

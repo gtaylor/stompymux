@@ -118,7 +118,8 @@ async fn maneuver_checks_publish_diagnostics_at_the_roll_boundary() {
             assert!(!output.iter().any(|(who, text)| *who == ObjectId(2)
                 && text.source() == "You make a piloting skill roll!"));
             let after = scripts.world().btech.clone();
-            persistence::save(&config.database(), &scripts.world())
+            let world_snapshot = scripts.world().clone();
+            persistence::save(&config.database(), &world_snapshot)
                 .await
                 .unwrap();
             let loaded = persistence::load(&config.database()).await.unwrap();

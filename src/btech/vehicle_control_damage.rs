@@ -132,10 +132,10 @@ pub(super) fn advance(world: &mut World) -> Vec<super::BattleNotice> {
     let mut notices = Vec::new();
     for (&id, vehicle) in world.btech.vehicles.iter_mut() {
         if vehicle.crew_stun_remaining == 0
-            || !world
+            || world
                 .objects
                 .get(&id)
-                .is_some_and(|object| !object.flags.contains(Flag::Going))
+                .is_none_or(|object| object.flags.contains(Flag::Going))
         {
             continue;
         }

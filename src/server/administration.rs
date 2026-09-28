@@ -133,10 +133,10 @@ impl Server {
             self.authentication.pending_resets.remove(&p);
         }
         if self.shutdown.is_some()
-            || !self
+            || self
                 .sessions
                 .get(&job.session)
-                .is_some_and(|s| s.player == Some(job.caller))
+                .is_none_or(|s| s.player != Some(job.caller))
         {
             return;
         }

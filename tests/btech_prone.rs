@@ -502,7 +502,7 @@ async fn restored_stagger_controls_drop_levels_and_survives_replay() {
                     assert_eq!(report.fall.is_some(), needs_roll && !success);
                     if let Some(check) = report.check {
                         assert_eq!(
-                            i32::from(check.situational),
+                            check.situational,
                             level + if speed_levels == 2 { 2 } else { 0 }
                         );
                     }

@@ -105,7 +105,8 @@ async fn wall_barrier_blocks_without_turning_budget_exhaustion_into_unreachable(
             map = map.0,
         ))
         .unwrap();
-    let snapshots = heartbeat_snapshots_until(&config, &scripts.world().clone(), 8, |world| {
+    let world_snapshot = scripts.world().clone();
+    let snapshots = heartbeat_snapshots_until(&config, &world_snapshot, 8, |world| {
         world.btech.controllers()[&unit].state() == AutopilotState::Blocked
     })
     .await;
@@ -197,7 +198,8 @@ async fn vehicle_ground_classes_are_admitted_on_water_and_bridge_maps() {
             ))
             .unwrap();
     }
-    let snapshots = heartbeat_snapshots_until(&config, &scripts.world().clone(), 72, |world| {
+    let world_snapshot = scripts.world().clone();
+    let snapshots = heartbeat_snapshots_until(&config, &world_snapshot, 72, |world| {
         units.iter().zip(starts).all(|(id, start)| {
             let position = world.btech.vehicles()[id].position().unwrap();
             (i64::from(position.x), i64::from(position.y)) != start
@@ -263,7 +265,8 @@ async fn competing_routes_make_progress_without_permanent_congestion_block() {
     }
     // Finish only when both controllers succeed. A nearby goal keeps the
     // successful trace short without weakening the bounded deadlock check.
-    let snapshots = heartbeat_snapshots_until(&config, &scripts.world().clone(), 72, |world| {
+    let world_snapshot = scripts.world().clone();
+    let snapshots = heartbeat_snapshots_until(&config, &world_snapshot, 72, |world| {
         [first, second].iter().all(|id| {
             world.btech.controllers()[id]
                 .feedback_records()
@@ -366,7 +369,8 @@ async fn weapons_hold_and_heat_ceiling_admit_no_autonomous_shot() {
             target = target.0,
         ))
         .unwrap();
-    let snapshots = heartbeat_snapshots(&config, &scripts.world().clone(), 4).await;
+    let world_snapshot = scripts.world().clone();
+    let snapshots = heartbeat_snapshots(&config, &world_snapshot, 4).await;
     let maximum_heat = snapshots
         .iter()
         .map(|world| world.btech.constructed_units()[&shooter].heat().stored)
@@ -392,7 +396,8 @@ async fn weapons_hold_and_heat_ceiling_admit_no_autonomous_shot() {
             shooter = shooter.0,
         ))
         .unwrap();
-    let snapshots = heartbeat_snapshots(&config, &scripts.world().clone(), 4).await;
+    let world_snapshot = scripts.world().clone();
+    let snapshots = heartbeat_snapshots(&config, &world_snapshot, 4).await;
     let maximum_heat = snapshots
         .iter()
         .map(|world| world.btech.constructed_units()[&shooter].heat().stored)
@@ -454,7 +459,8 @@ async fn autonomous_fire_rechecks_heat_between_multiple_mounts() {
             ceiling = one_shot_ceiling,
         ))
         .unwrap();
-    let low_ceiling_snapshots = heartbeat_snapshots(&config, &scripts.world().clone(), 4).await;
+    let world_snapshot = scripts.world().clone();
+    let low_ceiling_snapshots = heartbeat_snapshots(&config, &world_snapshot, 4).await;
     let low_ceiling_heat = low_ceiling_snapshots
         .iter()
         .map(|snapshot| snapshot.btech.constructed_units()[&shooter].heat().stored)
@@ -487,7 +493,8 @@ async fn autonomous_fire_rechecks_heat_between_multiple_mounts() {
             shooter = shooter.0,
         ))
         .unwrap();
-    let high_ceiling_snapshots = heartbeat_snapshots(&config, &scripts.world().clone(), 4).await;
+    let world_snapshot = scripts.world().clone();
+    let high_ceiling_snapshots = heartbeat_snapshots(&config, &world_snapshot, 4).await;
     let high_ceiling_heat = high_ceiling_snapshots
         .iter()
         .map(|snapshot| snapshot.btech.constructed_units()[&shooter].heat().stored)

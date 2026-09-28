@@ -411,7 +411,7 @@ fn observe(world: &World, observers: &[ObjectId]) -> Result<Vec<Observation>> {
                 continue;
             };
             if target == observer
-                || !other.position.is_some_and(|p| p.map == map)
+                || other.position.is_none_or(|p| p.map != map)
                 || !available(world, target)
             {
                 continue;

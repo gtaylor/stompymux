@@ -286,7 +286,7 @@ impl UserData for Handle {
             Ok(format!("state(#{}, {})", h.object.0, h.namespace))
         });
         m.add_function("__tostring", |_, args: MultiValue| {
-            let value = args.get(0);
+            let value = args.front();
             let Some(Value::UserData(value)) = value else {
                 return Err(super::handles::native_type_error(
                     1,
@@ -295,7 +295,7 @@ impl UserData for Handle {
                 ));
             };
             let handle = value.borrow::<Handle>().map_err(|_| {
-                super::handles::native_type_error(1, "btmux.object_state", args.get(0))
+                super::handles::native_type_error(1, "btmux.object_state", args.front())
             })?;
             handle.check()?;
             Ok(format!("state(#{}, {})", handle.object.0, handle.namespace))

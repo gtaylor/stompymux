@@ -50,14 +50,7 @@ pub fn unit_effective_maximum_speed(
     id: crate::ObjectId,
     tsm_tow_bonus: bool,
 ) -> Result<f64> {
-    configured(
-        world,
-        id,
-        super::speed_bonus::SpeedPolicy {
-            tsm_tow_bonus,
-            ..super::speed_bonus::SpeedPolicy::STANDARD
-        },
-    )
+    configured(world, id, super::speed_bonus::SpeedPolicy { tsm_tow_bonus })
 }
 
 /// Host-aware effective speed keeps the towing policy consistent through every transfer recheck.

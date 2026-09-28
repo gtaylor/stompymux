@@ -326,14 +326,7 @@ pub fn unit_battle_value(
     id: crate::ObjectId,
     tsm_tow_bonus: bool,
 ) -> Result<BattleValue> {
-    configured(
-        world,
-        id,
-        super::SpeedPolicy {
-            tsm_tow_bonus,
-            ..super::SpeedPolicy::STANDARD
-        },
-    )
+    configured(world, id, super::SpeedPolicy { tsm_tow_bonus })
 }
 
 /// Compute live battle value with the host's towing policy.

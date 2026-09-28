@@ -71,7 +71,7 @@ pub fn delete_map_objects_action(
 ) -> Result<usize> {
     scripts.atomic(|before| {
         ensure!(
-            crate::authority::is_wizard(&before, actor),
+            crate::authority::is_wizard(before, actor),
             "Permission denied."
         );
         ensure!(

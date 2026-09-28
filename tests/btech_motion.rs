@@ -6631,8 +6631,6 @@ const CONVENTIONAL_DIRECT_FIRE_WEAPONS: [stompymux_rs::BattleWeapon; 108] = [
 
 /// Conventional direct-fire weapons share native/Lua fire, durable heat and recycle handling;
 /// restart probes run once per shard under the pellet-family latching convention.
-/// Conventional direct-fire weapons share native/Lua fire, durable heat and recycle handling.
-
 async fn conventional_direct_fire_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
     use stompymux_rs::*;
     let (_dir, config, mut pristine, id, target) = shot_fixture().await;
@@ -12592,12 +12590,12 @@ fn caseless_seed_bytes(attack: u8, propellant: u8) -> [u8; 32] {
         std::sync::OnceLock::new();
     let seeds = SEEDS.get_or_init(|| {
         (0u32..10000)
-            .filter_map(|value| {
+            .map(|value| {
                 let mut bytes = [0; 32];
                 bytes[..4].copy_from_slice(&value.to_le_bytes());
                 let mut dice = stompymux_rs::BattleDice::seeded(bytes);
                 let first = dice.two_d6();
-                Some(((first, dice.two_d6()), value))
+                ((first, dice.two_d6()), value)
             })
             .collect()
     });
@@ -12624,7 +12622,7 @@ fn armor_piercing_seed_bytes(rear: bool, target: &stompymux_rs::BattleUnit) -> [
             )
         }) {
             found[slot] = (0u32..10000)
-                .find_map(|value| {
+                .find(|&value| {
                     let mut seed = [0; 32];
                     seed[..4].copy_from_slice(&value.to_le_bytes());
                     let initial = stompymux_rs::BattleDice::seeded(seed);
@@ -12635,10 +12633,9 @@ fn armor_piercing_seed_bytes(rear: bool, target: &stompymux_rs::BattleUnit) -> [
                         .resolve(target, arc, roll, &mut dice)
                         .unwrap();
                     dice.two_d6(); // Material entry.
-                    (hit.section == stompymux_rs::BattleSection::LeftTorso
+                    hit.section == stompymux_rs::BattleSection::LeftTorso
                         && !hit.through_armor_critical
-                        && dice.two_d6() == 12)
-                        .then_some(value)
+                        && dice.two_d6() == 12
                 })
                 .unwrap();
         }
@@ -12863,7 +12860,7 @@ async fn check_caseless_failures(
                 assert_eq!(lua.world().btech, before.btech);
                 assert!(lua.drain_outbox().is_empty());
                 let text = support::run_text(
-                    &native,
+                    native,
                     config,
                     ObjectId(1),
                     1,
@@ -14576,7 +14573,7 @@ async fn critical_balance_observers_cover_ground_causes_and_saved_replay() {
                     .filter(|check| check.roll.is_some())
                     .collect();
                 assert_eq!(report.pilot_notices.len(), checks.len() * 2, "{cause}");
-                for (pair, check) in report.pilot_notices.chunks_exact(2).zip(&checks) {
+                for (pair, check) in report.pilot_notices.as_chunks::<2>().0.iter().zip(&checks) {
                     assert_eq!(pair[0].text, "You make a piloting skill roll!");
                     assert_eq!(
                         pair[1].text,
@@ -18129,12 +18126,12 @@ async fn handweapon_native_lua_recovery_and_restart() {
             assert_eq!(native_messages, messages(&lua));
             if let Some(chop) = chop {
                 assert!(
-                    support::run_text(&chop, &config, ObjectId(1), 1, "chop/invalid")
+                    support::run_text(chop, &config, ObjectId(1), 1, "chop/invalid")
                         .contains("chop takes no switches")
                 );
                 assert_eq!(chop.world().btech, base.btech);
                 commands::run(
-                    &chop,
+                    chop,
                     &config,
                     ObjectId(1),
                     1,
@@ -18142,7 +18139,7 @@ async fn handweapon_native_lua_recovery_and_restart() {
                 )
                 .unwrap();
                 assert_eq!(chop.world().btech, native.world().btech);
-                assert_eq!(messages(&chop), native_messages);
+                assert_eq!(messages(chop), native_messages);
             }
             let mut world = lua.world().clone();
             assert_eq!(

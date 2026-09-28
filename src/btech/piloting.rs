@@ -293,7 +293,7 @@ fn experience_amount(check: &BattlePilotingCheck) -> Option<u32> {
     if !check.success || check.roll.is_none() || check.target <= 2 {
         return None;
     }
-    Some((check.target - 7).clamp(1, (1 + i32::from(check.situational)).max(2)) as u32)
+    Some((check.target - 7).clamp(1, (1 + check.situational).max(2)) as u32)
 }
 
 /// Apply successful-check XP within the caller's candidate and snapshot its diagnostic.

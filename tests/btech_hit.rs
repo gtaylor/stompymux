@@ -353,7 +353,7 @@ fn delegated_mech_tables_cover_anatomy_precedence_immunity_and_replay() {
                                     .unwrap();
                             let hit = rules.resolve(&target, arc, entry, &mut dice).unwrap();
                             assert_eq!(hit.section, expected_section);
-                            assert_eq!(hit.through_armor_critical, false);
+                            assert!(!hit.through_armor_critical);
                             assert_eq!(
                                 hit.crew_stun,
                                 !safe

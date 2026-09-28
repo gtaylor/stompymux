@@ -93,10 +93,10 @@ pub fn compare(kind: &str, before: &Value, after: &Value) -> Result<Value> {
                 number(a, "ticks")? == number(b, "ticks")?,
                 "Duration mismatch"
             );
-            if let Some(first) = optional(b, "time_to_engage")? {
-                if optional(a, "time_to_engage")?.is_none_or(|x| x > first + 1.0) {
-                    fail("first-shot regression");
-                }
+            if let Some(first) = optional(b, "time_to_engage")?
+                && optional(a, "time_to_engage")?.is_none_or(|x| x > first + 1.0)
+            {
+                fail("first-shot regression");
             }
             if number(a, "arc_fraction")? + 0.02 < number(b, "arc_fraction")? {
                 fail("arc uptime regression");
@@ -180,10 +180,10 @@ pub fn compare(kind: &str, before: &Value, after: &Value) -> Result<Value> {
                 && outcome != "destroyed"
                 && text(b, "outcome")? != "destroyed"
             {
-                if let Some(old) = optional(b, "first_shot")? {
-                    if optional(a, "first_shot")?.is_none_or(|n| n > old + 1.0) {
-                        fail("first-shot regression");
-                    }
+                if let Some(old) = optional(b, "first_shot")?
+                    && optional(a, "first_shot")?.is_none_or(|n| n > old + 1.0)
+                {
+                    fail("first-shot regression");
                 }
                 if number(a, "arc_fraction")? + 0.02 < number(b, "arc_fraction")? {
                     fail("arc uptime regression");

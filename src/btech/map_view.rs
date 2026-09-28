@@ -13,7 +13,7 @@ pub fn view_map_action(
 ) -> Result<BattleTacticalMap> {
     scripts.atomic(|before| {
         ensure!(
-            crate::authority::is_wizard(&before, actor),
+            crate::authority::is_wizard(before, actor),
             "Permission denied."
         );
         ensure!(
@@ -24,11 +24,11 @@ pub fn view_map_action(
             "Map is unavailable"
         );
         let report = super::tactical_map::map_view(
-            &before,
+            before,
             map,
             actor,
             center,
-            super::view_dimensions(&before, actor)?,
+            super::view_dimensions(before, actor)?,
         )?;
         for line in report.text.lines() {
             super::notify_message(scripts, super::BattleMessageTarget::Player(actor), line)?;

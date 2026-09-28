@@ -412,7 +412,7 @@ fn contact_facts_with_unit(
         return Ok(None);
     };
     let position = unit.position.expect("validated observer placement");
-    if !other.position.is_some_and(|p| p.map == position.map)
+    if other.position.is_none_or(|p| p.map != position.map)
         || world
             .objects
             .get(&target)
@@ -631,6 +631,21 @@ pub(super) fn styled_row(text: &str, color: Option<&str>) -> String {
         || text.clone(),
         |color| format!("[fg={color} bold]{text}[reset]"),
     )
+}
+
+/// Read acquired facts in stable unit order, resolving observer state once.
+/// Unlike the contact display, clairvoyance does not enumerate unacquired enemies.
+pub(crate) fn acquired_contact_facts(
+    world: &World,
+    observer: ObjectId,
+) -> Result<Vec<BattleContactFacts>> {
+    let reader = ContactReader::new(world, observer)?;
+    Ok(reader
+        .unit
+        .contacts
+        .keys()
+        .filter_map(|&target| reader.facts(target).ok().flatten())
+        .collect())
 }
 
 #[cfg(test)]
@@ -891,19 +906,4 @@ mod tests {
             .invisible = true;
         assert_parity(&world, observer, target);
     }
-}
-
-/// Read acquired facts in stable unit order, resolving observer state once.
-/// Unlike the contact display, clairvoyance does not enumerate unacquired enemies.
-pub(crate) fn acquired_contact_facts(
-    world: &World,
-    observer: ObjectId,
-) -> Result<Vec<BattleContactFacts>> {
-    let reader = ContactReader::new(world, observer)?;
-    Ok(reader
-        .unit
-        .contacts
-        .keys()
-        .filter_map(|&target| reader.facts(target).ok().flatten())
-        .collect())
 }

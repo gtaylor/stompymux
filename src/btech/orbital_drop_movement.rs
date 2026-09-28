@@ -291,7 +291,7 @@ fn touchdown(
         report.pilot_notices.push(super::BattlePilotNotice {
             before_notice: report.notices.len(),
             pilot,
-            text: super::piloting::roll_messages(i32::from(target), roll).join("\r\n"),
+            text: super::piloting::roll_messages(target, roll).join("\r\n"),
         });
     }
     if character && let Some(amount) = landing.experience_reason {

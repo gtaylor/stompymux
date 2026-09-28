@@ -105,7 +105,7 @@ async fn all_chassis_field_reports_scenario(f: &UnitFields) {
         let native = &f.native;
         let lua = &f.lua;
         f.install(&world);
-        let report = view_battle_unit_fields_action(&native, &config, ObjectId(1), id, "").unwrap();
+        let report = view_battle_unit_fields_action(native, config, ObjectId(1), id, "").unwrap();
         let lua_report: mlua::Table = lua
             .eval_callback(&format!("return btech.unit.fields(1,{})", id.0))
             .unwrap();
@@ -153,7 +153,7 @@ async fn all_chassis_field_reports_scenario(f: &UnitFields) {
             .map(|(_, doc)| doc.source().to_owned())
             .collect::<Vec<_>>();
         assert_eq!(expected, actual);
-        let native_text = support::run_text(&native, &config, ObjectId(1), 1, "@viewmech");
+        let native_text = support::run_text(native, config, ObjectId(1), 1, "@viewmech");
         assert!(native_text.contains("xpmod"));
         assert_eq!(native.world().btech, before);
         let saved = native.world().clone();
@@ -195,7 +195,7 @@ async fn field_layout_filters_scenario(f: &UnitFields) {
         ("stall", 2, vec![]),
     ] {
         let report =
-            view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, query).unwrap();
+            view_battle_unit_fields_action(scripts, config, ObjectId(1), id, query).unwrap();
         assert_eq!(report.columns, columns);
         assert_eq!(
             report
@@ -213,10 +213,9 @@ async fn field_layout_filters_scenario(f: &UnitFields) {
             .join("\n");
         assert_eq!(output, report.text);
     }
-    assert!(view_battle_unit_fields_action(&scripts, &config, ObjectId(2), id, "").is_err());
+    assert!(view_battle_unit_fields_action(scripts, config, ObjectId(2), id, "").is_err());
     assert!(
-        view_battle_unit_fields_action(&scripts, &config, ObjectId(1), ObjectId(999999), "")
-            .is_err()
+        view_battle_unit_fields_action(scripts, config, ObjectId(1), ObjectId(999999), "").is_err()
     );
     scripts
         .eval_callback::<()>("mux.world.pemit(1,'PRIOR')")
@@ -241,7 +240,7 @@ async fn named_edits_share_validation_scenario(f: &UnitFields) {
         f.install(&world);
         for (name, value) in [("TEAM", "-7"), ("xpmod", "2.5")] {
             let command = format!("@setmech {name} {value}");
-            assert!(support::run_text(&native, &config, ObjectId(1), 1, &command).is_empty());
+            assert!(support::run_text(native, config, ObjectId(1), 1, &command).is_empty());
             lua.eval_callback::<()>(&format!(
                 "btech.unit.set_field(1,{},'{name}','{value}')",
                 id.0
@@ -249,7 +248,7 @@ async fn named_edits_share_validation_scenario(f: &UnitFields) {
             .unwrap();
             assert_eq!(native.world().btech, lua.world().btech);
         }
-        let report = view_battle_unit_fields_action(&lua, &config, ObjectId(1), id, "1").unwrap();
+        let report = view_battle_unit_fields_action(lua, config, ObjectId(1), id, "1").unwrap();
         assert_eq!(field(&report, "team"), Some("-7"));
         assert_eq!(field(&report, "xpmod"), Some("2.50"));
         lua.drain_outbox();
@@ -263,7 +262,7 @@ async fn named_edits_share_validation_scenario(f: &UnitFields) {
             ("unknown", "0"),
         ] {
             assert!(
-                set_battle_unit_field_action(&lua, &config, ObjectId(1), id, name, value).is_err()
+                set_battle_unit_field_action(lua, config, ObjectId(1), id, name, value).is_err()
             );
             assert_eq!(serde_json::to_value(&*lua.world()).unwrap(), before);
         }
@@ -297,9 +296,8 @@ async fn detached_field_geometry_scenario(f: &UnitFields) {
                 id.0, id.0
             ))
             .unwrap();
-        set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "team", "4").unwrap();
-        let report =
-            view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "").unwrap();
+        set_battle_unit_field_action(scripts, config, ObjectId(1), id, "team", "4").unwrap();
+        let report = view_battle_unit_fields_action(scripts, config, ObjectId(1), id, "").unwrap();
         for (name, value) in [
             ("mapindex", "-1"),
             ("x", "0"),
@@ -310,7 +308,7 @@ async fn detached_field_geometry_scenario(f: &UnitFields) {
         ] {
             assert_eq!(field(&report, name), Some(value), "{name}");
         }
-        scripts.world().validate(&config).unwrap();
+        scripts.world().validate(config).unwrap();
     }
 }
 
@@ -340,15 +338,15 @@ async fn special_field_commands_scenario(f: &UnitFields) {
         support::install(specific, base.clone());
         support::install(generic, base.clone());
         let expected = support::run_text(
-            &specific,
-            &config,
+            specific,
+            config,
             ObjectId(1),
             1,
             &format!("{set} {assignment}"),
         );
         let actual = support::run_text(
-            &generic,
-            &config,
+            generic,
+            config,
             ObjectId(1),
             1,
             &format!("@setspecial {assignment}"),
@@ -356,8 +354,8 @@ async fn special_field_commands_scenario(f: &UnitFields) {
         assert!(expected.is_empty(), "{expected}");
         assert_eq!(expected, actual);
         assert_eq!(specific.world().btech, generic.world().btech);
-        let expected = support::run_text(&specific, &config, ObjectId(1), 1, &format!("{view} 1"));
-        let actual = support::run_text(&generic, &config, ObjectId(1), 1, "@viewspecial 1");
+        let expected = support::run_text(specific, config, ObjectId(1), 1, &format!("{view} 1"));
+        let actual = support::run_text(generic, config, ObjectId(1), 1, "@viewspecial 1");
         assert_eq!(expected, actual);
         let before = generic.world().btech.clone();
         for command in [
@@ -366,7 +364,7 @@ async fn special_field_commands_scenario(f: &UnitFields) {
             "@setspecial/invalid x y",
             "@viewspecial/invalid",
         ] {
-            assert!(!support::run_text(&generic, &config, ObjectId(1), 1, command).is_empty());
+            assert!(!support::run_text(generic, config, ObjectId(1), 1, command).is_empty());
             assert_eq!(generic.world().btech, before);
         }
     }
@@ -393,8 +391,7 @@ async fn hardware_fields_share_gameplay_ranges_and_vtol_fuel_edits_are_atomic_sc
             .and_then(BattleVehicle::vtol_fuel);
         let scripts = &f.native;
         support::install(scripts, world.clone());
-        let report =
-            view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "").unwrap();
+        let report = view_battle_unit_fields_action(scripts, config, ObjectId(1), id, "").unwrap();
         for (name, expected) in [
             ("tacrange", ranges.tactical),
             ("lrsrange", ranges.long_range),
@@ -421,7 +418,7 @@ async fn hardware_fields_share_gameplay_ranges_and_vtol_fuel_edits_are_atomic_sc
                 .eval_callback::<()>(&format!("btech.unit.set_field(1,{},'fuel','123')", id.0))
                 .unwrap();
             let report =
-                view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "fuel").unwrap();
+                view_battle_unit_fields_action(scripts, config, ObjectId(1), id, "fuel").unwrap();
             assert_eq!(field(&report, "fuel"), Some("123"));
             assert_eq!(
                 field(&report, "fuel_orig"),
@@ -430,14 +427,14 @@ async fn hardware_fields_share_gameplay_ranges_and_vtol_fuel_edits_are_atomic_sc
         } else {
             assert_eq!(field(&report, "fuel"), None);
             assert!(
-                set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "fuel", "123")
+                set_battle_unit_field_action(scripts, config, ObjectId(1), id, "fuel", "123")
                     .is_err()
             );
         }
         let before = scripts.world().btech.clone();
         for value in ["-1", "4294967295", "nan"] {
             assert!(
-                set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "fuel", value)
+                set_battle_unit_field_action(scripts, config, ObjectId(1), id, "fuel", value)
                     .is_err()
             );
             assert_eq!(scripts.world().btech, before);
@@ -458,7 +455,7 @@ async fn identity_edits_preserve_combat_state_and_survive_restart_for_every_chas
         let name = "Custom %cr name with spaces";
         let reference = "CUSTOM-1";
         for (field_name, value) in [("mechname", name), ("mechref", reference)] {
-            set_battle_unit_field_action(&native, &config, ObjectId(1), id, field_name, value)
+            set_battle_unit_field_action(native, config, ObjectId(1), id, field_name, value)
                 .unwrap();
             lua.eval_callback::<()>(&format!(
                 "btech.unit.set_field(1,{},'{}','{}')",
@@ -468,7 +465,7 @@ async fn identity_edits_preserve_combat_state_and_survive_restart_for_every_chas
         }
         assert_eq!(native.world().btech, lua.world().btech);
         let report =
-            view_battle_unit_fields_action(&native, &config, ObjectId(1), id, "1mech").unwrap();
+            view_battle_unit_fields_action(native, config, ObjectId(1), id, "1mech").unwrap();
         assert_eq!(field(&report, "mechname"), Some(name));
         assert_eq!(field(&report, "mechref"), Some(reference));
         let after = native.world().btech.clone();
@@ -489,15 +486,8 @@ async fn identity_edits_preserve_combat_state_and_survive_restart_for_every_chas
         assert_eq!(serde_json::to_value(&after).unwrap(), expected);
         for invalid in [String::new(), "x".repeat(129)] {
             assert!(
-                set_battle_unit_field_action(
-                    &native,
-                    &config,
-                    ObjectId(1),
-                    id,
-                    "mechname",
-                    &invalid
-                )
-                .is_err()
+                set_battle_unit_field_action(native, config, ObjectId(1), id, "mechname", &invalid)
+                    .is_err()
             );
             assert_eq!(native.world().btech, after);
         }
@@ -531,7 +521,7 @@ async fn runtime_hardware_zeroes_change_gameplay_and_survive_restart_scenario(f:
             ("radiorange", "0"),
             ("radiotype", "0"),
         ] {
-            set_battle_unit_field_action(&native, &config, ObjectId(1), id, name, value).unwrap();
+            set_battle_unit_field_action(native, config, ObjectId(1), id, name, value).unwrap();
             lua.eval_callback::<()>(&format!(
                 "btech.unit.set_field(1,{},'{}','{}')",
                 id.0, name, value
@@ -539,7 +529,7 @@ async fn runtime_hardware_zeroes_change_gameplay_and_survive_restart_scenario(f:
             .unwrap();
         }
         assert_eq!(native.world().btech, lua.world().btech);
-        let report = view_battle_unit_fields_action(&native, &config, ObjectId(1), id, "").unwrap();
+        let report = view_battle_unit_fields_action(native, config, ObjectId(1), id, "").unwrap();
         for (name, expected) in [
             ("tacrange", "0"),
             ("lrsrange", "17"),
@@ -581,8 +571,7 @@ async fn runtime_hardware_zeroes_change_gameplay_and_survive_restart_scenario(f:
             ("radiotype", "256"),
         ] {
             assert!(
-                set_battle_unit_field_action(&native, &config, ObjectId(1), id, name, value)
-                    .is_err()
+                set_battle_unit_field_action(native, config, ObjectId(1), id, name, value).is_err()
             );
             assert_eq!(native.world().btech, before);
         }
@@ -613,13 +602,11 @@ async fn thermal_fields_retain_committed_samples_and_share_cooling_with_status_s
         }
         let scripts = &f.native;
         support::install(scripts, world.clone());
-        let initial =
-            view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "").unwrap();
+        let initial = view_battle_unit_fields_action(scripts, config, ObjectId(1), id, "").unwrap();
         assert_eq!(field(&initial, "heat"), Some("0.00"));
         assert_eq!(field(&initial, "dissheat"), Some("0.00"));
         advance_battle_heat(&mut scripts.world_mut());
-        let report =
-            view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "").unwrap();
+        let report = view_battle_unit_fields_action(scripts, config, ObjectId(1), id, "").unwrap();
         let expected_sinks = if index < 2 {
             scripts.world().btech.constructed_units()[&id].cooling_capacity()
         } else {
@@ -648,7 +635,7 @@ async fn thermal_fields_retain_committed_samples_and_share_cooling_with_status_s
                 unit["heat"]["stored"] = 80.0.into()
             });
             let unchanged =
-                view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "heat").unwrap();
+                view_battle_unit_fields_action(scripts, config, ObjectId(1), id, "heat").unwrap();
             assert_eq!(field(&unchanged, "heat"), Some("40.00"));
         } else {
             for name in ["heat", "dissheat", "overheat"] {
@@ -659,8 +646,7 @@ async fn thermal_fields_retain_committed_samples_and_share_cooling_with_status_s
         let lua: mlua::Table = scripts
             .eval_callback(&format!("return btech.unit.fields(1,{})", id.0))
             .unwrap();
-        let native =
-            view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "").unwrap();
+        let native = view_battle_unit_fields_action(scripts, config, ObjectId(1), id, "").unwrap();
         assert_eq!(
             serde_json::to_value(lua).unwrap(),
             serde_json::to_value(native).unwrap()
@@ -699,7 +685,7 @@ async fn thermal_edits_share_native_lua_validation_and_preserve_stored_heat_scen
             let before = native.world().btech.clone();
             for field in ["heat", "dissheat", "overheat", "disabled_hs"] {
                 assert!(
-                    set_battle_unit_field_action(&native, &config, ObjectId(1), id, field, "1")
+                    set_battle_unit_field_action(native, config, ObjectId(1), id, field, "1")
                         .is_err()
                 );
                 assert_eq!(native.world().btech, before);
@@ -708,8 +694,8 @@ async fn thermal_edits_share_native_lua_validation_and_preserve_stored_heat_scen
         }
         for (name, value) in [("heat", "12.5"), ("dissheat", "-2.5"), ("overheat", "17")] {
             let output = support::run_text(
-                &native,
-                &config,
+                native,
+                config,
                 ObjectId(1),
                 1,
                 &format!("@setmech {name} {value}"),
@@ -744,8 +730,7 @@ async fn thermal_edits_share_native_lua_validation_and_preserve_stored_heat_scen
             ("disabled_hs", "65535"),
         ] {
             assert!(
-                set_battle_unit_field_action(&native, &config, ObjectId(1), id, name, value)
-                    .is_err()
+                set_battle_unit_field_action(native, config, ObjectId(1), id, name, value).is_err()
             );
             assert_eq!(native.world().btech, before);
         }
@@ -784,8 +769,7 @@ async fn navigation_fields_share_live_services_without_advancing_them_scenario(f
         let scripts = &f.native;
         support::install(scripts, world.clone());
         let before = scripts.world().btech.clone();
-        let report =
-            view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "").unwrap();
+        let report = view_battle_unit_fields_action(scripts, config, ObjectId(1), id, "").unwrap();
         assert_eq!(
             field(&report, "centdist"),
             Some(format!("{:.2}", navigation.range).as_str())
@@ -808,9 +792,9 @@ async fn navigation_fields_share_live_services_without_advancing_them_scenario(f
         persistence::save(&config.database(), &saved).await.unwrap();
         let restored = persistence::load(&config.database()).await.unwrap();
         assert_eq!(restored.btech, before);
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(restored))).unwrap();
+        let scripts = Scripts::new(config, Rc::new(RefCell::new(restored))).unwrap();
         let report =
-            view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "centdist").unwrap();
+            view_battle_unit_fields_action(&scripts, config, ObjectId(1), id, "centdist").unwrap();
         assert_eq!(field(&report, "centdist"), Some("0.20"));
     }
 }
@@ -826,14 +810,14 @@ async fn authored_and_edited_metadata_share_validation_across_chassis_and_restar
         let lua = &f.lua;
         f.install(&world);
         let original =
-            view_battle_unit_fields_action(&native, &config, ObjectId(1), id, "unit_").unwrap();
+            view_battle_unit_fields_action(native, config, ObjectId(1), id, "unit_").unwrap();
         assert_eq!(field(&original, "unit_era"), Some("Clan Invasion"));
         assert_eq!(field(&original, "unit_tro"), Some("TRO 3050"));
         native.drain_outbox();
         for (name, value) in [("unit_era", "Civil War"), ("unit_tro", "Custom %cr TRO")] {
             let output = support::run_text(
-                &native,
-                &config,
+                native,
+                config,
                 ObjectId(1),
                 1,
                 &format!("@setmech {name} {value}"),
@@ -847,13 +831,13 @@ async fn authored_and_edited_metadata_share_validation_across_chassis_and_restar
         }
         assert_eq!(native.world().btech, lua.world().btech);
         let report =
-            view_battle_unit_fields_action(&native, &config, ObjectId(1), id, "unit_").unwrap();
+            view_battle_unit_fields_action(native, config, ObjectId(1), id, "unit_").unwrap();
         assert_eq!(field(&report, "unit_era"), Some("Civil War"));
         assert_eq!(field(&report, "unit_tro"), Some("Custom %cr TRO"));
         let before = native.world().btech.clone();
         for value in ["x".repeat(25), "é".repeat(13)] {
             assert!(
-                set_battle_unit_field_action(&native, &config, ObjectId(1), id, "unit_era", &value)
+                set_battle_unit_field_action(native, config, ObjectId(1), id, "unit_era", &value)
                     .is_err()
             );
             assert_eq!(native.world().btech, before);
@@ -867,14 +851,14 @@ async fn authored_and_edited_metadata_share_validation_across_chassis_and_restar
                 .is_err()
         );
         assert_eq!(native.world().btech, before);
-        set_battle_unit_field_action(&native, &config, ObjectId(1), id, "unit_tro", "").unwrap();
+        set_battle_unit_field_action(native, config, ObjectId(1), id, "unit_tro", "").unwrap();
         let saved = native.world().clone();
         persistence::save(&config.database(), &saved).await.unwrap();
         let restored = persistence::load(&config.database()).await.unwrap();
         assert_eq!(restored.btech, saved.btech);
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(restored))).unwrap();
+        let scripts = Scripts::new(config, Rc::new(RefCell::new(restored))).unwrap();
         let report =
-            view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "unit_").unwrap();
+            view_battle_unit_fields_action(&scripts, config, ObjectId(1), id, "unit_").unwrap();
         assert_eq!(field(&report, "unit_tro"), Some(""));
     }
 }
@@ -894,11 +878,11 @@ async fn enemy_contact_count_follows_acquisition_and_teams_without_rescanning_sc
             (id, "1", "0"),
             (target, "2", "1"),
         ] {
-            set_battle_unit_field_action(&scripts, &config, ObjectId(1), edited, "team", team)
+            set_battle_unit_field_action(scripts, config, ObjectId(1), edited, "team", team)
                 .unwrap();
             let before = scripts.world().btech.clone();
             let report =
-                view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "numseen")
+                view_battle_unit_fields_action(scripts, config, ObjectId(1), id, "numseen")
                     .unwrap();
             assert_eq!(field(&report, "numseen"), Some(expected));
             let lua: mlua::Table = scripts
@@ -914,19 +898,19 @@ async fn enemy_contact_count_follows_acquisition_and_teams_without_rescanning_sc
             unit["contacts"][target.0.to_string()]["identified"] = false.into()
         });
         let report =
-            view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "numseen").unwrap();
+            view_battle_unit_fields_action(scripts, config, ObjectId(1), id, "numseen").unwrap();
         assert_eq!(field(&report, "numseen"), Some("1"));
         let saved = scripts.world().clone();
         persistence::save(&config.database(), &saved).await.unwrap();
         let loaded = persistence::load(&config.database()).await.unwrap();
         assert_eq!(loaded.btech, saved.btech);
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(loaded))).unwrap();
+        let scripts = Scripts::new(config, Rc::new(RefCell::new(loaded))).unwrap();
         firing::edit(&mut scripts.world_mut(), id, |unit| {
             unit["contacts"] = serde_json::json!({});
             unit["target_lock"] = serde_json::Value::Null;
         });
         let report =
-            view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "numseen").unwrap();
+            view_battle_unit_fields_action(&scripts, config, ObjectId(1), id, "numseen").unwrap();
         assert_eq!(field(&report, "numseen"), Some("0"));
     }
 }
@@ -946,8 +930,8 @@ async fn explicit_cockpit_links_share_named_edits_and_preserve_deferred_referenc
             ("turret2", "-99".into()),
         ] {
             let output = support::run_text(
-                &native,
-                &config,
+                native,
+                config,
                 ObjectId(1),
                 1,
                 &format!("@setmech {name} {value}"),
@@ -961,7 +945,7 @@ async fn explicit_cockpit_links_share_named_edits_and_preserve_deferred_referenc
         }
         assert_eq!(native.world().btech, lua.world().btech);
         let report =
-            view_battle_unit_fields_action(&native, &config, ObjectId(1), id, "turret").unwrap();
+            view_battle_unit_fields_action(native, config, ObjectId(1), id, "turret").unwrap();
         assert_eq!(
             field(&report, "turret0"),
             Some(target.0.to_string().as_str())
@@ -971,8 +955,8 @@ async fn explicit_cockpit_links_share_named_edits_and_preserve_deferred_referenc
         let before = native.world().btech.clone();
         assert!(
             set_battle_unit_field_action(
-                &native,
-                &config,
+                native,
+                config,
                 ObjectId(1),
                 id,
                 "turret0",
@@ -1012,8 +996,8 @@ async fn display_name_edits_share_chassis_reports_and_restore_template_fallback_
         assert_eq!(battle_display_name(&native.world(), id).unwrap(), "");
         assert!(
             support::run_text(
-                &native,
-                &config,
+                native,
+                config,
                 ObjectId(1),
                 1,
                 "@setmech displayname Silver Fox"
@@ -1037,7 +1021,7 @@ async fn display_name_edits_share_chassis_reports_and_restore_template_fallback_
             .eval_callback(&format!("return btech.unit.display_name({})", id.0))
             .unwrap();
         assert_eq!(reported, "Silver Fox");
-        let report = view_battle_unit_fields_action(&native, &config, ObjectId(1), id, "").unwrap();
+        let report = view_battle_unit_fields_action(native, config, ObjectId(1), id, "").unwrap();
         assert_eq!(field(&report, "displayname"), Some("Silver Fox"));
         let key = if native.world().btech.vehicles().contains_key(&id) {
             "vehicles"
@@ -1052,8 +1036,8 @@ async fn display_name_edits_share_chassis_reports_and_restore_template_fallback_
             .remove(&id.0.to_string());
         assert_eq!(after, before);
         set_battle_unit_field_action(
-            &native,
-            &config,
+            native,
+            config,
             ObjectId(1),
             target,
             "displayname",
@@ -1077,15 +1061,8 @@ async fn display_name_edits_share_chassis_reports_and_restore_template_fallback_
         );
         for name in ["x".repeat(121), "é".repeat(61)] {
             assert!(
-                set_battle_unit_field_action(
-                    &native,
-                    &config,
-                    ObjectId(1),
-                    id,
-                    "displayname",
-                    &name
-                )
-                .is_err()
+                set_battle_unit_field_action(native, config, ObjectId(1), id, "displayname", &name)
+                    .is_err()
             );
             let mut corrupt = serde_json::to_value(&saved.btech).unwrap();
             corrupt[key][id.0.to_string()]["display_name"] = serde_json::json!(name);
@@ -1120,14 +1097,8 @@ async fn startup_history_uses_supplied_completion_time_and_preserves_aborted_his
         let lua = &f.lua;
         f.install(&world);
         assert!(
-            support::run_text(
-                &native,
-                &config,
-                ObjectId(1),
-                1,
-                "@setmech last_startup -50"
-            )
-            .is_empty()
+            support::run_text(native, config, ObjectId(1), 1, "@setmech last_startup -50")
+                .is_empty()
         );
         lua.eval_callback::<()>(&format!(
             "btech.unit.set_field(1, {}, 'last_startup', '-50')",
@@ -1145,8 +1116,8 @@ async fn startup_history_uses_supplied_completion_time_and_preserves_aborted_his
         assert_eq!(native.world().btech, lua.world().btech);
         assert!(
             set_battle_unit_field_action(
-                &native,
-                &config,
+                native,
+                config,
                 ObjectId(1),
                 id,
                 "last_startup",
@@ -1222,7 +1193,7 @@ async fn startup_history_uses_supplied_completion_time_and_preserves_aborted_his
         let scripts = &f.native;
         support::install(scripts, world.clone());
         let report =
-            view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "last_startup")
+            view_battle_unit_fields_action(scripts, config, ObjectId(1), id, "last_startup")
                 .unwrap();
         assert_eq!(field(&report, "last_startup"), Some("1900000030"));
     }
@@ -1233,15 +1204,15 @@ async fn preference_fields_share_cockpit_state_validation_and_restart_scenario(f
     let config = &f.config;
     for source in firing::templates() {
         let (world, id, _, _) = f.pair(&source, &source);
-        let named = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let cockpit = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let named = Scripts::new(config, Rc::new(RefCell::new(world.clone()))).unwrap();
+        let cockpit = Scripts::new(config, Rc::new(RefCell::new(world.clone()))).unwrap();
+        let lua = Scripts::new(config, Rc::new(RefCell::new(world))).unwrap();
         let report =
-            view_battle_unit_fields_action(&named, &config, ObjectId(1), id, "MechPrefs").unwrap();
+            view_battle_unit_fields_action(&named, config, ObjectId(1), id, "MechPrefs").unwrap();
         assert_eq!(field(&report, "MechPrefs"), Some("-"));
         named.drain_outbox();
         assert!(
-            support::run_text(&named, &config, ObjectId(1), 1, "@setmech MechPrefs bcdegh")
+            support::run_text(&named, config, ObjectId(1), 1, "@setmech MechPrefs bcdegh")
                 .is_empty()
         );
         lua.eval_callback::<()>(&format!(
@@ -1259,7 +1230,7 @@ async fn preference_fields_share_cockpit_state_validation_and_restart_scenario(f
         ] {
             let text = support::run_text(
                 &cockpit,
-                &config,
+                config,
                 ObjectId(1),
                 1,
                 &format!("mechprefs {command}"),
@@ -1273,7 +1244,7 @@ async fn preference_fields_share_cockpit_state_validation_and_restart_scenario(f
         assert_eq!(named.world().btech, cockpit.world().btech);
         assert_eq!(named.world().btech, lua.world().btech);
         let report =
-            view_battle_unit_fields_action(&named, &config, ObjectId(1), id, "mechprefs").unwrap();
+            view_battle_unit_fields_action(&named, config, ObjectId(1), id, "mechprefs").unwrap();
         assert_eq!(field(&report, "MechPrefs"), Some("bcdegh"));
         let before = named.world().btech.clone();
         for value in [
@@ -1287,7 +1258,7 @@ async fn preference_fields_share_cockpit_state_validation_and_restart_scenario(f
             "bcdegh!",
         ] {
             assert!(
-                set_battle_unit_field_action(&named, &config, ObjectId(1), id, "MechPrefs", value)
+                set_battle_unit_field_action(&named, config, ObjectId(1), id, "MechPrefs", value)
                     .is_err(),
                 "{value}"
             );
@@ -1301,18 +1272,18 @@ async fn preference_fields_share_cockpit_state_validation_and_restart_scenario(f
             .is_err()
         );
         assert_eq!(lua.world().btech, before);
-        set_battle_unit_field_action(&named, &config, ObjectId(1), id, "MechPrefs", "bcdegh!b!g")
+        set_battle_unit_field_action(&named, config, ObjectId(1), id, "MechPrefs", "bcdegh!b!g")
             .unwrap();
         let report =
-            view_battle_unit_fields_action(&named, &config, ObjectId(1), id, "MechPrefs").unwrap();
+            view_battle_unit_fields_action(&named, config, ObjectId(1), id, "MechPrefs").unwrap();
         assert_eq!(field(&report, "MechPrefs"), Some("cdeh"));
         let saved = named.world().clone();
         persistence::save(&config.database(), &saved).await.unwrap();
         let loaded = persistence::load(&config.database()).await.unwrap();
         assert_eq!(loaded.btech, saved.btech);
-        set_battle_unit_field_action(&named, &config, ObjectId(1), id, "MechPrefs", "0").unwrap();
+        set_battle_unit_field_action(&named, config, ObjectId(1), id, "MechPrefs", "0").unwrap();
         let report =
-            view_battle_unit_fields_action(&named, &config, ObjectId(1), id, "MechPrefs").unwrap();
+            view_battle_unit_fields_action(&named, config, ObjectId(1), id, "MechPrefs").unwrap();
         assert_eq!(field(&report, "MechPrefs"), Some("-"));
     }
 }
@@ -1348,7 +1319,7 @@ async fn battle_value_field_tracks_live_damage_and_weapon_configuration_scenario
         let scripts = &f.native;
         support::install(scripts, world.clone());
         let report =
-            view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "BV").unwrap();
+            view_battle_unit_fields_action(scripts, config, ObjectId(1), id, "BV").unwrap();
         assert_eq!(field(&report, "bv"), Some(expected.as_str()));
         let lua: mlua::Table = scripts
             .eval_callback(&format!("return btech.unit.fields(1,{},'bv')", id.0))
@@ -1358,11 +1329,10 @@ async fn battle_value_field_tracks_live_damage_and_weapon_configuration_scenario
             serde_json::to_value(&report).unwrap()
         );
         assert!(
-            support::run_text(&scripts, &config, ObjectId(1), 1, "@viewmech bv")
-                .contains(&expected)
+            support::run_text(scripts, config, ObjectId(1), 1, "@viewmech bv").contains(&expected)
         );
         assert!(
-            set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "bv", "123").is_err()
+            set_battle_unit_field_action(scripts, config, ObjectId(1), id, "bv", "123").is_err()
         );
         assert_eq!(scripts.world().btech, before);
         scripts.drain_outbox();
@@ -1380,9 +1350,9 @@ async fn battle_value_field_tracks_live_damage_and_weapon_configuration_scenario
             .await
             .unwrap();
         let restored = persistence::load(&config.database()).await.unwrap();
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(restored))).unwrap();
+        let scripts = Scripts::new(config, Rc::new(RefCell::new(restored))).unwrap();
         let report =
-            view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "bv").unwrap();
+            view_battle_unit_fields_action(&scripts, config, ObjectId(1), id, "bv").unwrap();
         assert_eq!(field(&report, "bv"), Some(format!("{damaged:.2}").as_str()));
         set_battle_weapon_battle_value(
             &mut scripts.world_mut(),
@@ -1405,8 +1375,7 @@ async fn construction_fields_share_storage_authority_and_restart_without_changin
         let native = &f.native;
         let lua = &f.lua;
         f.install(&world);
-        let original =
-            view_battle_unit_fields_action(&native, &config, ObjectId(1), id, "").unwrap();
+        let original = view_battle_unit_fields_action(native, config, ObjectId(1), id, "").unwrap();
         for name in ["basewalkspeed", "baserunspeed", "hsengoverride"] {
             assert_eq!(field(&original, name), Some("0"));
         }
@@ -1416,8 +1385,8 @@ async fn construction_fields_share_storage_authority_and_restart_without_changin
             ("hsengoverride", "12"),
         ] {
             commands::run(
-                &native,
-                &config,
+                native,
+                config,
                 ObjectId(1),
                 1,
                 &format!("@setmech {name} {value}"),
@@ -1429,8 +1398,7 @@ async fn construction_fields_share_storage_authority_and_restart_without_changin
             ))
             .unwrap();
             assert_eq!(native.world().btech, lua.world().btech);
-            let report =
-                view_battle_unit_fields_action(&lua, &config, ObjectId(1), id, "").unwrap();
+            let report = view_battle_unit_fields_action(lua, config, ObjectId(1), id, "").unwrap();
             assert_eq!(field(&report, name), Some(value));
             for speed in ["speed", "maxspeed", "templatesp", "heatsinks"] {
                 assert_eq!(field(&report, speed), field(&original, speed));
@@ -1448,14 +1416,13 @@ async fn construction_fields_share_storage_authority_and_restart_without_changin
             assert!(lua.drain_outbox().is_empty());
             for invalid in ["2147483648", "-2147483649", "3.5", "", "walk"] {
                 assert!(
-                    set_battle_unit_field_action(&lua, &config, ObjectId(1), id, name, invalid)
+                    set_battle_unit_field_action(lua, config, ObjectId(1), id, name, invalid)
                         .is_err()
                 );
                 assert_eq!(lua.world().btech, before);
             }
             assert!(
-                set_battle_unit_field_action(&lua, &config, ObjectId(99999), id, name, "7")
-                    .is_err()
+                set_battle_unit_field_action(lua, config, ObjectId(99999), id, name, "7").is_err()
             );
             assert_eq!(lua.world().btech, before);
         }
@@ -1476,7 +1443,7 @@ async fn engine_sink_override_validates_authored_values_across_chassis_scenario(
     for source in firing::templates() {
         let authored = format!("HSEngOverRide {{ 14 }}\n{source}");
         let (mut world, id, _, _) = f.pair(&authored, &source);
-        let candidate = world.create(&config, "Invalid construction".into(), Kind::Thing);
+        let candidate = world.create(config, "Invalid construction".into(), Kind::Thing);
         let before = world.btech.clone();
         for value in ["no", "2147483648", "-2147483649", "1.5"] {
             let template =
@@ -1493,7 +1460,7 @@ async fn engine_sink_override_validates_authored_values_across_chassis_scenario(
         let scripts = &f.native;
         support::install(scripts, world.clone());
         let report =
-            view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "hsengoverride")
+            view_battle_unit_fields_action(scripts, config, ObjectId(1), id, "hsengoverride")
                 .unwrap();
         assert_eq!(field(&report, "hsengoverride"), Some("14"));
     }
@@ -1520,7 +1487,7 @@ async fn inactive_readonly_fields_stay_zero_with_damage_and_across_restart_scena
         support::install(scripts, world.clone());
         for name in ["StaggerDamage", "unusablearcs"] {
             let report =
-                view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, name).unwrap();
+                view_battle_unit_fields_action(scripts, config, ObjectId(1), id, name).unwrap();
             assert_eq!(field(&report, name), Some("0"));
             let lua: mlua::Table = scripts
                 .eval_callback(&format!("return btech.unit.fields(1,{},'{name}')", id.0))
@@ -1531,7 +1498,7 @@ async fn inactive_readonly_fields_stay_zero_with_damage_and_across_restart_scena
             );
             for value in ["0", "20", "-10"] {
                 assert!(
-                    set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, name, value)
+                    set_battle_unit_field_action(scripts, config, ObjectId(1), id, name, value)
                         .is_err()
                 );
                 assert!(
@@ -1561,10 +1528,10 @@ async fn inactive_readonly_fields_stay_zero_with_damage_and_across_restart_scena
             .unwrap();
         let restored = persistence::load(&config.database()).await.unwrap();
         assert_eq!(restored.btech, before);
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(restored))).unwrap();
+        let scripts = Scripts::new(config, Rc::new(RefCell::new(restored))).unwrap();
         for name in ["StaggerDamage", "unusablearcs"] {
             let report =
-                view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, name).unwrap();
+                view_battle_unit_fields_action(&scripts, config, ObjectId(1), id, name).unwrap();
             assert_eq!(field(&report, name), Some("0"));
         }
     }
@@ -1575,12 +1542,12 @@ async fn crew_and_target_fields_share_native_lua_validation_and_restart_scenario
     let config = &f.config;
     for source in firing::templates() {
         let (mut world, id, target, _) = f.pair(&source, &source);
-        let replacement = world.create(&config, "Relief pilot".into(), Kind::Player);
+        let replacement = world.create(config, "Relief pilot".into(), Kind::Player);
         world.objects.get_mut(&replacement).unwrap().location = Some(id);
         world.objects.get_mut(&replacement).unwrap().home = Some(ObjectId(config.home()));
         // Both interface runs start with the same private recovery random stream.
         prepare_battle_recovery(&mut world, replacement).unwrap();
-        let unplaced = world.create(&config, "Unplaced unit".into(), Kind::Thing);
+        let unplaced = world.create(config, "Unplaced unit".into(), Kind::Thing);
         world.objects.get_mut(&unplaced).unwrap().home = Some(ObjectId(config.home()));
         BattleUnitTemplate::parse(&source)
             .unwrap()
@@ -1611,8 +1578,8 @@ async fn crew_and_target_fields_share_native_lua_validation_and_restart_scenario
             assert_eq!(lua.world().btech, before);
             assert!(lua.drain_outbox().is_empty());
             commands::run(
-                &native,
-                &config,
+                native,
+                config,
                 ObjectId(1),
                 1,
                 &format!("@setmech {name} {value}"),
@@ -1625,7 +1592,7 @@ async fn crew_and_target_fields_share_native_lua_validation_and_restart_scenario
             .unwrap();
             assert_eq!(native.world().btech, lua.world().btech);
             let report =
-                view_battle_unit_fields_action(&lua, &config, ObjectId(1), id, name).unwrap();
+                view_battle_unit_fields_action(lua, config, ObjectId(1), id, name).unwrap();
             assert_eq!(field(&report, name), Some(value.to_string().as_str()));
         }
         let selected = lua
@@ -1667,13 +1634,13 @@ async fn crew_and_target_fields_share_native_lua_validation_and_restart_scenario
         ] {
             for value in values {
                 assert!(
-                    set_battle_unit_field_action(&lua, &config, ObjectId(1), id, name, &value)
+                    set_battle_unit_field_action(lua, config, ObjectId(1), id, name, &value)
                         .is_err()
                 );
                 assert_eq!(lua.world().btech, before);
             }
             assert!(
-                set_battle_unit_field_action(&lua, &config, replacement, id, name, "-1").is_err()
+                set_battle_unit_field_action(lua, config, replacement, id, name, "-1").is_err()
             );
             assert_eq!(lua.world().btech, before);
         }
@@ -1719,11 +1686,11 @@ async fn readonly_unit_fields_reject_native_and_lua_writes_on_every_chassis_scen
             "numseen",
         ] {
             let original =
-                view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, name).unwrap();
+                view_battle_unit_fields_action(scripts, config, ObjectId(1), id, name).unwrap();
             scripts.drain_outbox();
             for value in ["0", "-1", "3"] {
                 let error =
-                    set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, name, value)
+                    set_battle_unit_field_action(scripts, config, ObjectId(1), id, name, value)
                         .unwrap_err();
                 assert!(error.to_string().contains("read-only"));
                 let error = scripts
@@ -1736,8 +1703,8 @@ async fn readonly_unit_fields_reject_native_and_lua_writes_on_every_chassis_scen
                 assert!(error.to_string().contains("read-only"));
                 assert!(scripts.drain_outbox().is_empty());
                 let output = support::run_text(
-                    &scripts,
-                    &config,
+                    scripts,
+                    config,
                     ObjectId(1),
                     1,
                     &format!("@setmech {} {value}", name.to_ascii_uppercase()),
@@ -1746,7 +1713,7 @@ async fn readonly_unit_fields_reject_native_and_lua_writes_on_every_chassis_scen
                 assert_eq!(scripts.world().btech, before);
             }
             let report =
-                view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, name).unwrap();
+                view_battle_unit_fields_action(scripts, config, ObjectId(1), id, name).unwrap();
             assert_eq!(report, original);
             scripts.drain_outbox();
         }
@@ -1763,12 +1730,11 @@ async fn deferred_field_writes_reject_native_and_lua_edits_across_chassis_scenar
         let before = scripts.world().btech.clone();
         for (name, value) in [("status", "0"), ("critstatus", "a"), ("mechtype", "Mech")] {
             let report =
-                view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, name).unwrap();
+                view_battle_unit_fields_action(scripts, config, ObjectId(1), id, name).unwrap();
             assert!(field(&report, name).is_some());
             scripts.drain_outbox();
-            let error =
-                set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, name, value)
-                    .unwrap_err();
+            let error = set_battle_unit_field_action(scripts, config, ObjectId(1), id, name, value)
+                .unwrap_err();
             assert!(
                 error
                     .to_string()
@@ -1788,8 +1754,8 @@ async fn deferred_field_writes_reject_native_and_lua_edits_across_chassis_scenar
             );
             assert!(scripts.drain_outbox().is_empty());
             let output = support::run_text(
-                &scripts,
-                &config,
+                scripts,
+                config,
                 ObjectId(1),
                 1,
                 &format!("@setmech {} {value}", name.to_ascii_uppercase()),
@@ -1800,7 +1766,7 @@ async fn deferred_field_writes_reject_native_and_lua_edits_across_chassis_scenar
             );
             assert_eq!(scripts.world().btech, before);
             let after =
-                view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, name).unwrap();
+                view_battle_unit_fields_action(scripts, config, ObjectId(1), id, name).unwrap();
             assert_eq!(after, report);
             scripts.drain_outbox();
         }
@@ -1893,8 +1859,8 @@ async fn cargo_field_edits_share_load_rules_and_atomic_publication_scenario(f: &
             assert_eq!(lua.world().btech, before);
             assert!(lua.drain_outbox().is_empty());
             commands::run(
-                &native,
-                &config,
+                native,
+                config,
                 ObjectId(1),
                 1,
                 &format!("@setmech CARGOSPACE {value}"),
@@ -1907,8 +1873,7 @@ async fn cargo_field_edits_share_load_rules_and_atomic_publication_scenario(f: &
             .unwrap();
             assert_eq!(native.world().btech, lua.world().btech);
             let report =
-                view_battle_unit_fields_action(&lua, &config, ObjectId(1), id, "cargospace")
-                    .unwrap();
+                view_battle_unit_fields_action(lua, config, ObjectId(1), id, "cargospace").unwrap();
             assert_eq!(
                 field(&report, "cargospace"),
                 Some(value.to_string().as_str())
@@ -1948,7 +1913,7 @@ async fn cargo_field_edits_share_load_rules_and_atomic_publication_scenario(f: &
         let before = lua.world().btech.clone();
         for value in ["-1", "2147483648", "2147483647", "NaN", "1.5"] {
             assert!(
-                set_battle_unit_field_action(&lua, &config, ObjectId(1), id, "cargospace", value)
+                set_battle_unit_field_action(lua, config, ObjectId(1), id, "cargospace", value)
                     .is_err()
             );
             assert!(
@@ -1979,7 +1944,7 @@ async fn original_fuel_field_preserves_inventory_and_updates_surplus_load_scenar
         if !is_vtol {
             let before = lua.world().btech.clone();
             assert!(
-                set_battle_unit_field_action(&lua, &config, ObjectId(1), id, "fuel_orig", "123")
+                set_battle_unit_field_action(lua, config, ObjectId(1), id, "fuel_orig", "123")
                     .is_err()
             );
             assert_eq!(lua.world().btech, before);
@@ -1999,8 +1964,8 @@ async fn original_fuel_field_preserves_inventory_and_updates_surplus_load_scenar
             assert_eq!(lua.world().btech, before);
             assert!(lua.drain_outbox().is_empty());
             commands::run(
-                &native,
-                &config,
+                native,
+                config,
                 ObjectId(1),
                 1,
                 &format!("@setmech FUEL_ORIG {capacity}"),
@@ -2025,8 +1990,7 @@ async fn original_fuel_field_preserves_inventory_and_updates_surplus_load_scenar
                 (initial.remaining - i64::from(capacity)).max(0) as u64
             );
             let report =
-                view_battle_unit_fields_action(&lua, &config, ObjectId(1), id, "fuel_orig")
-                    .unwrap();
+                view_battle_unit_fields_action(lua, config, ObjectId(1), id, "fuel_orig").unwrap();
             assert_eq!(
                 field(&report, "fuel_orig"),
                 Some(capacity.to_string().as_str())
@@ -2041,7 +2005,7 @@ async fn original_fuel_field_preserves_inventory_and_updates_surplus_load_scenar
         let before = lua.world().btech.clone();
         for value in ["-1", "2147483648", "NaN", "1.5"] {
             assert!(
-                set_battle_unit_field_action(&lua, &config, ObjectId(1), id, "fuel_orig", value)
+                set_battle_unit_field_action(lua, config, ObjectId(1), id, "fuel_orig", value)
                     .is_err()
             );
             assert!(
@@ -2057,7 +2021,7 @@ async fn original_fuel_field_preserves_inventory_and_updates_surplus_load_scenar
         firing::edit(&mut lua.world_mut(), id, |unit| {
             unit["vtol_fuel"]["remaining"] = (-1).into()
         });
-        set_battle_unit_field_action(&lua, &config, ObjectId(1), id, "fuel_orig", "4000").unwrap();
+        set_battle_unit_field_action(lua, config, ObjectId(1), id, "fuel_orig", "4000").unwrap();
         let fuel = battle_vtol_fuel_status(&lua.world(), id).unwrap();
         assert_eq!((fuel.remaining, fuel.excess_mass), (-1, 0));
     }
@@ -2100,7 +2064,7 @@ async fn motion_fields_edit_actual_state_without_advancing_controls_scenario(f: 
             lua.drain_outbox();
             if !movable && value != "0" {
                 assert!(
-                    set_battle_unit_field_action(&lua, &config, ObjectId(1), id, name, value)
+                    set_battle_unit_field_action(lua, config, ObjectId(1), id, name, value)
                         .is_err()
                 );
                 assert_eq!(lua.world().btech, before);
@@ -2116,8 +2080,8 @@ async fn motion_fields_edit_actual_state_without_advancing_controls_scenario(f: 
             assert_eq!(lua.world().btech, before);
             assert!(lua.drain_outbox().is_empty());
             commands::run(
-                &native,
-                &config,
+                native,
+                config,
                 ObjectId(1),
                 1,
                 &format!("@setmech {} {value}", name.to_ascii_uppercase()),
@@ -2176,7 +2140,7 @@ async fn motion_fields_edit_actual_state_without_advancing_controls_scenario(f: 
             ("speed", "-100000"),
         ] {
             assert!(
-                set_battle_unit_field_action(&lua, &config, ObjectId(1), id, name, value).is_err()
+                set_battle_unit_field_action(lua, config, ObjectId(1), id, name, value).is_err()
             );
             assert!(
                 lua.eval_callback::<()>(&format!(
@@ -2198,7 +2162,7 @@ async fn coordinate_fields_share_scenario_placement_and_rollback_scenario(f: &Un
         let native = &f.native;
         let lua = &f.lua;
         f.install(&world);
-        let scenario = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let scenario = Scripts::new(config, Rc::new(RefCell::new(world))).unwrap();
         for (name, value, x, y, z) in [
             ("y", 9, 0, 9, 0),
             ("z", 2, 0, 9, 2),
@@ -2219,7 +2183,7 @@ async fn coordinate_fields_share_scenario_placement_and_rollback_scenario(f: &Un
             assert!(lua.drain_outbox().is_empty());
             set_battle_coordinates_action(
                 &scenario,
-                &config,
+                config,
                 ObjectId(1),
                 id,
                 BattleScenarioPosition {
@@ -2229,8 +2193,8 @@ async fn coordinate_fields_share_scenario_placement_and_rollback_scenario(f: &Un
             )
             .unwrap();
             commands::run(
-                &native,
-                &config,
+                native,
+                config,
                 ObjectId(1),
                 1,
                 &format!("@setmech {} {value}", name.to_ascii_uppercase()),
@@ -2244,7 +2208,7 @@ async fn coordinate_fields_share_scenario_placement_and_rollback_scenario(f: &Un
             assert_eq!(native.world().btech, scenario.world().btech);
             assert_eq!(lua.world().btech, scenario.world().btech);
             let report =
-                view_battle_unit_fields_action(&lua, &config, ObjectId(1), id, name).unwrap();
+                view_battle_unit_fields_action(lua, config, ObjectId(1), id, name).unwrap();
             assert_eq!(field(&report, name), Some(value.to_string().as_str()));
             let saved = lua.world().clone();
             persistence::save(&config.database(), &saved).await.unwrap();
@@ -2265,7 +2229,7 @@ async fn coordinate_fields_share_scenario_placement_and_rollback_scenario(f: &Un
         ] {
             lua.drain_outbox();
             assert!(
-                set_battle_unit_field_action(&lua, &config, ObjectId(1), id, name, value).is_err()
+                set_battle_unit_field_action(lua, config, ObjectId(1), id, name, value).is_err()
             );
             assert!(
                 lua.eval_callback::<()>(&format!(
@@ -2328,8 +2292,8 @@ async fn precise_coordinate_fields_preserve_fractional_position_and_restart_scen
             assert_eq!(lua.world().btech, before);
             assert!(lua.drain_outbox().is_empty());
             commands::run(
-                &native,
-                &config,
+                native,
+                config,
                 ObjectId(1),
                 1,
                 &format!("@setmech {} {value}", name.to_ascii_uppercase()),
@@ -2363,7 +2327,7 @@ async fn precise_coordinate_fields_preserve_fractional_position_and_restart_scen
                 }
             );
             let report =
-                view_battle_unit_fields_action(&lua, &config, ObjectId(1), id, "fz").unwrap();
+                view_battle_unit_fields_action(lua, config, ObjectId(1), id, "fz").unwrap();
             assert!(
                 (field(&report, "fz").unwrap().parse::<f64>().unwrap() - height * 64.5).abs()
                     < 0.01
@@ -2396,7 +2360,7 @@ async fn precise_coordinate_fields_preserve_fractional_position_and_restart_scen
         for name in ["fx", "fy", "fz"] {
             for value in ["NaN", "inf", "1e100", "1e20"] {
                 assert!(
-                    set_battle_unit_field_action(&lua, &config, ObjectId(1), id, name, value)
+                    set_battle_unit_field_action(lua, config, ObjectId(1), id, name, value)
                         .is_err()
                 );
                 assert_eq!(lua.world().btech, before);
@@ -2437,8 +2401,8 @@ async fn template_speed_field_changes_shared_attack_penalty_without_propulsion_e
             assert_eq!(lua.world().btech, before);
             assert!(lua.drain_outbox().is_empty());
             commands::run(
-                &native,
-                &config,
+                native,
+                config,
                 ObjectId(1),
                 1,
                 &format!("@setmech TEMPLATESP {baseline}"),
@@ -2451,8 +2415,7 @@ async fn template_speed_field_changes_shared_attack_penalty_without_propulsion_e
             .unwrap();
             assert_eq!(native.world().btech, lua.world().btech);
             let report =
-                view_battle_unit_fields_action(&lua, &config, ObjectId(1), id, "templatesp")
-                    .unwrap();
+                view_battle_unit_fields_action(lua, config, ObjectId(1), id, "templatesp").unwrap();
             assert_eq!(
                 field(&report, "templatesp")
                     .unwrap()
@@ -2496,7 +2459,7 @@ async fn template_speed_field_changes_shared_attack_penalty_without_propulsion_e
         let before = lua.world().btech.clone();
         for value in ["-1", "NaN", "inf", "1e100", "bad"] {
             assert!(
-                set_battle_unit_field_action(&lua, &config, ObjectId(1), id, "templatesp", value)
+                set_battle_unit_field_action(lua, config, ObjectId(1), id, "templatesp", value)
                     .is_err()
             );
             assert_eq!(lua.world().btech, before);
@@ -2523,7 +2486,7 @@ async fn maximum_speed_fields_preserve_mass_and_recalculate_from_the_correct_bas
         let before = lua.world().btech.clone();
         if !movable {
             assert!(
-                set_battle_unit_field_action(&lua, &config, ObjectId(1), id, "maxspeed", "40")
+                set_battle_unit_field_action(lua, config, ObjectId(1), id, "maxspeed", "40")
                     .is_err()
             );
             assert_eq!(lua.world().btech, before);
@@ -2538,7 +2501,7 @@ async fn maximum_speed_fields_preserve_mass_and_recalculate_from_the_correct_bas
         );
         assert_eq!(lua.world().btech, before);
         assert!(lua.drain_outbox().is_empty());
-        commands::run(&native, &config, ObjectId(1), 1, "@setmech MAXSPEED 40").unwrap();
+        commands::run(native, config, ObjectId(1), 1, "@setmech MAXSPEED 40").unwrap();
         lua.eval_callback::<()>(&format!("btech.unit.set_field(1,{},'maxspeed','40')", id.0))
             .unwrap();
         assert_eq!(lua.world().btech, native.world().btech);
@@ -2546,9 +2509,9 @@ async fn maximum_speed_fields_preserve_mass_and_recalculate_from_the_correct_bas
             battle_unit_load(&lua.world(), id, true).unwrap(),
             original_load
         );
-        set_battle_unit_field_action(&lua, &config, ObjectId(1), id, "templatesp", "80").unwrap();
+        set_battle_unit_field_action(lua, config, ObjectId(1), id, "templatesp", "80").unwrap();
         let report =
-            view_battle_unit_fields_action(&lua, &config, ObjectId(1), id, "maxspeed").unwrap();
+            view_battle_unit_fields_action(lua, config, ObjectId(1), id, "maxspeed").unwrap();
         assert_eq!(
             field(&report, "maxspeed").unwrap().parse::<f64>().unwrap(),
             40.0
@@ -2591,9 +2554,9 @@ async fn maximum_speed_fields_preserve_mass_and_recalculate_from_the_correct_bas
             firing::edit(&mut loaded, id, |unit| *unit = value);
             40.0 - 10.75
         };
-        let after = Scripts::new(&config, Rc::new(RefCell::new(loaded))).unwrap();
+        let after = Scripts::new(config, Rc::new(RefCell::new(loaded))).unwrap();
         let report =
-            view_battle_unit_fields_action(&after, &config, ObjectId(1), id, "maxspeed").unwrap();
+            view_battle_unit_fields_action(&after, config, ObjectId(1), id, "maxspeed").unwrap();
         assert_eq!(
             field(&report, "maxspeed").unwrap().parse::<f64>().unwrap(),
             expected
@@ -2607,7 +2570,7 @@ async fn maximum_speed_fields_preserve_mass_and_recalculate_from_the_correct_bas
         let before = after.world().btech.clone();
         for value in ["-1", "NaN", "inf", "1e100"] {
             assert!(
-                set_battle_unit_field_action(&after, &config, ObjectId(1), id, "maxspeed", value)
+                set_battle_unit_field_action(&after, config, ObjectId(1), id, "maxspeed", value)
                     .is_err()
             );
             assert_eq!(after.world().btech, before);
@@ -2654,8 +2617,8 @@ async fn jump_speed_fields_share_thrust_without_rebuilding_equipment_scenario(f:
             assert_eq!(lua.world().btech, before);
             assert!(lua.drain_outbox().is_empty());
             commands::run(
-                &native,
-                &config,
+                native,
+                config,
                 ObjectId(1),
                 1,
                 &format!("@setmech MAXJUMPSPEED {speed}"),
@@ -2669,7 +2632,7 @@ async fn jump_speed_fields_share_thrust_without_rebuilding_equipment_scenario(f:
             assert_eq!(native.world().btech, lua.world().btech);
             assert_eq!(battle_unit_load(&lua.world(), id, true).unwrap(), load);
             let report =
-                view_battle_unit_fields_action(&lua, &config, ObjectId(1), id, "maxjumpspeed")
+                view_battle_unit_fields_action(lua, config, ObjectId(1), id, "maxjumpspeed")
                     .unwrap();
             assert_eq!(
                 field(&report, "maxjumpspeed")
@@ -2715,7 +2678,7 @@ async fn jump_speed_fields_share_thrust_without_rebuilding_equipment_scenario(f:
         let before = lua.world().btech.clone();
         for value in ["-1", "NaN", "inf", "1e100", "352256"] {
             assert!(
-                set_battle_unit_field_action(&lua, &config, ObjectId(1), id, "maxjumpspeed", value)
+                set_battle_unit_field_action(lua, config, ObjectId(1), id, "maxjumpspeed", value)
                     .is_err()
             );
             assert_eq!(lua.world().btech, before);
@@ -2761,8 +2724,8 @@ async fn pilot_damage_fields_share_recovery_and_fatal_cleanup_scenario(f: &UnitF
                 assert_eq!(lua.world().btech, before);
                 assert!(lua.drain_outbox().is_empty());
                 commands::run(
-                    &native,
-                    &config,
+                    native,
+                    config,
                     ObjectId(1),
                     1,
                     &format!("@setmech PILOTDAM {value}"),
@@ -2798,7 +2761,7 @@ async fn pilot_damage_fields_share_recovery_and_fatal_cleanup_scenario(f: &UnitF
             let before = lua.world().btech.clone();
             for value in ["-1", "7", "256", "1.5", "bad"] {
                 assert!(
-                    set_battle_unit_field_action(&lua, &config, ObjectId(1), id, "pilotdam", value)
+                    set_battle_unit_field_action(lua, config, ObjectId(1), id, "pilotdam", value)
                         .is_err()
                 );
                 assert_eq!(lua.world().btech, before);
@@ -2813,7 +2776,7 @@ async fn pilot_damage_fields_share_recovery_and_fatal_cleanup_scenario(f: &UnitF
             );
             assert_eq!(lua.world().btech, before);
             assert!(lua.drain_outbox().is_empty());
-            commands::run(&native, &config, ObjectId(1), 1, "@setmech PILOTDAM 6").unwrap();
+            commands::run(native, config, ObjectId(1), 1, "@setmech PILOTDAM 6").unwrap();
             lua.eval_callback::<()>(&format!("btech.unit.set_field(1,{},'pilotdam','6')", id.0))
                 .unwrap();
             assert_eq!(native.world().btech, lua.world().btech);
@@ -2826,7 +2789,7 @@ async fn pilot_damage_fields_share_recovery_and_fatal_cleanup_scenario(f: &UnitF
             };
             assert_eq!(state, (true, None, BattlePower::Off));
             assert!(
-                set_battle_unit_field_action(&lua, &config, ObjectId(1), id, "pilotdam", "0")
+                set_battle_unit_field_action(lua, config, ObjectId(1), id, "pilotdam", "0")
                     .is_err()
             );
             assert_eq!(lua.world().btech, saved.btech);
@@ -2856,17 +2819,17 @@ async fn saved_jump_override_rejects_capacity_overflow_before_runtime_scenario(f
     let scripts = &f.native;
     support::install(scripts, world.clone());
     // The stored baseline includes the destroyed jet, so it can exceed the live-speed bound.
-    set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "maxjumpspeed", "352255")
+    set_battle_unit_field_action(scripts, config, ObjectId(1), id, "maxjumpspeed", "352255")
         .unwrap();
     let saved = scripts.world().clone();
-    saved.validate(&config).unwrap();
+    saved.validate(config).unwrap();
     persistence::save(&config.database(), &saved).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     assert_eq!(loaded.btech, saved.btech);
     firing::edit(&mut loaded, id, |unit| {
         unit["propulsion"]["jump"] = (352256.0 + 10.75).into()
     });
-    let error = loaded.validate(&config).unwrap_err();
+    let error = loaded.validate(config).unwrap_err();
     assert!(format!("{error:#}").contains("Invalid jump capacity"));
 }
 
@@ -2883,10 +2846,10 @@ async fn secondary_status_edits_preserve_observations_and_validate_controls_scen
         let scripts = &f.native;
         support::install(scripts, world.clone());
         for value in ["cwxy", "c", "-", "cdekl"] {
-            set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "status2", value)
+            set_battle_unit_field_action(scripts, config, ObjectId(1), id, "status2", value)
                 .unwrap();
             let report =
-                view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "status2")
+                view_battle_unit_fields_action(scripts, config, ObjectId(1), id, "status2")
                     .unwrap();
             assert_eq!(field(&report, "status2"), Some(value));
             assert_eq!(
@@ -2898,7 +2861,7 @@ async fn secondary_status_edits_preserve_observations_and_validate_controls_scen
         for value in ["q", "65536", "cq", "abc", "cij", "cF", "cghw"] {
             scripts.drain_outbox();
             assert!(
-                set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "status2", value)
+                set_battle_unit_field_action(scripts, config, ObjectId(1), id, "status2", value)
                     .is_err()
             );
             assert!(
@@ -2943,8 +2906,8 @@ async fn live_mass_fields_share_load_and_expire_on_material_changes_scenario(f: 
             assert_eq!(lua.world().btech, before);
             assert!(lua.drain_outbox().is_empty());
             commands::run(
-                &native,
-                &config,
+                native,
+                config,
                 ObjectId(1),
                 1,
                 &format!("@setmech REALWEIGHT {value}"),
@@ -2957,8 +2920,7 @@ async fn live_mass_fields_share_load_and_expire_on_material_changes_scenario(f: 
             .unwrap();
             assert_eq!(native.world().btech, lua.world().btech);
             let report =
-                view_battle_unit_fields_action(&lua, &config, ObjectId(1), id, "realweight")
-                    .unwrap();
+                view_battle_unit_fields_action(lua, config, ObjectId(1), id, "realweight").unwrap();
             assert_eq!(field(&report, "realweight"), Some(value.as_str()));
             let saved = lua.world().clone();
             let load = battle_unit_load(&saved, id, false).unwrap();
@@ -3019,7 +2981,7 @@ async fn live_mass_fields_share_load_and_expire_on_material_changes_scenario(f: 
         let before = lua.world().btech.clone();
         for value in ["-1", "2147483648", "1.5", "NaN", "bad"] {
             assert!(
-                set_battle_unit_field_action(&lua, &config, ObjectId(1), id, "realweight", value)
+                set_battle_unit_field_action(lua, config, ObjectId(1), id, "realweight", value)
                     .is_err()
             );
             assert_eq!(lua.world().btech, before);
@@ -3077,8 +3039,8 @@ async fn tonnage_fields_preserve_equipment_damage_and_live_corrections_scenario(
             assert_eq!(lua.world().btech, before);
             assert!(lua.drain_outbox().is_empty());
             commands::run(
-                &native,
-                &config,
+                native,
+                config,
                 ObjectId(1),
                 1,
                 &format!("@setmech TONS {value}"),
@@ -3091,7 +3053,7 @@ async fn tonnage_fields_preserve_equipment_damage_and_live_corrections_scenario(
             .unwrap();
             assert_eq!(native.world().btech, lua.world().btech);
             let report =
-                view_battle_unit_fields_action(&lua, &config, ObjectId(1), id, "tons").unwrap();
+                view_battle_unit_fields_action(lua, config, ObjectId(1), id, "tons").unwrap();
             assert_eq!(field(&report, "tons"), Some(value.as_str()));
             let saved = lua.world().clone();
             let mut expected = serde_json::to_value(&before).unwrap();
@@ -3114,11 +3076,10 @@ async fn tonnage_fields_preserve_equipment_damage_and_live_corrections_scenario(
                 saved.btech
             );
         }
-        set_battle_unit_field_action(&lua, &config, ObjectId(1), id, "realweight", "12345")
-            .unwrap();
+        set_battle_unit_field_action(lua, config, ObjectId(1), id, "realweight", "12345").unwrap();
         set_battle_unit_field_action(
-            &lua,
-            &config,
+            lua,
+            config,
             ObjectId(1),
             id,
             "tons",
@@ -3134,15 +3095,14 @@ async fn tonnage_fields_preserve_equipment_damage_and_live_corrections_scenario(
         let before = lua.world().btech.clone();
         for value in ["0", "-1", "65536", "1.5", "bad"] {
             assert!(
-                set_battle_unit_field_action(&lua, &config, ObjectId(1), id, "tons", value)
-                    .is_err()
+                set_battle_unit_field_action(lua, config, ObjectId(1), id, "tons", value).is_err()
             );
             assert_eq!(lua.world().btech, before);
         }
         if mech {
             for value in ["19", "37", "105"] {
                 assert!(
-                    set_battle_unit_field_action(&lua, &config, ObjectId(1), id, "tons", value)
+                    set_battle_unit_field_action(lua, config, ObjectId(1), id, "tons", value)
                         .is_err()
                 );
                 assert_eq!(lua.world().btech, before);
@@ -3194,8 +3154,8 @@ async fn movement_fields_preserve_material_and_validate_anatomy_scenario(f: &Uni
                 id.0
             ));
             commands::run(
-                &native,
-                &config,
+                native,
+                config,
                 ObjectId(1),
                 1,
                 &format!("@setmech MECHMOVETYPE {value}"),
@@ -3204,7 +3164,7 @@ async fn movement_fields_preserve_material_and_validate_anatomy_scenario(f: &Uni
             assert_eq!(native.world().btech, lua.world().btech);
             result.unwrap_or_else(|error| panic!("{value}: {error:#}"));
             let report =
-                view_battle_unit_fields_action(&lua, &config, ObjectId(1), id, "mechmovetype")
+                view_battle_unit_fields_action(lua, config, ObjectId(1), id, "mechmovetype")
                     .unwrap();
             assert_eq!(field(&report, "mechmovetype"), Some(*value));
             let collection = if mech { "constructed" } else { "vehicles" };
@@ -3245,7 +3205,7 @@ async fn movement_fields_preserve_material_and_validate_anatomy_scenario(f: &Uni
         };
         for value in [invalid, "Naval", "", "garbage"] {
             assert!(
-                set_battle_unit_field_action(&lua, &config, ObjectId(1), id, "mechmovetype", value)
+                set_battle_unit_field_action(lua, config, ObjectId(1), id, "mechmovetype", value)
                     .is_err()
             );
             assert_eq!(lua.world().btech, before);
@@ -3262,12 +3222,12 @@ async fn movement_field_rejects_overfilled_quad_limbs_atomically_scenario(f: &Un
         let slots = &mut state["definition"]["sections"]["LeftArm"]["criticals"];
         slots["11"] = slots["0"].clone();
     });
-    world.validate(&config).unwrap();
+    world.validate(config).unwrap();
     let scripts = &f.native;
     support::install(scripts, world.clone());
     let before = scripts.world().btech.clone();
     let error =
-        set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "mechmovetype", "Quad")
+        set_battle_unit_field_action(scripts, config, ObjectId(1), id, "mechmovetype", "Quad")
             .unwrap_err();
     assert!(format!("{error:#}").contains("Critical outside section capacity"));
     assert_eq!(scripts.world().btech, before);
@@ -3292,13 +3252,13 @@ async fn movement_field_rejects_incompatible_live_conditions_scenario(f: &UnitFi
                 state["dig"] = serde_json::to_value(BattleDigState::preparing(7)).unwrap();
             }
         });
-        world.validate(&config).unwrap();
+        world.validate(config).unwrap();
         let scripts = &f.native;
         support::install(scripts, world.clone());
         let before = scripts.world().btech.clone();
         let error = set_battle_unit_field_action(
-            &scripts,
-            &config,
+            scripts,
+            config,
             ObjectId(1),
             id,
             "mechmovetype",
@@ -3321,7 +3281,7 @@ async fn vehicle_jump_course_edits_reject_without_mutation_scenario(f: &UnitFiel
         for field in ["jumpheading", "jumplength"] {
             for value in ["0", "1"] {
                 let error =
-                    set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, field, value)
+                    set_battle_unit_field_action(scripts, config, ObjectId(1), id, field, value)
                         .unwrap_err();
                 assert!(format!("{error:#}").contains("require a Mech"));
                 assert!(
@@ -3360,7 +3320,7 @@ async fn compact_damage_reports_round_trip_through_the_shared_codec_scenario(f: 
                 }
             }
         });
-        world.validate(&config).unwrap();
+        world.validate(config).unwrap();
         let before = world.btech.clone();
         let text = battle_unit_damage_field(&world, id).unwrap();
         let records = parse_battle_damage_field(&text).unwrap();

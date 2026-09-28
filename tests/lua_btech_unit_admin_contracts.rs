@@ -393,7 +393,8 @@ async fn registered_default_admin_materializes_only_after_validated_update_and_p
         stompymux_rs::btech::administrative_unit_tonnage(&s.world(), id),
         Some(0)
     );
-    stompymux_rs::persistence::save(&config.database(), &s.world())
+    let world_snapshot = s.world().clone();
+    stompymux_rs::persistence::save(&config.database(), &world_snapshot)
         .await
         .unwrap();
     let restored = stompymux_rs::persistence::load(&config.database())
@@ -495,7 +496,7 @@ async fn unit_unregister_extension_matches_native_teardown_contract() {
     "#,
     )
     .unwrap();
-    let after = s.world();
+    let after = s.world().clone();
     assert!(!after.btech.registrations().contains_key(&unit));
     assert!(!after.btech.units().contains_key(&unit));
     assert!(!after.btech.constructed_units().contains_key(&unit));
@@ -506,9 +507,8 @@ async fn unit_unregister_extension_matches_native_teardown_contract() {
     );
     assert!(!after.btech.registrations().contains_key(&deferred_unit(&s)));
     assert_eq!(after.objects[&unit].kind, stompymux_rs::Kind::Thing);
-    drop(after);
     // The removed roles persist as deleted rows and reload to the same state.
-    stompymux_rs::persistence::save(&config.database(), &s.world())
+    stompymux_rs::persistence::save(&config.database(), &after)
         .await
         .unwrap();
     let restored = stompymux_rs::persistence::load(&config.database())
@@ -635,7 +635,8 @@ async fn c_schema_unit_configuration_normalizes_empty_invalid_and_stale_rows() {
         "display_name",
         Some("Persisted".into()),
     );
-    stompymux_rs::persistence::save(&config.database(), &s.world())
+    let world_snapshot = s.world().clone();
+    stompymux_rs::persistence::save(&config.database(), &world_snapshot)
         .await
         .unwrap();
     let valid = stompymux_rs::persistence::load(&config.database())

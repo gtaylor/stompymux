@@ -212,10 +212,10 @@ pub fn unit_illuminated(world: &World, target: ObjectId) -> bool {
     let _measurement = crate::btech::autopilot::diagnostics::measure(
         crate::btech::autopilot::diagnostics::Category::Illumination,
     );
-    if !world
+    if world
         .objects
         .get(&target)
-        .is_some_and(|o| !o.flags.contains(crate::Flag::Going))
+        .is_none_or(|o| o.flags.contains(crate::Flag::Going))
     {
         return false;
     }

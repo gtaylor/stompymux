@@ -28,8 +28,10 @@ async fn repair_queries_use_section_anatomy_and_persisted_technician_time() {
     };
     {
         let mut world = s.world_mut();
-        let mut configuration = stompymux_rs::BattlePlayerConfiguration::default();
-        configuration.technician_available_at = stompymux_rs::clock::wall_time() + 20;
+        let configuration = stompymux_rs::BattlePlayerConfiguration {
+            technician_available_at: stompymux_rs::clock::wall_time() + 20,
+            ..Default::default()
+        };
         stompymux_rs::btech::set_player_configuration(
             &mut world,
             stompymux_rs::ObjectId(1),

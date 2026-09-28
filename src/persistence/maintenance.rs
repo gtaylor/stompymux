@@ -101,7 +101,7 @@ pub(super) async fn cleanup(c: &mut SqliteConnection, purges: &BTreeSet<ObjectId
     for table in &tables {
         let fks = sqlx::query(sqlx::AssertSqlSafe(format!(
             "PRAGMA foreign_key_list({})",
-            identifier(&table)
+            identifier(table)
         )))
         .fetch_all(&mut *c)
         .await?;
@@ -118,7 +118,7 @@ pub(super) async fn cleanup(c: &mut SqliteConnection, purges: &BTreeSet<ObjectId
             for id in purges {
                 let count: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
                     "SELECT count(*) FROM {} WHERE {}=?",
-                    identifier(&table),
+                    identifier(table),
                     identifier(&column)
                 )))
                 .bind(id.0)

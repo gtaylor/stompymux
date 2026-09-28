@@ -48,7 +48,7 @@ pub fn reactor_explosion_action(
         )?;
         super::piloting::publish_ordered_notices(scripts, &report.notices, &report.pilot_notices)?;
         super::evacuation::publish_reactor_consequences(scripts, config, &report)?;
-        super::evacuation::publish_new_casualties(scripts, config, &before)?;
+        super::evacuation::publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(report)
     })

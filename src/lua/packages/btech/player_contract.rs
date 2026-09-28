@@ -8,7 +8,7 @@ fn argument_failure(argument: usize, code: &'static str, message: &str) -> mlua:
 }
 
 fn first(arguments: &mlua::MultiValue) -> Value {
-    arguments.get(0).cloned().unwrap_or(Value::Nil)
+    arguments.front().cloned().unwrap_or(Value::Nil)
 }
 
 fn second(arguments: &mlua::MultiValue) -> Value {

@@ -41,7 +41,7 @@ pub fn observer_messages(world: &World, subject: ObjectId, text: &str) -> Vec<(O
         .filter_map(|observer| {
             let unit = super::scanner::scanner_unit(world, observer)?;
             if observer == subject
-                || !unit.position.is_some_and(|p| p.map == position.map)
+                || unit.position.is_none_or(|p| p.map != position.map)
                 || (!unit.visibility.clairvoyant && !unit.contacts.contains_key(&subject))
                 || world
                     .objects
@@ -167,7 +167,7 @@ pub(super) fn hex_fire_messages(
             let unit = super::scanner::scanner_unit(world, id)?;
             if id == actor
                 || unit.power != super::BattlePower::Running
-                || !unit.position.is_some_and(|p| p.map == position.map)
+                || unit.position.is_none_or(|p| p.map != position.map)
             {
                 return None;
             }

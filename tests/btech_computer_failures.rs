@@ -94,7 +94,8 @@ async fn display_failures_recover_in_order_and_survive_restart() {
             assert!((30..=200).contains(&event["remaining"].as_u64().unwrap()));
         }
         stop_battle_unit_action(&scripts, &config, unit, ObjectId(1)).unwrap();
-        persistence::save(&config.database(), &scripts.world())
+        let world_snapshot = scripts.world().clone();
+        persistence::save(&config.database(), &world_snapshot)
             .await
             .unwrap();
         let restored = persistence::load(&config.database()).await.unwrap();
@@ -120,7 +121,8 @@ async fn display_failures_recover_in_order_and_survive_restart() {
                 .unwrap()
                 .is_empty()
         );
-        persistence::save(&config.database(), &scripts.world())
+        let world_snapshot = scripts.world().clone();
+        persistence::save(&config.database(), &world_snapshot)
             .await
             .unwrap();
         assert_eq!(

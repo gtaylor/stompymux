@@ -22,7 +22,7 @@ pub fn add_mine_action(
 ) -> Result<u32> {
     scripts.atomic(|before| {
         ensure!(
-            crate::authority::is_wizard(&before, actor),
+            crate::authority::is_wizard(before, actor),
             "Permission denied."
         );
         let record = before.btech.maps().get(&map).context("Map not found")?;

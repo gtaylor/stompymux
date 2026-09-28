@@ -38,7 +38,7 @@ pub(super) fn action(
     request: super::fire_target::FireTargetRequest<'_>,
 ) -> Result<BattleSightReport> {
     scripts.atomic(|before| {
-        let operator = super::combat_operator::admit_running(&before, shooter, pilot)?;
+        let operator = super::combat_operator::admit_running(before, shooter, pilot)?;
         let shooter = operator.source.unit;
         let mut candidate = before.clone();
         let report = resolve(&mut candidate, config, shooter, pilot, index, request)?;

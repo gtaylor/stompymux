@@ -478,7 +478,7 @@ pub fn administrative_section_info(
             "Mech" => {
                 let quad = administrative_unit_movement(world, id).as_deref() == Some("Quad");
                 match code {
-                    5 | 6 | 7 => 6,
+                    5..=7 => 6,
                     0 | 1 if quad => 6,
                     _ => 12,
                 }

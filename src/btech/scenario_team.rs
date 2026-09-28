@@ -12,10 +12,10 @@ pub fn set_team_action(
 ) -> Result<i32> {
     scripts.atomic(|before| {
         ensure!(
-            crate::authority::is_wizard(&before, actor),
+            crate::authority::is_wizard(before, actor),
             "Permission denied."
         );
-        let scanner = super::scanner::scanner_unit(&before, unit)
+        let scanner = super::scanner::scanner_unit(before, unit)
             .context("Unit construction state is unavailable")?;
         let position = scanner
             .position

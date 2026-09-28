@@ -141,8 +141,8 @@ pub(crate) fn configure(
     enabled: Option<bool>,
 ) -> Result<bool> {
     scripts.atomic(|before| {
-        super::targeting::controlled(&before, id, pilot)?;
-        let enabled = enabled.unwrap_or(!super::ams_unit::enabled(&before, id)?);
+        super::targeting::controlled(before, id, pilot)?;
+        let enabled = enabled.unwrap_or(!super::ams_unit::enabled(before, id)?);
         set_ams(&mut scripts.world.borrow_mut(), id, pilot, enabled)?;
         super::notify_unit_text(
             scripts,

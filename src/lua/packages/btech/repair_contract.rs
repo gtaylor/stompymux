@@ -17,7 +17,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 contract::require_special(
                     lua,
                     &world,
-                    args.get(0).cloned().unwrap_or(Value::Nil),
+                    args.front().cloned().unwrap_or(Value::Nil),
                     1,
                     "MECH",
                     "unit",
@@ -155,7 +155,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             let unit = contract::require_special(
                 lua,
                 &world,
-                args.get(0).cloned().unwrap_or(Value::Nil),
+                args.front().cloned().unwrap_or(Value::Nil),
                 1,
                 "MECH",
                 "unit",
@@ -181,7 +181,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             let player = contract::require_object(
                 lua,
                 &world,
-                args.get(0).cloned().unwrap_or(Value::Nil),
+                args.front().cloned().unwrap_or(Value::Nil),
                 1,
             )?;
             if !world

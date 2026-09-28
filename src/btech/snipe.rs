@@ -14,10 +14,10 @@ pub fn snipe_action(
 ) -> Result<()> {
     scripts.atomic(|before| {
         ensure!(
-            crate::authority::is_wizard(&before, pilot),
+            crate::authority::is_wizard(before, pilot),
             "Permission denied."
         );
-        super::targeting::controlled(&before, shooter, pilot)?;
+        super::targeting::controlled(before, shooter, pilot)?;
         let weapons = super::tic::selection(selection, 96)?;
         let rules = super::BattleMovementRules {
             fasa_turning: config.battletech.fasaturn != 0,

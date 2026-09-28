@@ -485,7 +485,7 @@ pub fn advance_battle_self_destructs_action(
                 });
             }
         }
-        super::evacuation::publish_new_casualties(scripts, config, &before)?;
+        super::evacuation::publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
         Ok(reports)
     })

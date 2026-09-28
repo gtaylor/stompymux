@@ -190,15 +190,15 @@ pub(super) fn fire_tics(
     target: super::fire_target::FireTargetRequest<'_>,
 ) -> Result<Vec<BattleTicShot>> {
     scripts.atomic(|before| {
-        super::weapons_hold::admit(&before, id, pilot)?;
+        super::weapons_hold::admit(before, id, pilot)?;
         before.validate_action(config)?;
         ensure!(!groups.is_empty(), "Supply a TIC selection");
         let groups: BTreeSet<_> = groups.into_iter().collect();
         let selected = groups
             .into_iter()
-            .map(|group| Ok((group, battle_tic(&before, id, pilot, group)?)))
+            .map(|group| Ok((group, battle_tic(before, id, pilot, group)?)))
             .collect::<Result<Vec<_>>>()?;
-        ensure!(running(&before, id), "Unit must be started");
+        ensure!(running(before, id), "Unit must be started");
         let positioned = before.btech.vehicles().get(&id).map_or_else(
             || before.btech.constructed_units()[&id].position().is_some(),
             |unit| unit.position().is_some(),

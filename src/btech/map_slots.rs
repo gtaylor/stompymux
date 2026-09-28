@@ -36,7 +36,7 @@ pub(super) fn placement_slot(world: &World, id: ObjectId, map: ObjectId) -> Resu
     let mut occupied = BTreeSet::new();
     let mut existing = None;
     for (member, position, slot) in memberships {
-        if !position.is_some_and(|position| position.map == map) {
+        if position.is_none_or(|position| position.map != map) {
             continue;
         }
         let slot = slot.context("Placed unit lacks a map slot")?;

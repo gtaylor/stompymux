@@ -35,7 +35,7 @@ pub fn damage_section_action(
         critical,
     } = hit;
     scripts.atomic(|before| {
-        admit(&before, actor, unit, damage)?;
+        admit(before, actor, unit, damage)?;
         if let Some(vehicle) = before.btech.vehicles().get(&unit) {
             let section =
                 super::BattleVehicleSection::parse_location(section).context("Invalid section!")?;
@@ -45,7 +45,7 @@ pub fn damage_section_action(
             );
             let mut rules =
                 super::BattleVehicleImpactRules::configured(&config.battletech, false).criticals;
-            rules.combat_safe = super::battle_combat_safe(&before, unit)?;
+            rules.combat_safe = super::battle_combat_safe(before, unit)?;
             return super::evacuation::directed_vehicle_damage_action(
                 scripts,
                 config,

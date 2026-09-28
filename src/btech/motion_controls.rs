@@ -72,14 +72,7 @@ pub(super) fn require_reverse_allowed(world: &World, id: ObjectId, speed: f64) -
 /// World-aware throttle ceiling shared by command parsing, admission and display.
 /// Load applies before Mech equipment bonuses; VTOL vertical allocation is a later control check.
 pub fn throttle_maximum(world: &World, id: ObjectId, tsm_tow_bonus: bool) -> Result<f64> {
-    throttle_configured(
-        world,
-        id,
-        super::SpeedPolicy {
-            tsm_tow_bonus,
-            ..super::SpeedPolicy::STANDARD
-        },
-    )
+    throttle_configured(world, id, super::SpeedPolicy { tsm_tow_bonus })
 }
 
 /// Host-aware throttle uses one policy for load accounting.

@@ -826,7 +826,7 @@ impl Server {
                 return;
             }
         }
-        if self.commit_heartbeat(before, metrics.as_deref_mut()).await {
+        if self.commit_heartbeat(before, metrics).await {
             self.flush();
         }
     }

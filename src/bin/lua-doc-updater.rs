@@ -463,10 +463,10 @@ fn function_body(function: &ApiFunction, example: Option<&str>) -> String {
                 "return" => returns.push(value.to_owned()),
                 _ => errors.push(value.to_owned()),
             }
-        } else if let Some(comment) = line.strip_prefix("---") {
-            if !line.starts_with("---@") {
-                prose.push(clean(comment.trim_start()));
-            }
+        } else if let Some(comment) = line.strip_prefix("---")
+            && !line.starts_with("---@")
+        {
+            prose.push(clean(comment.trim_start()));
         }
     }
     let joined = prose.join("\n");

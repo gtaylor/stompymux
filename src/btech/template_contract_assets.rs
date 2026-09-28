@@ -243,7 +243,7 @@ pub fn finalize_raw_load_specials(template: &mut RawTemplate) {
         && !occupies(RightArm, 2, "LowerActuator")
         && !occupies(LeftArm, 3, "HandOrFootActuator")
         && !occupies(RightArm, 3, "HandOrFootActuator");
-    let compact = template.sections.get(&CenterTorso).map_or(true, |section| {
+    let compact = template.sections.get(&CenterTorso).is_none_or(|section| {
         section
             .criticals
             .values()

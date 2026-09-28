@@ -9,7 +9,7 @@ fn admit(lua: &Lua, args: &mlua::MultiValue) -> mlua::Result<()> {
     unit(
         lua,
         &scripts.world(),
-        args.get(0).cloned().unwrap_or(Value::Nil),
+        args.front().cloned().unwrap_or(Value::Nil),
     )?;
     Ok(())
 }
@@ -18,7 +18,7 @@ fn admit_registered(lua: &Lua, args: &mlua::MultiValue) -> mlua::Result<()> {
     unit(
         lua,
         &scripts.world(),
-        args.get(0).cloned().unwrap_or(Value::Nil),
+        args.front().cloned().unwrap_or(Value::Nil),
     )?;
     Ok(())
 }
@@ -340,7 +340,7 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
             let id = unit(
                 lua,
                 &scripts.world(),
-                args.get(0).cloned().unwrap_or(Value::Nil),
+                args.front().cloned().unwrap_or(Value::Nil),
             )?;
             zero(crate::btech::set_administrative_heat_sinks(
                 &mut scripts.world_mut(),
@@ -375,7 +375,7 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
                 let id = unit(
                     lua,
                     &scripts.world(),
-                    args.get(0).cloned().unwrap_or(Value::Nil),
+                    args.front().cloned().unwrap_or(Value::Nil),
                 )?;
                 if code >= 57
                     && crate::btech::administrative_unit_class(&scripts.world(), id).as_deref()
@@ -414,7 +414,7 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
             let id = unit(
                 lua,
                 &scripts.world(),
-                args.get(0).cloned().unwrap_or(Value::Nil),
+                args.front().cloned().unwrap_or(Value::Nil),
             )?;
             zero(crate::btech::clear_administrative_technologies(
                 &mut scripts.world_mut(),
@@ -441,7 +441,7 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
             let id = unit(
                 lua,
                 &scripts.world(),
-                args.get(0).cloned().unwrap_or(Value::Nil),
+                args.front().cloned().unwrap_or(Value::Nil),
             )?;
             zero(crate::btech::set_administrative_unit_type(
                 &mut scripts.world_mut(),
@@ -462,7 +462,7 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
             let id = unit(
                 lua,
                 &scripts.world(),
-                args.get(0).cloned().unwrap_or(Value::Nil),
+                args.front().cloned().unwrap_or(Value::Nil),
             )?;
             let section_value = args.get(1).cloned().unwrap_or(Value::Nil);
             if section_value.is_nil() {
@@ -683,7 +683,7 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
             let id = contract::require_object(
                 lua,
                 &scripts.world(),
-                args.get(0).cloned().unwrap_or(Value::Nil),
+                args.front().cloned().unwrap_or(Value::Nil),
                 1,
             )?;
             if scripts.world().objects[&id].kind != crate::Kind::Thing {

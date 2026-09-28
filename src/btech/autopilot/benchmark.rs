@@ -553,7 +553,7 @@ fn fixture_world(
         // Setup-only, bounded ordinary acquisition; never inject a contact to admit an attack.
         for _ in 0..16 {
             crate::btech::refresh_contacts(&mut world, &ids)?;
-            if ids.chunks_exact(2).all(|pair| {
+            if ids.as_chunks::<2>().0.iter().all(|pair| {
                 super::orders::validate_for_unit(
                     &world,
                     pair[0],
@@ -567,7 +567,7 @@ fn fixture_world(
                 break;
             }
         }
-        for pair in ids.chunks_exact(2) {
+        for pair in ids.as_chunks::<2>().0 {
             let order = AutopilotOrder::Attack {
                 target: pair[1],
                 range: Some(super::AutopilotRangeBand {
@@ -646,7 +646,7 @@ fn map_source(scenario: BenchmarkScenario, seed: u64) -> String {
             let obstacle = match scenario {
                 BenchmarkScenario::Open | BenchmarkScenario::MovingPursuit => false,
                 BenchmarkScenario::Obstacles => {
-                    x % 11 == 0 && (y + (next_random(&mut rng) % 5) as u16) % 17 != 0
+                    x % 11 == 0 && !(y + (next_random(&mut rng) % 5) as u16).is_multiple_of(17)
                 }
                 BenchmarkScenario::MovingCongestion => {
                     // Crossing lanes force units with the same destination row
@@ -672,7 +672,7 @@ fn next_random(state: &mut u64) -> u64 {
 fn seed_bytes(seed: u64, stream: u64) -> [u8; 32] {
     let mut bytes = [0_u8; 32];
     let value = seed.wrapping_add(stream.wrapping_mul(0x9e37_79b9_7f4a_7c15));
-    for (index, chunk) in bytes.chunks_exact_mut(8).enumerate() {
+    for (index, chunk) in bytes.as_chunks_mut::<8>().0.iter_mut().enumerate() {
         chunk.copy_from_slice(&value.rotate_left((index * 13) as u32).to_le_bytes());
     }
     bytes
@@ -715,20 +715,18 @@ fn collect_completion_latencies(world: &World, output: &mut Vec<u64>) {
         for feedback in controller.feedback_records() {
             if feedback.event == AutopilotFeedbackEvent::OrderSucceeded
                 && feedback.simulation_time == simulation_time
+                && let Some(order_id) = feedback.order_id
+                && let Some(started) = controller.feedback_records().iter().find(|candidate| {
+                    candidate.order_id == Some(order_id)
+                        && candidate.event == AutopilotFeedbackEvent::OrderStarted
+                })
             {
-                if let Some(order_id) = feedback.order_id
-                    && let Some(started) = controller.feedback_records().iter().find(|candidate| {
-                        candidate.order_id == Some(order_id)
-                            && candidate.event == AutopilotFeedbackEvent::OrderStarted
-                    })
-                {
-                    output.push(
-                        feedback
-                            .simulation_time
-                            .saturating_sub(started.simulation_time)
-                            .max(0) as u64,
-                    );
-                }
+                output.push(
+                    feedback
+                        .simulation_time
+                        .saturating_sub(started.simulation_time)
+                        .max(0) as u64,
+                );
             }
         }
     }

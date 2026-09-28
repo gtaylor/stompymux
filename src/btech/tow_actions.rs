@@ -41,7 +41,7 @@ pub fn tow_action(
                 super::notify_unit(scripts, notice)?;
             }
         }
-        super::evacuation::publish_new_casualties(scripts, config, &before)?;
+        super::evacuation::publish_new_casualties(scripts, config, before)?;
         scripts.world().validate_action(config)?;
         Ok(())
     })

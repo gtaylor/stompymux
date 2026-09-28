@@ -12,7 +12,7 @@ pub fn save_map_action(
 ) -> Result<()> {
     scripts.atomic(|before| {
         ensure!(
-            crate::authority::is_wizard(&before, actor),
+            crate::authority::is_wizard(before, actor),
             "Permission denied."
         );
         ensure!(

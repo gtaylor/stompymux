@@ -33,7 +33,7 @@ pub(crate) fn apply_unit_damage_action(
     request: UnitDamageRequest<'_>,
 ) -> Result<()> {
     scripts.atomic(|before| {
-        super::scenario_damage::admit(&before, ObjectId(1), id, i32::from(request.amount))?;
+        super::scenario_damage::admit(before, ObjectId(1), id, i32::from(request.amount))?;
         if let Some(message) = request.unit_message.filter(|message| !message.is_empty()) {
             notify_unit_operation(scripts, id, message)?;
         }
@@ -173,7 +173,7 @@ pub(crate) fn apply_unit_damage_action(
         }
         super::piloting::publish_ordered_notices(scripts, &notices, &private)?;
         super::evacuation::publish_blast_consequences(scripts, config, &impacts, None)?;
-        super::evacuation::publish_new_casualties(scripts, config, &before)?;
+        super::evacuation::publish_new_casualties(scripts, config, before)?;
         scripts.world().validate_action(config)
     })
 }
@@ -249,7 +249,7 @@ fn finalize_load_specials(mech: &mut BattleTemplate) {
     let compact = mech
         .sections
         .get(&BattleSection::CenterTorso)
-        .map_or(true, |layout| {
+        .is_none_or(|layout| {
             layout
                 .criticals
                 .values()

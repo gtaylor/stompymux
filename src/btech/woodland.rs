@@ -162,9 +162,9 @@ pub fn resolve_woodland_effect(
     }
     let roll = dice.generic_roll();
     if !woods
-        || !weapon
+        || weapon
             .terrain_ignition_target(ammunition)
-            .is_some_and(|target| roll >= target)
+            .is_none_or(|target| roll < target)
     {
         return BattleWoodlandEffect::None;
     }

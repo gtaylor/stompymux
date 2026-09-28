@@ -121,7 +121,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
             let mut current = entrance_fields(entrance);
             if previous.is_none() {
                 for name in ["x", "y", "offset"] {
-                    current.entry(name.into()).or_insert(Cell::Integer(0));
+                    current.entry(name).or_insert(Cell::Integer(0));
                 }
             }
             row(

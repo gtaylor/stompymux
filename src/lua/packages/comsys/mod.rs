@@ -162,7 +162,7 @@ impl UserData for Handle {
                         .borrow()
                         .objects
                         .get(&id)
-                        .map_or(false, |o| o.kind != Kind::Garbage);
+                        .is_some_and(|o| o.kind != Kind::Garbage);
                     if !live {
                         return Err(super::error::failure(
                             "mux.object.invalid",

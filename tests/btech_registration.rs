@@ -322,7 +322,7 @@ async fn mech_registration_teardown_is_idempotent_and_forgets_configuration() {
         ),
         format!("#{} is not registered with BTech.", unit.0)
     );
-    let after = scripts.world();
+    let after = scripts.world().clone();
     assert!(!after.btech.registrations().contains_key(&unit));
     assert!(!after.btech.units().contains_key(&unit));
     assert!(!after.btech.constructed_units().contains_key(&unit));
@@ -334,10 +334,7 @@ async fn mech_registration_teardown_is_idempotent_and_forgets_configuration() {
     // Teardown never moves or destroys the container thing (C only frees the special object).
     assert_eq!(after.objects[&unit].location, Some(ObjectId(1)));
     assert_eq!(after.objects[&unit].kind, Kind::Thing);
-    drop(after);
-    persistence::save(&config.database(), &scripts.world())
-        .await
-        .unwrap();
+    persistence::save(&config.database(), &after).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
     assert!(!restored.btech.registrations().contains_key(&unit));
     assert!(!restored.btech.units().contains_key(&unit));
@@ -387,7 +384,7 @@ async fn unregister_constructed_unit_releases_map_and_pilot_references() {
             ),
             format!("Unregistered #{} from BTech.", unit.0)
         );
-        let after = scripts.world();
+        let after = scripts.world().clone();
         assert!(!after.btech.registrations().contains_key(&unit), "{source}");
         assert!(!after.btech.units().contains_key(&unit));
         assert!(!after.btech.constructed_units().contains_key(&unit));
@@ -412,10 +409,7 @@ async fn unregister_constructed_unit_releases_map_and_pilot_references() {
         );
         assert_eq!(after.btech.units()[&target].map, Some(map));
         assert_eq!(after.objects[&unit].location, Some(map));
-        drop(after);
-        persistence::save(&config.database(), &scripts.world())
-            .await
-            .unwrap();
+        persistence::save(&config.database(), &after).await.unwrap();
         let restored = persistence::load(&config.database()).await.unwrap();
         assert!(!restored.btech.registrations().contains_key(&unit));
         assert!(!restored.btech.units().contains_key(&unit));
