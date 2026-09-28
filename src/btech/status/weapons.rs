@@ -164,17 +164,33 @@ pub(super) fn render(world: &World, id: ObjectId) -> Result<String> {
 fn physical_readiness(unit: &BattleUnit) -> Result<Vec<String>> {
     let loadout = unit.loadout()?;
     let mut entries = Vec::new();
-    for (system, name) in [
-        (BattleSystem::Axe, "Axe"),
-        (BattleSystem::Sword, "Sword"),
-        (BattleSystem::Claw, "Claw"),
-        (BattleSystem::Mace, "Mace"),
-        (BattleSystem::DualSaw, "Saw"),
+    let tons = unit.definition().tons;
+    for (weapon, name) in [
+        (BattleArmAttack::Axe, "Axe"),
+        (BattleArmAttack::Sword, "Sword"),
+        (BattleArmAttack::Claw, "Claw"),
+        (BattleArmAttack::Mace, "Mace"),
+        (BattleArmAttack::Saw, "Saw"),
+        (BattleArmAttack::RetractableBlade, "RBlade"),
+        (BattleArmAttack::Lance, "Lance"),
+        (BattleArmAttack::Flail, "Flail"),
+        (BattleArmAttack::WreckingBall, "WBall"),
+        (BattleArmAttack::ChainWhip, "Whip"),
+        (BattleArmAttack::SmallVibroblade, "SVibro"),
+        (BattleArmAttack::MediumVibroblade, "MVibro"),
+        (BattleArmAttack::LargeVibroblade, "LVibro"),
     ] {
-        let minimum = if system == BattleSystem::DualSaw {
-            7
-        } else {
-            unit.definition().tons / 15
+        let Some(system) = weapon.system() else {
+            continue;
+        };
+        // The reference game lists its original weapons from a lighter, shared threshold.
+        let minimum = match weapon {
+            BattleArmAttack::Saw => 7,
+            BattleArmAttack::Axe
+            | BattleArmAttack::Sword
+            | BattleArmAttack::Claw
+            | BattleArmAttack::Mace => tons / 15,
+            weapon => weapon.minimum_slots(tons),
         };
         for (section, arm) in [
             (BattleSection::LeftArm, "LA"),
@@ -193,8 +209,8 @@ fn physical_readiness(unit: &BattleUnit) -> Result<Vec<String>> {
             let hand =
                 btech::physical::actuator(unit, section, 3, BattleSystem::HandOrFootActuator)?;
             let usable = unit.sections()[&section].internal > 0
-                && (system == BattleSystem::Claw || shoulder)
-                && (matches!(system, BattleSystem::Claw | BattleSystem::DualSaw) || hand);
+                && (weapon == BattleArmAttack::Claw || shoulder)
+                && (!weapon.needs_hand() || hand);
             let status = if !usable {
                 "[fg=red bold]XX[reset]".into()
             } else if let Some(seconds) = unit.limb_recycle().get(&section).filter(|s| **s > 0) {
@@ -270,6 +286,14 @@ mod tests {
             ("Claw", "Claw", false, false),
             ("Mace", "Mace", true, true),
             ("Dual_Saw", "Saw", false, true),
+            ("Retractable_Blade", "RBlade", true, true),
+            ("Lance", "Lance", false, true),
+            ("Flail", "Flail", false, true),
+            ("Wrecking_Ball", "WBall", false, true),
+            ("Chain_Whip", "Whip", true, true),
+            ("Small_Vibroblade", "SVibro", true, true),
+            ("Medium_Vibroblade", "MVibro", true, true),
+            ("Large_Vibroblade", "LVibro", true, true),
         ] {
             let source = include_str!("../../../game/mechs/AXM-2N")
                 .replace("    CRIT_5\t\t  { IS.MediumLaser - - 3 }\n", "")

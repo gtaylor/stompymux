@@ -45,14 +45,20 @@ impl BattleArm {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum BattlePhysicalAttack {
-    Kick { leg: BattleLeg },
-    Trip { leg: BattleLeg },
-    Punch { arm: BattleArm },
-    Axe { arm: BattleArm },
-    Sword { arm: BattleArm },
-    Mace { arm: BattleArm },
-    Saw { arm: BattleArm },
-    Claw { arm: BattleArm },
+    Kick {
+        leg: BattleLeg,
+    },
+    Trip {
+        leg: BattleLeg,
+    },
+    Punch {
+        arm: BattleArm,
+    },
+    /// A swing with the physical weapon installed in one arm; never a punch.
+    Weapon {
+        arm: BattleArm,
+        weapon: BattleArmAttack,
+    },
     Club,
 }
 
@@ -62,14 +68,10 @@ impl BattlePhysicalAttack {
         match self {
             Self::Club => BattleSection::RightArm,
             Self::Kick { leg } | Self::Trip { leg } => leg.section(chassis),
-            Self::Punch { arm }
-            | Self::Axe { arm }
-            | Self::Sword { arm }
-            | Self::Mace { arm }
-            | Self::Saw { arm }
-            | Self::Claw { arm } => arm.section(),
+            Self::Punch { arm } | Self::Weapon { arm, .. } => arm.section(),
         }
     }
+
     /// Check chassis anatomy and supporting legs before geometric or timing eligibility.
     pub fn validate_chassis_support(self, unit: &BattleUnit) -> Result<()> {
         let chassis = unit.chassis();
@@ -111,14 +113,19 @@ impl BattlePhysicalAttack {
     fn is_trip(self) -> bool {
         matches!(self, Self::Trip { .. })
     }
+
+    /// Arm making a punch or weapon swing; its side arc is also reachable.
+    fn arm(self) -> Option<BattleArm> {
+        match self {
+            Self::Punch { arm } | Self::Weapon { arm, .. } => Some(arm),
+            _ => None,
+        }
+    }
+
     /// Installed arm weapon, including mechanical weapons that need no hand.
     fn hand_weapon(self) -> Option<BattleArmAttack> {
         match self {
-            Self::Axe { .. } => Some(BattleArmAttack::Axe),
-            Self::Sword { .. } => Some(BattleArmAttack::Sword),
-            Self::Mace { .. } => Some(BattleArmAttack::Mace),
-            Self::Saw { .. } => Some(BattleArmAttack::Saw),
-            Self::Claw { .. } => Some(BattleArmAttack::Claw),
+            Self::Weapon { weapon, .. } => Some(weapon),
             _ => None,
         }
     }
@@ -129,17 +136,14 @@ impl BattlePhysicalAttack {
             Self::Kick { .. } => "kick",
             Self::Trip { .. } => "trip",
             Self::Punch { .. } => "punch",
-            Self::Axe { .. } => "axe",
-            Self::Sword { .. } => "chop",
-            Self::Mace { .. } => "mace",
-            Self::Saw { .. } => "saw",
-            Self::Claw { .. } => "claw",
+            Self::Weapon { weapon, .. } => weapon.verb(),
             Self::Club => "club",
         }
     }
 }
 
 /// Physical arm attack selected independently of left/right/both arm selection.
+/// Every variant except `Punch` is a physical weapon installed in the arm.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum BattleArmAttack {
@@ -149,33 +153,213 @@ pub enum BattleArmAttack {
     Mace,
     Saw,
     Claw,
+    RetractableBlade,
+    Lance,
+    Flail,
+    WreckingBall,
+    ChainWhip,
+    SmallVibroblade,
+    MediumVibroblade,
+    LargeVibroblade,
 }
 
 impl BattleArmAttack {
+    /// Hand weapons in the order an arm carrying several would swing them.
+    pub const HAND_WEAPONS: [Self; 13] = [
+        Self::Axe,
+        Self::Sword,
+        Self::Mace,
+        Self::Saw,
+        Self::Claw,
+        Self::RetractableBlade,
+        Self::Lance,
+        Self::Flail,
+        Self::WreckingBall,
+        Self::ChainWhip,
+        Self::SmallVibroblade,
+        Self::MediumVibroblade,
+        Self::LargeVibroblade,
+    ];
+
     /// Bind one selected arm to the shared physical attack description.
     fn attack(self, arm: BattleArm) -> BattlePhysicalAttack {
         match self {
             Self::Punch => BattlePhysicalAttack::Punch { arm },
-            Self::Axe => BattlePhysicalAttack::Axe { arm },
-            Self::Sword => BattlePhysicalAttack::Sword { arm },
-            Self::Mace => BattlePhysicalAttack::Mace { arm },
-            Self::Saw => BattlePhysicalAttack::Saw { arm },
-            Self::Claw => BattlePhysicalAttack::Claw { arm },
+            weapon => BattlePhysicalAttack::Weapon { arm, weapon },
         }
     }
 
-    /// Hand weapons in the order an arm carrying several would swing them.
-    const HAND_WEAPONS: [Self; 5] = [Self::Axe, Self::Sword, Self::Mace, Self::Saw, Self::Claw];
+    /// Hand weapon backed by an installed equipment family.
+    pub fn from_system(system: BattleSystem) -> Option<Self> {
+        Self::HAND_WEAPONS
+            .into_iter()
+            .find(|weapon| weapon.system() == Some(system))
+    }
 
     /// Equipment family backing a hand weapon; punches need none.
-    fn system(self) -> Option<BattleSystem> {
+    pub fn system(self) -> Option<BattleSystem> {
+        Some(match self {
+            Self::Punch => return None,
+            Self::Axe => BattleSystem::Axe,
+            Self::Sword => BattleSystem::Sword,
+            Self::Mace => BattleSystem::Mace,
+            Self::Saw => BattleSystem::DualSaw,
+            Self::Claw => BattleSystem::Claw,
+            Self::RetractableBlade => BattleSystem::RetractableBlade,
+            Self::Lance => BattleSystem::Lance,
+            Self::Flail => BattleSystem::Flail,
+            Self::WreckingBall => BattleSystem::WreckingBall,
+            Self::ChainWhip => BattleSystem::ChainWhip,
+            Self::SmallVibroblade => BattleSystem::SmallVibroblade,
+            Self::MediumVibroblade => BattleSystem::MediumVibroblade,
+            Self::LargeVibroblade => BattleSystem::LargeVibroblade,
+        })
+    }
+
+    /// Lowercase weapon name used in cockpit and damage messages.
+    pub fn name(self) -> &'static str {
         match self {
-            Self::Punch => None,
-            Self::Axe => Some(BattleSystem::Axe),
-            Self::Sword => Some(BattleSystem::Sword),
-            Self::Mace => Some(BattleSystem::Mace),
-            Self::Saw => Some(BattleSystem::DualSaw),
-            Self::Claw => Some(BattleSystem::Claw),
+            Self::Punch => "fist",
+            Self::Axe => "axe",
+            Self::Sword => "sword",
+            Self::Mace => "mace",
+            Self::Saw => "dual saw",
+            Self::Claw => "claw",
+            Self::RetractableBlade => "retractable blade",
+            Self::Lance => "lance",
+            Self::Flail => "flail",
+            Self::WreckingBall => "wrecking ball",
+            Self::ChainWhip => "chain whip",
+            Self::SmallVibroblade => "small vibroblade",
+            Self::MediumVibroblade => "medium vibroblade",
+            Self::LargeVibroblade => "large vibroblade",
+        }
+    }
+
+    /// Attack verb; observers see it with a trailing "s".
+    fn verb(self) -> &'static str {
+        match self {
+            Self::Punch => "punch",
+            Self::Axe => "axe",
+            Self::Sword => "chop",
+            Self::Mace => "mace",
+            Self::Saw => "saw",
+            Self::Claw => "claw",
+            Self::RetractableBlade => "cut",
+            Self::Lance => "skewer",
+            Self::Flail => "flail",
+            Self::WreckingBall => "wreck",
+            Self::ChainWhip => "whip",
+            Self::SmallVibroblade | Self::MediumVibroblade | Self::LargeVibroblade => "slice",
+        }
+    }
+
+    /// Critical slots a unit of this mass needs working in one arm to swing the weapon.
+    pub fn minimum_slots(self, tons: u16) -> u16 {
+        match self {
+            Self::Punch => 0,
+            Self::Axe | Self::Claw => tons / 15,
+            Self::Sword => (tons + 15) / 20,
+            Self::Mace => tons / 10,
+            Self::Saw => 7,
+            Self::RetractableBlade => tons.div_ceil(20) + 1,
+            Self::Lance => tons.div_ceil(20),
+            Self::Flail => 4,
+            Self::WreckingBall => 5,
+            Self::ChainWhip => 2,
+            Self::SmallVibroblade => 1,
+            Self::MediumVibroblade => 2,
+            Self::LargeVibroblade => 4,
+        }
+    }
+
+    /// Whether the arm's hand actuator must work to swing this weapon.
+    pub fn needs_hand(self) -> bool {
+        !matches!(
+            self,
+            Self::Saw | Self::Claw | Self::Lance | Self::Flail | Self::WreckingBall
+        )
+    }
+
+    /// Reduction applied to the pilot's piloting skill when aiming this attack.
+    fn skill_bonus(self) -> i16 {
+        match self {
+            Self::Punch | Self::Claw => 0,
+            Self::Sword
+            | Self::RetractableBlade
+            | Self::ChainWhip
+            | Self::SmallVibroblade
+            | Self::MediumVibroblade
+            | Self::LargeVibroblade => 2,
+            Self::Axe | Self::Mace | Self::Saw | Self::Lance | Self::Flail | Self::WreckingBall => {
+                1
+            }
+        }
+    }
+
+    /// Aim penalty inherent to the weapon, applied after the skill bonus.
+    fn weapon_modifier(self) -> u8 {
+        match self {
+            Self::Mace | Self::Lance | Self::WreckingBall => 2,
+            Self::Saw | Self::Claw | Self::Flail => 1,
+            _ => 0,
+        }
+    }
+
+    /// Base damage for an attacker of this mass before myomer and actuator effects.
+    fn damage(self, tons: u16) -> u16 {
+        match self {
+            Self::Punch => tons / 10,
+            Self::Axe | Self::Lance => tons / 5,
+            Self::Sword => (tons + 5) / 10 + 1,
+            Self::Mace => tons / 4,
+            Self::Saw => 7,
+            Self::Claw => tons / 7,
+            Self::RetractableBlade => tons.div_ceil(10),
+            Self::Flail => 9,
+            Self::WreckingBall => 8,
+            Self::ChainWhip => 3,
+            Self::SmallVibroblade => 7,
+            Self::MediumVibroblade => 10,
+            Self::LargeVibroblade => 14,
+        }
+    }
+
+    /// Whether active triple-strength myomer doubles this weapon's damage.
+    fn myomer_doubles(self) -> bool {
+        !matches!(
+            self,
+            Self::Saw
+                | Self::Flail
+                | Self::WreckingBall
+                | Self::ChainWhip
+                | Self::SmallVibroblade
+                | Self::MediumVibroblade
+                | Self::LargeVibroblade
+        )
+    }
+
+    /// Mechanical weapons that always strike the section their arm faces.
+    fn fixed_location(self) -> bool {
+        matches!(self, Self::Saw | Self::Claw)
+    }
+
+    /// Heat added to the attacker each time the weapon is swung.
+    fn heat(self) -> u8 {
+        match self {
+            Self::SmallVibroblade => 3,
+            Self::MediumVibroblade => 5,
+            Self::LargeVibroblade => 7,
+            _ => 0,
+        }
+    }
+
+    /// Damage the weapon deals its own wielder when the attack roll is a natural 2.
+    fn fumble_damage(self) -> Option<u16> {
+        match self {
+            Self::Flail => Some(5),
+            Self::WreckingBall => Some(4),
+            _ => None,
         }
     }
 
@@ -200,13 +384,7 @@ impl BattleArmAttack {
         let Some(system) = self.system() else {
             return Ok(true);
         };
-        let minimum = match self {
-            Self::Punch => 0,
-            Self::Axe | Self::Claw => unit.definition().tons / 15,
-            Self::Sword => (unit.definition().tons + 15) / 20,
-            Self::Mace => unit.definition().tons / 10,
-            Self::Saw => 7,
-        };
+        let minimum = self.minimum_slots(unit.definition().tons);
         Ok(unit
             .loadout()?
             .systems
@@ -284,6 +462,8 @@ pub struct BattlePhysicalReport {
     pub hit: bool,
     pub glancing: bool,
     pub impact: Option<BattleTacticalImpact>,
+    /// Damage a flail or wrecking ball dealt its own wielder on a natural 2.
+    pub fumble: Option<BattleTacticalImpact>,
     /// Piloting XP applied before eligible direct damage; absent for trips and ineligible combat.
     pub experience: Option<BattleExperienceAward>,
     /// Accepted damage and control-check XP diagnostics captured during resolution.
@@ -475,7 +655,7 @@ fn attack_profile_inner(
         vec![BattleSection::LeftArm, BattleSection::RightArm]
     } else if attack.uses_leg() && source.chassis() == BattleMechChassis::Biped {
         vec![BattleSection::LeftLeg, BattleSection::RightLeg]
-    } else if matches!(attack, BattlePhysicalAttack::Claw { .. }) {
+    } else if attack.hand_weapon() == Some(BattleArmAttack::Claw) {
         vec![]
     } else {
         vec![attack.section(source.chassis())]
@@ -503,7 +683,7 @@ fn attack_profile_inner(
             kind
         );
         ensure!(
-            matches!(kind, BattleArmAttack::Saw | BattleArmAttack::Claw)
+            !kind.needs_hand()
                 || actuator(
                     source,
                     attack.section(source.chassis()),
@@ -611,44 +791,10 @@ fn attack_profile_inner(
     };
     let angle = (range.bearing.unwrap_or(heading) - heading - twist).rem_euclid(360.0);
     let forward = angle <= 60.0 || angle >= 300.0;
-    let side = match attack {
-        BattlePhysicalAttack::Punch {
-            arm: BattleArm::Left,
-        }
-        | BattlePhysicalAttack::Axe {
-            arm: BattleArm::Left,
-        }
-        | BattlePhysicalAttack::Sword {
-            arm: BattleArm::Left,
-        }
-        | BattlePhysicalAttack::Mace {
-            arm: BattleArm::Left,
-        }
-        | BattlePhysicalAttack::Saw {
-            arm: BattleArm::Left,
-        }
-        | BattlePhysicalAttack::Claw {
-            arm: BattleArm::Left,
-        } => (240.0..300.0).contains(&angle),
-        BattlePhysicalAttack::Punch {
-            arm: BattleArm::Right,
-        }
-        | BattlePhysicalAttack::Axe {
-            arm: BattleArm::Right,
-        }
-        | BattlePhysicalAttack::Sword {
-            arm: BattleArm::Right,
-        }
-        | BattlePhysicalAttack::Mace {
-            arm: BattleArm::Right,
-        }
-        | BattlePhysicalAttack::Saw {
-            arm: BattleArm::Right,
-        }
-        | BattlePhysicalAttack::Claw {
-            arm: BattleArm::Right,
-        } => angle > 60.0 && angle <= 120.0,
-        _ => false,
+    let side = match attack.arm() {
+        Some(BattleArm::Left) => (240.0..300.0).contains(&angle),
+        Some(BattleArm::Right) => angle > 60.0 && angle <= 120.0,
+        None => false,
     };
     ensure!(
         forward || side,
@@ -705,28 +851,22 @@ fn attack_profile_inner(
         .character_values()
         .get(&pilot)
         .is_some_and(|values| super::advantages::enabled(values, "Melee_Specialist"));
+    let skill_bonus = match attack {
+        BattlePhysicalAttack::Kick { .. } | BattlePhysicalAttack::Trip { .. } => 2,
+        BattlePhysicalAttack::Club => 1,
+        BattlePhysicalAttack::Punch { .. } => 0,
+        BattlePhysicalAttack::Weapon { weapon, .. } => weapon.skill_bonus(),
+    };
     let base = if rules.use_pilot_skill {
-        unit_piloting_target(world, attacker, rules.fall.extended_piloting)?
-            - match attack {
-                BattlePhysicalAttack::Kick { .. }
-                | BattlePhysicalAttack::Trip { .. }
-                | BattlePhysicalAttack::Sword { .. } => 2,
-                BattlePhysicalAttack::Axe { .. }
-                | BattlePhysicalAttack::Mace { .. }
-                | BattlePhysicalAttack::Saw { .. }
-                | BattlePhysicalAttack::Club => 1,
-                _ => 0,
-            }
-    } else if attack.uses_leg() || matches!(attack, BattlePhysicalAttack::Sword { .. }) {
+        unit_piloting_target(world, attacker, rules.fall.extended_piloting)? - skill_bonus
+    } else if skill_bonus == 2 {
         3
     } else {
         4
     };
-    let weapon_modifier = match attack {
-        BattlePhysicalAttack::Mace { .. } => 2,
-        BattlePhysicalAttack::Saw { .. } | BattlePhysicalAttack::Claw { .. } => 1,
-        _ => 0,
-    };
+    let weapon_modifier = attack
+        .hand_weapon()
+        .map_or(0, BattleArmAttack::weapon_modifier);
     let movement = i16::from(source.attacker_movement_modifier(rules.fasa_turning));
     let attacker_movement = if specialist {
         (movement - 1).min(0)
@@ -742,14 +882,15 @@ fn attack_profile_inner(
     };
     let tons = source.definition().tons;
     let mut damage = match attack {
-        BattlePhysicalAttack::Sword { .. } => (tons + 5) / 10 + 1,
-        BattlePhysicalAttack::Punch { .. } => tons / 10,
-        BattlePhysicalAttack::Mace { .. } => tons / 4,
-        BattlePhysicalAttack::Saw { .. } => 7,
-        BattlePhysicalAttack::Claw { .. } => tons / 7,
+        BattlePhysicalAttack::Punch { .. } => BattleArmAttack::Punch.damage(tons),
+        BattlePhysicalAttack::Weapon { weapon, .. } => weapon.damage(tons),
         _ => tons / 5,
     };
-    if source.triple_myomer_active() && !matches!(attack, BattlePhysicalAttack::Saw { .. }) {
+    if source.triple_myomer_active()
+        && attack
+            .hand_weapon()
+            .is_none_or(BattleArmAttack::myomer_doubles)
+    {
         damage *= 2;
     }
     damage += u16::from(specialist);
@@ -795,11 +936,10 @@ fn attack_profile_inner(
         } else {
             BattleHitTable::Kick
         },
-        fixed_location: matches!(
-            attack,
-            BattlePhysicalAttack::Saw { .. } | BattlePhysicalAttack::Claw { .. }
-        )
-        .then_some(BattleSection::LeftArm),
+        fixed_location: attack
+            .hand_weapon()
+            .is_some_and(BattleArmAttack::fixed_location)
+            .then_some(BattleSection::LeftArm),
         hit_arc,
     })
 }
@@ -923,9 +1063,15 @@ fn resolve_attack_inner(
         if attack == BattlePhysicalAttack::Club {
             unit.limb_recycle.insert(BattleSection::LeftArm, 60);
         }
+        let weapon = attack.hand_weapon();
+        unit.heat.stored += f64::from(weapon.map_or(0, BattleArmAttack::heat));
         let threshold =
             profile.target_number - i32::from(rules.glancing == BattleGlancingMode::BelowTarget);
-        let hit = i32::from(roll) >= threshold;
+        // A natural 2 swings flails and wrecking balls back into their wielder.
+        let fumble = weapon
+            .and_then(BattleArmAttack::fumble_damage)
+            .filter(|_| roll == 2);
+        let hit = fumble.is_none() && i32::from(roll) >= threshold;
         let glancing =
             hit && rules.glancing != BattleGlancingMode::Disabled && i32::from(roll) == threshold;
         let mut pilot_notices = Vec::new();
@@ -1053,22 +1199,67 @@ fn resolve_attack_inner(
             notices.extend(result.notices.iter().cloned());
             impact = Some(result);
         }
-        let (balance, fall) = if matches!(attack, BattlePhysicalAttack::Kick { .. })
-            || (attack.is_trip() && hit)
-            || (matches!(attack, BattlePhysicalAttack::Mace { .. }) && !hit)
-        {
-            let balancing = if hit { target } else { attacker };
+        let mut fumble_impact = None;
+        if let Some(damage) = fumble {
+            let name = weapon.map_or("weapon", BattleArmAttack::name);
+            notices.push(BattleNotice {
+                unit: attacker,
+                text: format!("Your {name} swings wide and slams into you!"),
+            });
+            notices.extend(super::broadcast::observer_notices(
+                world,
+                attacker,
+                &format!("is struck by its own {name}!"),
+            ));
+            let source = &world.btech.constructed_units()[&attacker];
+            let mut dice = source.dice.clone();
+            let roll = dice.generic_roll();
+            let location = rules
+                .fall
+                .hit
+                .resolve(source, BattleHitArc::Front, roll, &mut dice)?;
+            world.btech.constructed.get_mut(&attacker).unwrap().dice = dice;
+            let fall_rules = participant_fall_rules(world, attacker, rules.fall);
+            let result = super::impact::resolve_attack_in_candidate(
+                world,
+                attacker,
+                location,
+                damage,
+                fall_rules,
+                super::impact::AttackImpact {
+                    attacker: None,
+                    weapon_effect: None,
+                    character,
+                    followup: false,
+                },
+            )?;
+            super::piloting::append_feedback(
+                &mut pilot_notices,
+                result.pilot_notices.clone(),
+                notices.len(),
+            );
+            notices.extend(result.notices.iter().cloned());
+            fumble_impact = Some(result);
+        }
+        // Unit making a balance check after this attack, and the check's modifier.
+        let balance_check = match weapon {
+            _ if fumble.is_some() => Some((attacker, 0)),
+            Some(BattleArmAttack::Mace) if !hit => Some((attacker, 2)),
+            // A wrecking ball hit unbalances its target as a charge does.
+            Some(BattleArmAttack::WreckingBall) if hit => Some((target, 2)),
+            _ if matches!(attack, BattlePhysicalAttack::Kick { .. }) => {
+                Some((if hit { target } else { attacker }, 0))
+            }
+            _ if attack.is_trip() && hit => Some((target, 0)),
+            _ => None,
+        };
+        let (balance, fall) = if let Some((balancing, modifier)) = balance_check {
             if !hit {
                 notices.push(BattleNotice {
                     unit: attacker,
                     text: "You miss and try to remain standing!".into(),
                 });
             }
-            let modifier = if matches!(attack, BattlePhysicalAttack::Mace { .. }) {
-                2
-            } else {
-                0
-            };
             let mut balance =
                 roll_piloting(world, balancing, modifier, rules.fall.extended_piloting)?;
             super::piloting::capture_feedback(
@@ -1103,6 +1294,8 @@ fn resolve_attack_inner(
                         unit: balancing,
                         text: if attack.is_trip() {
                             "You are tripped and fall to the ground!"
+                        } else if hit && attack.hand_weapon().is_some() {
+                            "The blow knocks you to the ground!"
                         } else if hit {
                             "The kick knocks you to the ground!"
                         } else {
@@ -1152,6 +1345,7 @@ fn resolve_attack_inner(
             hit,
             glancing,
             impact,
+            fumble: fumble_impact,
             experience,
             experience_messages,
             balance,

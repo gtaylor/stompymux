@@ -1,7 +1,7 @@
 +++
 title = "Piloting BattleMechs"
 description = "Enter a unit and take or release its cockpit"
-keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "unjam", "stinger", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "incendiary", "precision", "flechette", "jump", "dfa", "death from above", "land", "mechprefs", "autofall", "ams", "pods", "removepod", "removepods", "extinguish", "melee", "axe", "sword", "mace", "saw", "claw"]
+keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "unjam", "stinger", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "incendiary", "precision", "flechette", "jump", "dfa", "death from above", "land", "mechprefs", "autofall", "ams", "pods", "removepod", "removepods", "extinguish", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade"]
 article_tags = ["show_in_index"]
 +++
 
@@ -1302,12 +1302,36 @@ linked weapon. You must be the conscious assigned pilot, but the unit may be
 shut down or off-map. Manufacturer labels follow the server's parts setting.
 
 `melee [left|right|both] [#unit]` swings the physical weapon installed in each
-selected arm: an axe, sword, mace, dual saw or claw. Arms default to both, and
-each arm uses its own weapon, so a Mech with a sword in one arm and a claw in the
-other needs no separate command for either. Arms without a physical weapon are
-skipped when both are selected. Claws may strike with both arms in one action;
-any other weapon's swing leaves the second arm recovering. Use `punch` for bare
-fists.
+selected arm. Arms default to both, and each arm uses its own weapon, so a Mech
+with a sword in one arm and a claw in the other needs no separate command for
+either. Arms without a physical weapon are skipped when both are selected. Claws
+may strike with both arms in one action; any other weapon's swing leaves the
+second arm recovering. Use `punch` for bare fists.
+
+| Weapon | Template name | Damage | To-hit | Hand needed |
+|---|---|---|---|---|
+| Axe | `Axe` | tons / 5 | -1 | yes |
+| Sword | `Sword` | tons / 10 + 1 | -2 | yes |
+| Mace | `Mace` | tons / 4 | +1 | yes |
+| Dual saw | `Dual_Saw` | 7 | 0 | no |
+| Claw | `Claw` | tons / 7 | +1 | no |
+| Retractable blade | `Retractable_Blade` | tons / 10, rounded up | -2 | yes |
+| Lance | `Lance` | tons / 5 | +1 | no |
+| Flail | `Flail` | 9 | 0 | no |
+| Wrecking ball | `Wrecking_Ball` | 8 | +1 | no |
+| Chain whip | `Chain_Whip` | 3 | -2 | yes |
+| Small / medium / large vibroblade | `Small_Vibroblade`, `Medium_Vibroblade`, `Large_Vibroblade` | 7 / 10 / 14 | -2 | yes |
+
+Triple-strength myomer doubles axe, sword, mace, claw, retractable blade and
+lance damage only. A missed mace swing forces a piloting check at +2. A roll of
+2 with a flail or wrecking ball swings it back into your own front for 5 or 4
+damage, followed by a piloting check. A wrecking ball hit forces the target to
+make a piloting check at +2, as a charge does. Each vibroblade swing adds 3, 5
+or 7 heat.
+
+Weapons need these working critical slots in one arm: retractable blade, one
+per 20 tons (rounded up) plus one; lance, one per 20 tons (rounded up); flail 4;
+wrecking ball 5; chain whip 2; vibroblades 1, 2 or 4.
 
 `disable <weapon>` powers down a Gauss weapon once it finishes recharging. You
 must be piloting a running unit on a map. Comma-separated weapon numbers and

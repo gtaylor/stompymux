@@ -360,6 +360,14 @@ pub enum BattleSystem {
     Mace,
     DualSaw,
     Claw,
+    RetractableBlade,
+    Lance,
+    Flail,
+    WreckingBall,
+    ChainWhip,
+    SmallVibroblade,
+    MediumVibroblade,
+    LargeVibroblade,
 }
 
 impl BattleSystem {
@@ -407,6 +415,14 @@ impl BattleSystem {
             name if name.eq_ignore_ascii_case("Mace") => Ok(Self::Mace),
             name if name.eq_ignore_ascii_case("Dual_Saw") => Ok(Self::DualSaw),
             name if name.eq_ignore_ascii_case("Claw") => Ok(Self::Claw),
+            name if name.eq_ignore_ascii_case("Retractable_Blade") => Ok(Self::RetractableBlade),
+            name if name.eq_ignore_ascii_case("Lance") => Ok(Self::Lance),
+            name if name.eq_ignore_ascii_case("Flail") => Ok(Self::Flail),
+            name if name.eq_ignore_ascii_case("Wrecking_Ball") => Ok(Self::WreckingBall),
+            name if name.eq_ignore_ascii_case("Chain_Whip") => Ok(Self::ChainWhip),
+            name if name.eq_ignore_ascii_case("Small_Vibroblade") => Ok(Self::SmallVibroblade),
+            name if name.eq_ignore_ascii_case("Medium_Vibroblade") => Ok(Self::MediumVibroblade),
+            name if name.eq_ignore_ascii_case("Large_Vibroblade") => Ok(Self::LargeVibroblade),
             name if name.eq_ignore_ascii_case("FerroFibrous") => Ok(Self::FerroFibrous),
             name if name.eq_ignore_ascii_case("EndoSteel") => Ok(Self::EndoSteel),
             name if name.eq_ignore_ascii_case("TripleStrengthMyomer") => {

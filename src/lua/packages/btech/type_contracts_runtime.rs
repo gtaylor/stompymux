@@ -1,7 +1,7 @@
 //! LuaLS contract blocks for the btech runtime surface.
 // This file is read by lua-type-updater. Keep declarations next to the bindings.
 
-// lua-types-begin btech 00420
+// lua-types-begin btech 00421
 //|---Wizard-only detached snapshot; does not advance simulation or consume dice.
 //|---@param actor integer
 //|---@return BattleRuntimeStats

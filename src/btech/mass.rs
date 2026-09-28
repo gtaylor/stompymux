@@ -229,6 +229,17 @@ pub(super) fn system_slot_mass(definition: &super::BattleTemplate, system: Battl
         BattleSystem::Sword => {
             u32::from(definition.tons.div_ceil(10)) * 512 / u32::from(definition.tons.div_ceil(15))
         }
+        BattleSystem::RetractableBlade => {
+            let blade = u32::from(definition.tons.div_ceil(20));
+            (blade * 1024 + 512) / (blade + 1)
+        }
+        BattleSystem::Lance => 1024,
+        BattleSystem::Flail => 5 * 1024 / 4,
+        BattleSystem::WreckingBall => 4 * 1024 / 5,
+        BattleSystem::ChainWhip => 3 * 1024 / 2,
+        BattleSystem::SmallVibroblade => 3 * 1024,
+        BattleSystem::MediumVibroblade => 5 * 1024 / 2,
+        BattleSystem::LargeVibroblade => 7 * 1024 / 4,
         BattleSystem::JumpJet => match definition.tons {
             0..=55 => 512,
             56..=85 => 1024,

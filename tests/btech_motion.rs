@@ -17736,6 +17736,27 @@ async fn myomer_reverse_cooling_retains_throttle_without_invalidating_state() {
     );
 }
 
+/// Template equipment name that installs a hand weapon.
+fn handweapon_template_name(kind: stompymux_rs::BattleArmAttack) -> &'static str {
+    use stompymux_rs::BattleArmAttack as W;
+    match kind {
+        W::Axe => "Axe",
+        W::Mace => "Mace",
+        W::Sword => "Sword",
+        W::Saw => "Dual_Saw",
+        W::Claw => "Claw",
+        W::RetractableBlade => "Retractable_Blade",
+        W::Lance => "Lance",
+        W::Flail => "Flail",
+        W::WreckingBall => "Wrecking_Ball",
+        W::ChainWhip => "Chain_Whip",
+        W::SmallVibroblade => "Small_Vibroblade",
+        W::MediumVibroblade => "Medium_Vibroblade",
+        W::LargeVibroblade => "Large_Vibroblade",
+        W::Punch => panic!("fixture needs installed equipment"),
+    }
+}
+
 /// Equip both hands while preserving the fixture's identity and ammunition layout.
 fn install_test_handweapons(
     world: &mut stompymux_rs::World,
@@ -17744,14 +17765,7 @@ fn install_test_handweapons(
 ) {
     use stompymux_rs::*;
     let mut definition = world.btech.constructed_units()[&id].definition().clone();
-    let equipment = match kind {
-        BattleArmAttack::Axe => "Axe",
-        BattleArmAttack::Mace => "Mace",
-        BattleArmAttack::Sword => "Sword",
-        BattleArmAttack::Saw => "Dual_Saw",
-        BattleArmAttack::Claw => "Claw",
-        BattleArmAttack::Punch => panic!("fixture needs installed equipment"),
-    };
+    let equipment = handweapon_template_name(kind);
     for section in [BattleSection::LeftArm, BattleSection::RightArm] {
         for (slot, name) in [
             (2, "LowerActuator"),
@@ -17990,9 +18004,7 @@ async fn handweapon_profiles_parts_mass_and_myomer() {
             BattleArmAttack::Axe => "axe",
             BattleArmAttack::Mace => "mace",
             BattleArmAttack::Sword => "sword",
-            BattleArmAttack::Saw => "dual saw",
-            BattleArmAttack::Claw => "claw",
-            BattleArmAttack::Punch => unreachable!(),
+            _ => unreachable!(),
         };
         assert!(
             critical.notices.iter().any(|notice| notice.unit == id
@@ -18188,21 +18200,24 @@ async fn melee_swings_each_arms_installed_weapon() {
     let claw_axe = mixed(BattleArmAttack::Claw, "Axe");
     assert_eq!(
         swung(&attack(&claw_axe, BattleArmSelection::Right).unwrap()),
-        [BattlePhysicalAttack::Axe {
-            arm: BattleArm::Right
+        [BattlePhysicalAttack::Weapon {
+            arm: BattleArm::Right,
+            weapon: BattleArmAttack::Axe
         }]
     );
     assert_eq!(
         swung(&attack(&claw_axe, BattleArmSelection::Left).unwrap()),
-        [BattlePhysicalAttack::Claw {
-            arm: BattleArm::Left
+        [BattlePhysicalAttack::Weapon {
+            arm: BattleArm::Left,
+            weapon: BattleArmAttack::Claw
         }]
     );
     let both = attack(&claw_axe, BattleArmSelection::Both).unwrap();
     assert_eq!(
         swung(&both),
-        [BattlePhysicalAttack::Claw {
-            arm: BattleArm::Left
+        [BattlePhysicalAttack::Weapon {
+            arm: BattleArm::Left,
+            weapon: BattleArmAttack::Claw
         }]
     );
     assert_eq!(both.rejections.len(), 1);
@@ -18215,19 +18230,22 @@ async fn melee_swings_each_arms_installed_weapon() {
     let axe_claw = mixed(BattleArmAttack::Axe, "Claw");
     assert_eq!(
         swung(&attack(&axe_claw, BattleArmSelection::Both).unwrap()),
-        [BattlePhysicalAttack::Axe {
-            arm: BattleArm::Left
+        [BattlePhysicalAttack::Weapon {
+            arm: BattleArm::Left,
+            weapon: BattleArmAttack::Axe
         }]
     );
     let claws = mixed(BattleArmAttack::Claw, "Claw");
     assert_eq!(
         swung(&attack(&claws, BattleArmSelection::Both).unwrap()),
         [
-            BattlePhysicalAttack::Claw {
-                arm: BattleArm::Left
+            BattlePhysicalAttack::Weapon {
+                arm: BattleArm::Left,
+                weapon: BattleArmAttack::Claw
             },
-            BattlePhysicalAttack::Claw {
-                arm: BattleArm::Right
+            BattlePhysicalAttack::Weapon {
+                arm: BattleArm::Right,
+                weapon: BattleArmAttack::Claw
             }
         ]
     );
@@ -18264,6 +18282,220 @@ async fn melee_swings_each_arms_installed_weapon() {
         .contains("No physical weapon installed in this arm")
     );
     assert_eq!(scripts.world().btech, original.btech);
+}
+
+/// Give a unit's right arm working lower and hand actuators, then `count` parts of one hand weapon.
+fn install_right_arm_weapon(
+    world: &mut stompymux_rs::World,
+    id: ObjectId,
+    kind: stompymux_rs::BattleArmAttack,
+    count: u8,
+) {
+    use stompymux_rs::*;
+    let mut definition = world.btech.constructed_units()[&id].definition().clone();
+    let arm = definition
+        .sections
+        .get_mut(&BattleSection::RightArm)
+        .unwrap();
+    arm.criticals.retain(|slot, _| *slot < 2);
+    let equipment = handweapon_template_name(kind);
+    let parts = [(2, "LowerActuator"), (3, "HandOrFootActuator")]
+        .into_iter()
+        .chain((4..4 + count).map(|slot| (slot, equipment)));
+    for (slot, name) in parts {
+        arm.criticals.insert(
+            slot,
+            CriticalDefinition {
+                equipment: name.into(),
+                data: "-".into(),
+                modes: vec![],
+                brand: None,
+            },
+        );
+    }
+    let mut state = serde_json::to_value(&world.btech).unwrap();
+    state["constructed"][id.0.to_string()]["definition"] =
+        serde_json::to_value(definition).unwrap();
+    world.btech = serde_json::from_value(state).unwrap();
+}
+
+/// Each added 35-ton hand weapon has its own slots, aim, damage, myomer, hand and heat rules.
+#[tokio::test]
+async fn added_handweapon_profiles_slots_hands_and_heat() {
+    use stompymux_rs::*;
+    let (_dir, config, original, id, target) = kick_fixture().await;
+    // (weapon, slots, damage, fixed base, weapon modifier, myomer doubles, heat)
+    for (kind, slots, damage, fixed_base, modifier, doubles, heat) in [
+        (BattleArmAttack::RetractableBlade, 3, 4, 3, 0, true, 0.0),
+        (BattleArmAttack::Lance, 2, 7, 4, 2, true, 0.0),
+        (BattleArmAttack::Flail, 4, 9, 4, 1, false, 0.0),
+        (BattleArmAttack::WreckingBall, 5, 8, 4, 2, false, 0.0),
+        (BattleArmAttack::ChainWhip, 2, 3, 3, 0, false, 0.0),
+        (BattleArmAttack::SmallVibroblade, 1, 7, 3, 0, false, 3.0),
+        (BattleArmAttack::MediumVibroblade, 2, 10, 3, 0, false, 5.0),
+        (BattleArmAttack::LargeVibroblade, 4, 14, 3, 0, false, 7.0),
+    ] {
+        let profile = |world: &World| {
+            battle_arm_attack_profile(
+                world,
+                id,
+                ObjectId(1),
+                target,
+                BattleArm::Right,
+                kind,
+                kick_rules(),
+            )
+        };
+        let mut short = original.clone();
+        install_right_arm_weapon(&mut short, id, kind, slots - 1);
+        let error = format!("{:#}", profile(&short).unwrap_err());
+        assert!(error.contains("No usable"), "{kind:?}: {error}");
+
+        let mut base = original.clone();
+        install_right_arm_weapon(&mut base, id, kind, slots);
+        base.validate(&config).unwrap();
+        let armed = profile(&base).unwrap();
+        assert_eq!(
+            armed.attack,
+            BattlePhysicalAttack::Weapon {
+                arm: BattleArm::Right,
+                weapon: kind
+            }
+        );
+        assert_eq!(armed.base, fixed_base, "{kind:?}");
+        assert_eq!(armed.weapon_modifier, modifier, "{kind:?}");
+        assert_eq!(armed.damage, damage, "{kind:?}");
+        assert_eq!(armed.hit_table, BattleHitTable::Weapon);
+        assert_eq!(armed.fixed_location, None);
+
+        let mut hot = base.clone();
+        install_test_myomer(&mut hot, id);
+        myomer_test_heat(&mut hot, id, 20.0, 9.0);
+        assert_eq!(
+            profile(&hot).unwrap().damage,
+            if doubles { damage * 2 } else { damage },
+            "{kind:?}"
+        );
+
+        let mut handless = base.clone();
+        destroy_battle_critical(
+            &mut handless,
+            id,
+            CriticalLocation {
+                section: BattleSection::RightArm,
+                slot: 3,
+            },
+        )
+        .unwrap();
+        assert_eq!(profile(&handless).is_ok(), !kind.needs_hand(), "{kind:?}");
+
+        let scripts = Scripts::new(
+            &config,
+            std::rc::Rc::new(std::cell::RefCell::new(base.clone())),
+        )
+        .unwrap();
+        let before = scripts.world().btech.constructed_units()[&id].heat().stored;
+        let report = resolve_battle_arm_attack_action(
+            &scripts,
+            &config,
+            id,
+            ObjectId(1),
+            target,
+            BattleArmAttackChoice {
+                arms: BattleArmSelection::Both,
+                kind: BattleArmWeapon::Installed,
+            },
+            kick_rules(),
+        )
+        .unwrap();
+        assert_eq!(report.attacks.len(), 1);
+        assert_eq!(report.attacks[0].profile.attack, armed.attack);
+        assert_eq!(
+            scripts.world().btech.constructed_units()[&id].heat().stored - before,
+            heat,
+            "{kind:?}"
+        );
+    }
+}
+
+/// Flails and wrecking balls strike their wielder on a natural 2; wrecking-ball hits unbalance targets.
+#[tokio::test]
+async fn flail_and_wrecking_ball_fumbles_and_knockdown() {
+    use stompymux_rs::*;
+    let (_dir, config, original, id, target) = kick_fixture().await;
+    let seeded = |roll| {
+        (0..=255)
+            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == roll)
+            .unwrap()
+    };
+    for (kind, slots) in [
+        (BattleArmAttack::Flail, 4),
+        (BattleArmAttack::WreckingBall, 5),
+    ] {
+        let mut world = original.clone();
+        install_right_arm_weapon(&mut world, id, kind, slots);
+        shot_seed(&mut world, id, seeded(2));
+        let report = resolve_battle_arm_attack(
+            &mut world,
+            id,
+            ObjectId(1),
+            target,
+            BattleArmSelection::Right,
+            kind,
+            kick_rules(),
+        )
+        .unwrap();
+        let attack = &report.attacks[0];
+        assert_eq!(attack.roll, 2);
+        assert!(!attack.hit);
+        assert!(attack.impact.is_none());
+        let phase = &attack.fumble.as_ref().unwrap().impact.phases[0];
+        let expected = if kind == BattleArmAttack::Flail { 5 } else { 4 };
+        assert_eq!(phase.absorbed + phase.remaining, expected, "{kind:?}");
+        assert!(attack.balance.is_some());
+        assert!(
+            report
+                .notices
+                .iter()
+                .any(|notice| notice.unit == id && notice.text.contains("slams into you"))
+        );
+        world.validate(&config).unwrap();
+    }
+
+    let mut world = original.clone();
+    install_right_arm_weapon(&mut world, id, BattleArmAttack::WreckingBall, 5);
+    shot_seed(&mut world, id, seeded(12));
+    let report = resolve_battle_arm_attack(
+        &mut world,
+        id,
+        ObjectId(1),
+        target,
+        BattleArmSelection::Right,
+        BattleArmAttack::WreckingBall,
+        kick_rules(),
+    )
+    .unwrap();
+    let attack = &report.attacks[0];
+    assert!(attack.hit);
+    assert!(attack.fumble.is_none());
+    assert!(attack.impact.is_some());
+    assert_eq!(attack.balance.as_ref().unwrap().situational, 2);
+
+    let mut world = original.clone();
+    install_right_arm_weapon(&mut world, id, BattleArmAttack::Flail, 4);
+    shot_seed(&mut world, id, seeded(12));
+    let report = resolve_battle_arm_attack(
+        &mut world,
+        id,
+        ObjectId(1),
+        target,
+        BattleArmSelection::Right,
+        BattleArmAttack::Flail,
+        kick_rules(),
+    )
+    .unwrap();
+    assert!(report.attacks[0].hit);
+    assert!(report.attacks[0].balance.is_none());
 }
 
 /// Installed hand weapons reach a lower standing target, and choose tables independently of arm arcs.
