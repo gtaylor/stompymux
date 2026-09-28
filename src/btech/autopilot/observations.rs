@@ -23,8 +23,21 @@ pub struct AutopilotContact {
     pub known_destroyed: bool,
     /// Observed range in map units.
     pub range: f64,
+    /// Shared aiming distance from the unit's active C3/C3i network; absent when unnetworked.
+    /// It improves the range band only: physical reach and minimum range still use `range`.
+    pub network_range: Option<f64>,
+    /// Seen only by network peers. The unit can pursue and face it but cannot lock or fire
+    /// on it until its own sensors acquire it.
+    pub relayed: bool,
     /// Observation time, in simulation seconds.
     pub seen_at: i64,
+}
+
+impl AutopilotContact {
+    /// Distance that decides the weapon range band: the network's when available.
+    pub fn aiming_range(&self) -> f64 {
+        self.network_range.unwrap_or(self.range)
+    }
 }
 
 /// A detached tactical picture for one controller.
@@ -42,7 +55,8 @@ pub struct AutopilotObservation {
     pub speed: f64,
     /// Own mechanical and weapon readiness, never inferred from an enemy contact.
     pub own: AutopilotOwnReadiness,
-    /// Currently acquired contacts; no hidden battlefield state is included.
+    /// Currently acquired contacts, plus those relayed by active C3/C3i peers; no hidden
+    /// battlefield state is included.
     pub contacts: Vec<AutopilotContact>,
     /// Previously acquired enemies whose last sighting has not expired.
     pub remembered: Vec<AutopilotMemory>,
@@ -85,16 +99,18 @@ pub fn observe_with_memory(
     // those states expose the own-unit readiness below and no current contacts;
     // never turn a display precondition failure into a controller failure.
     let contacts = if own.power == BattlePower::Running && own.position.is_some() {
-        let mut contacts = super::super::contacts::acquired_contact_facts(world, unit)
+        let mut contacts = super::super::network_contacts::networked_contact_facts(world, unit)
             .unwrap_or_default()
             .into_iter()
-            .map(|facts| AutopilotContact {
-                unit: facts.target,
-                position: facts.position,
-                friendly: facts.friendly,
-                identified: facts.identified,
-                known_destroyed: facts.known_destroyed,
-                range: facts.range.spatial,
+            .map(|contact| AutopilotContact {
+                unit: contact.facts.target,
+                position: contact.facts.position,
+                friendly: contact.facts.friendly,
+                identified: contact.facts.identified,
+                known_destroyed: contact.facts.known_destroyed,
+                range: contact.facts.range.spatial,
+                network_range: contact.network_range,
+                relayed: contact.relayed,
                 seen_at: time,
             })
             .collect::<Vec<_>>();

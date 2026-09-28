@@ -285,3 +285,92 @@ async fn heartbeat_links_running_units_without_pilot_action() {
     assert_eq!(c3i(after, ids[0]), ids);
     assert_eq!(battle_c3_members(after, ids[0]).unwrap(), ids);
 }
+
+/// Autopilot observations carry peer sightings, flagged as relayed, with the shared range.
+#[tokio::test]
+async fn autopilot_observation_includes_relayed_network_sightings() {
+    let (_dir, config, mut world, units) = field(&[0; 3], false).await;
+    let (observer, peer, enemy) = (units[0].0, units[1].0, units[2].0);
+    set_battle_unit_signature(
+        &mut world,
+        enemy,
+        BattleUnitSignature {
+            team: 1,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    reconcile_battle_command_networks(&mut world).unwrap();
+    assert_eq!(c3i(&world, observer), vec![observer, peer]);
+    // Only the peer holds the enemy; the observer's own sensors hold nothing.
+    let mut encoded = serde_json::to_value(&world.btech).unwrap();
+    for &(id, _) in &units {
+        encoded["constructed"][id.0.to_string()]["contacts"] = serde_json::json!({});
+    }
+    encoded["constructed"][peer.0.to_string()]["contacts"][enemy.0.to_string()] =
+        serde_json::json!({"identified":true});
+    world.btech = serde_json::from_value(encoded).unwrap();
+    let observe = |world: &World| {
+        stompymux_rs::btech::autopilot::observations::observe(world, observer, 0).unwrap()
+    };
+    let observation = observe(&world);
+    let contact = observation
+        .contacts
+        .iter()
+        .find(|c| c.unit == enemy)
+        .expect("peer sighting is relayed");
+    assert!(contact.relayed && contact.identified && !contact.friendly);
+    assert!((contact.range - 2.0).abs() < 1e-8);
+    assert!((contact.network_range.unwrap() - 1.0).abs() < 1e-8);
+    // The peer itself is a direct contact of nobody here, so it is not invented.
+    assert!(!observation.contacts.iter().any(|c| c.unit == peer));
+    // Leaving the network removes the relayed sighting.
+    request_battle_network(
+        &mut world,
+        observer,
+        units[0].1,
+        BattleNetworkRequest::Leave,
+        BattleCommandNetwork::C3i,
+    )
+    .unwrap();
+    assert!(observe(&world).contacts.is_empty());
+    request_battle_network(
+        &mut world,
+        observer,
+        units[0].1,
+        BattleNetworkRequest::Automatic,
+        BattleCommandNetwork::C3i,
+    )
+    .unwrap();
+    // Once the observer acquires the enemy itself, the contact is direct.
+    let mut encoded = serde_json::to_value(&world.btech).unwrap();
+    encoded["constructed"][observer.0.to_string()]["contacts"][enemy.0.to_string()] =
+        serde_json::json!({"identified":true});
+    world.btech = serde_json::from_value(encoded).unwrap();
+    let contact = observe(&world)
+        .contacts
+        .into_iter()
+        .find(|c| c.unit == enemy)
+        .unwrap();
+    assert!(!contact.relayed);
+    assert!((contact.network_range.unwrap() - 1.0).abs() < 1e-8);
+    // Lua directors see the same flag.
+    let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
+    let relayed: bool = scripts
+        .eval_callback(&format!(
+            r#"
+            local u = mux.world.object({observer})
+            btech.autopilot.attach(u)
+            for _, contact in ipairs(btech.autopilot.observe(u).contacts) do
+                if contact.unit == {enemy} then
+                    return contact.relayed
+                end
+            end
+            error("enemy missing")
+            "#,
+            observer = observer.0,
+            enemy = enemy.0,
+        ))
+        .unwrap();
+    assert!(!relayed);
+}

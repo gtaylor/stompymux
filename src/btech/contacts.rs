@@ -548,22 +548,34 @@ fn network_view(
     target: ObjectId,
     identified: bool,
 ) -> Result<BattleContactView> {
-    let other = super::scanner::scanner_unit(world, target).context("Contact disappeared")?;
-    let facts = BattleContactFacts {
-        target,
-        position: other.position.context("Contact has no position")?,
-        identified,
-        friendly: identified && unit.signature.team == other.signature.team,
-        detection: None,
-        known_destroyed: identified && other.destroyed,
-        range: super::unit_range(world, observer, target)?,
-    };
+    let facts = relayed_facts(world, observer, unit.signature.team, target, identified)?;
     let status = if identified {
         super::contact_status::known_status(world, observer, target)?
     } else {
         "     ".into()
     };
     view_from_facts(world, unit, facts, status)
+}
+
+/// Facts for a sighting relayed by a command-network peer. Geometry is measured from the
+/// observer; identification, and so allegiance and known destruction, come from the peer.
+pub(super) fn relayed_facts(
+    world: &World,
+    observer: ObjectId,
+    observer_team: i32,
+    target: ObjectId,
+    identified: bool,
+) -> Result<BattleContactFacts> {
+    let other = super::scanner::scanner_unit(world, target).context("Contact disappeared")?;
+    Ok(BattleContactFacts {
+        target,
+        position: other.position.context("Contact has no position")?,
+        identified,
+        friendly: identified && observer_team == other.signature.team,
+        detection: None,
+        known_destroyed: identified && other.destroyed,
+        range: super::unit_range(world, observer, target)?,
+    })
 }
 
 /// Build the display row from established facts and the already-resolved status columns.

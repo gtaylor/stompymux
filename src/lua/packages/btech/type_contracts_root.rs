@@ -1975,6 +1975,8 @@
 //|---@field identified boolean Whether sensors identified the contact well enough to determine allegiance.
 //|---@field known_destroyed boolean Whether the visible contact status reports destruction.
 //|---@field range number Observed range in map units.
+//|---@field network_range number|nil Shared C3/C3i aiming distance; nil without an active network.
+//|---@field relayed boolean Seen only by network peers; the unit cannot lock or fire on it yet.
 //|---@field seen_at integer Simulation time of the observation.
 //|---@class BattleAutopilotMemory
 //|---@field unit integer Previously acquired unit identity.
@@ -1998,7 +2000,7 @@
 //|---@field heading number|nil Own heading, if motion is available.
 //|---@field speed number Own current speed.
 //|---@field own BattleAutopilotOwnReadiness Own mechanical and weapon readiness.
-//|---@field contacts BattleAutopilotContact[] Current sensor contacts.
+//|---@field contacts BattleAutopilotContact[] Current sensor contacts, plus those relayed by active C3/C3i peers.
 //|---@field remembered BattleAutopilotMemory[] Fresh retained sightings.
 //|---@class BattleAutopilotFeedback
 //|---@field sequence integer Monotonic feedback sequence.
@@ -2054,6 +2056,7 @@
 //|---@field friendly boolean|nil Present only for a current observation.
 //|---@field identified boolean|nil Present only for a current observation.
 //|---@field known_destroyed boolean|nil Present only for a current observation.
+//|---@field relayed boolean|nil Present only for a current observation; true when only C3/C3i peers see it.
 //|---@class BattleTacticalContact
 //|---@field unit integer Contact identity.
 //|---@field observations BattleTacticalSighting[] Source observations, ordered by observer ID.
