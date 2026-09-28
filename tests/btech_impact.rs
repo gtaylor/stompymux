@@ -471,3 +471,125 @@ async fn case_ii_vents_ammunition_explosion_through_local_armor() {
         "seeded scenarios must exercise the ammunition critical"
     );
 }
+
+/// Build the Jenner fixture with extra chassis technology flags.
+async fn technology_fixture(
+    specials: &str,
+) -> (
+    tempfile::TempDir,
+    stompymux_rs::Config,
+    stompymux_rs::World,
+    ObjectId,
+) {
+    let (dir, config, mut world) = support::isolated_world().await;
+    let id = world.create(&config, "Technology Jenner".into(), Kind::Thing);
+    let object = world.objects.get_mut(&id).unwrap();
+    object.location = Some(ObjectId(config.start()));
+    object.home = Some(ObjectId(config.home()));
+    let source = include_str!("fixtures/btech/mechs/JR7-D").replace(
+        "Specials\t { FlipArms }",
+        &format!("Specials\t {{ FlipArms {specials} }}"),
+    );
+    create_battle_unit(&mut world, id, BattleTemplate::parse(&source).unwrap()).unwrap();
+    seed(&mut world, id, 0);
+    (dir, config, world, id)
+}
+
+/// Hardened armor halves armor damage; reinforced structure halves and composite structure
+/// doubles internal damage. Full names and reference abbreviations behave the same.
+#[tokio::test]
+async fn armor_and_structure_technologies_modify_mech_damage() {
+    // Left arm: 4 armor and 6 internal structure on the Jenner.
+    for (specials, damage, armor, internal) in [
+        ("", 2, 2, 6),
+        ("HardenedArmor_Tech", 2, 3, 6),
+        ("HARM", 2, 3, 6),
+        // Hardened halves 12 to 6: four armor, then two internal.
+        ("HardenedArmor_Tech", 12, 0, 4),
+        ("", 6, 0, 4),
+        ("ReinforcedInternal_Tech", 6, 0, 5),
+        ("RINT", 6, 0, 5),
+        ("CompositeInternal_Tech", 6, 0, 2),
+        ("CINT", 6, 0, 2),
+    ] {
+        let (_dir, _config, mut world, id) = technology_fixture(specials).await;
+        let before = world.btech.constructed_units()[&id].sections()[&Section::LeftArm].clone();
+        assert_eq!((before.armor, before.internal), (4, 6), "{specials}");
+        resolve_battle_impact(&mut world, id, hit(Section::LeftArm, false), damage).unwrap();
+        let after = &world.btech.constructed_units()[&id].sections()[&Section::LeftArm];
+        assert_eq!(
+            (after.armor, after.internal),
+            (armor, internal),
+            "{specials} {damage}"
+        );
+    }
+}
+
+/// Construction mass follows the technology flags: hardened armor weighs double, reinforced
+/// structure double and composite structure half, and the small cockpit weighs two tons.
+#[tokio::test]
+async fn technology_flags_change_mech_mass() {
+    let (_dir, _config, world, id) = technology_fixture("").await;
+    let base = world.btech.constructed_units()[&id].mass().unwrap();
+    for (specials, armor, structure, cockpit) in [
+        (
+            "HardenedArmor_Tech",
+            base.armor * 2,
+            base.structure,
+            base.cockpit,
+        ),
+        (
+            "ReinforcedInternal_Tech",
+            base.armor,
+            base.structure * 2,
+            base.cockpit,
+        ),
+        (
+            "CompositeInternal_Tech",
+            base.armor,
+            // Half of 3.5 tons rounds up to the next half ton, as Endo Steel does.
+            2048,
+            base.cockpit,
+        ),
+        ("SmallCockpit_Tech", base.armor, base.structure, 2048),
+        ("SMCPIT", base.armor, base.structure, 2048),
+    ] {
+        let (_dir, _config, world, id) = technology_fixture(specials).await;
+        let mass = world.btech.constructed_units()[&id].mass().unwrap();
+        assert_eq!(
+            (mass.armor, mass.structure, mass.cockpit),
+            (armor, structure, cockpit),
+            "{specials}"
+        );
+    }
+}
+
+/// Running laser heat sinks glow and dissipate like double heat sinks. The Nightgyr ships
+/// with laser heat sinks; the abbreviation behaves the same and removing the flag stops the glow.
+#[tokio::test]
+async fn laser_heat_sinks_glow_while_running() {
+    let original = include_str!("../game/mechs/NightGyr-A");
+    assert!(original.contains("LaserHS_Tech"));
+    for (source, glows) in [
+        (original.to_string(), true),
+        (original.replace("LaserHS_Tech", "LHS"), true),
+        (original.replace(" LaserHS_Tech", ""), false),
+    ] {
+        let (_dir, config, mut world) = support::isolated_world().await;
+        let id = world.create(&config, "Glowing Nightgyr".into(), Kind::Thing);
+        let object = world.objects.get_mut(&id).unwrap();
+        object.location = Some(ObjectId(config.start()));
+        object.home = Some(ObjectId(config.home()));
+        create_battle_unit(&mut world, id, BattleTemplate::parse(&source).unwrap()).unwrap();
+        assert!(
+            world.btech.constructed_units()[&id]
+                .definition()
+                .has_double_heat_sinks()
+        );
+        assert!(!stompymux_rs::battle_unit_illuminated(&world, id));
+        let mut state = serde_json::to_value(&world.btech).unwrap();
+        state["constructed"][id.0.to_string()]["power"] = serde_json::json!({"state": "running"});
+        world.btech = serde_json::from_value(state).unwrap();
+        assert_eq!(stompymux_rs::battle_unit_illuminated(&world, id), glows);
+    }
+}

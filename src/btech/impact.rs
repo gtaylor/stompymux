@@ -960,6 +960,7 @@ impl<'a> ImpactContext<'a> {
         if vented == 0 || self.unit().sections()[&section].internal == 0 {
             return Ok(());
         }
+        let vented = self.unit().armor_damage(vented);
         let armor = self.damage_phase(section, vented, BattleDamagePhase::Armor { rear: true })?;
         self.record_phase(armor)?;
         if self.rules.is_some() {
@@ -1435,7 +1436,10 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
             context.strike_searchlight(section, rear);
             let previous_warning =
                 super::combat_warnings::armor_level(context.unit(), section, rear);
-            let armor = context.damage_phase(section, damage, BattleDamagePhase::Armor { rear })?;
+            // Hardened armor halves the damage before armor absorbs it; overflow stays halved.
+            let hardened = context.unit().armor_damage(damage);
+            let armor =
+                context.damage_phase(section, hardened, BattleDamagePhase::Armor { rear })?;
             let warning = super::combat_warnings::armor_level(context.unit(), section, rear);
             damage = armor.remaining;
             let ap = match weapon_effect {
@@ -1509,7 +1513,10 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
             {
                 context.unit_mut().reactor_instability_remaining = Some(31);
             }
-            let phase = context.damage_phase(section, damage, BattleDamagePhase::Internal)?;
+            // Reinforced structure halves and composite structure doubles internal damage,
+            // including any overflow that transfers onward.
+            let structural = context.unit().structure_damage(damage);
+            let phase = context.damage_phase(section, structural, BattleDamagePhase::Internal)?;
             damage = phase.remaining;
             context.record_phase(phase)?;
         }

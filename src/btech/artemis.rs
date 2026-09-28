@@ -17,6 +17,25 @@ pub struct BattleArtemisController<L = CriticalLocation> {
     pub operational: bool,
 }
 
+/// Whether a unit's Artemis controllers are Artemis V, which adds one more to the Artemis
+/// cluster bonus and one to hit. Either unit class reads its chassis technology flag.
+pub(super) fn artemis_v(world: &crate::World, id: crate::ObjectId) -> bool {
+    let technology = super::BattleTechnology::ArtemisV;
+    world
+        .btech
+        .constructed_units()
+        .get(&id)
+        .map(|unit| unit.definition().has_technology(technology))
+        .or_else(|| {
+            world
+                .btech
+                .vehicles()
+                .get(&id)
+                .map(|vehicle| vehicle.definition().has_technology(technology))
+        })
+        .unwrap_or(false)
+}
+
 /// Match authored links once; callers supply only section relationships and equipment availability.
 fn controllers<L: Copy>(
     weapons: &[WeaponMount<L>],

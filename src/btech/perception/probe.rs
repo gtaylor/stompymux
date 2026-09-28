@@ -10,16 +10,19 @@ pub enum BattleActiveProbe {
     Beagle,
     Light,
     Bloodhound,
+    /// A Watchdog CEWS: a Clan ECM suite that doubles as an active probe.
+    Watchdog,
 }
 
 impl BattleActiveProbe {
     /// Every family, longest reach first.
-    pub const BY_REACH: [Self; 3] = [Self::Bloodhound, Self::Beagle, Self::Light];
+    pub const BY_REACH: [Self; 4] = [Self::Bloodhound, Self::Beagle, Self::Watchdog, Self::Light];
 
     /// Hardware reach before the stationary-installation bonus.
     pub fn range(self) -> u8 {
         match self {
-            Self::Beagle => 6,
+            // The Watchdog's probe matches the Clan active probe.
+            Self::Beagle | Self::Watchdog => 6,
             Self::Light => 3,
             Self::Bloodhound => 8,
         }
@@ -36,6 +39,7 @@ impl BattleActiveProbe {
             Self::Beagle => "Beagle Active Probe",
             Self::Light => "Light Active Probe",
             Self::Bloodhound => "Bloodhound Active Probe",
+            Self::Watchdog => "Watchdog CEWS",
         }
     }
 
@@ -45,6 +49,7 @@ impl BattleActiveProbe {
             Self::Beagle => (BattleSystem::BeagleProbe, 1),
             Self::Light => (BattleSystem::LightProbe, 1),
             Self::Bloodhound => (BattleSystem::BloodhoundProbe, 3),
+            Self::Watchdog => (BattleSystem::Ecm, 1),
         }
     }
 }
@@ -76,7 +81,12 @@ impl BattleUnit {
     ) -> ProbeFitting {
         let (system, minimum) = probe.equipment();
         let parts = || loadout.systems.iter().filter(|part| part.system == system);
-        if parts().count() < minimum {
+        if parts().count() < minimum
+            || (probe == BattleActiveProbe::Watchdog
+                && !self
+                    .definition()
+                    .has_technology(crate::btech::BattleTechnology::Watchdog))
+        {
             return ProbeFitting {
                 installed: false,
                 available: false,
@@ -120,7 +130,11 @@ impl BattleVehicle {
     ) -> ProbeFitting {
         let system = probe.equipment().0;
         let mut parts = loadout.systems.iter().filter(|part| part.system == system);
-        let installed = loadout.systems.iter().any(|part| part.system == system);
+        let installed = loadout.systems.iter().any(|part| part.system == system)
+            && (probe != BattleActiveProbe::Watchdog
+                || self
+                    .definition()
+                    .has_technology(crate::btech::BattleTechnology::Watchdog));
         let available = if probe == BattleActiveProbe::Light
             && let Some(failed) = self.critical_conditions.light_probe_failure
         {
@@ -147,10 +161,10 @@ mod tests {
     #[test]
     fn families_order_by_reach_and_concealment() {
         let ranges = BattleActiveProbe::BY_REACH.map(BattleActiveProbe::range);
-        assert_eq!(ranges, [8, 6, 3]);
+        assert_eq!(ranges, [8, 6, 6, 3]);
         assert_eq!(
             BattleActiveProbe::BY_REACH.map(BattleActiveProbe::sees_concealed),
-            [true, false, false]
+            [true, false, false, false]
         );
         assert_eq!(
             serde_json::to_value(BattleActiveProbe::Bloodhound).unwrap(),

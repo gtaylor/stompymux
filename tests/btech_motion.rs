@@ -9929,6 +9929,68 @@ async fn small_cockpit_piloting_mass_and_restart() {
     }
 }
 
+/// Artemis V guidance makes Artemis rounds one easier to hit; ordinary Artemis IV does not.
+#[tokio::test]
+async fn artemis_v_guidance_improves_aim() {
+    use stompymux_rs::*;
+    for (specials, accuracy) in [(None, 0), (Some("ArtemisV_Tech"), -1), (Some("AV"), -1)] {
+        let (_dir, _config, mut world, id, target) = shot_fixture().await;
+        let mut template = world.btech.constructed_units()[&id].definition().clone();
+        template
+            .sections
+            .get_mut(&BattleSection::Head)
+            .unwrap()
+            .criticals
+            .insert(
+                3,
+                CriticalDefinition {
+                    equipment: "ArtemisIV".into(),
+                    data: "11".into(),
+                    modes: vec![],
+                    brand: None,
+                },
+            );
+        template
+            .sections
+            .get_mut(&BattleSection::RightTorso)
+            .unwrap()
+            .criticals
+            .get_mut(&0)
+            .unwrap()
+            .modes = vec!["Artemis/Mine".into()];
+        if let Some(flag) = specials {
+            let value = template.attributes.entry("specials".into()).or_default();
+            value.push(' ');
+            value.push_str(flag);
+        }
+        let mut state = serde_json::to_value(&world.btech).unwrap();
+        state["constructed"][id.0.to_string()]["definition"] =
+            serde_json::to_value(template).unwrap();
+        world.btech = serde_json::from_value(state).unwrap();
+        let srm = world.btech.constructed_units()[&id]
+            .loadout()
+            .unwrap()
+            .weapons
+            .iter()
+            .position(|m| m.weapon == BattleWeapon::Srm4)
+            .unwrap();
+        let before = battle_aim_modifiers(&world, id, target, srm, 4, shot_rules().aim)
+            .unwrap()
+            .beacon_accuracy;
+        assert_eq!(
+            toggle_battle_artemis(&mut world, id, ObjectId(1), srm).unwrap(),
+            BattleAmmunitionMode::Artemis
+        );
+        assert_eq!(
+            battle_aim_modifiers(&world, id, target, srm, 4, shot_rules().aim)
+                .unwrap()
+                .beacon_accuracy,
+            before + accuracy,
+            "{specials:?}"
+        );
+    }
+}
+
 /// Native and Lua Artemis controls share mode selection, rollback, firing and persisted expenditure.
 #[tokio::test]
 async fn artemis_native_lua_ammunition_fire_and_restart() {
@@ -29662,8 +29724,20 @@ fn install_test_probe(
         BattleActiveProbe::Beagle => ("BeagleProbe", 2),
         BattleActiveProbe::Light => ("Light_BAP", 1),
         BattleActiveProbe::Bloodhound => ("BloodhoundProbe", 3),
+        BattleActiveProbe::Watchdog => ("ECM", 1),
     };
     let mut definition = world.btech.constructed_units()[&id].definition().clone();
+    if probe == BattleActiveProbe::Watchdog {
+        let specials = definition
+            .attributes
+            .entry("specials".into())
+            .or_insert_with(|| "-".into());
+        *specials = if specials.as_str() == "-" {
+            "WatchDog_Tech".into()
+        } else {
+            format!("{specials} WatchDog_Tech")
+        };
+    }
     for slot in 3..3 + count {
         definition
             .sections
@@ -29696,6 +29770,7 @@ async fn active_probe_equipment_damage_and_restart() {
         (BattleActiveProbe::Beagle, 1536),
         (BattleActiveProbe::Light, 512),
         (BattleActiveProbe::Bloodhound, 2046),
+        (BattleActiveProbe::Watchdog, 1536),
     ] {
         let (_dir, config, mut world, id, target) = shot_fixture().await;
         let probed = |world: &World| battle_perceive(world, id, target).unwrap().unwrap().probed;

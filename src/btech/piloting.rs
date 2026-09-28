@@ -284,7 +284,10 @@ fn roll_check(
 impl super::BattleUnit {
     /// Construction-only control penalty; it does not count as mobility damage.
     pub fn cockpit_piloting_modifier(&self) -> u8 {
-        u8::from(self.definition().has_special("SMCPIT"))
+        u8::from(
+            self.definition()
+                .has_technology(super::BattleTechnology::SmallCockpit),
+        )
     }
 }
 

@@ -1245,7 +1245,9 @@ pub(crate) mod weapon_power;
 pub use weapon_power::disable_gauss_weapon;
 
 pub(crate) mod mml;
+mod technology;
 pub use mml::toggle_mml_ammunition;
+pub use technology::BattleTechnology;
 
 pub(crate) mod atm;
 pub use atm::toggle_atm_ammunition;

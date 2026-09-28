@@ -88,20 +88,31 @@ pub struct BattleTemplate {
 }
 
 impl BattleTemplate {
-    /// Clan chassis always use double-efficiency heat sinks.
+    /// Clan chassis always use double-efficiency heat sinks; laser heat sinks dissipate the same.
     pub fn has_double_heat_sinks(&self) -> bool {
-        self.has_special("Clan") || self.has_special("DoubleHS")
+        self.has_special("Clan")
+            || self.has_special("DoubleHS")
+            || self.has_technology(super::BattleTechnology::LaserHeatSinks)
     }
 
     /// Number of contiguous critical slots occupied by one installed heat sink.
     pub fn heat_sink_slots(&self) -> usize {
-        if self.has_special("Clan") {
+        // Laser heat sinks are a Clan design and occupy two slots like Clan double heat sinks.
+        if self.has_special("Clan") || self.has_technology(super::BattleTechnology::LaserHeatSinks)
+        {
             return 2;
         }
         if self.has_special("DoubleHS") {
             return 3;
         }
         1
+    }
+
+    /// Test a chassis technology by its full name or the reference's abbreviation, which
+    /// templates use interchangeably.
+    pub(crate) fn has_technology(&self, technology: super::BattleTechnology) -> bool {
+        let (name, abbreviation) = technology.names();
+        self.has_special(name) || self.has_special(abbreviation)
     }
 
     /// Test a whitespace-separated chassis feature using the asset's case-insensitive spelling.

@@ -131,7 +131,10 @@ pub(super) fn resolve_rear_followup_in_candidate(
     {
         hit.amount = (hit.amount / rules.rotor_damage_divisor).max(1);
     }
-    let amount = if vehicle.definition().has_special("HardenedArmor_Tech") {
+    let amount = if vehicle
+        .definition()
+        .has_technology(super::BattleTechnology::HardenedArmor)
+    {
         hit.amount.div_ceil(2)
     } else {
         hit.amount

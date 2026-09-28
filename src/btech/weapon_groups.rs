@@ -17,6 +17,8 @@ pub(super) struct WeaponGroupRequest {
     pub guidance_blocked: bool,
     pub angel_blocked: bool,
     pub target_beacon: bool,
+    /// The launching unit's Artemis controllers are Artemis V.
+    pub artemis_v: bool,
 }
 
 /// Shared cluster draw and ordered damage packet sizes, before target defenses.
@@ -45,6 +47,7 @@ pub(super) fn roll_weapon_groups(
         guidance_blocked,
         angel_blocked,
         target_beacon,
+        artemis_v,
     } = request;
     ensure!(
         damage_penalty == 0
@@ -116,11 +119,15 @@ pub(super) fn roll_weapon_groups(
         } else {
             mode
         };
-        weapon.damage_groups_for_ammunition_hit(
+        // Artemis V improves only its own guided rounds, not Narc beacon homing.
+        let artemis_v =
+            artemis_v && guided_mode == mode && mode.munition() == BattleAmmunitionMode::Artemis;
+        weapon.damage_groups_for_guided_hit(
             guided_mode,
             cluster_roll,
             glancing && !defer_glancing,
             distance,
+            artemis_v,
         )?
     };
     if defer_glancing {
@@ -241,6 +248,66 @@ impl WeaponGroups {
 mod tests {
     use super::*;
 
+    /// Artemis V adds three to the cluster roll, only for its own guided rounds.
+    #[test]
+    fn artemis_v_adds_one_more_to_guided_clusters() {
+        let weapon = BattleWeapon::Lrm20;
+        for roll in 2..=9 {
+            assert_eq!(
+                weapon
+                    .damage_groups_for_guided_hit(
+                        BattleAmmunitionMode::Artemis,
+                        Some(roll),
+                        false,
+                        None,
+                        true
+                    )
+                    .unwrap(),
+                weapon
+                    .damage_groups_for_ammunition_hit(
+                        BattleAmmunitionMode::Normal,
+                        Some(roll + 3),
+                        false,
+                        None
+                    )
+                    .unwrap()
+            );
+        }
+        for seed in 0..=31 {
+            let request =
+                |ammunition, artemis_v, target_beacon, guidance_blocked| WeaponGroupRequest {
+                    submerged: false,
+                    range_damage: false,
+                    damage_penalty: 0,
+                    weapon,
+                    ammunition,
+                    fire_mode: BattleFireMode::Normal,
+                    gatling_damage: None,
+                    distance: Some(7.0),
+                    glancing: false,
+                    guidance_blocked,
+                    angel_blocked: false,
+                    target_beacon,
+                    artemis_v,
+                };
+            let roll = |request| {
+                roll_weapon_groups(request, &mut BattleDice::seeded([seed; 32]))
+                    .unwrap()
+                    .damage
+            };
+            // Narc homing keeps the Artemis IV bonus even on an Artemis V chassis.
+            assert_eq!(
+                roll(request(BattleAmmunitionMode::Narc, true, true, false)),
+                roll(request(BattleAmmunitionMode::Artemis, false, false, false))
+            );
+            // ECM blocks Artemis V just as it blocks Artemis IV.
+            assert_eq!(
+                roll(request(BattleAmmunitionMode::Artemis, true, false, true)),
+                roll(request(BattleAmmunitionMode::Normal, false, false, false))
+            );
+        }
+    }
+
     /// Hotloaded clusters use direct dice; ordinary clusters record one generic check.
     #[test]
     fn cluster_accounting_preserves_direct_hotload_and_energy_rolls() {
@@ -276,6 +343,7 @@ mod tests {
                         guidance_blocked: false,
                         angel_blocked: false,
                         target_beacon: false,
+                        artemis_v: false,
                     },
                     &mut dice,
                 )
@@ -325,6 +393,7 @@ mod tests {
                                     guidance_blocked: false,
                                     angel_blocked: false,
                                     target_beacon: false,
+                                    artemis_v: false,
                                 },
                                 &mut dice,
                             )
@@ -386,6 +455,7 @@ mod tests {
                         guidance_blocked: false,
                         angel_blocked: false,
                         target_beacon: false,
+                        artemis_v: false,
                     },
                     &mut dice,
                 )
@@ -434,6 +504,7 @@ mod tests {
                             guidance_blocked: false,
                             angel_blocked: false,
                             target_beacon: false,
+                            artemis_v: false,
                         },
                         &mut dice,
                     )
@@ -471,6 +542,7 @@ mod tests {
                     guidance_blocked: false,
                     angel_blocked: false,
                     target_beacon: false,
+                    artemis_v: false,
                 },
                 &mut BattleDice::seeded([0; 32]),
             )
@@ -499,6 +571,7 @@ mod tests {
                     guidance_blocked: false,
                     angel_blocked: false,
                     target_beacon: false,
+                    artemis_v: false,
                 },
                 &mut dice,
             )
@@ -542,6 +615,7 @@ mod streak_lrm_tests {
                                 guidance_blocked: confused,
                                 angel_blocked: confused,
                                 target_beacon: false,
+                                artemis_v: false,
                             },
                             &mut dice,
                         )

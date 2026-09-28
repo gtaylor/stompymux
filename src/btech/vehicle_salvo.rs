@@ -161,6 +161,7 @@ pub(super) fn resolve_with_context_in_candidate(
     );
     let target_beacon =
         vehicle.has_beacon(BattleBeaconKind::Narc) || vehicle.has_beacon(BattleBeaconKind::Homing);
+    let artemis_v = attacker.is_some_and(|shooter| super::artemis::artemis_v(world, shooter));
     let initial_woods = if woods_damage && let Some(shooter) = attacker {
         super::woods_absorption::begin_pellets(world, shooter, target, weapon, request.ammunition)?
     } else {
@@ -184,6 +185,7 @@ pub(super) fn resolve_with_context_in_candidate(
             guidance_blocked: request.guidance_blocked,
             angel_blocked: request.angel_blocked,
             target_beacon,
+            artemis_v,
         },
         &mut world.btech.vehicles.get_mut(&target).unwrap().dice,
     )?;

@@ -821,6 +821,10 @@ pub(super) fn target_modifiers(
         distance,
         rules.extended_movement,
     )?);
+    let artemis_v_guided = ammunition.munition() == super::BattleAmmunitionMode::Artemis
+        && super::artemis::artemis_v(world, shooter)
+        && !super::electronic_field(world, shooter)?.blocks_outgoing_guidance()
+        && !super::electronic_field(world, target)?.blocks_incoming_guidance();
     let friendly_tag = ammunition.munition() == super::BattleAmmunitionMode::SemiGuided
         && super::tagged_by(world, target).is_some_and(|tagger| {
             tagger != shooter
@@ -858,11 +862,12 @@ pub(super) fn target_modifiers(
             .map_or(0, super::BattleOrbitalDrop::target_modifier),
         movement: ammunition.tag_movement_modifier(movement, friendly_tag)
             + i8::from(moving_aircraft),
+        // Homing beacons and Artemis V guidance each make the shot one easier.
         beacon_accuracy: -i8::from(
             super::narc::has_beacon(world, target, super::BattleBeaconKind::Homing)
                 && ammunition.munition() == super::BattleAmmunitionMode::Narc
                 && !weapon.is_narc(),
-        ),
+        ) - i8::from(artemis_v_guided),
         concealed: defender.concealed,
     })
 }

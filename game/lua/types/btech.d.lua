@@ -1143,7 +1143,7 @@ function btech_unit.perception(dbref) end
 ---@field running boolean Stopped units perceive nothing.
 ---@field text string The report printed by the sensor command.
 
----@alias BattleProbeKind "beagle"|"light"|"bloodhound"
+---@alias BattleProbeKind "beagle"|"light"|"bloodhound"|"watchdog"
 
 ---@alias BattleContactArc "front" | "right" | "rear" | "left"
 

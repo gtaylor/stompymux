@@ -33,7 +33,7 @@ fn flag(template: &BattleTemplate, name: &str) -> bool {
         .filter_map(|key| template.attributes.get(*key))
         .any(|v| {
             v.split_ascii_whitespace()
-                .any(|v| v.eq_ignore_ascii_case(name))
+                .any(|v| super::technology::spells(v, name))
         })
         || (0..=56).any(|code| {
             admin_contract::administrative_technology(code).is_some_and(|(candidate, _)| {
@@ -53,7 +53,7 @@ fn raw_flag(template: &RawTemplate, name: &str) -> bool {
         .any(|value| {
             value
                 .split_ascii_whitespace()
-                .any(|value| value.eq_ignore_ascii_case(name))
+                .any(|value| super::technology::spells(value, name))
         })
 }
 
@@ -139,12 +139,24 @@ fn raw_equipment_cost(world: &World, template: &RawTemplate) -> Result<f64> {
                         bloodhound += 1;
                         0.0
                     }
-                    BattleSystem::ArtemisIv => 100000.0,
+                    BattleSystem::ArtemisIv => {
+                        if raw_flag(template, "ArtemisV_Tech") {
+                            250000.0
+                        } else {
+                            100000.0
+                        }
+                    }
                     BattleSystem::AngelEcm => 375000.0,
                     BattleSystem::C3Master => 300000.0,
                     BattleSystem::C3Slave => 250000.0,
                     BattleSystem::C3i => 375000.0,
-                    BattleSystem::Ecm => 100000.0,
+                    BattleSystem::Ecm => {
+                        if raw_flag(template, "WatchDog_Tech") {
+                            500000.0
+                        } else {
+                            100000.0
+                        }
+                    }
                     BattleSystem::Tag => 50000.0,
                     BattleSystem::TargetingComputer => 10000.0,
                     BattleSystem::Axe => 5000.0,
@@ -531,12 +543,24 @@ pub fn template_base_cost(world: &World, template: &BattleTemplate) -> Result<u6
             BattleSystem::BeagleProbe => total += 100000.0,
             BattleSystem::LightProbe => total += 50000.0,
             BattleSystem::BloodhoundProbe => bloodhound += 1,
-            BattleSystem::ArtemisIv => total += 100000.0,
+            BattleSystem::ArtemisIv => {
+                total += if flag(template, "ArtemisV_Tech") {
+                    250000.0
+                } else {
+                    100000.0
+                }
+            }
             BattleSystem::AngelEcm => total += 375000.0,
             BattleSystem::C3Master => total += 300000.0,
             BattleSystem::C3Slave => total += 250000.0,
             BattleSystem::C3i => total += 375000.0,
-            BattleSystem::Ecm => total += 100000.0,
+            BattleSystem::Ecm => {
+                total += if flag(template, "WatchDog_Tech") {
+                    500000.0
+                } else {
+                    100000.0
+                }
+            }
             BattleSystem::Tag => total += 50000.0,
             BattleSystem::TargetingComputer => total += 10000.0,
             BattleSystem::Axe => total += 5000.0,
@@ -709,12 +733,24 @@ pub fn vehicle_template_base_cost(world: &World, template: &BattleVehicleTemplat
                 bloodhound += 1;
                 0.0
             }
-            BattleSystem::ArtemisIv => 100000.0,
+            BattleSystem::ArtemisIv => {
+                if flag_vehicle(template, "ArtemisV_Tech") {
+                    250000.0
+                } else {
+                    100000.0
+                }
+            }
             BattleSystem::AngelEcm => 375000.0,
             BattleSystem::C3Master => 300000.0,
             BattleSystem::C3Slave => 250000.0,
             BattleSystem::C3i => 375000.0,
-            BattleSystem::Ecm => 100000.0,
+            BattleSystem::Ecm => {
+                if flag_vehicle(template, "WatchDog_Tech") {
+                    500000.0
+                } else {
+                    100000.0
+                }
+            }
             BattleSystem::Tag => 50000.0,
             BattleSystem::TargetingComputer => 10000.0,
             BattleSystem::ShoulderOrHip
@@ -757,6 +793,6 @@ fn flag_vehicle(template: &BattleVehicleTemplate, name: &str) -> bool {
         .filter_map(|key| template.attributes.get(*key))
         .any(|v| {
             v.split_ascii_whitespace()
-                .any(|v| v.eq_ignore_ascii_case(name))
+                .any(|v| super::technology::spells(v, name))
         })
 }

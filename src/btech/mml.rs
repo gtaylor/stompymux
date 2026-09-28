@@ -309,6 +309,7 @@ mod tests {
                     guidance_blocked: blocked,
                     angel_blocked: false,
                     target_beacon: beacon,
+                    artemis_v: false,
                 };
                 let actual =
                     roll_weapon_groups(request(mode), &mut BattleDice::seeded([seed; 32])).unwrap();
@@ -360,6 +361,7 @@ mod tests {
                                     guidance_blocked: false,
                                     angel_blocked: false,
                                     target_beacon: false,
+                                    artemis_v: false,
                                 },
                                 &mut dice,
                             )

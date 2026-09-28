@@ -18,7 +18,11 @@ pub(super) fn roll(
         .get(&id)
         .context("Vehicle is unavailable")?;
     let skill = super::skills::unit_piloting_target(world, id, extended)?;
-    let cockpit = u8::from(vehicle.definition().has_special("SMCPIT"));
+    let cockpit = u8::from(
+        vehicle
+            .definition()
+            .has_technology(super::BattleTechnology::SmallCockpit),
+    );
     let absent_character_pilot = if object.flags.contains(Flag::InCharacter)
         && vehicle
             .pilot()

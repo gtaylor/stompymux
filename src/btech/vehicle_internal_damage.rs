@@ -131,9 +131,15 @@ fn resolve_damage(
             .is_some_and(|state| state.internal > 0),
         "Vehicle section is unavailable"
     );
-    let structural_damage = if vehicle.definition().has_special("ReinforcedInternal_Tech") {
+    let structural_damage = if vehicle
+        .definition()
+        .has_technology(super::BattleTechnology::ReinforcedStructure)
+    {
         amount.div_ceil(2)
-    } else if vehicle.definition().has_special("CompositeInternal_Tech") {
+    } else if vehicle
+        .definition()
+        .has_technology(super::BattleTechnology::CompositeStructure)
+    {
         amount
             .checked_mul(2)
             .context("Vehicle internal damage exceeds limit")?

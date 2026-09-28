@@ -24,7 +24,7 @@ State as of 2026-09-14. "Headline gaps" lists only what is still open.
 | commands | 1.8k | mostly ported | `perecm`/`pereccm`, `@createbays`; `embark`/`disembark`/`udisembark` and `attachcables`/`detachcables` need the MechWarrior unit; no shared `common_checks` admission (3 divergent messages, no `last_use` reset). Per-class restricted gate and in-cockpit `HELP` are done. |
 | core | 2.3k | partial | RNG is ChaCha8 not xoshiro256**; no event queue / per-kind `EVENTSTATS`; 14/22 diagnostic channels missing |
 | scripting | 6.9k | redesigned | ~100/112 C Lua API names missing; 0/67 `bt*()` softcode functions; 0/12 Lua constant namespaces; deferred-family `@setspecial` values inert |
-| unit | 20.5k | mostly ported | Mech hardened/reinforced/composite/ICE/Waterproof/TargComp flags rejected; OmniMech, ForceSingleHS, NoSensors; `standanyway` inert; ejected-MechWarrior class absent |
+| unit | 20.5k | mostly ported | Mech ICE/Waterproof/TargComp flags inert; OmniMech, ForceSingleHS, NoSensors; `standanyway` inert; ejected-MechWarrior class absent |
 | combat | 24k | ported (in scope) | Autoeject (needs MW class); deferred-family hit tables. To-hit terms, range/woods damage, rotor divisor, underwater firing and sixth sense are done. |
 | movement | 11k | ported (in scope) | Water-depth MP penalty is a behavior decision (unreachable in live reference); cables are MW actions. Periodic piloting, sprint, stagger-at-action, VTOL collisions are done. |
 | sensors | 8.5k | mostly ported | PERECM/PERECCM; `MOVE_NONE` stationary Mechs; post-detection perception XP; DropShip detection factor (deferred). `view`, datalink, radar, light re-check, SENSOR/SCAN/REPORT/C3 formats are done. |
@@ -116,12 +116,10 @@ cockpit, MASC/TSM, ECM/C3/TAG/NARC/Artemis catalogs are ported. Gaps:
 
 - **CASE II** is implemented as `BattleSystem::CaseIi` (`CASE-II` criticals), with
   the venting rule described in `btech-coverage.md`.
-- Mech template whitelist hard-rejects `ICEEngine_Tech`, `HardenedArmor_Tech`,
-  `ReinforcedInternal_Tech`, `CompositeInternal_Tech`, `Waterproof_Tech`,
-  `TargComp_Tech` (chassis flag), `OmniMech_Tech`, `ForceSingleHS`, `NoSensors`,
-  `SS_Ability`, `CompactHS`. The vehicle side already implements hardened, reinforced,
-  composite and ICE; the Mech side needs the same rules.
-- `LaserHS_Tech` is accepted but has no consumer (also unimplemented in C).
+- Mech `ICEEngine_Tech`, `Waterproof_Tech`, `TargComp_Tech` (chassis flag),
+  `OmniMech_Tech`, `ForceSingleHS`, `NoSensors`, `SS_Ability` and `CompactHS` have no
+  Mech rules yet. Hardened armor, reinforced and composite structure, small cockpit,
+  laser heat sinks, Watchdog and Artemis V are implemented (see `btech-coverage.md`).
 - `OMNI_BASE_MODE` critical bit is not distinguished.
 - `MECHPREF_STANDANYWAY` is persisted but inert (stand still blocked on high BTH).
 - Ejected MechWarrior unit class (`CLASS_MW`) does not exist; ejection and hit/LOS
@@ -1188,7 +1186,7 @@ fidelity, then deferred scope.
    Replace the three divergent replies in `power.rs`. The per-class restricted
    gate already exists in `special_dispatch.rs`; route ordinary handlers through
    it so dispatch no longer falls back to global lookup.
-2. **Mech chassis parity.** Extend the Mech validator and rules to hardened, reinforced, composite, ICE,
+2. **Mech chassis parity.** Extend the Mech validator and rules to ICE,
    Waterproof and the TargComp chassis flag (vehicle rules exist to share);
    OmniMech + `OMNI_BASE_MODE`; ForceSingleHS; NoSensors; make `standanyway`
    consumed by `stand.rs`. Unblocks templates that fail construction today.

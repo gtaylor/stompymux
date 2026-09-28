@@ -142,7 +142,9 @@ pub fn critical_report(
         double_sinks: unit.definition().has_double_heat_sinks(),
         engine: BattleEngine::display_family(&loadout, unit.definition().has_special("Clan"))?,
         improved_jets: unit.definition().has_special("ImprovedJJ_Tech"),
-        small_cockpit: unit.definition().has_special("SMCPIT"),
+        small_cockpit: unit
+            .definition()
+            .has_technology(super::BattleTechnology::SmallCockpit),
         show_brands,
     };
     let inventory = Inventory {

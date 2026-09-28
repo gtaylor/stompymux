@@ -1096,6 +1096,40 @@ Battle value drops the ammunition and Gauss exposure penalties for a CASE II loc
 including the center torso, head, legs and XL side torsos. Tests cover the venting
 path, battle value, mass and parsing.
 
+### Chassis technologies
+
+`BattleTechnology` names seven chassis flags and accepts either the reference's full name
+or its abbreviation, as the reference template loader does. Cost helpers accept both
+spellings too.
+
+- **Hardened armor** (`HardenedArmor_Tech`/`HARM`): conventional Mech armor damage is
+  halved, rounding up, before armor absorbs it, and overflow stays halved. This matches
+  the reference damage code and the existing vehicle rule. Armor weighs eight points
+  per ton.
+- **Reinforced structure** (`ReinforcedInternal_Tech`/`RINT`) halves internal damage,
+  rounding up. **Composite structure** (`CompositeInternal_Tech`/`CINT`) doubles it.
+  Overflow keeps the modified value, as in the reference. Reinforced structure weighs
+  twice as much as standard, and composite weighs the same as Endo Steel. Limb loss on a
+  critical roll of 12 still destroys the whole location.
+- **Small cockpit** (`SmallCockpit_Tech`/`SMCPIT`): both spellings give the two-ton
+  cockpit, the +1 piloting modifier and the 175,000 cost.
+- **Laser heat sinks** (`LaserHS_Tech`/`LHS`): the reference marks these as
+  unimplemented, so tabletop rules apply. They dissipate as double heat sinks, occupy two
+  slots each, and a running unit that carries them glows, counting as illuminated in
+  darkness.
+- **Watchdog CEWS** (`WatchDog_Tech`/`WDOG`): unimplemented in the reference, so tabletop
+  rules apply. The unit's installed ECM slot also works as an active probe
+  (`BattleActiveProbe::Watchdog`, Clan active-probe reach), and damage to that slot
+  disables both functions. The slot weighs a ton and a half and costs 500,000.
+- **Artemis V** (`ArtemisV_Tech`/`AV`): unimplemented in the reference, so tabletop rules
+  apply. The unit's Artemis controllers add three to the cluster roll instead of two, and
+  Artemis rounds get a -1 to-hit modifier. ECM that blocks Artemis IV also blocks both
+  effects. Narc homing keeps its ordinary bonus. A controller weighs a ton and a half and
+  costs 250,000.
+
+Tests cover Mech damage and mass for every spelling, laser heat sink glow, the Watchdog
+probe's reach, damage and restart, and the Artemis V cluster, aim and mass rules.
+
 ### Conventional Narc beacons
 
 IS and Clan Narc launchers now use native Rust pod resolution, distinct explosive

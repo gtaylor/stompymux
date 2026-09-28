@@ -112,6 +112,24 @@ fn artemis_unassigned_links_and_mass() {
     }
 }
 
+/// An Artemis V controller weighs a ton and a half, half a ton more than Artemis IV.
+#[test]
+fn artemis_v_controller_mass() {
+    let standard = BattleUnit::from_template(definition(BattleSection::CenterTorso, "11")).unwrap();
+    for flag in ["ArtemisV_Tech", "AV"] {
+        let mut template = definition(BattleSection::CenterTorso, "11");
+        let value = template.attributes.entry("specials".into()).or_default();
+        value.push(' ');
+        value.push_str(flag);
+        let unit = BattleUnit::from_template(template).unwrap();
+        assert_eq!(
+            unit.mass().unwrap().equipment,
+            standard.mass().unwrap().equipment + 512,
+            "{flag}"
+        );
+    }
+}
+
 /// Head lookup does not hide a same-numbered center-torso launcher.
 #[test]
 fn head_controller_reports_both_matching_mounts() {

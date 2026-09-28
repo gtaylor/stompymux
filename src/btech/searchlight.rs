@@ -393,9 +393,30 @@ pub fn unit_illuminated(world: &World, target: ObjectId) -> bool {
     }
     lamp_state(world, target).is_some_and(|_| {
         inferno(world, target) > 0
+            || laser_heat_sink_glow(world, target)
             || beam(world, target).is_some()
             || externally_illuminated(world, target)
     })
+}
+
+/// Running laser heat sinks glow, so the unit counts as illuminated in darkness.
+fn laser_heat_sink_glow(world: &World, target: ObjectId) -> bool {
+    let technology = super::BattleTechnology::LaserHeatSinks;
+    world
+        .btech
+        .constructed_units()
+        .get(&target)
+        .map(|unit| {
+            unit.definition().has_technology(technology)
+                && unit.power() == super::BattlePower::Running
+        })
+        .or_else(|| {
+            world.btech.vehicles().get(&target).map(|unit| {
+                unit.definition().has_technology(technology)
+                    && unit.power() == super::BattlePower::Running
+            })
+        })
+        .unwrap_or(false)
 }
 
 /// Scenario lighting, nearby infernos and other lamps can trigger external-light warnings.
@@ -639,6 +660,7 @@ impl<'w> IlluminationContext<'w> {
         let value = live
             && lamp_state(world, target).is_some_and(|_| {
                 inferno(world, target) > 0
+                    || laser_heat_sink_glow(world, target)
                     || beam(world, target).is_some()
                     || externally_illuminated_with_sources(
                         world,
