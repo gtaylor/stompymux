@@ -18058,11 +18058,6 @@ async fn handweapon_native_lua_recovery_and_restart() {
         std::rc::Rc::new(std::cell::RefCell::new(original.clone())),
     )
     .unwrap();
-    let chop_holder = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(original.clone())),
-    )
-    .unwrap();
     let pristine_db = snapshot_database(&config);
     for (kind, command) in [
         (BattleArmAttack::Axe, "axe"),
@@ -18082,10 +18077,6 @@ async fn handweapon_native_lua_recovery_and_restart() {
             shot_seed(&mut base, target, 19);
             install(&native, base.clone());
             install(&lua, base.clone());
-            let chop = (kind == BattleArmAttack::Sword).then(|| {
-                install(&chop_holder, base.clone());
-                &chop_holder
-            });
             let call = format!("btech.unit.{command}({},1,'both',{})", id.0, target.0);
             assert!(
                 lua.eval_callback::<()>(&format!("{call}; error('abort')"))
@@ -18098,7 +18089,7 @@ async fn handweapon_native_lua_recovery_and_restart() {
                 &config,
                 ObjectId(1),
                 1,
-                &format!("{command} both #{}", target.0),
+                &format!("melee both #{}", target.0),
             )
             .unwrap();
             let report: mlua::Table = lua.eval_callback(&format!("return {call}")).unwrap();
@@ -18124,23 +18115,6 @@ async fn handweapon_native_lua_recovery_and_restart() {
             };
             let native_messages = messages(&native);
             assert_eq!(native_messages, messages(&lua));
-            if let Some(chop) = chop {
-                assert!(
-                    support::run_text(chop, &config, ObjectId(1), 1, "chop/invalid")
-                        .contains("chop takes no switches")
-                );
-                assert_eq!(chop.world().btech, base.btech);
-                commands::run(
-                    chop,
-                    &config,
-                    ObjectId(1),
-                    1,
-                    &format!("chop both #{}", target.0),
-                )
-                .unwrap();
-                assert_eq!(chop.world().btech, native.world().btech);
-                assert_eq!(messages(chop), native_messages);
-            }
             let mut world = lua.world().clone();
             assert_eq!(
                 world.btech.constructed_units()[&id].limb_recycle().len(),
@@ -18161,6 +18135,135 @@ async fn handweapon_native_lua_recovery_and_restart() {
             assert_eq!(world.btech, loaded.btech);
         }
     }
+}
+
+/// `melee` swings each arm's own installed weapon, pairs only claws, and rejects empty arms.
+#[tokio::test]
+async fn melee_swings_each_arms_installed_weapon() {
+    use stompymux_rs::*;
+    let (_dir, config, original, id, target) = kick_fixture().await;
+    let mixed = |left: BattleArmAttack, right: &str| {
+        let mut world = original.clone();
+        install_test_handweapons(&mut world, id, left);
+        let mut definition = world.btech.constructed_units()[&id].definition().clone();
+        let arm = definition
+            .sections
+            .get_mut(&BattleSection::RightArm)
+            .unwrap();
+        for slot in 4..=6 {
+            arm.criticals.get_mut(&slot).unwrap().equipment = right.into();
+        }
+        let mut state = serde_json::to_value(&world.btech).unwrap();
+        state["constructed"][id.0.to_string()]["definition"] =
+            serde_json::to_value(definition).unwrap();
+        world.btech = serde_json::from_value(state).unwrap();
+        world
+    };
+    let attack = |world: &World, arms| {
+        let scripts = Scripts::new(
+            &config,
+            std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
+        )
+        .unwrap();
+        resolve_battle_arm_attack_action(
+            &scripts,
+            &config,
+            id,
+            ObjectId(1),
+            target,
+            BattleArmAttackChoice {
+                arms,
+                kind: BattleArmWeapon::Installed,
+            },
+            kick_rules(),
+        )
+    };
+    let swung = |report: &BattleArmAttackReport| {
+        report
+            .attacks
+            .iter()
+            .map(|attack| attack.profile.attack)
+            .collect::<Vec<_>>()
+    };
+    let claw_axe = mixed(BattleArmAttack::Claw, "Axe");
+    assert_eq!(
+        swung(&attack(&claw_axe, BattleArmSelection::Right).unwrap()),
+        [BattlePhysicalAttack::Axe {
+            arm: BattleArm::Right
+        }]
+    );
+    assert_eq!(
+        swung(&attack(&claw_axe, BattleArmSelection::Left).unwrap()),
+        [BattlePhysicalAttack::Claw {
+            arm: BattleArm::Left
+        }]
+    );
+    let both = attack(&claw_axe, BattleArmSelection::Both).unwrap();
+    assert_eq!(
+        swung(&both),
+        [BattlePhysicalAttack::Claw {
+            arm: BattleArm::Left
+        }]
+    );
+    assert_eq!(both.rejections.len(), 1);
+    assert_eq!(both.rejections[0].arm, BattleArm::Right);
+    assert!(
+        both.rejections[0]
+            .reason
+            .contains("Your limbs are still recovering")
+    );
+    let axe_claw = mixed(BattleArmAttack::Axe, "Claw");
+    assert_eq!(
+        swung(&attack(&axe_claw, BattleArmSelection::Both).unwrap()),
+        [BattlePhysicalAttack::Axe {
+            arm: BattleArm::Left
+        }]
+    );
+    let claws = mixed(BattleArmAttack::Claw, "Claw");
+    assert_eq!(
+        swung(&attack(&claws, BattleArmSelection::Both).unwrap()),
+        [
+            BattlePhysicalAttack::Claw {
+                arm: BattleArm::Left
+            },
+            BattlePhysicalAttack::Claw {
+                arm: BattleArm::Right
+            }
+        ]
+    );
+    let bare = format!(
+        "{:#}",
+        attack(&original, BattleArmSelection::Left).unwrap_err()
+    );
+    assert!(
+        bare.contains("No physical weapon installed in this arm"),
+        "{bare}"
+    );
+    let bare = format!(
+        "{:#}",
+        attack(&original, BattleArmSelection::Both).unwrap_err()
+    );
+    assert!(bare.contains("No usable physical weapon"), "{bare}");
+    let scripts = Scripts::new(
+        &config,
+        std::rc::Rc::new(std::cell::RefCell::new(original.clone())),
+    )
+    .unwrap();
+    assert!(
+        support::run_text(&scripts, &config, ObjectId(1), 1, "melee/invalid")
+            .contains("melee takes no switches")
+    );
+    assert!(
+        support::run_text(
+            &scripts,
+            &config,
+            ObjectId(1),
+            1,
+            &format!("melee left #{}", target.0)
+        )
+        .contains("No physical weapon installed in this arm")
+    );
+    assert_eq!(scripts.world().btech, original.btech);
 }
 
 /// Installed hand weapons reach a lower standing target, and choose tables independently of arm arcs.
@@ -18324,7 +18427,7 @@ async fn mace_miss_balance_success_and_failure() {
             target,
             BattleArmAttackChoice {
                 arms: BattleArmSelection::Right,
-                kind: BattleArmAttack::Mace,
+                kind: BattleArmWeapon::Fixed(BattleArmAttack::Mace),
             },
             rules,
         )
@@ -20722,7 +20825,7 @@ async fn character_arm_sequence_orders_casualties_and_replays() {
         shot_seed(&mut world, target, head_seed);
         let choice = BattleArmAttackChoice {
             arms: BattleArmSelection::Both,
-            kind: BattleArmAttack::Punch,
+            kind: BattleArmWeapon::Fixed(BattleArmAttack::Punch),
         };
         let baseline = world.clone();
         let scripts =

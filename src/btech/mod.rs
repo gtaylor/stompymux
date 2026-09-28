@@ -508,7 +508,7 @@ pub use evacuation::physical_attack_action;
 
 pub use evacuation::arm_attack_action;
 /// Typed arm sequence and its atomic character-aware host action.
-pub use physical::BattleArmAttackChoice;
+pub use physical::{BattleArmAttackChoice, BattleArmWeapon};
 
 /// One-way charge host action with character casualty publication.
 pub use evacuation::charge_action;

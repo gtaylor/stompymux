@@ -164,15 +164,48 @@ impl BattleArmAttack {
         }
     }
 
+    /// Hand weapons in the order an arm carrying several would swing them.
+    const HAND_WEAPONS: [Self; 5] = [Self::Axe, Self::Sword, Self::Mace, Self::Saw, Self::Claw];
+
+    /// Equipment family backing a hand weapon; punches need none.
+    fn system(self) -> Option<BattleSystem> {
+        match self {
+            Self::Punch => None,
+            Self::Axe => Some(BattleSystem::Axe),
+            Self::Sword => Some(BattleSystem::Sword),
+            Self::Mace => Some(BattleSystem::Mace),
+            Self::Saw => Some(BattleSystem::DualSaw),
+            Self::Claw => Some(BattleSystem::Claw),
+        }
+    }
+
+    /// Whether completing this attack leaves the other arm free to attack in the same action.
+    fn pairs(self) -> bool {
+        matches!(self, Self::Punch | Self::Claw)
+    }
+
+    /// Hand weapon installed in an arm, whether or not enough of it still works to swing.
+    pub(super) fn installed(unit: &BattleUnit, section: BattleSection) -> Result<Option<Self>> {
+        let loadout = unit.loadout()?;
+        Ok(Self::HAND_WEAPONS.into_iter().find(|kind| {
+            loadout
+                .systems
+                .iter()
+                .any(|part| Some(part.system) == kind.system() && part.location.section == section)
+        }))
+    }
+
     /// Count operational same-arm parts using the attack's observable minimum, not its mass divisor.
     pub(super) fn available(self, unit: &BattleUnit, section: BattleSection) -> Result<bool> {
-        let (system, minimum) = match self {
-            Self::Punch => return Ok(true),
-            Self::Axe => (BattleSystem::Axe, unit.definition().tons / 15),
-            Self::Sword => (BattleSystem::Sword, (unit.definition().tons + 15) / 20),
-            Self::Mace => (BattleSystem::Mace, unit.definition().tons / 10),
-            Self::Saw => (BattleSystem::DualSaw, 7),
-            Self::Claw => (BattleSystem::Claw, unit.definition().tons / 15),
+        let Some(system) = self.system() else {
+            return Ok(true);
+        };
+        let minimum = match self {
+            Self::Punch => 0,
+            Self::Axe | Self::Claw => unit.definition().tons / 15,
+            Self::Sword => (unit.definition().tons + 15) / 20,
+            Self::Mace => unit.definition().tons / 10,
+            Self::Saw => 7,
         };
         Ok(unit
             .loadout()?
@@ -1182,11 +1215,26 @@ pub fn resolve_punch(
     )
 }
 
+/// Attack each selected arm makes in one sequenced arm action.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BattleArmWeapon {
+    /// Every selected arm makes this attack.
+    Fixed(BattleArmAttack),
+    /// Each selected arm swings whichever hand weapon it carries.
+    Installed,
+}
+
+impl From<BattleArmAttack> for BattleArmWeapon {
+    fn from(kind: BattleArmAttack) -> Self {
+        Self::Fixed(kind)
+    }
+}
+
 /// Arm selection and physical weapon used by one sequenced host action.
 #[derive(Debug, Clone, Copy)]
 pub struct BattleArmAttackChoice {
     pub arms: BattleArmSelection,
-    pub kind: BattleArmAttack,
+    pub kind: BattleArmWeapon,
 }
 
 /// Attempt the selected arms in order; an impact error rolls back the entire action.
@@ -1206,7 +1254,10 @@ pub fn resolve_arm_attack(
         attacker,
         pilot,
         target,
-        BattleArmAttackChoice { arms, kind },
+        BattleArmAttackChoice {
+            arms,
+            kind: kind.into(),
+        },
         rules,
         false,
     )
@@ -1257,11 +1308,33 @@ fn resolve_arm_attack_inner(
         };
         let mut completed_arm = None;
         for &arm in arms {
-            if auto_select
-                && !kind.available(&world.btech.constructed_units()[&attacker], arm.section())?
-            {
+            let unit = &world.btech.constructed_units()[&attacker];
+            let kind = match kind {
+                BattleArmWeapon::Fixed(kind) => kind,
+                BattleArmWeapon::Installed => {
+                    match BattleArmAttack::installed(unit, arm.section())? {
+                        Some(kind) => kind,
+                        None if auto_select => continue,
+                        None => {
+                            let reason = format!(
+                                "{}: No physical weapon installed in this arm",
+                                arm.section().name().replace('_', " ")
+                            );
+                            report.notices.push(BattleNotice {
+                                unit: attacker,
+                                text: reason.clone(),
+                            });
+                            report.rejections.push(BattleArmRejection { arm, reason });
+                            continue;
+                        }
+                    }
+                }
+            };
+            if auto_select && !kind.available(unit, arm.section())? {
                 continue;
             }
+            // Only paired attacks may follow a completed arm; other swings block the second arm.
+            let allowed_arm = completed_arm.filter(|_| kind.pairs());
             let attack = kind.attack(arm);
             if let Err(error) = attack_profile_inner(
                 world,
@@ -1271,7 +1344,7 @@ fn resolve_arm_attack_inner(
                 attack,
                 rules,
                 AttackContext {
-                    completed_arm,
+                    completed_arm: allowed_arm,
                     character,
                 },
             ) {
@@ -1291,11 +1364,11 @@ fn resolve_arm_attack_inner(
                 attack,
                 rules,
                 AttackContext {
-                    completed_arm,
+                    completed_arm: allowed_arm,
                     character,
                 },
             )?;
-            if matches!(kind, BattleArmAttack::Punch | BattleArmAttack::Claw) {
+            if kind.pairs() {
                 completed_arm = Some(arm.section());
             }
             super::piloting::append_feedback(
@@ -1313,11 +1386,16 @@ fn resolve_arm_attack_inner(
                 .map(|r| r.reason.as_str())
                 .collect::<Vec<_>>()
                 .join("\n");
-            ensure!(
-                !reasons.is_empty(),
-                "No usable {:?} in the selected arms",
-                kind
-            );
+            if reasons.is_empty() {
+                match kind {
+                    BattleArmWeapon::Fixed(kind) => {
+                        anyhow::bail!("No usable {kind:?} in the selected arms")
+                    }
+                    BattleArmWeapon::Installed => {
+                        anyhow::bail!("No usable physical weapon in the selected arms")
+                    }
+                }
+            }
             anyhow::bail!("No selected arm could attack: {reasons}");
         }
         world.btech.validate_action(world)?;
@@ -1343,7 +1421,7 @@ pub(crate) fn configured_arm_attack(
     pilot: ObjectId,
     arms: Option<&str>,
     target: Option<ObjectId>,
-    kind: BattleArmAttack,
+    kind: BattleArmWeapon,
 ) -> Result<BattleArmAttackReport> {
     let (chosen, arms) = {
         let world = scripts.world.borrow();
@@ -1477,38 +1555,18 @@ enum PhysicalCommand {
     Kick,
     Punch,
     Trip,
-    Axe,
-    Sword,
-    Mace,
-    Saw,
-    Claw,
+    Melee,
     Club,
     GrabClub,
     Charge,
 }
 
-/// Native mace adapter.
-pub(crate) fn mace_command(
+/// Native adapter swinging each selected arm's installed axe, sword, mace, saw or claw.
+pub(crate) fn melee_command(
     ctx: &crate::CommandContext<'_>,
     input: &crate::CommandInput,
 ) -> Result<crate::CommandAction> {
-    command_for(ctx, input, PhysicalCommand::Mace)
-}
-
-/// Native axe adapter.
-pub(crate) fn axe_command(
-    ctx: &crate::CommandContext<'_>,
-    input: &crate::CommandInput,
-) -> Result<crate::CommandAction> {
-    command_for(ctx, input, PhysicalCommand::Axe)
-}
-
-/// Native sword adapter.
-pub(crate) fn sword_command(
-    ctx: &crate::CommandContext<'_>,
-    input: &crate::CommandInput,
-) -> Result<crate::CommandAction> {
-    command_for(ctx, input, PhysicalCommand::Sword)
+    command_for(ctx, input, PhysicalCommand::Melee)
 }
 
 /// Native trip adapter.
@@ -1545,12 +1603,7 @@ fn command_for(
         PhysicalCommand::Kick => "Usage: kick [left|right] [#unit]",
         PhysicalCommand::Trip => "Usage: trip [left|right] [#unit]",
         PhysicalCommand::Punch => "Usage: punch [left|right|both] [#unit]",
-        PhysicalCommand::Axe => "Usage: axe [left|right|both] [#unit]",
-        PhysicalCommand::Sword if input.name == "chop" => "Usage: chop [left|right|both] [#unit]",
-        PhysicalCommand::Sword => "Usage: sword [left|right|both] [#unit]",
-        PhysicalCommand::Mace => "Usage: mace [left|right|both] [#unit]",
-        PhysicalCommand::Saw => "Usage: saw [left|right|both] [#unit]",
-        PhysicalCommand::Claw => "Usage: claw [left|right|both] [#unit]",
+        PhysicalCommand::Melee => "Usage: melee [left|right|both] [#unit]",
         PhysicalCommand::Club => "Usage: club [#unit]",
         PhysicalCommand::GrabClub => "Usage: grabclub [left|right|-]",
         PhysicalCommand::Charge => "Usage: charge [#unit|-]",
@@ -1614,19 +1667,10 @@ fn command_for(
                 configured_trip(ctx.scripts, ctx.config, id, ctx.player, leg, target)?;
                 Vec::new()
             }
-            PhysicalCommand::Punch
-            | PhysicalCommand::Axe
-            | PhysicalCommand::Sword
-            | PhysicalCommand::Mace
-            | PhysicalCommand::Saw
-            | PhysicalCommand::Claw => {
+            PhysicalCommand::Punch | PhysicalCommand::Melee => {
                 let attack = match kind {
-                    PhysicalCommand::Axe => BattleArmAttack::Axe,
-                    PhysicalCommand::Sword => BattleArmAttack::Sword,
-                    PhysicalCommand::Mace => BattleArmAttack::Mace,
-                    PhysicalCommand::Saw => BattleArmAttack::Saw,
-                    PhysicalCommand::Claw => BattleArmAttack::Claw,
-                    _ => BattleArmAttack::Punch,
+                    PhysicalCommand::Melee => BattleArmWeapon::Installed,
+                    _ => BattleArmWeapon::Fixed(BattleArmAttack::Punch),
                 };
                 configured_arm_attack(
                     ctx.scripts,
@@ -1651,22 +1695,6 @@ fn command_for(
             crate::CommandAction::Report(crate::CommandReport::Reply(format!("{error:#}")))
         }
     })
-}
-
-/// Attempt a mechanical saw swing through the shared physical transaction.
-pub(crate) fn saw_command(
-    ctx: &crate::CommandContext<'_>,
-    input: &crate::CommandInput,
-) -> Result<crate::CommandAction> {
-    command_for(ctx, input, PhysicalCommand::Saw)
-}
-
-/// Attempt claw attacks through the shared physical transaction.
-pub(crate) fn claw_command(
-    ctx: &crate::CommandContext<'_>,
-    input: &crate::CommandInput,
-) -> Result<crate::CommandAction> {
-    command_for(ctx, input, PhysicalCommand::Claw)
 }
 
 /// Resolve a two-handed club swing with configured targeting and combat policy.

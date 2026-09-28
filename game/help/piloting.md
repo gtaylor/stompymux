@@ -1,7 +1,7 @@
 +++
 title = "Piloting BattleMechs"
 description = "Enter a unit and take or release its cockpit"
-keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "unjam", "stinger", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "incendiary", "precision", "flechette", "jump", "dfa", "death from above", "land", "mechprefs", "autofall", "ams", "pods", "removepod", "removepods", "extinguish"]
+keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "unjam", "stinger", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "incendiary", "precision", "flechette", "jump", "dfa", "death from above", "land", "mechprefs", "autofall", "ams", "pods", "removepod", "removepods", "extinguish", "melee", "axe", "sword", "mace", "saw", "claw"]
 article_tags = ["show_in_index"]
 +++
 
@@ -1301,8 +1301,13 @@ one-shot launchers, rear mounts and Artemis links. Split slots identify their
 linked weapon. You must be the conscious assigned pilot, but the unit may be
 shut down or off-map. Manufacturer labels follow the server's parts setting.
 
-`chop [left|right|both] [#unit]` uses the same sword attack as `sword`, including
-targeting, damage and recovery.
+`melee [left|right|both] [#unit]` swings the physical weapon installed in each
+selected arm: an axe, sword, mace, dual saw or claw. Arms default to both, and
+each arm uses its own weapon, so a Mech with a sword in one arm and a claw in the
+other needs no separate command for either. Arms without a physical weapon are
+skipped when both are selected. Claws may strike with both arms in one action;
+any other weapon's swing leaves the second arm recovering. Use `punch` for bare
+fists.
 
 `disable <weapon>` powers down a Gauss weapon once it finishes recharging. You
 must be piloting a running unit on a map. Comma-separated weapon numbers and

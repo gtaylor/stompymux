@@ -638,18 +638,8 @@ impl CommandRegistry {
                 crate::btech::physical::grabclub_command,
             )
             .policy(SwitchPolicy::Reject("grabclub takes no switches."), false),
-            CommandDefinition::native("claw", P::EVERYONE, crate::btech::physical::claw_command)
-                .policy(SwitchPolicy::Reject("claw takes no switches."), false),
-            CommandDefinition::native("saw", P::EVERYONE, crate::btech::physical::saw_command)
-                .policy(SwitchPolicy::Reject("saw takes no switches."), false),
-            CommandDefinition::native("mace", P::EVERYONE, crate::btech::physical::mace_command)
-                .policy(SwitchPolicy::Reject("mace takes no switches."), false),
-            CommandDefinition::native("axe", P::EVERYONE, crate::btech::physical::axe_command)
-                .policy(SwitchPolicy::Reject("axe takes no switches."), false),
-            CommandDefinition::native("chop", P::EVERYONE, crate::btech::physical::sword_command)
-                .policy(SwitchPolicy::Reject("chop takes no switches."), false),
-            CommandDefinition::native("sword", P::EVERYONE, crate::btech::physical::sword_command)
-                .policy(SwitchPolicy::Reject("sword takes no switches."), false),
+            CommandDefinition::native("melee", P::EVERYONE, crate::btech::physical::melee_command)
+                .policy(SwitchPolicy::Reject("melee takes no switches."), false),
             CommandDefinition::native("punch", P::EVERYONE, crate::btech::physical::punch_command)
                 .policy(SwitchPolicy::Reject("punch takes no switches."), false),
             CommandDefinition::native("trip", P::EVERYONE, crate::btech::physical::trip_command)

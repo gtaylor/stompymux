@@ -123,7 +123,7 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
                         ObjectId(pilot),
                         leg.as_deref(),
                         target.map(ObjectId),
-                        kind,
+                        kind.into(),
                     )
                     .map_err(mlua::Error::external)?;
                     detached(lua, &report)

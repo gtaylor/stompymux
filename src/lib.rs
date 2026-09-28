@@ -324,9 +324,9 @@ pub use btech::advance_motion_action as advance_battle_motion_action;
 /// Resolve a physical attack and publish character injuries and crew casualties atomically.
 pub use btech::physical_attack_action as resolve_battle_physical_attack_action;
 
-/// Arm sequencing choice and character-aware host action.
-pub use btech::BattleArmAttackChoice;
 pub use btech::arm_attack_action as resolve_battle_arm_attack_action;
+/// Arm sequencing choice and character-aware host action.
+pub use btech::{BattleArmAttackChoice, BattleArmWeapon};
 
 /// Resolve one charge and publish character injuries, XP and casualties atomically.
 pub use btech::charge_action as resolve_battle_charge_action;
