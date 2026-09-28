@@ -864,6 +864,7 @@ pub fn clear_administrative_technologies(
                 BattleSystem::TripleStrengthMyomer,
                 BattleSystem::Masc,
                 BattleSystem::Case,
+                BattleSystem::CaseIi,
             ],
             true,
         )?;

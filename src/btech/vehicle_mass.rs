@@ -251,6 +251,13 @@ impl BattleVehicleTemplate {
                 }
             }
             BattleSystem::Case | BattleSystem::LightProbe => 512,
+            BattleSystem::CaseIi => {
+                if self.has_special("Clan") {
+                    512
+                } else {
+                    1024
+                }
+            }
             BattleSystem::JumpJet => match self.tons {
                 0..=55 => 512,
                 56..=85 => 1024,

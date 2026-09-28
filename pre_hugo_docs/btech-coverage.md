@@ -1078,6 +1078,24 @@ The same audit corrected targeting-computer eligibility for conventional AMS.
 Laser AMS retains beam-family eligibility for equipment sizing. Catalogue and
 Clan energy regressions cover that distinction without enabling manual fire.
 
+### CASE II
+
+`CASE-II` criticals parse as `BattleSystem::CaseIi`. It is a noncritical slot, like
+CASE, and weighs one ton per Inner Sphere slot or half a ton per Clan slot. It costs
+175,000 per slot, matching the reference cost table. The reference defines a CASE II
+section bit but never applies it, so the combat rule follows the published rules
+instead of the C code.
+
+When ammunition or a weapon explodes in a CASE II location, the section takes one
+point of internal damage with its normal critical roll. The rest of the blast goes
+to that section's armor (rear armor on torsos), and damage beyond that armor is lost
+without transferring. The pilot takes one injury instead of two, reported as
+`BattleImpactEffect::VentedExplosionInjury` when no tactical rules are supplied.
+CASE II also counts as CASE for containment and for vehicle power-plant containment.
+Battle value drops the ammunition and Gauss exposure penalties for a CASE II location,
+including the center torso, head, legs and XL side torsos. Tests cover the venting
+path, battle value, mass and parsing.
+
 ### Conventional Narc beacons
 
 IS and Clan Narc launchers now use native Rust pod resolution, distinct explosive

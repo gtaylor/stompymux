@@ -132,6 +132,7 @@ fn raw_equipment_cost(world: &World, template: &RawTemplate) -> Result<f64> {
             total += if let Ok(system) = BattleSystem::parse(&critical.equipment) {
                 match system {
                     BattleSystem::Case => 50000.0,
+                    BattleSystem::CaseIi => 175000.0,
                     BattleSystem::BeagleProbe => 100000.0,
                     BattleSystem::LightProbe => 50000.0,
                     BattleSystem::BloodhoundProbe => {
@@ -526,6 +527,7 @@ pub fn template_base_cost(world: &World, template: &BattleTemplate) -> Result<u6
             BattleSystem::Masc => masc += 1,
             BattleSystem::Sword => sword = true,
             BattleSystem::Case => total += 50000.0,
+            BattleSystem::CaseIi => total += 175000.0,
             BattleSystem::BeagleProbe => total += 100000.0,
             BattleSystem::LightProbe => total += 50000.0,
             BattleSystem::BloodhoundProbe => bloodhound += 1,
@@ -700,6 +702,7 @@ pub fn vehicle_template_base_cost(world: &World, template: &BattleVehicleTemplat
     for part in &loadout.systems {
         total += match part.system {
             BattleSystem::Case => 50000.0,
+            BattleSystem::CaseIi => 175000.0,
             BattleSystem::BeagleProbe => 100000.0,
             BattleSystem::LightProbe => 50000.0,
             BattleSystem::BloodhoundProbe => {

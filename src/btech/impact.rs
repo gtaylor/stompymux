@@ -12,6 +12,8 @@ use serde::Serialize;
 pub enum BattleImpactEffect {
     HeadInjury,
     ExplosionInjury,
+    /// An explosion vented by CASE II injures the pilot once instead of twice.
+    VentedExplosionInjury,
     CrewStun,
     SectionLost(BattleSection),
 }
@@ -892,20 +894,25 @@ impl<'a> ImpactContext<'a> {
                 }
                 explosion /= 2;
             }
-            resolve_path(
-                self,
-                DamagePacket {
-                    announced: false,
-                    direct_hit: false,
-                    section: explosion_section,
-                    damage: u16::try_from(explosion)?,
-                    internal_only: true,
-                    transfer: true,
-                    rear: false,
-                    tac: false,
-                    weapon_effect: None,
-                },
-            )?;
+            let vented = self.unit().has_case_ii(explosion_section);
+            if vented {
+                self.vent_explosion(explosion_section, u16::try_from(explosion)?)?;
+            } else {
+                resolve_path(
+                    self,
+                    DamagePacket {
+                        announced: false,
+                        direct_hit: false,
+                        section: explosion_section,
+                        damage: u16::try_from(explosion)?,
+                        internal_only: true,
+                        transfer: true,
+                        rear: false,
+                        tac: false,
+                        weapon_effect: None,
+                    },
+                )?;
+            }
             let hotload = if let BattleCriticalLoss::Weapon { index, .. } = loss {
                 self.unit().loadout()?.weapons[index]
                     .weapon
@@ -921,8 +928,45 @@ impl<'a> ImpactContext<'a> {
                 });
             }
             if !hotload {
-                self.effect(BattleImpactEffect::ExplosionInjury)?;
+                self.effect(if vented {
+                    BattleImpactEffect::VentedExplosionInjury
+                } else {
+                    BattleImpactEffect::ExplosionInjury
+                })?;
             }
+        }
+        Ok(())
+    }
+
+    /// CASE II: the section takes one internal point, with its normal critical roll, and the
+    /// rest of the blast is vented through its armor (rear armor on torsos). Damage beyond that
+    /// armor is lost and never transfers to another section.
+    fn vent_explosion(&mut self, section: BattleSection, damage: u16) -> Result<()> {
+        resolve_path(
+            self,
+            DamagePacket {
+                announced: false,
+                direct_hit: false,
+                section,
+                damage: damage.min(1),
+                internal_only: true,
+                transfer: false,
+                rear: false,
+                tac: false,
+                weapon_effect: None,
+            },
+        )?;
+        let vented = damage.saturating_sub(1);
+        if vented == 0 || self.unit().sections()[&section].internal == 0 {
+            return Ok(());
+        }
+        let armor = self.damage_phase(section, vented, BattleDamagePhase::Armor { rear: true })?;
+        self.record_phase(armor)?;
+        if self.rules.is_some() {
+            self.report.notices.push(super::BattleNotice {
+                unit: self.id,
+                text: "Your CASE II vents the explosion!".to_owned(),
+            });
         }
         Ok(())
     }
@@ -1024,7 +1068,9 @@ impl<'a> ImpactContext<'a> {
         if let Some(toughness) = self.character_toughness
             && matches!(
                 effect,
-                BattleImpactEffect::HeadInjury | BattleImpactEffect::ExplosionInjury
+                BattleImpactEffect::HeadInjury
+                    | BattleImpactEffect::ExplosionInjury
+                    | BattleImpactEffect::VentedExplosionInjury
             )
             && !self.unit().is_destroyed()
             && self.unit().pilot().is_some()
@@ -1034,10 +1080,10 @@ impl<'a> ImpactContext<'a> {
                 .pilot()
                 .and_then(|pilot| self.world.btech.character_values().get(&pilot))
                 .is_some_and(|values| super::advantages::enabled(values, "Pain_Resistance"));
-            let hits = if effect == BattleImpactEffect::HeadInjury || resistant {
-                1
-            } else {
+            let hits = if effect == BattleImpactEffect::ExplosionInjury && !resistant {
                 2
+            } else {
+                1
             };
             let injury =
                 super::pilot_injury::injure_in_candidate(self.world, self.id, hits, toughness)?;
@@ -1060,10 +1106,14 @@ impl<'a> ImpactContext<'a> {
                     .is_some_and(|values| super::advantages::enabled(values, "Pain_Resistance"));
                 Some(if resistant { 1 } else { 2 })
             }
+            BattleImpactEffect::VentedExplosionInjury => Some(1),
             _ => None,
         };
         if let Some(hits) = hits.filter(|_| !self.unit().is_destroyed()) {
-            if effect == BattleImpactEffect::ExplosionInjury {
+            if matches!(
+                effect,
+                BattleImpactEffect::ExplosionInjury | BattleImpactEffect::VentedExplosionInjury
+            ) {
                 self.report.notices.push(super::BattleNotice {
                     unit: self.id,
                     text: "You take personal injury from the ammunition explosion!".to_owned(),

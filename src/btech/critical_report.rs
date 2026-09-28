@@ -219,8 +219,10 @@ fn inspect<L: Copy + PartialEq>(
             let proxy = definition.equipment.eq_ignore_ascii_case("SplitCrit_Left")
                 || definition.equipment.eq_ignore_ascii_case("SplitCrit_Right");
             let placeholder = proxy
-                || system
-                    .is_some_and(|system| system.is_noncritical() && system != BattleSystem::Case);
+                || system.is_some_and(|system| {
+                    system.is_noncritical()
+                        && !matches!(system, BattleSystem::Case | BattleSystem::CaseIi)
+                });
             let broken = weapon.is_some_and(|(_, mount)| {
                 mount
                     .criticals

@@ -393,3 +393,81 @@ async fn character_stun_actions_publish_and_roll_back() {
     assert_eq!(world.btech, loaded.btech);
     assert_eq!(world.btech.constructed_units()[&id].stun_remaining(), 0);
 }
+
+/// CASE II takes one internal point, vents the rest through the torso's rear armor and loses
+/// any excess, so the center torso survives and the pilot is injured once instead of twice.
+#[tokio::test]
+async fn case_ii_vents_ammunition_explosion_through_local_armor() {
+    let (dir, config, mut baseline) = support::isolated_world().await;
+    let id = baseline.create(&config, "Vented Jenner".into(), Kind::Thing);
+    let object = baseline.objects.get_mut(&id).unwrap();
+    object.location = Some(ObjectId(config.start()));
+    object.home = Some(ObjectId(config.home()));
+    let source = include_str!("fixtures/btech/mechs/JR7-D").replace(
+        "    CRIT_2-3\t\t  { JumpJet - - }\nCenter_Torso",
+        "    CRIT_2-3\t\t  { JumpJet - - }\n    CRIT_4\t\t  { CASE-II - - }\nCenter_Torso",
+    );
+    let template = BattleTemplate::parse(&source).unwrap();
+    assert!(
+        template.sections[&Section::RightTorso]
+            .criticals
+            .values()
+            .any(|part| part.equipment == "CASE-II")
+    );
+    create_battle_unit(&mut baseline, id, template).unwrap();
+    assert!(baseline.btech.constructed_units()[&id].has_case_ii(Section::RightTorso));
+    for slot in [1, 2] {
+        stompymux_rs::destroy_battle_critical(
+            &mut baseline,
+            id,
+            stompymux_rs::CriticalLocation {
+                section: Section::RightTorso,
+                slot,
+            },
+        )
+        .unwrap();
+    }
+    let mut found = false;
+    for value in 0..64 {
+        let mut world = baseline.clone();
+        seed(&mut world, id, value);
+        let report =
+            resolve_battle_impact(&mut world, id, hit(Section::RightTorso, true), 1).unwrap();
+        if !report
+            .pending_effects
+            .contains(&Effect::VentedExplosionInjury)
+        {
+            continue;
+        }
+        assert!(!report.destroyed);
+        assert!(!report.pending_effects.contains(&Effect::ExplosionInjury));
+        let unit = &world.btech.constructed_units()[&id];
+        assert_eq!(unit.ammunition(), &[0]);
+        let torso = &unit.sections()[&Section::RightTorso];
+        assert_eq!(torso.internal, 7);
+        assert_eq!(torso.rear, 0);
+        assert_eq!(torso.armor, 7);
+        assert!(
+            report
+                .phases
+                .iter()
+                .all(|phase| phase.section == Section::RightTorso)
+        );
+        assert_eq!(
+            unit.sections()[&Section::CenterTorso],
+            baseline.btech.constructed_units()[&id].sections()[&Section::CenterTorso]
+        );
+        persistence::save(&config.database(), &world).await.unwrap();
+        assert_eq!(
+            persistence::load(&config.database()).await.unwrap().btech,
+            world.btech
+        );
+        found = true;
+        break;
+    }
+    drop(dir);
+    assert!(
+        found,
+        "seeded scenarios must exercise the ammunition critical"
+    );
+}

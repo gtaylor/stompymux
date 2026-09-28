@@ -226,6 +226,14 @@ pub(super) fn system_slot_mass(definition: &super::BattleTemplate, system: Battl
                 768
             }
         }
+        // Inner Sphere CASE II weighs a ton per slot; the Clan version weighs half as much.
+        BattleSystem::CaseIi => {
+            if definition.has_special("Clan") {
+                512
+            } else {
+                1024
+            }
+        }
         BattleSystem::Sword => {
             u32::from(definition.tons.div_ceil(10)) * 512 / u32::from(definition.tons.div_ceil(15))
         }
@@ -304,5 +312,24 @@ mod tests {
         ] {
             assert_eq!(engine_mass(rating), half_tons * 512);
         }
+    }
+
+    /// CASE II weighs a ton per Inner Sphere slot and half a ton per Clan slot.
+    #[test]
+    fn case_ii_slot_mass_depends_on_technology_base() {
+        let mut definition = super::super::BattleTemplate::parse(include_str!(
+            "../../tests/fixtures/btech/mechs/JR7-D"
+        ))
+        .unwrap();
+        assert_eq!(system_slot_mass(&definition, BattleSystem::CaseIi), 1024);
+        assert_eq!(system_slot_mass(&definition, BattleSystem::Case), 512);
+        let specials = definition.attributes.entry("specials".into()).or_default();
+        specials.push_str(" Clan");
+        assert_eq!(system_slot_mass(&definition, BattleSystem::CaseIi), 512);
+        assert_eq!(
+            BattleSystem::parse("CASE-II").unwrap(),
+            BattleSystem::CaseIi
+        );
+        assert!(BattleSystem::CaseIi.is_noncritical());
     }
 }

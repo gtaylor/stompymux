@@ -345,6 +345,8 @@ pub enum BattleSystem {
     HeavyFerroFibrous,
     LightFerroFibrous,
     Case,
+    /// CASE II vents a local explosion through armor after one point of internal damage.
+    CaseIi,
     TargetingComputer,
     ArtemisIv,
     Ecm,
@@ -374,6 +376,7 @@ impl BattleSystem {
                 | Self::HeavyFerroFibrous
                 | Self::LightFerroFibrous
                 | Self::Case
+                | Self::CaseIi
         )
     }
 
@@ -420,6 +423,7 @@ impl BattleSystem {
             name if name.eq_ignore_ascii_case("HvyFerroFibrous") => Ok(Self::HeavyFerroFibrous),
             name if name.eq_ignore_ascii_case("LtFerroFibrous") => Ok(Self::LightFerroFibrous),
             name if name.eq_ignore_ascii_case("CASE") => Ok(Self::Case),
+            name if name.eq_ignore_ascii_case("CASE-II") => Ok(Self::CaseIi),
             _ => bail!("Unsupported equipment {name}"),
         }
     }

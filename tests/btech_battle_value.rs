@@ -85,6 +85,25 @@ fn case_changes_ammunition_exposure() {
     );
 }
 
+/// CASE II removes the bin's defensive penalty just as ordinary CASE does in a side torso.
+#[test]
+fn case_ii_changes_ammunition_exposure() {
+    let mut definition = BattleTemplate::parse(JENNER).unwrap();
+    let mut case = definition.sections[&BattleSection::Head].criticals[&3].clone();
+    case.equipment = "CASE-II".into();
+    definition
+        .sections
+        .get_mut(&BattleSection::RightTorso)
+        .unwrap()
+        .criticals
+        .insert(3, case);
+    score(
+        &BattleUnit::from_template(definition).unwrap(),
+        215.0,
+        370.3,
+    );
+}
+
 /// Arm Gauss penalties count installed slots and use the adjacent torso's containment.
 #[test]
 fn gauss_exposure_is_per_slot_and_uses_parent_torso_case() {
