@@ -1114,9 +1114,9 @@ spellings too.
 - **Small cockpit** (`SmallCockpit_Tech`/`SMCPIT`): both spellings give the two-ton
   cockpit, the +1 piloting modifier and the 175,000 cost.
 - **Laser heat sinks** (`LaserHS_Tech`/`LHS`): the reference marks these as
-  unimplemented, so tabletop rules apply. They dissipate as double heat sinks, occupy two
-  slots each, and a running unit that carries them glows, counting as illuminated in
-  darkness.
+  unimplemented, so tabletop rules apply. Laser heat sinks are Clan equipment, so
+  dissipation and slots follow the chassis sink rules (double heat sinks on Clan
+  chassis). A running unit that carries them glows, counting as illuminated in darkness.
 - **Watchdog CEWS** (`WatchDog_Tech`/`WDOG`): unimplemented in the reference, so tabletop
   rules apply. The unit's installed ECM slot also works as an active probe
   (`BattleActiveProbe::Watchdog`, Clan active-probe reach), and damage to that slot

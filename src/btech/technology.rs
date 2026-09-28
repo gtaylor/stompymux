@@ -11,7 +11,7 @@ pub enum BattleTechnology {
     CompositeStructure,
     /// Two-ton cockpit that adds one to piloting rolls.
     SmallCockpit,
-    /// Clan heat sinks that dissipate like double heat sinks and glow in darkness.
+    /// Clan heat sinks that glow in darkness; dissipation follows the chassis sink rules.
     LaserHeatSinks,
     /// Clan ECM suite that also works as an active probe.
     Watchdog,

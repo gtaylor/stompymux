@@ -243,7 +243,7 @@ fn laser_sink_designation_preserves_single_and_double_sink_behavior() {
     }
 }
 
-/// Unchanged Night Gyr assets exercise the inert designation with actual Clan equipment.
+/// Unchanged Night Gyr assets exercise the laser-sink designation with actual Clan equipment.
 #[tokio::test]
 async fn night_gyr_laser_sink_assets_construct_and_replay_damage() {
     let (_dir, config, mut world) = support::isolated_world().await;

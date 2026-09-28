@@ -88,18 +88,14 @@ pub struct BattleTemplate {
 }
 
 impl BattleTemplate {
-    /// Clan chassis always use double-efficiency heat sinks; laser heat sinks dissipate the same.
+    /// Clan chassis always use double-efficiency heat sinks.
     pub fn has_double_heat_sinks(&self) -> bool {
-        self.has_special("Clan")
-            || self.has_special("DoubleHS")
-            || self.has_technology(super::BattleTechnology::LaserHeatSinks)
+        self.has_special("Clan") || self.has_special("DoubleHS")
     }
 
     /// Number of contiguous critical slots occupied by one installed heat sink.
     pub fn heat_sink_slots(&self) -> usize {
-        // Laser heat sinks are a Clan design and occupy two slots like Clan double heat sinks.
-        if self.has_special("Clan") || self.has_technology(super::BattleTechnology::LaserHeatSinks)
-        {
+        if self.has_special("Clan") {
             return 2;
         }
         if self.has_special("DoubleHS") {

@@ -564,7 +564,7 @@ async fn technology_flags_change_mech_mass() {
     }
 }
 
-/// Running laser heat sinks glow and dissipate like double heat sinks. The Nightgyr ships
+/// Running laser heat sinks glow. The Nightgyr ships
 /// with laser heat sinks; the abbreviation behaves the same and removing the flag stops the glow.
 #[tokio::test]
 async fn laser_heat_sinks_glow_while_running() {
