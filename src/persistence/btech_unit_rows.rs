@@ -75,12 +75,20 @@ fn timer_rows<T: SavedTimers>(record: &T, now: i64) -> Result<Rows> {
 }
 
 /// A record's core and live parts as stored: JSON with every counter blanked.
-fn parts<T: SavedParts + SavedTimers>(record: &T) -> Result<(String, String)> {
+pub(crate) fn blanked_parts<T: SavedParts + SavedTimers>(
+    record: &T,
+) -> Result<(serde_json::Value, serde_json::Value)> {
     let timers = record.saved_timers();
     let mut core = record.saved_core_value()?;
     let mut live = record.saved_live_value()?;
     blank(&mut core, &timers)?;
     blank(&mut live, &timers)?;
+    Ok((core, live))
+}
+
+/// The stored text of a record's parts.
+fn parts<T: SavedParts + SavedTimers>(record: &T) -> Result<(String, String)> {
+    let (core, live) = blanked_parts(record)?;
     Ok((serde_json::to_string(&core)?, serde_json::to_string(&live)?))
 }
 

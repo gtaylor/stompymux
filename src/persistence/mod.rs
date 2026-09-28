@@ -34,7 +34,7 @@ mod btech_terrain;
 mod btech_tows;
 mod btech_turn_clock;
 mod btech_unit_configuration;
-mod btech_unit_rows;
+pub(crate) mod btech_unit_rows;
 mod btech_units;
 mod btech_values;
 mod btech_vehicles;
@@ -525,6 +525,47 @@ pub async fn inspect_links(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Table definitions of a database, by name, with whitespace normalized.
+    async fn tables(c: &mut SqliteConnection) -> std::collections::BTreeMap<String, String> {
+        sqlx::query_as::<_, (String, String)>(
+            "SELECT name,sql FROM sqlite_master WHERE type='table' ORDER BY name",
+        )
+        .fetch_all(c)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|(name, sql)| (name, sql.split_whitespace().collect::<Vec<_>>().join(" ")))
+        .collect()
+    }
+
+    /// The test fixture database holds exactly the tables the schema files create, so a
+    /// schema change that is not carried into the fixture fails here rather than in
+    /// whichever integration test first touches the difference.
+    #[tokio::test]
+    async fn fixture_database_matches_the_schema_files() {
+        let mut fresh = SqliteConnection::connect("sqlite::memory:").await.unwrap();
+        sqlx::raw_sql(include_str!("schema32.sql"))
+            .execute(&mut fresh)
+            .await
+            .unwrap();
+        sqlx::raw_sql(include_str!("btech_schema.sql"))
+            .execute(&mut fresh)
+            .await
+            .unwrap();
+        let expected = tables(&mut fresh).await;
+        let fixture = Path::new(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/game/data/stompymux.db"
+        ));
+        let mut stored = connect(fixture, 1000, true, false).await.unwrap();
+        let actual = tables(&mut stored).await;
+        stored.close().await.unwrap();
+        assert_eq!(
+            actual, expected,
+            "tests/fixtures/game/data/stompymux.db differs from the schema files"
+        );
+    }
 
     /// The required table list names exactly the tables the schema file creates.
     #[test]
