@@ -17,7 +17,7 @@ pub struct BattlePilotingCheck {
     pub damage: u8,
     /// Construction penalty from a small cockpit, separate from damage.
     pub cockpit: u8,
-    /// Hardened armor adds one while the Mech is running.
+    /// Hardened armor adds one to Mech piloting and vehicle driving rolls.
     pub armor: u8,
     pub situational: i32,
     pub absent_character_pilot: u8,

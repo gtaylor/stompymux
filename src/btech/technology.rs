@@ -3,8 +3,9 @@
 /// A chassis technology that templates may spell by its full name or reference abbreviation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BattleTechnology {
-    /// Armor where each point stops two damage; it weighs twice as much, costs a Mech one
-    /// running MP and adds one to piloting rolls made while running.
+    /// Armor where each point stops two damage and that negates armor-piercing effects. It
+    /// weighs twice as much, costs a Mech one running MP, adds one to piloting and driving
+    /// rolls and subtracts two from critical rolls for damage that penetrates it.
     HardenedArmor,
     /// Structure that halves internal damage and weighs twice as much.
     ReinforcedStructure,
@@ -60,6 +61,9 @@ impl BattleTechnology {
         let removed = amount.div_ceil(2).min(u32::from(armor)) as u16;
         (removed, amount.saturating_sub(u32::from(armor) * 2))
     }
+
+    /// Critical rolls for damage that penetrates hardened armor are two lower.
+    pub(crate) const HARDENED_CRITICAL_PENALTY: u8 = 2;
 
     /// Internal damage after reinforced or composite structure modifies it.
     pub(crate) fn structure_damage(reinforced: bool, composite: bool, amount: u16) -> u16 {
@@ -121,12 +125,9 @@ impl super::BattleUnit {
         if self.hardened_armor() { 10.75 } else { 0.0 }
     }
 
-    /// Hardened armor adds one to piloting rolls while the Mech is running.
+    /// Hardened armor adds one to every piloting roll.
     pub(crate) fn hardened_piloting_modifier(&self) -> u8 {
-        let running = self
-            .motion()
-            .is_some_and(|motion| motion.speed > self.movement_maximum_speed() * 2.0 / 3.0 + 0.1);
-        u8::from(self.hardened_armor() && running)
+        u8::from(self.hardened_armor())
     }
 
     /// Internal damage this Mech actually applies to its structure.
@@ -161,5 +162,26 @@ mod tests {
         assert!(BattleTechnology::recognizes("harm"));
         assert!(BattleTechnology::recognizes("WatchDog_Tech"));
         assert!(!BattleTechnology::recognizes("Clan"));
+    }
+
+    /// The twenty-damage piloting check counts each hardened point lost once, plus overflow.
+    #[test]
+    fn hardened_hits_count_armor_points_toward_piloting_checks() {
+        let mut template = crate::btech::BattleTemplate::parse(include_str!(
+            "../../tests/fixtures/btech/mechs/JR7-D"
+        ))
+        .unwrap();
+        let specials = template.attributes.entry("specials".into()).or_default();
+        specials.push_str(" HARM");
+        let unit = crate::btech::BattleUnit::from_template(template).unwrap();
+        let left_arm = crate::btech::BattleSection::LeftArm;
+        // Six damage removes three of four points: three count.
+        assert_eq!(unit.hardened_hit(left_arm, false, 6), Some((3, 0)));
+        // Twelve damage removes all four and four more pass through: eight count.
+        assert_eq!(unit.hardened_hit(left_arm, false, 12), Some((4, 4)));
+        // Rear torso hits use rear armor.
+        let torso = crate::btech::BattleSection::CenterTorso;
+        assert_eq!(unit.hardened_hit(torso, true, 10), Some((3, 4)));
+        assert_eq!(unit.hardened_piloting_modifier(), 1);
     }
 }

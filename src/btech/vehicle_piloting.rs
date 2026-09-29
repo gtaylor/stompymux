@@ -34,9 +34,15 @@ pub(super) fn roll(
         0
     };
     let damage = vehicle.piloting_damage();
+    let armor = u8::from(
+        vehicle
+            .definition()
+            .has_technology(super::BattleTechnology::HardenedArmor),
+    );
     let target = i32::from(skill)
         .wrapping_add(i32::from(damage))
         .wrapping_add(i32::from(cockpit))
+        .wrapping_add(i32::from(armor))
         .wrapping_add(modifier)
         .wrapping_add(i32::from(absent_character_pilot));
     let blocked =
@@ -58,7 +64,7 @@ pub(super) fn roll(
         skill,
         damage,
         cockpit,
-        armor: 0,
+        armor,
         situational: modifier,
         absent_character_pilot,
         target,

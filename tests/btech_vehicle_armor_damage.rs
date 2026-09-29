@@ -668,13 +668,19 @@ async fn rotor_divisor_preserves_minimum_internal_damage_and_restart() {
     }
 }
 
-/// Hardened armor costs a vehicle one flank MP.
+/// Hardened armor leaves vehicle speed alone and adds one to driving rolls.
 #[tokio::test]
-async fn hardened_armor_reduces_vehicle_flank_speed() {
+async fn hardened_armor_hampers_vehicle_driving() {
     let standard = include_str!("../game/mechs/Demolisher");
     let hardened = standard.replace("ICEEngine_Tech", "ICEEngine_Tech HardenedArmor_Tech");
-    let (_dir, _config, world, id) = fixture(standard).await;
-    let base = world.btech.vehicles()[&id].maximum_speed();
-    let (_dir, _config, world, id) = fixture(&hardened).await;
-    assert_eq!(world.btech.vehicles()[&id].maximum_speed(), base - 10.75);
+    let (_dir, _config, mut plain, plain_id) = fixture(standard).await;
+    let (_dir, _config, mut world, id) = fixture(&hardened).await;
+    assert_eq!(
+        world.btech.vehicles()[&id].maximum_speed(),
+        plain.btech.vehicles()[&plain_id].maximum_speed()
+    );
+    let base = stompymux_rs::roll_battle_piloting(&mut plain, plain_id, 0, true).unwrap();
+    let check = stompymux_rs::roll_battle_piloting(&mut world, id, 0, true).unwrap();
+    assert_eq!((base.armor, check.armor), (0, 1));
+    assert_eq!(check.target, base.target + 1);
 }

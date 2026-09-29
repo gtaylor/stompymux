@@ -226,7 +226,9 @@ pub(super) fn resolve_rear_followup_in_candidate(
     result.overflow = hardened_overflow.unwrap_or(amount - u32::from(result.absorbed));
     let remaining = vehicle.sections()[&hit.section].armor;
     let warning = super::combat_warnings::armor_severity(original, remaining);
+    // Hardened armor negates armor-piercing critical chances.
     let ap = !hit.through_armor_critical
+        && !hardened
         && result.overflow == 0
         && hit.armor_piercing.is_some()
         && (original == 0 || u32::from(remaining) * 100 / u32::from(original) < 50);

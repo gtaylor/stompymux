@@ -1102,14 +1102,22 @@ path, battle value, mass and parsing.
 or its abbreviation, as the reference template loader does. Cost helpers accept both
 spellings too.
 
-- **Hardened armor** (`HardenedArmor_Tech`/`HARM`) follows the tabletop rules on Mechs and
-  vehicles. Each remaining point stops two damage, so a hit removes half its damage in armor
-  (rounding up). Damage beyond twice the remaining armor passes on at full value. The
-  reference instead halved the whole hit, overflow included. Hardened armor costs one
-  running (Mech) or flank (vehicle) MP, 10.75 kph off the speed ceiling. Because walking
-  speed derives from that ceiling, the walking threshold also drops by two-thirds of an MP.
-  Mech piloting rolls made while running get +1 (`BattlePilotingCheck::armor`). Armor
-  weighs eight points per ton.
+- **Hardened armor** (`HardenedArmor_Tech`/`HARM`) follows *Tactical Operations* pp. 280–281
+  and *Tactical Operations: Advanced Units & Equipment* p. 92, for Mechs and vehicles:
+  - Each remaining point stops two damage. A hit removes half its damage in armor (rounding
+    up), and damage beyond twice the remaining armor passes on at full value. The reference
+    instead halved the whole hit, overflow included.
+  - Critical rolls for damage that penetrates the armor are two lower, including the roll of
+    12 that blows off a limb. Through-armor criticals from the hit-location roll are
+    unmodified.
+  - Armor-piercing ammunition loses its critical check and acts as a standard round.
+  - Mechs lose one running MP, 10.75 kph off the speed ceiling. Because walking speed derives
+    from that ceiling, the walking threshold also drops by two-thirds of an MP. Mech piloting
+    rolls and vehicle driving rolls get +1 (`BattlePilotingCheck::armor`). Vehicles keep
+    their speed.
+  - Per the *Tactical Operations* 3.01 errata, each hardened point lost counts as one damage
+    toward the twenty-damage piloting check, and damage beyond the armor counts in full.
+  - Armor weighs eight points per ton.
 - **Reinforced structure** (`ReinforcedInternal_Tech`/`RINT`) halves internal damage,
   rounding up. **Composite structure** (`CompositeInternal_Tech`/`CINT`) doubles it.
   Overflow keeps the modified value, as in the reference. Reinforced structure weighs

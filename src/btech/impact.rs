@@ -1417,7 +1417,13 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
                 .rules
                 .filter(|_| context.unit().posture() != super::BattlePosture::Prone)
             {
-                context.unit_mut().stagger.record(damage, rules.stagger)?;
+                // Errata: each hardened armor point lost counts as one damage toward the
+                // twenty-damage piloting check; damage beyond the armor counts in full.
+                let counted = context
+                    .unit()
+                    .hardened_hit(section, rear, damage)
+                    .map_or(damage, |(removed, overflow)| removed + overflow);
+                context.unit_mut().stagger.record(counted, rules.stagger)?;
             }
         }
         plasma_returns += 1;
@@ -1448,8 +1454,9 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
             )?;
             let warning = super::combat_warnings::armor_level(context.unit(), section, rear);
             damage = hardened.map_or(armor.remaining, |(_, overflow)| overflow);
+            // Hardened armor negates armor-piercing critical chances.
             let ap = match weapon_effect {
-                Some(WeaponEffect::ArmorPiercing(weapon)) => Some(weapon),
+                Some(WeaponEffect::ArmorPiercing(weapon)) if hardened.is_none() => Some(weapon),
                 _ => None,
             }
             .filter(|_| {
@@ -1492,7 +1499,17 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
         let penetrating = !internal_only && damage > 0;
         if damage > 0 {
             // The reference consumes this roll even when a TAC already supplied criticals.
-            let roll = context.unit_mut().dice.generic_roll();
+            // Damage that penetrated hardened armor rolls two lower.
+            let penalty = if !internal_only && context.unit().hardened_armor() {
+                super::BattleTechnology::HARDENED_CRITICAL_PENALTY
+            } else {
+                0
+            };
+            let roll = context
+                .unit_mut()
+                .dice
+                .generic_roll()
+                .saturating_sub(penalty);
             if tac_criticals == 0 {
                 if roll == 12
                     && matches!(
@@ -1636,4 +1653,103 @@ fn resolve_criticals(
         context.lose_critical(location)?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A Jenner, optionally with hardened armor, seeded for a deterministic damage stream.
+    fn world(hardened: bool, seed: u8) -> (World, ObjectId) {
+        let mut template = super::super::BattleTemplate::parse(include_str!(
+            "../../tests/fixtures/btech/mechs/JR7-D"
+        ))
+        .unwrap();
+        if hardened {
+            let specials = template.attributes.entry("specials".into()).or_default();
+            specials.push_str(" HardenedArmor_Tech");
+        }
+        let mut unit = BattleUnit::from_template(template).unwrap();
+        unit.dice = super::super::BattleDice::seeded([seed; 32]);
+        let mut world = World::default();
+        let id = ObjectId(41);
+        world.btech.constructed.insert(id, unit);
+        (world, id)
+    }
+
+    /// An unguided hit on the left arm, with or without armor-piercing ammunition.
+    fn strike(world: &mut World, id: ObjectId, damage: u16, effect: WeaponEffect) {
+        resolve_attack_in_candidate(
+            world,
+            id,
+            BattleHit {
+                section: BattleSection::LeftArm,
+                rear_armor: false,
+                through_armor_critical: false,
+                crew_stun: false,
+            },
+            damage,
+            None,
+            AttackImpact {
+                attacker: None,
+                weapon_effect: Some(effect),
+                character: false,
+                followup: false,
+            },
+        )
+        .unwrap();
+    }
+
+    /// Hardened armor negates the armor-piercing critical check, so an AP round consumes
+    /// exactly the dice of an ordinary round. Against standard armor the check still rolls.
+    #[test]
+    fn hardened_armor_negates_armor_piercing_criticals() {
+        let ap = WeaponEffect::ArmorPiercing(super::super::BattleWeapon::Ac10);
+        // Six hardened damage leaves one of four armor points: exposed but not breached.
+        let (mut piercing, id) = world(true, 3);
+        let (mut conventional, _) = world(true, 3);
+        strike(&mut piercing, id, 6, ap);
+        strike(&mut conventional, id, 6, WeaponEffect::Conventional);
+        let (piercing, conventional) = (
+            &piercing.btech.constructed_units()[&id],
+            &conventional.btech.constructed_units()[&id],
+        );
+        assert_eq!(piercing.dice, conventional.dice);
+        assert_eq!(piercing.sections(), conventional.sections());
+        assert_eq!(piercing.lost_criticals(), conventional.lost_criticals());
+        let (mut piercing, _) = world(false, 3);
+        let (mut conventional, _) = world(false, 3);
+        strike(&mut piercing, id, 3, ap);
+        strike(&mut conventional, id, 3, WeaponEffect::Conventional);
+        assert_ne!(
+            piercing.btech.constructed_units()[&id].dice,
+            conventional.btech.constructed_units()[&id].dice
+        );
+    }
+
+    /// Damage that penetrates hardened armor rolls criticals two lower.
+    #[test]
+    fn hardened_armor_lowers_penetrating_critical_rolls() {
+        let mut exercised = [false, false];
+        for seed in 0..=63 {
+            let mut dice = super::super::BattleDice::seeded([seed; 32]);
+            dice.two_d6();
+            let roll = dice.two_d6();
+            // Twelve damage strips four hardened points and puts four into the structure.
+            let (mut world, id) = world(true, seed);
+            let before = world.btech.constructed_units()[&id].lost_criticals().len();
+            strike(&mut world, id, 12, WeaponEffect::Conventional);
+            let unit = &world.btech.constructed_units()[&id];
+            assert_eq!(unit.sections()[&BattleSection::LeftArm].internal, 2);
+            let critical = unit.lost_criticals().len() > before;
+            assert_eq!(critical, roll >= 10, "seed {seed} roll {roll}");
+            if (8..10).contains(&roll) {
+                exercised[0] = true;
+            }
+            if roll >= 10 {
+                exercised[1] = true;
+            }
+        }
+        assert_eq!(exercised, [true, true]);
+    }
 }
