@@ -214,9 +214,30 @@ fn fire_mode(bits: &[i32]) -> BattleFireMode {
         BattleFireMode::Normal
     }
 }
+/// Project the first round bit; an MML family bit selects the matching long-range supply.
 fn ammo_mode(bits: &[i32]) -> BattleAmmunitionMode {
-    match bits.first().copied().unwrap_or(0) {
+    let long_range = bits.contains(&4194304);
+    let round = munition_mode(
+        bits.iter()
+            .copied()
+            .find(|&bit| bit != 4194304)
+            .unwrap_or(0),
+    );
+    if !long_range {
+        return round;
+    }
+    round
+        .with_mml_family(true)
+        .unwrap_or(BattleAmmunitionMode::MmlLrm)
+}
+
+/// The round selected by one reference ammunition bit, excluding the MML family bit.
+fn munition_mode(bit: i32) -> BattleAmmunitionMode {
+    match bit {
         1 | 8 => BattleAmmunitionMode::Cluster,
+        // Shared reference bits resolve as template flags do: Artemis/Mine and Narc/Smoke.
+        2 => BattleAmmunitionMode::Artemis,
+        4 => BattleAmmunitionMode::Narc,
         16 => BattleAmmunitionMode::Mine,
         32 => BattleAmmunitionMode::Smoke,
         64 => BattleAmmunitionMode::Inferno,
@@ -235,7 +256,6 @@ fn ammo_mode(bits: &[i32]) -> BattleAmmunitionMode {
         524288 => BattleAmmunitionMode::SemiGuided,
         1048576 => BattleAmmunitionMode::ExtendedRange,
         2097152 => BattleAmmunitionMode::HighExplosive,
-        4194304 => BattleAmmunitionMode::MmlLrm,
         _ => BattleAmmunitionMode::Normal,
     }
 }
@@ -888,4 +908,30 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         })?,
     )?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Each round bit combined with the MML family bit selects the matching long-range supply.
+    #[test]
+    fn mml_family_bit_combines_with_every_long_range_round() {
+        for (bit, mode) in [
+            (0, BattleAmmunitionMode::MmlLrm),
+            (2, BattleAmmunitionMode::MmlLrmArtemis),
+            (4, BattleAmmunitionMode::MmlLrmNarc),
+            (128, BattleAmmunitionMode::MmlLrmSwarm),
+            (256, BattleAmmunitionMode::MmlLrmSwarm1),
+            (131072, BattleAmmunitionMode::MmlLrmStinger),
+            (524288, BattleAmmunitionMode::MmlLrmSemiGuided),
+        ] {
+            let bits: Vec<i32> = [bit, 4194304].into_iter().filter(|&bit| bit != 0).collect();
+            assert_eq!(ammo_mode(&bits), mode, "{bits:?}");
+        }
+        assert_eq!(ammo_mode(&[2]), BattleAmmunitionMode::Artemis);
+        assert_eq!(ammo_mode(&[4]), BattleAmmunitionMode::Narc);
+        // SRM-only rounds fall back to the plain long-range supply.
+        assert_eq!(ammo_mode(&[64, 4194304]), BattleAmmunitionMode::MmlLrm);
+    }
 }

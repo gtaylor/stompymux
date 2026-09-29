@@ -90,7 +90,7 @@ pub(super) fn modifiers_for_source(
             )
         };
     ensure!(
-        ammunition != BattleAmmunitionMode::Stinger,
+        ammunition.munition() != BattleAmmunitionMode::Stinger,
         "Stinger missiles cannot shoot hexes!"
     );
     let indirect = super::spotter::indirect_hex_for_source(world, source, weapon_index)?;

@@ -201,7 +201,7 @@ fn weapon_line<S>(mount: BattleWeaponInspection<S>, location: &str) -> String {
             " [ULTRA]"
         } else if mount.fire_mode == super::BattleFireMode::Hotload {
             " [HOTLOAD]"
-        } else if mount.ammunition_mode == super::BattleAmmunitionMode::Artemis {
+        } else if mount.ammunition_mode.munition() == super::BattleAmmunitionMode::Artemis {
             " [Artemis]"
         } else if mount.ammunition_mode == super::BattleAmmunitionMode::Cluster {
             if state.weapon.is_artillery() {
@@ -230,11 +230,11 @@ fn weapon_line<S>(mount: BattleWeaponInspection<S>, location: &str) -> String {
             " [Precision]"
         } else if mount.ammunition_mode == super::BattleAmmunitionMode::Flechette {
             " [Flechette]"
-        } else if mount.ammunition_mode == super::BattleAmmunitionMode::Swarm {
+        } else if mount.ammunition_mode.munition() == super::BattleAmmunitionMode::Swarm {
             " [Swarm]"
-        } else if mount.ammunition_mode == super::BattleAmmunitionMode::Swarm1 {
+        } else if mount.ammunition_mode.munition() == super::BattleAmmunitionMode::Swarm1 {
             " [Swarm1]"
-        } else if mount.ammunition_mode == super::BattleAmmunitionMode::SemiGuided {
+        } else if mount.ammunition_mode.munition() == super::BattleAmmunitionMode::SemiGuided {
             " [Sguided]"
         } else {
             ""

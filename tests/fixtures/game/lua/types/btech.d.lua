@@ -77,7 +77,7 @@
 ---@field section BattleSectionName
 ---@field slot integer Zero-based critical slot.
 
----@alias BattleAmmunitionMode "smoke"|"mine"|"i_narc_explosive"|"i_narc_haywire"|"i_narc_ecm"|"i_narc_nemesis"|"semi_guided"|"swarm"|"swarm1"|"stinger"|"narc"|"normal"|"cluster"|"artemis"|"precision"|"flechette"|"armor_piercing"|"caseless"|"incendiary"|"inferno"|"mml_lrm"|"extended_range"|"high_explosive"
+---@alias BattleAmmunitionMode "smoke"|"mine"|"i_narc_explosive"|"i_narc_haywire"|"i_narc_ecm"|"i_narc_nemesis"|"semi_guided"|"swarm"|"swarm1"|"stinger"|"narc"|"normal"|"cluster"|"artemis"|"precision"|"flechette"|"armor_piercing"|"caseless"|"incendiary"|"inferno"|"mml_lrm"|"mml_lrm_artemis"|"mml_lrm_narc"|"mml_lrm_swarm"|"mml_lrm_swarm1"|"mml_lrm_semi_guided"|"mml_lrm_stinger"|"extended_range"|"high_explosive"
 
 ---@alias BattleFireMode "normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary4"|"rotary6"|"gatling"
 
@@ -1275,7 +1275,7 @@ function btech_unit.heatcutoff(dbref, pilot) end
 ---@param dbref integer
 ---@param pilot integer
 ---@param weapon integer Zero-based weapon number.
----@return BattleAmmunitionMode normal for SRM, mml_lrm for LRM.
+---@return BattleAmmunitionMode The selected supply: SRM rounds, or mml_lrm and its mml_lrm_* special rounds for LRM.
 function btech_unit.mml(dbref, pilot, weapon) end
 
 ---Toggle Extended Range ammunition on an eligible indirect launcher; requires matching bins.

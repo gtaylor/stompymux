@@ -412,10 +412,16 @@ impl BattleUnit {
                         section: location.section,
                         slot,
                     })
-                    && self.ammunition_modes.get(&index)
-                        == Some(&super::BattleAmmunitionMode::Artemis)
+                    && let Some(&mode) = self.ammunition_modes.get(&index)
+                    && mode.munition() == super::BattleAmmunitionMode::Artemis
                 {
-                    self.ammunition_modes.remove(&index);
+                    // Losing the controller keeps an MML's long-range family selected.
+                    let mode = mode.with_munition(super::BattleAmmunitionMode::Normal);
+                    if mode == super::BattleAmmunitionMode::Normal {
+                        self.ammunition_modes.remove(&index);
+                    } else {
+                        self.ammunition_modes.insert(index, mode);
+                    }
                 }
             }
         }

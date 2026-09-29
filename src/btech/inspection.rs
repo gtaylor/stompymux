@@ -813,12 +813,34 @@ fn live_fire_mode(mode: super::BattleFireMode) -> Option<i32> {
         super::BattleFireMode::Gatling => 4096,
     })
 }
+/// Live selection bits; MML long-range special rounds report both the round and family bits.
 fn live_ammunition_mode(
+    mode: super::BattleAmmunitionMode,
+    weapon: super::BattleWeapon,
+) -> Vec<i32> {
+    let mut bits: Vec<i32> = live_munition_bit(mode.munition(), weapon)
+        .into_iter()
+        .collect();
+    if mode.is_mml_lrm() {
+        bits.push(4194304);
+    }
+    bits
+}
+
+/// The single reference bit for a round, excluding the MML family bit.
+fn live_munition_bit(
     mode: super::BattleAmmunitionMode,
     weapon: super::BattleWeapon,
 ) -> Option<i32> {
     Some(match mode {
-        super::BattleAmmunitionMode::Normal => return None,
+        super::BattleAmmunitionMode::Normal
+        | super::BattleAmmunitionMode::MmlLrm
+        | super::BattleAmmunitionMode::MmlLrmArtemis
+        | super::BattleAmmunitionMode::MmlLrmNarc
+        | super::BattleAmmunitionMode::MmlLrmSwarm
+        | super::BattleAmmunitionMode::MmlLrmSwarm1
+        | super::BattleAmmunitionMode::MmlLrmSemiGuided
+        | super::BattleAmmunitionMode::MmlLrmStinger => return None,
         super::BattleAmmunitionMode::Cluster => {
             if weapon.is_lbx() {
                 1
@@ -834,7 +856,6 @@ fn live_ammunition_mode(
         super::BattleAmmunitionMode::Swarm => 128,
         super::BattleAmmunitionMode::Swarm1 => 256,
         super::BattleAmmunitionMode::Stinger => 131072,
-        super::BattleAmmunitionMode::MmlLrm => 4194304,
         super::BattleAmmunitionMode::ExtendedRange => 1048576,
         super::BattleAmmunitionMode::HighExplosive => 2097152,
         super::BattleAmmunitionMode::INarcExplosive => 512,

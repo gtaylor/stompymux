@@ -71,7 +71,8 @@ impl BattleWeapon {
     /// Select the attached effect; explosive ammunition uses ordinary salvo damage instead.
     pub(super) fn beacon_kind(self, mode: BattleAmmunitionMode) -> Option<BattleBeaconKind> {
         if self.is_narc() {
-            return (mode != BattleAmmunitionMode::Narc).then_some(BattleBeaconKind::Narc);
+            return (mode.munition() != BattleAmmunitionMode::Narc)
+                .then_some(BattleBeaconKind::Narc);
         }
         if self != Self::INarcBeacon {
             return None;
@@ -221,9 +222,9 @@ pub fn toggle_narc(
     pilot: ObjectId,
     index: usize,
 ) -> Result<BattleAmmunitionMode> {
-    let ready = super::weapon_controls::ready_weapon(world, id, pilot, index)?;
+    super::weapon_controls::ready_weapon(world, id, pilot, index)?;
     ensure!(
-        BattleAmmunitionMode::Narc.supports(ready.weapon),
+        super::weapon_controls::selectable_munition(world, id, index, BattleAmmunitionMode::Narc),
         "That weapon cannot be set NARC!"
     );
     Ok(super::weapon_controls::toggle_ammunition_mode(
@@ -251,7 +252,7 @@ pub fn toggle_explosive(
 
 /// Shared mode descriptions for native and Lua controls.
 pub(crate) fn message(mode: BattleAmmunitionMode, index: usize, explosive: bool) -> String {
-    let text = match (explosive, mode == BattleAmmunitionMode::Narc) {
+    let text = match (explosive, mode.munition() == BattleAmmunitionMode::Narc) {
         (true, true) => "explosive rounds",
         (true, false) => "NARC beacons",
         (false, true) => "Narc Beacon compatible missiles.",

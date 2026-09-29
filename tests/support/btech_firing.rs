@@ -127,11 +127,8 @@ pub fn supply_fixture_on(
                 CriticalDefinition {
                     equipment: format!("Ammo_{}", weapon.name()),
                     data: weapon.profile().ammunition_per_ton.to_string(),
-                    modes: if flag.is_empty() {
-                        vec![]
-                    } else {
-                        vec![flag.into()]
-                    },
+                    // Whitespace separates combined flags, such as an MML family plus a special round.
+                    modes: flag.split_whitespace().map(Into::into).collect(),
                     brand: None,
                 },
             );

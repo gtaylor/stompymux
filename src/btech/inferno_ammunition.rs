@@ -20,9 +20,14 @@ pub fn toggle_inferno(
     pilot: ObjectId,
     index: usize,
 ) -> Result<BattleAmmunitionMode> {
-    let ready = super::weapon_controls::ready_weapon(world, id, pilot, index)?;
+    super::weapon_controls::ready_weapon(world, id, pilot, index)?;
     ensure!(
-        BattleAmmunitionMode::Inferno.supports(ready.weapon),
+        super::weapon_controls::selectable_munition(
+            world,
+            id,
+            index,
+            BattleAmmunitionMode::Inferno
+        ),
         "That weapon cannot be set to fire Inferno missiles!"
     );
     Ok(super::weapon_controls::toggle_ammunition_mode(

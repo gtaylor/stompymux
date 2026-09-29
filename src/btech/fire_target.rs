@@ -182,7 +182,7 @@ pub(super) fn resolve_conventional_for_source(
         });
     }
     ensure!(
-        coordinate.is_none() || ammunition != super::BattleAmmunitionMode::Stinger,
+        coordinate.is_none() || ammunition.munition() != super::BattleAmmunitionMode::Stinger,
         "Stinger missiles cannot shoot hexes!"
     );
     Ok(ResolvedFireTarget::Unit { unit, coordinate })

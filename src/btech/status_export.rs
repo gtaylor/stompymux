@@ -21,6 +21,13 @@ pub(super) fn mode_letter(mode: Mode, weapon: BattleWeapon) -> char {
         Mode::Swarm1 => '1',
         Mode::Stinger => 'T',
         Mode::MmlLrm => 'L',
+        // Special MML long-range rounds report their round letter, matching the reference precedence.
+        Mode::MmlLrmArtemis
+        | Mode::MmlLrmNarc
+        | Mode::MmlLrmSwarm
+        | Mode::MmlLrmSwarm1
+        | Mode::MmlLrmSemiGuided
+        | Mode::MmlLrmStinger => mode_letter(mode.munition(), weapon),
         Mode::ExtendedRange => 'R',
         Mode::HighExplosive => 'X',
         Mode::Narc => {

@@ -355,7 +355,7 @@ fn check_unit_target(
     } else {
         world.btech.constructed_units()[&shooter].ammunition_mode(index)?
     };
-    if ammunition == BattleAmmunitionMode::Stinger {
+    if ammunition.munition() == BattleAmmunitionMode::Stinger {
         ensure!(
             super::stinger::target_airborne(world, target),
             "Stinger missiles can only engage airborne targets!"

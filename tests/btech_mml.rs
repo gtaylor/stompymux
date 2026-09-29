@@ -446,3 +446,151 @@ async fn mml_ammunition_hazards_follow_bin_contents() {
         }
     }
 }
+
+/// Long-range MML bins can carry one LRM special round. Controls select it within the LRM
+/// family, firing draws the matching bin with LRM grouping, and the selection survives restart.
+#[tokio::test]
+async fn mml_long_range_special_rounds_select_fire_and_persist() {
+    type Toggle = fn(&mut World, ObjectId, ObjectId, usize) -> anyhow::Result<BattleAmmunitionMode>;
+    let rounds: [(&str, Toggle, BattleAmmunitionMode, BattleAmmunitionMode); 5] = [
+        (
+            "Narc/Smoke",
+            toggle_battle_narc,
+            BattleAmmunitionMode::Narc,
+            BattleAmmunitionMode::MmlLrmNarc,
+        ),
+        (
+            "Swarm",
+            |world, id, pilot, index| toggle_battle_swarm(world, id, pilot, index, false),
+            BattleAmmunitionMode::Swarm,
+            BattleAmmunitionMode::MmlLrmSwarm,
+        ),
+        (
+            "Swarm1",
+            |world, id, pilot, index| toggle_battle_swarm(world, id, pilot, index, true),
+            BattleAmmunitionMode::Swarm1,
+            BattleAmmunitionMode::MmlLrmSwarm1,
+        ),
+        (
+            "Sguided",
+            toggle_battle_semiguided,
+            BattleAmmunitionMode::SemiGuided,
+            BattleAmmunitionMode::MmlLrmSemiGuided,
+        ),
+        (
+            "Stinger",
+            toggle_battle_stinger,
+            BattleAmmunitionMode::Stinger,
+            BattleAmmunitionMode::MmlLrmStinger,
+        ),
+    ];
+    for source in firing::templates() {
+        for (flag, toggle, round, mode) in rounds {
+            let (_dir, config, mut world, shooter, target, index) = firing::fixture_with_supply(
+                &source,
+                Some(BattleWeapon::Mml9),
+                include_str!("../game/mechs/AS7-D"),
+                false,
+                Some(&format!("MML_LRM {flag}")),
+            )
+            .await;
+            let pilot = ObjectId(1);
+            // Narc rounds exist in both families; LRM-only rounds are refused while SRM is selected.
+            if round == BattleAmmunitionMode::Narc {
+                assert_eq!(toggle(&mut world, shooter, pilot, index).unwrap(), round);
+                assert_eq!(
+                    toggle_mml_ammunition(&mut world, shooter, pilot, index).unwrap(),
+                    mode
+                );
+            } else {
+                let before = world.btech.clone();
+                assert!(toggle(&mut world, shooter, pilot, index).is_err());
+                assert_eq!(world.btech, before);
+                assert_eq!(
+                    toggle_mml_ammunition(&mut world, shooter, pilot, index).unwrap(),
+                    BattleAmmunitionMode::MmlLrm
+                );
+                assert_eq!(toggle(&mut world, shooter, pilot, index).unwrap(), mode);
+                // Returning to SRM drops the LRM-only round rather than keeping an impossible supply.
+                assert_eq!(
+                    toggle_mml_ammunition(&mut world, shooter, pilot, index).unwrap(),
+                    BattleAmmunitionMode::Normal
+                );
+                toggle_mml_ammunition(&mut world, shooter, pilot, index).unwrap();
+                assert_eq!(toggle(&mut world, shooter, pilot, index).unwrap(), mode);
+            }
+            // SRM-only Inferno rounds are refused while the LRM family is selected.
+            let selected = world.btech.clone();
+            assert!(toggle_battle_inferno(&mut world, shooter, pilot, index).is_err());
+            assert_eq!(world.btech, selected);
+            // Toggling the round again keeps the LRM family.
+            assert_eq!(
+                toggle(&mut world, shooter, pilot, index).unwrap(),
+                BattleAmmunitionMode::MmlLrm
+            );
+            assert_eq!(toggle(&mut world, shooter, pilot, index).unwrap(), mode);
+
+            let seed = (0..=255)
+                .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+                .unwrap();
+            firing::edit(&mut world, shooter, |state| {
+                state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+            });
+            firing::edit(&mut world, target, |state| {
+                state["position"]["y"] = 4.into();
+                state["motion"]["point"] =
+                    serde_json::to_value(BattleHexCoordinate { x: 0, y: 4 }.center()).unwrap();
+            });
+            let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+            let fire = format!(
+                "return btech.unit.fire({},1,{index},{})",
+                shooter.0, target.0
+            );
+            if round == BattleAmmunitionMode::Stinger {
+                // Stinger rounds keep their airborne-only restriction in the LRM family.
+                let before = scripts.world().btech.clone();
+                let error = scripts
+                    .eval_callback::<mlua::Table>(&fire)
+                    .unwrap_err()
+                    .to_string();
+                assert!(error.contains("airborne"), "{error}");
+                assert_eq!(scripts.world().btech, before);
+                continue;
+            }
+            let report: mlua::Table = scripts.eval_callback(&fire).unwrap();
+            let launch = report
+                .get::<Option<mlua::Table>>("launch")
+                .unwrap()
+                .unwrap_or(report.clone());
+            let expenditure: mlua::Table = launch.get("expenditure").unwrap();
+            assert_eq!(
+                expenditure.get::<String>("ammunition_mode").unwrap(),
+                serde_json::to_value(mode).unwrap().as_str().unwrap()
+            );
+            let draws: mlua::Table = expenditure.get("ammunition").unwrap();
+            assert_eq!(draws.raw_len(), 1);
+            if !matches!(
+                round,
+                BattleAmmunitionMode::Swarm | BattleAmmunitionMode::Swarm1
+            ) {
+                let salvo: mlua::Table = report.get("salvo").unwrap();
+                let salvo = salvo
+                    .get::<Option<mlua::Table>>("report")
+                    .unwrap()
+                    .unwrap_or(salvo);
+                let groups: mlua::Table = salvo.get("groups").unwrap();
+                assert!(groups.raw_len() > 0, "MML hit must deal damage");
+                for group in groups.sequence_values::<mlua::Table>() {
+                    let damage = group.unwrap().get::<u16>("damage").unwrap();
+                    assert!((1..=5).contains(&damage), "LRM grouping: {damage}");
+                }
+            }
+            let saved = scripts.world().clone();
+            persistence::save(&config.database(), &saved).await.unwrap();
+            assert_eq!(
+                persistence::load(&config.database()).await.unwrap().btech,
+                saved.btech
+            );
+        }
+    }
+}

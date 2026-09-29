@@ -121,7 +121,7 @@ impl BattleWeapon {
             "Inferno hits use burn exposure instead of armor damage groups"
         );
         let cluster = mode == super::BattleAmmunitionMode::Cluster;
-        let artemis = mode == super::BattleAmmunitionMode::Artemis;
+        let artemis = mode.munition() == super::BattleAmmunitionMode::Artemis;
         if let Some(distance) = distance {
             ensure!(
                 distance.is_finite() && distance >= 0.0,
@@ -164,7 +164,7 @@ impl BattleWeapon {
         } else {
             self.missile_hits(adjusted.clamp(2, 12) as u8)?
         };
-        let group_size = if mode == super::BattleAmmunitionMode::MmlLrm
+        let group_size = if mode.is_mml_lrm()
             || matches!(
                 self,
                 Self::ClanLrm5

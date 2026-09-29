@@ -44,7 +44,7 @@ pub(super) struct SwarmRequest<'a> {
 impl BattleAmmunitionMode {
     /// Swarm rounds bypass interception and retain unused missiles between targets.
     pub(super) fn is_swarm(self) -> bool {
-        matches!(self, Self::Swarm | Self::Swarm1)
+        matches!(self.munition(), Self::Swarm | Self::Swarm1)
     }
 }
 
@@ -216,7 +216,7 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Ba
             let Some(unit) = super::scanner::scanner_unit(world, candidate) else {
                 continue;
             };
-            if request.weapon.ammunition_mode == BattleAmmunitionMode::Swarm1
+            if request.weapon.ammunition_mode.munition() == BattleAmmunitionMode::Swarm1
                 && unit.signature.team == team
             {
                 continue;
@@ -282,7 +282,7 @@ pub fn toggle_swarm(
         BattleAmmunitionMode::Swarm
     };
     anyhow::ensure!(
-        mode.supports(ready.weapon),
+        super::weapon_controls::selectable_munition(world, id, index, mode),
         "That weapon cannot fire Swarm missiles!"
     );
     Ok(super::weapon_controls::toggle_ammunition_mode(
@@ -293,7 +293,7 @@ pub fn toggle_swarm(
 impl BattleAmmunitionMode {
     /// Shared native and Lua ammunition selection feedback.
     pub(crate) fn swarm_message(self, index: usize) -> String {
-        let name = match self {
+        let name = match self.munition() {
             Self::Swarm => "Swarm",
             Self::Swarm1 => "Swarm1",
             _ => {

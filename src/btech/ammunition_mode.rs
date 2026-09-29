@@ -22,6 +22,18 @@ pub enum BattleAmmunitionMode {
     Stinger,
     /// Long-range ammunition dedicated to a multi-missile launcher.
     MmlLrm,
+    /// MML long-range rounds compatible with Artemis IV guidance.
+    MmlLrmArtemis,
+    /// MML long-range rounds compatible with Narc beacons.
+    MmlLrmNarc,
+    /// MML long-range Swarm rounds.
+    MmlLrmSwarm,
+    /// MML long-range Swarm-I rounds that skip friendly units.
+    MmlLrmSwarm1,
+    /// MML long-range semi-guided rounds.
+    MmlLrmSemiGuided,
+    /// MML long-range anti-air Stinger rounds.
+    MmlLrmStinger,
     ExtendedRange,
     HighExplosive,
     INarcExplosive,
@@ -42,7 +54,13 @@ impl BattleAmmunitionMode {
     pub(super) fn supports(self, weapon: BattleWeapon) -> bool {
         match self {
             Self::Normal => true,
-            Self::MmlLrm => weapon.is_mml(),
+            Self::MmlLrm
+            | Self::MmlLrmArtemis
+            | Self::MmlLrmNarc
+            | Self::MmlLrmSwarm
+            | Self::MmlLrmSwarm1
+            | Self::MmlLrmSemiGuided
+            | Self::MmlLrmStinger => weapon.is_mml(),
             Self::ExtendedRange | Self::HighExplosive => weapon.supports_semiguided(),
             Self::Inferno => weapon.profile().missiles > 0,
             Self::SemiGuided | Self::Stinger => weapon.supports_semiguided(),
@@ -100,7 +118,7 @@ impl BattleAmmunitionMode {
 
     /// Mounted weapons may carry several mode bits; preserve their ammunition precedence.
     pub(super) fn initial_selection(weapon: BattleWeapon, flags: &[String]) -> Self {
-        [
+        let mode = [
             "AP",
             "Precision",
             "Flechette",
@@ -126,9 +144,18 @@ impl BattleAmmunitionMode {
             "HighExplosive",
         ]
         .into_iter()
+        .filter(|flag| !weapon.is_mml() || *flag != "MML_LRM")
         .find(|flag| flags.iter().any(|value| value == flag))
         .and_then(|flag| Self::from_flag(weapon, flag))
-        .unwrap_or_default()
+        .unwrap_or_default();
+        if !weapon.is_mml() {
+            return mode;
+        }
+        // MMLs select the flagged family; a round that family cannot carry falls back to normal.
+        let long_range = flags.iter().any(|flag| flag == "MML_LRM");
+        mode.with_mml_family(long_range)
+            .or_else(|| Self::Normal.with_mml_family(long_range))
+            .unwrap_or_default()
     }
 
     /// Read a bin's single ammunition type; conflicting or unrelated flags are invalid.
@@ -139,6 +166,16 @@ impl BattleAmmunitionMode {
         if let [flag] = flags
             && let Some(mode) = Self::from_flag(weapon, flag)
             && mode.supports(weapon)
+        {
+            return Ok(mode);
+        }
+        // MML long-range bins may pair the family flag with one compatible special round.
+        if weapon.is_mml()
+            && let [first, second] = flags
+            && let Some(special) = [first, second].into_iter().find(|flag| *flag != "MML_LRM")
+            && [first, second].into_iter().any(|flag| flag == "MML_LRM")
+            && let Some(mode) = Self::from_flag(weapon, special)
+            && let Some(mode) = mode.with_mml_family(true)
         {
             return Ok(mode);
         }
@@ -162,7 +199,7 @@ impl BattleAmmunitionMode {
 
     /// Artemis command feedback distinguishes compatible missiles from ordinary ammunition.
     pub(crate) fn artemis_message(self, index: usize) -> String {
-        if self == Self::Artemis {
+        if self.munition() == Self::Artemis {
             return self.message(index);
         }
         format!("Weapon {index} has been set to fire normal missiles")
@@ -170,7 +207,7 @@ impl BattleAmmunitionMode {
 
     /// Shared mode-switch feedback for native and Lua callers.
     pub(crate) fn message(self, index: usize) -> String {
-        if self == Self::Artemis {
+        if self.munition() == Self::Artemis {
             return format!("Weapon {index} has been set to fire Artemis IV compatible missiles.");
         }
         format!(
@@ -293,7 +330,12 @@ pub fn toggle_artemis(
         "You do not have an Artemis system for that weapon."
     );
     ensure!(
-        BattleAmmunitionMode::Artemis.supports(readiness.weapon) && !readiness.weapon.is_rocket(),
+        super::weapon_controls::selectable_munition(
+            world,
+            id,
+            index,
+            BattleAmmunitionMode::Artemis
+        ) && !readiness.weapon.is_rocket(),
         "That weapon cannot be set ARTEMIS!"
     );
     Ok(super::weapon_controls::toggle_ammunition_mode(
@@ -317,7 +359,7 @@ pub(crate) fn artemis_command(
 impl BattleAmmunitionMode {
     /// These missile supplies do not trigger automatic defensive interception.
     pub(super) fn bypasses_ams(self) -> bool {
-        matches!(self, Self::Swarm | Self::Swarm1 | Self::Mine)
+        matches!(self.munition(), Self::Swarm | Self::Swarm1 | Self::Mine)
     }
 }
 

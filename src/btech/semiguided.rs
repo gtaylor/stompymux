@@ -13,7 +13,7 @@ impl BattleWeapon {
 impl BattleAmmunitionMode {
     /// Friendly TAG from another unit removes positive movement penalties but preserves negative modifiers.
     pub(super) fn tag_movement_modifier(self, movement: i8, friendly_other_tag: bool) -> i8 {
-        if self == Self::SemiGuided && friendly_other_tag {
+        if self.munition() == Self::SemiGuided && friendly_other_tag {
             return movement.min(0);
         }
         movement
@@ -21,7 +21,7 @@ impl BattleAmmunitionMode {
 
     /// Shared native/Lua cockpit feedback.
     pub(crate) fn semiguided_message(self, index: usize) -> String {
-        if self == Self::SemiGuided {
+        if self.munition() == Self::SemiGuided {
             return format!("Weapon {index} has been set to fire Sguided missiles.");
         }
         format!("Weapon {index} has been set to fire normal missiles")
@@ -35,9 +35,14 @@ pub fn toggle_semiguided(
     pilot: ObjectId,
     index: usize,
 ) -> Result<BattleAmmunitionMode> {
-    let ready = super::weapon_controls::ready_weapon(world, id, pilot, index)?;
+    super::weapon_controls::ready_weapon(world, id, pilot, index)?;
     ensure!(
-        ready.weapon.supports_semiguided(),
+        super::weapon_controls::selectable_munition(
+            world,
+            id,
+            index,
+            BattleAmmunitionMode::SemiGuided
+        ),
         "That weapon cannot fire Sguided missiles!"
     );
     Ok(super::weapon_controls::toggle_ammunition_mode(
