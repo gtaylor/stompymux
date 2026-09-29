@@ -429,9 +429,10 @@ mod status_export;
 
 pub(crate) mod physical;
 pub use physical::{
-    BattleArm, BattleArmAttackReport, BattleArmRejection, BattleArmSelection, BattleLeg,
-    BattlePhysicalAttack, BattlePhysicalProfile, BattlePhysicalReport, BattlePhysicalRules,
-    kick_profile, punch_profile, resolve_kick, resolve_punch, resolve_trip, trip_profile,
+    BattleArm, BattleArmAttackReport, BattleArmRejection, BattleArmSelection,
+    BattleLancePenetration, BattleLeg, BattlePhysicalAttack, BattlePhysicalProfile,
+    BattlePhysicalReport, BattlePhysicalRules, kick_profile, punch_profile, resolve_kick,
+    resolve_punch, resolve_trip, trip_profile,
 };
 
 mod myomer;

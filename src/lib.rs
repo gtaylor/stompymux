@@ -228,8 +228,8 @@ pub use btech::set_friendly_fire_safety as set_battle_friendly_fire_safety;
 pub use btech::{unit_status as battle_unit_status, weapon_status as battle_weapon_status};
 
 pub use btech::{
-    BattleLeg, BattlePhysicalProfile, BattlePhysicalReport, BattlePhysicalRules,
-    kick_profile as battle_kick_profile, resolve_kick as resolve_battle_kick,
+    BattleLancePenetration, BattleLeg, BattlePhysicalProfile, BattlePhysicalReport,
+    BattlePhysicalRules, kick_profile as battle_kick_profile, resolve_kick as resolve_battle_kick,
 };
 
 // Physical arm selection and punch reports share the kick damage domain.

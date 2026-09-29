@@ -18498,6 +18498,138 @@ async fn flail_and_wrecking_ball_fumbles_and_knockdown() {
     assert!(report.attacks[0].balance.is_none());
 }
 
+/// A lance drives one point through remaining armor on 10+, rolling that point's critical at -2;
+/// once the struck location's armor is gone, no penetration check is made.
+#[tokio::test]
+async fn lance_penetrates_remaining_armor_with_reduced_criticals() {
+    use stompymux_rs::*;
+    let (_dir, config, original, id, target) = kick_fixture().await;
+    let hit_seed = (0..=255)
+        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+        .unwrap();
+    let mut armed = original.clone();
+    install_right_arm_weapon(&mut armed, id, BattleArmAttack::Lance, 2);
+    shot_seed(&mut armed, id, hit_seed);
+    // Armor the target heavily enough that the lance's seven damage never breaches it.
+    let mut state = serde_json::to_value(&armed.btech).unwrap();
+    let unit = &mut state["constructed"][target.0.to_string()];
+    for name in unit["sections"]
+        .as_object()
+        .unwrap()
+        .keys()
+        .cloned()
+        .collect::<Vec<_>>()
+    {
+        unit["sections"][&name]["armor"] = 30.into();
+        unit["definition"]["sections"][&name]["armor"] = 30.into();
+    }
+    armed.btech = serde_json::from_value(state).unwrap();
+    let attack = |world: &mut World| {
+        resolve_battle_arm_attack(
+            world,
+            id,
+            ObjectId(1),
+            target,
+            BattleArmSelection::Right,
+            BattleArmAttack::Lance,
+            kick_rules(),
+        )
+        .unwrap()
+        .attacks
+        .remove(0)
+    };
+    let dice_state = |world: &World| {
+        serde_json::to_value(&world.btech).unwrap()["constructed"][target.0.to_string()]["dice"]
+            .clone()
+    };
+    let (mut misses, mut pierced, mut suppressed, mut breached) = (0, 0, 0, 0);
+    for seed in 0..=255 {
+        let mut world = armed.clone();
+        shot_seed(&mut world, target, seed);
+        let report = attack(&mut world);
+        assert!(report.hit);
+        let Some(penetration) = &report.penetration else {
+            // Thin armor the lance stripped away gets no penetration check.
+            let struck = report.impact.as_ref().unwrap().impact.phases[0].section;
+            let state = &world.btech.constructed_units()[&target].sections()[&struck];
+            assert!(state.armor == 0 || state.rear == 0, "seed {seed}");
+            breached += 1;
+            continue;
+        };
+        let Some(impact) = &penetration.impact else {
+            assert!(penetration.roll < 10);
+            misses += 1;
+            continue;
+        };
+        assert!(penetration.roll >= 10);
+        pierced += 1;
+        let phase = &impact.impact.phases[0];
+        assert_eq!(phase.absorbed + phase.remaining, 1, "seed {seed}");
+        // Replay the target's stream. Its generic rolls run: hit location, damage entry, the
+        // penetration check, the penetration's damage entry, then the raw critical roll.
+        let finished = dice_state(&world);
+        let mut dice = BattleDice::seeded([seed; 32]);
+        let mut rolls = Vec::new();
+        while serde_json::to_value(&dice).unwrap() != finished {
+            rolls.push(dice.d6());
+            assert!(rolls.len() < 64, "seed {seed}: replay lost the stream");
+        }
+        let pairs: Vec<u8> = rolls.chunks(2).map(|pair| pair.iter().sum()).collect();
+        assert_eq!(pairs[2], penetration.roll, "seed {seed}");
+        let raw = pairs[4];
+        assert_eq!(
+            impact.impact.criticals.is_empty(),
+            raw.saturating_sub(2) < 8,
+            "seed {seed}"
+        );
+        // Raw 8 or 9 would crit an ordinary internal hit; the -2 penalty suppresses it.
+        if (8..10).contains(&raw) {
+            suppressed += 1;
+        }
+    }
+    assert!(
+        misses > 0 && pierced > 0 && suppressed > 0,
+        "{misses} {pierced} {suppressed} {breached}"
+    );
+    assert!(breached < misses + pierced);
+
+    let mut stripped = armed.clone();
+    let mut state = serde_json::to_value(&stripped.btech).unwrap();
+    let sections = state["constructed"][target.0.to_string()]["sections"]
+        .as_object_mut()
+        .unwrap();
+    for section in sections.values_mut() {
+        section["armor"] = 1.into();
+        if section["rear"].as_u64().unwrap() > 0 {
+            section["rear"] = 1.into();
+        }
+    }
+    stripped.btech = serde_json::from_value(state).unwrap();
+    for seed in 0..32 {
+        let mut world = stripped.clone();
+        shot_seed(&mut world, target, seed);
+        assert!(attack(&mut world).penetration.is_none());
+    }
+    let mut world = armed.clone();
+    let mut fist = world.clone();
+    install_right_arm_weapon(&mut fist, id, BattleArmAttack::Axe, 3);
+    shot_seed(&mut world, target, 0);
+    shot_seed(&mut fist, target, 0);
+    assert!(attack(&mut world).penetration.is_some());
+    let axe = resolve_battle_arm_attack(
+        &mut fist,
+        id,
+        ObjectId(1),
+        target,
+        BattleArmSelection::Right,
+        BattleArmAttack::Axe,
+        kick_rules(),
+    )
+    .unwrap();
+    assert!(axe.attacks[0].penetration.is_none());
+    world.validate(&config).unwrap();
+}
+
 /// Installed hand weapons reach a lower standing target, and choose tables independently of arm arcs.
 #[tokio::test]
 async fn handweapon_elevation_tables_and_default_arm_selection() {

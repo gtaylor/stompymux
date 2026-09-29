@@ -1329,6 +1329,11 @@ damage, followed by a piloting check. A wrecking ball hit forces the target to
 make a piloting check at +2, as a charge does. Each vibroblade swing adds 3, 5
 or 7 heat.
 
+When a lance hits and armor still covers the struck location, roll 2d6: on 10 or
+more, one point of damage goes straight to internal structure, and its critical
+hit roll takes a -2 penalty. Once that location's armor is gone, the lance hits
+normally.
+
 Weapons need these working critical slots in one arm: retractable blade, one
 per 20 tons (rounded up) plus one; lance, one per 20 tons (rounded up); flail 4;
 wrecking ball 5; chain whip 2; vibroblades 1, 2 or 4.

@@ -462,6 +462,8 @@ pub struct BattlePhysicalReport {
     pub hit: bool,
     pub glancing: bool,
     pub impact: Option<BattleTacticalImpact>,
+    /// Lance armor-penetration check, made when armor remains where the lance struck.
+    pub penetration: Option<BattleLancePenetration>,
     /// Damage a flail or wrecking ball dealt its own wielder on a natural 2.
     pub fumble: Option<BattleTacticalImpact>,
     /// Piloting XP applied before eligible direct damage; absent for trips and ineligible combat.
@@ -1102,6 +1104,7 @@ fn resolve_attack_inner(
             },
         ));
         let mut impact = None;
+        let mut penetration = None;
         let mut experience = None;
         let mut experience_messages = Vec::new();
         if glancing {
@@ -1198,6 +1201,18 @@ fn resolve_attack_inner(
             );
             notices.extend(result.notices.iter().cloned());
             impact = Some(result);
+            if weapon == Some(BattleArmAttack::Lance) {
+                penetration = lance_penetration(
+                    world,
+                    attacker,
+                    target,
+                    location,
+                    rules,
+                    character,
+                    &mut notices,
+                    &mut pilot_notices,
+                )?;
+            }
         }
         let mut fumble_impact = None;
         if let Some(damage) = fumble {
@@ -1345,6 +1360,7 @@ fn resolve_attack_inner(
             hit,
             glancing,
             impact,
+            penetration,
             fumble: fumble_impact,
             experience,
             experience_messages,
@@ -1354,6 +1370,85 @@ fn resolve_attack_inner(
             notices,
         })
     })
+}
+
+/// Lance armor-penetration roll and the internal damage it drove through on 10 or more.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct BattleLancePenetration {
+    pub roll: u8,
+    pub impact: Option<BattleTacticalImpact>,
+}
+
+/// Lowest 2d6 roll with which a lance drives one point through remaining armor.
+const LANCE_PENETRATION_TARGET: u8 = 10;
+
+/// Critical-roll penalty for the point a lance drives through armor.
+const LANCE_CRITICAL_PENALTY: u8 = 2;
+
+/// After a lance hit, roll to drive one point into internal structure while armor still covers
+/// the struck location; that point's critical roll takes a -2 penalty.
+#[allow(clippy::too_many_arguments)]
+fn lance_penetration(
+    world: &mut World,
+    attacker: ObjectId,
+    target: ObjectId,
+    location: BattleHit,
+    rules: BattlePhysicalRules,
+    character: bool,
+    notices: &mut Vec<BattleNotice>,
+    pilot_notices: &mut Vec<super::BattlePilotNotice>,
+) -> Result<Option<BattleLancePenetration>> {
+    let victim = &world.btech.constructed_units()[&target];
+    let section = location.section;
+    let state = &victim.sections()[&section];
+    let rear = location.rear_armor
+        && matches!(
+            section,
+            BattleSection::LeftTorso | BattleSection::RightTorso | BattleSection::CenterTorso
+        );
+    let armor = if rear { state.rear } else { state.armor };
+    if victim.is_destroyed() || state.internal == 0 || armor == 0 {
+        return Ok(None);
+    }
+    let roll = world
+        .btech
+        .constructed
+        .get_mut(&target)
+        .unwrap()
+        .dice
+        .generic_roll();
+    if roll < LANCE_PENETRATION_TARGET {
+        return Ok(Some(BattleLancePenetration { roll, impact: None }));
+    }
+    notices.push(BattleNotice {
+        unit: attacker,
+        text: "Your lance punches through the armor!".into(),
+    });
+    notices.push(BattleNotice {
+        unit: target,
+        text: "A lance punches through your armor!".into(),
+    });
+    let fall_rules = participant_fall_rules(world, target, rules.fall);
+    let result = super::impact::resolve_penetration_in_candidate(
+        world,
+        target,
+        section,
+        1,
+        fall_rules,
+        super::impact::AttackImpact {
+            attacker: Some(attacker),
+            weapon_effect: None,
+            character,
+            followup: false,
+        },
+        LANCE_CRITICAL_PENALTY,
+    )?;
+    super::piloting::append_feedback(pilot_notices, result.pilot_notices.clone(), notices.len());
+    notices.extend(result.notices.iter().cloned());
+    Ok(Some(BattleLancePenetration {
+        roll,
+        impact: Some(result),
+    }))
 }
 
 impl BattleUnit {
