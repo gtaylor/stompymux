@@ -5,6 +5,9 @@ use stompymux_test_support as support;
 #[path = "../btech_ammunition_preference.rs"]
 mod btech_ammunition_preference;
 
+#[path = "../btech_autopilot_network.rs"]
+mod btech_autopilot_network;
+
 #[path = "../btech_autopilot_runtime.rs"]
 mod btech_autopilot_runtime;
 
