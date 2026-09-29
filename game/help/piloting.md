@@ -928,6 +928,15 @@ with farther contacts first within each group. C0 follows battlefield membership
 order. Short lists contain at most 250 entries.
 
 
+When your unit is in an active C3 or C3i network, `contacts` also lists targets
+that only your available network peers can see. Such rows carry no detection
+letter, since your own sensors do not hold them, and identify the target when a
+peer does. Every row then gains a `c:` column after `r:` with the shared targeting
+range: the closest usable sighting in the network, which is what your weapons aim
+with. Peer sightings never grant a lock, a firing line, or a spot on their own.
+`contacts #unit` reads a peer-only sighting the same way.
+
+
 The five characters after `S:` summarize contact condition. They show, in order:
 carried club (C); destroyed (D), lamp (L) or illuminated (l); jumping (J), prone (F)
 or standing transition (f); shutdown (S), starting (s), excess heat (+) or inferno

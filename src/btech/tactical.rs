@@ -48,6 +48,9 @@ pub struct TacticalSighting {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Destruction reported by current sensors, never inferred from lost contact.
     pub known_destroyed: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Held for this observer only by its C3/C3i peers; absent for remembered locations.
+    pub relayed: Option<bool>,
 }
 
 /// Intelligence about one contact, retaining every observer's provenance.
@@ -164,6 +167,7 @@ pub fn observe_tactical(
                     friendly: Some(contact.friendly),
                     identified: Some(contact.identified),
                     known_destroyed: Some(contact.known_destroyed),
+                    relayed: Some(contact.relayed),
                 });
         }
         for memory in &observation.remembered {
@@ -178,6 +182,7 @@ pub fn observe_tactical(
                     friendly: None,
                     identified: None,
                     known_destroyed: None,
+                    relayed: None,
                 });
         }
         let mut status = controller.clone();

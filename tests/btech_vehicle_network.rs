@@ -252,8 +252,8 @@ async fn mixed_network_reports_messages_and_range_share_one_path() {
                 .iter()
                 .all(|row| row.armor_percent == 100 && row.internal_percent == 100)
         );
-        let targets = battle_c3i_targets(&world, id, pilot).unwrap();
-        assert!(targets.rows.iter().any(|row| row.unit == units[6].0));
+        let contacts = displayed_battle_contacts(&world, id).unwrap();
+        assert!(contacts.iter().any(|row| row.target == units[6].0));
         let loadout = if let Some(vehicle) = world.btech.vehicles().get(&id) {
             vehicle
                 .loadout()

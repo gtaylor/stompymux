@@ -257,6 +257,8 @@ pub struct BattleContactView {
     pub name: String,
     pub friendly: bool,
     pub range: super::BattleRange,
+    /// Closest usable command-network sighting distance; absent when the observer has no active network.
+    pub network_range: Option<f64>,
     pub heading: f64,
     pub speed: f64,
 }
@@ -340,10 +342,14 @@ impl BattleContactView {
     }
 
     /// Render compact contact data with the target movement marker and no embedded styles.
+    /// A networked observer gains a `c:` column with the shared aiming distance.
     fn compact_text(&self, movement: &str) -> String {
         let name: String = crate::text::plain(&self.name).chars().take(12).collect();
+        let network = self
+            .network_range
+            .map_or_else(String::new, |range| format!(" c:{range:>4.1}"));
         format!(
-            "{}{}{}[{}]{} {:<12} x:{:>3} y:{:>3} z:{:>3} r:{:>4.1} b:{:>3} s:{:>5.1} h:{:>3} S:{}",
+            "{}{}{}[{}]{} {:<12} x:{:>3} y:{:>3} z:{:>3} r:{:>4.1}{network} b:{:>3} s:{:>5.1} h:{:>3} S:{}",
             detection_code(self.detection, self.identified),
             ' ',
             self.weapon_arc.symbol(),
@@ -529,6 +535,57 @@ fn contact_view(
     else {
         return Ok(None);
     };
+    let status = super::contact_status::contact_status(world, observer, target)?;
+    view_from_facts(world, unit, facts, status).map(Some)
+}
+
+/// Present a sighting reported by a command-network peer as the observer's own row.
+/// The observer supplies geometry and arcs; identification comes from the peer's view.
+fn network_view(
+    world: &World,
+    observer: ObjectId,
+    unit: &super::scanner::ScannerUnit<'_>,
+    target: ObjectId,
+    identified: bool,
+) -> Result<BattleContactView> {
+    let facts = relayed_facts(world, observer, unit.signature.team, target, identified)?;
+    let status = if identified {
+        super::contact_status::known_status(world, observer, target)?
+    } else {
+        "     ".into()
+    };
+    view_from_facts(world, unit, facts, status)
+}
+
+/// Facts for a sighting relayed by a command-network peer. Geometry is measured from the
+/// observer; identification, and so allegiance and known destruction, come from the peer.
+pub(super) fn relayed_facts(
+    world: &World,
+    observer: ObjectId,
+    observer_team: i32,
+    target: ObjectId,
+    identified: bool,
+) -> Result<BattleContactFacts> {
+    let other = super::scanner::scanner_unit(world, target).context("Contact disappeared")?;
+    Ok(BattleContactFacts {
+        target,
+        position: other.position.context("Contact has no position")?,
+        identified,
+        friendly: identified && observer_team == other.signature.team,
+        detection: None,
+        known_destroyed: identified && other.destroyed,
+        range: super::unit_range(world, observer, target)?,
+    })
+}
+
+/// Build the display row from established facts and the already-resolved status columns.
+fn view_from_facts(
+    world: &World,
+    unit: &super::scanner::ScannerUnit<'_>,
+    facts: BattleContactFacts,
+    status: String,
+) -> Result<BattleContactView> {
+    let target = facts.target;
     let other = super::scanner::scanner_unit(world, target).context("Contact disappeared")?;
     let heading = unit.heading.context("Observer has no motion state")?;
     let bearing = facts.range.bearing.unwrap_or(180.0);
@@ -559,7 +616,7 @@ fn contact_view(
             },
         )?,
         detection: facts.detection,
-        status: super::contact_status::contact_status(world, observer, target)?,
+        status,
         target,
         name: if facts.identified {
             other.name.to_owned()
@@ -568,12 +625,24 @@ fn contact_view(
         },
         friendly: facts.friendly,
         range: facts.range,
+        network_range: None,
         heading: other.travel_heading.context("Contact has no motion")?,
         speed: other.speed,
     };
     view.short_text = view.compact_text(movement_type(world, target));
     view.verbose_text = view.verbose_text(world, unit.vehicle)?;
-    Ok(Some(view))
+    Ok(view)
+}
+
+/// Attach the shared aiming distance and re-render the compact row.
+fn attach_network_range(
+    world: &World,
+    network: &super::network_contacts::NetworkSightings<'_>,
+    view: &mut BattleContactView,
+) -> Result<()> {
+    view.network_range = Some(network.range(view.target, view.range.spatial)?.distance);
+    view.short_text = view.compact_text(movement_type(world, view.target));
+    Ok(())
 }
 
 /// Contact movement labels retain the game's spelling and stationary fallback.
@@ -600,6 +669,37 @@ pub fn visible_contact(
     ContactReader::new(world, observer)?.view(target)
 }
 
+/// One contact as the cockpit displays it: a direct sighting, or one relayed by an active
+/// command-network peer, with the shared aiming distance attached either way.
+/// Relayed rows never satisfy the firing, locking, or spotting rules built on `visible_contact`.
+pub fn displayed_contact(
+    world: &World,
+    observer: ObjectId,
+    target: ObjectId,
+) -> Result<Option<BattleContactView>> {
+    let reader = ContactReader::new(world, observer)?;
+    let mut view = reader.view(target)?;
+    let Some(mut network) = super::network_contacts::NetworkSightings::new(world, observer)? else {
+        return Ok(view);
+    };
+    if view.is_none()
+        && observer != target
+        && let Some(identified) = network.identified(target)?
+    {
+        view = Some(network_view(
+            world,
+            observer,
+            &reader.unit,
+            target,
+            identified,
+        )?);
+    }
+    if let Some(view) = &mut view {
+        attach_network_range(world, &network, view)?;
+    }
+    Ok(view)
+}
+
 /// List eligible acquired contacts, or all same-map units for a clairvoyant observer.
 /// This read-only display never attempts acquisition or updates the saved observation.
 pub fn visible_contacts(world: &World, observer: ObjectId) -> Result<Vec<BattleContactView>> {
@@ -614,6 +714,45 @@ pub fn visible_contacts(world: &World, observer: ObjectId) -> Result<Vec<BattleC
         if let Some(view) = reader.view(target)? {
             views.push(view);
         }
+    }
+    views.sort_by(|a, b| {
+        a.range
+            .spatial
+            .total_cmp(&b.range.spatial)
+            .then(a.target.cmp(&b.target))
+    });
+    Ok(views)
+}
+
+/// The cockpit contact list: direct sightings plus targets relayed by active command-network
+/// peers, every row carrying the shared aiming distance. See [`displayed_contact`].
+pub fn displayed_contacts(world: &World, observer: ObjectId) -> Result<Vec<BattleContactView>> {
+    let mut views = visible_contacts(world, observer)?;
+    let Some(mut network) = super::network_contacts::NetworkSightings::new(world, observer)? else {
+        return Ok(views);
+    };
+    let reader = ContactReader::new(world, observer)?;
+    let map = reader
+        .unit
+        .position
+        .expect("validated observer placement")
+        .map;
+    for target in super::map_slots::all_unit_order(world, map)? {
+        if target == observer || views.iter().any(|view| view.target == target) {
+            continue;
+        }
+        if let Some(identified) = network.identified(target)? {
+            views.push(network_view(
+                world,
+                observer,
+                &reader.unit,
+                target,
+                identified,
+            )?);
+        }
+    }
+    for view in &mut views {
+        attach_network_range(world, &network, view)?;
     }
     views.sort_by(|a, b| {
         a.range

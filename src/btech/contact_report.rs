@@ -39,7 +39,7 @@ pub(crate) fn report(
         None
     };
     let mut contacts = if let Some(target) = target {
-        super::visible_contact(&world, unit, target)?
+        super::displayed_contact(&world, unit, target)?
             .into_iter()
             .collect()
     } else if argument.starts_with('+') {
@@ -51,7 +51,7 @@ pub(crate) fn report(
     } else if let Some(options) = &options {
         super::contact_preferences::filtered_for_source(&world, source, options.preferences)?
     } else {
-        super::visible_contacts(&world, unit)?
+        super::displayed_contacts(&world, unit)?
     };
     let short = brief.contacts != 0;
     contacts.sort_by_key(|contact| {

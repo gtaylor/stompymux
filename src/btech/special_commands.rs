@@ -117,7 +117,7 @@ mod tests {
     #[test]
     fn catalogue_order_restrictions_and_dispatch_are_shared() {
         for (kind, count) in [
-            (BattleSpecialType::Mech, 193),
+            (BattleSpecialType::Mech, 191),
             (BattleSpecialType::Debug, 9),
             (BattleSpecialType::Map, 26),
             (BattleSpecialType::Autopilot, 7),

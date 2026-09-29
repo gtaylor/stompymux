@@ -302,7 +302,8 @@ pub use perception::{
 mod contacts;
 pub use contacts::{
     BattleContact, BattleContactRules, BattleContactTransition, BattleContactUpdate,
-    BattleContactView, update_contact, visible_contact, visible_contacts,
+    BattleContactView, displayed_contact, displayed_contacts, update_contact, visible_contact,
+    visible_contacts,
 };
 
 mod skills;
@@ -918,7 +919,10 @@ pub(crate) mod network_message;
 
 pub(crate) mod network_status;
 
-pub(crate) mod network_targets;
+pub(crate) mod network_topology;
+pub use network_topology::{BattleNetworkAutomation, reconcile as reconcile_command_networks};
+
+pub(crate) mod network_contacts;
 
 mod radio_scanning;
 pub use radio_scanning::BattleFrequencyScan;

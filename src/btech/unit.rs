@@ -121,6 +121,9 @@ pub struct BattleUnit {
     /// Classic C3 membership is independent of C3i.
     #[serde(default)]
     pub(super) c3_network: Option<u64>,
+    /// Which network families the server may link automatically.
+    #[serde(default)]
+    pub(super) network_automation: super::BattleNetworkAutomation,
     #[serde(default)]
     pub(super) supercharger: super::BattleBoosterState,
     /// Resolve simultaneous booster checks in the order their timers were scheduled.
@@ -365,6 +368,7 @@ super::saved_parts::saved_parts!(BattleUnit {
         hull_down,
         c3i_network,
         c3_network,
+        network_automation,
         radio,
         radio_skill,
         radio_experience_remaining,
@@ -888,6 +892,7 @@ impl BattleUnit {
             masc: Default::default(),
             c3i_network: None,
             c3_network: None,
+            network_automation: Default::default(),
             supercharger: Default::default(),
             supercharger_scheduled_last: false,
             radio: Default::default(),

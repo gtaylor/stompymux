@@ -29,42 +29,42 @@
 //|function btech_player.contact_options(options, brief_buildings) end
 // lua-types-end
 
-// lua-types-begin btech 00458
+// lua-types-begin btech 00455
 //|---Read the saved personal-combat loadout, or nil when none is configured.
 //|---@param player DbRef|Object
 //|---@return BattlePersonalCombatLoadout|nil loadout
 //|function btech_player.loadout(player) end
 // lua-types-end
 
-// lua-types-begin btech 00459
+// lua-types-begin btech 00456
 //|---Replace the saved personal-combat loadout; nil clears it.
 //|---@param player DbRef|Object
 //|---@param loadout BattlePersonalCombatLoadout|nil
 //|function btech_player.set_loadout(player, loadout) end
 // lua-types-end
 
-// lua-types-begin btech 00460
+// lua-types-begin btech 00457
 //|---Read the saved MechWarrior template reference, or nil when unset.
 //|---@param player DbRef|Object
 //|---@return string|nil reference
 //|function btech_player.mechwarrior_template(player) end
 // lua-types-end
 
-// lua-types-begin btech 00461
+// lua-types-begin btech 00458
 //|---Replace the saved MechWarrior template reference; nil clears it.
 //|---@param player DbRef|Object
 //|---@param reference string|nil
 //|function btech_player.set_mechwarrior_template(player, reference) end
 // lua-types-end
 
-// lua-types-begin btech 00462
+// lua-types-begin btech 00459
 //|---Read the saved tactical contact and display preferences.
 //|---@param player DbRef|Object
 //|---@return BattleUiPreferencesState preferences
 //|function btech_player.ui_preferences(player) end
 // lua-types-end
 
-// lua-types-begin btech 00463
+// lua-types-begin btech 00460
 //|---Replace the saved tactical contact and display preferences; nil clears them.
 //|---@param player DbRef|Object
 //|---@param preferences BattleUiPreferencesState|nil

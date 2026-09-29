@@ -638,6 +638,7 @@ Alias: `"front" | "right" | "rear" | "left"`
 - `name`: `string` — Chassis name, or "something" for unidentified signals.
 - `friendly`: `boolean` — Identified and on the same team as observer.
 - `range`: `BattleRange`
+- `network_range`: `number|nil` — Closest usable command-network sighting distance; nil without an active network.
 - `heading`: `number` — Travel axis including lateral offset; reverse speed travels opposite this axis.
 - `speed`: `number` — Current kph.
 
@@ -1368,26 +1369,6 @@ Alias: `"follow_brief" | "include" | "exclude"`
 - `armor_percent`: `integer`
 - `internal_percent`: `integer`
 
-## BattleNetworkTargetRow
-
-- `unit`: `integer`
-- `label`: `string`
-- `name`: `string`
-- `identified`: `boolean`
-- `friendly`: `boolean` — Actual team relationship; identification controls display color.
-- `detection`: `BattleDetectionChannel|nil` — How the requester itself perceives the target; nil for network-only sightings.
-- `weapon_arc`: `string`
-- `coordinate`: `BattleHexCoordinate`
-- `elevation`: `integer`
-- `range`: `number` — Physical spatial range.
-- `network_range`: `{kind: "c3"|"c3i", distance: number, source: integer|nil}`
-- `bearing`: `integer`
-- `speed`: `number`
-- `heading`: `integer`
-- `status`: `string` — Five condition columns; blank without a clear sighting.
-- `destroyed`: `boolean`
-- `selected`: `boolean`
-
 ## BattleSwarmHop
 
 - `target`: `integer`
@@ -1776,6 +1757,8 @@ Alias: `"manual_takeover"|"contact_lost"|"stuck"|"unreachable"|"invalidated"|"re
 - `identified`: `boolean` — Whether sensors identified the contact well enough to determine allegiance.
 - `known_destroyed`: `boolean` — Whether the visible contact status reports destruction.
 - `range`: `number` — Observed range in map units.
+- `network_range`: `number|nil` — Shared C3/C3i aiming distance; nil without an active network.
+- `relayed`: `boolean` — Seen only by network peers; the unit cannot lock or fire on it yet.
 - `seen_at`: `integer` — Simulation time of the observation.
 
 ## BattleAutopilotMemory
@@ -1809,7 +1792,7 @@ Alias: `"manual_takeover"|"contact_lost"|"stuck"|"unreachable"|"invalidated"|"re
 - `heading`: `number|nil` — Own heading, if motion is available.
 - `speed`: `number` — Own current speed.
 - `own`: `BattleAutopilotOwnReadiness` — Own mechanical and weapon readiness.
-- `contacts`: `BattleAutopilotContact[]` — Current sensor contacts.
+- `contacts`: `BattleAutopilotContact[]` — Current sensor contacts, plus those relayed by active C3/C3i peers.
 - `remembered`: `BattleAutopilotMemory[]` — Fresh retained sightings.
 
 ## BattleAutopilotFeedback
@@ -1861,6 +1844,7 @@ Alias: `"manual_takeover"|"contact_lost"|"stuck"|"unreachable"|"invalidated"|"re
 - `friendly`: `boolean|nil` — Present only for a current observation.
 - `identified`: `boolean|nil` — Present only for a current observation.
 - `known_destroyed`: `boolean|nil` — Present only for a current observation.
+- `relayed`: `boolean|nil` — Present only for a current observation; true when only C3/C3i peers see it.
 
 ## BattleTacticalContact
 

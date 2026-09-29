@@ -1,9 +1,12 @@
-//! Pure target choice over the same acquired contacts available to Lua.
+//! Pure target choice over the same acquired and network-relayed contacts available to Lua.
 
 use super::observations::AutopilotObservation;
 use crate::ObjectId;
 
-/// Select a currently observed hostile target. The explicit assignment wins when visible.
+/// Select a currently observed hostile target. The explicit assignment wins when visible,
+/// including through a C3/C3i peer.
+/// Targets the unit can engage itself are always preferred to network-relayed ones, which
+/// are chosen only so the unit can close on and face an enemy it cannot yet see.
 /// An existing target is retained until another candidate scores at least 20% higher.
 pub fn choose_target(
     observation: &AutopilotObservation,
@@ -24,6 +27,14 @@ pub fn choose_target(
             .find(|contact| contact.unit == explicit)
             .map(|contact| contact.unit);
     }
+    let hostile: Vec<_> = if hostile.iter().any(|contact| !contact.relayed) {
+        hostile
+            .into_iter()
+            .filter(|contact| !contact.relayed)
+            .collect()
+    } else {
+        hostile
+    };
     // Only the controller's own ready weapons and acquired range may inform
     // this estimate. It does not inspect target armor, heat, ammunition or
     // any hidden capability. The actual shot path still does full admission.
@@ -35,16 +46,21 @@ pub fn choose_target(
         .filter(|ready| !ready.weapon.is_ams() && !ready.weapon.is_artillery())
         .map(|ready| ready.weapon.profile())
         .collect();
-    let score = |distance: f64| {
-        let range = distance.max(0.0);
+    // Physical distance decides reach and minimum range; the network's shared distance, when
+    // present, decides the band, exactly as the shot path applies it.
+    let score = |contact: &super::observations::AutopilotContact| {
+        let range = contact.range.max(0.0);
+        let band = contact.aiming_range().clamp(0.0, range);
         let effectiveness: f64 = profiles
             .iter()
             .filter(|profile| range <= f64::from(profile.long_range))
             .map(|profile| {
                 let nominal = f64::from(profile.damage) * f64::from(profile.missiles.max(1));
-                let range_factor = if range <= f64::from(profile.short_range) {
+                let assisted = range > f64::from(profile.minimum_range);
+                let band = if assisted { band } else { range };
+                let range_factor = if band <= f64::from(profile.short_range) {
                     1.0
-                } else if range <= f64::from(profile.medium_range) {
+                } else if band <= f64::from(profile.medium_range) {
                     0.66
                 } else {
                     0.33
@@ -65,7 +81,7 @@ pub fn choose_target(
     };
     let scored: Vec<_> = hostile
         .iter()
-        .map(|contact| (*contact, score(contact.range)))
+        .map(|contact| (*contact, score(contact)))
         .collect();
     let &(best, best_score) =
         scored
@@ -174,6 +190,8 @@ mod tests {
             identified: true,
             known_destroyed: false,
             range,
+            network_range: None,
+            relayed: false,
             seen_at: 0,
         };
         let observation = AutopilotObservation {
@@ -250,5 +268,70 @@ mod tests {
         observation.contacts.push(unknown);
         assert_eq!(choose_target(&observation, Some(ObjectId(5)), None), None);
         assert_eq!(choose_target(&observation, None, None), Some(ObjectId(3)));
+    }
+
+    /// Network sightings steer choice without ever outranking a target the unit can engage.
+    #[test]
+    fn network_range_improves_bands_and_relayed_targets_only_fill_gaps() {
+        let map = ObjectId(1);
+        let at = |unit: i64, range, network_range, relayed| AutopilotContact {
+            unit: ObjectId(unit),
+            position: BattlePosition {
+                map,
+                x: unit as u16,
+                y: 0,
+            },
+            friendly: false,
+            identified: true,
+            known_destroyed: false,
+            range,
+            network_range,
+            relayed,
+            seen_at: 0,
+        };
+        let config = crate::Config::load("tests/fixtures/game").unwrap();
+        let mut world = crate::World::default();
+        let unit = world.create(&config, "Network policy fixture".into(), crate::Kind::Thing);
+        crate::BattleUnitTemplate::parse(include_str!("../../../game/mechs/JR7-D"))
+            .unwrap()
+            .create(&mut world, unit)
+            .unwrap();
+        let mut observation = AutopilotObservation {
+            unit: ObjectId(10),
+            time: 0,
+            position: None,
+            heading: None,
+            speed: 0.0,
+            own: crate::btech::autopilot::observations::AutopilotOwnReadiness {
+                power: crate::btech::BattlePower::Running,
+                maximum_speed: 0.0,
+                heat: None,
+                weapons: world.btech.constructed_units()[&unit]
+                    .weapon_readiness_batch()
+                    .unwrap(),
+            },
+            contacts: vec![at(2, 6.5, None, false), at(3, 8.0, None, false)],
+            remembered: vec![],
+        };
+        for weapon in &mut observation.own.weapons {
+            weapon.ready = true;
+        }
+        // Unassisted, the nearer target sits in the better band.
+        assert_eq!(choose_target(&observation, None, None), Some(ObjectId(2)));
+        // A peer two hexes from the farther target puts it in short range for this unit.
+        observation.contacts[1].network_range = Some(2.0);
+        assert_eq!(choose_target(&observation, None, None), Some(ObjectId(3)));
+        // A relayed target never displaces one the unit can lock, however close the peer is.
+        observation.contacts.push(at(4, 1.0, Some(1.0), true));
+        assert_eq!(choose_target(&observation, None, None), Some(ObjectId(3)));
+        // With nothing of its own in view, the unit turns to what its peers see.
+        observation.contacts.retain(|contact| contact.relayed);
+        observation.contacts.push(at(5, 30.0, Some(30.0), true));
+        assert_eq!(choose_target(&observation, None, None), Some(ObjectId(4)));
+        // An explicit attack order may name a target only a peer can see.
+        assert_eq!(
+            choose_target(&observation, Some(ObjectId(5)), None),
+            Some(ObjectId(5))
+        );
     }
 }

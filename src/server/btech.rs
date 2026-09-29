@@ -621,6 +621,28 @@ impl Server {
                 return;
             }
         }
+        let networks =
+            crate::reconcile_battle_command_networks(&mut self.scripts.world.borrow_mut());
+        match networks {
+            Ok(network_notices) => notices.extend(network_notices),
+            Err(error) => {
+                self.config.log(
+                    &[crate::logging::Category::Problems],
+                    "BTECH",
+                    "ERROR",
+                    error.to_string(),
+                );
+                *self.scripts.world.borrow_mut() = before;
+                self.scripts
+                    .world
+                    .borrow_mut()
+                    .btech
+                    .autopilot_plans
+                    .clear();
+                self.scripts.effects.rollback();
+                return;
+            }
+        }
         let links = crate::advance_battle_spotter_links(&mut self.scripts.world.borrow_mut());
         match links {
             Ok(link_notices) => notices.extend(link_notices),

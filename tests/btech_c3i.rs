@@ -1021,40 +1021,36 @@ async fn network_targets_share_identification_and_range_without_acquiring_contac
     world.btech = serde_json::from_value(encoded).unwrap();
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(first);
     let before = world.btech.clone();
-    let report = battle_c3i_targets(&world, first, pilot).unwrap();
-    assert_eq!(report.rows.len(), 1);
-    let row = &report.rows[0];
+    let contacts = displayed_battle_contacts(&world, first).unwrap();
+    assert_eq!(contacts.len(), 1);
+    let row = &contacts[0];
     assert!(row.identified && !row.friendly);
     assert_eq!(row.name, "Atlas");
     assert_eq!(row.detection, None);
-    assert!((row.range - 16.0).abs() < 1e-8);
-    assert!((row.network_range.distance - 1.0).abs() < 1e-8);
-    assert_eq!(row.network_range.source, Some(peer));
-    assert!(text::plain(&report.text).contains("r:16.0 c: 1.0"));
-    assert!(report.text.contains("[fg=yellow bold]"));
+    assert!((row.range.spatial - 16.0).abs() < 1e-8);
+    assert!((row.network_range.unwrap() - 1.0).abs() < 1e-8);
+    assert!(row.short_text.contains("r:16.0 c: 1.0"));
+    assert!(row.styled_short_text(false).contains("[fg=yellow bold]"));
     assert_eq!(world.btech, before);
     persistence::save(&config.database(), &world).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
-    assert_eq!(battle_c3i_targets(&restored, first, pilot).unwrap(), report);
+    assert_eq!(
+        displayed_battle_contacts(&restored, first).unwrap(),
+        contacts
+    );
     let scripts =
         Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(restored))).unwrap();
     let text: String = scripts
         .eval_callback(&format!(
-            "return assert(btech.unit.c3i_targets({}, {})).text",
-            first.0, pilot.0
+            "return assert(btech.unit.contacts({}))[1].short_text",
+            first.0
         ))
         .unwrap();
-    assert_eq!(text, report.text);
+    assert_eq!(text, row.short_text);
     assert!(scripts.drain_outbox().is_empty());
-    assert_eq!(
-        text::plain(&support::run_text(
-            &scripts,
-            &config,
-            pilot,
-            1,
-            "c3itargets"
-        )),
-        text::plain(&report.text)
+    assert!(
+        text::plain(&support::run_text(&scripts, &config, pilot, 1, "contacts"))
+            .contains(&row.short_text)
     );
     assert_eq!(scripts.world().btech, before);
     stop_battle_unit(
@@ -1064,9 +1060,7 @@ async fn network_targets_share_identification_and_range_without_acquiring_contac
         BattleMovementRules::STANDARD.fall,
     )
     .unwrap();
-    let empty = battle_c3i_targets(&world, first, pilot).unwrap();
-    assert!(empty.rows.is_empty());
-    assert_eq!(empty.text, "C3i Contacts:\r\nEnd C3i Contact List");
+    assert!(displayed_battle_contacts(&world, first).unwrap().is_empty());
 }
 
 /// Each row is recomputed from current sightings; a peer's probe contact behind a hill stays unidentified.
@@ -1103,29 +1097,24 @@ async fn network_target_visibility_is_recomputed_for_every_row() {
             .unwrap();
     }
     world.btech = serde_json::from_value(encoded).unwrap();
-    let report = battle_c3i_targets(&world, first, pilot).unwrap();
+    let contacts = displayed_battle_contacts(&world, first).unwrap();
     assert_eq!(
-        report.rows.iter().map(|r| r.unit).collect::<Vec<_>>(),
-        vec![unknown, known]
+        contacts.iter().map(|r| r.target).collect::<Vec<_>>(),
+        vec![known, unknown]
     );
-    assert!(!report.rows[0].identified);
-    assert_eq!(report.rows[0].name, "something");
-    assert_eq!(report.rows[0].status, "     ");
-    let plain = text::plain(&report.text);
-    let unknown_line = plain
-        .lines()
-        .find(|line| line.contains("something"))
-        .unwrap();
-    assert!(unknown_line.contains("something   x:"));
-    assert!(unknown_line.ends_with("S:     "));
-    assert!(report.rows[1].identified);
+    assert!(!contacts[1].identified);
+    assert_eq!(contacts[1].name, "something");
+    assert_eq!(contacts[1].status, "     ");
+    assert!(contacts[1].short_text.contains("something    x:"));
+    assert!(contacts[1].short_text.ends_with("S:     "));
+    assert!(contacts[0].identified);
     // A later map entry with no sighting must never inherit the previous peer sighting.
-    assert!(!report.rows.iter().any(|r| r.unit == units[4].0));
+    assert!(!contacts.iter().any(|r| r.target == units[4].0));
 }
 
 #[tokio::test]
 async fn direct_network_targets_keep_sensor_markers_selection_and_destroyed_first_order() {
-    let (_dir, _config, mut world, units) = field().await;
+    let (_dir, config, mut world, units) = field().await;
     let (first, pilot) = units[0];
     let peer = units[1].0;
     let wreck = units[2].0;
@@ -1149,29 +1138,42 @@ async fn direct_network_targets_keep_sensor_markers_selection_and_destroyed_firs
     encoded["constructed"][first.0.to_string()]["target_lock"] =
         serde_json::json!({"target":near,"remaining":0});
     world.btech = serde_json::from_value(encoded).unwrap();
-    let report = battle_c3i_targets(&world, first, pilot).unwrap();
+    let contacts = displayed_battle_contacts(&world, first).unwrap();
     assert_eq!(
-        report.rows.iter().map(|r| r.unit).collect::<Vec<_>>(),
-        vec![wreck, far, near]
+        contacts.iter().map(|r| r.target).collect::<Vec<_>>(),
+        vec![wreck, near, far]
     );
-    assert!(report.rows[0].destroyed);
-    assert_eq!(report.rows[0].status.chars().nth(1), Some('D'));
+    assert_eq!(contacts[0].status.chars().nth(1), Some('D'));
     assert!(
-        report
-            .rows
+        contacts
             .iter()
             .all(|r| r.detection == Some(BattleDetectionChannel::Sensors))
     );
+    assert!(contacts.iter().all(|r| r.short_text.starts_with("S ")));
+    // No peer sees closer, so the shared range equals the physical range on every row.
     assert!(
-        text::plain(&report.text)
-            .lines()
-            .skip(1)
-            .take(3)
-            .all(|line| line.starts_with("S "))
+        contacts
+            .iter()
+            .all(|r| (r.network_range.unwrap() - r.range.spatial).abs() < 1e-8)
     );
-    assert!(report.rows[2].selected);
-    assert!(report.text.contains("[fg=red bold]"));
-    assert_eq!(report.rows[2].network_range.source, None);
+    assert!(
+        contacts[1]
+            .styled_short_text(true)
+            .contains("[fg=red bold]")
+    );
+    world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(first);
+    let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
+    let listing = support::run_text(&scripts, &config, pilot, 1, "contacts");
+    let lines: Vec<_> = text::plain(&listing).lines().map(str::to_owned).collect();
+    // The cockpit display keeps its destroyed-first, descending-range order.
+    let position = |id: ObjectId| {
+        let label = &contacts.iter().find(|r| r.target == id).unwrap().label;
+        lines
+            .iter()
+            .position(|line| line.contains(&format!("[{label}]")))
+    };
+    assert!(listing.contains("[fg=red bold]"));
+    assert!(position(wreck) < position(far) && position(far) < position(near));
 }
 
 #[tokio::test]
@@ -1648,17 +1650,20 @@ async fn classic_reports_apply_active_capacity_and_keep_unconscious_masters() {
     let status = battle_c3_status(&world, first, pilot).unwrap();
     assert_eq!(status.rows.len(), 5);
     assert!(status.rows.iter().any(|r| r.unit == units[5].0));
-    let targets = battle_c3_targets(&world, first, pilot).unwrap();
-    assert_eq!(targets.rows.len(), 1);
-    assert_eq!(targets.rows[0].unit, target);
-    assert_eq!(targets.rows[0].network_range.kind, BattleCommandNetwork::C3);
-    assert_eq!(targets.rows[0].network_range.source, Some(units[4].0));
-    assert_eq!(targets.rows[0].detection, None);
+    let contacts = displayed_battle_contacts(&world, first).unwrap();
+    assert_eq!(contacts.len(), 1);
+    assert_eq!(contacts[0].target, target);
+    // Classic C3 supplies the shared range: the master at y17 sits one hex from the target.
+    assert!((contacts[0].network_range.unwrap() - 1.0).abs() < 1e-8);
+    assert_eq!(contacts[0].detection, None);
     assert_eq!(world.btech, before);
     persistence::save(&config.database(), &world).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
     assert_eq!(battle_c3_status(&restored, first, pilot).unwrap(), status);
-    assert_eq!(battle_c3_targets(&restored, first, pilot).unwrap(), targets);
+    assert_eq!(
+        displayed_battle_contacts(&restored, first).unwrap(),
+        contacts
+    );
     // Shutdown removes this master from the temporary capacity calculation.
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     encoded["recoveries"] = serde_json::json!({});
@@ -1680,16 +1685,11 @@ async fn classic_reports_apply_active_capacity_and_keep_unconscious_masters() {
             .collect::<Vec<_>>(),
         vec![units[1].0, units[2].0, units[3].0]
     );
-    assert!(
-        battle_c3_targets(&world, first, pilot)
-            .unwrap()
-            .rows
-            .is_empty()
-    );
-    assert_eq!(
-        battle_c3i_targets(&world, first, pilot).unwrap().rows[0].unit,
-        target
-    );
+    // The stopped master leaves the classic set, so the C3i peer supplies the sighting
+    // while the shared range falls back to the physical distance.
+    let contacts = displayed_battle_contacts(&world, first).unwrap();
+    assert_eq!(contacts[0].target, target);
+    assert!((contacts[0].network_range.unwrap() - 16.0).abs() < 1e-8);
     assert_eq!(battle_c3_members(&world, first).unwrap().len(), 6);
     assert_eq!(world.btech, before);
     world.validate(&config).unwrap();
@@ -1700,34 +1700,25 @@ async fn classic_displays_are_private_native_and_detached_lua_reports() {
     let (_dir, config, mut world, units) = field_with_classic(&[1, 0, 0, 0, 0, 0, 0], true).await;
     let (first, pilot) = units[0];
     assert!(battle_c3_status(&world, first, pilot).is_err());
-    assert!(battle_c3_targets(&world, first, pilot).is_err());
     join_leave_battle_c3(&mut world, first, pilot, Some(units[1].0)).unwrap();
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(first);
     let status = battle_c3_status(&world, first, pilot).unwrap();
-    let targets = battle_c3_targets(&world, first, pilot).unwrap();
     assert!(status.text.starts_with("C3 Network Status:"));
-    assert!(targets.text.starts_with("C3 Contacts:"));
     assert!(battle_c3_status(&world, first, ObjectId(2)).is_err());
-    assert!(battle_c3_targets(&world, first, ObjectId(2)).is_err());
     let before = world.btech.clone();
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
-    for (native, lua, report) in [
-        ("c3network", "c3_network", status.text),
-        ("c3targets", "c3_targets", targets.text),
-    ] {
-        let result: String = scripts
-            .eval_callback(&format!(
-                "return assert(btech.unit.{lua}({}, {})).text",
-                first.0, pilot.0
-            ))
-            .unwrap();
-        assert_eq!(result, report);
-        assert!(scripts.drain_outbox().is_empty());
-        assert_eq!(
-            text::plain(&support::run_text(&scripts, &config, pilot, 1, native)),
-            text::plain(&report)
-        );
-    }
+    let result: String = scripts
+        .eval_callback(&format!(
+            "return assert(btech.unit.c3_network({}, {})).text",
+            first.0, pilot.0
+        ))
+        .unwrap();
+    assert_eq!(result, status.text);
+    assert!(scripts.drain_outbox().is_empty());
+    assert_eq!(
+        text::plain(&support::run_text(&scripts, &config, pilot, 1, "c3network")),
+        text::plain(&status.text)
+    );
     assert_eq!(scripts.world().btech, before);
 }
 

@@ -137,17 +137,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         "unit_supercharger",
         error::wrap(lua, supercharger, "btech.operation.failed")?,
     )?;
-    let c3_targets = lua.create_function(|lua, (unit, pilot): (i64, i64)| {
-        crate::lua::transactions::require(lua)?;
-        let scripts = crate::Scripts::services(lua)?;
-        let report = crate::battle_c3_targets(&scripts.world(), ObjectId(unit), ObjectId(pilot))
-            .map_err(|e| error::failure("btech.operation.failed", e))?;
-        detached(lua, &report)
-    })?;
-    native.set(
-        "unit_c3_targets",
-        error::wrap(lua, c3_targets, "btech.operation.failed")?,
-    )?;
     let c3_network = lua.create_function(|lua, (unit, pilot): (i64, i64)| {
         crate::lua::transactions::require(lua)?;
         let scripts = crate::Scripts::services(lua)?;
@@ -158,17 +147,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     native.set(
         "unit_c3_network",
         error::wrap(lua, c3_network, "btech.operation.failed")?,
-    )?;
-    let c3i_targets = lua.create_function(|lua, (unit, pilot): (i64, i64)| {
-        crate::lua::transactions::require(lua)?;
-        let scripts = crate::Scripts::services(lua)?;
-        let report = crate::battle_c3i_targets(&scripts.world(), ObjectId(unit), ObjectId(pilot))
-            .map_err(|e| error::failure("btech.operation.failed", e))?;
-        detached(lua, &report)
-    })?;
-    native.set(
-        "unit_c3i_targets",
-        error::wrap(lua, c3i_targets, "btech.operation.failed")?,
     )?;
     let c3i_network = lua.create_function(|lua, (unit, pilot): (i64, i64)| {
         crate::lua::transactions::require(lua)?;

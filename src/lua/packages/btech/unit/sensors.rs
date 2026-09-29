@@ -23,7 +23,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 ObjectId(unit),
                 lua.from_value(Value::Table(table))?,
             ),
-            None => crate::visible_battle_contacts(&shared.borrow(), ObjectId(unit)),
+            None => crate::displayed_battle_contacts(&shared.borrow(), ObjectId(unit)),
         }
         .map_err(|e| error::failure("btech.operation.failed", e))?;
         detached(lua, &contacts)

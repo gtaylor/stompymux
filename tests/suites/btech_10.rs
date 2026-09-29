@@ -38,6 +38,9 @@ mod btech_mech_vacuum;
 #[path = "../btech_mw_safety.rs"]
 mod btech_mw_safety;
 
+#[path = "../btech_network_topology.rs"]
+mod btech_network_topology;
+
 #[path = "../btech_power.rs"]
 mod btech_power;
 

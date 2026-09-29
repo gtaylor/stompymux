@@ -396,7 +396,10 @@ fn advance_combat_inner(
             }
         };
         if let Some(target) = target {
-            if let Some(contact) = observation.contacts.iter().find(|c| c.unit == target) {
+            let contact = observation.contacts.iter().find(|c| c.unit == target);
+            // A network-relayed target is faced in advance but cannot be locked or fired on.
+            let relayed = contact.is_some_and(|contact| contact.relayed);
+            if let Some(contact) = contact {
                 let stationary = super::steering::motion(world, id)
                     .is_some_and(|m| m.speed.abs() < 0.1 && m.desired_speed.abs() < 0.1);
                 let navigating = world
@@ -424,7 +427,7 @@ fn advance_combat_inner(
                 );
             }
             // Weapons hold forbids expenditure, not aiming an explicitly assigned target.
-            if config_for_unit.fire_mode != super::AutopilotFireMode::Hold {
+            if config_for_unit.fire_mode != super::AutopilotFireMode::Hold && !relayed {
                 fire_target_if_ready(
                     world,
                     config,

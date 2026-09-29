@@ -141,6 +141,8 @@ fn valid_combat_target_is_retained_between_reassessment_ticks_but_loss_is_immedi
         identified: true,
         known_destroyed: false,
         range,
+        network_range: None,
+        relayed: false,
         seen_at: 2,
     };
     let mut observation = AutopilotObservation {
