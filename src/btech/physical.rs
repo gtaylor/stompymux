@@ -73,7 +73,12 @@ impl BattlePhysicalAttack {
     }
 
     /// Check chassis anatomy and supporting legs before geometric or timing eligibility.
+    /// A `Weapon` carrying `Punch` is malformed and rejected here, before any attack path uses it.
     pub fn validate_chassis_support(self, unit: &BattleUnit) -> Result<()> {
+        ensure!(
+            self.hand_weapon() != Some(BattleArmAttack::Punch),
+            "A punch is not a weapon swing"
+        );
         let chassis = unit.chassis();
         if !self.uses_leg() {
             ensure!(

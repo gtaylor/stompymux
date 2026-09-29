@@ -18630,6 +18630,34 @@ async fn lance_penetrates_remaining_armor_with_reduced_criticals() {
     world.validate(&config).unwrap();
 }
 
+/// A weapon swing that names a punch is malformed and cannot reach resolution through the host action.
+#[tokio::test]
+async fn weapon_attack_rejects_punch() {
+    use stompymux_rs::*;
+    let (_dir, config, original, id, target) = kick_fixture().await;
+    let scripts = Scripts::new(
+        &config,
+        std::rc::Rc::new(std::cell::RefCell::new(original.clone())),
+    )
+    .unwrap();
+    let error = resolve_battle_physical_attack_action(
+        &scripts,
+        &config,
+        id,
+        ObjectId(1),
+        target,
+        BattlePhysicalAttack::Weapon {
+            arm: BattleArm::Right,
+            weapon: BattleArmAttack::Punch,
+        },
+        kick_rules(),
+    )
+    .unwrap_err();
+    assert!(format!("{error:#}").contains("A punch is not a weapon swing"));
+    assert_eq!(scripts.world().btech, original.btech);
+    assert!(scripts.drain_outbox().is_empty());
+}
+
 /// Installed hand weapons reach a lower standing target, and choose tables independently of arm arcs.
 #[tokio::test]
 async fn handweapon_elevation_tables_and_default_arm_selection() {
