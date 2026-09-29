@@ -2223,6 +2223,16 @@ function btech_unit.saw(dbref, pilot, arms, target) end
 ---@return table report Ordered attacks, per-arm rejections and transactional notices.
 function btech_unit.claw(dbref, pilot, arms, target) end
 
+---Swing the physical weapon installed in each selected arm (axe, sword, mace, dual saw, claw,
+---retractable blade, lance, flail, wrecking ball, chain whip or vibroblade). Both arms by
+---default, skipping arms without a weapon; only claws let the second arm follow a completed swing.
+---@param dbref integer
+---@param pilot integer
+---@param arms? 'left'|'right'|'both'
+---@param target? integer Defaults to selected target; explicit targets require acquisition.
+---@return table report Ordered attacks, per-arm rejections and transactional notices.
+function btech_unit.melee(dbref, pilot, arms, target) end
+
 ---Grab a tree in a selected arm (left first by default), or drop it with '-'.
 ---@param dbref integer
 ---@param pilot integer

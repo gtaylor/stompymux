@@ -89,16 +89,15 @@ pub fn grab_club(
         unit.unjam().is_none(),
         "You are too busy unjamming a weapon!"
     );
-    for kind in [
-        BattleArmAttack::Axe,
-        BattleArmAttack::Sword,
-        BattleArmAttack::Mace,
-    ] {
+    for kind in BattleArmAttack::HAND_WEAPONS
+        .into_iter()
+        .filter(|kind| kind.needs_hand())
+    {
         for arm in [BattleArm::Left, BattleArm::Right] {
             ensure!(
                 !kind.available(unit, arm.section())?,
-                "You cannot grab a club while carrying a {:?}",
-                kind
+                "You cannot grab a club while carrying a {}",
+                kind.name()
             );
         }
     }

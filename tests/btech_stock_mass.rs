@@ -85,6 +85,9 @@ fn stock_identities_and_reference_mass_facts_are_stable() {
         (442, "Light_BAP", 512),
         (443, "SplitCrit_Left", 0),
         (445, "Hardpoint", 0),
+        (446, "Retractable_Blade", 1024),
+        (449, "Wrecking_Ball", 819),
+        (453, "Large_Vibroblade", 1792),
         (528, "Gold", 204),
         (529, "Natural_Extracts", 51),
         (534, "Ore", 51),
@@ -97,7 +100,7 @@ fn stock_identities_and_reference_mass_facts_are_stable() {
     }
     let mut names = BTreeSet::new();
     let parts: Vec<_> = (1..=669).filter_map(BattlePart::from_id).collect();
-    assert_eq!(parts.len(), 575);
+    assert_eq!(parts.len(), 583);
     let mut duplicates = BTreeSet::new();
     for part in parts {
         if !names.insert(part.name.to_ascii_lowercase()) {

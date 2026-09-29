@@ -275,7 +275,17 @@ pub(super) fn resolve_attack_in_candidate(
     rules: impl Into<Option<super::BattleFallRules>>,
     attack: AttackImpact,
 ) -> Result<super::BattleTacticalImpact> {
-    let rules = rules.into();
+    let context = attack_context(world, id, rules.into(), &attack)?;
+    resolve_packet(context, hit, damage, attack.weapon_effect)
+}
+
+/// Build the damage context for an attributed attack packet.
+fn attack_context<'a>(
+    world: &'a mut World,
+    id: ObjectId,
+    rules: Option<super::BattleFallRules>,
+    attack: &AttackImpact,
+) -> Result<ImpactContext<'a>> {
     let toughness = rules.map(|rules| rules.toughness).unwrap_or_else(|| {
         world
             .btech
@@ -295,7 +305,44 @@ pub(super) fn resolve_attack_in_candidate(
     context.character_toughness = (attack.character
         && context.world.objects[&id].flags.contains(Flag::InCharacter))
     .then_some(toughness);
-    resolve_packet(context, hit, damage, attack.weapon_effect)
+    Ok(context)
+}
+
+/// Drive `damage` straight into a section's internal structure, bypassing its armor.
+/// Critical-hit rolls for the packet take `critical_penalty`; used by lance penetration.
+pub(super) fn resolve_penetration_in_candidate(
+    world: &mut World,
+    id: ObjectId,
+    section: BattleSection,
+    damage: u16,
+    rules: super::BattleFallRules,
+    attack: AttackImpact,
+    critical_penalty: u8,
+) -> Result<super::BattleTacticalImpact> {
+    let mut context = attack_context(world, id, Some(rules), &attack)?;
+    if context.enter_damage() {
+        context.report.impact.destroyed = context.unit().is_destroyed();
+        return Ok(context.report);
+    }
+    context.warn_attacker();
+    resolve_path(
+        &mut context,
+        DamagePacket {
+            announced: true,
+            direct_hit: false,
+            section,
+            damage,
+            internal_only: true,
+            transfer: true,
+            rear: false,
+            tac: false,
+            weapon_effect: None,
+            critical_penalty,
+        },
+    )?;
+    context.unit().validate()?;
+    context.report.impact.destroyed = context.unit().is_destroyed();
+    Ok(context.report)
 }
 
 /// Traverse one packet with the admission policy already selected by its attack owner.
@@ -327,6 +374,7 @@ fn resolve_packet(
                 rear: hit.rear_armor,
                 tac: hit.through_armor_critical,
                 weapon_effect,
+                critical_penalty: 0,
             },
         )?;
     }
@@ -360,6 +408,7 @@ pub(super) fn resolve_internal_stress(
             rear: false,
             tac: false,
             weapon_effect: None,
+            critical_penalty: 0,
         },
     )?;
     context.unit().validate()?;
@@ -414,6 +463,7 @@ fn resolve_misload_inner(
             rear: false,
             tac: false,
             weapon_effect: None,
+            critical_penalty: 0,
         },
     )?;
     context.unit().validate()?;
@@ -781,6 +831,14 @@ impl<'a> ImpactContext<'a> {
                     System::Sword => Some("Your sword has been destroyed!"),
                     System::Mace => Some("Your mace has been destroyed!"),
                     System::DualSaw => Some("Your dual saw has been destroyed!"),
+                    System::RetractableBlade => Some("Your retractable blade has been destroyed!"),
+                    System::Lance => Some("Your lance has been destroyed!"),
+                    System::Flail => Some("Your flail has been destroyed!"),
+                    System::WreckingBall => Some("Your wrecking ball has been destroyed!"),
+                    System::ChainWhip => Some("Your chain whip has been destroyed!"),
+                    System::SmallVibroblade => Some("Your small vibroblade has been destroyed!"),
+                    System::MediumVibroblade => Some("Your medium vibroblade has been destroyed!"),
+                    System::LargeVibroblade => Some("Your large vibroblade has been destroyed!"),
                     System::ArtemisIv => Some("Your Artemis IV system has been destroyed!"),
                     System::Ecm => Some("Your ECM system has been destroyed!"),
                     System::NullSignature => Some("Your Null Signature System has been destroyed!"),
@@ -910,6 +968,7 @@ impl<'a> ImpactContext<'a> {
                         rear: false,
                         tac: false,
                         weapon_effect: None,
+                        critical_penalty: 0,
                     },
                 )?;
             }
@@ -954,6 +1013,7 @@ impl<'a> ImpactContext<'a> {
                 rear: false,
                 tac: false,
                 weapon_effect: None,
+                critical_penalty: 0,
             },
         )?;
         let vented = damage.saturating_sub(1);
@@ -1351,6 +1411,8 @@ struct DamagePacket {
     rear: bool,
     tac: bool,
     weapon_effect: Option<WeaponEffect>,
+    /// Subtracted from this packet's critical-hit rolls, as for a glancing blow.
+    critical_penalty: u8,
 }
 
 /// Follow armor/internal transfer links, resolving explosion recursion before the interrupted hit resumes.
@@ -1365,6 +1427,7 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
         rear,
         tac,
         weapon_effect,
+        critical_penalty,
     } = packet;
     let mut initial_packet = true;
     let mut plasma_returns = 0;
@@ -1509,7 +1572,7 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
                 .unit_mut()
                 .dice
                 .generic_roll()
-                .saturating_sub(penalty);
+                .saturating_sub(critical_penalty.saturating_add(penalty));
             if tac_criticals == 0 {
                 if roll == 12
                     && matches!(
@@ -1611,6 +1674,7 @@ fn resolve_dump_ignition(context: &mut ImpactContext<'_>, section: BattleSection
             rear: true,
             tac: false,
             weapon_effect: None,
+            critical_penalty: 0,
         },
     );
     context.attacker = attacker;

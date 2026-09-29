@@ -119,6 +119,7 @@ no_list: true
 - [`mace`](mace/)
 - [`markings`](markings/)
 - [`masc`](masc/)
+- [`melee`](melee/)
 - [`mml`](mml/)
 - [`mw_safety`](mw-safety/)
 - [`narc`](narc/)

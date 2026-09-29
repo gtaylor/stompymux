@@ -252,6 +252,12 @@ impl BattleVehicleTemplate {
                     1024
                 }
             }
+            BattleSystem::RetractableBlade => u32::from(self.tons.div_ceil(20)) * 1024 + 512,
+            BattleSystem::Lance => u32::from(self.tons.div_ceil(20)) * 1024,
+            BattleSystem::WreckingBall => 4096,
+            BattleSystem::ChainWhip | BattleSystem::SmallVibroblade => 3072,
+            BattleSystem::Flail | BattleSystem::MediumVibroblade => 5120,
+            BattleSystem::LargeVibroblade => 7168,
             BattleSystem::Ecm => {
                 if self.has_special("Clan")
                     && !self.has_technology(super::BattleTechnology::Watchdog)

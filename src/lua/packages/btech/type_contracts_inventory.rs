@@ -93,7 +93,7 @@
 //|function btech_inventory.set(actor, object, part, brand, quantity) end
 // lua-types-end
 
-// lua-types-begin btech 00418
+// lua-types-begin btech 00419
 //|---Return all part/manufacturer forms in short-name order, without requiring live stock.
 //|---@param actor integer Wizard requesting inspection.
 //|---@return table[] forms Part ID, brand ID, short_name, long_name and very_long_name.
