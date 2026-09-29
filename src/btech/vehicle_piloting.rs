@@ -18,7 +18,11 @@ pub(super) fn roll(
         .get(&id)
         .context("Vehicle is unavailable")?;
     let skill = super::skills::unit_piloting_target(world, id, extended)?;
-    let cockpit = u8::from(vehicle.definition().has_special("SMCPIT"));
+    let cockpit = u8::from(
+        vehicle
+            .definition()
+            .has_technology(super::BattleTechnology::SmallCockpit),
+    );
     let absent_character_pilot = if object.flags.contains(Flag::InCharacter)
         && vehicle
             .pilot()
@@ -30,9 +34,15 @@ pub(super) fn roll(
         0
     };
     let damage = vehicle.piloting_damage();
+    let armor = u8::from(
+        vehicle
+            .definition()
+            .has_technology(super::BattleTechnology::HardenedArmor),
+    );
     let target = i32::from(skill)
         .wrapping_add(i32::from(damage))
         .wrapping_add(i32::from(cockpit))
+        .wrapping_add(i32::from(armor))
         .wrapping_add(modifier)
         .wrapping_add(i32::from(absent_character_pilot));
     let blocked =
@@ -54,6 +64,7 @@ pub(super) fn roll(
         skill,
         damage,
         cockpit,
+        armor,
         situational: modifier,
         absent_character_pilot,
         target,

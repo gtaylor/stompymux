@@ -225,6 +225,7 @@ fn resolve_hex_shot_inner(
                         guidance_blocked: field.blocks_outgoing_guidance(),
                         angel_blocked: field.angel_disturbed,
                         target_beacon: false,
+                        artemis_v: super::artemis::artemis_v(world, shooter),
                     },
                     super::dice::unit_dice_mut(world, shooter)?,
                 )?;

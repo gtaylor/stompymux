@@ -131,9 +131,15 @@ fn resolve_damage(
             .is_some_and(|state| state.internal > 0),
         "Vehicle section is unavailable"
     );
-    let structural_damage = if vehicle.definition().has_special("ReinforcedInternal_Tech") {
+    let structural_damage = if vehicle
+        .definition()
+        .has_technology(super::BattleTechnology::ReinforcedStructure)
+    {
         amount.div_ceil(2)
-    } else if vehicle.definition().has_special("CompositeInternal_Tech") {
+    } else if vehicle
+        .definition()
+        .has_technology(super::BattleTechnology::CompositeStructure)
+    {
         amount
             .checked_mul(2)
             .context("Vehicle internal damage exceeds limit")?
@@ -187,7 +193,17 @@ fn resolve_damage(
     let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
     let roll = vehicle.dice.generic_roll();
     result.rolls.push(roll);
-    let count = match roll {
+    // Damage that penetrated hardened armor rolls criticals two lower.
+    let penalty = if armor_criticals.is_some()
+        && vehicle
+            .definition()
+            .has_technology(super::BattleTechnology::HardenedArmor)
+    {
+        super::BattleTechnology::HARDENED_CRITICAL_PENALTY
+    } else {
+        0
+    };
+    let count = match roll.saturating_sub(penalty) {
         _ if armor_criticals == Some(true) => 0,
         8 | 9 => 1,
         10 | 11 => 2,

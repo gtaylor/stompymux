@@ -102,6 +102,19 @@ impl BattleWeapon {
         glancing: bool,
         distance: Option<f64>,
     ) -> Result<Vec<u16>> {
+        self.damage_groups_for_guided_hit(mode, cluster_roll, glancing, distance, false)
+    }
+
+    /// As [`Self::damage_groups_for_ammunition_hit`], with Artemis V guidance adding one more
+    /// to the Artemis cluster bonus.
+    pub(super) fn damage_groups_for_guided_hit(
+        self,
+        mode: super::BattleAmmunitionMode,
+        cluster_roll: Option<u8>,
+        glancing: bool,
+        distance: Option<f64>,
+        artemis_v: bool,
+    ) -> Result<Vec<u16>> {
         ensure!(!self.is_artillery(), "Artillery damage requires an arrival");
         ensure!(
             mode.supports(self),
@@ -156,7 +169,12 @@ impl BattleWeapon {
         }
         let roll = cluster_roll.context("Missile launcher requires a cluster roll")?;
         ensure!((2..=12).contains(&roll), "Invalid missile cluster roll");
-        let adjusted = i16::from(roll) + if artemis { 2 } else { 0 } - if glancing { 4 } else { 0 };
+        let artemis_bonus = match (artemis, artemis_v) {
+            (true, true) => 3,
+            (true, false) => 2,
+            (false, _) => 0,
+        };
+        let adjusted = i16::from(roll) + artemis_bonus - if glancing { 4 } else { 0 };
         let mut hits = if self.is_streak() {
             self.profile().missiles
         } else if glancing && adjusted < 2 {
@@ -519,6 +537,10 @@ fn resolve_salvo_with_effects(
             Some(super::unit_range(world, shooter, target)?.spatial)
         }
     };
+    let artemis_v = match geometry {
+        HitGeometry::Fixed(_) => false,
+        HitGeometry::Direct { shooter, .. } => super::artemis::artemis_v(world, shooter),
+    };
     let (guidance_blocked, angel_blocked) = match geometry {
         HitGeometry::Fixed(_) => (false, false),
         HitGeometry::Direct { shooter, .. } => {
@@ -583,6 +605,7 @@ fn resolve_salvo_with_effects(
             angel_blocked,
             target_beacon: unit.has_beacon(super::BattleBeaconKind::Narc)
                 || unit.has_beacon(super::BattleBeaconKind::Homing),
+            artemis_v,
         },
         &mut unit.dice,
     )?;

@@ -17,6 +17,8 @@ pub struct BattlePilotingCheck {
     pub damage: u8,
     /// Construction penalty from a small cockpit, separate from damage.
     pub cockpit: u8,
+    /// Hardened armor adds one to Mech piloting and vehicle driving rolls.
+    pub armor: u8,
     pub situational: i32,
     pub absent_character_pilot: u8,
     pub target: i32,
@@ -237,6 +239,7 @@ fn roll_check(
     let skill = super::skills::control_target(world, unit, extended)?;
     let damage = state.mobility().piloting_modifier;
     let cockpit = state.cockpit_piloting_modifier();
+    let armor = state.hardened_piloting_modifier();
     let absent_character_pilot = if object.flags.contains(Flag::InCharacter)
         && state
             .pilot()
@@ -250,6 +253,7 @@ fn roll_check(
     let target = i32::from(skill)
         .wrapping_add(i32::from(damage))
         .wrapping_add(i32::from(cockpit))
+        .wrapping_add(i32::from(armor))
         .wrapping_add(modifier)
         .wrapping_add(i32::from(absent_character_pilot));
     let blocked = controls_blocked(world, unit, state.power());
@@ -272,6 +276,7 @@ fn roll_check(
         skill,
         damage,
         cockpit,
+        armor,
         situational: modifier,
         absent_character_pilot,
         target,
@@ -284,7 +289,10 @@ fn roll_check(
 impl super::BattleUnit {
     /// Construction-only control penalty; it does not count as mobility damage.
     pub fn cockpit_piloting_modifier(&self) -> u8 {
-        u8::from(self.definition().has_special("SMCPIT"))
+        u8::from(
+            self.definition()
+                .has_technology(super::BattleTechnology::SmallCockpit),
+        )
     }
 }
 
@@ -375,6 +383,7 @@ mod tests {
             skill: 6,
             damage: 2,
             cockpit: 1,
+            armor: 0,
             situational: -1,
             absent_character_pilot: 5,
             target: 13,
@@ -466,6 +475,7 @@ mod tests {
             skill: 6,
             damage: 0,
             cockpit: 0,
+            armor: 0,
             situational: 0,
             absent_character_pilot: 0,
             target: 6,

@@ -218,7 +218,10 @@ fn landing_input(
                 false,
                 unit.combat_safe,
                 unit.piloting_damage(),
-                u8::from(unit.definition().has_special("SMCPIT")),
+                u8::from(
+                    unit.definition()
+                        .has_technology(super::BattleTechnology::SmallCockpit),
+                ),
             )
         };
     let skill = if mech {

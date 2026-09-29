@@ -53,9 +53,10 @@ impl BattleUnit {
         Ok(installed)
     }
 
-    /// Installed CASE or Clan containment vents internal explosions, including after section loss.
+    /// Installed CASE, CASE II or Clan containment stops internal explosions from transferring,
+    /// including after section loss.
     pub fn has_case(&self, section: BattleSection) -> bool {
-        if self.definition().has_special("Clan") {
+        if self.definition().has_special("Clan") || self.has_case_ii(section) {
             return true;
         }
         self.definition()
@@ -64,6 +65,18 @@ impl BattleUnit {
             .is_some_and(|layout| {
                 layout.criticals.values().any(|part| {
                     BattleSystem::parse(&part.equipment).ok() == Some(BattleSystem::Case)
+                })
+            })
+    }
+
+    /// Installed CASE II vents a local explosion through armor after one internal point.
+    pub fn has_case_ii(&self, section: BattleSection) -> bool {
+        self.definition()
+            .sections
+            .get(&section)
+            .is_some_and(|layout| {
+                layout.criticals.values().any(|part| {
+                    BattleSystem::parse(&part.equipment).ok() == Some(BattleSystem::CaseIi)
                 })
             })
     }

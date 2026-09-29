@@ -617,7 +617,7 @@ Alias: `{x: integer, y: integer, z?: integer}`
 
 ## BattleProbeKind
 
-Alias: `"beagle"|"light"|"bloodhound"`
+Alias: `"beagle"|"light"|"bloodhound"|"watchdog"`
 
 ## BattleContactArc
 

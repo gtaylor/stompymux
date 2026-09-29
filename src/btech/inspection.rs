@@ -68,6 +68,11 @@ pub fn inspection_template_battle_value(template: &BattleTemplate) -> Result<sup
     let mut defense = armor as f32 * 2.5 + structure as f32 * 1.5 * engine_factor;
     defense += tons as f32 * if flag("HDGyro_Tech") { 1.0 } else { 0.5 };
     let settings = super::BattleWeaponSettings::default();
+    let has_case_ii = |section| {
+        loadout.systems.iter().any(|part| {
+            part.system == super::BattleSystem::CaseIi && part.location.section == section
+        })
+    };
     let ecm = loadout
         .systems
         .iter()
@@ -108,7 +113,9 @@ pub fn inspection_template_battle_value(template: &BattleTemplate) -> Result<sup
             part.system == super::BattleSystem::Case
                 && part.location.section == bin.location.section
         });
-        if vulnerable || flag("XLEngine_Tech") || flag("XXL_Tech") || !has_case {
+        if !has_case_ii(bin.location.section)
+            && (vulnerable || flag("XLEngine_Tech") || flag("XXL_Tech") || !has_case)
+        {
             defense -= 15.0;
         }
     }
@@ -131,7 +138,9 @@ pub fn inspection_template_battle_value(template: &BattleTemplate) -> Result<sup
         })
     };
     for (&section, definition) in &template.sections {
-        let exposed = if (clan && vulnerable_core(section)) || xl {
+        let exposed = if has_case_ii(section) {
+            false
+        } else if (clan && vulnerable_core(section)) || xl {
             true
         } else if vulnerable_core(section) {
             !has_case(section)

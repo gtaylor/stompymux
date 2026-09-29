@@ -18,10 +18,12 @@ impl BattleVehicle {
     /// Configuration text does not install CASE equipment or add containment by itself.
     pub fn has_powerplant_containment(&self) -> bool {
         self.definition().sections.values().any(|layout| {
-            layout
-                .criticals
-                .values()
-                .any(|part| BattleSystem::parse(&part.equipment).ok() == Some(BattleSystem::Case))
+            layout.criticals.values().any(|part| {
+                matches!(
+                    BattleSystem::parse(&part.equipment),
+                    Ok(BattleSystem::Case | BattleSystem::CaseIi)
+                )
+            })
         })
     }
 }

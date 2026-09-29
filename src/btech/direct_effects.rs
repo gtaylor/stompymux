@@ -149,6 +149,7 @@ fn terrain_damage(world: &mut World, request: &DirectEffectRequest) -> Result<u1
             guidance_blocked: false,
             angel_blocked: false,
             target_beacon: false,
+            artemis_v: super::artemis::artemis_v(world, request.shooter),
         },
         super::dice::unit_dice_mut(world, request.shooter)?,
     )?;

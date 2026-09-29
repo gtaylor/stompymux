@@ -52,7 +52,7 @@ impl BattleUnit {
         };
         let gyro = self.gyro().mass(gyro);
         let cockpit = if survives(BattleSection::Head) {
-            if definition.has_special("SMCPIT") {
+            if definition.has_technology(super::BattleTechnology::SmallCockpit) {
                 2 * 1024
             } else {
                 3 * 1024
@@ -83,11 +83,16 @@ impl BattleUnit {
         } else {
             14
         };
-        let structure_divisor = if material_count(BattleSystem::EndoSteel) >= material_slots {
-            4
-        } else {
-            2
-        };
+        let structure_divisor =
+            if definition.has_technology(super::BattleTechnology::ReinforcedStructure) {
+                1
+            } else if material_count(BattleSystem::EndoSteel) >= material_slots
+                || definition.has_technology(super::BattleTechnology::CompositeStructure)
+            {
+                4
+            } else {
+                2
+            };
         let structure = structure_mass(definition.tons, current, original, structure_divisor)?;
         let protection: u32 = self
             .sections()
@@ -104,6 +109,9 @@ impl BattleUnit {
             62
         } else if material_count(BattleSystem::LightFerroFibrous) >= 7 {
             53
+        } else if definition.has_technology(super::BattleTechnology::HardenedArmor) {
+            // Hardened armor provides eight points per ton instead of sixteen.
+            25
         } else {
             50
         };
@@ -212,18 +220,36 @@ pub(super) fn system_slot_mass(definition: &super::BattleTemplate, system: Battl
         | BattleSystem::C3Master
         | BattleSystem::C3Slave
         | BattleSystem::Tag
-        | BattleSystem::ArtemisIv
         | BattleSystem::AngelEcm
         | BattleSystem::NullSignature
         | BattleSystem::Axe
         | BattleSystem::Mace
         | BattleSystem::DualSaw
         | BattleSystem::Claw => 1024,
+        // An Artemis V controller weighs a ton and a half.
+        BattleSystem::ArtemisIv => {
+            if definition.has_technology(super::BattleTechnology::ArtemisV) {
+                1536
+            } else {
+                1024
+            }
+        }
+        // A Watchdog CEWS weighs a ton and a half in the Clan ECM slot.
         BattleSystem::Ecm => {
-            if definition.has_special("Clan") {
+            if definition.has_technology(super::BattleTechnology::Watchdog) {
+                1536
+            } else if definition.has_special("Clan") {
                 1024
             } else {
                 768
+            }
+        }
+        // Inner Sphere CASE II weighs a ton per slot; the Clan version weighs half as much.
+        BattleSystem::CaseIi => {
+            if definition.has_special("Clan") {
+                512
+            } else {
+                1024
             }
         }
         BattleSystem::Sword => {
@@ -315,5 +341,24 @@ mod tests {
         ] {
             assert_eq!(engine_mass(rating), half_tons * 512);
         }
+    }
+
+    /// CASE II weighs a ton per Inner Sphere slot and half a ton per Clan slot.
+    #[test]
+    fn case_ii_slot_mass_depends_on_technology_base() {
+        let mut definition = super::super::BattleTemplate::parse(include_str!(
+            "../../tests/fixtures/btech/mechs/JR7-D"
+        ))
+        .unwrap();
+        assert_eq!(system_slot_mass(&definition, BattleSystem::CaseIi), 1024);
+        assert_eq!(system_slot_mass(&definition, BattleSystem::Case), 512);
+        let specials = definition.attributes.entry("specials".into()).or_default();
+        specials.push_str(" Clan");
+        assert_eq!(system_slot_mass(&definition, BattleSystem::CaseIi), 512);
+        assert_eq!(
+            BattleSystem::parse("CASE-II").unwrap(),
+            BattleSystem::CaseIi
+        );
+        assert!(BattleSystem::CaseIi.is_noncritical());
     }
 }

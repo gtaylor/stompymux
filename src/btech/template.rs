@@ -104,6 +104,13 @@ impl BattleTemplate {
         1
     }
 
+    /// Test a chassis technology by its full name or the reference's abbreviation, which
+    /// templates use interchangeably.
+    pub(crate) fn has_technology(&self, technology: super::BattleTechnology) -> bool {
+        let (name, abbreviation) = technology.names();
+        self.has_special(name) || self.has_special(abbreviation)
+    }
+
     /// Test a whitespace-separated chassis feature using the asset's case-insensitive spelling.
     pub(crate) fn has_special(&self, name: &str) -> bool {
         self.attributes.get("specials").is_some_and(|value| {

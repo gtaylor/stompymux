@@ -131,7 +131,11 @@ pub(super) fn resolve_rear_followup_in_candidate(
     {
         hit.amount = (hit.amount / rules.rotor_damage_divisor).max(1);
     }
-    let amount = if vehicle.definition().has_special("HardenedArmor_Tech") {
+    let hardened = vehicle
+        .definition()
+        .has_technology(super::BattleTechnology::HardenedArmor);
+    // Hardened armor records the armor it could remove: half the hit, rounding up.
+    let amount = if hardened {
         hit.amount.div_ceil(2)
     } else {
         hit.amount
@@ -171,7 +175,7 @@ pub(super) fn resolve_rear_followup_in_candidate(
         result.rolls.push(vehicle.dice.generic_roll());
     }
     if section_lost {
-        result.overflow = amount;
+        result.overflow = hit.amount;
         return Ok(result);
     }
     if let Some(notices) =
@@ -202,17 +206,29 @@ pub(super) fn resolve_rear_followup_in_candidate(
     });
     let previous_warning =
         super::combat_warnings::armor_severity(original, vehicle.sections()[&hit.section].armor);
+    // Each hardened armor point stops two damage; overflow passes at full value.
+    let (armor_damage, hardened_overflow) = if hardened {
+        let (removed, overflow) = super::BattleTechnology::hardened_hit(
+            hit.amount,
+            vehicle.sections()[&hit.section].armor,
+        );
+        (u32::from(removed), Some(overflow))
+    } else {
+        (amount, None)
+    };
     result.absorbed = vehicle
         .damage_phase(
             hit.section,
-            amount.min(u32::from(u16::MAX)) as u16,
+            armor_damage.min(u32::from(u16::MAX)) as u16,
             BattleDamagePhase::Armor { rear: false },
         )?
         .absorbed;
-    result.overflow = amount - u32::from(result.absorbed);
+    result.overflow = hardened_overflow.unwrap_or(amount - u32::from(result.absorbed));
     let remaining = vehicle.sections()[&hit.section].armor;
     let warning = super::combat_warnings::armor_severity(original, remaining);
+    // Hardened armor negates armor-piercing critical chances.
     let ap = !hit.through_armor_critical
+        && !hardened
         && result.overflow == 0
         && hit.armor_piercing.is_some()
         && (original == 0 || u32::from(remaining) * 100 / u32::from(original) < 50);

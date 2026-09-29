@@ -1078,6 +1078,70 @@ The same audit corrected targeting-computer eligibility for conventional AMS.
 Laser AMS retains beam-family eligibility for equipment sizing. Catalogue and
 Clan energy regressions cover that distinction without enabling manual fire.
 
+### CASE II
+
+`CASE-II` criticals parse as `BattleSystem::CaseIi`. It is a noncritical slot, like
+CASE, and weighs one ton per Inner Sphere slot or half a ton per Clan slot. It costs
+175,000 per slot, matching the reference cost table. The reference defines a CASE II
+section bit but never applies it, so the combat rule follows the published rules
+instead of the C code.
+
+When ammunition or a weapon explodes in a CASE II location, the section takes one
+point of internal damage with its normal critical roll. The rest of the blast goes
+to that section's armor (rear armor on torsos), and damage beyond that armor is lost
+without transferring. The pilot takes one injury instead of two, reported as
+`BattleImpactEffect::VentedExplosionInjury` when no tactical rules are supplied.
+CASE II also counts as CASE for containment and for vehicle power-plant containment.
+Battle value drops the ammunition and Gauss exposure penalties for a CASE II location,
+including the center torso, head, legs and XL side torsos. Tests cover the venting
+path, battle value, mass and parsing.
+
+### Chassis technologies
+
+`BattleTechnology` names seven chassis flags and accepts either the reference's full name
+or its abbreviation, as the reference template loader does. Cost helpers accept both
+spellings too.
+
+- **Hardened armor** (`HardenedArmor_Tech`/`HARM`) follows *Tactical Operations* pp. 280–281
+  and *Tactical Operations: Advanced Units & Equipment* p. 92, for Mechs and vehicles:
+  - Each remaining point stops two damage. A hit removes half its damage in armor (rounding
+    up), and damage beyond twice the remaining armor passes on at full value. The reference
+    instead halved the whole hit, overflow included.
+  - Critical rolls for damage that penetrates the armor are two lower, including the roll of
+    12 that blows off a limb. Through-armor criticals from the hit-location roll are
+    unmodified.
+  - Armor-piercing ammunition loses its critical check and acts as a standard round.
+  - Mechs lose one running MP, 10.75 kph off the speed ceiling. Because walking speed derives
+    from that ceiling, the walking threshold also drops by two-thirds of an MP. Mech piloting
+    rolls and vehicle driving rolls get +1 (`BattlePilotingCheck::armor`). Vehicles keep
+    their speed.
+  - Per the *Tactical Operations* 3.01 errata, each hardened point lost counts as one damage
+    toward the twenty-damage piloting check, and damage beyond the armor counts in full.
+  - Armor weighs eight points per ton.
+- **Reinforced structure** (`ReinforcedInternal_Tech`/`RINT`) halves internal damage,
+  rounding up. **Composite structure** (`CompositeInternal_Tech`/`CINT`) doubles it.
+  Overflow keeps the modified value, as in the reference. Reinforced structure weighs
+  twice as much as standard, and composite weighs the same as Endo Steel. Limb loss on a
+  critical roll of 12 still destroys the whole location.
+- **Small cockpit** (`SmallCockpit_Tech`/`SMCPIT`): both spellings give the two-ton
+  cockpit, the +1 piloting modifier and the 175,000 cost.
+- **Laser heat sinks** (`LaserHS_Tech`/`LHS`): the reference marks these as
+  unimplemented, so tabletop rules apply. Laser heat sinks are Clan equipment, so
+  dissipation and slots follow the chassis sink rules (double heat sinks on Clan
+  chassis). A running unit that carries them glows, counting as illuminated in darkness.
+- **Watchdog CEWS** (`WatchDog_Tech`/`WDOG`): unimplemented in the reference, so tabletop
+  rules apply. The unit's installed ECM slot also works as an active probe
+  (`BattleActiveProbe::Watchdog`, Clan active-probe reach), and damage to that slot
+  disables both functions. The slot weighs a ton and a half and costs 500,000.
+- **Artemis V** (`ArtemisV_Tech`/`AV`): unimplemented in the reference, so tabletop rules
+  apply. The unit's Artemis controllers add three to the cluster roll instead of two, and
+  Artemis rounds get a -1 to-hit modifier. ECM that blocks Artemis IV also blocks both
+  effects. Narc homing keeps its ordinary bonus. A controller weighs a ton and a half and
+  costs 250,000.
+
+Tests cover Mech damage and mass for every spelling, laser heat sink glow, the Watchdog
+probe's reach, damage and restart, and the Artemis V cluster, aim and mass rules.
+
 ### Conventional Narc beacons
 
 IS and Clan Narc launchers now use native Rust pod resolution, distinct explosive

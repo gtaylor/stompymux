@@ -164,13 +164,18 @@ impl BattleUnit {
         let xl = matches!(engine, BattleEngine::Xl | BattleEngine::Xxl);
         for bin in &loadout.ammunition {
             let section = bin.location.section;
-            if vulnerable_core(section) || xl || !self.has_case(section) {
+            // CASE II protects every location, including the core and XL side torsos.
+            if !self.has_case_ii(section)
+                && (vulnerable_core(section) || xl || !self.has_case(section))
+            {
                 defense -= 15.0;
             }
         }
         // Gauss exposure is assessed per installed weapon slot, including destroyed slots.
         for (&section, layout) in &definition.sections {
-            let exposed = if (clan && vulnerable_core(section)) || xl {
+            let exposed = if self.has_case_ii(section) {
+                false
+            } else if (clan && vulnerable_core(section)) || xl {
                 true
             } else if vulnerable_core(section) {
                 !self.has_case(section)

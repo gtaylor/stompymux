@@ -96,9 +96,12 @@ impl BattleVehicleTemplate {
             .map(|mount| mount.weapon.mass())
             .sum();
         let turret = quarter_ton(turret_weapons / 10);
-        let structure_divisor = if self.has_special("ReinforcedInternal_Tech") {
+        let structure_divisor = if self.has_technology(super::BattleTechnology::ReinforcedStructure)
+        {
             1
-        } else if self.has_special("EndoSteel_Tech") || self.has_special("CompositeInternal_Tech") {
+        } else if self.has_special("EndoSteel_Tech")
+            || self.has_technology(super::BattleTechnology::CompositeStructure)
+        {
             4
         } else {
             2
@@ -132,7 +135,7 @@ impl BattleVehicleTemplate {
             protection * 50 / 62
         } else if self.has_special("LtFerroFibrous_Tech") {
             protection * 50 / 53
-        } else if self.has_special("HardenedArmor_Tech") {
+        } else if self.has_technology(super::BattleTechnology::HardenedArmor) {
             protection * 2
         } else {
             protection
@@ -232,7 +235,6 @@ impl BattleVehicleTemplate {
             | BattleSystem::Claw
             | BattleSystem::Mace
             | BattleSystem::DualSaw
-            | BattleSystem::ArtemisIv
             | BattleSystem::Masc
             | BattleSystem::C3Slave
             | BattleSystem::Tag => 1024,
@@ -243,6 +245,13 @@ impl BattleVehicleTemplate {
                 u32::from(self.tons.div_ceil(10)) * 512 / u32::from(self.tons.div_ceil(15))
             }
             BattleSystem::BeagleProbe => 1536,
+            BattleSystem::ArtemisIv => {
+                if self.has_technology(super::BattleTechnology::ArtemisV) {
+                    1536
+                } else {
+                    1024
+                }
+            }
             BattleSystem::RetractableBlade => u32::from(self.tons.div_ceil(20)) * 1024 + 512,
             BattleSystem::Lance => u32::from(self.tons.div_ceil(20)) * 1024,
             BattleSystem::WreckingBall => 4096,
@@ -250,13 +259,22 @@ impl BattleVehicleTemplate {
             BattleSystem::Flail | BattleSystem::MediumVibroblade => 5120,
             BattleSystem::LargeVibroblade => 7168,
             BattleSystem::Ecm => {
-                if self.has_special("Clan") {
+                if self.has_special("Clan")
+                    && !self.has_technology(super::BattleTechnology::Watchdog)
+                {
                     1024
                 } else {
                     1536
                 }
             }
             BattleSystem::Case | BattleSystem::LightProbe => 512,
+            BattleSystem::CaseIi => {
+                if self.has_special("Clan") {
+                    512
+                } else {
+                    1024
+                }
+            }
             BattleSystem::JumpJet => match self.tons {
                 0..=55 => 512,
                 56..=85 => 1024,

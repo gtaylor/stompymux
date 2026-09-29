@@ -675,7 +675,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00155
-//|---@alias BattleProbeKind "beagle"|"light"|"bloodhound"
+//|---@alias BattleProbeKind "beagle"|"light"|"bloodhound"|"watchdog"
 // lua-types-end
 
 // lua-types-begin btech 00156

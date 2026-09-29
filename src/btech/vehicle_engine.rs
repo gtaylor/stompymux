@@ -52,6 +52,12 @@ impl BattleVehicleMovement {
 }
 
 impl BattleVehicleTemplate {
+    /// Test a chassis technology by its full name or the reference's abbreviation.
+    pub(crate) fn has_technology(&self, technology: super::BattleTechnology) -> bool {
+        let (name, abbreviation) = technology.names();
+        self.has_special(name) || self.has_special(abbreviation)
+    }
+
     /// Inspect case-insensitive chassis flags while retaining their original text in the definition.
     pub(crate) fn has_special(&self, flag: &str) -> bool {
         self.attributes.get("specials").is_some_and(|value| {

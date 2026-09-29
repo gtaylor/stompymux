@@ -142,7 +142,9 @@ pub fn critical_report(
         double_sinks: unit.definition().has_double_heat_sinks(),
         engine: BattleEngine::display_family(&loadout, unit.definition().has_special("Clan"))?,
         improved_jets: unit.definition().has_special("ImprovedJJ_Tech"),
-        small_cockpit: unit.definition().has_special("SMCPIT"),
+        small_cockpit: unit
+            .definition()
+            .has_technology(super::BattleTechnology::SmallCockpit),
         show_brands,
     };
     let inventory = Inventory {
@@ -219,8 +221,10 @@ fn inspect<L: Copy + PartialEq>(
             let proxy = definition.equipment.eq_ignore_ascii_case("SplitCrit_Left")
                 || definition.equipment.eq_ignore_ascii_case("SplitCrit_Right");
             let placeholder = proxy
-                || system
-                    .is_some_and(|system| system.is_noncritical() && system != BattleSystem::Case);
+                || system.is_some_and(|system| {
+                    system.is_noncritical()
+                        && !matches!(system, BattleSystem::Case | BattleSystem::CaseIi)
+                });
             let broken = weapon.is_some_and(|(_, mount)| {
                 mount
                     .criticals

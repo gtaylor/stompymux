@@ -1753,6 +1753,7 @@ fn validate_definition(definition: &BattleTemplate) -> Result<()> {
                             || flag.eq_ignore_ascii_case("LightEngine_Tech")
                             || flag.eq_ignore_ascii_case("XXL_Tech")
                             || flag.eq_ignore_ascii_case("CompactEngine_Tech")
+                            || super::BattleTechnology::recognizes(flag)
                             || (0..=56).any(|code| {
                                 super::admin_contract::administrative_technology(code)
                                     .is_some_and(|(name, _)| flag.eq_ignore_ascii_case(name))

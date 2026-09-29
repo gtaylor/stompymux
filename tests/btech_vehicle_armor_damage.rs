@@ -89,6 +89,8 @@ async fn armor_penetration_uses_one_entry_roll_and_applies_material_modifiers() 
         ("", 40, 40, 0, 0),
         ("", 43, 43, 3, 3),
         ("HardenedArmor_Tech", 81, 41, 1, 1),
+        // Forty hardened points stop eighty; the other five pass at full value.
+        ("HardenedArmor_Tech", 85, 43, 5, 5),
         ("ReinforcedInternal_Tech", 43, 43, 3, 2),
         ("CompositeInternal_Tech", 43, 43, 3, 6),
     ] {
@@ -664,4 +666,21 @@ async fn rotor_divisor_preserves_minimum_internal_damage_and_restart() {
             1
         );
     }
+}
+
+/// Hardened armor leaves vehicle speed alone and adds one to driving rolls.
+#[tokio::test]
+async fn hardened_armor_hampers_vehicle_driving() {
+    let standard = include_str!("../game/mechs/Demolisher");
+    let hardened = standard.replace("ICEEngine_Tech", "ICEEngine_Tech HardenedArmor_Tech");
+    let (_dir, _config, mut plain, plain_id) = fixture(standard).await;
+    let (_dir, _config, mut world, id) = fixture(&hardened).await;
+    assert_eq!(
+        world.btech.vehicles()[&id].maximum_speed(),
+        plain.btech.vehicles()[&plain_id].maximum_speed()
+    );
+    let base = stompymux_rs::roll_battle_piloting(&mut plain, plain_id, 0, true).unwrap();
+    let check = stompymux_rs::roll_battle_piloting(&mut world, id, 0, true).unwrap();
+    assert_eq!((base.armor, check.armor), (0, 1));
+    assert_eq!(check.target, base.target + 1);
 }
