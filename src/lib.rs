@@ -228,8 +228,8 @@ pub use btech::set_friendly_fire_safety as set_battle_friendly_fire_safety;
 pub use btech::{unit_status as battle_unit_status, weapon_status as battle_weapon_status};
 
 pub use btech::{
-    BattleLeg, BattlePhysicalProfile, BattlePhysicalReport, BattlePhysicalRules,
-    kick_profile as battle_kick_profile, resolve_kick as resolve_battle_kick,
+    BattleLancePenetration, BattleLeg, BattlePhysicalProfile, BattlePhysicalReport,
+    BattlePhysicalRules, kick_profile as battle_kick_profile, resolve_kick as resolve_battle_kick,
 };
 
 // Physical arm selection and punch reports share the kick damage domain.
@@ -324,9 +324,9 @@ pub use btech::advance_motion_action as advance_battle_motion_action;
 /// Resolve a physical attack and publish character injuries and crew casualties atomically.
 pub use btech::physical_attack_action as resolve_battle_physical_attack_action;
 
-/// Arm sequencing choice and character-aware host action.
-pub use btech::BattleArmAttackChoice;
 pub use btech::arm_attack_action as resolve_battle_arm_attack_action;
+/// Arm sequencing choice and character-aware host action.
+pub use btech::{BattleArmAttackChoice, BattleArmWeapon};
 
 /// Resolve one charge and publish character injuries, XP and casualties atomically.
 pub use btech::charge_action as resolve_battle_charge_action;

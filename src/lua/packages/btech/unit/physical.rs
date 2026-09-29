@@ -103,12 +103,13 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
         native.set(name, error::wrap(lua, callback, "btech.operation.failed")?)?;
     }
     for (name, kind) in [
-        ("unit_punch", crate::BattleArmAttack::Punch),
-        ("unit_axe", crate::BattleArmAttack::Axe),
-        ("unit_sword", crate::BattleArmAttack::Sword),
-        ("unit_mace", crate::BattleArmAttack::Mace),
-        ("unit_saw", crate::BattleArmAttack::Saw),
-        ("unit_claw", crate::BattleArmAttack::Claw),
+        ("unit_punch", crate::BattleArmAttack::Punch.into()),
+        ("unit_axe", crate::BattleArmAttack::Axe.into()),
+        ("unit_sword", crate::BattleArmAttack::Sword.into()),
+        ("unit_mace", crate::BattleArmAttack::Mace.into()),
+        ("unit_saw", crate::BattleArmAttack::Saw.into()),
+        ("unit_claw", crate::BattleArmAttack::Claw.into()),
+        ("unit_melee", crate::BattleArmWeapon::Installed),
     ] {
         let callback = lua.create_function(
             move |lua, (id, pilot, leg, target): (i64, i64, Option<String>, Option<i64>)| {

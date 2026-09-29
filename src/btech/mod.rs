@@ -429,9 +429,10 @@ mod status_export;
 
 pub(crate) mod physical;
 pub use physical::{
-    BattleArm, BattleArmAttackReport, BattleArmRejection, BattleArmSelection, BattleLeg,
-    BattlePhysicalAttack, BattlePhysicalProfile, BattlePhysicalReport, BattlePhysicalRules,
-    kick_profile, punch_profile, resolve_kick, resolve_punch, resolve_trip, trip_profile,
+    BattleArm, BattleArmAttackReport, BattleArmRejection, BattleArmSelection,
+    BattleLancePenetration, BattleLeg, BattlePhysicalAttack, BattlePhysicalProfile,
+    BattlePhysicalReport, BattlePhysicalRules, kick_profile, punch_profile, resolve_kick,
+    resolve_punch, resolve_trip, trip_profile,
 };
 
 mod myomer;
@@ -508,7 +509,7 @@ pub use evacuation::physical_attack_action;
 
 pub use evacuation::arm_attack_action;
 /// Typed arm sequence and its atomic character-aware host action.
-pub use physical::BattleArmAttackChoice;
+pub use physical::{BattleArmAttackChoice, BattleArmWeapon};
 
 /// One-way charge host action with character casualty publication.
 pub use evacuation::charge_action;

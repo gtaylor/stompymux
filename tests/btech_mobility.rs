@@ -312,7 +312,7 @@ fn biped_support_and_quad_gyro_standing_rules() {
 /// Quad kicks use front legs, allow one missing support and reject hip damage or arm attacks.
 #[test]
 fn quad_physical_support_uses_selected_front_leg_and_surviving_hips() {
-    use stompymux_rs::{BattleArm, BattleLeg, BattlePhysicalAttack as Attack};
+    use stompymux_rs::{BattleArm, BattleArmAttack, BattleLeg, BattlePhysicalAttack as Attack};
     let base = quad();
     for (leg, section) in [
         (BattleLeg::Left, Section::LeftArm),
@@ -351,11 +351,14 @@ fn quad_physical_support_uses_selected_front_leg_and_surviving_hips() {
     for arm in [BattleArm::Left, BattleArm::Right] {
         for attack in [
             Attack::Punch { arm },
-            Attack::Axe { arm },
-            Attack::Sword { arm },
-            Attack::Mace { arm },
-            Attack::Saw { arm },
-            Attack::Claw { arm },
+            Attack::Weapon {
+                arm,
+                weapon: BattleArmAttack::Axe,
+            },
+            Attack::Weapon {
+                arm,
+                weapon: BattleArmAttack::Flail,
+            },
             Attack::Club,
         ] {
             assert!(attack.validate_chassis_support(&base).is_err());
