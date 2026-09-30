@@ -102,18 +102,19 @@ async fn located_packets_count_overflow_once_and_combat_safe_counts_nothing() {
 }
 
 /// Rotor scaling precedes accounting; hardened armor and internal reinforcement follow it.
+/// VTOLs cannot mount hardened armor, so the rotor case checks reinforcement alone.
 #[tokio::test]
 async fn accounting_uses_the_admitted_packet_before_material_reductions() {
     for rotor in [false, true] {
         let source = if rotor {
             include_str!("../game/mechs/Kestrel")
+                .replace("ICEEngine_Tech", "ICEEngine_Tech ReinforcedInternal_Tech")
         } else {
-            include_str!("../game/mechs/Demolisher")
-        }
-        .replace(
-            "ICEEngine_Tech",
-            "ICEEngine_Tech HardenedArmor_Tech ReinforcedInternal_Tech",
-        );
+            include_str!("../game/mechs/Demolisher").replace(
+                "ICEEngine_Tech",
+                "ICEEngine_Tech HardenedArmor_Tech ReinforcedInternal_Tech",
+            )
+        };
         let (_dir, _, mut world, id, _, _) =
             firing::fixture_with_target(&source, None, &source).await;
         let mut rules = BattleVehicleImpactRules::STANDARD.criticals;
@@ -123,6 +124,7 @@ async fn accounting_uses_the_admitted_packet_before_material_reductions() {
             &mut world,
             id,
             BattleVehicleArmorHit {
+                damage_class: BattleDamageClass::Ordinary,
                 section: if rotor {
                     BattleVehicleSection::Rotor
                 } else {
@@ -140,7 +142,7 @@ async fn accounting_uses_the_admitted_packet_before_material_reductions() {
             counters(&world, id),
             serde_json::json!({"taken":incoming,"inflicted":0})
         );
-        assert_eq!(report.armor_damage, if rotor { 2 } else { 5 });
+        assert_eq!(report.armor_damage, if rotor { 3 } else { 5 });
         let internal = resolve_battle_vehicle_internal_damage(
             &mut world,
             id,

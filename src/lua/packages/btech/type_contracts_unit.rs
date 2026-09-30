@@ -1667,13 +1667,42 @@
 // lua-types-end
 
 // lua-types-begin btech 00410
-//|---Select missile Mine rounds, which bypass AMS and retain ordinary missile damage.
+//|---Select missile Mine (Thunder) rounds. They bypass AMS and retain ordinary missile damage
+//|---against units; a hit on a hex lays a minefield there.
 //|---@param dbref integer
 //|---@param pilot integer
 //|---@param weapon integer
 //|---@return BattleAmmunitionMode
 //|function btech_unit.firemine(dbref, pilot, weapon) end
 // lua-types-end
+
+// lua-types-begin btech 00549
+//|---Select Thunder-Augmented rounds, which mine a target hex and its neighbors at half strength.
+//|---@param dbref integer
+//|---@param pilot integer
+//|---@param weapon integer
+//|---@return BattleAmmunitionMode
+//|function btech_unit.fireaugmented(dbref, pilot, weapon) end
+// lua-types-end
+
+// lua-types-begin btech 00550
+//|---Select Thunder-Vibrabomb rounds, which lay a field that trips under units heavier than the shooter.
+//|---@param dbref integer
+//|---@param pilot integer
+//|---@param weapon integer
+//|---@return BattleAmmunitionMode
+//|function btech_unit.firevibrabomb(dbref, pilot, weapon) end
+// lua-types-end
+
+// lua-types-begin btech 00551
+//|---Select Thunder-Active rounds, whose mines also catch units hovering just above the ground.
+//|---@param dbref integer
+//|---@param pilot integer
+//|---@param weapon integer
+//|---@return BattleAmmunitionMode
+//|function btech_unit.fireactive(dbref, pilot, weapon) end
+// lua-types-end
+
 
 // lua-types-begin btech 00419
 //|---Wizard-only predictive firing using fixed horizontal target orders and normal weapon launches.

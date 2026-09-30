@@ -78,6 +78,7 @@ fn resolve(
                 | BattleMineKind::Inferno
                 | BattleMineKind::Command
                 | BattleMineKind::Vibra
+                | BattleMineKind::Active
         ),
         "Trigger mines require their script handler"
     );
@@ -223,6 +224,7 @@ fn hit_hex(
             super::blast_damage::BlastDamage {
                 damage,
                 packet_size: 5,
+                class: BattleDamageClass::Ordinary,
                 table: BattleHitTable::Kick,
                 arc,
                 heat: if inferno {

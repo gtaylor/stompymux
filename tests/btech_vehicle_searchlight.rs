@@ -131,6 +131,7 @@ async fn vehicle_lamp_damage_shares_rolls_and_cancels_pending_switches() {
             toughness: false,
         };
         let hit = BattleVehicleArmorHit {
+            damage_class: BattleDamageClass::Ordinary,
             section: BattleVehicleSection::Front,
             amount: 1,
             through_armor_critical: false,

@@ -78,7 +78,9 @@ fn atm_profiles_tables_and_ammunition_markers() {
         );
         assert_eq!(BattlePart::from_id(id).unwrap().name, weapon.name());
         assert_eq!(
-            BattlePart::from_id(id + 192).unwrap().name,
+            BattlePart::from_id(id + AMMUNITION_PART_OFFSET)
+                .unwrap()
+                .name,
             format!("Ammo_{}", weapon.name())
         );
         assert!(weapon.supports_hotload());

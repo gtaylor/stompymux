@@ -2376,6 +2376,348 @@
   },
   {
     "accuracy": 0,
+    "mass": 3072,
+    "name": "IS.NLRM-5",
+    "profile": {
+      "ammunition_per_ton": 24,
+      "critical_slots": 2,
+      "damage": 1,
+      "heat": 2,
+      "long_range": 21,
+      "medium_range": 14,
+      "minimum_range": 3,
+      "missiles": 5,
+      "recycle_seconds": 15,
+      "short_range": 7
+    },
+    "skill": "Gunnery-Missile",
+    "weapon": "nlrm5"
+  },
+  {
+    "accuracy": 0,
+    "mass": 6144,
+    "name": "IS.NLRM-10",
+    "profile": {
+      "ammunition_per_ton": 12,
+      "critical_slots": 4,
+      "damage": 1,
+      "heat": 4,
+      "long_range": 21,
+      "medium_range": 14,
+      "minimum_range": 3,
+      "missiles": 10,
+      "recycle_seconds": 20,
+      "short_range": 7
+    },
+    "skill": "Gunnery-Missile",
+    "weapon": "nlrm10"
+  },
+  {
+    "accuracy": 0,
+    "mass": 9216,
+    "name": "IS.NLRM-15",
+    "profile": {
+      "ammunition_per_ton": 8,
+      "critical_slots": 6,
+      "damage": 1,
+      "heat": 5,
+      "long_range": 21,
+      "medium_range": 14,
+      "minimum_range": 3,
+      "missiles": 15,
+      "recycle_seconds": 25,
+      "short_range": 7
+    },
+    "skill": "Gunnery-Missile",
+    "weapon": "nlrm15"
+  },
+  {
+    "accuracy": 0,
+    "mass": 12288,
+    "name": "IS.NLRM-20",
+    "profile": {
+      "ammunition_per_ton": 6,
+      "critical_slots": 9,
+      "damage": 1,
+      "heat": 6,
+      "long_range": 21,
+      "medium_range": 14,
+      "minimum_range": 3,
+      "missiles": 20,
+      "recycle_seconds": 30,
+      "short_range": 7
+    },
+    "skill": "Gunnery-Missile",
+    "weapon": "nlrm20"
+  },
+  {
+    "accuracy": 0,
+    "mass": 2048,
+    "name": "IS.LRT-5",
+    "profile": {
+      "ammunition_per_ton": 24,
+      "critical_slots": 1,
+      "damage": 1,
+      "heat": 2,
+      "long_range": 21,
+      "medium_range": 14,
+      "minimum_range": 6,
+      "missiles": 5,
+      "recycle_seconds": 15,
+      "short_range": 7
+    },
+    "skill": "Gunnery-Missile",
+    "weapon": "lrt5"
+  },
+  {
+    "accuracy": 0,
+    "mass": 5120,
+    "name": "IS.LRT-10",
+    "profile": {
+      "ammunition_per_ton": 12,
+      "critical_slots": 2,
+      "damage": 1,
+      "heat": 4,
+      "long_range": 21,
+      "medium_range": 14,
+      "minimum_range": 6,
+      "missiles": 10,
+      "recycle_seconds": 20,
+      "short_range": 7
+    },
+    "skill": "Gunnery-Missile",
+    "weapon": "lrt10"
+  },
+  {
+    "accuracy": 0,
+    "mass": 7168,
+    "name": "IS.LRT-15",
+    "profile": {
+      "ammunition_per_ton": 8,
+      "critical_slots": 3,
+      "damage": 1,
+      "heat": 5,
+      "long_range": 21,
+      "medium_range": 14,
+      "minimum_range": 6,
+      "missiles": 15,
+      "recycle_seconds": 25,
+      "short_range": 7
+    },
+    "skill": "Gunnery-Missile",
+    "weapon": "lrt15"
+  },
+  {
+    "accuracy": 0,
+    "mass": 10240,
+    "name": "IS.LRT-20",
+    "profile": {
+      "ammunition_per_ton": 6,
+      "critical_slots": 5,
+      "damage": 1,
+      "heat": 6,
+      "long_range": 21,
+      "medium_range": 14,
+      "minimum_range": 6,
+      "missiles": 20,
+      "recycle_seconds": 30,
+      "short_range": 7
+    },
+    "skill": "Gunnery-Missile",
+    "weapon": "lrt20"
+  },
+  {
+    "accuracy": 0,
+    "mass": 1024,
+    "name": "IS.SRT-2",
+    "profile": {
+      "ammunition_per_ton": 50,
+      "critical_slots": 1,
+      "damage": 2,
+      "heat": 2,
+      "long_range": 9,
+      "medium_range": 6,
+      "minimum_range": 0,
+      "missiles": 2,
+      "recycle_seconds": 15,
+      "short_range": 3
+    },
+    "skill": "Gunnery-Missile",
+    "weapon": "srt2"
+  },
+  {
+    "accuracy": 0,
+    "mass": 2048,
+    "name": "IS.SRT-4",
+    "profile": {
+      "ammunition_per_ton": 25,
+      "critical_slots": 1,
+      "damage": 2,
+      "heat": 3,
+      "long_range": 9,
+      "medium_range": 6,
+      "minimum_range": 0,
+      "missiles": 4,
+      "recycle_seconds": 15,
+      "short_range": 3
+    },
+    "skill": "Gunnery-Missile",
+    "weapon": "srt4"
+  },
+  {
+    "accuracy": 0,
+    "mass": 3072,
+    "name": "IS.SRT-6",
+    "profile": {
+      "ammunition_per_ton": 15,
+      "critical_slots": 2,
+      "damage": 2,
+      "heat": 4,
+      "long_range": 9,
+      "medium_range": 6,
+      "minimum_range": 0,
+      "missiles": 6,
+      "recycle_seconds": 15,
+      "short_range": 3
+    },
+    "skill": "Gunnery-Missile",
+    "weapon": "srt6"
+  },
+  {
+    "accuracy": 0,
+    "mass": 1024,
+    "name": "CL.LRT-5",
+    "profile": {
+      "ammunition_per_ton": 24,
+      "critical_slots": 1,
+      "damage": 1,
+      "heat": 2,
+      "long_range": 21,
+      "medium_range": 14,
+      "minimum_range": 0,
+      "missiles": 5,
+      "recycle_seconds": 15,
+      "short_range": 7
+    },
+    "skill": "Gunnery-Missile",
+    "weapon": "clan_lrt5"
+  },
+  {
+    "accuracy": 0,
+    "mass": 2560,
+    "name": "CL.LRT-10",
+    "profile": {
+      "ammunition_per_ton": 12,
+      "critical_slots": 1,
+      "damage": 1,
+      "heat": 4,
+      "long_range": 21,
+      "medium_range": 14,
+      "minimum_range": 0,
+      "missiles": 10,
+      "recycle_seconds": 20,
+      "short_range": 7
+    },
+    "skill": "Gunnery-Missile",
+    "weapon": "clan_lrt10"
+  },
+  {
+    "accuracy": 0,
+    "mass": 3584,
+    "name": "CL.LRT-15",
+    "profile": {
+      "ammunition_per_ton": 8,
+      "critical_slots": 2,
+      "damage": 1,
+      "heat": 5,
+      "long_range": 21,
+      "medium_range": 14,
+      "minimum_range": 0,
+      "missiles": 15,
+      "recycle_seconds": 25,
+      "short_range": 7
+    },
+    "skill": "Gunnery-Missile",
+    "weapon": "clan_lrt15"
+  },
+  {
+    "accuracy": 0,
+    "mass": 5120,
+    "name": "CL.LRT-20",
+    "profile": {
+      "ammunition_per_ton": 6,
+      "critical_slots": 4,
+      "damage": 1,
+      "heat": 6,
+      "long_range": 21,
+      "medium_range": 14,
+      "minimum_range": 0,
+      "missiles": 20,
+      "recycle_seconds": 20,
+      "short_range": 7
+    },
+    "skill": "Gunnery-Missile",
+    "weapon": "clan_lrt20"
+  },
+  {
+    "accuracy": 0,
+    "mass": 512,
+    "name": "CL.SRT-2",
+    "profile": {
+      "ammunition_per_ton": 50,
+      "critical_slots": 1,
+      "damage": 2,
+      "heat": 2,
+      "long_range": 9,
+      "medium_range": 6,
+      "minimum_range": 0,
+      "missiles": 2,
+      "recycle_seconds": 15,
+      "short_range": 3
+    },
+    "skill": "Gunnery-Missile",
+    "weapon": "clan_srt2"
+  },
+  {
+    "accuracy": 0,
+    "mass": 1024,
+    "name": "CL.SRT-4",
+    "profile": {
+      "ammunition_per_ton": 25,
+      "critical_slots": 1,
+      "damage": 2,
+      "heat": 3,
+      "long_range": 9,
+      "medium_range": 6,
+      "minimum_range": 0,
+      "missiles": 4,
+      "recycle_seconds": 15,
+      "short_range": 3
+    },
+    "skill": "Gunnery-Missile",
+    "weapon": "clan_srt4"
+  },
+  {
+    "accuracy": 0,
+    "mass": 1536,
+    "name": "CL.SRT-6",
+    "profile": {
+      "ammunition_per_ton": 15,
+      "critical_slots": 1,
+      "damage": 2,
+      "heat": 4,
+      "long_range": 9,
+      "medium_range": 6,
+      "minimum_range": 0,
+      "missiles": 6,
+      "recycle_seconds": 15,
+      "short_range": 3
+    },
+    "skill": "Gunnery-Missile",
+    "weapon": "clan_srt6"
+  },
+  {
+    "accuracy": 0,
     "mass": 2048,
     "name": "IS.LRM-5",
     "profile": {

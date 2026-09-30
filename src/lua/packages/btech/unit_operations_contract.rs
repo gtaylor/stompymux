@@ -256,6 +256,9 @@ fn munition_mode(bit: i32) -> BattleAmmunitionMode {
         524288 => BattleAmmunitionMode::SemiGuided,
         1048576 => BattleAmmunitionMode::ExtendedRange,
         2097152 => BattleAmmunitionMode::HighExplosive,
+        8388608 => BattleAmmunitionMode::ThunderAugmented,
+        16777216 => BattleAmmunitionMode::ThunderVibrabomb,
+        33554432 => BattleAmmunitionMode::ThunderActive,
         _ => BattleAmmunitionMode::Normal,
     }
 }
@@ -286,6 +289,9 @@ fn mode_names(bits: &[i32]) -> Vec<String> {
                 1048576 => Some("ExtendedRange"),
                 2097152 => Some("HighExplosive"),
                 4194304 => Some("MML_LRM"),
+                8388608 => Some("ThunderAug"),
+                16777216 => Some("ThunderVibra"),
+                33554432 => Some("ThunderActive"),
                 _ => None,
             }
             .map(str::to_owned)

@@ -30,6 +30,8 @@ pub struct BattleHexShotReport {
     pub recoil: Option<BattleRecoilReport>,
     pub surfaces: Vec<BattleSurfaceWeaponImpact>,
     pub buildings: Vec<BattleBuildingImpact>,
+    /// Minefields a Thunder salvo laid in place of terrain damage.
+    pub thunder: BattleThunderReport,
 }
 
 /// Resolve a direct non-character terrain shot atomically.
@@ -149,6 +151,14 @@ fn resolve_hex_shot_inner(
     }
     ensure!(ready, "Weapon is not ready");
     super::weapon_geometry::check_water(weapon, submerged)?;
+    ensure!(
+        !weapon.is_torpedo()
+            || record
+                .base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?
+                .terrain
+                == Terrain::Water,
+        "Torpedoes can only strike targets in the water!"
+    );
     let aim = super::hex_aim::modifiers_for_source(
         world,
         operator.source,
@@ -203,6 +213,7 @@ fn resolve_hex_shot_inner(
         let mut terrain = Vec::new();
         let mut surfaces = Vec::new();
         let mut buildings = Vec::new();
+        let mut thunder = BattleThunderReport::default();
         if launch.launched && target_number.is_some() {
             if launch.hit {
                 let packets = super::weapon_groups::roll_weapon_groups(
@@ -230,7 +241,20 @@ fn resolve_hex_shot_inner(
                     super::dice::unit_dice_mut(world, shooter)?,
                 )?;
                 cluster_roll = packets.cluster_roll;
-                if aim.mode != BattleHexTargetMode::UnitAtHex {
+                if aim.mode == BattleHexTargetMode::Hex
+                    && launch.expenditure.ammunition_mode.is_thunder()
+                    && weapon.profile().missiles > 0
+                {
+                    // Thunder rounds scatter mines across the hex instead of blasting it.
+                    thunder = super::thunder::lay(
+                        world,
+                        shooter,
+                        map,
+                        coordinate,
+                        launch.expenditure.ammunition_mode,
+                        packets.damage.iter().sum(),
+                    )?;
+                } else if aim.mode != BattleHexTargetMode::UnitAtHex {
                     let damage =
                         if launch.expenditure.ammunition_mode == BattleAmmunitionMode::Inferno {
                             // Inferno terrain exposure occurs once with no clearing or building damage.
@@ -322,6 +346,7 @@ fn resolve_hex_shot_inner(
             surfaces,
             buildings,
             recoil,
+            thunder,
         })
     })
 }
@@ -365,6 +390,7 @@ impl BattleHexShotReport {
         for impact in &self.buildings {
             notices.extend(impact.notices.clone());
         }
+        notices.extend(self.thunder.notices(self.shooter));
         for impact in &self.surfaces {
             super::piloting::append_feedback(
                 private,

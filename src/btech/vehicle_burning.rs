@@ -256,6 +256,7 @@ fn burn_damage(
         world,
         id,
         BattleVehicleArmorHit {
+            damage_class: BattleDamageClass::Ordinary,
             section,
             amount: u32::from(amount),
             through_armor_critical: false,

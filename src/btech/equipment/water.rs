@@ -27,6 +27,16 @@ impl BattleWaterRanges {
 impl BattleWeapon {
     /// Explicit catalogue eligibility; energy classification alone does not permit water fire.
     pub fn water_ranges(self) -> Option<BattleWaterRanges> {
+        if self.is_torpedo() {
+            // Torpedoes are built for water and keep their ordinary reach.
+            let profile = self.profile();
+            return Some(BattleWaterRanges {
+                minimum_range: profile.minimum_range,
+                short_range: profile.short_range,
+                medium_range: profile.medium_range,
+                long_range: Some(profile.long_range),
+            });
+        }
         let (minimum_range, short_range, medium_range, long_range) = match self {
             Self::ClanErLargeLaser => (0, 5, 10, Some(15)),
             Self::ClanErMediumLaser => (0, 3, 7, Some(10)),
@@ -109,14 +119,15 @@ mod tests {
     use super::*;
 
     /// Water eligibility is narrower than energy weapons, and differs between plasma designs.
+    /// The fourteen torpedo launchers are the only missiles that fire underwater.
     #[test]
-    fn catalogue_admits_only_the_32_water_profiles() {
+    fn catalogue_admits_only_the_46_water_profiles() {
         assert_eq!(
             BattleWeapon::ALL
                 .iter()
                 .filter(|w| w.water_ranges().is_some())
                 .count(),
-            32
+            46
         );
         for weapon in [
             BattleWeapon::Flamer,

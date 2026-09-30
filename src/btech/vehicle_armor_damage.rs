@@ -12,6 +12,8 @@ pub struct BattleVehicleArmorHit {
     pub through_armor_critical: bool,
     /// AP ammunition's weapon family, when applicable; ordinary hits use None.
     pub armor_piercing: Option<BattleWeapon>,
+    /// Energy and area-effect hits interact with reflective armor.
+    pub damage_class: BattleDamageClass,
 }
 
 /// Ordered protection changes and critical effects; visibility and attack publication remain external.
@@ -134,9 +136,18 @@ pub(super) fn resolve_rear_followup_in_candidate(
     let hardened = vehicle
         .definition()
         .has_technology(super::BattleTechnology::HardenedArmor);
+    let reflective = !hardened
+        && vehicle
+            .definition()
+            .has_technology(super::BattleTechnology::LaserReflectiveArmor)
+        && hit.damage_class != BattleDamageClass::Ordinary;
     // Hardened armor records the armor it could remove: half the hit, rounding up.
+    // Reflective armor halves energy hits, rounding down, and doubles area-effect hits.
     let amount = if hardened {
         hit.amount.div_ceil(2)
+    } else if reflective {
+        super::BattleTechnology::reflective_hit(hit.damage_class, hit.amount, u16::MAX)
+            .map_or(hit.amount, |(removed, _)| u32::from(removed))
     } else {
         hit.amount
     };
@@ -212,6 +223,17 @@ pub(super) fn resolve_rear_followup_in_candidate(
             hit.amount,
             vehicle.sections()[&hit.section].armor,
         );
+        (u32::from(removed), Some(overflow))
+    } else if let Some((removed, overflow)) = reflective
+        .then(|| {
+            super::BattleTechnology::reflective_hit(
+                hit.damage_class,
+                hit.amount,
+                vehicle.sections()[&hit.section].armor,
+            )
+        })
+        .flatten()
+    {
         (u32::from(removed), Some(overflow))
     } else {
         (amount, None)

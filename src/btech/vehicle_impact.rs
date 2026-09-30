@@ -54,6 +54,7 @@ pub fn resolve_vehicle_impact(
                 armor_piercing,
                 rear: false,
                 attacker: None,
+                class: BattleDamageClass::Ordinary,
             },
             rules,
         )?;
@@ -68,6 +69,7 @@ pub(super) struct ImpactRequest {
     pub armor_piercing: Option<BattleWeapon>,
     pub rear: bool,
     pub attacker: Option<ObjectId>,
+    pub class: BattleDamageClass,
 }
 
 /// Continue a previously admitted attack, retaining location and damage rolls after hull loss.
@@ -95,6 +97,7 @@ pub(super) fn resolve_directed_followup(
         armor_piercing,
         rear,
         attacker,
+        class,
     } = request;
     ensure!(amount > 0, "Impact damage must be positive");
     if let Some(weapon) = armor_piercing {
@@ -124,6 +127,7 @@ pub(super) fn resolve_directed_followup(
                 amount,
                 through_armor_critical: hit.through_armor_critical,
                 armor_piercing,
+                damage_class: class,
             },
             rear,
             rules.criticals,

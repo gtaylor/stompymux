@@ -14,10 +14,12 @@ pub enum BattleMineKind {
     Command,
     Vibra,
     Trigger,
+    /// Thunder-Active mines, which also catch units hovering or flying just above the ground.
+    Active,
 }
 
 impl BattleMineKind {
-    /// Parse the five complete operator spellings, without prefix matching.
+    /// Parse the six complete operator spellings, without prefix matching.
     pub fn parse(value: &str) -> Result<Self> {
         match value.to_ascii_lowercase().as_str() {
             "standard" => Ok(Self::Standard),
@@ -25,6 +27,7 @@ impl BattleMineKind {
             "command" => Ok(Self::Command),
             "vibra" => Ok(Self::Vibra),
             "trigger" => Ok(Self::Trigger),
+            "active" => Ok(Self::Active),
             _ => bail!("Invalid mine type!"),
         }
     }
@@ -37,6 +40,7 @@ impl BattleMineKind {
             Self::Command => 3,
             Self::Vibra => 4,
             Self::Trigger => 5,
+            Self::Active => 6,
         }
     }
 
@@ -48,6 +52,7 @@ impl BattleMineKind {
             3 => Self::Command,
             4 => Self::Vibra,
             5 => Self::Trigger,
+            6 => Self::Active,
             _ => bail!("Invalid mine kind"),
         })
     }

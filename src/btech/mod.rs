@@ -590,6 +590,11 @@ pub(crate) mod semiguided;
 pub use semiguided::toggle_semiguided;
 pub(crate) mod stinger;
 pub use stinger::toggle_stinger;
+pub(crate) mod thunder;
+pub use thunder::{
+    BattleThunderField, BattleThunderReport, THUNDER_MAXIMUM_STRENGTH, toggle_thunder,
+};
+pub(crate) mod torpedo;
 
 mod spotter;
 pub use spotter::{BattleSpotterTarget, select_spotter, spotter_target};
@@ -1229,7 +1234,10 @@ pub use inventory::{
 
 mod parts;
 mod parts_catalogue;
-pub use parts::{BattlePart, BattlePartKind, inventory_mass, set_inventory_named};
+pub use parts::{
+    AMMUNITION_PART_OFFSET, BattlePart, BattlePartKind, PART_ID_LIMIT, WEAPON_PART_IDS,
+    inventory_mass, set_inventory_named,
+};
 
 mod cargo_bay;
 pub use cargo_bay::{
@@ -1252,7 +1260,7 @@ pub use weapon_power::disable_gauss_weapon;
 pub(crate) mod mml;
 mod technology;
 pub use mml::toggle_mml_ammunition;
-pub use technology::BattleTechnology;
+pub use technology::{BattleDamageClass, BattleTechnology, reflective_armor_slots};
 
 pub(crate) mod atm;
 pub use atm::toggle_atm_ammunition;

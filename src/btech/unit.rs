@@ -1622,6 +1622,9 @@ pub(super) fn replace_critical_modes(
         "ExtendedRange",
         "HighExplosive",
         "MML_LRM",
+        "ThunderAug",
+        "ThunderVibra",
+        "ThunderActive",
     ];
     modes.retain(|mode| !ALL.contains(&mode.as_str()));
     modes.extend(fire);
@@ -1683,6 +1686,7 @@ fn validate_definition(definition: &BattleTemplate) -> Result<()> {
         "Invalid unit identity"
     );
     super::radio::validate_attributes(&definition.attributes)?;
+    definition.validate_armor_slots()?;
     for (field, value) in &definition.attributes {
         match field.as_str() {
             "name" | "reference" | "tons" | "max_speed" | "jump_speed" | "heat_sinks"

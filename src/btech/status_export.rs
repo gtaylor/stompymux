@@ -43,6 +43,9 @@ pub(super) fn mode_letter(mode: Mode, weapon: BattleWeapon) -> char {
         Mode::Caseless => 'U',
         Mode::Incendiary => 'D',
         Mode::Inferno => 'I',
+        Mode::ThunderAugmented => 'H',
+        Mode::ThunderVibrabomb => 'V',
+        Mode::ThunderActive => 'K',
     }
 }
 

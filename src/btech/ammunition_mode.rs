@@ -46,12 +46,22 @@ pub enum BattleAmmunitionMode {
     Caseless,
     Incendiary,
     Inferno,
+    /// Thunder rounds that seed a weaker minefield across the target and adjacent hexes.
+    ThunderAugmented,
+    /// Thunder rounds that lay a vibrabomb field keyed to the firing unit's weight.
+    ThunderVibrabomb,
+    /// Thunder rounds whose mines also catch hovering and low-flying units.
+    ThunderActive,
 }
 
 impl BattleAmmunitionMode {
     /// Equipment compatibility, shared by templates, saved units, controls and damage grouping.
     /// Installed controllers and disposable-weapon restrictions belong to live controls.
     pub(super) fn supports(self, weapon: BattleWeapon) -> bool {
+        // Torpedo launchers carry ordinary or Artemis-guided torpedoes only.
+        if weapon.is_torpedo() {
+            return matches!(self, Self::Normal | Self::Artemis);
+        }
         match self {
             Self::Normal => true,
             Self::MmlLrm
@@ -70,6 +80,9 @@ impl BattleAmmunitionMode {
             }
             Self::Cluster => weapon.is_lbx() || weapon.is_artillery(),
             Self::Smoke | Self::Mine => weapon.is_artillery() || weapon.profile().missiles > 0,
+            Self::ThunderAugmented | Self::ThunderVibrabomb | Self::ThunderActive => {
+                weapon.supports_thunder()
+            }
             Self::Artemis => weapon.profile().missiles > 0,
             Self::Narc => {
                 weapon.profile().missiles > 0
@@ -112,6 +125,9 @@ impl BattleAmmunitionMode {
             "AP" => Some(Self::ArmorPiercing),
             "Precision" => Some(Self::Precision),
             "Flechette" => Some(Self::Flechette),
+            "ThunderAug" => Some(Self::ThunderAugmented),
+            "ThunderVibra" => Some(Self::ThunderVibrabomb),
+            "ThunderActive" => Some(Self::ThunderActive),
             _ => None,
         }
     }
@@ -142,6 +158,9 @@ impl BattleAmmunitionMode {
             "MML_LRM",
             "ExtendedRange",
             "HighExplosive",
+            "ThunderAug",
+            "ThunderVibra",
+            "ThunderActive",
         ]
         .into_iter()
         .filter(|flag| !weapon.is_mml() || *flag != "MML_LRM")
@@ -359,7 +378,15 @@ pub(crate) fn artemis_command(
 impl BattleAmmunitionMode {
     /// These missile supplies do not trigger automatic defensive interception.
     pub(super) fn bypasses_ams(self) -> bool {
-        matches!(self.munition(), Self::Swarm | Self::Swarm1 | Self::Mine)
+        matches!(
+            self.munition(),
+            Self::Swarm
+                | Self::Swarm1
+                | Self::Mine
+                | Self::ThunderAugmented
+                | Self::ThunderVibrabomb
+                | Self::ThunderActive
+        )
     }
 }
 

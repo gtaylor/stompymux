@@ -248,7 +248,28 @@
     {
       "class_mask": 0,
       "syntax": "FIREMINE <weapnum>",
-      "description": "Sets/unsets artillery weapon to fire mine rounds.",
+      "description": "Sets/unsets artillery weapon or LRM launcher to fire mine (Thunder) rounds.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "FIREAUGMENTED <weapnum>",
+      "description": "Sets/unsets the LRM launcher to fire Thunder-Augmented rounds, which mine the target hex and its neighbors.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "FIREVIBRABOMB <weapnum>",
+      "description": "Sets/unsets the LRM launcher to fire Thunder-Vibrabomb rounds, which only trip under units heavier than yours.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "FIREACTIVE <weapnum>",
+      "description": "Sets/unsets the LRM launcher to fire Thunder-Active rounds, whose mines also catch hovering units.",
       "restricted": false,
       "category": false
     },

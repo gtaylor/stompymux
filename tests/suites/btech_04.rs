@@ -50,6 +50,12 @@ mod btech_setxy;
 #[path = "../btech_special_rounds.rs"]
 mod btech_special_rounds;
 
+#[path = "../btech_thunder.rs"]
+mod btech_thunder;
+
+#[path = "../btech_torpedo.rs"]
+mod btech_torpedo;
+
 #[path = "../btech_startup_health.rs"]
 mod btech_startup_health;
 

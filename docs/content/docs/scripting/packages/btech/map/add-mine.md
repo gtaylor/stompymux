@@ -21,7 +21,7 @@ btech.map.add_mine(actor, map, x, y, kind, strength, extra)
 | `map` | `integer` |  |
 | `x` | `integer` |  |
 | `y` | `integer` |  |
-| `kind` | `'standard'\|'inferno'\|'command'\|'vibra'\|'trigger'` |  |
+| `kind` | `'standard'\|'inferno'\|'command'\|'vibra'\|'trigger'\|'active'` |  |
 | `strength` | `integer` |  |
 | `extra?` | `integer` |  |
 

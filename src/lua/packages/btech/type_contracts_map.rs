@@ -154,7 +154,7 @@
 //|---@param map integer
 //|---@param x integer
 //|---@param y integer
-//|---@param kind 'standard'|'inferno'|'command'|'vibra'|'trigger'
+//|---@param kind 'standard'|'inferno'|'command'|'vibra'|'trigger'|'active'
 //|---@param strength integer
 //|---@param extra? integer
 //|---@return integer

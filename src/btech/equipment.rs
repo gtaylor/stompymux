@@ -171,6 +171,10 @@ impl BattleWeapon {
                     | Self::Lrm10
                     | Self::Lrm15
                     | Self::Lrm20
+                    | Self::Nlrm5
+                    | Self::Nlrm10
+                    | Self::Nlrm15
+                    | Self::Nlrm20
                     | Self::Elrm5
                     | Self::Elrm10
                     | Self::Elrm15
@@ -222,6 +226,19 @@ impl BattleWeapon {
                 | Self::ClanLbx10
                 | Self::ClanLbx20
         )
+    }
+
+    /// Energy weapons for armor that reacts to the attack type: lasers, PPCs, flamers and
+    /// plasma weapons. Anti-personnel pods and laser anti-missile systems never strike armor.
+    pub fn is_energy(self) -> bool {
+        match self {
+            Self::APod | Self::ClanAPod | Self::LaserAms | Self::ClanLaserAms => false,
+            Self::HeavyFlamer
+            | Self::VehicleFlamer
+            | Self::VehicleHeavyFlamer
+            | Self::PlasmaRifle => true,
+            _ => self.gunnery_skill(true) == "Gunnery-Laser",
+        }
     }
 
     /// Internal damage released by the first critical hit on a functional Gauss weapon.
@@ -352,6 +369,8 @@ pub enum BattleSystem {
     Ecm,
     AngelEcm,
     StealthArmor,
+    /// Filler slots claimed by laser-reflective armor; the armor itself is a chassis technology.
+    LaserReflective,
     NullSignature,
     BeagleProbe,
     Tag,
@@ -379,6 +398,7 @@ impl BattleSystem {
             self,
             Self::FerroFibrous
                 | Self::StealthArmor
+                | Self::LaserReflective
                 | Self::EndoSteel
                 | Self::TripleStrengthMyomer
                 | Self::HeavyFerroFibrous
@@ -408,6 +428,7 @@ impl BattleSystem {
             name if name.eq_ignore_ascii_case("Ecm") => Ok(Self::Ecm),
             name if name.eq_ignore_ascii_case("AngelEcm") => Ok(Self::AngelEcm),
             name if name.eq_ignore_ascii_case("StealthArmor") => Ok(Self::StealthArmor),
+            name if name.eq_ignore_ascii_case("LaserReflective") => Ok(Self::LaserReflective),
             name if name.eq_ignore_ascii_case("NullSig_Device") => Ok(Self::NullSignature),
             name if name.eq_ignore_ascii_case("TAG") => Ok(Self::Tag),
             name if name.eq_ignore_ascii_case("BeagleProbe") => Ok(Self::BeagleProbe),
@@ -475,6 +496,52 @@ mod tests {
                     assert_eq!(actual, expected);
                 }
             }
+        }
+    }
+
+    /// Enhanced LRMs are heavier LRMs with a three-hex minimum range and the same salvos.
+    #[test]
+    fn enhanced_lrms_match_lrm_salvos_with_shorter_minimum_range() {
+        for (enhanced, standard, tons) in [
+            (W::Nlrm5, W::Lrm5, 3),
+            (W::Nlrm10, W::Lrm10, 6),
+            (W::Nlrm15, W::Lrm15, 9),
+            (W::Nlrm20, W::Lrm20, 12),
+        ] {
+            assert_eq!(W::parse(enhanced.name()).unwrap(), enhanced);
+            assert_eq!(W::from_part_id(enhanced.part_id()), Some(enhanced));
+            assert_eq!(enhanced.mass(), tons * 1024);
+            let (profile, lrm) = (enhanced.profile(), standard.profile());
+            assert_eq!(profile.minimum_range, 3);
+            assert_eq!(
+                (profile.heat, profile.missiles, profile.long_range),
+                (lrm.heat, lrm.missiles, lrm.long_range)
+            );
+            assert!(enhanced.supports_indirect_fire() && enhanced.supports_semiguided());
+            for roll in 2..=12 {
+                assert_eq!(
+                    enhanced.damage_groups(Some(roll)).unwrap(),
+                    standard.damage_groups(Some(roll)).unwrap()
+                );
+            }
+        }
+        assert!(W::parse("IS.NLRM-15").is_ok());
+    }
+
+    /// Energy weapons are the ones reflective armor deflects.
+    #[test]
+    fn energy_weapons_include_flamers_and_plasma_but_not_defenses() {
+        for weapon in [
+            W::MediumLaser,
+            W::ErPpc,
+            W::HeavyFlamer,
+            W::PlasmaRifle,
+            W::ClanFlamer,
+        ] {
+            assert!(weapon.is_energy(), "{weapon:?}");
+        }
+        for weapon in [W::Ac20, W::Lrm20, W::LaserAms, W::APod, W::GaussRifle] {
+            assert!(!weapon.is_energy(), "{weapon:?}");
         }
     }
 

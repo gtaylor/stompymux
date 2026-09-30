@@ -171,12 +171,17 @@ pub fn mine_activations(
         let unit = &world.btech.constructed_units()[&id];
         (unit.elevation_level(tile), unit.effective_mass()?)
     };
-    if elevation > surface {
+    // Only active mines reach a unit hovering or flying one level above the surface.
+    if elevation > surface + 1 {
         return Ok(Vec::new());
     }
+    let airborne = elevation > surface;
     let tons = i64::from(mass / 1024);
     let mut activations = Vec::new();
     for (&ordinal, &mine) in map.ordered_minefields() {
+        if airborne && mine.kind != BattleMineKind::Active {
+            continue;
+        }
         if let Some(response) = mine.response(coordinate, tons, reason)? {
             activations.push(BattleMineActivation {
                 ordinal,

@@ -274,6 +274,7 @@ pub(super) fn resolve_with_context_in_candidate(
                     .then_some(weapon),
                 rear: forced.is_some() && arc == BattleHitArc::Rear,
                 attacker,
+                class: BattleDamageClass::of_weapon(weapon),
             },
             rules,
             forced,

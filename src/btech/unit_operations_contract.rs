@@ -74,6 +74,7 @@ pub(crate) fn apply_unit_damage_action(
                             arc,
                             character: before.objects[&id].flags.contains(crate::Flag::InCharacter),
                             attacker: Some(id),
+                            class: super::BattleDamageClass::Ordinary,
                         },
                         rear,
                         rules,
@@ -123,6 +124,7 @@ pub(crate) fn apply_unit_damage_action(
                         &mut scripts.world_mut(),
                         id,
                         super::BattleVehicleArmorHit {
+                            damage_class: super::BattleDamageClass::Ordinary,
                             section,
                             amount: u32::from(amount),
                             through_armor_critical: request.critical,

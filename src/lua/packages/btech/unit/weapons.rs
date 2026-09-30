@@ -68,6 +68,43 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
         })?;
         native.set(name, error::wrap(lua, action, "btech.operation.failed")?)?;
     }
+    for (name, mode) in [
+        (
+            "unit_fireaugmented",
+            crate::BattleAmmunitionMode::ThunderAugmented,
+        ),
+        (
+            "unit_firevibrabomb",
+            crate::BattleAmmunitionMode::ThunderVibrabomb,
+        ),
+        (
+            "unit_fireactive",
+            crate::BattleAmmunitionMode::ThunderActive,
+        ),
+    ] {
+        let action = lua.create_function(move |lua, (unit, pilot, index): (i64, i64, usize)| {
+            crate::lua::transactions::require(lua)?;
+            let scripts = crate::Scripts::services(lua)?;
+            crate::lua::transactions::run(lua, &scripts.world, || {
+                let selected = crate::toggle_battle_thunder(
+                    &mut scripts.world.borrow_mut(),
+                    ObjectId(unit),
+                    ObjectId(pilot),
+                    index,
+                    mode,
+                )
+                .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")))?;
+                crate::btech::notify_unit_text(
+                    &scripts,
+                    ObjectId(unit),
+                    &selected.thunder_message(index),
+                )
+                .map_err(|e| error::failure("btech.operation.failed", e))?;
+                detached(lua, &selected)
+            })
+        })?;
+        native.set(name, error::wrap(lua, action, "btech.operation.failed")?)?;
+    }
     let cluster = lua.create_function(move |lua, (unit, pilot, index): (i64, i64, usize)| {
         crate::lua::transactions::require(lua)?;
         let scripts = crate::Scripts::services(lua)?;

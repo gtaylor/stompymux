@@ -239,6 +239,7 @@ pub(super) fn resolve_material_signed_with_tonnage(
                     armor_piercing: None,
                     rear: arc == BattleHitArc::Rear,
                     attacker: None,
+                    class: BattleDamageClass::Ordinary,
                 },
                 rules.vehicle_impact,
             )?;

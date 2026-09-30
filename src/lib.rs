@@ -767,7 +767,7 @@ pub use btech::{
 pub use btech::BattleVehicleExplosion;
 
 pub use btech::{
-    BattleVehicleArmorDamage, BattleVehicleArmorHit,
+    BattleDamageClass, BattleVehicleArmorDamage, BattleVehicleArmorHit,
     resolve_vehicle_armor_damage as resolve_battle_vehicle_armor_damage,
 };
 
@@ -985,6 +985,10 @@ pub use btech::toggle_swarm as toggle_battle_swarm;
 
 pub use btech::toggle_missile_rounds as toggle_battle_missile_rounds;
 
+pub use btech::toggle_thunder as toggle_battle_thunder;
+
+pub use btech::{BattleThunderField, BattleThunderReport, THUNDER_MAXIMUM_STRENGTH};
+
 pub use btech::{BattleSightAim, BattleSightReport};
 
 pub use btech::{
@@ -1018,8 +1022,8 @@ pub use btech::{
 };
 
 pub use btech::{
-    BattlePart, BattlePartKind, inventory_mass as battle_inventory_mass,
-    set_inventory_named as set_battle_inventory_named,
+    AMMUNITION_PART_OFFSET, BattlePart, BattlePartKind, PART_ID_LIMIT, WEAPON_PART_IDS,
+    inventory_mass as battle_inventory_mass, set_inventory_named as set_battle_inventory_named,
 };
 
 pub use btech::{

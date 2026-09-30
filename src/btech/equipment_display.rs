@@ -67,5 +67,8 @@ pub(super) fn ammunition_description(weapon: BattleWeapon, mode: A) -> &'static 
         A::Caseless => " Caseless",
         A::Incendiary => " Incendiary",
         A::Inferno => " Inferno",
+        A::ThunderAugmented => " Thunder-Augmented",
+        A::ThunderVibrabomb => " Thunder-Vibrabomb",
+        A::ThunderActive => " Thunder-Active",
     }
 }

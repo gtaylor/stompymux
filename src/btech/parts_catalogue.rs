@@ -108,6 +108,7 @@ pub(super) const STOCK: &[(i32, &str, u32, BattlePartKind)] = &[
     (451, "Small_Vibroblade", 3072, BattlePartKind::Component),
     (452, "Medium_Vibroblade", 2560, BattlePartKind::Component),
     (453, "Large_Vibroblade", 1792, BattlePartKind::Component),
+    (454, "LaserReflective", 0, BattlePartKind::Component),
     (512, "Ammo_LBX2", 1024, BattlePartKind::Commodity),
     (513, "Ammo_LBX5_LBX", 1024, BattlePartKind::Commodity),
     (514, "Ammo_LBX10_LBX", 1024, BattlePartKind::Commodity),
