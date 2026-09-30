@@ -136,7 +136,7 @@ fn assess_with_occupancy(
         };
     };
 
-    let Some(mut cost) = terrain_cost(to_tile.terrain) else {
+    let Some(mut cost) = terrain_cost(to_tile.terrain, unit_kind) else {
         return TraversalAssessment::blocked(TraversalReason::ImpassableTerrain);
     };
     let (from_height, to_height) = support_heights(world, unit_id, unit_kind, from_tile, to_tile);
@@ -284,10 +284,16 @@ fn in_bounds(width: i64, height: i64, x: u16, y: u16) -> bool {
     i64::from(x) < width && i64::from(y) < height
 }
 
-fn terrain_cost(terrain: Terrain) -> Option<u32> {
+/// Relative route cost of entering a tile, or `None` when the tile is impassable.
+fn terrain_cost(terrain: Terrain, kind: GroundUnitKind) -> Option<u32> {
     Some(match terrain {
         Terrain::Wall => return None,
-        Terrain::Grassland | Terrain::Road | Terrain::Bridge | Terrain::Building => 1,
+        Terrain::Sand if kind == GroundUnitKind::Wheeled => 2,
+        Terrain::Grassland
+        | Terrain::Road
+        | Terrain::Bridge
+        | Terrain::Building
+        | Terrain::Sand => 1,
         Terrain::LightForest | Terrain::Rough | Terrain::Snow | Terrain::Fire | Terrain::Smoke => 2,
         Terrain::HeavyForest | Terrain::Mountains => 3,
         Terrain::Water | Terrain::Ice => 3,
@@ -538,10 +544,30 @@ mod tests {
             Terrain::Smoke,
             Terrain::Snow,
             Terrain::Building,
+            Terrain::Sand,
         ] {
-            assert!(terrain_cost(terrain).is_some_and(|cost| cost > 0));
+            assert!(terrain_cost(terrain, GroundUnitKind::Mech).is_some_and(|cost| cost > 0));
         }
-        assert_eq!(terrain_cost(Terrain::Wall), None);
+        assert_eq!(terrain_cost(Terrain::Wall, GroundUnitKind::Mech), None);
+    }
+
+    /// Wheeled routes avoid sand; other ground units price it like clear terrain.
+    #[test]
+    fn sand_costs_extra_only_for_wheeled_units() {
+        assert_eq!(
+            terrain_cost(Terrain::Sand, GroundUnitKind::Wheeled),
+            Some(2)
+        );
+        for kind in [
+            GroundUnitKind::Mech,
+            GroundUnitKind::Tracked,
+            GroundUnitKind::Hover,
+        ] {
+            assert_eq!(
+                terrain_cost(Terrain::Sand, kind),
+                terrain_cost(Terrain::Grassland, kind)
+            );
+        }
     }
 
     #[test]

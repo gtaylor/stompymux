@@ -240,7 +240,7 @@ impl BattleOrbitalDrop {
             _ => 0,
         };
         target += match input.terrain {
-            Terrain::Grassland | Terrain::Road => 0,
+            Terrain::Grassland | Terrain::Road | Terrain::Sand => 0,
             Terrain::Water | Terrain::HighWater => 2,
             _ => 3,
         };

@@ -588,7 +588,7 @@ Alias: `{mode: "offset", offset: integer}|{mode: "exact", x: integer, y: integer
 
 ## BattleTerrainName
 
-Alias: `"grassland"|"road"|"light_forest"|"heavy_forest"|"water"|"ice"|"bridge"|"high_water"|"rough"|"mountains"|"fire"|"smoke"|"snow"|"building"|"wall"`
+Alias: `"grassland"|"road"|"light_forest"|"heavy_forest"|"water"|"ice"|"bridge"|"high_water"|"rough"|"mountains"|"fire"|"smoke"|"snow"|"building"|"wall"|"sand"`
 
 ## BattleLineOfSight
 

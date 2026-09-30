@@ -26,8 +26,9 @@ Startup progress survives restart. It pauses while the server is offline or
 unable to save progress. A running unit accepts `heading <degrees>` and
 `speed <kph|stop|walk|run|back>`. Turns and speed changes are gradual. Shutting down above 10.75 kph forward
 causes a fall and can cause crowding collisions. Reverse or slower motion stops
-without that shutdown fall. Motion supports grassland, roads, forests, rough ground, mountains, snow and
-bridge decks, including one- and two-level elevation changes. Forward steps reduce
+without that shutdown fall. Motion supports grassland, roads, forests, rough ground, mountains, snow, sand and
+bridge decks, including one- and two-level elevation changes. Sand halves the speed
+of wheeled vehicles; Mechs, tracked vehicles and hovercraft cross it like grassland. Forward steps reduce
 speed by 10.75 kph per level while preserving your requested throttle. Backing
 across a step normally requires a piloting check: failure causes a fall, with an
 uphill fall returning you to the previous position. When reverse-step checks are
@@ -73,7 +74,7 @@ without rolling while the pilot is unconscious; an already prone Mech retains
 its automatic-success exception.
 
 Use `jump <bearing> <range>` to engage jump jets toward a hex center. Grassland, roads,
-forests, rough ground, mountains, snow, smoke, fire, water, high water, ice, bridges,
+forests, rough ground, mountains, snow, sand, smoke, fire, water, high water, ice, bridges,
 buildings and walls are supported,
 including changes in elevation. Jump progress survives restart
 and pauses while the server is offline or unable to save. Jet damage and gravity
