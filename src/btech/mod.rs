@@ -595,7 +595,6 @@ pub use thunder::{
     BattleThunderField, BattleThunderReport, THUNDER_MAXIMUM_STRENGTH, toggle_thunder,
 };
 pub(crate) mod torpedo;
-pub use torpedo::toggle_torpedo;
 
 mod spotter;
 pub use spotter::{BattleSpotterTarget, select_spotter, spotter_target};
@@ -1235,7 +1234,10 @@ pub use inventory::{
 
 mod parts;
 mod parts_catalogue;
-pub use parts::{BattlePart, BattlePartKind, inventory_mass, set_inventory_named};
+pub use parts::{
+    AMMUNITION_PART_OFFSET, BattlePart, BattlePartKind, PART_ID_LIMIT, WEAPON_PART_IDS,
+    inventory_mass, set_inventory_named,
+};
 
 mod cargo_bay;
 pub use cargo_bay::{

@@ -925,11 +925,6 @@ impl CommandRegistry {
                 ),
             CommandDefinition::native("fireactive", P::EVERYONE, crate::btech::thunder::command)
                 .policy(SwitchPolicy::Reject("fireactive takes no switches."), false),
-            CommandDefinition::native("firetorpedo", P::EVERYONE, crate::btech::torpedo::command)
-                .policy(
-                    SwitchPolicy::Reject("firetorpedo takes no switches."),
-                    false,
-                ),
             CommandDefinition::native(
                 "firecluster",
                 P::EVERYONE,

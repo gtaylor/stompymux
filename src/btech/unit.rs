@@ -1622,7 +1622,6 @@ pub(super) fn replace_critical_modes(
         "ExtendedRange",
         "HighExplosive",
         "MML_LRM",
-        "Torpedo",
         "ThunderAug",
         "ThunderVibra",
         "ThunderActive",

@@ -80,7 +80,6 @@ pub(super) fn modifiers(
         shooter,
         super::network_range::NetworkTarget::Unit(target),
         mount.weapon,
-        super::weapon_geometry::ammunition_mode(world, shooter, weapon_index)?,
         submerged,
         &mut aim,
     )?;

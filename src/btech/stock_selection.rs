@@ -159,9 +159,8 @@ fn exact_names() -> &'static ExactNames {
     static NAMES: OnceLock<ExactNames> = OnceLock::new();
     NAMES.get_or_init(|| {
         let mut names = ExactNames::default();
-        let last = super::parts_catalogue::STOCK.last().map_or(0, |row| row.0);
         for brand in 0..=5 {
-            for id in 1..=last {
+            for id in 1..super::PART_ID_LIMIT {
                 let Some(part) = BattlePart::from_id(id) else {
                     continue;
                 };

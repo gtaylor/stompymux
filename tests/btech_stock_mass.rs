@@ -74,7 +74,7 @@ fn stock_identities_and_reference_mass_facts_are_stable() {
             BattlePart::parse(&part.name.to_ascii_lowercase()).unwrap(),
             part
         );
-        let ammunition = BattlePart::from_id(weapon.part_id() + 192).unwrap();
+        let ammunition = BattlePart::from_id(weapon.ammunition_part_id()).unwrap();
         assert_eq!(ammunition.kind, BattlePartKind::Ammunition);
         assert_eq!(ammunition.mass, 1024);
     }
@@ -99,8 +99,8 @@ fn stock_identities_and_reference_mass_facts_are_stable() {
         assert_eq!(BattlePart::parse(name).unwrap().part_id, id);
     }
     let mut names = BTreeSet::new();
-    let parts: Vec<_> = (1..=669).filter_map(BattlePart::from_id).collect();
-    assert_eq!(parts.len(), 591);
+    let parts: Vec<_> = BattlePart::all().collect();
+    assert_eq!(parts.len(), 619);
     let mut duplicates = BTreeSet::new();
     for part in parts {
         if !names.insert(part.name.to_ascii_lowercase()) {
@@ -119,7 +119,7 @@ fn stock_identities_and_reference_mass_facts_are_stable() {
                 .contains("Ambiguous")
         );
     }
-    for id in [-1, 0, 192, 384, 511, 670, i32::MAX] {
+    for id in [-1, 0, 197, 384, 511, 670, 1024, 1408, i32::MAX] {
         assert!(BattlePart::from_id(id).is_none());
     }
     assert!(BattlePart::parse("Gold*").is_err());
@@ -294,7 +294,7 @@ async fn construction_rejects_unknown_stock_before_mutation() {
     for source in templates() {
         let (_dir, config, mut world) = support::isolated_world().await;
         let id = world.create(&config, "Stocked shell".into(), Kind::Thing);
-        set_battle_inventory_quantity(&mut world, ObjectId(1), id, 192, 0, 1).unwrap();
+        set_battle_inventory_quantity(&mut world, ObjectId(1), id, 384, 0, 1).unwrap();
         let before = world.btech.clone();
         assert!(
             BattleUnitTemplate::parse(&source)
@@ -303,7 +303,7 @@ async fn construction_rejects_unknown_stock_before_mutation() {
                 .is_err()
         );
         assert_eq!(world.btech, before);
-        set_battle_inventory_quantity(&mut world, ObjectId(1), id, 192, 0, 0).unwrap();
+        set_battle_inventory_quantity(&mut world, ObjectId(1), id, 384, 0, 0).unwrap();
         set_battle_inventory_named(&mut world, ObjectId(1), id, "Gold", 0, 1).unwrap();
         BattleUnitTemplate::parse(&source)
             .unwrap()

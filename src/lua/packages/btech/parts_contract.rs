@@ -6,7 +6,7 @@ use mlua::{Lua, LuaString, MultiValue, Table, Value};
 use std::sync::Arc;
 
 const GROUP: &str = "parts";
-const ITEM_COUNT: i64 = 1024;
+const ITEM_COUNT: i64 = crate::btech::PART_ID_LIMIT as i64;
 const BRAND_COUNT: i64 = 5;
 const LUA_SAFE_INTEGER_MAX: i64 = 9_007_199_254_740_991;
 
@@ -137,9 +137,13 @@ fn require_part(
 }
 
 pub(super) fn part_category(id: i32) -> &'static str {
+    if crate::btech::WEAPON_PART_IDS.contains(&id) {
+        return "weapon";
+    }
+    if crate::btech::BattlePart::ammunition_weapon_id(id).is_some() {
+        return "ammunition";
+    }
     match id {
-        1..=192 => "weapon",
-        193..=384 => "ammunition",
         385..=393 => "bomb",
         394..=511 => "special",
         512..=1023 => "cargo",
@@ -466,7 +470,20 @@ const WEAPONS: &[WeaponContract] = weapon_contracts! {
     ("missile",2,1,3,7,14,21,2,24,15,67,3072),
     ("missile",4,1,3,7,14,21,4,12,20,104,6144),
     ("missile",5,1,3,7,14,21,6,8,25,157,9216),
-    ("missile",6,1,3,7,14,21,9,6,30,210,12288),
+    ("missile",6,1,3,7,14,21,9,6,30,210,12288),    ("missile",2,1,6,7,14,21,1,24,15,45,2048),
+    ("missile",4,1,6,7,14,21,2,12,20,90,5120),
+    ("missile",5,1,6,7,14,21,3,8,25,136,7168),
+    ("missile",6,1,6,7,14,21,5,6,30,181,10240),
+    ("missile",2,2,0,3,6,9,1,50,15,21,1024),
+    ("missile",3,2,0,3,6,9,1,25,15,39,2048),
+    ("missile",4,2,0,3,6,9,2,15,15,59,3072),
+    ("missile",2,1,0,7,14,21,1,24,15,55,1024),
+    ("missile",4,1,0,7,14,21,1,12,20,109,2560),
+    ("missile",5,1,0,7,14,21,2,8,25,164,3584),
+    ("missile",6,1,0,7,14,21,4,6,20,220,5120),
+    ("missile",2,2,0,3,6,9,1,50,15,21,512),
+    ("missile",3,2,0,3,6,9,1,25,15,39,1024),
+    ("missile",4,2,0,3,6,9,1,15,15,59,1536),
 };
 
 fn weapon_contract(id: i32) -> Option<&'static WeaponContract> {

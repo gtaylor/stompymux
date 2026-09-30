@@ -105,26 +105,6 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
         })?;
         native.set(name, error::wrap(lua, action, "btech.operation.failed")?)?;
     }
-    let torpedo = lua.create_function(move |lua, (unit, pilot, index): (i64, i64, usize)| {
-        crate::lua::transactions::require(lua)?;
-        let scripts = crate::Scripts::services(lua)?;
-        crate::lua::transactions::run(lua, &scripts.world, || {
-            let mode = crate::toggle_battle_torpedo(
-                &mut scripts.world.borrow_mut(),
-                ObjectId(unit),
-                ObjectId(pilot),
-                index,
-            )
-            .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")))?;
-            crate::btech::notify_unit_text(&scripts, ObjectId(unit), &mode.torpedo_message(index))
-                .map_err(|e| error::failure("btech.operation.failed", e))?;
-            detached(lua, &mode)
-        })
-    })?;
-    native.set(
-        "unit_firetorpedo",
-        error::wrap(lua, torpedo, "btech.operation.failed")?,
-    )?;
     let cluster = lua.create_function(move |lua, (unit, pilot, index): (i64, i64, usize)| {
         crate::lua::transactions::require(lua)?;
         let scripts = crate::Scripts::services(lua)?;

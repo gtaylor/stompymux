@@ -191,7 +191,6 @@ pub(in crate::lua::packages) fn install(lua: &Lua, api: &Table, mux: &Table) -> 
         ("unit", "unit_fireaugmented", "fireaugmented"),
         ("unit", "unit_firevibrabomb", "firevibrabomb"),
         ("unit", "unit_fireactive", "fireactive"),
-        ("unit", "unit_firetorpedo", "firetorpedo"),
         ("unit", "unit_artemis", "artemis"),
         ("unit", "unit_hotload", "hotload"),
         ("unit", "unit_ultra", "ultra"),

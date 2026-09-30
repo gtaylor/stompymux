@@ -987,8 +987,6 @@ pub use btech::toggle_missile_rounds as toggle_battle_missile_rounds;
 
 pub use btech::toggle_thunder as toggle_battle_thunder;
 
-pub use btech::toggle_torpedo as toggle_battle_torpedo;
-
 pub use btech::{BattleThunderField, BattleThunderReport, THUNDER_MAXIMUM_STRENGTH};
 
 pub use btech::{BattleSightAim, BattleSightReport};
@@ -1024,8 +1022,8 @@ pub use btech::{
 };
 
 pub use btech::{
-    BattlePart, BattlePartKind, inventory_mass as battle_inventory_mass,
-    set_inventory_named as set_battle_inventory_named,
+    AMMUNITION_PART_OFFSET, BattlePart, BattlePartKind, PART_ID_LIMIT, WEAPON_PART_IDS,
+    inventory_mass as battle_inventory_mass, set_inventory_named as set_battle_inventory_named,
 };
 
 pub use btech::{

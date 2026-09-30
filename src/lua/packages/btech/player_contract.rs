@@ -107,7 +107,7 @@ fn equipment(
                 serde_json::json!({"argument":2}),
             )
         })?;
-    if !(1..=192).contains(&part.id) {
+    if !crate::btech::WEAPON_PART_IDS.contains(&part.id) {
         return Err(error::failure_with_detail(
             "btech.part.wrong_kind",
             format!("{field}.weapon is not a weapon"),

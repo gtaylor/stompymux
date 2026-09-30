@@ -46,8 +46,6 @@ pub enum BattleAmmunitionMode {
     Caseless,
     Incendiary,
     Inferno,
-    /// LRM and SRM torpedoes, fired only from a submerged launcher at a target in water.
-    Torpedo,
     /// Thunder rounds that seed a weaker minefield across the target and adjacent hexes.
     ThunderAugmented,
     /// Thunder rounds that lay a vibrabomb field keyed to the firing unit's weight.
@@ -60,6 +58,10 @@ impl BattleAmmunitionMode {
     /// Equipment compatibility, shared by templates, saved units, controls and damage grouping.
     /// Installed controllers and disposable-weapon restrictions belong to live controls.
     pub(super) fn supports(self, weapon: BattleWeapon) -> bool {
+        // Torpedo launchers carry ordinary or Artemis-guided torpedoes only.
+        if weapon.is_torpedo() {
+            return matches!(self, Self::Normal | Self::Artemis);
+        }
         match self {
             Self::Normal => true,
             Self::MmlLrm
@@ -78,7 +80,6 @@ impl BattleAmmunitionMode {
             }
             Self::Cluster => weapon.is_lbx() || weapon.is_artillery(),
             Self::Smoke | Self::Mine => weapon.is_artillery() || weapon.profile().missiles > 0,
-            Self::Torpedo => weapon.supports_torpedo(),
             Self::ThunderAugmented | Self::ThunderVibrabomb | Self::ThunderActive => {
                 weapon.supports_thunder()
             }
@@ -124,7 +125,6 @@ impl BattleAmmunitionMode {
             "AP" => Some(Self::ArmorPiercing),
             "Precision" => Some(Self::Precision),
             "Flechette" => Some(Self::Flechette),
-            "Torpedo" => Some(Self::Torpedo),
             "ThunderAug" => Some(Self::ThunderAugmented),
             "ThunderVibra" => Some(Self::ThunderVibrabomb),
             "ThunderActive" => Some(Self::ThunderActive),
@@ -158,7 +158,6 @@ impl BattleAmmunitionMode {
             "MML_LRM",
             "ExtendedRange",
             "HighExplosive",
-            "Torpedo",
             "ThunderAug",
             "ThunderVibra",
             "ThunderActive",
@@ -384,7 +383,6 @@ impl BattleAmmunitionMode {
             Self::Swarm
                 | Self::Swarm1
                 | Self::Mine
-                | Self::Torpedo
                 | Self::ThunderAugmented
                 | Self::ThunderVibrabomb
                 | Self::ThunderActive

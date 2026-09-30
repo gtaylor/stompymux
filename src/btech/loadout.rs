@@ -293,7 +293,6 @@ fn is_contract_ammunition_mode(mode: &str) -> bool {
             | "ExtendedRange"
             | "HighExplosive"
             | "MML_LRM"
-            | "Torpedo"
             | "ThunderAug"
             | "ThunderVibra"
             | "ThunderActive"

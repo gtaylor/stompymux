@@ -324,11 +324,7 @@ fn check_bearing(
         submerged,
         bears,
     } = super::weapon_geometry::geometry(world, shooter, index, hex.center())?;
-    super::weapon_geometry::check_water(
-        weapon,
-        super::weapon_geometry::ammunition_mode(world, shooter, index)?,
-        submerged,
-    )?;
+    super::weapon_geometry::check_water(weapon, submerged)?;
     ensure!(
         rules.override_weapon_arcs
             || super::spotter::indirect_hex_for_source(world, targeting, index)?.is_some()
@@ -365,7 +361,7 @@ fn check_unit_target(
             "Stinger missiles can only engage airborne targets!"
         );
     }
-    super::torpedo::check_target(world, ammunition, target)?;
+    super::torpedo::check_target(world, weapon, target)?;
     let indirect = super::spotter::indirect_target_for_source(world, targeting, index)?;
     if indirect.is_some() {
         super::spotter::check_indirect_water(world, shooter, target)?;
@@ -381,7 +377,7 @@ fn check_unit_target(
         index,
         recipient.point.context("Target is not placed")?,
     )?;
-    super::weapon_geometry::check_water(geometry.weapon, ammunition, geometry.submerged)?;
+    super::weapon_geometry::check_water(geometry.weapon, geometry.submerged)?;
     ensure!(
         (coolant && shooter == target)
             || indirect.is_some()

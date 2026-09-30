@@ -275,13 +275,6 @@
     },
     {
       "class_mask": 0,
-      "syntax": "FIRETORPEDO <weapnum>",
-      "description": "Sets/unsets the LRM or SRM launcher to fire torpedoes, which only work underwater.",
-      "restricted": false,
-      "category": false
-    },
-    {
-      "class_mask": 0,
       "syntax": "FIRESMOKE <weapnum>",
       "description": "Sets/unsets artillery weapon to fire smoke rounds.",
       "restricted": false,

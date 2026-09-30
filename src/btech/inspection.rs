@@ -478,7 +478,7 @@ pub(crate) fn inspection_template_part(
         let weapon = super::BattleWeapon::parse(name).ok()?;
         return Some((
             InspectionPart {
-                id: weapon.part_id() + 192,
+                id: weapon.ammunition_part_id(),
                 brand: supplied_brand,
             },
             false,
@@ -508,11 +508,8 @@ pub(crate) fn inspection_template_part(
     let internal = (394..=445)
         .filter_map(BattlePart::from_id)
         .find(|part| part.name.eq_ignore_ascii_case(name));
-    let part = internal.or_else(|| {
-        (1..=1023)
-            .filter_map(BattlePart::from_id)
-            .find(|part| part.name.eq_ignore_ascii_case(name))
-    })?;
+    let part =
+        internal.or_else(|| BattlePart::all().find(|part| part.name.eq_ignore_ascii_case(name)))?;
     let weapon = part.kind == BattlePartKind::Weapon;
     Some((
         InspectionPart {
@@ -648,7 +645,7 @@ fn critical_rows(
             })
         } else if let Some((_, bin)) = ammunition {
             Some(InspectionPart {
-                id: bin.weapon.part_id() + 192,
+                id: bin.weapon.ammunition_part_id(),
                 brand: bin.brand.unwrap_or(0) % 16,
             })
         } else if let Some(system) = system {
@@ -671,7 +668,10 @@ fn critical_rows(
             .or_else(|| {
                 raw_identity
                     .filter(|(_, _, payload)| {
-                        *payload && part.is_some_and(|part| part.id >= 193 && part.id < 385)
+                        *payload
+                            && part.is_some_and(|part| {
+                                BattlePart::ammunition_weapon_id(part.id).is_some()
+                            })
                     })
                     .map(|_| {
                         let capacity = critical
@@ -801,10 +801,9 @@ fn template_ammunition_modes(flags: &[String]) -> Vec<i32> {
         ("ExtendedRange", 1048576),
         ("HighExplosive", 2097152),
         ("MML_LRM", 4194304),
-        ("Torpedo", 8388608),
-        ("ThunderAug", 16777216),
-        ("ThunderVibra", 33554432),
-        ("ThunderActive", 67108864),
+        ("ThunderAug", 8388608),
+        ("ThunderVibra", 16777216),
+        ("ThunderActive", 33554432),
     ];
     MODES
         .iter()
@@ -881,10 +880,9 @@ fn live_munition_bit(
         super::BattleAmmunitionMode::Caseless => 262144,
         super::BattleAmmunitionMode::Incendiary => 32768,
         super::BattleAmmunitionMode::Inferno => 64,
-        super::BattleAmmunitionMode::Torpedo => 8388608,
-        super::BattleAmmunitionMode::ThunderAugmented => 16777216,
-        super::BattleAmmunitionMode::ThunderVibrabomb => 33554432,
-        super::BattleAmmunitionMode::ThunderActive => 67108864,
+        super::BattleAmmunitionMode::ThunderAugmented => 8388608,
+        super::BattleAmmunitionMode::ThunderVibrabomb => 16777216,
+        super::BattleAmmunitionMode::ThunderActive => 33554432,
     })
 }
 
@@ -918,7 +916,7 @@ pub fn inspect_raw_template_criticals(
         ammunition_modes.sort_unstable();
         ammunition_modes.dedup();
         let ammunition = identity
-            .filter(|(part, _, _)| (193..385).contains(&part.id))
+            .filter(|(part, _, _)| BattlePart::ammunition_weapon_id(part.id).is_some())
             .map(|_| {
                 let rounds = critical
                     .and_then(|raw| raw.data.parse::<i32>().ok())
@@ -940,7 +938,9 @@ pub fn inspect_raw_template_criticals(
             slot: slot + 1,
             kind: match identity {
                 Some((_, true, _)) => "weapon",
-                Some((part, _, _)) if (193..385).contains(&part.id) => "ammunition",
+                Some((part, _, _)) if BattlePart::ammunition_weapon_id(part.id).is_some() => {
+                    "ammunition"
+                }
                 Some((part, _, _)) => match BattlePart::from_id(part.id).map(|part| part.kind) {
                     Some(BattlePartKind::Bomb) => "bomb",
                     Some(BattlePartKind::Commodity) => "cargo",
@@ -1901,7 +1901,7 @@ pub fn inspect_vehicle_criticals(
             })
         } else if let Some((_, bin)) = ammo {
             Some(InspectionPart {
-                id: bin.weapon.part_id() + 192,
+                id: bin.weapon.ammunition_part_id(),
                 brand: bin.brand.unwrap_or(0) % 16,
             })
         } else if let Some(system) = system {

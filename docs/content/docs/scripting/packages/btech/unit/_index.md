@@ -84,7 +84,6 @@ no_list: true
 - [`firesmoke`](firesmoke/)
 - [`fireswarm`](fireswarm/)
 - [`fireswarm1`](fireswarm1/)
-- [`firetorpedo`](firetorpedo/)
 - [`firevibrabomb`](firevibrabomb/)
 - [`fixturret`](fixturret/)
 - [`flamerheat`](flamerheat/)

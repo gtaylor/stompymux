@@ -3,6 +3,25 @@ use super::{BattleInventoryEntry, BattleWeapon};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
+use std::ops::RangeInclusive;
+
+/// Weapon identities, including raw personal and infantry weapons. The block ends where bombs,
+/// components and commodities begin.
+pub const WEAPON_PART_IDS: RangeInclusive<i32> = 1..=384;
+
+/// A weapon's loose ammunition identity sits this far above the weapon's own, past every
+/// bomb, component and commodity identity.
+pub const AMMUNITION_PART_OFFSET: i32 = 1024;
+
+/// Every part identity is below this bound, so a brand and identity pack into one number.
+pub const PART_ID_LIMIT: i32 = 2048;
+
+impl BattleWeapon {
+    /// Stock identity of this weapon's loose ammunition.
+    pub fn ammunition_part_id(self) -> i32 {
+        self.part_id() + AMMUNITION_PART_OFFSET
+    }
+}
 
 /// Physical stock category; possessing an item does not enable its combat subsystem.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -36,8 +55,9 @@ impl BattlePart {
                 mass: weapon.mass(),
             });
         }
-        if (193..385).contains(&id) {
-            let weapon = Self::from_id(id - 192)?;
+        if let Some(weapon) = Self::ammunition_weapon_id(id) {
+            let weapon =
+                Self::from_id(weapon).filter(|part| part.kind == BattlePartKind::Weapon)?;
             return Some(Self {
                 part_id: id,
                 name: format!("Ammo_{}", weapon.name),
@@ -57,13 +77,20 @@ impl BattlePart {
         })
     }
 
+    /// The weapon identity whose loose ammunition `id` names, if it names ammunition.
+    pub fn ammunition_weapon_id(id: i32) -> Option<i32> {
+        let weapon = id - AMMUNITION_PART_OFFSET;
+        WEAPON_PART_IDS.contains(&weapon).then_some(weapon)
+    }
+
+    /// Every catalogued part in identity order.
+    pub fn all() -> impl Iterator<Item = Self> {
+        (1..PART_ID_LIMIT).filter_map(Self::from_id)
+    }
+
     /// Resolve an exact, ASCII case-insensitive stock name; manufacturer selection is separate.
     pub fn parse(name: &str) -> Result<Self> {
-        let mut matches = (1..=super::parts_catalogue::STOCK
-            .last()
-            .map_or(0, |entry| entry.0))
-            .filter_map(Self::from_id)
-            .filter(|part| part.name.eq_ignore_ascii_case(name));
+        let mut matches = Self::all().filter(|part| part.name.eq_ignore_ascii_case(name));
         let part = matches
             .next()
             .with_context(|| format!("Unknown inventory part {name}"))?;

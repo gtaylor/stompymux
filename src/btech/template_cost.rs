@@ -2,7 +2,7 @@
 use super::*;
 use crate::World;
 use anyhow::Result;
-const WEAPON_COST: [u64; 182] = [
+const WEAPON_COST: [u64; 196] = [
     1500, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 200000, 80000, 11250, 10000, 300000, 7500, 250000, 100000, 20000, 175000, 60000,
     16000, 12500, 400000, 150000, 30000, 100000, 300000, 150000, 250000, 400000, 600000, 5000,
@@ -17,8 +17,11 @@ const WEAPON_COST: [u64; 182] = [
     0, 0, 0, 8500, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     // Enhanced LRM-5, -10, -15 and -20.
     60000, 125000, 175000, 250000,
+    // Inner Sphere LRT-5 to -20 and SRT-2 to -6, then the Clan launchers.
+    30000, 100000, 175000, 250000, 10000, 60000, 80000, 30000, 100000, 175000, 250000, 10000, 60000,
+    80000,
 ];
-const AMMO_COST: [u64; 182] = [
+const AMMO_COST: [u64; 196] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2000, 20000, 2000, 9000, 12000, 20000,
     1000, 500, 1000, 1000, 9000, 12000, 20000, 10000, 75000, 75000, 75000, 75000, 30000, 30000,
@@ -28,7 +31,8 @@ const AMMO_COST: [u64; 182] = [
     10000, 27000, 27000, 27000, 27000, 30000, 30000, 30000, 30000, 27000, 27000, 27000, 5000, 5000,
     5000, 5000, 6000, 7500, 54000, 54000, 54000, 0, 0, 0, 50000, 50000, 50000, 50000, 0, 0, 0, 0,
     0, 0, 0, 1000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 31000, 31000, 31000,
-    31000,
+    31000, 30000, 30000, 30000, 30000, 27000, 27000, 27000, 30000, 30000, 30000, 30000, 27000,
+    27000, 27000,
 ];
 fn flag(template: &BattleTemplate, name: &str) -> bool {
     ["specials", "specials2"]
@@ -93,10 +97,9 @@ fn raw_ammunition_cost(template: &RawTemplate) -> Result<f64> {
     for section in RawSectionCode::for_unit(template.class, template.movement) {
         for row in inspection::inspect_raw_template_criticals(template, *section)? {
             let Some(part) = row.part else { continue };
-            if !(193..385).contains(&part.id) {
+            let Some(weapon_id) = BattlePart::ammunition_weapon_id(part.id) else {
                 continue;
-            }
-            let weapon_id = part.id - 192;
+            };
             let Some((_, maximum)) = row.ammunition else {
                 continue;
             };

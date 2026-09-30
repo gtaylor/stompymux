@@ -1,4 +1,4 @@
-//! Torpedoes fire only from a submerged launcher at a target in the water.
+//! Torpedo launchers fire only from a submerged mount at a target in the water.
 use crate::support;
 use stompymux_rs::*;
 
@@ -9,10 +9,10 @@ fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Va
     world.btech = serde_json::from_value(saved).unwrap();
 }
 
-/// A Jenner whose only weapon is an IS SRM-6 in its left leg, fed by a torpedo bin and a
-/// missile bin. A leg launcher is submerged even in shallow water.
+/// A Jenner whose only weapon is an IS SRT-6 in its left leg, fed by two torpedo bins. A leg
+/// launcher is submerged even in shallow water.
 fn launcher() -> BattleUnitTemplate {
-    let weapon = BattleWeapon::Srm6;
+    let weapon = BattleWeapon::Srt6;
     let mut definition = BattleUnitTemplate::parse(include_str!("../game/mechs/JR7-D")).unwrap();
     let BattleUnitTemplate::Mech(unit) = &mut definition else {
         panic!("The Jenner is a Mech");
@@ -38,16 +38,13 @@ fn launcher() -> BattleUnitTemplate {
     }
     let bins = unit.sections.get_mut(&BattleSection::RightTorso).unwrap();
     bins.criticals.clear();
-    for (slot, modes) in [vec!["Torpedo".to_owned()], Vec::new()]
-        .into_iter()
-        .enumerate()
-    {
+    for slot in 0..2 {
         bins.criticals.insert(
             slot as u8,
             CriticalDefinition {
                 equipment: format!("Ammo_{}", weapon.name()),
                 data: weapon.profile().ammunition_per_ton.to_string(),
-                modes,
+                modes: Vec::new(),
                 brand: None,
             },
         );
@@ -139,7 +136,7 @@ fn acquire(world: &mut World, shooter: ObjectId, target: ObjectId) {
     panic!("Fixture contact was not acquired");
 }
 
-/// Fire the SRM at the target and describe any refusal.
+/// Fire the SRT at the target and describe any refusal.
 fn fire(
     world: &mut World,
     shooter: ObjectId,
@@ -149,36 +146,16 @@ fn fire(
         .map_err(|error| error.to_string())
 }
 
-/// Submerged torpedoes launch at a submerged target; ordinary SRMs may not fire underwater.
+/// A submerged launcher's torpedoes reach a submerged target, and AMS cannot stop them.
 #[tokio::test]
 async fn submerged_launchers_fire_torpedoes_at_targets_in_water() {
     let (_dir, config, mut world, shooter, target) = fixture([4, 1]).await;
     acquire(&mut world, shooter, target);
-    let before = world.clone();
-    assert!(
-        fire(&mut world, shooter, target)
-            .unwrap_err()
-            .contains("may not be fired underwater")
-    );
-    assert_eq!(world.btech, before.btech);
-    assert_eq!(
-        toggle_battle_torpedo(&mut world, shooter, ObjectId(1), 0).unwrap(),
-        BattleAmmunitionMode::Torpedo
-    );
+    edit(&mut world, target, |unit| unit["ams_enabled"] = true.into());
     let report = fire(&mut world, shooter, target).unwrap();
-    assert_eq!(
-        report.expenditure.ammunition_mode,
-        BattleAmmunitionMode::Torpedo
-    );
+    assert!(report.expenditure.heat > 0);
     assert!(report.ams.is_none(), "AMS cannot engage torpedoes");
     world.validate(&config).unwrap();
-    // A second toggle on the recycled launcher restores ordinary missiles.
-    let mut restored = before.clone();
-    toggle_battle_torpedo(&mut restored, shooter, ObjectId(1), 0).unwrap();
-    assert_eq!(
-        toggle_battle_torpedo(&mut restored, shooter, ObjectId(1), 0).unwrap(),
-        BattleAmmunitionMode::Normal
-    );
 }
 
 /// Torpedoes stay in their tubes on dry land and cannot reach a target ashore.
@@ -190,22 +167,25 @@ async fn torpedoes_need_water_at_both_ends() {
     ] {
         let (_dir, _config, mut world, shooter, target) = fixture(rows).await;
         acquire(&mut world, shooter, target);
-        toggle_battle_torpedo(&mut world, shooter, ObjectId(1), 0).unwrap();
         let before = world.clone();
         assert_eq!(fire(&mut world, shooter, target).unwrap_err(), message);
         assert_eq!(world.btech, before.btech);
     }
 }
 
-/// Only standard LRM and SRM launchers load torpedoes.
+/// Torpedo launchers are their own catalogue weapons with part identities above the old limit.
 #[test]
-fn torpedo_controls_reject_other_launchers() {
-    for weapon in [
-        BattleWeapon::StreakSrm6,
-        BattleWeapon::Mml5,
-        BattleWeapon::Nlrm10,
+fn torpedo_launchers_are_catalogue_weapons() {
+    for (name, torpedo) in [
+        ("IS.LRT-20", BattleWeapon::Lrt20),
+        ("CL.SRT-2", BattleWeapon::ClanSrt2),
     ] {
-        assert!(!weapon.supports_torpedo());
+        assert_eq!(BattleWeapon::parse(name).unwrap(), torpedo);
+        assert!(torpedo.is_torpedo());
+        let ammunition = BattlePart::from_id(torpedo.ammunition_part_id()).unwrap();
+        assert_eq!(ammunition.name, format!("Ammo_{name}"));
+        assert_eq!(ammunition.kind, BattlePartKind::Ammunition);
     }
-    assert!(BattleWeapon::ClanLrm20.supports_torpedo());
+    assert!(BattleWeapon::ClanSrt6.part_id() > 192);
+    assert!(!BattleWeapon::Srm6.is_torpedo());
 }

@@ -33,7 +33,7 @@ async fn catalogue_resolution_and_c_weapon_projection_are_exact() {
         end
 
         local all=btech.parts.list()
-        assert(#all==510,'catalogue '..#all)
+        assert(#all==545,'catalogue '..#all)
         local counted=0
         local registered_weapons={}
         local names={}
@@ -45,9 +45,9 @@ async fn catalogue_resolution_and_c_weapon_projection_are_exact() {
         end
         assert(counted==#all)
         for index,part in ipairs(all) do
-            assert(type(part.id)=='number' and part.id>=0 and part.id<1024)
+            assert(type(part.id)=='number' and part.id>=0 and part.id<2048)
             assert(type(part.brand)=='number' and part.brand>=0 and part.brand<=5)
-            assert(part.packed_id==part.brand*1024+part.id)
+            assert(part.packed_id==part.brand*2048+part.id)
             assert(type(part.short_name)=='string' and type(part.long_name)=='string' and type(part.very_long_name)=='string')
             assert(type(part.weight_tons)=='number' and type(part.cost)=='number')
             local by_number=btech.parts.resolve(part.packed_id)
@@ -90,8 +90,8 @@ async fn catalogue_resolution_and_c_weapon_projection_are_exact() {
         assert(btech.parts.resolve(first.short_name..'\0ignored').packed_id==first.packed_id)
         assert(#btech.parts.search(first.short_name..'\0ignored')>=1)
         assert(#btech.parts.list('weapon\0ignored')==#btech.parts.list('weapon'))
-        assert(btech.parts.resolve(256*1024+first.id)==nil)
-        assert(btech.parts.resolve((256*1024+first.id)+0.0)==nil)
+        assert(btech.parts.resolve(256*2048+first.id)==nil)
+        assert(btech.parts.resolve((256*2048+first.id)+0.0)==nil)
         ok,err=mux.error.pcall(function() btech.parts.search('\0ignored') end)
         assert(not ok and err.code=='mux.arg.invalid' and err.detail.argument==1)
         for _,bad in ipairs({-1,1.5,0/0,math.huge}) do

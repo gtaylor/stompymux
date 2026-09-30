@@ -47,7 +47,9 @@ fn streak_lrm_catalogue_and_packet_facts() {
         );
         assert_eq!(BattlePart::from_id(id).unwrap().name, weapon.name());
         assert_eq!(
-            BattlePart::from_id(id + 192).unwrap().name,
+            BattlePart::from_id(id + AMMUNITION_PART_OFFSET)
+                .unwrap()
+                .name,
             format!("Ammo_{}", weapon.name())
         );
         assert!(weapon.is_streak());

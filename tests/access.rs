@@ -311,7 +311,6 @@ fn c_catalog_defaults() {
                 | "fireaugmented"
                 | "firevibrabomb"
                 | "fireactive"
-                | "firetorpedo"
                 | "firecluster"
                 | "artemis"
                 | "ecm"

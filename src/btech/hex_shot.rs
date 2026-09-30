@@ -150,10 +150,9 @@ fn resolve_hex_shot_inner(
         );
     }
     ensure!(ready, "Weapon is not ready");
-    let ammunition = super::weapon_geometry::ammunition_mode(world, shooter, weapon_index)?;
-    super::weapon_geometry::check_water(weapon, ammunition, submerged)?;
+    super::weapon_geometry::check_water(weapon, submerged)?;
     ensure!(
-        ammunition.munition() != BattleAmmunitionMode::Torpedo
+        !weapon.is_torpedo()
             || record
                 .base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?
                 .terrain

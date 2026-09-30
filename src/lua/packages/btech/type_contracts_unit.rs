@@ -1703,14 +1703,6 @@
 //|function btech_unit.fireactive(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00552
-//|---Select torpedoes, which fire only from a submerged launcher at a target in the water.
-//|---@param dbref integer
-//|---@param pilot integer
-//|---@param weapon integer
-//|---@return BattleAmmunitionMode
-//|function btech_unit.firetorpedo(dbref, pilot, weapon) end
-// lua-types-end
 
 // lua-types-begin btech 00419
 //|---Wizard-only predictive firing using fixed horizontal target orders and normal weapon launches.

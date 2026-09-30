@@ -32,7 +32,6 @@ The numbers below are native identifiers; pass the typed constants to Lua APIs.
 | `btech.unit.ammunition_modes.EXTENDED_RANGE` | `1048576` |  |
 | `btech.unit.ammunition_modes.HIGH_EXPLOSIVE` | `2097152` |  |
 | `btech.unit.ammunition_modes.MML_LRM` | `4194304` |  |
-| `btech.unit.ammunition_modes.TORPEDO` | `8388608` |  |
-| `btech.unit.ammunition_modes.THUNDER_AUGMENTED` | `16777216` |  |
-| `btech.unit.ammunition_modes.THUNDER_VIBRABOMB` | `33554432` |  |
-| `btech.unit.ammunition_modes.THUNDER_ACTIVE` | `67108864` |  |
+| `btech.unit.ammunition_modes.THUNDER_AUGMENTED` | `8388608` |  |
+| `btech.unit.ammunition_modes.THUNDER_VIBRABOMB` | `16777216` |  |
+| `btech.unit.ammunition_modes.THUNDER_ACTIVE` | `33554432` |  |

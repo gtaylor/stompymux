@@ -106,8 +106,7 @@ pub(super) fn apply_water_range(
 ) -> Result<bool> {
     let water = submerged(world, shooter, index)?;
     if water {
-        let ammunition = ammunition_mode(world, shooter, index)?;
-        let water_range = weapon.water_range_modifier_for(ammunition, aim.distance, extended)?;
+        let water_range = weapon.water_range_modifier(aim.distance, extended)?;
         let minimum = weapon.profile().minimum_range;
         // The enclosing reference aim calculation handles raw minimum range
         // before entering either the ordinary or underwater bracket routine.
@@ -119,13 +118,9 @@ pub(super) fn apply_water_range(
 }
 
 /// Weapon eligibility is checked before launch; target waterline visibility remains a LOS rule.
-/// Torpedoes are the reverse of most rounds: they fire only from a submerged launcher.
-pub(super) fn check_water(
-    weapon: BattleWeapon,
-    ammunition: BattleAmmunitionMode,
-    submerged: bool,
-) -> Result<()> {
-    if ammunition.munition() == BattleAmmunitionMode::Torpedo {
+/// Torpedoes are the reverse of other weapons: they fire only from a submerged launcher.
+pub(super) fn check_water(weapon: BattleWeapon, submerged: bool) -> Result<()> {
+    if weapon.is_torpedo() {
         ensure!(submerged, "Torpedoes can only be fired underwater.");
         return Ok(());
     }
@@ -134,21 +129,4 @@ pub(super) fn check_water(
         "This weapon may not be fired underwater."
     );
     Ok(())
-}
-
-/// The ammunition a mount has selected, for either unit class.
-pub(super) fn ammunition_mode(
-    world: &World,
-    shooter: ObjectId,
-    index: usize,
-) -> Result<BattleAmmunitionMode> {
-    if let Some(vehicle) = world.btech.vehicles().get(&shooter) {
-        return vehicle.ammunition_mode(index);
-    }
-    world
-        .btech
-        .constructed_units()
-        .get(&shooter)
-        .context("Shooter is not constructed")?
-        .ammunition_mode(index)
 }
