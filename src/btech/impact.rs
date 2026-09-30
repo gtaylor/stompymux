@@ -24,6 +24,21 @@ pub(super) enum WeaponEffect {
     Conventional,
     ArmorPiercing(super::BattleWeapon),
     Plasma,
+    /// Lasers, PPCs and flamers, which reflective armor partly deflects.
+    Energy,
+    /// Artillery blasts, which reflective armor absorbs poorly.
+    AreaEffect,
+}
+
+impl WeaponEffect {
+    /// How this hit interacts with specialized armor.
+    fn damage_class(self) -> super::BattleDamageClass {
+        match self {
+            Self::Plasma | Self::Energy => super::BattleDamageClass::Energy,
+            Self::AreaEffect => super::BattleDamageClass::AreaEffect,
+            Self::Conventional | Self::ArmorPiercing(_) => super::BattleDamageClass::Ordinary,
+        }
+    }
 }
 
 /// Ordered material phases and critical losses from one hit, including nested explosions.
@@ -1429,6 +1444,10 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
         weapon_effect,
         critical_penalty,
     } = packet;
+    let damage_class = weapon_effect.map_or(
+        super::BattleDamageClass::Ordinary,
+        WeaponEffect::damage_class,
+    );
     let mut initial_packet = true;
     let mut plasma_returns = 0;
     let mut ignition_section = None;
@@ -1482,16 +1501,17 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
             {
                 // Errata: each hardened armor point lost counts as one damage toward the
                 // twenty-damage piloting check; damage beyond the armor counts in full.
+                // Reflective armor counts the same way.
                 let counted = context
                     .unit()
-                    .hardened_hit(section, rear, damage)
+                    .armor_hit(section, rear, damage, damage_class)
                     .map_or(damage, |(removed, overflow)| removed + overflow);
                 context.unit_mut().stagger.record(counted, rules.stagger)?;
             }
         }
         plasma_returns += 1;
         if rear
-            && weapon_effect.is_some()
+            && weapon_effect.is_some_and(|effect| !matches!(effect, WeaponEffect::AreaEffect))
             && matches!(
                 section,
                 BattleSection::LeftTorso | BattleSection::RightTorso | BattleSection::CenterTorso
@@ -1509,17 +1529,22 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
             let previous_warning =
                 super::combat_warnings::armor_level(context.unit(), section, rear);
             // Hardened armor points each stop two damage; overflow passes at full value.
-            let hardened = context.unit().hardened_hit(section, rear, damage);
+            // Reflective armor does the same against energy weapons.
+            let special = context
+                .unit()
+                .armor_hit(section, rear, damage, damage_class);
             let armor = context.damage_phase(
                 section,
-                hardened.map_or(damage, |(removed, _)| removed),
+                special.map_or(damage, |(removed, _)| removed),
                 BattleDamagePhase::Armor { rear },
             )?;
             let warning = super::combat_warnings::armor_level(context.unit(), section, rear);
-            damage = hardened.map_or(armor.remaining, |(_, overflow)| overflow);
+            damage = special.map_or(armor.remaining, |(_, overflow)| overflow);
             // Hardened armor negates armor-piercing critical chances.
             let ap = match weapon_effect {
-                Some(WeaponEffect::ArmorPiercing(weapon)) if hardened.is_none() => Some(weapon),
+                Some(WeaponEffect::ArmorPiercing(weapon)) if !context.unit().hardened_armor() => {
+                    Some(weapon)
+                }
                 _ => None,
             }
             .filter(|_| {
@@ -1725,13 +1750,19 @@ mod tests {
 
     /// A Jenner, optionally with hardened armor, seeded for a deterministic damage stream.
     fn world(hardened: bool, seed: u8) -> (World, ObjectId) {
+        armored_world(if hardened { "HardenedArmor_Tech" } else { "" }, seed)
+    }
+
+    /// A Jenner with an extra chassis special, seeded for a deterministic damage stream.
+    fn armored_world(special: &str, seed: u8) -> (World, ObjectId) {
         let mut template = super::super::BattleTemplate::parse(include_str!(
             "../../tests/fixtures/btech/mechs/JR7-D"
         ))
         .unwrap();
-        if hardened {
+        if !special.is_empty() {
             let specials = template.attributes.entry("specials".into()).or_default();
-            specials.push_str(" HardenedArmor_Tech");
+            specials.push(' ');
+            specials.push_str(special);
         }
         let mut unit = BattleUnit::from_template(template).unwrap();
         unit.dice = super::super::BattleDice::seeded([seed; 32]);
@@ -1815,5 +1846,26 @@ mod tests {
             }
         }
         assert_eq!(exercised, [true, true]);
+    }
+
+    /// Reflective armor halves energy hits, doubles area-effect hits and ignores the rest.
+    #[test]
+    fn reflective_armor_depends_on_damage_class() {
+        let arm = |effect, damage| {
+            let (mut world, id) = armored_world("LaserRefArmor_Tech", 5);
+            strike(&mut world, id, damage, effect);
+            let state = &world.btech.constructed_units()[&id].sections()[&BattleSection::LeftArm];
+            (state.armor, state.internal)
+        };
+        // The Jenner's left arm carries four armor points over six internal.
+        assert_eq!(arm(WeaponEffect::Energy, 6), (1, 6));
+        assert_eq!(arm(WeaponEffect::Energy, 1), (3, 6));
+        // Ten energy damage: four points stop eight, two pass through.
+        assert_eq!(arm(WeaponEffect::Energy, 10), (0, 4));
+        assert_eq!(arm(WeaponEffect::Plasma, 6), (1, 6));
+        assert_eq!(arm(WeaponEffect::Conventional, 3), (1, 6));
+        assert_eq!(arm(WeaponEffect::AreaEffect, 1), (2, 6));
+        // Three area-effect damage: two strip all four points, one passes through.
+        assert_eq!(arm(WeaponEffect::AreaEffect, 3), (0, 5));
     }
 }

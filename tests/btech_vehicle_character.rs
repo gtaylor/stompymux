@@ -591,6 +591,7 @@ async fn ordinary_hull_loss_leaves_occupants_alive_and_armor_criticals_publish_c
         seed_vehicle(&mut world, id, seed);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let hit = BattleVehicleArmorHit {
+            damage_class: BattleDamageClass::Ordinary,
             section: BattleVehicleSection::Front,
             amount: if crew_critical { 1 } else { 48 },
             through_armor_critical: crew_critical,
@@ -1217,6 +1218,7 @@ async fn transport_loss_shares_nested_chassis_destruction_and_transactional_dise
                         &config,
                         carrier,
                         BattleVehicleArmorHit {
+                            damage_class: BattleDamageClass::Ordinary,
                             section: BattleVehicleSection::Front,
                             amount: 48,
                             through_armor_critical: false,

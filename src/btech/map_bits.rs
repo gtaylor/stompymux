@@ -207,6 +207,7 @@ mod tests {
             BattleMineKind::Inferno,
             BattleMineKind::Vibra,
             BattleMineKind::Trigger,
+            BattleMineKind::Active,
         ] {
             for extra in [-5, 0, 1, 3, 90, 100, 110] {
                 let mut map = map();

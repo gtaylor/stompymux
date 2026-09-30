@@ -225,6 +225,7 @@ fn hit_cell(
                 arc,
                 heat: 0,
                 character: is_character,
+                class: BattleDamageClass::AreaEffect,
             },
             &mut rear,
             rules,

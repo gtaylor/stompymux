@@ -463,6 +463,10 @@ const WEAPONS: &[WeaponContract] = weapon_contracts! {
     ("energy",1,1,0,1,2,3,1,0,10,5,768),
     ("missile",1,1,0,2,4,6,1,2,20,12,1024),
     ("missile",1,1,4,6,9,12,1,1,20,22,1024),
+    ("missile",2,1,3,7,14,21,2,24,15,67,3072),
+    ("missile",4,1,3,7,14,21,4,12,20,104,6144),
+    ("missile",5,1,3,7,14,21,6,8,25,157,9216),
+    ("missile",6,1,3,7,14,21,9,6,30,210,12288),
 };
 
 fn weapon_contract(id: i32) -> Option<&'static WeaponContract> {

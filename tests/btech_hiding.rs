@@ -303,6 +303,7 @@ async fn hiding_damage_and_shutdown_distinguish_cover_from_preparation() {
                     &mut test,
                     id,
                     BattleVehicleArmorHit {
+                        damage_class: BattleDamageClass::Ordinary,
                         section: BattleVehicleSection::Front,
                         amount: u32::from(amount),
                         through_armor_critical: false,

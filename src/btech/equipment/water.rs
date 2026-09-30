@@ -70,12 +70,26 @@ impl BattleWeapon {
         distance: f64,
         extended: bool,
     ) -> Result<Option<BattleWeaponRange>> {
+        self.water_range_modifier_for(
+            super::super::BattleAmmunitionMode::Normal,
+            distance,
+            extended,
+        )
+    }
+
+    /// Underwater accuracy for the loaded ammunition, so torpedoes use their own bands.
+    pub fn water_range_modifier_for(
+        self,
+        ammunition: super::super::BattleAmmunitionMode,
+        distance: f64,
+        extended: bool,
+    ) -> Result<Option<BattleWeaponRange>> {
         ensure!(
             distance.is_finite() && distance >= 0.0,
             "Invalid weapon range"
         );
         let profile = self
-            .water_ranges()
+            .water_ranges_for(ammunition)
             .context("This weapon may not be fired underwater.")?;
         let range = (distance + 0.95).floor();
         if range > f64::from(profile.effective_range(extended)) {

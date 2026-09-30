@@ -1622,6 +1622,10 @@ pub(super) fn replace_critical_modes(
         "ExtendedRange",
         "HighExplosive",
         "MML_LRM",
+        "Torpedo",
+        "ThunderAug",
+        "ThunderVibra",
+        "ThunderActive",
     ];
     modes.retain(|mode| !ALL.contains(&mode.as_str()));
     modes.extend(fire);

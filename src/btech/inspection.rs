@@ -801,6 +801,10 @@ fn template_ammunition_modes(flags: &[String]) -> Vec<i32> {
         ("ExtendedRange", 1048576),
         ("HighExplosive", 2097152),
         ("MML_LRM", 4194304),
+        ("Torpedo", 8388608),
+        ("ThunderAug", 16777216),
+        ("ThunderVibra", 33554432),
+        ("ThunderActive", 67108864),
     ];
     MODES
         .iter()
@@ -877,6 +881,10 @@ fn live_munition_bit(
         super::BattleAmmunitionMode::Caseless => 262144,
         super::BattleAmmunitionMode::Incendiary => 32768,
         super::BattleAmmunitionMode::Inferno => 64,
+        super::BattleAmmunitionMode::Torpedo => 8388608,
+        super::BattleAmmunitionMode::ThunderAugmented => 16777216,
+        super::BattleAmmunitionMode::ThunderVibrabomb => 33554432,
+        super::BattleAmmunitionMode::ThunderActive => 67108864,
     })
 }
 

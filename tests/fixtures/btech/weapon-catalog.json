@@ -2376,6 +2376,82 @@
   },
   {
     "accuracy": 0,
+    "mass": 3072,
+    "name": "IS.NLRM-5",
+    "profile": {
+      "ammunition_per_ton": 24,
+      "critical_slots": 2,
+      "damage": 1,
+      "heat": 2,
+      "long_range": 21,
+      "medium_range": 14,
+      "minimum_range": 3,
+      "missiles": 5,
+      "recycle_seconds": 15,
+      "short_range": 7
+    },
+    "skill": "Gunnery-Missile",
+    "weapon": "nlrm5"
+  },
+  {
+    "accuracy": 0,
+    "mass": 6144,
+    "name": "IS.NLRM-10",
+    "profile": {
+      "ammunition_per_ton": 12,
+      "critical_slots": 4,
+      "damage": 1,
+      "heat": 4,
+      "long_range": 21,
+      "medium_range": 14,
+      "minimum_range": 3,
+      "missiles": 10,
+      "recycle_seconds": 20,
+      "short_range": 7
+    },
+    "skill": "Gunnery-Missile",
+    "weapon": "nlrm10"
+  },
+  {
+    "accuracy": 0,
+    "mass": 9216,
+    "name": "IS.NLRM-15",
+    "profile": {
+      "ammunition_per_ton": 8,
+      "critical_slots": 6,
+      "damage": 1,
+      "heat": 5,
+      "long_range": 21,
+      "medium_range": 14,
+      "minimum_range": 3,
+      "missiles": 15,
+      "recycle_seconds": 25,
+      "short_range": 7
+    },
+    "skill": "Gunnery-Missile",
+    "weapon": "nlrm15"
+  },
+  {
+    "accuracy": 0,
+    "mass": 12288,
+    "name": "IS.NLRM-20",
+    "profile": {
+      "ammunition_per_ton": 6,
+      "critical_slots": 9,
+      "damage": 1,
+      "heat": 6,
+      "long_range": 21,
+      "medium_range": 14,
+      "minimum_range": 3,
+      "missiles": 20,
+      "recycle_seconds": 30,
+      "short_range": 7
+    },
+    "skill": "Gunnery-Missile",
+    "weapon": "nlrm20"
+  },
+  {
+    "accuracy": 0,
     "mass": 2048,
     "name": "IS.LRM-5",
     "profile": {

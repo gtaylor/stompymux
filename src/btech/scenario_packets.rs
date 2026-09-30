@@ -90,6 +90,7 @@ pub fn damage_action(
                     arc,
                     character,
                     attacker: Some(unit),
+                    class: super::BattleDamageClass::Ordinary,
                 },
                 rear,
                 rules,

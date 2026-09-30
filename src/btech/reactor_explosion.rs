@@ -247,6 +247,7 @@ fn hit_cell(
             super::blast_damage::BlastDamage {
                 damage,
                 packet_size: 3,
+                class: super::BattleDamageClass::Ordinary,
                 table: if punch {
                     BattleHitTable::Punch
                 } else {

@@ -51,6 +51,7 @@ pub fn damage_section_action(
                 config,
                 unit,
                 super::BattleVehicleArmorHit {
+                    damage_class: super::BattleDamageClass::Ordinary,
                     section,
                     amount: damage as u32,
                     through_armor_critical: critical,

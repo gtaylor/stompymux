@@ -32,6 +32,7 @@ pub(super) fn apply(
     shooter: ObjectId,
     target: NetworkTarget,
     weapon: BattleWeapon,
+    ammunition: super::BattleAmmunitionMode,
     submerged: bool,
     aim: &mut BattleAimModifiers,
 ) -> Result<()> {
@@ -54,20 +55,22 @@ pub(super) fn apply(
     };
     let members = super::command_network::active_members(world, shooter, kind, false)?;
     let selected = select(world, shooter, target, aim.distance, &members, kind)?;
-    aim.range = bracket(weapon, aim.distance, selected.distance, submerged);
+    let water = submerged.then(|| weapon.water_ranges_for(ammunition));
+    aim.range = bracket(weapon, aim.distance, selected.distance, water);
     aim.network_range = Some(selected);
     Ok(())
 }
 
 /// C3 brackets use shared distance, ignore a peer's minimum range, and disable extended range.
+/// `water` holds the loaded round's underwater bands when the launcher is submerged.
 fn bracket(
     weapon: BattleWeapon,
     physical: f64,
     shared: f64,
-    submerged: bool,
+    water: Option<Option<super::BattleWaterRanges>>,
 ) -> Option<BattleWeaponRange> {
-    let (short, medium, maximum) = if submerged {
-        let profile = weapon.water_ranges()?;
+    let (short, medium, maximum) = if let Some(water) = water {
+        let profile = water?;
         (
             profile.short_range,
             profile.medium_range,
@@ -153,35 +156,72 @@ mod tests {
     fn water_network_uses_water_bands_and_physical_limit() {
         for (shared, expected) in [(0.0, 0), (4.04, 0), (4.06, 2), (7.04, 2), (7.06, 4)] {
             assert_eq!(
-                bracket(BattleWeapon::Ppc, 10.04, shared, true)
-                    .unwrap()
-                    .modifier,
+                bracket(
+                    BattleWeapon::Ppc,
+                    10.04,
+                    shared,
+                    Some(BattleWeapon::Ppc.water_ranges())
+                )
+                .unwrap()
+                .modifier,
                 expected
             );
         }
-        assert!(bracket(BattleWeapon::Ppc, 10.06, 0.0, true).is_none());
-        assert!(bracket(BattleWeapon::SmallLaser, 2.04, 0.0, true).is_some());
-        assert!(bracket(BattleWeapon::SmallLaser, 2.06, 0.0, true).is_none());
-        assert!(bracket(BattleWeapon::Lrm20, 1.0, 0.0, true).is_none());
+        assert!(
+            bracket(
+                BattleWeapon::Ppc,
+                10.06,
+                0.0,
+                Some(BattleWeapon::Ppc.water_ranges())
+            )
+            .is_none()
+        );
+        assert!(
+            bracket(
+                BattleWeapon::SmallLaser,
+                2.04,
+                0.0,
+                Some(BattleWeapon::SmallLaser.water_ranges())
+            )
+            .is_some()
+        );
+        assert!(
+            bracket(
+                BattleWeapon::SmallLaser,
+                2.06,
+                0.0,
+                Some(BattleWeapon::SmallLaser.water_ranges())
+            )
+            .is_none()
+        );
+        assert!(
+            bracket(
+                BattleWeapon::Lrm20,
+                1.0,
+                0.0,
+                Some(BattleWeapon::Lrm20.water_ranges())
+            )
+            .is_none()
+        );
     }
 
     #[test]
     fn brackets_preserve_rounding_and_ignore_peer_minimum_range() {
         for (distance, expected) in [(7.049, 0), (7.051, 2), (14.049, 2), (14.051, 4)] {
             assert_eq!(
-                bracket(BattleWeapon::Lrm20, 20.0, distance, false)
+                bracket(BattleWeapon::Lrm20, 20.0, distance, None)
                     .unwrap()
                     .modifier,
                 expected
             );
         }
         assert_eq!(
-            bracket(BattleWeapon::Lrm20, 20.0, 0.0, false)
+            bracket(BattleWeapon::Lrm20, 20.0, 0.0, None)
                 .unwrap()
                 .modifier,
             0
         );
-        assert!(bracket(BattleWeapon::Lrm20, 21.051, 1.0, false).is_none());
-        assert!(bracket(BattleWeapon::Lrm20, 21.049, 1.0, false).is_some());
+        assert!(bracket(BattleWeapon::Lrm20, 21.051, 1.0, None).is_none());
+        assert!(bracket(BattleWeapon::Lrm20, 21.049, 1.0, None).is_some());
     }
 }

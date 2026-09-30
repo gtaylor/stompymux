@@ -46,6 +46,14 @@ pub enum BattleAmmunitionMode {
     Caseless,
     Incendiary,
     Inferno,
+    /// LRM and SRM torpedoes, fired only from a submerged launcher at a target in water.
+    Torpedo,
+    /// Thunder rounds that seed a weaker minefield across the target and adjacent hexes.
+    ThunderAugmented,
+    /// Thunder rounds that lay a vibrabomb field keyed to the firing unit's weight.
+    ThunderVibrabomb,
+    /// Thunder rounds whose mines also catch hovering and low-flying units.
+    ThunderActive,
 }
 
 impl BattleAmmunitionMode {
@@ -70,6 +78,10 @@ impl BattleAmmunitionMode {
             }
             Self::Cluster => weapon.is_lbx() || weapon.is_artillery(),
             Self::Smoke | Self::Mine => weapon.is_artillery() || weapon.profile().missiles > 0,
+            Self::Torpedo => weapon.supports_torpedo(),
+            Self::ThunderAugmented | Self::ThunderVibrabomb | Self::ThunderActive => {
+                weapon.supports_thunder()
+            }
             Self::Artemis => weapon.profile().missiles > 0,
             Self::Narc => {
                 weapon.profile().missiles > 0
@@ -112,6 +124,10 @@ impl BattleAmmunitionMode {
             "AP" => Some(Self::ArmorPiercing),
             "Precision" => Some(Self::Precision),
             "Flechette" => Some(Self::Flechette),
+            "Torpedo" => Some(Self::Torpedo),
+            "ThunderAug" => Some(Self::ThunderAugmented),
+            "ThunderVibra" => Some(Self::ThunderVibrabomb),
+            "ThunderActive" => Some(Self::ThunderActive),
             _ => None,
         }
     }
@@ -142,6 +158,10 @@ impl BattleAmmunitionMode {
             "MML_LRM",
             "ExtendedRange",
             "HighExplosive",
+            "Torpedo",
+            "ThunderAug",
+            "ThunderVibra",
+            "ThunderActive",
         ]
         .into_iter()
         .filter(|flag| !weapon.is_mml() || *flag != "MML_LRM")
@@ -359,7 +379,16 @@ pub(crate) fn artemis_command(
 impl BattleAmmunitionMode {
     /// These missile supplies do not trigger automatic defensive interception.
     pub(super) fn bypasses_ams(self) -> bool {
-        matches!(self.munition(), Self::Swarm | Self::Swarm1 | Self::Mine)
+        matches!(
+            self.munition(),
+            Self::Swarm
+                | Self::Swarm1
+                | Self::Mine
+                | Self::Torpedo
+                | Self::ThunderAugmented
+                | Self::ThunderVibrabomb
+                | Self::ThunderActive
+        )
     }
 }
 

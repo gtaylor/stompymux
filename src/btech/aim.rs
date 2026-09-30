@@ -606,6 +606,7 @@ pub(super) fn aim_modifiers_for_source(
         shooter,
         super::network_range::NetworkTarget::Unit(target),
         mount.weapon,
+        super::weapon_geometry::ammunition_mode(world, shooter, weapon_index)?,
         submerged,
         &mut modifiers,
     )?;

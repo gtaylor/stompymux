@@ -876,6 +876,22 @@ pub(super) static AMMUNITION_MODES: Catalog = Catalog {
             name: "MML_LRM",
             value: 4194304,
         },
+        Entry {
+            name: "TORPEDO",
+            value: 8388608,
+        },
+        Entry {
+            name: "THUNDER_AUGMENTED",
+            value: 16777216,
+        },
+        Entry {
+            name: "THUNDER_VIBRABOMB",
+            value: 33554432,
+        },
+        Entry {
+            name: "THUNDER_ACTIVE",
+            value: 67108864,
+        },
     ],
 };
 

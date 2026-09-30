@@ -5,7 +5,8 @@ linkTitle: "firemine"
 manualLinkTitle: "firemine"
 ---
 
-Select missile Mine rounds, which bypass AMS and retain ordinary missile damage.
+Select missile Mine (Thunder) rounds. They bypass AMS and retain ordinary missile damage
+against units; a hit on a hex lays a minefield there.
 
 ## Signature
 

@@ -33,6 +33,7 @@ async fn vehicle_armor_warnings_follow_thresholds_preferences_and_restart() {
             (0, Some("BREACHED!")),
         ] {
             let hit = BattleVehicleArmorHit {
+                damage_class: BattleDamageClass::Ordinary,
                 section: BattleVehicleSection::Front,
                 amount: u32::from(previous - remaining),
                 through_armor_critical: false,

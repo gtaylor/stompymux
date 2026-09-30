@@ -123,6 +123,7 @@ async fn accounting_uses_the_admitted_packet_before_material_reductions() {
             &mut world,
             id,
             BattleVehicleArmorHit {
+                damage_class: BattleDamageClass::Ordinary,
                 section: if rotor {
                     BattleVehicleSection::Rotor
                 } else {

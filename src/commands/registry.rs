@@ -913,6 +913,23 @@ impl CommandRegistry {
                 crate::btech::special_rounds::command,
             )
             .policy(SwitchPolicy::Reject("firemine takes no switches."), false),
+            CommandDefinition::native("fireaugmented", P::EVERYONE, crate::btech::thunder::command)
+                .policy(
+                    SwitchPolicy::Reject("fireaugmented takes no switches."),
+                    false,
+                ),
+            CommandDefinition::native("firevibrabomb", P::EVERYONE, crate::btech::thunder::command)
+                .policy(
+                    SwitchPolicy::Reject("firevibrabomb takes no switches."),
+                    false,
+                ),
+            CommandDefinition::native("fireactive", P::EVERYONE, crate::btech::thunder::command)
+                .policy(SwitchPolicy::Reject("fireactive takes no switches."), false),
+            CommandDefinition::native("firetorpedo", P::EVERYONE, crate::btech::torpedo::command)
+                .policy(
+                    SwitchPolicy::Reject("firetorpedo takes no switches."),
+                    false,
+                ),
             CommandDefinition::native(
                 "firecluster",
                 P::EVERYONE,

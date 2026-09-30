@@ -92,6 +92,8 @@ pub(super) struct BlastDamage {
     pub arc: BattleHitArc,
     pub heat: i32,
     pub character: bool,
+    /// Artillery is area-effect damage; mines and reactor blasts are ordinary.
+    pub class: BattleDamageClass,
 }
 
 /// Ordered material and thermal effects from one admitted occupant.
@@ -137,6 +139,7 @@ pub(super) fn resolve(
                 arc: request.arc,
                 character: request.character,
                 attacker: None,
+                class: request.class,
             },
             *rear,
             rules,
@@ -171,6 +174,7 @@ pub(super) struct MaterialPacket {
     pub arc: BattleHitArc,
     pub character: bool,
     pub attacker: Option<ObjectId>,
+    pub class: BattleDamageClass,
 }
 
 /// Shared location and impact resolution for blast and wizard packets, including post-destruction rolls.
@@ -193,6 +197,7 @@ pub(super) fn resolve_packet(
                 armor_piercing: None,
                 rear,
                 attacker: request.attacker,
+                class: request.class,
             },
             rules.vehicle_impact,
         )?;
@@ -231,7 +236,8 @@ pub(super) fn resolve_packet(
         environment,
         super::impact::AttackImpact {
             attacker: request.attacker,
-            weapon_effect: None,
+            weapon_effect: (request.class == BattleDamageClass::AreaEffect)
+                .then_some(super::impact::WeaponEffect::AreaEffect),
             character: request.character,
             followup: true,
         },

@@ -118,6 +118,7 @@ pub(super) fn modifiers_for_source(
         shooter,
         super::network_range::NetworkTarget::Hex(hex),
         weapon,
+        super::weapon_geometry::ammunition_mode(world, shooter, weapon_index)?,
         submerged,
         &mut modifiers,
     )?;

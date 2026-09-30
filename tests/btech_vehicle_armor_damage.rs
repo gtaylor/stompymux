@@ -75,10 +75,49 @@ fn set_seed(world: &mut World, id: ObjectId, seed: [u8; 32]) {
 /// Plain front armor hit; hit-table secondary effects have already been resolved by the caller.
 fn hit(amount: u32) -> BattleVehicleArmorHit {
     BattleVehicleArmorHit {
+        damage_class: BattleDamageClass::Ordinary,
         section: BattleVehicleSection::Front,
         amount,
         through_armor_critical: false,
         armor_piercing: None,
+    }
+}
+
+/// Reflective armor halves energy hits, doubles area-effect hits and ignores ordinary ones.
+#[tokio::test]
+async fn reflective_armor_depends_on_the_damage_class() {
+    let text = include_str!("../game/mechs/Demolisher")
+        .replace("ICEEngine_Tech", "ICEEngine_Tech LaserRefArmor_Tech");
+    // The Demolisher's front carries forty armor points over eight internal.
+    for (class, amount, armor_damage, overflow) in [
+        (BattleDamageClass::Ordinary, 43, 43, 3),
+        (BattleDamageClass::Energy, 21, 10, 0),
+        (BattleDamageClass::Energy, 1, 1, 0),
+        // Forty points stop eighty energy damage; the other five pass at full value.
+        (BattleDamageClass::Energy, 85, 42, 5),
+        (BattleDamageClass::AreaEffect, 10, 20, 0),
+        // Twenty damage strips all forty points; the last five pass through.
+        (BattleDamageClass::AreaEffect, 25, 50, 5),
+    ] {
+        let (_dir, _config, mut world, id) = fixture(&text).await;
+        seed(&mut world, id, 21);
+        let report = resolve_battle_vehicle_armor_damage(
+            &mut world,
+            id,
+            BattleVehicleArmorHit {
+                damage_class: class,
+                ..hit(amount)
+            },
+            rules(),
+        )
+        .unwrap();
+        assert_eq!(report.armor_damage, armor_damage, "{class:?} {amount}");
+        assert_eq!(report.absorbed, armor_damage.min(40) as u16);
+        assert_eq!(report.overflow, overflow, "{class:?} {amount}");
+        assert_eq!(
+            world.btech.vehicles()[&id].sections()[&BattleVehicleSection::Front].internal,
+            8 - overflow as u16
+        );
     }
 }
 
@@ -364,6 +403,7 @@ async fn vacuum_penetration_disables_equipment_and_survives_environment_change_a
             &mut world,
             id,
             BattleVehicleArmorHit {
+                damage_class: BattleDamageClass::Ordinary,
                 section,
                 amount: u32::from(initial.armor) + 1,
                 through_armor_critical: false,
@@ -631,6 +671,7 @@ async fn rotor_divisor_preserves_minimum_internal_damage_and_restart() {
             &mut world,
             id,
             BattleVehicleArmorHit {
+                damage_class: BattleDamageClass::Ordinary,
                 section: BattleVehicleSection::Rotor,
                 amount,
                 through_armor_critical: false,

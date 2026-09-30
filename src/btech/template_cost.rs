@@ -2,7 +2,7 @@
 use super::*;
 use crate::World;
 use anyhow::Result;
-const WEAPON_COST: [u64; 178] = [
+const WEAPON_COST: [u64; 182] = [
     1500, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 200000, 80000, 11250, 10000, 300000, 7500, 250000, 100000, 20000, 175000, 60000,
     16000, 12500, 400000, 150000, 30000, 100000, 300000, 150000, 250000, 400000, 600000, 5000,
@@ -15,8 +15,10 @@ const WEAPON_COST: [u64; 178] = [
     30000, 100000, 175000, 250000, 10000, 60000, 80000, 50000, 125000, 225000, 350000, 100000,
     250000, 15000, 90000, 120000, 15000, 30000, 45000, 50000, 175000, 325000, 450000, 0, 0, 0, 0,
     0, 0, 0, 8500, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    // Enhanced LRM-5, -10, -15 and -20.
+    60000, 125000, 175000, 250000,
 ];
-const AMMO_COST: [u64; 178] = [
+const AMMO_COST: [u64; 182] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2000, 20000, 2000, 9000, 12000, 20000,
     1000, 500, 1000, 1000, 9000, 12000, 20000, 10000, 75000, 75000, 75000, 75000, 30000, 30000,
@@ -25,7 +27,8 @@ const AMMO_COST: [u64; 178] = [
     12000, 1000, 9000, 12000, 20000, 1000, 6000, 4500, 2000, 2000, 5000, 20000, 15000, 10000, 1000,
     10000, 27000, 27000, 27000, 27000, 30000, 30000, 30000, 30000, 27000, 27000, 27000, 5000, 5000,
     5000, 5000, 6000, 7500, 54000, 54000, 54000, 0, 0, 0, 50000, 50000, 50000, 50000, 0, 0, 0, 0,
-    0, 0, 0, 1000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 31000, 31000, 31000,
+    31000,
 ];
 fn flag(template: &BattleTemplate, name: &str) -> bool {
     ["specials", "specials2"]
@@ -90,7 +93,7 @@ fn raw_ammunition_cost(template: &RawTemplate) -> Result<f64> {
     for section in RawSectionCode::for_unit(template.class, template.movement) {
         for row in inspection::inspect_raw_template_criticals(template, *section)? {
             let Some(part) = row.part else { continue };
-            if !(193..=370).contains(&part.id) {
+            if !(193..385).contains(&part.id) {
                 continue;
             }
             let weapon_id = part.id - 192;
@@ -287,6 +290,8 @@ fn raw_vehicle_base_cost(world: &World, template: &RawTemplate) -> Result<u64> {
         20000
     } else if raw_flag(template, "StealthArmor_Tech") {
         50000
+    } else if raw_flag(template, "LaserRefArmor_Tech") {
+        30000
     } else if raw_flag(template, "HardenedArmor_Tech") || raw_flag(template, "LtFerroFibrous_Tech")
     {
         15000
@@ -495,6 +500,8 @@ pub fn template_base_cost(world: &World, template: &BattleTemplate) -> Result<u6
         20000
     } else if flag(template, "StealthArmor_Tech") {
         50000
+    } else if flag(template, "LaserRefArmor_Tech") {
+        30000
     } else if flag(template, "HardenedArmor_Tech") || flag(template, "LtFerroFibrous_Tech") {
         15000
     } else if flag(template, "HvyFerroFibrous_Tech") {
@@ -690,6 +697,8 @@ pub fn vehicle_template_base_cost(world: &World, template: &BattleVehicleTemplat
         20000
     } else if flag_vehicle(template, "StealthArmor_Tech") {
         50000
+    } else if flag_vehicle(template, "LaserRefArmor_Tech") {
+        30000
     } else if flag_vehicle(template, "HardenedArmor_Tech")
         || flag_vehicle(template, "LtFerroFibrous_Tech")
     {

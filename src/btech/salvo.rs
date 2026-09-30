@@ -26,19 +26,21 @@ impl BattleWeapon {
             Self::Mml5
             | Self::ClanLrm5
             | Self::Lrm5
+            | Self::Nlrm5
             | Self::Elrm5
             | Self::LrDfm5
             | Self::ClanLbx5
             | Self::Lbx5 => [1, 2, 2, 3, 3, 3, 3, 4, 4, 5, 5],
             Self::ClanLrm10 => [3, 3, 4, 6, 6, 6, 6, 8, 8, 10, 10],
             Self::ClanLrm15 => [5, 5, 6, 9, 9, 9, 9, 12, 12, 15, 15],
-            Self::Lrm10 | Self::Rocket10 => [3, 4, 4, 5, 6, 6, 6, 8, 8, 10, 10],
-            Self::Lrm15 | Self::Rocket15 => [5, 5, 9, 9, 9, 9, 9, 12, 12, 15, 15],
+            Self::Lrm10 | Self::Nlrm10 | Self::Rocket10 => [3, 4, 4, 5, 6, 6, 6, 8, 8, 10, 10],
+            Self::Lrm15 | Self::Nlrm15 | Self::Rocket15 => [5, 5, 9, 9, 9, 9, 9, 12, 12, 15, 15],
             Self::ClanSrm4 | Self::Srm4 | Self::SrDfm4 => [1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4],
             Self::ClanSrm6 | Self::Srm6 | Self::SrDfm6 => [2, 2, 3, 3, 4, 4, 4, 5, 5, 6, 6],
             Self::ClanLrm20
             | Self::Rocket20
             | Self::Lrm20
+            | Self::Nlrm20
             | Self::Mrm20
             | Self::Elrm20
             | Self::LrDfm20
@@ -193,6 +195,10 @@ impl BattleWeapon {
                     | Self::Lrm10
                     | Self::Lrm15
                     | Self::Lrm20
+                    | Self::Nlrm5
+                    | Self::Nlrm10
+                    | Self::Nlrm15
+                    | Self::Nlrm20
                     | Self::Rocket10
                     | Self::Rocket15
                     | Self::Rocket20
@@ -669,6 +675,8 @@ fn resolve_salvo_with_effects(
         Some(super::impact::WeaponEffect::Plasma)
     } else if mode == super::BattleAmmunitionMode::ArmorPiercing {
         Some(super::impact::WeaponEffect::ArmorPiercing(weapon))
+    } else if weapon.is_energy() {
+        Some(super::impact::WeaponEffect::Energy)
     } else {
         Some(super::impact::WeaponEffect::Conventional)
     };
@@ -962,6 +970,10 @@ mod tests {
             (W::Mrm20, [1, 1, 1, 1, 6, 6, 9, 12, 12, 12, 12]),
             (W::Mrm30, [1, 1, 1, 1, 10, 10, 12, 18, 18, 18, 18]),
             (W::Mrm40, [1, 1, 1, 1, 12, 12, 18, 24, 24, 24, 24]),
+            (W::Nlrm5, [1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 3]),
+            (W::Nlrm10, [1, 1, 1, 1, 3, 4, 4, 5, 6, 6, 6]),
+            (W::Nlrm15, [1, 1, 1, 1, 5, 5, 9, 9, 9, 9, 9]),
+            (W::Nlrm20, [1, 1, 1, 1, 6, 6, 9, 12, 12, 12, 12]),
             (W::Elrm5, [1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 3]),
             (W::Elrm10, [1, 1, 1, 1, 3, 4, 4, 5, 6, 6, 6]),
             (W::Elrm15, [1, 1, 1, 1, 5, 5, 9, 9, 9, 9, 12]),

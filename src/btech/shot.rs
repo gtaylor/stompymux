@@ -373,7 +373,9 @@ fn resolve_shot_inner(
         }
     }
     let submerged = super::weapon_geometry::submerged(world, shooter, weapon_index)?;
-    super::weapon_geometry::check_water(selected_weapon, submerged)?;
+    let ammunition = super::weapon_geometry::ammunition_mode(world, shooter, weapon_index)?;
+    super::weapon_geometry::check_water(selected_weapon, ammunition, submerged)?;
+    super::torpedo::check_target(world, ammunition, target)?;
     if indirect.is_some() {
         super::spotter::check_indirect_water(world, shooter, target)?;
     }
@@ -395,9 +397,11 @@ fn resolve_shot_inner(
     let position = attacker.position().unwrap();
     let tile =
         world.btech.maps()[&position.map].base_hex(i64::from(position.x), i64::from(position.y))?;
+    // Torpedoes are the one round built for a submerged leg launcher.
     ensure!(
-        !(attacker.elevation_level(tile) < 0
-            && attacker.chassis().is_leg(mount.criticals[0].section)),
+        ammunition.munition() == super::BattleAmmunitionMode::Torpedo
+            || !(attacker.elevation_level(tile) < 0
+                && attacker.chassis().is_leg(mount.criticals[0].section)),
         "Submerged weapon firing requires underwater combat rules"
     );
     ensure!(

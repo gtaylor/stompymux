@@ -71,13 +71,13 @@
 ---@field tons integer
 ---@field map integer|nil
 
----@alias BattleWeapon "arrow_iv"|"clan_arrow_iv"|"long_tom"|"sniper"|"thumper"|"long_tom_cannon"|"sniper_cannon"|"thumper_cannon"|"a_pod"|"clan_a_pod"|"i_narc_beacon"|"narc_beacon"|"clan_narc_beacon"|"anti_missile_system"|"clan_anti_missile_system"|"laser_ams"|"clan_laser_ams"|"clan_lbx2"|"clan_lbx5"|"clan_lbx10"|"clan_lbx20"|"clan_ultra_ac2"|"clan_ultra_ac5"|"clan_ultra_ac10"|"clan_ultra_ac20"|"mml3"|"mml5"|"mml7"|"mml9"|"clan_atm3"|"clan_atm6"|"clan_atm9"|"clan_atm12"|"clan_lrm5"|"clan_lrm10"|"clan_lrm15"|"clan_lrm20"|"clan_srm2"|"clan_srm4"|"clan_srm6"|"clan_streak_srm2"|"clan_streak_srm4"|"clan_streak_srm6"|"clan_streak_lrm5"|"clan_streak_lrm10"|"clan_streak_lrm15"|"clan_streak_lrm20"|"clan_gauss_rifle"|"clan_machine_gun"|"clan_light_machine_gun"|"clan_heavy_machine_gun"|"clan_er_large_laser"|"clan_er_medium_laser"|"clan_er_small_laser"|"clan_er_micro_laser"|"clan_er_ppc"|"clan_flamer"|"clan_heavy_large_laser"|"clan_heavy_medium_laser"|"clan_heavy_small_laser"|"clan_large_pulse_laser"|"clan_medium_pulse_laser"|"clan_small_pulse_laser"|"clan_micro_pulse_laser"|"clan_er_large_pulse_laser"|"clan_er_medium_pulse_laser"|"clan_er_small_pulse_laser"|"clan_plasma_rifle"|"flamer"|"coolant_gun"|"heavy_flamer"|"vehicle_flamer"|"vehicle_heavy_flamer"|"plasma_rifle"|"acid_thrower"|"thunderbolt5"|"thunderbolt10"|"thunderbolt15"|"thunderbolt20"|"hyper_ac2"|"hyper_ac5"|"hyper_ac10"|"machine_gun"|"heavy_machine_gun"|"light_ac2"|"light_ac5"|"small_laser"|"medium_laser"|"large_laser"|"ppc"|"er_small_laser"|"er_medium_laser"|"er_large_laser"|"er_ppc"|"small_pulse_laser"|"medium_pulse_laser"|"large_pulse_laser"|"x_small_pulse_laser"|"x_medium_pulse_laser"|"x_large_pulse_laser"|"light_ppc"|"heavy_ppc"|"snub_nosed_ppc"|"srm2"|"rocket10"|"rocket15"|"rocket20"|"mrm10"|"mrm20"|"mrm30"|"mrm40"|"streak_srm2"|"streak_srm4"|"streak_srm6"|"lr_dfm5"|"lr_dfm10"|"lr_dfm15"|"lr_dfm20"|"sr_dfm2"|"sr_dfm4"|"sr_dfm6"|"elrm5"|"elrm10"|"elrm15"|"elrm20"|"lrm5"|"lrm10"|"lrm15"|"srm4"|"srm6"|"lrm20"|"heavy_gauss_rifle"|"gauss_rifle"|"light_gauss_rifle"|"magshot_gauss_rifle"|"lbx2"|"lbx5"|"lbx10"|"lbx20"|"ac2"|"ac5"|"ac10"|"ac20"|"ultra_ac2"|"ultra_ac5"|"ultra_ac10"|"ultra_ac20"|"rotary_ac2"|"rotary_ac5"|"clan_rotary_ac2"|"clan_rotary_ac5"|"clan_rotary_ac10"|"clan_rotary_ac20"
+---@alias BattleWeapon "arrow_iv"|"clan_arrow_iv"|"long_tom"|"sniper"|"thumper"|"long_tom_cannon"|"sniper_cannon"|"thumper_cannon"|"a_pod"|"clan_a_pod"|"i_narc_beacon"|"narc_beacon"|"clan_narc_beacon"|"anti_missile_system"|"clan_anti_missile_system"|"laser_ams"|"clan_laser_ams"|"clan_lbx2"|"clan_lbx5"|"clan_lbx10"|"clan_lbx20"|"clan_ultra_ac2"|"clan_ultra_ac5"|"clan_ultra_ac10"|"clan_ultra_ac20"|"mml3"|"mml5"|"mml7"|"mml9"|"clan_atm3"|"clan_atm6"|"clan_atm9"|"clan_atm12"|"clan_lrm5"|"clan_lrm10"|"clan_lrm15"|"clan_lrm20"|"clan_srm2"|"clan_srm4"|"clan_srm6"|"clan_streak_srm2"|"clan_streak_srm4"|"clan_streak_srm6"|"clan_streak_lrm5"|"clan_streak_lrm10"|"clan_streak_lrm15"|"clan_streak_lrm20"|"clan_gauss_rifle"|"clan_machine_gun"|"clan_light_machine_gun"|"clan_heavy_machine_gun"|"clan_er_large_laser"|"clan_er_medium_laser"|"clan_er_small_laser"|"clan_er_micro_laser"|"clan_er_ppc"|"clan_flamer"|"clan_heavy_large_laser"|"clan_heavy_medium_laser"|"clan_heavy_small_laser"|"clan_large_pulse_laser"|"clan_medium_pulse_laser"|"clan_small_pulse_laser"|"clan_micro_pulse_laser"|"clan_er_large_pulse_laser"|"clan_er_medium_pulse_laser"|"clan_er_small_pulse_laser"|"clan_plasma_rifle"|"flamer"|"coolant_gun"|"heavy_flamer"|"vehicle_flamer"|"vehicle_heavy_flamer"|"plasma_rifle"|"acid_thrower"|"thunderbolt5"|"thunderbolt10"|"thunderbolt15"|"thunderbolt20"|"hyper_ac2"|"hyper_ac5"|"hyper_ac10"|"machine_gun"|"heavy_machine_gun"|"light_ac2"|"light_ac5"|"small_laser"|"medium_laser"|"large_laser"|"ppc"|"er_small_laser"|"er_medium_laser"|"er_large_laser"|"er_ppc"|"small_pulse_laser"|"medium_pulse_laser"|"large_pulse_laser"|"x_small_pulse_laser"|"x_medium_pulse_laser"|"x_large_pulse_laser"|"light_ppc"|"heavy_ppc"|"snub_nosed_ppc"|"srm2"|"rocket10"|"rocket15"|"rocket20"|"mrm10"|"mrm20"|"mrm30"|"mrm40"|"streak_srm2"|"streak_srm4"|"streak_srm6"|"lr_dfm5"|"lr_dfm10"|"lr_dfm15"|"lr_dfm20"|"sr_dfm2"|"sr_dfm4"|"sr_dfm6"|"elrm5"|"elrm10"|"elrm15"|"elrm20"|"nlrm5"|"nlrm10"|"nlrm15"|"nlrm20"|"lrm5"|"lrm10"|"lrm15"|"srm4"|"srm6"|"lrm20"|"heavy_gauss_rifle"|"gauss_rifle"|"light_gauss_rifle"|"magshot_gauss_rifle"|"lbx2"|"lbx5"|"lbx10"|"lbx20"|"ac2"|"ac5"|"ac10"|"ac20"|"ultra_ac2"|"ultra_ac5"|"ultra_ac10"|"ultra_ac20"|"rotary_ac2"|"rotary_ac5"|"clan_rotary_ac2"|"clan_rotary_ac5"|"clan_rotary_ac10"|"clan_rotary_ac20"
 
 ---@class BattleCriticalLocation
 ---@field section BattleSectionName
 ---@field slot integer Zero-based critical slot.
 
----@alias BattleAmmunitionMode "smoke"|"mine"|"i_narc_explosive"|"i_narc_haywire"|"i_narc_ecm"|"i_narc_nemesis"|"semi_guided"|"swarm"|"swarm1"|"stinger"|"narc"|"normal"|"cluster"|"artemis"|"precision"|"flechette"|"armor_piercing"|"caseless"|"incendiary"|"inferno"|"mml_lrm"|"mml_lrm_artemis"|"mml_lrm_narc"|"mml_lrm_swarm"|"mml_lrm_swarm1"|"mml_lrm_semi_guided"|"mml_lrm_stinger"|"extended_range"|"high_explosive"
+---@alias BattleAmmunitionMode "smoke"|"mine"|"i_narc_explosive"|"i_narc_haywire"|"i_narc_ecm"|"i_narc_nemesis"|"semi_guided"|"swarm"|"swarm1"|"stinger"|"narc"|"normal"|"cluster"|"artemis"|"precision"|"flechette"|"armor_piercing"|"caseless"|"incendiary"|"inferno"|"mml_lrm"|"mml_lrm_artemis"|"mml_lrm_narc"|"mml_lrm_swarm"|"mml_lrm_swarm1"|"mml_lrm_semi_guided"|"mml_lrm_stinger"|"extended_range"|"high_explosive"|"torpedo"|"thunder_augmented"|"thunder_vibrabomb"|"thunder_active"
 
 ---@alias BattleFireMode "normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary4"|"rotary6"|"gatling"
 
@@ -885,7 +885,7 @@ function btech_map.add_fire(actor, dbref, x, y, duration) end
 ---@param map integer
 ---@param x integer
 ---@param y integer
----@param kind 'standard'|'inferno'|'command'|'vibra'|'trigger'
+---@param kind 'standard'|'inferno'|'command'|'vibra'|'trigger'|'active'
 ---@param strength integer
 ---@param extra? integer
 ---@return integer
@@ -3049,7 +3049,8 @@ function btech_unit.firecluster(dbref, pilot, weapon) end
 ---@return BattleAmmunitionMode
 function btech_unit.firesmoke(dbref, pilot, weapon) end
 
----Select missile Mine rounds, which bypass AMS and retain ordinary missile damage.
+---Select missile Mine (Thunder) rounds. They bypass AMS and retain ordinary missile damage
+---against units; a hit on a hex lays a minefield there.
 ---@param dbref integer
 ---@param pilot integer
 ---@param weapon integer
@@ -3995,5 +3996,33 @@ function btech_tactical.observe(units, feedback_cursors) end
 ---@return BattleTacticalSubmitResult[] results Assigned IDs and revisions in request order.
 function btech_tactical.submit(intentions) end
 btech.tactical = btech_tactical
+
+---Select Thunder-Augmented rounds, which mine a target hex and its neighbors at half strength.
+---@param dbref integer
+---@param pilot integer
+---@param weapon integer
+---@return BattleAmmunitionMode
+function btech_unit.fireaugmented(dbref, pilot, weapon) end
+
+---Select Thunder-Vibrabomb rounds, which lay a field that trips under units heavier than the shooter.
+---@param dbref integer
+---@param pilot integer
+---@param weapon integer
+---@return BattleAmmunitionMode
+function btech_unit.firevibrabomb(dbref, pilot, weapon) end
+
+---Select Thunder-Active rounds, whose mines also catch units hovering just above the ground.
+---@param dbref integer
+---@param pilot integer
+---@param weapon integer
+---@return BattleAmmunitionMode
+function btech_unit.fireactive(dbref, pilot, weapon) end
+
+---Select torpedoes, which fire only from a submerged launcher at a target in the water.
+---@param dbref integer
+---@param pilot integer
+---@param weapon integer
+---@return BattleAmmunitionMode
+function btech_unit.firetorpedo(dbref, pilot, weapon) end
 
 return btech

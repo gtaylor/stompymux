@@ -70,6 +70,8 @@ impl AmmunitionBin {
                     mode,
                     super::BattleAmmunitionMode::Precision
                         | super::BattleAmmunitionMode::ArmorPiercing
+                        | super::BattleAmmunitionMode::ThunderAugmented
+                        | super::BattleAmmunitionMode::ThunderActive
                 )
             {
                 full_capacity / 2
@@ -116,6 +118,8 @@ impl AmmunitionBin {
                     mode,
                     super::BattleAmmunitionMode::Precision
                         | super::BattleAmmunitionMode::ArmorPiercing
+                        | super::BattleAmmunitionMode::ThunderAugmented
+                        | super::BattleAmmunitionMode::ThunderActive
                 )
             {
                 full_capacity / 2
@@ -289,6 +293,10 @@ fn is_contract_ammunition_mode(mode: &str) -> bool {
             | "ExtendedRange"
             | "HighExplosive"
             | "MML_LRM"
+            | "Torpedo"
+            | "ThunderAug"
+            | "ThunderVibra"
+            | "ThunderActive"
     )
 }
 
