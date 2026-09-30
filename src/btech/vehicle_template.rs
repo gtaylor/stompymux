@@ -177,6 +177,15 @@ impl BattleVehicleTemplate {
             },
             "Rotor anatomy must match the vehicle class"
         );
+        // Hardened armor is too heavy for craft that ride on air: hovercraft and VTOLs.
+        ensure!(
+            !self.has_technology(super::BattleTechnology::HardenedArmor)
+                || !matches!(
+                    self.movement,
+                    BattleVehicleMovement::Hover | BattleVehicleMovement::Vtol
+                ),
+            "Hovercraft and VTOLs cannot mount hardened armor"
+        );
         Ok(())
     }
 

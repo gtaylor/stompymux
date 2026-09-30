@@ -725,3 +725,33 @@ async fn hardened_armor_hampers_vehicle_driving() {
     assert_eq!((base.armor, check.armor), (0, 1));
     assert_eq!(check.target, base.target + 1);
 }
+
+/// Hovercraft and VTOLs cannot carry hardened armor; ground vehicles can.
+#[test]
+fn hardened_armor_is_barred_from_hovercraft_and_vtols() {
+    let tracked = include_str!("../game/mechs/Demolisher");
+    let harden = |source: &str| {
+        source.replacen(
+            "Specials         {",
+            "Specials         { HardenedArmor_Tech",
+            1,
+        )
+    };
+    assert!(BattleVehicleTemplate::parse(&harden(tracked)).is_ok());
+    assert!(
+        BattleVehicleTemplate::parse(&harden(&tracked.replace("{ Track }", "{ Wheel }"))).is_ok()
+    );
+    for source in [
+        tracked.replace("{ Track }", "{ Hover }"),
+        include_str!("../game/mechs/Kestrel").to_owned(),
+    ] {
+        let hardened = harden(&source);
+        assert!(hardened.contains("HardenedArmor_Tech"));
+        let error = BattleVehicleTemplate::parse(&hardened).unwrap_err();
+        assert!(
+            format!("{error:#}").contains("Hovercraft and VTOLs cannot mount hardened armor"),
+            "{error:#}"
+        );
+        assert!(BattleVehicleTemplate::parse(&source).is_ok());
+    }
+}
