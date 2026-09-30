@@ -25,7 +25,7 @@ impl BattleInventoryCleanup {
 
 /// Structural critical placeholders are not loose repair parts and are removed by FIXSTUFF.
 fn structural_placeholder(id: i32) -> bool {
-    matches!(id, 406 | 407 | 408 | 428 | 432 | 433 | 443 | 444)
+    matches!(id, 406 | 407 | 408 | 428 | 432 | 433 | 443 | 444 | 454)
 }
 
 /// Rebuild ordered positive stock, retaining manufacturer identities and rejecting quantity overflow.

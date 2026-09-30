@@ -1686,6 +1686,7 @@ fn validate_definition(definition: &BattleTemplate) -> Result<()> {
         "Invalid unit identity"
     );
     super::radio::validate_attributes(&definition.attributes)?;
+    definition.validate_armor_slots()?;
     for (field, value) in &definition.attributes {
         match field.as_str() {
             "name" | "reference" | "tons" | "max_speed" | "jump_speed" | "heat_sinks"

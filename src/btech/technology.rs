@@ -1,4 +1,5 @@
 //! Chassis-wide construction technologies recorded as template flags rather than critical slots.
+use anyhow::{Result, ensure};
 
 /// A chassis technology that templates may spell by its full name or reference abbreviation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -131,6 +132,68 @@ impl BattleTechnology {
         } else {
             amount
         }
+    }
+}
+
+/// Critical slots laser-reflective armor claims on a Mech: ten for Inner Sphere armor and five
+/// for Clan armor. Hardened armor claims none.
+pub fn reflective_armor_slots(clan: bool) -> usize {
+    if clan { 5 } else { 10 }
+}
+
+/// Armor-type flags; hardened and reflective armor exclude all the others.
+const ARMOR_TYPES: [&str; 7] = [
+    "FerroFibrous_Tech",
+    "HvyFerroFibrous_Tech",
+    "LtFerroFibrous_Tech",
+    "StealthArmor_Tech",
+    "HardenedArmor_Tech",
+    "LaserRefArmor_Tech",
+    "ReactiveArmor_Tech",
+];
+
+impl super::BattleTemplate {
+    /// Tabletop construction rules for specialized armor: laser-reflective armor fills exactly
+    /// its slot count with `LaserReflective` criticals, those criticals need the armor, and
+    /// hardened or reflective armor is the Mech's only armor type.
+    pub(crate) fn validate_armor_slots(&self) -> Result<()> {
+        let armor_types = ARMOR_TYPES
+            .into_iter()
+            .filter(|name| {
+                self.has_special(name)
+                    || BattleTechnology::ALL.into_iter().any(|technology| {
+                        let (full, abbreviation) = technology.names();
+                        full == *name && self.has_special(abbreviation)
+                    })
+            })
+            .count();
+        let special = self.has_technology(BattleTechnology::HardenedArmor)
+            || self.has_technology(BattleTechnology::LaserReflectiveArmor);
+        ensure!(
+            !special || armor_types == 1,
+            "Hardened and laser-reflective armor replace every other armor type"
+        );
+        let found = self
+            .sections
+            .values()
+            .flat_map(|section| section.criticals.values())
+            .filter(|critical| {
+                matches!(
+                    super::BattleSystem::parse(&critical.equipment),
+                    Ok(super::BattleSystem::LaserReflective)
+                )
+            })
+            .count();
+        let expected = if self.has_technology(BattleTechnology::LaserReflectiveArmor) {
+            reflective_armor_slots(self.has_special("Clan"))
+        } else {
+            0
+        };
+        ensure!(
+            found == expected,
+            "Laser-reflective armor needs {expected} LaserReflective critical slots; found {found}"
+        );
+        Ok(())
     }
 }
 
@@ -288,5 +351,68 @@ mod tests {
         let torso = crate::btech::BattleSection::CenterTorso;
         assert_eq!(unit.hardened_hit(torso, true, 10), Some((3, 4)));
         assert_eq!(unit.hardened_piloting_modifier(), 1);
+    }
+
+    /// Reflective armor claims ten Inner Sphere or five Clan slots; hardened armor claims none,
+    /// and neither combines with another armor type.
+    #[test]
+    fn specialized_armor_follows_tabletop_slot_rules() {
+        let jenner = |specials: &str, slots: u8| {
+            let mut template = crate::btech::BattleTemplate::parse(include_str!(
+                "../../tests/fixtures/btech/mechs/JR7-D"
+            ))
+            .unwrap();
+            let flags = template.attributes.entry("specials".into()).or_default();
+            flags.push(' ');
+            flags.push_str(specials);
+            let torso = template
+                .sections
+                .get_mut(&crate::btech::BattleSection::LeftTorso)
+                .unwrap();
+            for slot in 2..2 + slots {
+                torso.criticals.insert(
+                    slot,
+                    crate::btech::CriticalDefinition {
+                        equipment: "LaserReflective".into(),
+                        data: "-".into(),
+                        modes: Vec::new(),
+                        brand: None,
+                    },
+                );
+            }
+            template
+        };
+        assert!(
+            jenner("LaserRefArmor_Tech", 10)
+                .validate_armor_slots()
+                .is_ok()
+        );
+        assert!(jenner("LRARM", 10).validate_armor_slots().is_ok());
+        assert!(
+            jenner("LaserRefArmor_Tech Clan", 5)
+                .validate_armor_slots()
+                .is_ok()
+        );
+        for (specials, slots) in [
+            ("LaserRefArmor_Tech", 0),
+            ("LaserRefArmor_Tech", 9),
+            ("LaserRefArmor_Tech Clan", 10),
+            ("", 1),
+            ("HardenedArmor_Tech", 1),
+            ("HardenedArmor_Tech FerroFibrous_Tech", 0),
+            ("HARM LRARM", 10),
+        ] {
+            assert!(
+                jenner(specials, slots).validate_armor_slots().is_err(),
+                "{specials} {slots}"
+            );
+        }
+        assert!(
+            jenner("HardenedArmor_Tech", 0)
+                .validate_armor_slots()
+                .is_ok()
+        );
+        assert!(crate::btech::BattleUnit::from_template(jenner("LaserRefArmor_Tech", 9)).is_err());
+        assert!(crate::btech::BattleUnit::from_template(jenner("LaserRefArmor_Tech", 10)).is_ok());
     }
 }

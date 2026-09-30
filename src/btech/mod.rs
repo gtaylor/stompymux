@@ -1260,7 +1260,7 @@ pub use weapon_power::disable_gauss_weapon;
 pub(crate) mod mml;
 mod technology;
 pub use mml::toggle_mml_ammunition;
-pub use technology::{BattleDamageClass, BattleTechnology};
+pub use technology::{BattleDamageClass, BattleTechnology, reflective_armor_slots};
 
 pub(crate) mod atm;
 pub use atm::toggle_atm_ammunition;

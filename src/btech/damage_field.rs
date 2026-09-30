@@ -29,7 +29,8 @@ pub(super) fn placeholder(name: &str) -> bool {
                 | BattleSystem::HeavyFerroFibrous
                 | BattleSystem::LightFerroFibrous
                 | BattleSystem::TripleStrengthMyomer
-                | BattleSystem::StealthArmor)
+                | BattleSystem::StealthArmor
+                | BattleSystem::LaserReflective)
         )
 }
 

@@ -298,6 +298,7 @@ impl BattleVehicleTemplate {
             | BattleSystem::HeavyFerroFibrous
             | BattleSystem::LightFerroFibrous
             | BattleSystem::StealthArmor
+            | BattleSystem::LaserReflective
             | BattleSystem::NullSignature => 0,
         }
     }

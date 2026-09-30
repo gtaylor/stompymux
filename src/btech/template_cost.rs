@@ -182,6 +182,7 @@ fn raw_equipment_cost(world: &World, template: &RawTemplate) -> Result<f64> {
                     | BattleSystem::EndoSteel
                     | BattleSystem::TripleStrengthMyomer
                     | BattleSystem::StealthArmor
+                    | BattleSystem::LaserReflective
                     | BattleSystem::Masc
                     | BattleSystem::Sword => 0.0,
                     _ => part_cost(world, part.part_id)? as f64,
@@ -589,7 +590,8 @@ pub fn template_base_cost(world: &World, template: &BattleTemplate) -> Result<u6
             | BattleSystem::LightFerroFibrous
             | BattleSystem::EndoSteel
             | BattleSystem::TripleStrengthMyomer
-            | BattleSystem::StealthArmor => {}
+            | BattleSystem::StealthArmor
+            | BattleSystem::LaserReflective => {}
             _ => {
                 if let Ok(part_id) = BattlePart::parse(
                     &template.sections[&part.location.section].criticals[&part.location.slot]
@@ -780,7 +782,8 @@ pub fn vehicle_template_base_cost(world: &World, template: &BattleVehicleTemplat
             | BattleSystem::LightFerroFibrous
             | BattleSystem::EndoSteel
             | BattleSystem::TripleStrengthMyomer
-            | BattleSystem::StealthArmor => 0.0,
+            | BattleSystem::StealthArmor
+            | BattleSystem::LaserReflective => 0.0,
             _ => BattlePart::parse(
                 &template.sections[&part.location.section].criticals[&part.location.slot].equipment,
             )

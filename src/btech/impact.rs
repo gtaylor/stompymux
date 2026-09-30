@@ -1764,6 +1764,24 @@ mod tests {
             specials.push(' ');
             specials.push_str(special);
         }
+        if special == "LaserRefArmor_Tech" {
+            // Inner Sphere reflective armor fills the Jenner's ten free left torso slots.
+            let torso = template
+                .sections
+                .get_mut(&BattleSection::LeftTorso)
+                .unwrap();
+            for slot in 2..12 {
+                torso.criticals.insert(
+                    slot,
+                    super::super::CriticalDefinition {
+                        equipment: "LaserReflective".into(),
+                        data: "-".into(),
+                        modes: Vec::new(),
+                        brand: None,
+                    },
+                );
+            }
+        }
         let mut unit = BattleUnit::from_template(template).unwrap();
         unit.dice = super::super::BattleDice::seeded([seed; 32]);
         let mut world = World::default();

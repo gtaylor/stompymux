@@ -369,6 +369,8 @@ pub enum BattleSystem {
     Ecm,
     AngelEcm,
     StealthArmor,
+    /// Filler slots claimed by laser-reflective armor; the armor itself is a chassis technology.
+    LaserReflective,
     NullSignature,
     BeagleProbe,
     Tag,
@@ -396,6 +398,7 @@ impl BattleSystem {
             self,
             Self::FerroFibrous
                 | Self::StealthArmor
+                | Self::LaserReflective
                 | Self::EndoSteel
                 | Self::TripleStrengthMyomer
                 | Self::HeavyFerroFibrous
@@ -425,6 +428,7 @@ impl BattleSystem {
             name if name.eq_ignore_ascii_case("Ecm") => Ok(Self::Ecm),
             name if name.eq_ignore_ascii_case("AngelEcm") => Ok(Self::AngelEcm),
             name if name.eq_ignore_ascii_case("StealthArmor") => Ok(Self::StealthArmor),
+            name if name.eq_ignore_ascii_case("LaserReflective") => Ok(Self::LaserReflective),
             name if name.eq_ignore_ascii_case("NullSig_Device") => Ok(Self::NullSignature),
             name if name.eq_ignore_ascii_case("TAG") => Ok(Self::Tag),
             name if name.eq_ignore_ascii_case("BeagleProbe") => Ok(Self::BeagleProbe),
