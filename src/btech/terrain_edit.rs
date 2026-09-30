@@ -188,6 +188,7 @@ mod tests {
             Terrain::Snow,
             Terrain::Building,
             Terrain::Wall,
+            Terrain::Sand,
         ] {
             let symbol = if terrain == Terrain::Grassland {
                 '.'

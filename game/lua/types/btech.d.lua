@@ -1074,7 +1074,7 @@ function btech_map.set_cargo_transfer_point(map, point) end
 ---@return integer elevation
 function btech_map.elevation(map, hex) end
 
----@alias BattleTerrainName "grassland"|"road"|"light_forest"|"heavy_forest"|"water"|"ice"|"bridge"|"high_water"|"rough"|"mountains"|"fire"|"smoke"|"snow"|"building"|"wall"
+---@alias BattleTerrainName "grassland"|"road"|"light_forest"|"heavy_forest"|"water"|"ice"|"bridge"|"high_water"|"rough"|"mountains"|"fire"|"smoke"|"snow"|"building"|"wall"|"sand"
 
 ---Read one decoded terrain kind.
 ---@param map DbRef|Object

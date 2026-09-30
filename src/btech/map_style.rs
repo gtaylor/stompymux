@@ -9,7 +9,7 @@ pub(super) fn terrain(terrain: Terrain, elevation: u8) -> &'static str {
         Terrain::Water => "[fg=blue]",
         Terrain::Building | Terrain::Ice | Terrain::Wall | Terrain::Snow => "[fg=white bold]",
         Terrain::Road | Terrain::Smoke => "[fg=black bold]",
-        Terrain::Rough => "[fg=yellow bold]",
+        Terrain::Rough | Terrain::Sand => "[fg=yellow bold]",
         Terrain::Mountains => "[fg=yellow]",
         Terrain::Fire => "[fg=red bold]",
         Terrain::LightForest => "[fg=green bold]",

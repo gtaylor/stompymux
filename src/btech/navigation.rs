@@ -150,6 +150,7 @@ fn terrain_name(terrain: super::Terrain) -> &'static str {
         Snow => "Snow",
         Building => "Building",
         Wall => "Wall",
+        Sand => "Sand",
     }
 }
 

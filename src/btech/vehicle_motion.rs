@@ -99,12 +99,7 @@ impl BattleVehicleTemplate {
         } else {
             motion.turn_toward(maximum, rules.fasa_turning, 1.0);
         }
-        let divisor = match terrain {
-            Terrain::Rough | Terrain::Snow | Terrain::LightForest => 2.0,
-            Terrain::Mountains | Terrain::HeavyForest => 3.0,
-            _ => 1.0,
-        };
-        let mut target = motion.desired_speed.abs() / divisor;
+        let mut target = motion.desired_speed.abs() / terrain_divisor(terrain, self.movement);
         if matches!(terrain, Terrain::Road | Terrain::Bridge)
             && matches!(
                 self.movement,
@@ -139,5 +134,37 @@ impl super::BattleVehicle {
     ) -> Result<BattleMotion> {
         self.definition()
             .motion_at_maximum(motion, terrain, rules, self.maximum_speed())
+    }
+}
+
+/// Speed divisor a vehicle's terrain imposes on its desired throttle.
+fn terrain_divisor(terrain: Terrain, movement: BattleVehicleMovement) -> f64 {
+    match terrain {
+        Terrain::Rough | Terrain::Snow | Terrain::LightForest => 2.0,
+        Terrain::Mountains | Terrain::HeavyForest => 3.0,
+        // Loose sand bogs down wheels; tracks and hover skirts cross it like clear ground.
+        Terrain::Sand if movement == BattleVehicleMovement::Wheeled => 2.0,
+        _ => 1.0,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Sand halves only wheeled throttle; other movement types treat it as clear ground.
+    #[test]
+    fn sand_slows_only_wheeled_vehicles() {
+        assert_eq!(
+            terrain_divisor(Terrain::Sand, BattleVehicleMovement::Wheeled),
+            2.0
+        );
+        for movement in [BattleVehicleMovement::Tracked, BattleVehicleMovement::Hover] {
+            assert_eq!(terrain_divisor(Terrain::Sand, movement), 1.0);
+        }
+        assert_eq!(
+            terrain_divisor(Terrain::Rough, BattleVehicleMovement::Tracked),
+            2.0
+        );
     }
 }

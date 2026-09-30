@@ -22,6 +22,7 @@ pub enum Terrain {
     Snow,
     Building,
     Wall,
+    Sand,
 }
 
 impl Terrain {
@@ -43,6 +44,7 @@ impl Terrain {
             '+' => Self::Snow,
             '@' => Self::Building,
             '=' => Self::Wall,
+            '}' => Self::Sand,
             _ => bail!("unknown terrain symbol {symbol:?}"),
         })
     }
@@ -65,6 +67,7 @@ impl Terrain {
             Self::Snow => '+',
             Self::Building => '@',
             Self::Wall => '=',
+            Self::Sand => '}',
         }
     }
 }
@@ -402,6 +405,22 @@ mod tests {
             BattleMapAsset::parse_diagnostics(b"1 1\n.3\xff\n0: 50 20\n\xff", 0).unwrap();
         assert_eq!((map.flags, map.gravity, map.temperature), (0, 50, 20));
         assert!(warnings.is_empty());
+    }
+
+    /// Sand's `}` symbol decodes without a substitution warning and round-trips.
+    #[test]
+    fn sand_symbol_decodes_and_round_trips() {
+        let (map, warnings) = BattleMapAsset::parse_diagnostics(b"2 1\n}1.0\n", 0).unwrap();
+        assert!(warnings.is_empty());
+        assert_eq!(
+            map.hex(0, 0).unwrap(),
+            BattleHex {
+                terrain: Terrain::Sand,
+                elevation: 1
+            }
+        );
+        assert_eq!(Terrain::Sand.symbol(), '}');
+        assert_eq!(Terrain::from_symbol('}').unwrap(), Terrain::Sand);
     }
 
     /// Delimiters and integer whitespace are distinct in the file format.

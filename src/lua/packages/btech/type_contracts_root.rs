@@ -657,7 +657,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00142
-//|---@alias BattleTerrainName "grassland"|"road"|"light_forest"|"heavy_forest"|"water"|"ice"|"bridge"|"high_water"|"rough"|"mountains"|"fire"|"smoke"|"snow"|"building"|"wall"
+//|---@alias BattleTerrainName "grassland"|"road"|"light_forest"|"heavy_forest"|"water"|"ice"|"bridge"|"high_water"|"rough"|"mountains"|"fire"|"smoke"|"snow"|"building"|"wall"|"sand"
 // lua-types-end
 
 // lua-types-begin btech 00145

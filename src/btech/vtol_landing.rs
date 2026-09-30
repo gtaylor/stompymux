@@ -80,6 +80,6 @@ impl BattleVehicle {
 pub(super) fn supported_surface(hex: BattleHex) -> bool {
     matches!(
         hex.terrain,
-        Terrain::Grassland | Terrain::Road | Terrain::Building
+        Terrain::Grassland | Terrain::Road | Terrain::Building | Terrain::Sand
     )
 }
