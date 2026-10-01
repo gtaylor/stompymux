@@ -210,13 +210,7 @@ pub(super) fn resolve_material_signed_with_tonnage(
             })
             .transpose()?;
         let unit = world.btech.vehicles.get_mut(&id).unwrap();
-        let wet = tile.is_some_and(|tile| {
-            (matches!(
-                tile.terrain,
-                Terrain::Water | Terrain::Ice | Terrain::Bridge
-            ) && unit.elevation_level(tile) < 0)
-                || tile.terrain == Terrain::HighWater
-        });
+        let wet = tile.is_some_and(|tile| tile.immerses(unit.elevation_level(tile)));
         let damage = super::fall_profile::damage(tons, levels, wet, gravity)?;
         let direction_roll = unit.dice.d6();
         let (arc, offset) = super::fall_profile::direction(direction_roll)?;

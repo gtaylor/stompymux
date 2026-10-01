@@ -76,7 +76,7 @@ fn advance_fire(map: &mut StoredBattleMap) -> Result<()> {
         if effect.remaining == 0 {
             Arc::make_mut(&mut map.decorations).remove(&index);
             let tile = &mut Arc::make_mut(map.terrain.as_mut().unwrap())[index as usize];
-            if matches!(tile.terrain, Terrain::LightForest | Terrain::HeavyForest) {
+            if tile.terrain.is_woods() {
                 tile.terrain = if map.fire_dice.as_mut().unwrap().d6() < 3 {
                     Terrain::Grassland
                 } else {
@@ -124,11 +124,11 @@ fn spread(map: &mut StoredBattleMap, index: u32, replaced: &mut BTreeSet<u32>) -
         let Some(index) = index.filter(|_| ignite) else {
             continue;
         };
-        if !matches!(
-            map.base_hex(i64::from(index) % map.width, i64::from(index) / map.width)?
-                .terrain,
-            Terrain::LightForest | Terrain::HeavyForest
-        ) {
+        if !map
+            .base_hex(i64::from(index) % map.width, i64::from(index) / map.width)?
+            .terrain
+            .is_woods()
+        {
             continue;
         }
         let remaining = 59 + map.fire_dice.as_mut().unwrap().die(121)?;

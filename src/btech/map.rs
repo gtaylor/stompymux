@@ -272,7 +272,7 @@ impl BattleMapAsset {
             // Authored fire is permanent unless explicit metadata overrides this default.
             flags: initial_flags
                 | if hexes.iter().any(|hex| hex.terrain == Terrain::Fire) {
-                    8
+                    super::BattleMapFlag::PermanentFire.bit() as i32
                 } else {
                     0
                 },

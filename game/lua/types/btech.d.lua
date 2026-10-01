@@ -39,7 +39,7 @@
 ---@field height integer
 ---@field gravity integer
 ---@field temperature integer
----@field flags integer
+---@field flags BattleMapFlag[] Map flags the asset enables.
 
 ---@class BattleHex
 ---@field terrain string Snake_case terrain name.
@@ -56,7 +56,7 @@
 ---@field gravity integer
 ---@field temperature integer
 
----@field flags integer
+---@field flags BattleMapFlag[] Enabled map flags.
 ---@field light integer 0 night, 1 twilight, 2 day
 ---@field visibility integer Weather range in hexes
 ---@field sensor_flags integer Disabled perception channels: sensor band bit 0 (1), radar bit 5 (32), probes bit 6 (64).
@@ -3160,6 +3160,8 @@ function btech_unit.set_field(actor, unit, field, value) end
 ---@class BattleRepairOperation
 ---Typed battlefield light constant from btech.map.light_levels.
 ---@class BattleLightLevel
+---Typed battlefield rule switch from btech.map.flags.
+---@class BattleMapFlag
 ---Typed searchlight switching policy from btech.unit.searchlight_modes.
 ---@class BattleSearchlightMode
 
@@ -4017,5 +4019,18 @@ function btech_unit.firevibrabomb(dbref, pilot, weapon) end
 ---@param weapon integer
 ---@return BattleAmmunitionMode
 function btech_unit.fireactive(dbref, pilot, weapon) end
+
+---Whether a map has one rule switch enabled.
+---@param dbref integer Map object dbref.
+---@param flag BattleMapFlag Typed constant from btech.map.flags.
+---@return boolean
+function btech_map.has_flag(dbref, flag) end
+
+---Wizard-only switch of one map rule flag, leaving the others unchanged.
+---@param actor integer
+---@param map integer
+---@param flag BattleMapFlag Typed constant from btech.map.flags.
+---@param enabled boolean
+function btech_map.set_flag(actor, map, flag, enabled) end
 
 return btech

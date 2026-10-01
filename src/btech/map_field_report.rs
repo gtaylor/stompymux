@@ -37,10 +37,10 @@ fn fields(map: &super::StoredBattleMap) -> Vec<BattleMapField> {
         ("winddir", Some(map.wind_direction.to_string())),
         ("windspeed", Some(map.wind_speed.to_string())),
         ("cloudbase", Some(map.cloud_base.to_string())),
-        ("flags", Some(super::field_bits::format(map.flags))),
+        ("flags", Some(super::format_map_flags(map.flags))),
         (
             "sensorflags",
-            Some(super::field_bits::format(map.sensor_flags)),
+            Some(super::format_perception_flags(map.sensor_flags)),
         ),
         ("regen_factor", Some(map.building.regeneration.to_string())),
     ]

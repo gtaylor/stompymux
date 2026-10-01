@@ -295,11 +295,7 @@ fn resolve_material_with_tonnage(
         let wet = if let Some(position) = position {
             let tile = world.btech.maps()[&position.map]
                 .base_hex(i64::from(position.x), i64::from(position.y))?;
-            (matches!(
-                tile.terrain,
-                super::Terrain::Water | super::Terrain::Ice | super::Terrain::Bridge
-            ) && world.btech.constructed_units()[&id].elevation_level(tile) < 0)
-                || tile.terrain == super::Terrain::HighWater
+            tile.immerses(world.btech.constructed_units()[&id].elevation_level(tile))
         } else {
             false
         };

@@ -36,9 +36,9 @@ Inspect the BattleTech foundation:
 directory. `inspect` reports saved map or unit metadata for a database object.
 `status` reports the loaded identity counts and implementation status.
 
-Map assets containing `&` fire terrain automatically enable permanent fires
-(map flag 8). An explicit `flags: gravity temperature` line overrides that
-default; retain flag 8 to preserve those fires when saving. Temporary-fire `>`
+Map assets containing `&` fire terrain automatically enable the `permanent_fire`
+map flag. An explicit `flags: gravity temperature` line overrides that
+default; retain bit 8 (`permanent_fire`) to preserve those fires when saving. Temporary-fire `>`
 and smoke `:` markers load as grassland.
 
 Unknown terrain characters also load as grassland, retaining their elevation.
@@ -634,9 +634,24 @@ match in full without regard to case. Lua uses
 Writable fields are `cf`, `cfmax`, `regen_factor`, `gravity`, `temperature`,
 `maplight`, `mapname`, `mapvis`, `winddir`, `windspeed`, `cloudbase`, `flags`
 and `sensorflags`. Dimensions, `maxvis`, `buildonmap` and `firstfree` are read-only.
-`sensorflags` switches perception off for everyone on the map: bit 0 (`a`, value 1)
-disables the sensor band, bit 5 (`f`, 32) radar and bit 6 (`g`, 64) active probes.
-Other bits have no effect.
+`flags` and `sensorflags` take a list of names separated by spaces or commas,
+which replaces the current set; `-` clears every flag. `@VIEWMAP` shows the same
+names. Map `flags` are:
+
+| Name | Effect |
+| --- | --- |
+| `special_rules` | Environmental rules (gravity, temperature, vacuum) apply. |
+| `vacuum` | The map has no atmosphere. |
+| `permanent_fire` | Authored fire never burns out. |
+| `underground` | A ceiling blocks jumping and flight; artillery needs a spotter. |
+| `dark` | Units see only terrain in their line of sight. |
+| `indestructible_bridges` | Weapon fire cannot break bridges. |
+| `no_bridge_generation` | Loading does not turn roads over water into bridges. |
+| `no_friendly_fire` | Teammates cannot damage each other with non-coolant weapons. |
+| `no_physical_attacks` | Physical attacks are not allowed. |
+
+`sensorflags` switches perception off for everyone on the map: `sensors`
+disables the sensor band, `radar` radar and `probes` active probes.
 Light accepts 0–2 and visibility 0–60. Wind direction must be 0–359 and speed
 nonnegative. Integrity must stay between zero and its maximum; set the maximum
 first when creating a structure. Numeric input must fit a signed 32-bit integer.
@@ -646,10 +661,7 @@ its unsigned value: 1000 becomes 127, -1 becomes 255 and -1000 becomes 128.
 Use `SETCOND` to enter gravity directly as 0–255. Names retain at most 29 UTF-8 bytes without
 splitting a character. Renaming does not reload terrain.
 
-Bitvectors accept a signed integer or letters `a`–`z`, then `A`–`F`, for bits
-0–31. `!` clears the following letter from a value constructed from zero;
-`ab!a` yields only bit `b`. Invalid letters or incomplete negation reject the
-edit. Environment field edits preserve flags; use `SETCOND` for its combined
+Unknown flag names reject the edit. Environment field edits preserve flags; use `SETCOND` for its combined
 condition and flag update. These edits do not advance time or schedule repairs.
 
 

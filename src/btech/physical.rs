@@ -735,7 +735,7 @@ fn attack_profile_inner(
     );
     let map = &world.btech.maps()[&position.map];
     ensure!(
-        map.flags & 512 == 0,
+        !map.has_flag(super::BattleMapFlag::NoPhysicalAttacks),
         "You cannot perform physical attacks here!"
     );
     if source.signature().team == victim.signature().team {
@@ -758,11 +758,10 @@ fn attack_profile_inner(
     if club {
         ensure!(
             source.carried_club.is_some()
-                || matches!(
-                    map.hex(i64::from(position.x), i64::from(position.y))?
-                        .terrain,
-                    Terrain::LightForest | Terrain::HeavyForest
-                ),
+                || map
+                    .hex(i64::from(position.x), i64::from(position.y))?
+                    .terrain
+                    .is_woods(),
             "You can not seem to find any trees around to club with."
         );
     }
@@ -882,10 +881,10 @@ fn attack_profile_inner(
     };
     let target_movement =
         super::aim::ground_physical_target_modifier(world, victim, rules.extended_movement);
+    // Smoke painted into the target's tile obscures it like heavy woods.
     let terrain = match target_tile.terrain {
-        Terrain::Smoke | Terrain::HeavyForest => 2,
-        Terrain::LightForest => 1,
-        _ => 0,
+        Terrain::Smoke => 2,
+        terrain => terrain.woods_density(),
     };
     let tons = source.definition().tons;
     let mut damage = match attack {

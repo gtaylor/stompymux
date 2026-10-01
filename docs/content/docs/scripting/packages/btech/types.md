@@ -46,7 +46,7 @@ Alias: `"LeftArm"|"RightArm"|"LeftTorso"|"RightTorso"|"CenterTorso"|"LeftLeg"|"R
 - `height`: `integer`
 - `gravity`: `integer`
 - `temperature`: `integer`
-- `flags`: `integer`
+- `flags`: `BattleMapFlag[]` — Map flags the asset enables.
 
 ## BattleHex
 

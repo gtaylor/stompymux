@@ -418,3 +418,20 @@
 //|---@return table report Map, columns, fields (name/value) and literal text. firstfree has no value.
 //|function btech_map.fields(actor, map, arguments) end
 // lua-types-end
+
+// lua-types-begin btech 00552
+//|---Whether a map has one rule switch enabled.
+//|---@param dbref integer Map object dbref.
+//|---@param flag BattleMapFlag Typed constant from btech.map.flags.
+//|---@return boolean
+//|function btech_map.has_flag(dbref, flag) end
+// lua-types-end
+
+// lua-types-begin btech 00553
+//|---Wizard-only switch of one map rule flag, leaving the others unchanged.
+//|---@param actor integer
+//|---@param map integer
+//|---@param flag BattleMapFlag Typed constant from btech.map.flags.
+//|---@param enabled boolean
+//|function btech_map.set_flag(actor, map, flag, enabled) end
+// lua-types-end

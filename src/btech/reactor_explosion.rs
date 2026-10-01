@@ -197,11 +197,7 @@ fn hit_cell(
 ) -> Result<()> {
     let tile = world.btech.maps()[&report.map]
         .base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
-    let ground = if matches!(tile.terrain, Terrain::Water | Terrain::Ice) {
-        -i32::from(tile.elevation)
-    } else {
-        i32::from(tile.elevation)
-    };
+    let ground = i32::from(tile.surface_height());
     let blast = super::blast_damage::BlastCell {
         coordinate,
         origin: point,

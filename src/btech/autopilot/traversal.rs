@@ -288,18 +288,13 @@ fn in_bounds(width: i64, height: i64, x: u16, y: u16) -> bool {
 fn terrain_cost(terrain: Terrain, kind: GroundUnitKind) -> Option<u32> {
     Some(match terrain {
         Terrain::Wall => return None,
-        Terrain::Sand if kind == GroundUnitKind::Wheeled => 2,
-        Terrain::Grassland
-        | Terrain::Road
-        | Terrain::Bridge
-        | Terrain::Building
-        | Terrain::Sand => 1,
-        Terrain::LightForest | Terrain::Rough | Terrain::Snow | Terrain::Fire | Terrain::Smoke => 2,
-        Terrain::HeavyForest | Terrain::Mountains => 3,
+        Terrain::Fire | Terrain::Smoke => 2,
         Terrain::Water | Terrain::Ice => 3,
         // High water remains mechanically enterable, but receives a large
         // penalty so a route chooses it only when ordinary ground is absent.
         Terrain::HighWater => 5,
+        // Elsewhere a route prefers terrain in proportion to the speed it costs.
+        terrain => terrain.ground_speed_divisor(kind == GroundUnitKind::Wheeled) as u32,
     })
 }
 

@@ -336,6 +336,43 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         error::wrap(lua, conditions, "btech.operation.failed")?,
     )?;
     let shared = world.clone();
+    let has_flag = lua.create_function(move |lua, (id, flag): (i64, Value)| {
+        crate::lua::transactions::require(lua)?;
+        let flag = constants::require_map_flag(flag, 2)?;
+        let world = shared.borrow();
+        let map = world
+            .btech
+            .maps()
+            .get(&ObjectId(id))
+            .ok_or_else(|| error::failure("btech.operation.failed", "Map not found"))?;
+        Ok(map.has_flag(flag))
+    })?;
+    native.set(
+        "map_has_flag",
+        error::wrap(lua, has_flag, "btech.operation.failed")?,
+    )?;
+    let set_flag =
+        lua.create_function(|lua, (actor, id, flag, enabled): (i64, i64, Value, bool)| {
+            crate::lua::transactions::require(lua)?;
+            let flag = constants::require_map_flag(flag, 3)?;
+            let scripts = crate::Scripts::services(lua)?;
+            crate::lua::transactions::run(lua, &scripts.world, || {
+                crate::set_battle_map_flag_action(
+                    &scripts,
+                    &crate::lua::configuration(lua),
+                    ObjectId(actor),
+                    ObjectId(id),
+                    flag,
+                    enabled,
+                )
+                .map_err(mlua::Error::external)
+            })
+        })?;
+    native.set(
+        "map_set_flag",
+        error::wrap(lua, set_flag, "btech.operation.failed")?,
+    )?;
+    let shared = world.clone();
     let clouds = lua.create_function(move |lua, (actor, id, altitude): (i64, i64, i16)| {
         crate::lua::transactions::require(lua)?;
         crate::set_battle_map_cloud_base(

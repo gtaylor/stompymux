@@ -34,7 +34,7 @@ pub fn begin_vtol_takeoff(
         .get(&position.map)
         .context("Aircraft map is unavailable")?;
     map.base_hex(i64::from(position.x), i64::from(position.y))?;
-    let underground = map.flags & 16 != 0;
+    let underground = map.has_flag(super::BattleMapFlag::Underground);
     world
         .btech
         .vehicles

@@ -972,6 +972,72 @@ pub(super) static LIGHT_LEVELS: Catalog = Catalog {
     ],
 };
 
+/// Battlefield rule switches; values are the persisted `BattleMapFlag` bits.
+pub(super) static MAP_FLAGS: Catalog = Catalog {
+    qualified_name: "btech.map.flags",
+    entries: &[
+        Entry {
+            name: "SPECIAL_RULES",
+            value: 2,
+        },
+        Entry {
+            name: "VACUUM",
+            value: 4,
+        },
+        Entry {
+            name: "PERMANENT_FIRE",
+            value: 8,
+        },
+        Entry {
+            name: "UNDERGROUND",
+            value: 16,
+        },
+        Entry {
+            name: "DARK",
+            value: 32,
+        },
+        Entry {
+            name: "INDESTRUCTIBLE_BRIDGES",
+            value: 64,
+        },
+        Entry {
+            name: "NO_BRIDGE_GENERATION",
+            value: 128,
+        },
+        Entry {
+            name: "NO_FRIENDLY_FIRE",
+            value: 256,
+        },
+        Entry {
+            name: "NO_PHYSICAL_ATTACKS",
+            value: 512,
+        },
+    ],
+};
+
+/// Decode a checked `btech.map.flags` constant.
+pub(super) fn require_map_flag(
+    value: Value,
+    argument: usize,
+) -> mlua::Result<crate::BattleMapFlag> {
+    let bit = i64::from(require(value, argument, "flag", &MAP_FLAGS)?);
+    crate::BattleMapFlag::ALL
+        .into_iter()
+        .find(|flag| flag.bit() == bit)
+        .ok_or_else(|| mlua::Error::external("unknown map flag"))
+}
+
+/// Push every map flag set in `flags` as an array of `btech.map.flags` constants.
+pub(super) fn push_map_flags(lua: &Lua, flags: i64) -> mlua::Result<Table> {
+    let result = lua.create_table()?;
+    for flag in crate::BattleMapFlag::ALL {
+        if flag.is_set(flags) {
+            result.raw_push(push(lua, &MAP_FLAGS, flag.bit() as i32)?)?;
+        }
+    }
+    Ok(result)
+}
+
 /// Searchlight switching policies accepted by `btech.unit.slite`; zero is automatic.
 pub(super) static SEARCHLIGHT_MODES: Catalog = Catalog {
     qualified_name: "btech.unit.searchlight_modes",
@@ -1334,6 +1400,7 @@ pub(super) fn install(lua: &Lua, package: &Table) -> mlua::Result<()> {
 
     let map = table(lua, package, "map")?;
     map.raw_set("light_levels", namespace(lua, &LIGHT_LEVELS)?)?;
+    map.raw_set("flags", namespace(lua, &MAP_FLAGS)?)?;
     package.raw_set("map", map)?;
 
     let repair = table(lua, package, "repair")?;
@@ -1378,6 +1445,16 @@ mod tests {
             );
         }
         assert_eq!(LIGHT_LEVELS.entries.len(), 3);
+    }
+
+    /// Map flag constants match the named Rust flags bit for bit.
+    #[test]
+    fn map_flag_catalog_matches_battle_map_flags() {
+        assert_eq!(MAP_FLAGS.entries.len(), crate::BattleMapFlag::ALL.len());
+        for (entry, flag) in MAP_FLAGS.entries.iter().zip(crate::BattleMapFlag::ALL) {
+            assert_eq!(i64::from(entry.value), flag.bit());
+            assert_eq!(entry.name, flag.name().to_ascii_uppercase());
+        }
     }
 
     /// Searchlight mode constants decode to the matching mode and command spelling.

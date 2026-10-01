@@ -112,7 +112,7 @@ fn display(
         .source
         .unit;
     let map = &world.btech.maps()[&viewport.map];
-    if (cliff.is_some() || landing) && map.flags & 32 != 0 {
+    if (cliff.is_some() || landing) && map.has_flag(super::BattleMapFlag::Dark) {
         bail!("You can't see that much here!");
     }
     let ansi = world.objects[&pilot].flags.contains(crate::Flag::Ansi);
@@ -256,7 +256,10 @@ fn terrain_canvas(
             let row = y * 2 + usize::from(coordinate.x.rem_euclid(2) == 0);
             let column = x * 3 + 1;
             let seen = match &viewer {
-                Some(viewer) => !(visible || map.flags & 32 != 0) || viewer.visible(coordinate)?,
+                Some(viewer) => {
+                    !(visible || map.has_flag(super::BattleMapFlag::Dark))
+                        || viewer.visible(coordinate)?
+                }
                 None => true,
             };
             let pixels = if !seen {

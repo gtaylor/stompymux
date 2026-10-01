@@ -32,7 +32,9 @@ pub(super) fn resolve(
     let tile = record.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
     let sides = match tile.terrain {
         Terrain::Ice => 15,
-        Terrain::Bridge if record.flags & 64 == 0 => 10 * (1 + u16::from(tile.elevation)),
+        Terrain::Bridge if !record.has_flag(super::BattleMapFlag::IndestructibleBridges) => {
+            10 * (1 + u16::from(tile.elevation))
+        }
         _ => return Ok(None),
     };
     let threshold = weapon.0.profile_for_ammunition(weapon.1).damage;

@@ -51,7 +51,7 @@
 //|---@field height integer
 //|---@field gravity integer
 //|---@field temperature integer
-//|---@field flags integer
+//|---@field flags BattleMapFlag[] Map flags the asset enables.
 // lua-types-end
 
 // lua-types-begin btech 00007
@@ -74,7 +74,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00009
-//|---@field flags integer
+//|---@field flags BattleMapFlag[] Enabled map flags.
 //|---@field light integer 0 night, 1 twilight, 2 day
 //|---@field visibility integer Weather range in hexes
 //|---@field sensor_flags integer Disabled perception channels: sensor band bit 0 (1), radar bit 5 (32), probes bit 6 (64).
@@ -1603,6 +1603,8 @@
 //|---@class BattleRepairOperation
 //|---Typed battlefield light constant from btech.map.light_levels.
 //|---@class BattleLightLevel
+//|---Typed battlefield rule switch from btech.map.flags.
+//|---@class BattleMapFlag
 //|---Typed searchlight switching policy from btech.unit.searchlight_modes.
 //|---@class BattleSearchlightMode
 // lua-types-end
@@ -2088,6 +2090,6 @@
 //|btech.tactical = btech_tactical
 // lua-types-end
 
-// lua-types-begin btech 00552
+// lua-types-begin btech 00554
 //|return btech
 // lua-types-end

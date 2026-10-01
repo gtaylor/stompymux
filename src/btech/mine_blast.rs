@@ -160,11 +160,7 @@ fn hit_hex(
 ) -> Result<()> {
     let tile = world.btech.maps()[&report.map]
         .base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
-    let ground = if matches!(tile.terrain, Terrain::Water | Terrain::Ice) {
-        -i32::from(tile.elevation)
-    } else {
-        i32::from(tile.elevation)
-    };
+    let ground = i32::from(tile.surface_height());
     let neighbor = coordinate != report.mine.coordinate;
     let inferno = report.mine.kind == BattleMineKind::Inferno;
     // Rear armor remains selected after a rear-facing occupant within this blast cell.

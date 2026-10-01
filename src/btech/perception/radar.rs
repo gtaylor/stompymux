@@ -76,10 +76,7 @@ impl BattleRadarTarget {
 /// Terrain datum for radar's surface-clearance calculation.
 fn surface_datum(tile: BattleHex) -> i32 {
     let magnitude = i32::from(tile.elevation);
-    if matches!(
-        tile.terrain,
-        Terrain::Water | Terrain::Ice | Terrain::Bridge
-    ) {
+    if tile.terrain.holds_water() {
         return -magnitude;
     }
     magnitude

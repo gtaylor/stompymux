@@ -40,7 +40,7 @@ impl StoredBattleMap {
                     {
                         '>'
                     }
-                    Terrain::Fire if self.flags & 8 == 0 => {
+                    Terrain::Fire if !self.has_flag(super::BattleMapFlag::PermanentFire) => {
                         stale_effects.push(coordinate);
                         '.'
                     }

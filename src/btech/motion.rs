@@ -299,11 +299,7 @@ fn set_speed_by_actor(
     let position = unit.position().context("Unit is not placed")?;
     let tile =
         world.btech.maps()[&position.map].base_hex(i64::from(position.x), i64::from(position.y))?;
-    let wet = tile.terrain == Terrain::HighWater
-        || (matches!(
-            tile.terrain,
-            Terrain::Water | Terrain::Ice | Terrain::Bridge
-        ) && unit.elevation_level(tile) < 0);
+    let wet = tile.immerses(unit.elevation_level(tile));
     ensure!(
         !wet || speed <= maximum * 2.0 / 3.0 + 0.1,
         "You can't run through water!"

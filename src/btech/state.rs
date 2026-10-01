@@ -100,12 +100,12 @@ pub struct StoredBattleMap {
 impl StoredBattleMap {
     /// The saved map restriction blocks non-coolant fire between teammates.
     pub fn blocks_friendly_fire(&self) -> bool {
-        self.flags & 256 != 0
+        self.has_flag(super::BattleMapFlag::NoFriendlyFire)
     }
 
     /// Environmental rules are enabled by the map's persisted special-conditions flag.
     pub fn uses_special_rules(&self) -> bool {
-        self.flags & 2 != 0
+        self.has_flag(super::BattleMapFlag::SpecialRules)
     }
 
     /// Whether every tile has a known terrain/elevation interpretation.

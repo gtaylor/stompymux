@@ -21,8 +21,8 @@ impl super::StoredBattleMap {
         BattleMapEnvironment {
             gravity: self.gravity as u8,
             temperature: self.temperature as i8,
-            vacuum: self.flags & 4 != 0,
-            underground: self.flags & 16 != 0,
+            vacuum: self.has_flag(super::BattleMapFlag::Vacuum),
+            underground: self.has_flag(super::BattleMapFlag::Underground),
         }
     }
 }
@@ -55,19 +55,17 @@ pub fn set_map_environment(
         .clone();
     map.gravity = i64::from(conditions.gravity);
     map.temperature = i64::from(conditions.temperature);
-    map.flags &= !(2 | 4);
-    if conditions.vacuum {
-        map.flags |= 4;
-    }
+    map.set_flag(super::BattleMapFlag::Vacuum, conditions.vacuum);
+    // Underground is retained once enabled, including for an explicit false.
     if conditions.underground {
-        map.flags |= 16;
+        map.set_flag(super::BattleMapFlag::Underground, true);
     }
-    if conditions.vacuum
-        || conditions.gravity != 100
-        || !(-30..=50).contains(&conditions.temperature)
-    {
-        map.flags |= 2;
-    }
+    map.set_flag(
+        super::BattleMapFlag::SpecialRules,
+        conditions.vacuum
+            || conditions.gravity != 100
+            || !(-30..=50).contains(&conditions.temperature),
+    );
     map.validate()?;
     let actual = map.environment();
     world.btech.maps.insert(id, map);

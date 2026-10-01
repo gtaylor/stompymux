@@ -31,7 +31,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         result.set("height", map.height)?;
         result.set("gravity", map.gravity)?;
         result.set("temperature", map.temperature)?;
-        result.set("flags", map.flags)?;
+        result.set("flags", constants::push_map_flags(lua, map.flags)?)?;
         result.set("terrain_ready", map.terrain_ready())?;
         result.set(
             "cargo_transfer_point",

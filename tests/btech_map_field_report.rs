@@ -103,7 +103,15 @@ async fn report_values_order_filters_and_layouts_are_explicit() {
         assert_eq!(output(&scripts), report.text);
     }
     set_battle_map_field_action(&scripts, &config, ObjectId(1), map, "gravity", "-1").unwrap();
-    set_battle_map_field_action(&scripts, &config, ObjectId(1), map, "flags", "aF").unwrap();
+    set_battle_map_field_action(
+        &scripts,
+        &config,
+        ObjectId(1),
+        map,
+        "flags",
+        "dark,underground",
+    )
+    .unwrap();
     assert_eq!(
         view_battle_map_fields_action(&scripts, &config, ObjectId(1), map, "gravity")
             .unwrap()
@@ -118,7 +126,7 @@ async fn report_values_order_filters_and_layouts_are_explicit() {
             .fields[0]
             .value
             .as_deref(),
-        Some("aF")
+        Some("underground dark")
     );
 }
 

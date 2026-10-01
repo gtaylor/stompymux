@@ -30,9 +30,7 @@ fn profile(
                     Terrain::LightForest | Terrain::HeavyForest | Terrain::Rough
                 )
         }
-        BattleVehicleMovement::Hover => {
-            matches!(terrain, Terrain::LightForest | Terrain::HeavyForest)
-        }
+        BattleVehicleMovement::Hover => terrain.is_woods(),
         BattleVehicleMovement::Stationary | BattleVehicleMovement::Vtol => false,
     };
     if !applies {

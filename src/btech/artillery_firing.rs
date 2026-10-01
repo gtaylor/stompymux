@@ -292,7 +292,10 @@ pub(super) fn prepare(
     let visible =
         observer.is_none() && super::visibility::hex_unblocked(world, shooter, coordinate)?;
     ensure!(
-        explicit_hex.is_some() || observer.is_some() || visible || record.flags & 16 == 0,
+        explicit_hex.is_some()
+            || observer.is_some()
+            || visible
+            || !record.has_flag(super::BattleMapFlag::Underground),
         "You cannot fire indirect weapons underground!"
     );
     ensure!(

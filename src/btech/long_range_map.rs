@@ -167,7 +167,7 @@ fn render_viewport(
                 cells.push(cell);
                 continue;
             }
-            if (map.flags & 32 != 0
+            if (map.has_flag(super::BattleMapFlag::Dark)
                 || matches!(
                     mode,
                     BattleLongRangeMode::VisibleTerrain
