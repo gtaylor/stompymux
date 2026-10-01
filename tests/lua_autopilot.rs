@@ -22,7 +22,7 @@ async fn lua_controls_a_typed_autopilot_queue() {
     let root = config.path(&config.database.mech_database);
     std::fs::create_dir_all(&root).unwrap();
     std::fs::write(
-        root.join("PARITY"),
+        root.join("PARITY.toml"),
         include_str!("fixtures/btech/mechs/PARITY.toml"),
     )
     .unwrap();

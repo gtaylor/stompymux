@@ -28,7 +28,7 @@ async fn branded_scripts() -> (
     let root = config.path(&config.database.mech_database);
     std::fs::create_dir_all(&root).unwrap();
     std::fs::write(
-        root.join("PARITY"),
+        root.join("PARITY.toml"),
         include_str!("fixtures/btech/mechs/PARITY.toml"),
     )
     .unwrap();

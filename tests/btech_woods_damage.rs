@@ -365,7 +365,10 @@ async fn missile_woods_absorption_follows_live_ams_interception() {
             for recipient in [
                 include_str!("../game/mechs/JR7-D.toml")
                     .replace("IS.MediumLaser", ams.name())
-                    .replace("Ammo_IS.SRM-4 25", &format!("Ammo_{} 24", ams.name())),
+                    .replace(
+                        r#""Ammo_IS.SRM-4", rounds = 25"#,
+                        &format!(r#""Ammo_{}", rounds = 24"#, ams.name()),
+                    ),
                 include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", ams.name()),
             ] {
                 for weapon in [BattleWeapon::Lrm5, BattleWeapon::Lrm20] {
