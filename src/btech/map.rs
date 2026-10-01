@@ -243,7 +243,7 @@ fn map_integer(value: &str) -> Option<i32> {
 
 /// Optional conditions are applied only when the first post-terrain record is fully valid.
 /// Invalid metadata leaves inferred fire flags and standard gravity/temperature intact.
-fn parse_metadata(record: &[u8]) -> Option<(i32, i32, i32)> {
+pub(super) fn parse_metadata(record: &[u8]) -> Option<(i32, i32, i32)> {
     let line = std::str::from_utf8(record).ok()?;
     let (flags, conditions) = line.split_once(':')?;
     let mut fields = map_fields(conditions);

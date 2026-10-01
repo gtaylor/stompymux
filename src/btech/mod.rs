@@ -152,6 +152,8 @@ mod ground_proposal;
 mod loadout;
 mod loadout_context;
 mod map;
+mod map_lint;
+pub use map_lint::{MapCheckIssue, check_map_source, tidy_map_source};
 mod map_flags;
 mod terrain_rules;
 pub use map_flags::{BattleMapFlag, format_map_flags, parse_map_flags};

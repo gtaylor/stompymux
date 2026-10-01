@@ -4,7 +4,7 @@ stylua := env("STYLUA", "stylua")
 
 default: checks
 
-checks: fmt-check lint check-lua-types check-lua-docs test
+checks: fmt-check lint check-lua-types check-lua-docs check-maps test
 
 fmt: fmt-lua fmt-rust
 
@@ -82,6 +82,14 @@ docsite:
 
 docsite-serve:
     npm --prefix docs run serve
+
+# Fail when any map in game/maps would not load, or loads with silently ignored data.
+check-maps:
+    cargo run --quiet --bin map-check -- game/maps
+
+# Remove mechanical junk from map files without changing how any of them load.
+tidy-maps:
+    cargo run --quiet --bin map-check -- --fix game/maps
 
 update-lua-docs:
     cargo run --quiet --features lua-doc-updater --bin lua-doc-updater -- --write
