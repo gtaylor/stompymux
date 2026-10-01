@@ -282,13 +282,7 @@ impl ParsedTemplate {
             primary.section,
             extension.section
         );
-        ensure!(
-            !mount
-                .item
-                .get(..5)
-                .is_some_and(|head| head.eq_ignore_ascii_case("Ammo_")),
-            "ammunition cannot be split"
-        );
+        ensure!(!is_ammunition(&mount.item), "ammunition cannot be split");
         let (first, last) = primary.at.bounds()?;
         let weapon = CriticalDefinition {
             equipment: mount.item,
@@ -372,10 +366,7 @@ fn decode_field(key: &str, kind: Kind, value: toml::Value) -> Result<Option<Stri
 
 /// Build the stored critical for one single-section slot entry.
 fn slot_critical(slot: SlotDocument) -> Result<CriticalDefinition> {
-    let ammunition = slot
-        .item
-        .get(..5)
-        .is_some_and(|head| head.eq_ignore_ascii_case("Ammo_"));
+    let ammunition = is_ammunition(&slot.item);
     ensure!(
         !slot.item.eq_ignore_ascii_case(SPLIT_LEFT) && !slot.item.eq_ignore_ascii_case(SPLIT_RIGHT),
         "use split_mounts for weapons that span sections"
@@ -619,6 +610,11 @@ fn primary_slot_count(
     total.checked_sub(u8::try_from(extension).ok()?)
 }
 
+/// Whether an item names an ammunition bin.
+fn is_ammunition(item: &str) -> bool {
+    super::equipment::strip_name_prefix(item, "Ammo_").is_some()
+}
+
 /// Whether a stored critical is a split-mount extension marker.
 pub(super) fn is_split_proxy(equipment: &str) -> bool {
     equipment.eq_ignore_ascii_case(SPLIT_LEFT) || equipment.eq_ignore_ascii_case(SPLIT_RIGHT)
@@ -680,10 +676,7 @@ fn render_section(
                     critical.data, critical.equipment
                 )
             })?;
-            let ammunition = critical
-                .equipment
-                .get(..5)
-                .is_some_and(|head| head.eq_ignore_ascii_case("Ammo_"));
+            let ammunition = is_ammunition(&critical.equipment);
             let key = if ammunition { "rounds" } else { "link" };
             write!(entry, ", {key} = {value}")?;
         }
