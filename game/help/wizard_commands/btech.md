@@ -548,7 +548,8 @@ when shrinking past them. Lua uses `btech.map.resize(actor, map, width, height)`
 `SAVEMAP <name>` exports your current map to its configured map directory. Existing
 files are replaced atomically after the world transaction commits. Temporary fire
 reloads as grass; smoke exposes underlying terrain. Stale fire/smoke is cleaned
-from the live map. Relative subdirectories must already exist; destinations outside
+from the live map. Map flags, gravity and temperature are saved whenever any of
+them differs from the defaults (no flags, gravity 100, 20°C). Relative subdirectories must already exist; destinations outside
 the map directory and symlinks are rejected. `Saving complete!` confirms the file
 replacement; a write failure preserves the previous file and reports an error.
 Stale-effect cleanup is already committed if the later file write fails.

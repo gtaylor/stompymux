@@ -59,8 +59,10 @@ impl StoredBattleMap {
             }
             source.push('\n');
         }
+        // The optional line carries flags, gravity and temperature together, so write it
+        // whenever any of them differs from the values a map without the line loads with.
         let flags = self.flags & super::BattleMapFlag::mask();
-        if flags != 0 {
+        if flags != 0 || self.gravity != 100 || self.temperature != 20 {
             writeln!(source, "{flags}: {} {}", self.gravity, self.temperature)?;
         }
         Ok(BattleMapExport {

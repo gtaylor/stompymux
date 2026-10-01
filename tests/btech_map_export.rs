@@ -40,9 +40,8 @@ async fn export_terrain_effects_and_metadata_match_asset_contract() {
         assert_eq!(candidate.btech, before);
         let permanent = flags & 8 != 0;
         let mut expected = format!("5 1\n>0#1`2{}3.4\n", if permanent { '&' } else { '.' });
-        if flags & !1 != 0 {
-            expected.push_str(&format!("{}: 50 -40\n", flags & !1));
-        }
+        // Non-default conditions are saved even when no flag is set.
+        expected.push_str(&format!("{}: 50 -40\n", flags & !1));
         assert_eq!(export.source, expected);
         assert_eq!(
             export.stale_effects,
@@ -56,7 +55,7 @@ async fn export_terrain_effects_and_metadata_match_asset_contract() {
         assert_eq!(decoded.hex(0, 0).unwrap().terrain, Terrain::Grassland);
         assert_eq!(decoded.hex(1, 0).unwrap().terrain, Terrain::Road);
         assert_eq!(decoded.flags, flags & !1);
-        assert_eq!(decoded.gravity, if flags & !1 == 0 { 100 } else { 50 });
+        assert_eq!((decoded.gravity, decoded.temperature), (50, -40));
         persistence::save(&config.database(), &candidate)
             .await
             .unwrap();
@@ -114,4 +113,15 @@ async fn export_base_smoke_and_all_canonical_tiles() {
         export.source.strip_suffix("8: 100 20\n").unwrap()
     );
     assert_eq!(unflagged.stale_effects, export.stale_effects);
+    // A single non-default condition is enough to write the line.
+    let mut state = serde_json::to_value(&world.btech).unwrap();
+    state["maps"][map.0.to_string()]["temperature"] = (-5).into();
+    world.btech = serde_json::from_value(state).unwrap();
+    let cold = world.btech.maps()[&map].export_asset().unwrap();
+    assert_eq!(cold.source, format!("{}0: 100 -5\n", unflagged.source));
+    let decoded = BattleMapAsset::parse(&cold.source).unwrap();
+    assert_eq!(
+        (decoded.flags, decoded.gravity, decoded.temperature),
+        (0, 100, -5)
+    );
 }
