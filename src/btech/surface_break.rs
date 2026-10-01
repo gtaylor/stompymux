@@ -5,7 +5,6 @@ use super::{
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// Terrain change and ordered occupant consequences owned by the enclosing world transaction.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -311,14 +310,11 @@ fn break_surface(
             }
         }
     }
-    let record = candidate.btech.maps.get_mut(&map).unwrap();
-    let index = (i64::from(coordinate.y) * record.width + i64::from(coordinate.x)) as usize;
-    Arc::make_mut(
-        record
-            .terrain
-            .as_mut()
-            .context("Map terrain is ambiguous")?,
-    )[index] = replacement;
+    candidate.btech.maps.get_mut(&map).unwrap().write_hex(
+        i64::from(coordinate.x),
+        i64::from(coordinate.y),
+        replacement,
+    )?;
     let mut report = BattleSurfaceBreak {
         map,
         coordinate,

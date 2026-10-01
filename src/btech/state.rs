@@ -1158,7 +1158,7 @@ fn map_target(world: &World, id: ObjectId) -> Result<()> {
 }
 
 /// Turn a parsed source into a checked persistent domain record.
-fn map_from_asset(name: &str, mut asset: BattleMapAsset) -> Result<StoredBattleMap> {
+pub(super) fn map_from_asset(name: &str, mut asset: BattleMapAsset) -> Result<StoredBattleMap> {
     ensure!(
         !name.is_empty() && name.len() <= 1024 && !name.contains('\0'),
         "Invalid map asset name"
