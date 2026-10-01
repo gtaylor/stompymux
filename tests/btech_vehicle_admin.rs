@@ -106,17 +106,29 @@ fn construction_dispatch_uses_declared_class_and_confines_assets() {
     let mech = include_str!("fixtures/btech/mechs/JR7-D.toml");
     let vehicle = include_str!("../game/mechs/Demolisher.toml");
     assert!(matches!(
-        BattleUnitTemplate::parse("test", mech).unwrap(),
+        BattleUnitTemplate::parse("JR7-D", mech).unwrap(),
         BattleUnitTemplate::Mech(_)
     ));
     assert!(matches!(
-        BattleUnitTemplate::parse("test", vehicle).unwrap(),
+        BattleUnitTemplate::parse("Demolisher", vehicle).unwrap(),
         BattleUnitTemplate::Vehicle(_)
     ));
-    assert!(BattleUnitTemplate::parse("test", &vehicle.replace("Vehicle", "VTOL")).is_err());
-    assert!(BattleUnitTemplate::parse("test", &vehicle.replace("Vehicle", "Mech")).is_err());
+    assert!(
+        BattleUnitTemplate::parse(
+            "test",
+            &vehicle.replace("class = \"vehicle\"", "class = \"vtol\"")
+        )
+        .is_err()
+    );
+    assert!(
+        BattleUnitTemplate::parse(
+            "test",
+            &vehicle.replace("class = \"vehicle\"", "class = \"mech\"")
+        )
+        .is_err()
+    );
     let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("vehicle"), vehicle).unwrap();
+    std::fs::write(dir.path().join("vehicle.toml"), vehicle).unwrap();
     assert!(matches!(
         read_battle_unit_template(dir.path(), "vehicle").unwrap(),
         BattleUnitTemplate::Vehicle(_)
