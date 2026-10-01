@@ -130,6 +130,9 @@ function btech_template.loadout(name) end
 ---@field reveal_hint boolean|nil Defaults to false; disclose coordinates in location failures only when true.
 
 local btech_map = {}
+---Terrain names accepted by set_hex and reported by hex and terrain queries.
+---@type BattleTerrainTypes
+btech_map.terrain_types = {}
 
 ---Read the detached saved cargo location, or nil when the map has no location restriction.
 ---@param map integer
@@ -1005,7 +1008,7 @@ function btech_map.add_block(actor, dbref, x, y, radius, team) end
 ---@param dbref integer
 ---@param x integer
 ---@param y integer
----@param terrain string Canonical terrain symbol; a leading dot selects grassland.
+---@param terrain BattleTerrainName Name from btech.map.terrain_types.
 ---@param elevation integer Absolute magnitude capped at nine.
 ---@return BattleMapHexChange
 function btech_map.set_hex(actor, dbref, x, y, terrain, elevation) end
@@ -1075,6 +1078,23 @@ function btech_map.set_cargo_transfer_point(map, point) end
 function btech_map.elevation(map, hex) end
 
 ---@alias BattleTerrainName "grassland"|"road"|"light_forest"|"heavy_forest"|"water"|"ice"|"bridge"|"high_water"|"rough"|"mountains"|"fire"|"smoke"|"snow"|"building"|"wall"|"sand"
+---@class BattleTerrainTypes
+---@field GRASSLAND "grassland"
+---@field ROAD "road"
+---@field LIGHT_FOREST "light_forest"
+---@field HEAVY_FOREST "heavy_forest"
+---@field WATER "water"
+---@field ICE "ice"
+---@field BRIDGE "bridge"
+---@field HIGH_WATER "high_water"
+---@field ROUGH "rough"
+---@field MOUNTAINS "mountains"
+---@field FIRE "fire"
+---@field SMOKE "smoke"
+---@field SNOW "snow"
+---@field BUILDING "building"
+---@field WALL "wall"
+---@field SAND "sand"
 
 ---Read one decoded terrain kind.
 ---@param map DbRef|Object

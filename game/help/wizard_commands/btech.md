@@ -485,20 +485,42 @@ and any surface-break reports. Terrain, dice, occupant effects and notifications
 roll back together if the action fails.
 
 `ADDHEX <x> <y> <terrain> <elevation>` changes one base tile on the wizard's
-current map. Use a map terrain symbol (`.` for grassland); elevation is converted
+current map. Use a terrain symbol from the table below; elevation is converted
 to a positive magnitude and capped at nine. Units retain their physical altitude
 and current movement or flight state. Editing ice into water is a direct terrain
 edit; use `DELICE` to melt ice with normal occupant falls and flooding. Temporary
 fire/smoke overlays remain independent of the underlying tile. Lua offers
-`btech.map.set_hex(actor, map, x, y, terrain, elevation)` and returns the previous
-and resulting tiles. Occupied maps can be edited and saved without reloading
-their source assets.
+`btech.map.set_hex(actor, map, x, y, terrain, elevation)`, taking a name from
+`btech.map.terrain_types`, and returns the previous and resulting tiles. Occupied
+maps can be edited and saved without reloading their source assets.
+
+| Symbol | Terrain | Lua name | Elevation digit means |
+| --- | --- | --- | --- |
+| `.` | Grassland | `grassland` | height |
+| `#` | Road | `road` | height |
+| `` ` `` | Light forest | `light_forest` | height |
+| `"` | Heavy forest | `heavy_forest` | height |
+| `~` | Water | `water` | depth |
+| `-` | Ice | `ice` | depth of the water below |
+| `/` | Bridge | `bridge` | deck height |
+| `?` | High water | `high_water` | height |
+| `%` | Rough | `rough` | height |
+| `^` | Mountains | `mountains` | height |
+| `&` | Fire | `fire` | height |
+| `:` | Smoke | `smoke` | height |
+| `+` | Snow | `snow` | height |
+| `@` | Building | `building` | height |
+| `=` | Wall | `wall` | height |
+| `}` | Sand | `sand` | height |
+
+In map files `.` is grassland, `'` is light forest, and `>` (temporary fire) and
+`:` load as grassland.
 
 `@MAPEMIT <message>` broadcasts to the occupants of running units on the wizard's
 current map and privately confirms `Message sent!`. Unconscious crews do not receive
 the message. No sensor contact
 or line of sight is required. Players standing directly in the map room are
-outside this cockpit audience. Lua provides `btech.map.emit(actor, map, text)`,
+outside this cockpit audience. Lua provides `btech.map.emit_as(actor, map, text)`,
 returning eligible unit dbrefs in battlefield slot order. If delivery fails, all
 staged messages are discarded together.
 
@@ -541,7 +563,7 @@ the map; other wizards shut down and clear units after loading. Shutdown falls
 therefore use the newly loaded terrain and conditions. Units keep their physical
 altitude until movement resolves it. Other map settings, including cloud base,
 remain intact. Invalid assets or crops that exclude placed units fail atomically;
-use `CLEARMECHS` first for such crops. Lua uses `btech.map.load(actor, map, name)`.
+use `CLEARMECHS` first for such crops. Lua uses `btech.map.load_as(actor, map, name)`.
 
 ## Link opposite map edges
 

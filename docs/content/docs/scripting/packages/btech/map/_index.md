@@ -66,3 +66,4 @@ no_list: true
 
 - [`btech.map.flags`](flags/)
 - [`btech.map.light_levels`](light_levels/)
+- [`btech.map.terrain_types`](terrain_types/)

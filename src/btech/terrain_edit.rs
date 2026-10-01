@@ -135,7 +135,7 @@ pub fn set_map_hex_action(
 }
 
 /// Native terrain arguments use the first symbol, including the operator's grassland shorthand.
-pub(crate) fn terrain_argument(value: &str) -> Result<Terrain> {
+fn terrain_argument(value: &str) -> Result<Terrain> {
     match value.chars().next().context("Expected a terrain symbol")? {
         '.' => Ok(Terrain::Grassland),
         symbol => Terrain::from_symbol(symbol),

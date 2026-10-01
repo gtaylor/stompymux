@@ -275,7 +275,7 @@
 //|---@param dbref integer
 //|---@param x integer
 //|---@param y integer
-//|---@param terrain string Canonical terrain symbol; a leading dot selects grassland.
+//|---@param terrain BattleTerrainName Name from btech.map.terrain_types.
 //|---@param elevation integer Absolute magnitude capped at nine.
 //|---@return BattleMapHexChange
 //|function btech_map.set_hex(actor, dbref, x, y, terrain, elevation) end

@@ -162,6 +162,9 @@
 
 // lua-types-begin btech 00023
 //|local btech_map = {}
+//|---Terrain names accepted by set_hex and reported by hex and terrain queries.
+//|---@type BattleTerrainTypes
+//|btech_map.terrain_types = {}
 // lua-types-end
 
 // lua-types-begin btech 00031
@@ -658,6 +661,23 @@
 
 // lua-types-begin btech 00142
 //|---@alias BattleTerrainName "grassland"|"road"|"light_forest"|"heavy_forest"|"water"|"ice"|"bridge"|"high_water"|"rough"|"mountains"|"fire"|"smoke"|"snow"|"building"|"wall"|"sand"
+//|---@class BattleTerrainTypes
+//|---@field GRASSLAND "grassland"
+//|---@field ROAD "road"
+//|---@field LIGHT_FOREST "light_forest"
+//|---@field HEAVY_FOREST "heavy_forest"
+//|---@field WATER "water"
+//|---@field ICE "ice"
+//|---@field BRIDGE "bridge"
+//|---@field HIGH_WATER "high_water"
+//|---@field ROUGH "rough"
+//|---@field MOUNTAINS "mountains"
+//|---@field FIRE "fire"
+//|---@field SMOKE "smoke"
+//|---@field SNOW "snow"
+//|---@field BUILDING "building"
+//|---@field WALL "wall"
+//|---@field SAND "sand"
 // lua-types-end
 
 // lua-types-begin btech 00145

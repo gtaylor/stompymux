@@ -1080,6 +1080,77 @@ pub(super) static DETECTION_CHANNELS: StringCatalog = StringCatalog {
     ],
 };
 
+/// Terrain names accepted by `btech.map.set_hex` and reported by map tile queries.
+pub(super) static TERRAIN_TYPES: StringCatalog = StringCatalog {
+    qualified_name: "btech.map.terrain_types",
+    entries: &[
+        StringEntry {
+            name: "GRASSLAND",
+            value: "grassland",
+        },
+        StringEntry {
+            name: "ROAD",
+            value: "road",
+        },
+        StringEntry {
+            name: "LIGHT_FOREST",
+            value: "light_forest",
+        },
+        StringEntry {
+            name: "HEAVY_FOREST",
+            value: "heavy_forest",
+        },
+        StringEntry {
+            name: "WATER",
+            value: "water",
+        },
+        StringEntry {
+            name: "ICE",
+            value: "ice",
+        },
+        StringEntry {
+            name: "BRIDGE",
+            value: "bridge",
+        },
+        StringEntry {
+            name: "HIGH_WATER",
+            value: "high_water",
+        },
+        StringEntry {
+            name: "ROUGH",
+            value: "rough",
+        },
+        StringEntry {
+            name: "MOUNTAINS",
+            value: "mountains",
+        },
+        StringEntry {
+            name: "FIRE",
+            value: "fire",
+        },
+        StringEntry {
+            name: "SMOKE",
+            value: "smoke",
+        },
+        StringEntry {
+            name: "SNOW",
+            value: "snow",
+        },
+        StringEntry {
+            name: "BUILDING",
+            value: "building",
+        },
+        StringEntry {
+            name: "WALL",
+            value: "wall",
+        },
+        StringEntry {
+            name: "SAND",
+            value: "sand",
+        },
+    ],
+};
+
 pub(super) static AUTOPILOT_STATES: StringCatalog = StringCatalog {
     qualified_name: "btech.autopilot.states",
     entries: &[
@@ -1401,6 +1472,7 @@ pub(super) fn install(lua: &Lua, package: &Table) -> mlua::Result<()> {
     let map = table(lua, package, "map")?;
     map.raw_set("light_levels", namespace(lua, &LIGHT_LEVELS)?)?;
     map.raw_set("flags", namespace(lua, &MAP_FLAGS)?)?;
+    map.raw_set("terrain_types", string_namespace(lua, &TERRAIN_TYPES)?)?;
     package.raw_set("map", map)?;
 
     let repair = table(lua, package, "repair")?;
@@ -1445,6 +1517,16 @@ mod tests {
             );
         }
         assert_eq!(LIGHT_LEVELS.entries.len(), 3);
+    }
+
+    /// Terrain constants name every Rust terrain in order.
+    #[test]
+    fn terrain_type_catalog_matches_terrain_names() {
+        assert_eq!(TERRAIN_TYPES.entries.len(), crate::Terrain::ALL.len());
+        for (entry, terrain) in TERRAIN_TYPES.entries.iter().zip(crate::Terrain::ALL) {
+            assert_eq!(entry.value, terrain.name());
+            assert_eq!(entry.name, terrain.name().to_ascii_uppercase());
+        }
     }
 
     /// Map flag constants match the named Rust flags bit for bit.

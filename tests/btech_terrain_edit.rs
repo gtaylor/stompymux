@@ -48,10 +48,10 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
         ] {
             let before = serde_json::to_value(&lua.world().btech).unwrap();
             let call = format!(
-                "btech.map.set_hex({},{},0,11,{},-30)",
+                "btech.map.set_hex({},{},0,11,btech.map.terrain_types.{},-30)",
                 actor.0,
                 map.0,
-                serde_json::to_string(&symbol.to_string()).unwrap()
+                terrain.name().to_ascii_uppercase()
             );
             assert!(
                 lua.eval_callback::<()>(&format!("{call}; error('abort edit')"))
@@ -106,6 +106,19 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
                 saved.btech
             );
         }
+        // Lua takes terrain names; operator symbols belong to ADDHEX.
+        let before = lua.world().btech.clone();
+        for terrain in ["'^'", "'Mountains'", "'bogus'"] {
+            assert!(
+                lua.eval_callback::<()>(&format!(
+                    "btech.map.set_hex({},{},0,11,{terrain},1)",
+                    actor.0, map.0
+                ))
+                .is_err()
+            );
+            assert_eq!(lua.world().btech, before);
+        }
+        lua.drain_outbox();
         let mut candidate = native.world().clone();
         let before = candidate.btech.clone();
         assert!(

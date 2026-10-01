@@ -86,10 +86,9 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         native.set(name, error::wrap(lua, action, "btech.operation.failed")?)?;
     }
     let set_hex = lua.create_function(
-        |lua, (actor, id, x, y, symbol, elevation): (i64, i64, i32, i32, String, i32)| {
+        |lua, (actor, id, x, y, name, elevation): (i64, i64, i32, i32, String, i32)| {
             crate::lua::transactions::require(lua)?;
-            let terrain = crate::btech::terrain_edit::terrain_argument(&symbol)
-                .map_err(mlua::Error::external)?;
+            let terrain = crate::Terrain::from_name(&name).map_err(mlua::Error::external)?;
             let scripts = crate::Scripts::services(lua)?;
             crate::lua::transactions::run(lua, &scripts.world, || {
                 let report = crate::set_battle_map_hex_action(
