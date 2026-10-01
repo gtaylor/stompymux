@@ -18,7 +18,6 @@ mod btech_dice;
 mod btech_entrances;
 mod btech_inventory;
 mod btech_landing_exclusions;
-mod btech_map_bits;
 mod btech_map_lifecycle;
 mod btech_map_links;
 mod btech_map_random;

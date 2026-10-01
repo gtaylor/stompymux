@@ -610,7 +610,6 @@ pub use targeting::{BattleHexLock, BattleHexTargetMode, BattleTargetSelection, s
 
 pub use targeting::hex_occupant;
 
-pub(crate) mod map_bits;
 mod map_slots;
 pub use map_slots::map_unit_order;
 

@@ -33,12 +33,6 @@ pub fn list_map_action(
             notify("X   Y   Type  obj   dc   ds     di")?;
             notify("--------------------------------------------")?;
             for kind in BattleMapObjectKind::ALL {
-                if kind == BattleMapObjectKind::Bits {
-                    if record.has_lookup_object() {
-                        notify("--- MAP/HANGAR INFORMATION OBJECT ---")?;
-                    }
-                    continue;
-                }
                 for (slot, coordinate) in super::map_object_delete::object_positions(record, kind) {
                     let [object, byte, short, scalar] =
                         object_fields(record, kind, slot, coordinate)?;
@@ -167,7 +161,7 @@ fn object_fields(
                 zone.radius,
             ]
         }
-        BattleMapObjectKind::Decoration | BattleMapObjectKind::Bits => unreachable!(),
+        BattleMapObjectKind::Decoration => unreachable!(),
     })
 }
 

@@ -125,20 +125,22 @@ pub(super) fn advance(
     Ok(Some(report))
 }
 
-/// Artillery checks duplicate coordinates only through already committed mine coverage.
+/// Artillery does not stack a second field on a coordinate that already holds one.
 fn deposit_mine(
     world: &mut World,
     map: ObjectId,
     coordinate: BattleHexCoordinate,
     strength: u16,
 ) -> Result<Option<u32>> {
-    let fields = world.btech.maps()[&map].minefields();
-    if world.btech.maps()[&map].mine_coverage(coordinate)?
-        && fields.values().any(|field| field.coordinate == coordinate)
+    world.btech.maps()[&map].base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
+    if world.btech.maps()[&map]
+        .minefields()
+        .values()
+        .any(|field| field.coordinate == coordinate)
     {
         return Ok(None);
     }
-    let ordinal = super::minefield::insert_with_lookup(
+    let ordinal = super::insert_minefield(
         world,
         map,
         BattleMinefield {
@@ -148,7 +150,6 @@ fn deposit_mine(
             extra: 0,
             owner: ObjectId(0),
         },
-        false,
     )?;
     Ok(Some(ordinal))
 }

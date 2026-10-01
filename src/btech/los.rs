@@ -429,7 +429,6 @@ mod tests {
             building: Default::default(),
             building_repair: None,
             landing_exclusions: Default::default(),
-            lookup_bits: None,
             landing_exclusion_order: Default::default(),
             minefields: Default::default(),
             minefield_order: Default::default(),

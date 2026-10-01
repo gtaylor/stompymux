@@ -14,9 +14,6 @@ pub struct StoredBattleMap {
     /// Allocated membership span, including holes retained after removal.
     #[serde(default)]
     pub(crate) membership_extent: u32,
-    /// None means no TBITS object; empty and zero-filled rows retain independent allocation.
-    #[serde(default)]
-    pub(crate) lookup_bits: Option<Arc<BTreeMap<u32, Vec<u8>>>>,
     /// Optional loading location and its coordinate disclosure policy.
     #[serde(default)]
     pub(crate) cargo_transfer_point: Option<super::BattleCargoTransferPoint>,
@@ -168,7 +165,6 @@ impl StoredBattleMap {
             point.validate(self)?;
         }
         self.validate_artillery()?;
-        self.validate_lookup_bits()?;
         ensure!(
             self.landing_exclusion_order.len() == self.landing_exclusions.len()
                 && self
@@ -1133,11 +1129,6 @@ pub(super) fn replace_map_asset(
     map.building_repair = old.building_repair;
     map.artillery_shots = old.artillery_shots.clone();
     map.landing_exclusions = old.landing_exclusions.clone();
-    map.lookup_bits = old.lookup_bits.clone();
-    if map.lookup_bits.is_some() {
-        // Retained lookup allocation remains a map object after replacing terrain flags.
-        map.flags |= 1;
-    }
     map.membership_extent = old.membership_extent;
     map.landing_exclusion_order = old.landing_exclusion_order.clone();
     map.minefields = old.minefields.clone();
@@ -1187,7 +1178,6 @@ fn map_from_asset(name: &str, mut asset: BattleMapAsset) -> Result<StoredBattleM
         building_repair: None,
         cargo_transfer_point: None,
         landing_exclusions: Default::default(),
-        lookup_bits: None,
         landing_exclusion_order: Default::default(),
         minefields: Default::default(),
         minefield_order: Default::default(),

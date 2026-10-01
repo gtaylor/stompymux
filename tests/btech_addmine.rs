@@ -234,7 +234,7 @@ async fn rejected_or_aborted_placement_does_not_change_order_or_publish_output()
     assert!(scripts.drain_outbox().is_empty());
 }
 
-/// Artillery prepends uncached deposits and suppresses reinforcement after coverage is rebuilt.
+/// Artillery prepends its deposit once; later shells on the same hex do not stack fields.
 #[tokio::test]
 async fn artillery_mines_precede_existing_records_without_replacing_them() {
     let (_dir, config, mut world) = support::isolated_world().await;
@@ -279,10 +279,6 @@ async fn artillery_mines_precede_existing_records_without_replacing_them() {
         toughness: false,
     };
     for repetition in 0..3 {
-        if repetition == 2 {
-            let original = world.btech.maps()[&map].minefields()[&9];
-            set_minefield(&mut world, map, 9, Some(original)).unwrap();
-        }
         let mut flight = BattleArtilleryFlight::new(
             coordinate,
             coordinate,
@@ -295,17 +291,13 @@ async fn artillery_mines_precede_existing_records_without_replacing_them() {
         for _ in 0..10 {
             arrival = advance_artillery_flight(&mut world, map, &mut flight, rules).unwrap();
         }
-        assert_eq!(arrival.unwrap().mines.len(), usize::from(repetition < 2));
+        assert_eq!(arrival.unwrap().mines.len(), usize::from(repetition == 0));
         assert_eq!(
             world.btech.maps()[&map]
                 .ordered_minefields()
                 .map(|(id, _)| *id)
                 .collect::<Vec<_>>(),
-            if repetition == 0 {
-                vec![0, 9]
-            } else {
-                vec![1, 0, 9]
-            }
+            vec![0, 9]
         );
         assert_eq!(world.btech.maps()[&map].minefields()[&9].owner, ObjectId(1));
         persistence::save(&config.database(), &world).await.unwrap();

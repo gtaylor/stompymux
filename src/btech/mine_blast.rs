@@ -104,13 +104,6 @@ fn resolve(
         }
     }
     world.attempt(|world| {
-        if neighbors {
-            world.btech.maps.get_mut(&map).unwrap().set_lookup_bit(
-                mine.coordinate,
-                super::map_bits::LookupKind::Mine,
-                false,
-            )?;
-        }
         let mut report = BattleMineBlastReport {
             map,
             mine,
@@ -138,12 +131,6 @@ fn resolve(
                 super::set_minefield(world, map, ordinal, None)?;
             }
         }
-        world
-            .btech
-            .maps
-            .get_mut(&map)
-            .unwrap()
-            .rebuild_mine_lookup()?;
         world.btech.validate_action(world)?;
         Ok(report)
     })

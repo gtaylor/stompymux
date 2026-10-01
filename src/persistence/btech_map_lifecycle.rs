@@ -17,7 +17,6 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
     super::btech_object_order::purge(c, &removed).await?;
     for id in &removed {
         for (table, key) in [
-            ("btech_map_bits", "map_dbref"),
             ("btech_map_cargo_configuration", "map_dbref"),
             ("btech_map_entrances", "child_dbref"),
             ("btech_map_links", "child_dbref"),

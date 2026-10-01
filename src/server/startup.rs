@@ -41,7 +41,6 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
             }
         }
     }
-    crate::btech::map_bits::rebuild_mine_lookups(&mut world.borrow_mut())?;
     // Seed imported characters and assigned pilots before startup's commit admits gameplay.
     {
         let mut loaded = world.borrow_mut();

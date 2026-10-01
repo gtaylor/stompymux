@@ -195,23 +195,6 @@ async fn resize_clears_effects_and_building_routes() {
     }
     persistence::save(&config.database(), &world).await.unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-    let before = scripts.world().btech.clone();
-    assert_eq!(
-        resize_battle_map_action(&scripts, &config, actor, map, 2, 2)
-            .unwrap_err()
-            .to_string(),
-        "Invalid map for size change, sorry."
-    );
-    assert_eq!(scripts.world().btech, before);
-    delete_battle_map_objects_action(
-        &scripts,
-        &config,
-        actor,
-        map,
-        Some(BattleMapObjectKind::Bits),
-        None,
-    )
-    .unwrap();
     resize_battle_map_action(&scripts, &config, actor, map, 2, 2).unwrap();
     let saved = scripts.world().clone();
     let field = &saved.btech.maps()[&map];

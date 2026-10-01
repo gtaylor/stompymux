@@ -59,7 +59,7 @@ impl StoredBattleMap {
             }
             source.push('\n');
         }
-        let flags = self.flags & !1;
+        let flags = self.flags & super::BattleMapFlag::mask();
         if flags != 0 {
             writeln!(source, "{flags}: {} {}", self.gravity, self.temperature)?;
         }

@@ -79,11 +79,6 @@ pub fn set_building_entrance(
     let entrances = Arc::make_mut(&mut record.building_entrances);
     if let Some(entrance) = entrance {
         entrances.insert(ordinal, entrance);
-        record.set_lookup_bit(
-            entrance.coordinate,
-            super::map_bits::LookupKind::Hangar,
-            true,
-        )?;
     } else if let Some(removed) = entrances.remove(&ordinal) {
         // Return routes belong to the removed exterior entrance, even when another
         // entrance points at the same interior. Interior arrival points stay intact.

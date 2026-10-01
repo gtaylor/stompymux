@@ -442,15 +442,10 @@ async fn server_rolls_back_schema_and_output_on_failed_creation_then_recovers() 
 
 /// Deferred overlays must survive rejected terrain edits; only derived LOS is invalidated.
 #[tokio::test]
-async fn reload_rejects_unowned_objects_and_preserves_owned_lookup_rows() {
+async fn reload_rejects_unowned_objects_and_preserves_deferred_rows() {
     let (_dir, config, mut world, id, mut sql) = fixture().await;
     create(&config, &mut world, id).await;
     sqlx::query("INSERT INTO btech_map_los VALUES(?,0,1,123)")
-        .bind(id.0)
-        .execute(&mut sql)
-        .await
-        .unwrap();
-    sqlx::query("INSERT INTO btech_map_bits VALUES(?,0,0,1)")
         .bind(id.0)
         .execute(&mut sql)
         .await
@@ -485,14 +480,6 @@ async fn reload_rejects_unowned_objects_and_preserves_owned_lookup_rows() {
             .unwrap(),
         123
     );
-    assert_eq!(
-        sqlx::query_scalar::<_, i64>("SELECT value FROM btech_map_bits WHERE map_dbref=?")
-            .bind(id.0)
-            .fetch_one(&mut sql)
-            .await
-            .unwrap(),
-        1
-    );
     sqlx::query("DELETE FROM btech_map_objects WHERE map_dbref=?")
         .bind(id.0)
         .execute(&mut sql)
@@ -506,14 +493,6 @@ async fn reload_rejects_unowned_objects_and_preserves_owned_lookup_rows() {
             .await
             .unwrap(),
         0
-    );
-    assert_eq!(
-        sqlx::query_scalar::<_, i64>("SELECT value FROM btech_map_bits WHERE map_dbref=?")
-            .bind(id.0)
-            .fetch_one(&mut sql)
-            .await
-            .unwrap(),
-        1
     );
     assert_eq!(
         persistence::load(&config.database()).await.unwrap().btech,
@@ -855,125 +834,5 @@ async fn permanent_decorations_survive_idle_and_mixed_timer_service() {
     assert_eq!(
         persistence::load(&config.database()).await.unwrap().btech,
         world.btech
-    );
-}
-
-/// Definition edits update lookup lanes atomically, retaining other maps and padding.
-#[tokio::test]
-async fn mine_and_building_lookup_updates_are_selective_and_transactional() {
-    use stompymux_rs::{
-        BattleBuildingEntrance, BattleHexCoordinate, BattleMineKind, BattleMinefield,
-        set_building_entrance, set_minefield,
-    };
-    let (_dir, config, mut world, id, mut sql) = fixture().await;
-    create(&config, &mut world, id).await;
-    let other = world.create(&config, "Other map".into(), Kind::Room);
-    create_battle_map(
-        &mut world,
-        other,
-        "other",
-        BattleMapAsset::parse(SOURCE).unwrap(),
-    )
-    .unwrap();
-    persistence::save(&config.database(), &world).await.unwrap();
-    for (map, value) in [(id, 255), (other, 1)] {
-        sqlx::query("INSERT INTO btech_map_bits VALUES(?,0,0,?)")
-            .bind(map.0)
-            .bind(value)
-            .execute(&mut sql)
-            .await
-            .unwrap();
-    }
-    world = persistence::load(&config.database()).await.unwrap();
-    // An unrelated world change preserves owned lookup rows.
-    world.objects.get_mut(&id).unwrap().name = "Renamed map".into();
-    persistence::save(&config.database(), &world).await.unwrap();
-    assert_eq!(
-        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM btech_map_bits")
-            .fetch_one(&mut sql)
-            .await
-            .unwrap(),
-        2
-    );
-    let before = world.btech.clone();
-    let coordinate = BattleHexCoordinate { x: 0, y: 0 };
-    set_minefield(
-        &mut world,
-        id,
-        0,
-        Some(BattleMinefield {
-            coordinate,
-            kind: BattleMineKind::Standard,
-            strength: 10,
-            extra: 0,
-            owner: ObjectId(1),
-        }),
-    )
-    .unwrap();
-    sqlx::query("CREATE TRIGGER reject_cache_update BEFORE UPDATE ON btech_map_bits BEGIN SELECT RAISE(ABORT,'cache failure'); END").execute(&mut sql).await.unwrap();
-    assert!(persistence::save(&config.database(), &world).await.is_err());
-    assert_eq!(
-        persistence::load(&config.database()).await.unwrap().btech,
-        before
-    );
-    assert_eq!(
-        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM btech_map_bits")
-            .fetch_one(&mut sql)
-            .await
-            .unwrap(),
-        2
-    );
-    sqlx::query("DROP TRIGGER reject_cache_update")
-        .execute(&mut sql)
-        .await
-        .unwrap();
-    persistence::save(&config.database(), &world).await.unwrap();
-    assert_eq!(
-        sqlx::query_scalar::<_, i64>("SELECT value FROM btech_map_bits WHERE map_dbref=?")
-            .bind(id.0)
-            .fetch_one(&mut sql)
-            .await
-            .unwrap(),
-        235
-    );
-    set_building_entrance(
-        &mut world,
-        other,
-        0,
-        Some(BattleBuildingEntrance {
-            coordinate,
-            interior: id,
-            data_char: 0,
-            data_short: 0,
-            data_int: 0,
-        }),
-    )
-    .unwrap();
-    persistence::save(&config.database(), &world).await.unwrap();
-    assert_eq!(
-        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM btech_map_bits")
-            .fetch_one(&mut sql)
-            .await
-            .unwrap(),
-        2
-    );
-    assert_eq!(
-        sqlx::query_scalar::<_, i64>("SELECT value FROM btech_map_bits WHERE map_dbref=?")
-            .bind(other.0)
-            .fetch_one(&mut sql)
-            .await
-            .unwrap(),
-        3
-    );
-    let loaded = persistence::load(&config.database()).await.unwrap();
-    assert_eq!(loaded.btech, world.btech);
-    assert_eq!(loaded.btech.maps()[&id].minefields().len(), 1);
-    assert_eq!(
-        loaded.btech.maps()[&other]
-            .building_at(coordinate)
-            .unwrap()
-            .unwrap()
-            .interior,
-        id
     );
 }

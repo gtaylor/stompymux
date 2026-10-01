@@ -13,7 +13,6 @@ const OWNED: &[(&str, &str)] = &[
     ("btech_character_state", "player_dbref"),
     ("btech_character_values", "player_dbref"),
     ("btech_economy_parts", "object_dbref"),
-    ("btech_map_bits", "map_dbref"),
     ("btech_map_cargo_configuration", "map_dbref"),
     ("btech_map_entrances", "child_dbref"),
     ("btech_map_hexes", "map_dbref"),

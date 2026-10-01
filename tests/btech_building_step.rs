@@ -6,15 +6,14 @@ use stompymux_rs::*;
 #[tokio::test]
 async fn ground_entry_reports_live_cf_once_and_replays_after_restart() {
     for source in firing::templates().into_iter().take(5) {
-        for (flags, perception, integrity, cached) in [
-            (0, None, 7, true),
-            (0, None, 7, false),
-            (0, None, 0, true),
-            (4, None, 7, true),
-            (16, None, 7, true),
-            (16, Some(-10), 7, true),
-            (16, Some(18), 7, true),
-            (4, Some(-10), 7, true),
+        for (flags, perception, integrity) in [
+            (0, None, 7),
+            (0, None, 0),
+            (4, None, 7),
+            (16, None, 7),
+            (16, Some(-10), 7),
+            (16, Some(18), 7),
+            (4, Some(-10), 7),
         ] {
             let (_dir, config, mut world, id, _, _) =
                 firing::fixture_with_target(&source, None, &source).await;
@@ -57,28 +56,6 @@ async fn ground_entry_reports_live_cf_once_and_replays_after_restart() {
                     }),
                 )
                 .unwrap();
-            }
-            if !cached {
-                let scripts =
-                    Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world)))
-                        .unwrap();
-                delete_battle_map_objects_action(
-                    &scripts,
-                    &config,
-                    ObjectId(1),
-                    map,
-                    Some(BattleMapObjectKind::Bits),
-                    None,
-                )
-                .unwrap();
-                world = scripts.world().clone();
-                // Only the step notice is gated; ordinary entrance lookup remains available.
-                assert!(
-                    world.btech.maps()[&map]
-                        .building_at(BattleHexCoordinate { x: 0, y: 10 })
-                        .unwrap()
-                        .is_some()
-                );
             }
             if let Some(target) = perception {
                 world
@@ -136,7 +113,7 @@ async fn ground_entry_reports_live_cf_once_and_replays_after_restart() {
                         .filter(|n| n.text.contains(" has CF of ")),
                 );
             }
-            if cached && (flags == 0 || (flags == 16 && perception == Some(-10))) {
+            if flags == 0 || (flags == 16 && perception == Some(-10)) {
                 assert_eq!(messages.len(), 1, "{source}");
                 assert_eq!(messages[0].unit, id);
                 assert_eq!(

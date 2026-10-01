@@ -28,7 +28,6 @@ pub fn resize_map_action(
             "Map is unavailable"
         );
         let old = before.btech.maps().get(&id).context("Map not found")?;
-        require_no_lookup(old)?;
         ensure!(
             (1..=1000).contains(&width) && (1..=1000).contains(&height),
             "Map dimensions must be between 1 and 1000"
@@ -72,14 +71,6 @@ pub(crate) fn command(
 ) -> Result<crate::CommandAction> {
     let result = (|| -> Result<()> {
         let map = super::special_dispatch::object(ctx)?;
-        require_no_lookup(
-            ctx.scripts
-                .world()
-                .btech
-                .maps()
-                .get(&map)
-                .context("Map not found")?,
-        )?;
         let args: Vec<_> = input.args.split_whitespace().collect();
         ensure!(args.len() == 2, "Usage: SETMAPSIZE <X> <Y>");
         resize_map_action(
@@ -97,13 +88,4 @@ pub(crate) fn command(
             crate::CommandAction::Report(crate::CommandReport::Reply(format!("{error:#}")))
         }
     })
-}
-
-/// The information-object refusal precedes dimension parsing, even for empty cache rows.
-fn require_no_lookup(map: &super::StoredBattleMap) -> Result<()> {
-    ensure!(
-        !map.has_lookup_object(),
-        "Invalid map for size change, sorry."
-    );
-    Ok(())
 }

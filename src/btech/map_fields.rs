@@ -65,8 +65,7 @@ fn edit(
         "gravity" => record.gravity = i64::from(integer()?.clamp(-128, 127) as i8 as u8),
         "temperature" => record.temperature = i64::from(integer()?.clamp(-128, 127)),
         "cloudbase" => record.cloud_base = short()? as i16,
-        // The lookup-object bit is maintained by map objects, not operators.
-        "flags" => record.flags = super::parse_map_flags(value)? | (record.flags & 1),
+        "flags" => record.flags = super::parse_map_flags(value)?,
         "sensorflags" => record.sensor_flags = super::parse_perception_flags(value)?,
         "mapname" => {
             ensure!(!value.chars().any(char::is_control), "Invalid map name");

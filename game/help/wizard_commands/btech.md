@@ -94,7 +94,7 @@ does not establish complete gameplay parity. Maps without a saved terrain dictio
 tile queries are available. Reload replaces terrain from the asset; it cannot
 recover saved terrain edits. It requires unchanged dimensions, no units on the
 map. Supported map objects are retained; unrecognized object types prevent saving
-the reload. Terrain and mine/building changes invalidate saved lookup caches.
+the reload. Terrain changes invalidate saved line-of-sight caches.
 
 `map-create` registers an existing room or thing. Both map operations require
 control of the target and save terrain and environment together. A failed save
@@ -584,8 +584,8 @@ The reported count covers selected records, excluding reciprocal cleanup.
 
 Lua uses `btech.map.delete_objects(actor, map, type, x, y)`; omit type to select all
 kinds at a coordinate, or omit both coordinates to select a type across the map.
-Rust derives mine/building lookups from their definitions. `DELOBJ TBITS` reports
-that there is no separate lookup cache to delete and leaves those definitions active.
+Mine coverage and building entry are read directly from the mine and entrance
+records, so a new minefield (including one laid by artillery) is live at once.
 
 ## List map contents
 

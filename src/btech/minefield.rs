@@ -90,17 +90,6 @@ pub fn set_minefield(
     ordinal: u32,
     mine: Option<BattleMinefield>,
 ) -> Result<()> {
-    set_with_lookup(world, map, ordinal, mine, true)
-}
-
-/// Operator edits rebuild coverage; artillery insertion deliberately defers it.
-fn set_with_lookup(
-    world: &mut World,
-    map: ObjectId,
-    ordinal: u32,
-    mine: Option<BattleMinefield>,
-    rebuild: bool,
-) -> Result<()> {
     ensure!(
         world
             .objects
@@ -128,7 +117,6 @@ fn set_with_lookup(
     let record = world.btech.maps.get_mut(&map).unwrap();
     let mines = Arc::make_mut(&mut record.minefields);
     if let Some(mine) = mine {
-        record.flags |= 1;
         if mines.insert(ordinal, mine).is_none() {
             let order = Arc::make_mut(&mut record.minefield_order);
             let position = order
@@ -141,29 +129,16 @@ fn set_with_lookup(
         mines.remove(&ordinal);
         Arc::make_mut(&mut record.minefield_order).retain(|slot| *slot != ordinal);
     }
-    if rebuild {
-        record.rebuild_mine_lookup()?;
-    }
     Ok(())
 }
 
 /// Prepend a newly created mine without renumbering surviving records or their auxiliary data.
 pub fn insert_minefield(world: &mut World, map: ObjectId, mine: BattleMinefield) -> Result<u32> {
-    insert_with_lookup(world, map, mine, true)
-}
-
-/// Share stable insertion while allowing artillery's deferred coverage update.
-pub(super) fn insert_with_lookup(
-    world: &mut World,
-    map: ObjectId,
-    mine: BattleMinefield,
-    rebuild: bool,
-) -> Result<u32> {
     let record = world.btech.maps().get(&map).context("Map not found")?;
     let ordinal = (0..=u32::try_from(record.minefields.len())?)
         .find(|slot| !record.minefields.contains_key(slot))
         .context("No minefield slot available")?;
-    set_with_lookup(world, map, ordinal, Some(mine), rebuild)?;
+    set_minefield(world, map, ordinal, Some(mine))?;
     let order = Arc::make_mut(&mut world.btech.maps.get_mut(&map).unwrap().minefield_order);
     order.retain(|slot| *slot != ordinal);
     order.insert(0, ordinal);

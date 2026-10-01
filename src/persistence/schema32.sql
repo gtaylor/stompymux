@@ -7,7 +7,6 @@ CREATE TABLE btech_character_state ( player_dbref INTEGER PRIMARY KEY REFERENCES
 CREATE TABLE btech_character_values ( player_dbref INTEGER NOT NULL REFERENCES btech_character_state(player_dbref) ON DELETE CASCADE, value_name TEXT NOT NULL CHECK (length(value_name) BETWEEN 1 AND 255), value INTEGER NOT NULL CHECK (value BETWEEN 0 AND 255), xp INTEGER NOT NULL CHECK (xp >= 0), last_used INTEGER NOT NULL, PRIMARY KEY (player_dbref, value_name)) WITHOUT ROWID;
 CREATE TABLE btech_economy_costs ( item_name TEXT PRIMARY KEY, cost TEXT NOT NULL) WITHOUT ROWID;
 CREATE TABLE btech_economy_parts ( object_dbref INTEGER NOT NULL REFERENCES objects(dbref) ON DELETE CASCADE, part_id INTEGER NOT NULL, brand_id INTEGER NOT NULL, quantity INTEGER NOT NULL CHECK (quantity > 0), PRIMARY KEY (object_dbref, part_id, brand_id)) WITHOUT ROWID;
-CREATE TABLE btech_map_bits ( map_dbref INTEGER NOT NULL, y INTEGER NOT NULL, byte_index INTEGER NOT NULL, value INTEGER NOT NULL, PRIMARY KEY (map_dbref, y, byte_index)) WITHOUT ROWID;
 CREATE TABLE btech_map_cargo_configuration ( map_dbref INTEGER PRIMARY KEY, x INTEGER NOT NULL, y INTEGER NOT NULL, reveal_hint INTEGER NOT NULL);
 CREATE TABLE btech_map_entrances ( child_dbref INTEGER NOT NULL, direction INTEGER NOT NULL, mode INTEGER NOT NULL, x INTEGER NOT NULL, y INTEGER NOT NULL, offset INTEGER NOT NULL, PRIMARY KEY (child_dbref, direction)) WITHOUT ROWID;
 CREATE TABLE btech_map_hexes ( map_dbref INTEGER NOT NULL, x INTEGER NOT NULL, y INTEGER NOT NULL, value INTEGER NOT NULL, PRIMARY KEY (map_dbref, x, y)) WITHOUT ROWID;
