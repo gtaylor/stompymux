@@ -18,7 +18,8 @@ async fn all_scan_silhouettes_use_symbols_and_preserve_owned_layouts() {
         include_str!("../game/mechs/Kestrel.toml"),
     ] {
         let (_dir, config, world, source, target, _) =
-            firing::fixture_with_target(include_str!("../game/mechs/JR7-D.toml"), None, template).await;
+            firing::fixture_with_target(include_str!("../game/mechs/JR7-D.toml"), None, template)
+                .await;
         let before = serde_json::to_value(&world.btech).unwrap();
         let scan = scan_battle_unit(&world, source, ObjectId(1), target, "A").unwrap();
         let plain = text::plain(&scan);

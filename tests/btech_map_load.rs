@@ -9,9 +9,12 @@ use stompymux_rs::*;
 async fn load_map_native_lua_and_restart_across_chassis() {
     for (chassis, source) in firing::templates().into_iter().enumerate() {
         for god in [false, true] {
-            let (_dir, config, mut world, id, target, _) =
-                firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml"))
-                    .await;
+            let (_dir, config, mut world, id, target, _) = firing::fixture_with_target(
+                &source,
+                None,
+                include_str!("../game/mechs/AS7-D.toml"),
+            )
+            .await;
             let map = world.btech.units()[&id].map.unwrap();
             let actor = if god {
                 release_battle_pilot(&mut world, id, ObjectId(1)).unwrap();

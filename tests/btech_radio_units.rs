@@ -39,7 +39,7 @@ async fn targeted_radio_mixed_pairs_share_visibility_delivery_and_restart() {
                 (target_template, listener, 1),
             ] {
                 let id = world.create(&config, "Radio unit".into(), Kind::Thing);
-                BattleUnitTemplate::parse("test",template)
+                BattleUnitTemplate::parse("test", template)
                     .unwrap()
                     .create(&mut world, id)
                     .unwrap();
@@ -191,7 +191,7 @@ async fn channel_radio_rotates_mixed_transmitters_relays_and_receivers() {
             )
             .unwrap();
             let id = world.create(&config, "Radio unit".into(), Kind::Thing);
-            BattleUnitTemplate::parse("test",&templates[(index + rotation) % templates.len()])
+            BattleUnitTemplate::parse("test", &templates[(index + rotation) % templates.len()])
                 .unwrap()
                 .create(&mut world, id)
                 .unwrap();

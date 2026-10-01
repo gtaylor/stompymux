@@ -3,7 +3,8 @@ use stompymux_rs::*;
 
 /// Build one multi-slot installation without conflating repeated critical records with weapons.
 fn template(weapon: BattleWeapon, modes: &[&str]) -> BattleTemplate {
-    let mut template = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+    let mut template =
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let jets = template.sections[&BattleSection::LeftTorso]
         .criticals
         .clone();

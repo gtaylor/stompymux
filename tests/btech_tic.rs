@@ -17,11 +17,16 @@ async fn tic_membership_native_lua_and_persistence() {
             create_battle_vehicle(
                 &mut world,
                 id,
-                BattleVehicleTemplate::parse("test",source).unwrap(),
+                BattleVehicleTemplate::parse("test", source).unwrap(),
             )
             .unwrap();
         } else {
-            create_battle_unit(&mut world, id, BattleTemplate::parse("test",source).unwrap()).unwrap();
+            create_battle_unit(
+                &mut world,
+                id,
+                BattleTemplate::parse("test", source).unwrap(),
+            )
+            .unwrap();
         }
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
@@ -147,17 +152,21 @@ async fn tic_firing_reuses_shots_and_rolls_back_callbacks() {
             create_battle_vehicle(
                 &mut world,
                 shooter,
-                BattleVehicleTemplate::parse("test",source).unwrap(),
+                BattleVehicleTemplate::parse("test", source).unwrap(),
             )
             .unwrap();
         } else {
-            create_battle_unit(&mut world, shooter, BattleTemplate::parse("test",source).unwrap())
-                .unwrap();
+            create_battle_unit(
+                &mut world,
+                shooter,
+                BattleTemplate::parse("test", source).unwrap(),
+            )
+            .unwrap();
         }
         create_battle_unit(
             &mut world,
             target,
-            BattleTemplate::parse("JR7-D",include_str!("../game/mechs/JR7-D.toml")).unwrap(),
+            BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, shooter, map, 0, 1).unwrap();

@@ -32,7 +32,7 @@ async fn fixture_sources(
             .unwrap()
             .flags
             .insert(Flag::InCharacter);
-        BattleUnitTemplate::parse("test",source)
+        BattleUnitTemplate::parse("test", source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();
@@ -385,8 +385,11 @@ fn vehicle_battle_value_applies_each_ground_movement_discount() {
         (BattleVehicleMovement::Hover, 386.4_f32),
         (BattleVehicleMovement::Stationary, 460.0_f32),
     ] {
-        let mut definition =
-            BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap();
+        let mut definition = BattleVehicleTemplate::parse(
+            "Demolisher",
+            include_str!("../game/mechs/Demolisher.toml"),
+        )
+        .unwrap();
         definition.movement = movement;
         let unit = BattleVehicle::new(definition).unwrap();
         assert_eq!(unit.battle_value().unwrap().defensive, f64::from(defensive));
@@ -405,7 +408,7 @@ fn shipped_vehicles_and_vtols_have_finite_battle_values() {
         let Ok(text) = std::fs::read_to_string(&path) else {
             continue;
         };
-        let Ok(definition) = BattleVehicleTemplate::parse("test",&text) else {
+        let Ok(definition) = BattleVehicleTemplate::parse("test", &text) else {
             continue;
         };
         rotorcraft += usize::from(definition.is_vtol());
@@ -450,7 +453,8 @@ fn tow_fixture(
     create_battle_vehicle(
         world,
         load,
-        BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap(),
+        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+            .unwrap(),
     )
     .unwrap();
     place_battle_unit(world, load, map, 0, 0).unwrap();
@@ -588,7 +592,7 @@ async fn experience_load_queries_honor_hot_myomer_configuration() {
     create_battle_unit(
         &mut world,
         lighter,
-        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, lighter, map, 0, 0).unwrap();

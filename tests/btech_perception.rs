@@ -82,7 +82,7 @@ async fn lane(rows: &[&str], observer: Observer<'_>) -> Lane {
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     }
     let vehicle = |source: &str, equipment: Option<&str>| {
-        let mut definition = BattleVehicleTemplate::parse("test",source).unwrap();
+        let mut definition = BattleVehicleTemplate::parse("test", source).unwrap();
         if let Some(equipment) = equipment {
             let front = definition
                 .sections
@@ -117,14 +117,14 @@ async fn lane(rows: &[&str], observer: Observer<'_>) -> Lane {
         Observer::Mech => create_battle_unit(
             &mut world,
             observer_id,
-            BattleTemplate::parse("JR7-D",include_str!("../game/mechs/JR7-D.toml")).unwrap(),
+            BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap(),
     }
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse("JR7-D",include_str!("../game/mechs/JR7-D.toml")).unwrap(),
+        BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, observer_id, map, 0, 0).unwrap();
@@ -383,7 +383,7 @@ async fn hostile_ecm_leaves_only_sight() {
     create_battle_unit(
         &mut lane.world,
         jammer,
-        BattleTemplate::parse("RVN-1X",include_str!("../game/mechs/RVN-1X.toml")).unwrap(),
+        BattleTemplate::parse("RVN-1X", include_str!("../game/mechs/RVN-1X.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut lane.world, jammer, lane.map, 0, 6).unwrap();

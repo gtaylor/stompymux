@@ -4,7 +4,8 @@ use stompymux_rs::*;
 
 /// A complete Clan biped with two external double sinks and ordinary fusion construction.
 fn definition() -> BattleTemplate {
-    let mut template = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+    let mut template =
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     template
         .attributes
         .insert("specials".into(), "Clan FlipArms".into());
@@ -181,7 +182,8 @@ fn clan_game_assets_construct_without_rewriting_templates() {
         (include_str!("../game/mechs/Vulture-C.toml"), 24.0),
         (include_str!("../game/mechs/Vixen-1.toml"), 20.0),
     ] {
-        let unit = BattleUnit::from_template(BattleTemplate::parse("test",source).unwrap()).unwrap();
+        let unit =
+            BattleUnit::from_template(BattleTemplate::parse("test", source).unwrap()).unwrap();
         assert_eq!(unit.engine().unwrap(), BattleEngine::Xl);
         assert_eq!(unit.heat_rates(&World::default()).dissipation, cooling);
         assert!(
@@ -200,7 +202,7 @@ fn clan_game_assets_construct_without_rewriting_templates() {
 #[test]
 fn laser_sink_designation_preserves_single_and_double_sink_behavior() {
     for mut template in [
-        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
         definition(),
     ] {
         let baseline = BattleUnit::from_template(template.clone()).unwrap();
@@ -253,7 +255,7 @@ async fn night_gyr_laser_sink_assets_construct_and_replay_damage() {
         include_str!("../game/mechs/NightGyr-C.toml"),
         include_str!("../game/mechs/NightGyr-D.toml"),
     ] {
-        let template = BattleTemplate::parse("test",source).unwrap();
+        let template = BattleTemplate::parse("test", source).unwrap();
         let cooling = f64::from(template.heat_sinks);
         let id = world.create(&config, template.name.clone(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
@@ -285,7 +287,8 @@ async fn night_gyr_laser_sink_assets_construct_and_replay_damage() {
 /// Recognizing a designation does not bypass incomplete equipment checks.
 #[test]
 fn laser_sink_designation_does_not_accept_incomplete_clan_sinks() {
-    let mut template = BattleTemplate::parse("NightGyr-B",include_str!("../game/mechs/NightGyr-B.toml")).unwrap();
+    let mut template =
+        BattleTemplate::parse("NightGyr-B", include_str!("../game/mechs/NightGyr-B.toml")).unwrap();
     assert!(BattleUnit::from_template(template.clone()).is_ok());
     template
         .sections
@@ -308,7 +311,7 @@ fn low_capacity_clan_cooling_constructs_and_replays() {
         include_str!("../game/mechs/SnowFox-1.toml"),
         include_str!("../game/mechs/SnowFox-2.toml"),
     ] {
-        let template = BattleTemplate::parse("test",source).unwrap();
+        let template = BattleTemplate::parse("test", source).unwrap();
         for capacity in [10, 12, 14, 16, 18, 20] {
             let mut adjusted = template.clone();
             adjusted.heat_sinks = capacity;

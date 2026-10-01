@@ -28,7 +28,8 @@ async fn cross_surface(row: &str) {
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("Fulcrum",include_str!("../game/mechs/Fulcrum.toml")).unwrap(),
+        BattleVehicleTemplate::parse("Fulcrum", include_str!("../game/mechs/Fulcrum.toml"))
+            .unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 2, 1).unwrap();
@@ -54,7 +55,7 @@ async fn cross_surface(row: &str) {
     create_battle_unit(
         &mut world,
         mech,
-        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, mech, map, 6, 2).unwrap();

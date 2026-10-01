@@ -842,11 +842,13 @@ fn unit_template_source(template: &BattleTemplate) -> Result<String> {
         .collect();
     let sections: Vec<_> = layouts
         .iter()
-        .map(|(section, layout)| super::template_document::RenderSection {
-            heading: chassis.section_name(*section).to_ascii_lowercase(),
-            mech: Some(*section),
-            layout,
-        })
+        .map(
+            |(section, layout)| super::template_document::RenderSection {
+                heading: chassis.section_name(*section).to_ascii_lowercase(),
+                mech: Some(*section),
+                layout,
+            },
+        )
         .collect();
     super::template_document::render(&attributes, &sections)
 }
@@ -866,11 +868,13 @@ fn vehicle_template_source(template: &BattleVehicleTemplate) -> Result<String> {
         .collect();
     let sections: Vec<_> = layouts
         .iter()
-        .map(|(section, layout)| super::template_document::RenderSection {
-            heading: section.name().to_ascii_lowercase(),
-            mech: None,
-            layout,
-        })
+        .map(
+            |(section, layout)| super::template_document::RenderSection {
+                heading: section.name().to_ascii_lowercase(),
+                mech: None,
+                layout,
+            },
+        )
         .collect();
     super::template_document::render(&attributes, &sections)
 }
@@ -885,7 +889,11 @@ fn saved_attributes(
     let mut saved = attributes.clone();
     for (field, administrative, default) in [
         ("type", "administrative_unit_type", class.to_owned()),
-        ("move_type", "administrative_movement_type", movement.to_owned()),
+        (
+            "move_type",
+            "administrative_movement_type",
+            movement.to_owned(),
+        ),
         ("tons", "administrative_tonnage", tons.to_string()),
     ] {
         let value = saved

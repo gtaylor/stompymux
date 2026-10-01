@@ -9,7 +9,8 @@ use stompymux_rs::*;
 async fn native_lua_mines_share_clamping_order_and_leave_every_chassis_untouched() {
     for source in firing::templates() {
         let (_dir, config, mut world, unit, _, _) =
-            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml")).await;
+            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml"))
+                .await;
         let map = world.btech.units()[&unit].map.unwrap();
         let actor = world.create(&config, "Mine operator".into(), Kind::Player);
         world

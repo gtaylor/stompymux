@@ -17,7 +17,8 @@ fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Va
 /// A Jenner whose only weapon is an IS LRM-20 fed by one bin of each Thunder round.
 fn launcher() -> BattleUnitTemplate {
     let weapon = BattleWeapon::Lrm20;
-    let mut definition = BattleUnitTemplate::parse("JR7-D",include_str!("../game/mechs/JR7-D.toml")).unwrap();
+    let mut definition =
+        BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap();
     let BattleUnitTemplate::Mech(unit) = &mut definition else {
         panic!("The Jenner is a Mech");
     };
@@ -316,7 +317,8 @@ async fn active_mines_catch_hovercraft_over_water() {
         id,
         BattleVehicleTemplate::parse(
             "test",
-            &include_str!("../game/mechs/Demolisher.toml").replace("movement = \"track\"", "movement = \"hover\""),
+            &include_str!("../game/mechs/Demolisher.toml")
+                .replace("movement = \"track\"", "movement = \"hover\""),
         )
         .unwrap(),
     )

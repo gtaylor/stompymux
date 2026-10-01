@@ -56,7 +56,7 @@ fn with_modes(template: &str, item: &str, modes: &[&str]) -> String {
                 format!(
                     "{}{}, modes = [{modes}]{}",
                     &line[..start],
-                    &pattern,
+                    pattern,
                     &line[end..]
                 )
             }

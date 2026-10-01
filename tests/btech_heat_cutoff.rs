@@ -22,7 +22,12 @@ async fn fixture(
     let (dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Heat regulator".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    create_battle_unit(&mut world, id, BattleTemplate::parse("test",source).unwrap()).unwrap();
+    create_battle_unit(
+        &mut world,
+        id,
+        BattleTemplate::parse("test", source).unwrap(),
+    )
+    .unwrap();
     if let Some((tile, temperature)) = tile {
         let map = world.create(&config, "Environment".into(), Kind::Room);
         create_battle_map(
@@ -224,7 +229,8 @@ async fn cutoff_environment_samples_and_damaged_capacity() {
         assert_eq!(unit.heat().excess, (stored - sampled_cooling).max(0.0));
         assert_eq!(unit.heat_rates(&world).dissipation, inspected_cooling);
     }
-    let (_dir, config, mut world, id) = fixture(include_str!("../game/mechs/JR7-D.toml"), None).await;
+    let (_dir, config, mut world, id) =
+        fixture(include_str!("../game/mechs/JR7-D.toml"), None).await;
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     saved["constructed"][id.0.to_string()]["heat_cutoff"] =
         serde_json::json!({"enabled":true,"disabled":10,"remaining":null});

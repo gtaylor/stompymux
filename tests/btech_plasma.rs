@@ -13,7 +13,7 @@ async fn plasma_heat_transfer_unwind_and_saved_dice_replay() {
     create_battle_unit(
         &mut base,
         id,
-        BattleTemplate::parse("AS7-D",include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
+        BattleTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
     )
     .unwrap();
     let rules = BattleHitRules {
@@ -131,7 +131,8 @@ fn plasma_ammunition_is_inert_and_mount_facts_are_distinct() {
     for rounds in [0, 1, 10, u16::MAX] {
         assert_eq!(weapon.ammunition_explosion_damage(rounds), 0);
     }
-    let mut template = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+    let mut template =
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let arm = template.sections.get_mut(&BattleSection::LeftArm).unwrap();
     for slot in [2, 3] {
         arm.criticals.get_mut(&slot).unwrap().equipment = weapon.name().into();

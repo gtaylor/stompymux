@@ -248,7 +248,7 @@ async fn removal_handles_starting_stopped_and_unplaced_units() {
         let mut world = original;
         let new = world.create(&config, "Unplaced".into(), Kind::Thing);
         world.objects.get_mut(&new).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse("test",&source)
+        BattleUnitTemplate::parse("test", &source)
             .unwrap()
             .create(&mut world, new)
             .unwrap();

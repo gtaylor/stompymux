@@ -154,7 +154,8 @@ async fn map_views_clip_both_parities_and_preserve_terrain_cells_and_preferences
 async fn map_views_ignore_unit_markers_and_leave_all_supported_chassis_unchanged() {
     for template in firing::templates() {
         let (_dir, config, mut world, unit, _, _) =
-            firing::fixture_with_target(&template, None, include_str!("../game/mechs/AS7-D.toml")).await;
+            firing::fixture_with_target(&template, None, include_str!("../game/mechs/AS7-D.toml"))
+                .await;
         let map = world.btech.units()[&unit].map.unwrap();
         let actor = world.create(&config, "Map viewer".into(), Kind::Player);
         world

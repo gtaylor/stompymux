@@ -413,9 +413,11 @@ mod tests {
         let config = crate::Config::load("tests/fixtures/game").unwrap();
         let mut world = World::default();
         let id = world.create(&config, "Mech".into(), crate::Kind::Thing);
-        let template =
-            crate::BattleTemplate::parse("JR7-D",include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"))
-                .unwrap();
+        let template = crate::BattleTemplate::parse(
+            "JR7-D",
+            include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"),
+        )
+        .unwrap();
         let mut unit = crate::BattleUnit::from_template(template).unwrap();
         unit.position = Some(crate::BattlePosition {
             map: ObjectId(99),

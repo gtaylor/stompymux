@@ -143,7 +143,8 @@ fn raised_hex(world: &mut World, map: ObjectId, index: usize) {
 async fn terrain_clouds_follow_level_and_equality_rules_without_consuming_dice() {
     for source in firing::templates() {
         let (_dir, config, mut world, id, _, _) =
-            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml")).await;
+            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml"))
+                .await;
         let map = world.btech.units()[&id].map.unwrap();
         // The observer stands at level zero and looks at an empty hex raised to level one.
         raised_hex(&mut world, map, 9);

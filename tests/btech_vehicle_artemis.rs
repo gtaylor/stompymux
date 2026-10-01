@@ -22,7 +22,7 @@ fn templates() -> Vec<String> {
 
 /// Install one turret launcher and a controller without changing chassis identity.
 fn definition(source: &str, section: BattleVehicleSection, link: &str) -> BattleVehicleTemplate {
-    let mut template = BattleVehicleTemplate::parse("test",source).unwrap();
+    let mut template = BattleVehicleTemplate::parse("test", source).unwrap();
     for section in template.sections.values_mut() {
         section.criticals.clear();
     }

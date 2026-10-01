@@ -412,7 +412,7 @@ async fn simultaneous_requests_keep_insertion_order() {
         let (_dir, config, mut world, source, observer, _) = fixture(&template, &template).await;
         let second = world.create(&config, "Second observer".into(), Kind::Thing);
         world.objects.get_mut(&second).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse("test",&template)
+        BattleUnitTemplate::parse("test", &template)
             .unwrap()
             .create(&mut world, second)
             .unwrap();

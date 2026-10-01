@@ -75,7 +75,11 @@ const FIELDS: &[(&str, &str, Kind)] = &[
     ("cargo_space", "cargo_space", Kind::Integer),
     ("max_suits", "max_suits", Kind::Integer),
     ("max_ton", "max_ton", Kind::Integer),
-    ("carrier_maximum_tonnage", "carrier_maximum_tonnage", Kind::Integer),
+    (
+        "carrier_maximum_tonnage",
+        "carrier_maximum_tonnage",
+        Kind::Integer,
+    ),
     ("unit_era", "unit_era", Kind::Text),
     ("unit_tro", "unit_tro", Kind::Text),
     ("specials", "specials", Kind::Flags),
@@ -325,7 +329,10 @@ fn decode_field(key: &str, kind: Kind, value: toml::Value) -> Result<Option<Stri
         }
         (Kind::Text, toml::Value::String(value)) => match key {
             "class" => {
-                ensure!(value == value.to_ascii_lowercase(), "class must be lowercase");
+                ensure!(
+                    value == value.to_ascii_lowercase(),
+                    "class must be lowercase"
+                );
                 RawUnitClass::parse(&value)?.name().to_owned()
             }
             "movement" => {
@@ -409,10 +416,7 @@ fn occupy(
 ) -> Result<()> {
     for slot in first..=last {
         ensure!(
-            layout
-                .criticals
-                .insert(slot, critical.clone())
-                .is_none(),
+            layout.criticals.insert(slot, critical.clone()).is_none(),
             "overlapping slot {}",
             slot + 1
         );
@@ -507,7 +511,9 @@ pub(super) fn render(
                     .with_context(|| format!("invalid {attribute} {value}"))?;
                 toml::Value::Float(value).to_string()
             }
-            Kind::Text if matches!(*name, "class" | "movement") => quote(&value.to_ascii_lowercase()),
+            Kind::Text if matches!(*name, "class" | "movement") => {
+                quote(&value.to_ascii_lowercase())
+            }
             Kind::Text => quote(value),
             Kind::Flags => {
                 let flags: Vec<_> = value
@@ -550,9 +556,7 @@ fn split_mounts(sections: &[RenderSection<'_>]) -> Result<Vec<RenderedMount>> {
             if !is_split_proxy(&critical.equipment) {
                 continue;
             }
-            let extension = section
-                .mech
-                .context("split mount outside a mech section")?;
+            let extension = section.mech.context("split mount outside a mech section")?;
             let (primary, first) = parse_split_link(&critical.data)?;
             if let Some(mount) = mounts
                 .iter_mut()
@@ -600,8 +604,12 @@ fn primary_slot_count(
     primary: BattleSection,
     first: u8,
 ) -> Option<u8> {
-    let name = super::loadout::unbranded_weapon_name(&weapon.equipment).unwrap_or(&weapon.equipment);
-    let total = super::BattleWeapon::parse(name).ok()?.profile().critical_slots;
+    let name =
+        super::loadout::unbranded_weapon_name(&weapon.equipment).unwrap_or(&weapon.equipment);
+    let total = super::BattleWeapon::parse(name)
+        .ok()?
+        .profile()
+        .critical_slots;
     let link = split_link_data(primary, first);
     let extension = sections
         .iter()
@@ -660,10 +668,17 @@ fn render_section(
     }
     writeln!(output, "slots = [")?;
     for (first, last, critical) in runs {
-        let mut entry = format!("at = {}, item = {}", range(first, last), quote(&critical.equipment));
+        let mut entry = format!(
+            "at = {}, item = {}",
+            range(first, last),
+            quote(&critical.equipment)
+        );
         if critical.data != "-" {
             let value: i64 = critical.data.parse().with_context(|| {
-                format!("unsupported data {} on {}", critical.data, critical.equipment)
+                format!(
+                    "unsupported data {} on {}",
+                    critical.data, critical.equipment
+                )
             })?;
             let ammunition = critical
                 .equipment
@@ -858,10 +873,19 @@ placements = [
         assert_eq!(torso.criticals[&0].brand, Some(4));
 
         for (placements, class) in [
-            ("{ section = \"left_arm\", at = 1 }, { section = \"center_torso\", at = 1 }", "mech"),
+            (
+                "{ section = \"left_arm\", at = 1 }, { section = \"center_torso\", at = 1 }",
+                "mech",
+            ),
             ("{ section = \"left_torso\", at = 1 }", "mech"),
-            ("{ section = \"left_torso\", at = 1 }, { section = \"center_torso\", at = 1 }, { section = \"left_arm\", at = 1 }", "mech"),
-            ("{ section = \"left_torso\", at = 1 }, { section = \"center_torso\", at = 1 }", "vehicle"),
+            (
+                "{ section = \"left_torso\", at = 1 }, { section = \"center_torso\", at = 1 }, { section = \"left_arm\", at = 1 }",
+                "mech",
+            ),
+            (
+                "{ section = \"left_torso\", at = 1 }, { section = \"center_torso\", at = 1 }",
+                "vehicle",
+            ),
         ] {
             let source = format!(
                 "class = \"{class}\"\n[sections.center_torso]\n[sections.left_torso]\n[sections.left_arm]\n[[split_mounts]]\nitem = \"IS.AC/20\"\nplacements = [{placements}]"

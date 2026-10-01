@@ -24,18 +24,22 @@ async fn fixture(
             create_battle_unit(
                 &mut world,
                 id,
-                BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                    .unwrap(),
             )
             .unwrap();
         } else {
             create_battle_vehicle(
                 &mut world,
                 id,
-                BattleVehicleTemplate::parse("test",if index == 1 {
-                    include_str!("../game/mechs/Demolisher.toml")
-                } else {
-                    include_str!("../game/mechs/Fulcrum.toml")
-                })
+                BattleVehicleTemplate::parse(
+                    "test",
+                    if index == 1 {
+                        include_str!("../game/mechs/Demolisher.toml")
+                    } else {
+                        include_str!("../game/mechs/Fulcrum.toml")
+                    },
+                )
                 .unwrap(),
             )
             .unwrap();

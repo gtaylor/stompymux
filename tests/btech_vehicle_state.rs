@@ -4,7 +4,8 @@ use stompymux_rs::*;
 /// An intact tracked fixture with two turret weapons and four ammunition bins.
 fn vehicle() -> BattleVehicle {
     BattleVehicle::new(
-        BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap(),
+        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+            .unwrap(),
     )
     .unwrap()
 }
@@ -113,7 +114,11 @@ fn vehicle_snapshot_rejects_inconsistent_material_state() {
             .is_destroyed()
     );
     let mut truck = BattleVehicle::new(
-        BattleVehicleTemplate::parse("Flatbed_Truck",include_str!("../game/mechs/Flatbed_Truck.toml")).unwrap(),
+        BattleVehicleTemplate::parse(
+            "Flatbed_Truck",
+            include_str!("../game/mechs/Flatbed_Truck.toml"),
+        )
+        .unwrap(),
     )
     .unwrap();
     let before = truck.clone();

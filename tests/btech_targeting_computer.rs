@@ -3,7 +3,8 @@ use stompymux_rs::*;
 
 /// Install a distributed computer; any individual computer slot loss disables assistance globally.
 fn definition() -> BattleTemplate {
-    let mut template = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+    let mut template =
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     for section in [BattleSection::LeftTorso, BattleSection::RightTorso] {
         let mut part = template.sections[&section].criticals[&1].clone();
         part.equipment = "TargetingComputer".into();
@@ -21,7 +22,7 @@ fn definition() -> BattleTemplate {
 #[test]
 fn targeting_computer_slots_mass_damage_and_flooding() {
     let ordinary = BattleUnit::from_template(
-        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     assert!(!ordinary.targeting_computer_operational().unwrap());
@@ -89,7 +90,7 @@ fn targeting_computer_slots_mass_damage_and_flooding() {
 #[test]
 fn targeting_computer_black_knight_constructs_unchanged() {
     let source = std::fs::read_to_string("game/mechs/BL12-KNT.toml").unwrap();
-    let unit = BattleUnit::from_template(BattleTemplate::parse("test",&source).unwrap()).unwrap();
+    let unit = BattleUnit::from_template(BattleTemplate::parse("test", &source).unwrap()).unwrap();
     assert!(unit.targeting_computer_operational().unwrap());
     assert_eq!(
         unit.loadout()
@@ -111,7 +112,8 @@ fn authored_links_construct_without_changing_automatic_eligibility() {
         include_str!("../game/mechs/Viper-2.toml"),
         include_str!("../game/mechs/Thor-D.toml"),
     ] {
-        let unit = BattleUnit::from_template(BattleTemplate::parse("test",source).unwrap()).unwrap();
+        let unit =
+            BattleUnit::from_template(BattleTemplate::parse("test", source).unwrap()).unwrap();
         assert!(unit.targeting_computer_operational().unwrap());
         assert!(
             unit.loadout()
@@ -126,7 +128,8 @@ fn authored_links_construct_without_changing_automatic_eligibility() {
             serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
         assert_eq!(restored.loadout().unwrap(), unit.loadout().unwrap());
     }
-    let mut template = BattleTemplate::parse("Mas-A",include_str!("../game/mechs/Mas-A.toml")).unwrap();
+    let mut template =
+        BattleTemplate::parse("Mas-A", include_str!("../game/mechs/Mas-A.toml")).unwrap();
     let with_flag = BattleUnit::from_template(template.clone()).unwrap();
     for section in template.sections.values_mut() {
         for critical in section.criticals.values_mut() {

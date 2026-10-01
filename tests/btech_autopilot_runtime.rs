@@ -22,7 +22,7 @@ async fn ground_fixture() -> (tempfile::TempDir, Config, World, ObjectId, Object
     .unwrap();
     let unit = world.create(&config, "Autopilot mech".into(), Kind::Thing);
     world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
-    BattleUnitTemplate::parse("JR7-D",include_str!("../game/mechs/JR7-D.toml"))
+    BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
         .unwrap()
         .create(&mut world, unit)
         .unwrap();

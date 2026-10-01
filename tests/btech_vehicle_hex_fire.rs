@@ -31,7 +31,7 @@ async fn fixture_with_template(
     create_battle_vehicle(
         &mut world,
         shooter,
-        BattleVehicleTemplate::parse("test",template).unwrap(),
+        BattleVehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, shooter, map, 1, 1).unwrap();

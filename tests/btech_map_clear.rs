@@ -28,9 +28,12 @@ async fn clear_map_units_shares_chassis_shutdown_and_restart() {
             if mode == "moving" && chassis == 5 {
                 continue;
             }
-            let (_dir, config, mut world, id, target, _) =
-                firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml"))
-                    .await;
+            let (_dir, config, mut world, id, target, _) = firing::fixture_with_target(
+                &source,
+                None,
+                include_str!("../game/mechs/AS7-D.toml"),
+            )
+            .await;
             let map = world.btech.units()[&id].map.unwrap();
             let actor = operator(&mut world, &config, map);
             firing::edit(&mut world, target, |unit| unit["map_slot"] = 0.into());
@@ -222,9 +225,12 @@ async fn clear_map_tows_in_either_slot_order() {
         firing::templates()[6].clone(),
     ] {
         for load_first in [false, true] {
-            let (_dir, config, mut world, id, target, _) =
-                firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml"))
-                    .await;
+            let (_dir, config, mut world, id, target, _) = firing::fixture_with_target(
+                &source,
+                None,
+                include_str!("../game/mechs/AS7-D.toml"),
+            )
+            .await;
             let map = world.btech.units()[&id].map.unwrap();
             let actor = operator(&mut world, &config, map);
             firing::edit(&mut world, target, |unit| {

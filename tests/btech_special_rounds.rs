@@ -52,7 +52,7 @@ async fn fixture(
         (if index == 0 {
             launcher(source, artillery)
         } else {
-            BattleUnitTemplate::parse("test",source).unwrap()
+            BattleUnitTemplate::parse("test", source).unwrap()
         })
         .create(&mut world, id)
         .unwrap();
@@ -76,7 +76,7 @@ fn launcher(source: &str, artillery: bool) -> BattleUnitTemplate {
     } else {
         BattleWeapon::ClanLrm20
     };
-    let mut definition = BattleUnitTemplate::parse("test",source).unwrap();
+    let mut definition = BattleUnitTemplate::parse("test", source).unwrap();
     let part = CriticalDefinition {
         equipment: weapon.name().into(),
         data: "-".into(),

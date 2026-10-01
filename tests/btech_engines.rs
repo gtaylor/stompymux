@@ -3,7 +3,8 @@ use stompymux_rs::*;
 
 /// Preserve a complete biped while redistributing engine slots among its three torso sections.
 fn definition(center: u8, left: u8, right: u8) -> BattleTemplate {
-    let mut template = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+    let mut template =
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     template.max_speed = 96.75;
     let engine = template.sections[&BattleSection::CenterTorso].criticals[&0].clone();
     for (section, count) in [
@@ -91,7 +92,8 @@ fn relocated_engine_families_mass_and_invalid_layouts() {
 /// Existing Heavy Gauss assets preserve their installed engine identity and weapon loadout.
 #[test]
 fn relocated_cestus_constructs_without_asset_changes() {
-    let template = BattleTemplate::parse("CES-4S",include_str!("../game/mechs/CES-4S.toml")).unwrap();
+    let template =
+        BattleTemplate::parse("CES-4S", include_str!("../game/mechs/CES-4S.toml")).unwrap();
     let unit = BattleUnit::from_template(template).unwrap();
     assert_eq!(unit.engine().unwrap(), BattleEngine::Light);
     let loadout = unit.loadout().unwrap();
@@ -180,7 +182,7 @@ fn asymmetric_quad_engines_use_effective_family_and_live_damage() {
         (include_str!("../game/mechs/BGS-1T.toml"), BattleEngine::Xl),
         (include_str!("../game/mechs/BGS-2T.toml"), BattleEngine::Xxl),
     ] {
-        let template = BattleTemplate::parse("test",source).unwrap();
+        let template = BattleTemplate::parse("test", source).unwrap();
         assert!(check_battle_template(&template).constructible);
         let mut unit = BattleUnit::from_template(template).unwrap();
         assert_eq!(unit.engine().unwrap(), expected);
@@ -207,7 +209,8 @@ fn asymmetric_quad_engines_use_effective_family_and_live_damage() {
         }
         assert!(unit.is_destroyed());
     }
-    let mut template = BattleTemplate::parse("GOL-3S",include_str!("../game/mechs/GOL-3S.toml")).unwrap();
+    let mut template =
+        BattleTemplate::parse("GOL-3S", include_str!("../game/mechs/GOL-3S.toml")).unwrap();
     let unit = BattleUnit::from_template(template.clone()).unwrap();
     assert_eq!(unit.engine().unwrap(), BattleEngine::Light);
     let loadout = unit.loadout().unwrap();
@@ -246,7 +249,7 @@ fn mixed_relocated_asset_engines_construct_and_preserve_saved_damage() {
         include_str!("../game/mechs/STK-8S.toml"),
         include_str!("../game/mechs/BTZ-3F.toml"),
     ] {
-        let definition = BattleTemplate::parse("test",source).unwrap();
+        let definition = BattleTemplate::parse("test", source).unwrap();
         assert!(check_battle_template(&definition).constructible);
         let mut unit = BattleUnit::from_template(definition.clone()).unwrap();
         assert_eq!(unit.definition(), &definition);

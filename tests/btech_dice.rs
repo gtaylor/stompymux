@@ -48,14 +48,19 @@ async fn verify_saved_dice(vehicle: bool) {
         create_battle_vehicle(
             &mut world,
             id,
-            BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap(),
+            BattleVehicleTemplate::parse(
+                "Demolisher",
+                include_str!("../game/mechs/Demolisher.toml"),
+            )
+            .unwrap(),
         )
         .unwrap();
     } else {
         create_battle_unit(
             &mut world,
             id,
-            BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                .unwrap(),
         )
         .unwrap();
     }
@@ -112,7 +117,11 @@ async fn vehicle_streams_are_independent_and_reject_unknown_algorithms() {
         create_battle_vehicle(
             &mut world,
             id,
-            BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap(),
+            BattleVehicleTemplate::parse(
+                "Demolisher",
+                include_str!("../game/mechs/Demolisher.toml"),
+            )
+            .unwrap(),
         )
         .unwrap();
         ids.push(id);

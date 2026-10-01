@@ -27,7 +27,12 @@ async fn enter_pilot_restart_and_leave_preserve_ordinary_movement() {
     for (player, name, x) in [(ObjectId(1), "Alpha", 0), (ObjectId(2), "Bravo", 1)] {
         let id = world.create(&config, name.into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        create_battle_unit(&mut world, id, BattleTemplate::parse("JR7-D",JENNER).unwrap()).unwrap();
+        create_battle_unit(
+            &mut world,
+            id,
+            BattleTemplate::parse("JR7-D", JENNER).unwrap(),
+        )
+        .unwrap();
         place_battle_unit(&mut world, id, map, x, 0).unwrap();
         world.objects.get_mut(&player).unwrap().location = Some(map);
         ids.push(id);
@@ -98,7 +103,12 @@ async fn cockpit_occupancy_authority_callback_rollback_and_pilot_purge() {
     let id = world.create(&config, "Jenner".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().location = Some(ObjectId(config.start()));
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    create_battle_unit(&mut world, id, BattleTemplate::parse("JR7-D",JENNER).unwrap()).unwrap();
+    create_battle_unit(
+        &mut world,
+        id,
+        BattleTemplate::parse("JR7-D", JENNER).unwrap(),
+    )
+    .unwrap();
     assert!(assign_battle_pilot(&mut world, id, ObjectId(1)).is_err());
     for player in [ObjectId(1), ObjectId(2)] {
         world.objects.get_mut(&player).unwrap().location = Some(id);
@@ -224,7 +234,12 @@ async fn evacuation_moves_crew_retains_xp_and_rolls_back() {
     let config = Config::load(&config.root).unwrap();
     let unit = world.create(&config, "Evacuation unit".into(), Kind::Thing);
     world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
-    create_battle_unit(&mut world, unit, BattleTemplate::parse("JR7-D",JENNER).unwrap()).unwrap();
+    create_battle_unit(
+        &mut world,
+        unit,
+        BattleTemplate::parse("JR7-D", JENNER).unwrap(),
+    )
+    .unwrap();
     world
         .objects
         .get_mut(&unit)
@@ -348,7 +363,12 @@ async fn casualty_impact_action_rolls_back_damage_and_moves() {
     let config = Config::load(&config.root).unwrap();
     let unit = world.create(&config, "Casualty unit".into(), Kind::Thing);
     world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
-    create_battle_unit(&mut world, unit, BattleTemplate::parse("JR7-D",JENNER).unwrap()).unwrap();
+    create_battle_unit(
+        &mut world,
+        unit,
+        BattleTemplate::parse("JR7-D", JENNER).unwrap(),
+    )
+    .unwrap();
     world
         .objects
         .get_mut(&unit)
@@ -489,7 +509,12 @@ async fn character_pilot_health_recovery_and_fatal_evacuation() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let unit = world.create(&config, "Character injury unit".into(), Kind::Thing);
     world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
-    create_battle_unit(&mut world, unit, BattleTemplate::parse("JR7-D",JENNER).unwrap()).unwrap();
+    create_battle_unit(
+        &mut world,
+        unit,
+        BattleTemplate::parse("JR7-D", JENNER).unwrap(),
+    )
+    .unwrap();
     world
         .objects
         .get_mut(&unit)

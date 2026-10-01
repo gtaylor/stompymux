@@ -9,7 +9,8 @@ fn definition(
     extension: BattleSection,
 ) -> BattleTemplate {
     use BattleSection::*;
-    let mut template = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+    let mut template =
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let count = weapon.profile().critical_slots;
     let first = if parent == CenterTorso {
         10
@@ -306,7 +307,8 @@ async fn split_section_loss_preserves_remaining_slot_mass() {
 /// A fifteen-slot artillery mount shares construction and critical loss across its linked sections.
 #[test]
 fn arrow_mount_can_end_before_the_primary_section_boundary() {
-    let template = BattleTemplate::parse("CPLT-C5",include_str!("../game/mechs/CPLT-C5.toml")).unwrap();
+    let template =
+        BattleTemplate::parse("CPLT-C5", include_str!("../game/mechs/CPLT-C5.toml")).unwrap();
     let unit = BattleUnit::from_template(template.clone()).unwrap();
     let loadout = unit.loadout().unwrap();
     let index = loadout
@@ -602,8 +604,8 @@ fn center_torso_split_mounts_load_and_round_trip_from_documents() {
         "{ section = \"left_torso\", at = \"1-8\" },\n    { section = \"center_torso\", at = \"11-12\" },",
     );
     assert_ne!(reversed, source);
-    let loadout = BattleLoadout::resolve(&BattleTemplate::parse("JR7-D", &reversed).unwrap())
-        .unwrap();
+    let loadout =
+        BattleLoadout::resolve(&BattleTemplate::parse("JR7-D", &reversed).unwrap()).unwrap();
     let mount = loadout
         .weapons
         .iter()
@@ -612,6 +614,9 @@ fn center_torso_split_mounts_load_and_round_trip_from_documents() {
     assert_eq!(mount.criticals[0].section, LeftTorso);
     assert_eq!(mount.criticals.last().unwrap().section, CenterTorso);
 
-    let distant = source.replace("\"left_torso\", at = \"1-8\"", "\"left_arm\", at = \"5-12\"");
+    let distant = source.replace(
+        "\"left_torso\", at = \"1-8\"",
+        "\"left_arm\", at = \"5-12\"",
+    );
     assert!(BattleTemplate::parse("JR7-D", &distant).is_err());
 }

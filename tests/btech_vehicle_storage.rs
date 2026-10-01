@@ -14,7 +14,8 @@ async fn vehicles_save_damage_replay_and_purge_with_their_objects() {
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap(),
+        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+            .unwrap(),
     )
     .unwrap();
     assert_eq!(world.btech.units()[&id].class_code, 1);
@@ -26,7 +27,11 @@ async fn vehicles_save_damage_replay_and_purge_with_their_objects() {
         create_battle_vehicle(
             &mut world,
             id,
-            BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap()
+            BattleVehicleTemplate::parse(
+                "Demolisher",
+                include_str!("../game/mechs/Demolisher.toml")
+            )
+            .unwrap()
         )
         .is_err()
     );
@@ -111,8 +116,11 @@ async fn vehicle_storage_rejects_corrupt_and_oversized_records() {
     let id = world.create(&config, "Truck".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().location = Some(ObjectId(config.start()));
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    let definition =
-        BattleVehicleTemplate::parse("Flatbed_Truck",include_str!("../game/mechs/Flatbed_Truck.toml")).unwrap();
+    let definition = BattleVehicleTemplate::parse(
+        "Flatbed_Truck",
+        include_str!("../game/mechs/Flatbed_Truck.toml"),
+    )
+    .unwrap();
     assert!(create_battle_vehicle(&mut world, ObjectId(1), definition.clone()).is_err());
     create_battle_vehicle(&mut world, id, definition).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();

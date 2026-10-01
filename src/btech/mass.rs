@@ -346,7 +346,10 @@ mod tests {
     /// CASE II weighs a ton per Inner Sphere slot and half a ton per Clan slot.
     #[test]
     fn case_ii_slot_mass_depends_on_technology_base() {
-        let mut definition = super::super::BattleTemplate::parse("JR7-D",include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"))
+        let mut definition = super::super::BattleTemplate::parse(
+            "JR7-D",
+            include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"),
+        )
         .unwrap();
         assert_eq!(system_slot_mass(&definition, BattleSystem::CaseIi), 1024);
         assert_eq!(system_slot_mass(&definition, BattleSystem::Case), 512);

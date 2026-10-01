@@ -31,7 +31,8 @@ fn operator(world: &mut World, config: &Config, map: ObjectId) -> ObjectId {
 async fn melting_matches_combat_fractures_native_lua_and_restart() {
     for source in firing::templates() {
         let (_dir, config, mut world, unit, _, _) =
-            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml")).await;
+            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml"))
+                .await;
         let map = world.btech.units()[&unit].map.unwrap();
         let actor = operator(&mut world, &config, map);
         tile(&mut world, map, 0, 11, "ice", 2);
@@ -94,7 +95,8 @@ async fn melting_matches_combat_fractures_native_lua_and_restart() {
 async fn freezing_water_preserves_submerged_mechs() {
     for source in firing::templates().into_iter().take(2) {
         let (_dir, config, mut world, unit, _, _) =
-            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml")).await;
+            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml"))
+                .await;
         let map = world.btech.units()[&unit].map.unwrap();
         let actor = operator(&mut world, &config, map);
         tile(&mut world, map, 0, 11, "water", 2);

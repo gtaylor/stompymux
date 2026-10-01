@@ -13,7 +13,8 @@ fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Va
 /// launcher is submerged even in shallow water.
 fn launcher() -> BattleUnitTemplate {
     let weapon = BattleWeapon::Srt6;
-    let mut definition = BattleUnitTemplate::parse("JR7-D",include_str!("../game/mechs/JR7-D.toml")).unwrap();
+    let mut definition =
+        BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap();
     let BattleUnitTemplate::Mech(unit) = &mut definition else {
         panic!("The Jenner is a Mech");
     };
@@ -71,7 +72,7 @@ async fn fixture(rows: [i64; 2]) -> (tempfile::TempDir, Config, World, ObjectId,
         if index == 0 {
             launcher()
         } else {
-            BattleUnitTemplate::parse("JR7-D",include_str!("../game/mechs/JR7-D.toml")).unwrap()
+            BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap()
         }
         .create(&mut world, id)
         .unwrap();

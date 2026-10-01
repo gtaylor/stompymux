@@ -242,8 +242,10 @@ async fn vehicle_damage_banners_follow_owned_motive_state() {
         ("wheel", "AXLE DESTROYED"),
         ("hover", "LIFT FAN DESTROYED"),
     ] {
-        let source = include_str!("../game/mechs/Demolisher.toml")
-            .replace("movement = \"track\"", &format!("movement = \"{movement}\""));
+        let source = include_str!("../game/mechs/Demolisher.toml").replace(
+            "movement = \"track\"",
+            &format!("movement = \"{movement}\""),
+        );
         let (_dir, _config, mut world, id, _) = fixture(&source).await;
         assert!(!text::plain(&battle_unit_status(&world, id, "").unwrap()).contains(banner));
         damage_battle_vehicle_motive(
@@ -264,7 +266,8 @@ async fn vehicle_damage_banners_follow_owned_motive_state() {
 /// Independent vehicle and inferno fires share one condition banner.
 #[tokio::test]
 async fn concurrent_fire_sources_have_one_status_banner() {
-    let (_dir, _config, mut world, id, _) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+    let (_dir, _config, mut world, id, _) =
+        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     for (burning, inferno) in [(true, 0), (false, 30), (true, 30)] {
         let mut encoded = serde_json::to_value(&world.btech).unwrap();
         let vehicle = &mut encoded["vehicles"][id.0.to_string()];
@@ -285,7 +288,8 @@ async fn concurrent_fire_sources_have_one_status_banner() {
 /// A landed rotorcraft names its destroyed rotor without reporting hull destruction.
 #[tokio::test]
 async fn landed_rotor_loss_has_its_own_damage_banner() {
-    let (_dir, _config, mut world, id, _) = fixture(include_str!("../game/mechs/Kestrel.toml")).await;
+    let (_dir, _config, mut world, id, _) =
+        fixture(include_str!("../game/mechs/Kestrel.toml")).await;
     damage_battle_vehicle_phase(
         &mut world,
         id,
@@ -329,7 +333,7 @@ async fn named_fixture(
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
     let observer = world.create(&config, "Observer".into(), Kind::Thing);
-    BattleUnitTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml"))
+    BattleUnitTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
         .unwrap()
         .create(&mut world, observer)
         .unwrap();
@@ -459,12 +463,16 @@ async fn vehicle_cockpit_sections_share_native_lua_observer_and_restart_reports(
 
 #[tokio::test]
 async fn vehicle_status_tracks_live_load_damage_ammunition_and_flight() {
-    let (_dir, config, mut world, id, _) = fixture(include_str!("../game/mechs/Kestrel.toml")).await;
+    let (_dir, config, mut world, id, _) =
+        fixture(include_str!("../game/mechs/Kestrel.toml")).await;
     let target = world.create(&config, "Load".into(), Kind::Thing);
-    BattleUnitTemplate::parse("Savannah_Master",include_str!("../game/mechs/Savannah_Master.toml"))
-        .unwrap()
-        .create(&mut world, target)
-        .unwrap();
+    BattleUnitTemplate::parse(
+        "Savannah_Master",
+        include_str!("../game/mechs/Savannah_Master.toml"),
+    )
+    .unwrap()
+    .create(&mut world, target)
+    .unwrap();
     let position = world.btech.vehicles()[&id].position().unwrap();
     place_battle_unit(
         &mut world,
@@ -527,13 +535,29 @@ async fn vehicle_status_tracks_live_load_damage_ammunition_and_flight() {
 async fn status_layout_snapshots_cover_every_diagram() {
     for (name, reference, source) in [
         ("light", "JR7-D", include_str!("../game/mechs/JR7-D.toml")),
-        ("medium", "SHD-2H", include_str!("../game/mechs/SHD-2H.toml")),
+        (
+            "medium",
+            "SHD-2H",
+            include_str!("../game/mechs/SHD-2H.toml"),
+        ),
         ("heavy", "WHM-6R", include_str!("../game/mechs/WHM-6R.toml")),
         ("assault", "AS7-D", include_str!("../game/mechs/AS7-D.toml")),
         ("quad", "GOL-1H", include_str!("../game/mechs/GOL-1H.toml")),
-        ("vehicle", "Demolisher", include_str!("../game/mechs/Demolisher.toml")),
-        ("turretless", "Savannah_Master", include_str!("../game/mechs/Savannah_Master.toml")),
-        ("vtol", "Kestrel", include_str!("../game/mechs/Kestrel.toml")),
+        (
+            "vehicle",
+            "Demolisher",
+            include_str!("../game/mechs/Demolisher.toml"),
+        ),
+        (
+            "turretless",
+            "Savannah_Master",
+            include_str!("../game/mechs/Savannah_Master.toml"),
+        ),
+        (
+            "vtol",
+            "Kestrel",
+            include_str!("../game/mechs/Kestrel.toml"),
+        ),
     ] {
         let (_dir, config, world, id, _) = named_fixture(reference, source).await;
         let before = world.btech.clone();

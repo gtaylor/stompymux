@@ -18,7 +18,7 @@ btech.unit.save_template(unit, reference)
 | Name | Type | Description |
 | --- | --- | --- |
 | `unit` | `DbRef\|Object` |  |
-| `reference` | `string` | Relative name under database.mech_database. |
+| `reference` | `string` | Template reference: the file stem of a `.toml` document anywhere under database.mech_database. |
 
 ## Returns
 

@@ -357,7 +357,10 @@ mod tests {
     #[test]
     fn ignition_selects_only_live_requested_bins_without_rolling_for_empty_requests() {
         let mut unit = BattleUnit::from_template(
-            super::super::BattleTemplate::parse("AS7-D",include_str!("../../tests/fixtures/btech/mechs/AS7-D.toml"))
+            super::super::BattleTemplate::parse(
+                "AS7-D",
+                include_str!("../../tests/fixtures/btech/mechs/AS7-D.toml"),
+            )
             .unwrap(),
         )
         .unwrap();

@@ -39,9 +39,12 @@ async fn map_broadcast_audience_native_lua_and_restart() {
             "pilot_recovery",
             "empty_recovery",
         ] {
-            let (_dir, config, mut world, unit, target, _) =
-                firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml"))
-                    .await;
+            let (_dir, config, mut world, unit, target, _) = firing::fixture_with_target(
+                &source,
+                None,
+                include_str!("../game/mechs/AS7-D.toml"),
+            )
+            .await;
             let map = world.btech.units()[&unit].map.unwrap();
             let actor = listeners(&mut world, &config, map, target);
             if mode == "empty_recovery" {

@@ -22,7 +22,8 @@ async fn fixture(
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if index < 2 {
             let mut definition =
-                BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                    .unwrap();
             definition
                 .attributes
                 .insert("specials".into(), "FlipArms Searchlight".into());
@@ -31,7 +32,7 @@ async fn fixture(
             create_battle_vehicle(
                 &mut world,
                 id,
-                BattleVehicleTemplate::parse("test",vehicle).unwrap(),
+                BattleVehicleTemplate::parse("test", vehicle).unwrap(),
             )
             .unwrap();
         }
@@ -715,7 +716,7 @@ async fn occupied_hex_selection_does_not_skip_hidden_or_forbidden_targets() {
 /// Replace the target's two mounts and four bins while preserving battlefield membership.
 fn install_vehicle_ams(world: &mut World, target: ObjectId, weapon: BattleWeapon) {
     let source = include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", weapon.name());
-    let unit = BattleVehicle::new(BattleVehicleTemplate::parse("test",&source).unwrap()).unwrap();
+    let unit = BattleVehicle::new(BattleVehicleTemplate::parse("test", &source).unwrap()).unwrap();
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     saved["vehicles"][target.0.to_string()]["definition"] =
         serde_json::to_value(unit.definition()).unwrap();
@@ -978,7 +979,8 @@ async fn vehicle_coolant_and_flamer_heat_share_target_effects_and_host_rollback(
         BattleWeapon::VehicleFlamer,
         BattleWeapon::VehicleHeavyFlamer,
     ] {
-        let template = include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", weapon.name());
+        let template =
+            include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", weapon.name());
         let (_dir, config, base, _, [target, _, shooter, vehicle]) = engagement(&template).await;
         for hit in [false, true] {
             let mut world = base.clone();
@@ -1493,7 +1495,8 @@ async fn vehicle_beacons_drive_aim_guidance_interference_and_section_loss() {
 
 #[tokio::test]
 async fn vehicle_pod_host_action_rolls_back_attachment_and_location_effects() {
-    let template = include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", "IS.NarcBeacon");
+    let template =
+        include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", "IS.NarcBeacon");
     let (_dir, config, mut world, _, [_, _, shooter, target]) = engagement(&template).await;
     let value = (0..=255)
         .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
@@ -2146,7 +2149,8 @@ async fn weapon_engagement(
     weapon: BattleWeapon,
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {
     if vehicle {
-        let template = include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", weapon.name());
+        let template =
+            include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", weapon.name());
         let (dir, config, world, _, [_, _, shooter, target]) = engagement(&template).await;
         return (dir, config, world, shooter, target, 0);
     }
@@ -3327,7 +3331,8 @@ async fn weapon_fire_preserves_target_emergency_feedback() {
         let target = base.create(&config, "Emergency target".into(), Kind::Thing);
         base.objects.get_mut(&target).unwrap().home = Some(ObjectId(config.home()));
         let mut template =
-            BattleVehicleTemplate::parse("Kestrel",include_str!("../game/mechs/Kestrel.toml")).unwrap();
+            BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
+                .unwrap();
         for section in template.sections.values_mut() {
             section.internal = 30;
         }

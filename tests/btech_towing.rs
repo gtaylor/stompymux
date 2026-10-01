@@ -22,7 +22,7 @@ async fn fixture(sources: &[&str]) -> (tempfile::TempDir, Config, World, ObjectI
     let mut units = Vec::new();
     for source in sources {
         let id = world.create(&config, "Unit".into(), Kind::Thing);
-        BattleUnitTemplate::parse("test",source)
+        BattleUnitTemplate::parse("test", source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();
@@ -275,8 +275,11 @@ async fn towing_follows_position_facing_and_height_for_every_chassis_pair() {
 #[tokio::test]
 async fn external_speed_exceeds_disabled_target_limits_but_requires_a_tow() {
     for speed in [160.0_f64, -100.0] {
-        let (_dir, config, mut world, _, ids) =
-            fixture(&[CHASSIS[2], include_str!("../game/mechs/Savannah_Master.toml")]).await;
+        let (_dir, config, mut world, _, ids) = fixture(&[
+            CHASSIS[2],
+            include_str!("../game/mechs/Savannah_Master.toml"),
+        ])
+        .await;
         let [a, b] = ids[..] else { unreachable!() };
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(a);
         assign_battle_pilot(&mut world, a, ObjectId(1)).unwrap();
@@ -382,7 +385,7 @@ async fn towing_load_shares_equipment_discounts_and_live_mass_across_chassis() {
 #[tokio::test]
 async fn hot_myomer_tow_discount_requires_hardware_heat_and_configuration() {
     let (_dir, config, mut world, map, ids) = fixture(&CHASSIS[..1]).await;
-    let mut template = BattleTemplate::parse("test",CHASSIS[0]).unwrap();
+    let mut template = BattleTemplate::parse("test", CHASSIS[0]).unwrap();
     let mut remaining = 6;
     for location in [BattleSection::LeftTorso, BattleSection::RightTorso] {
         let section = template.sections.get_mut(&location).unwrap();
@@ -421,7 +424,7 @@ async fn hot_myomer_tow_discount_requires_hardware_heat_and_configuration() {
     create_battle_unit(
         &mut world,
         observer,
-        BattleTemplate::parse("test",CHASSIS[0]).unwrap(),
+        BattleTemplate::parse("test", CHASSIS[0]).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, observer, map, 0, 0).unwrap();
@@ -796,7 +799,10 @@ async fn reverse_towing_guard_is_shared_by_native_lua_and_direct_controls() {
 
 #[tokio::test]
 async fn vertical_commands_share_loaded_budget_and_atomic_native_lua_behavior() {
-    for target in [include_str!("../game/mechs/Savannah_Master.toml"), CHASSIS[1]] {
+    for target in [
+        include_str!("../game/mechs/Savannah_Master.toml"),
+        CHASSIS[1],
+    ] {
         let (_dir, config, mut world, _, ids) = fixture(&[CHASSIS[2], target]).await;
         let [a, b] = ids[..] else { unreachable!() };
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(a);
@@ -1747,8 +1753,11 @@ async fn pickup_ice_failure_restores_the_previous_tow_and_all_material_state() {
 #[tokio::test]
 async fn native_and_lua_scenario_permission_share_inspection_persistence_and_rollback() {
     for target_source in CHASSIS {
-        let (_dir, config, mut world, _, ids) =
-            fixture(&[include_str!("fixtures/btech/mechs/AS7-D.toml"), target_source]).await;
+        let (_dir, config, mut world, _, ids) = fixture(&[
+            include_str!("fixtures/btech/mechs/AS7-D.toml"),
+            target_source,
+        ])
+        .await;
         let [carrier, target] = ids[..] else {
             unreachable!()
         };

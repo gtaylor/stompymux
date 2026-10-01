@@ -35,9 +35,9 @@ async fn mixed_case_equipment_shares_construction_mass_and_saved_identity() {
     ] {
         // Exercise source decoding as well as typed construction.
         let source = source.replace("Ammo_IS.SRM-4 25 -", "Ammo_IS.SRM-4 12 Hotload Halfton -");
-        let canonical = BattleTemplate::parse("test",&source).unwrap();
+        let canonical = BattleTemplate::parse("test", &source).unwrap();
         let expected = BattleUnit::from_template(canonical.clone()).unwrap();
-        let mut mixed = BattleTemplate::parse("test",&source.replace("Ammo_", "ammo_")).unwrap();
+        let mut mixed = BattleTemplate::parse("test", &source.replace("Ammo_", "ammo_")).unwrap();
         for section in mixed.sections.values_mut() {
             for (&slot, part) in &mut section.criticals {
                 part.equipment = if slot % 2 == 0 {
@@ -64,9 +64,10 @@ async fn mixed_case_equipment_shares_construction_mass_and_saved_identity() {
         include_str!("../game/mechs/Hunter.toml"),
         include_str!("../game/mechs/Kestrel.toml"),
     ] {
-        let canonical = BattleVehicleTemplate::parse("test",source).unwrap();
+        let canonical = BattleVehicleTemplate::parse("test", source).unwrap();
         let expected = BattleVehicle::new(canonical).unwrap();
-        let mut mixed = BattleVehicleTemplate::parse("test",&source.replace("Ammo_", "aMMo_")).unwrap();
+        let mut mixed =
+            BattleVehicleTemplate::parse("test", &source.replace("Ammo_", "aMMo_")).unwrap();
         for section in mixed.sections.values_mut() {
             for (&slot, part) in &mut section.criticals {
                 part.equipment = if slot % 2 == 0 {

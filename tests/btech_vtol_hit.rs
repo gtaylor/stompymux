@@ -3,7 +3,8 @@ use stompymux_rs::*;
 
 #[test]
 fn vtol_tables_cover_every_arc_roll_and_critical_proof_override() {
-    let base = BattleVehicleTemplate::parse("Kestrel",include_str!("../game/mechs/Kestrel.toml")).unwrap();
+    let base = BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
+        .unwrap();
     for proof in [false, true] {
         let mut template = base.clone();
         if proof {
@@ -71,12 +72,16 @@ fn rotor_critical_ranges_and_invalid_requests_are_explicit() {
             effect
         );
     }
-    let template = BattleVehicleTemplate::parse("Kestrel",include_str!("../game/mechs/Kestrel.toml")).unwrap();
+    let template =
+        BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
+            .unwrap();
     for roll in [0, 1, 13, 255] {
         assert!(BattleRotorHit::from_critical_roll(roll).is_err());
         assert!(template.vtol_hit(BattleHitArc::Front, roll).is_err());
     }
-    let ground = BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap();
+    let ground =
+        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+            .unwrap();
     assert!(ground.vtol_hit(BattleHitArc::Front, 7).is_err());
 }
 
@@ -85,11 +90,13 @@ fn advanced_aircraft_locations_share_armor_gate_draws_without_direct_rotor_effec
     use BattleVehicleSection as S;
     for proof in [false, true] {
         let source = if proof {
-            include_str!("../game/mechs/Kestrel.toml").replace("CargoTech", "CargoTech CritProof_Tech")
+            include_str!("../game/mechs/Kestrel.toml")
+                .replace("CargoTech", "CargoTech CritProof_Tech")
         } else {
             include_str!("../game/mechs/Kestrel.toml").into()
         };
-        let unit = BattleVehicle::new(BattleVehicleTemplate::parse("test",&source).unwrap()).unwrap();
+        let unit =
+            BattleVehicle::new(BattleVehicleTemplate::parse("test", &source).unwrap()).unwrap();
         for (arc, row) in [
             (BattleHitArc::Front, "FFORFFFLOOO"),
             (BattleHitArc::Rear, "BBOLBBBROOO"),
@@ -142,7 +149,9 @@ fn advanced_aircraft_locations_share_armor_gate_draws_without_direct_rotor_effec
 #[test]
 fn advanced_aircraft_turret_fallback_and_damaged_armor_gate_use_material_state() {
     use BattleVehicleSection as S;
-    let mut template = BattleVehicleTemplate::parse("Kestrel",include_str!("../game/mechs/Kestrel.toml")).unwrap();
+    let mut template =
+        BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
+            .unwrap();
     template
         .sections
         .insert(S::Turret, template.sections[&S::Front].clone());

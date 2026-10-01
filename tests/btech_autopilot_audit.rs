@@ -38,7 +38,7 @@ async fn mech_fixture(
     .unwrap();
     let unit = world.create(&config, "Autopilot audit mech".into(), Kind::Thing);
     world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
-    BattleUnitTemplate::parse("JR7-D",include_str!("../game/mechs/JR7-D.toml"))
+    BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
         .unwrap()
         .create(&mut world, unit)
         .unwrap();
@@ -158,7 +158,7 @@ async fn vehicle_ground_classes_are_admitted_on_water_and_bridge_maps() {
         create_battle_vehicle(
             &mut world,
             id,
-            BattleVehicleTemplate::parse("test",template).unwrap(),
+            BattleVehicleTemplate::parse("test", template).unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, id, map, starts[index].0, starts[index].1).unwrap();
@@ -232,7 +232,7 @@ async fn competing_routes_make_progress_without_permanent_congestion_block() {
     let (_directory, config, mut world, map, first) = mech_fixture(&map_asset, (3, 6)).await;
     let second = world.create(&config, "Autopilot congestion follower".into(), Kind::Thing);
     world.objects.get_mut(&second).unwrap().home = Some(ObjectId(config.home()));
-    BattleUnitTemplate::parse("JR7-D",include_str!("../game/mechs/JR7-D.toml"))
+    BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
         .unwrap()
         .create(&mut world, second)
         .unwrap();

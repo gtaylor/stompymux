@@ -272,7 +272,11 @@ mod tests {
                     (BattleSection::CenterTorso, BattleHitArc::Rear, false),
                 ] {
                     let mut world = World::default();
-                    target(&mut world, include_str!("../../game/mechs/JR7-D.toml"), running);
+                    target(
+                        &mut world,
+                        include_str!("../../game/mechs/JR7-D.toml"),
+                        running,
+                    );
                     let mut dice = BattleDice::seeded([byte; 32]);
                     world.btech.constructed.get_mut(&ObjectId(42)).unwrap().dice = dice.clone();
                     let success = dice.d6() >= 3

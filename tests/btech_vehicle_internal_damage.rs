@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test",template).unwrap(),
+        BattleVehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -59,15 +59,14 @@ async fn internal_damage_handles_structure_rounding_and_vehicle_local_overflow()
         ("ReinforcedInternal_Tech", 3, 3),
         ("CompositeInternal_Tech", 10, 8),
     ] {
-        let text = include_str!("../game/mechs/Demolisher.toml")
-            .replace(
-                "\"ICEEngine_Tech\"",
-                &if special.is_empty() {
-                    "\"ICEEngine_Tech\"".to_owned()
-                } else {
-                    format!("\"ICEEngine_Tech\", \"{special}\"")
-                },
-            );
+        let text = include_str!("../game/mechs/Demolisher.toml").replace(
+            "\"ICEEngine_Tech\"",
+            &if special.is_empty() {
+                "\"ICEEngine_Tech\"".to_owned()
+            } else {
+                format!("\"ICEEngine_Tech\", \"{special}\"")
+            },
+        );
         let (_dir, config, mut world, id) = fixture(&text).await;
         seed(&mut world, id, 31);
         let mut dice = BattleDice::seeded([31; 32]);
@@ -100,7 +99,8 @@ async fn internal_damage_handles_structure_rounding_and_vehicle_local_overflow()
 
 #[tokio::test]
 async fn internal_criticals_precede_structure_and_nested_errors_roll_back_all_damage() {
-    let (_dir, _config, mut world, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+    let (_dir, _config, mut world, id) =
+        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     let value = (0..=255)
         .find(|value| {
             let mut dice = BattleDice::seeded([*value; 32]);
@@ -134,7 +134,8 @@ async fn internal_criticals_precede_structure_and_nested_errors_roll_back_all_da
             .text
             .contains("has been destroyed")
     );
-    let (_dir, _config, mut world, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+    let (_dir, _config, mut world, id) =
+        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     let value = (0..=255)
         .find(|value| {
             let mut dice = BattleDice::seeded([*value; 32]);

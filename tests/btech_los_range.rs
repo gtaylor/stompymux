@@ -24,11 +24,11 @@ async fn fixture(
     .unwrap();
     let observer = world.create(&config, "Observer".into(), Kind::Thing);
     let target = world.create(&config, "Target".into(), Kind::Thing);
-    BattleUnitTemplate::parse("test",source)
+    BattleUnitTemplate::parse("test", source)
         .unwrap()
         .create(&mut world, observer)
         .unwrap();
-    BattleUnitTemplate::parse("JR7-D",include_str!("../game/mechs/JR7-D.toml"))
+    BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
         .unwrap()
         .create(&mut world, target)
         .unwrap();

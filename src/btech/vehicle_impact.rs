@@ -348,15 +348,24 @@ mod policy_tests {
     #[test]
     fn configured_critical_tables_are_selected_per_victim_class() {
         let ground = BattleVehicle::new(
-            BattleVehicleTemplate::parse("Demolisher",include_str!("../../game/mechs/Demolisher.toml")).unwrap(),
+            BattleVehicleTemplate::parse(
+                "Demolisher",
+                include_str!("../../game/mechs/Demolisher.toml"),
+            )
+            .unwrap(),
         )
         .unwrap();
         let aircraft = BattleVehicle::new(
-            BattleVehicleTemplate::parse("Kestrel",include_str!("../../game/mechs/Kestrel.toml")).unwrap(),
+            BattleVehicleTemplate::parse("Kestrel", include_str!("../../game/mechs/Kestrel.toml"))
+                .unwrap(),
         )
         .unwrap();
         let observation = BattleVehicle::new(
-            BattleVehicleTemplate::parse("ObservationVTOL",include_str!("../../game/mechs/ObservationVTOL.toml")).unwrap(),
+            BattleVehicleTemplate::parse(
+                "ObservationVTOL",
+                include_str!("../../game/mechs/ObservationVTOL.toml"),
+            )
+            .unwrap(),
         )
         .unwrap();
         for ground_advanced in [false, true] {

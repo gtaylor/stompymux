@@ -23,11 +23,14 @@ async fn fixture(hover: bool) -> (tempfile::TempDir, Config, World, ObjectId, Ob
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test",if hover {
-            include_str!("../game/mechs/Fulcrum.toml")
-        } else {
-            include_str!("../game/mechs/Flatbed_Truck.toml")
-        })
+        BattleVehicleTemplate::parse(
+            "test",
+            if hover {
+                include_str!("../game/mechs/Fulcrum.toml")
+            } else {
+                include_str!("../game/mechs/Flatbed_Truck.toml")
+            },
+        )
         .unwrap(),
     )
     .unwrap();

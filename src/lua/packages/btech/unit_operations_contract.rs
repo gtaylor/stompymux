@@ -564,8 +564,11 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     )
                 })
                 .map_err(|_| {
-                contract::operation_failure("template_save_failed", "unable to save unit template")
-            })?;
+                    contract::operation_failure(
+                        "template_save_failed",
+                        "unable to save unit template",
+                    )
+                })?;
             Ok(MultiValue::new())
         })?,
     )?;

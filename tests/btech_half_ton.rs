@@ -3,7 +3,8 @@ use stompymux_rs::*;
 
 /// Replace the fixture's bin while preserving its other ordinary construction facts.
 fn definition(weapon: BattleWeapon, rounds: u16, flags: &[&str]) -> BattleTemplate {
-    let mut template = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+    let mut template =
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let bin = template
         .sections
         .get_mut(&BattleSection::RightTorso)
@@ -85,7 +86,8 @@ fn half_ton_capacity_modes_mass_and_hazards() {
 fn half_ton_osiris_and_razorback_construct_unchanged() {
     for name in ["OSR-3D", "RZK-9S"] {
         let source = std::fs::read_to_string(format!("game/mechs/{name}")).unwrap();
-        let unit = BattleUnit::from_template(BattleTemplate::parse("test",&source).unwrap()).unwrap();
+        let unit =
+            BattleUnit::from_template(BattleTemplate::parse("test", &source).unwrap()).unwrap();
         assert!(
             unit.loadout()
                 .unwrap()

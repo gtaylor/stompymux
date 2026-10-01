@@ -21,7 +21,7 @@ async fn linked_map_movement_replays_for_mechs_ground_vehicles_and_aircraft() {
             .unwrap();
             set_battle_map_wrapping(&mut world, map, true).unwrap();
             let id = world.create(&config, "Traveler".into(), Kind::Thing);
-            BattleUnitTemplate::parse("test",source)
+            BattleUnitTemplate::parse("test", source)
                 .unwrap()
                 .create(&mut world, id)
                 .unwrap();
@@ -128,7 +128,8 @@ async fn aircraft_rolls_back_when_the_opposite_edge_is_too_high() {
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("Kestrel",include_str!("../game/mechs/Kestrel.toml")).unwrap(),
+        BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
+            .unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 2, 0).unwrap();
@@ -355,7 +356,8 @@ async fn wrapped_jump_paths_keep_distance_and_replay_through_all_four_edges() {
         create_battle_unit(
             &mut world,
             id,
-            BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                .unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, id, map, x, y).unwrap();

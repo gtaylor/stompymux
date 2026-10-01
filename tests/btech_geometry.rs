@@ -38,7 +38,8 @@ async fn ranges_include_depth_and_elevation_and_reject_different_maps() {
         create_battle_unit(
             &mut world,
             id,
-            BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                .unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, id, map, x, 0).unwrap();

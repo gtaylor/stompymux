@@ -115,12 +115,12 @@
 local btech_template = {}
 
 ---Read a biped asset without instantiating or activating a unit.
----@param name string Relative name under database.mech_database.
+---@param name string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
 ---@return BattleTemplate
 function btech_template.inspect(name) end
 
 ---Resolve supported equipment; does not validate chassis construction or enable simulation.
----@param name string Relative name under database.mech_database.
+---@param name string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
 ---@return BattleLoadout
 function btech_template.loadout(name) end
 
@@ -507,7 +507,7 @@ function btech_unit.inspect(dbref) end
 
 ---Construct a persistent Mech or ground vehicle on an unused live thing. Transactional.
 ---@param dbref integer
----@param name string Relative name under database.mech_database.
+---@param name string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
 ---@return boolean
 function btech_unit.create(dbref, name) end
 
@@ -1951,7 +1951,7 @@ function btech_unit.cluster(dbref, pilot, weapon) end
 ---@field ammunition_adjustments BattleAmmunitionAdjustment[] Changes on successful construction.
 
 ---Preview construction without registering a unit or modifying the source asset.
----@param name string Bounded asset name from the configured mech directory.
+---@param name string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
 ---@return BattleTemplateCheck
 function btech_template.check(name) end
 
@@ -3397,7 +3397,7 @@ function btech_player.set_ui_preferences(player, preferences) end
 -- C-parity template inspection contracts.
 
 ---Read current, original and rear armor values; an omitted section reports the totals.
----@param reference string Relative name under database.mech_database.
+---@param reference string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
 ---@param section? BattleSection Typed section constant from btech.unit.sections.
 ---@return BattleArmorStatus status
 function btech_template.armor(reference, section) end
@@ -3531,12 +3531,12 @@ function btech_unit.payload(unit) end
 
 ---Replace the unit definition from a saved template reference.
 ---@param unit DbRef|Object
----@param reference string Relative name under database.mech_database.
+---@param reference string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
 function btech_unit.load_template(unit, reference) end
 
 ---Save the unit definition under a template reference in the mech database.
 ---@param unit DbRef|Object
----@param reference string Relative name under database.mech_database.
+---@param reference string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
 function btech_unit.save_template(unit, reference) end
 
 ---Run one shared piloting check; returns whether it succeeded.

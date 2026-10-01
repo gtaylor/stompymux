@@ -297,14 +297,17 @@ mod tests {
         ] {
             let original = include_str!("../../../game/mechs/AXM-2N.toml");
             let source = original
-                .replace("    { at = \"5-7\", item = \"IS.MediumLaser\", brand = 3 },\n", "")
+                .replace(
+                    "    { at = \"5-7\", item = \"IS.MediumLaser\", brand = 3 },\n",
+                    "",
+                )
                 .replace(
                     "{ at = \"8-12\", item = \"Axe\"",
                     &format!("{{ at = \"5-12\", item = \"{equipment}\""),
                 );
             assert!(!source.contains("IS.MediumLaser") && source.contains("\"5-12\""));
-            let unit =
-                BattleUnit::from_template(BattleTemplate::parse("AXM-2N", &source).unwrap()).unwrap();
+            let unit = BattleUnit::from_template(BattleTemplate::parse("AXM-2N", &source).unwrap())
+                .unwrap();
             assert_eq!(
                 text::plain(&physical_readiness(&unit).unwrap().join("")),
                 format!("{label}[RA]: Rdy")

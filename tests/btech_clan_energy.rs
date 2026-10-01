@@ -23,7 +23,8 @@ fn clan_energy_mounts_accuracy_and_grouped_critical_losses() {
             [u16::from(weapon.profile().damage)]
         );
         let mut template =
-            BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                .unwrap();
         let arm = template.sections.get_mut(&BattleSection::LeftArm).unwrap();
         let mut part = arm.criticals[&2].clone();
         part.equipment = weapon.name().into();

@@ -3,7 +3,8 @@ use stompymux_rs::*;
 
 /// Replace one bin without enabling an unconnected artillery launcher.
 fn ammunition_template(weapon: BattleWeapon, flags: &[&str]) -> BattleTemplate {
-    let mut template = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+    let mut template =
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let bin = template
         .sections
         .get_mut(&BattleSection::RightTorso)

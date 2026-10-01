@@ -47,7 +47,11 @@ async fn reactor_shot_and_neighbor_death_have_distinct_attribution() {
             create_battle_vehicle(
                 &mut base,
                 neighbor,
-                BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap(),
+                BattleVehicleTemplate::parse(
+                    "Demolisher",
+                    include_str!("../game/mechs/Demolisher.toml"),
+                )
+                .unwrap(),
             )
             .unwrap();
             place_battle_unit(

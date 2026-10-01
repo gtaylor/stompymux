@@ -269,7 +269,7 @@ async fn tag_takeover_crosses_chassis_and_rejects_corrupt_saved_ownership() {
         select_battle_tag(&mut world, id, ObjectId(1), Some(target)).unwrap();
         let map = world.btech.units()[&id].map.unwrap();
         let other = world.create(&config, "Replacement TAG".into(), Kind::Thing);
-        BattleUnitTemplate::parse("test",replacement)
+        BattleUnitTemplate::parse("test", replacement)
             .unwrap()
             .create(&mut world, other)
             .unwrap();
@@ -392,7 +392,7 @@ async fn vehicle_tag_guides_mech_and_vehicle_missiles() {
         assert!(unaided.target_movement > 0);
         let map = world.btech.units()[&shooter].map.unwrap();
         let tagger = world.create(&config, "TAG vehicle".into(), Kind::Thing);
-        BattleUnitTemplate::parse("test",&sources[2])
+        BattleUnitTemplate::parse("test", &sources[2])
             .unwrap()
             .create(&mut world, tagger)
             .unwrap();

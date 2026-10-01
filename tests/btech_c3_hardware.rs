@@ -3,7 +3,8 @@ use stompymux_rs::*;
 
 /// Replace arm equipment with explicitly positioned computer slots.
 fn design(parts: &[(BattleSection, u8, &str)]) -> BattleUnit {
-    let mut template = BattleTemplate::parse("AS7-D",include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap();
+    let mut template =
+        BattleTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap();
     template.attributes.insert(
         "specials".into(),
         "C3MasterTech C3SlaveTech C3I_Tech".into(),

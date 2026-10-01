@@ -19,7 +19,7 @@ fn templates() -> Vec<String> {
 
 /// Preserve other construction technologies while changing only cargo installation facts.
 fn configured(source: &str, space: &str, flags: &str) -> BattleUnitTemplate {
-    let mut template = BattleUnitTemplate::parse("test",source).unwrap();
+    let mut template = BattleUnitTemplate::parse("test", source).unwrap();
     let attributes = match &mut template {
         BattleUnitTemplate::Mech(template) => &mut template.attributes,
         BattleUnitTemplate::Vehicle(template) => &mut template.attributes,

@@ -17,7 +17,7 @@ btech.template.check(name)
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `name` | `string` | Bounded asset name from the configured mech directory. |
+| `name` | `string` | Template reference: the file stem of a `.toml` document anywhere under database.mech_database. |
 
 ## Returns
 

@@ -106,15 +106,15 @@ fn construction_dispatch_uses_declared_class_and_confines_assets() {
     let mech = include_str!("fixtures/btech/mechs/JR7-D.toml");
     let vehicle = include_str!("../game/mechs/Demolisher.toml");
     assert!(matches!(
-        BattleUnitTemplate::parse("test",mech).unwrap(),
+        BattleUnitTemplate::parse("test", mech).unwrap(),
         BattleUnitTemplate::Mech(_)
     ));
     assert!(matches!(
-        BattleUnitTemplate::parse("test",vehicle).unwrap(),
+        BattleUnitTemplate::parse("test", vehicle).unwrap(),
         BattleUnitTemplate::Vehicle(_)
     ));
-    assert!(BattleUnitTemplate::parse("test",&vehicle.replace("Vehicle", "VTOL")).is_err());
-    assert!(BattleUnitTemplate::parse("test",&vehicle.replace("Vehicle", "Mech")).is_err());
+    assert!(BattleUnitTemplate::parse("test", &vehicle.replace("Vehicle", "VTOL")).is_err());
+    assert!(BattleUnitTemplate::parse("test", &vehicle.replace("Vehicle", "Mech")).is_err());
     let dir = tempfile::tempdir().unwrap();
     std::fs::write(dir.path().join("vehicle"), vehicle).unwrap();
     assert!(matches!(
@@ -145,10 +145,19 @@ async fn operator_inspection_reports_mech_ground_and_vtol_state_without_mutation
         let id = world.create(&config, "Inspected unit".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if vehicle {
-            create_battle_vehicle(&mut world, id, BattleVehicleTemplate::parse("test",asset).unwrap())
-                .unwrap();
+            create_battle_vehicle(
+                &mut world,
+                id,
+                BattleVehicleTemplate::parse("test", asset).unwrap(),
+            )
+            .unwrap();
         } else {
-            create_battle_unit(&mut world, id, BattleTemplate::parse("test",asset).unwrap()).unwrap();
+            create_battle_unit(
+                &mut world,
+                id,
+                BattleTemplate::parse("test", asset).unwrap(),
+            )
+            .unwrap();
         }
         place_battle_unit(&mut world, id, map, 1, 0).unwrap();
         world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(id);

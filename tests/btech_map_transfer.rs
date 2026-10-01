@@ -30,12 +30,13 @@ async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassi
         create_battle_unit(
             &mut world,
             occupant,
-            BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                .unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, occupant, interior, 0, 0).unwrap();
         let id = world.create(&config, "Traveler".into(), Kind::Thing);
-        BattleUnitTemplate::parse("test",source)
+        BattleUnitTemplate::parse("test", source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();

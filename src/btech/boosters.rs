@@ -99,7 +99,10 @@ mod tests {
     #[test]
     fn masc_seizes_all_chassis_hips_and_survives_serialization() {
         let biped = BattleUnit::from_template(
-            super::super::BattleTemplate::parse("JR7-D",include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"))
+            super::super::BattleTemplate::parse(
+                "JR7-D",
+                include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"),
+            )
             .unwrap(),
         )
         .unwrap();
@@ -107,8 +110,11 @@ mod tests {
             let mut encoded = serde_json::to_value(&biped).unwrap();
             if chassis == "Quad" {
                 encoded["definition"] = serde_json::to_value(
-                    super::super::BattleTemplate::parse("SCP-1N",include_str!("../../game/mechs/SCP-1N.toml"))
-                        .unwrap(),
+                    super::super::BattleTemplate::parse(
+                        "SCP-1N",
+                        include_str!("../../game/mechs/SCP-1N.toml"),
+                    )
+                    .unwrap(),
                 )
                 .unwrap();
             }

@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test",template).unwrap(),
+        BattleVehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -33,7 +33,8 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 
 #[tokio::test]
 async fn vehicle_injury_recovery_and_scenario_death_replay_without_material_damage() {
-    let (_dir, config, mut world, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+    let (_dir, config, mut world, id) =
+        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     let mut state = serde_json::to_value(&world.btech).unwrap();
     let value = (0..=255)
         .find(|value| BattleDice::seeded([*value; 32]).two_d6() < 11)

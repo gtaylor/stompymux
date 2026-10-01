@@ -315,7 +315,10 @@ mod anatomy_tests {
     /// Default raw skill stays six; only control checks receive the quad advantage.
     #[test]
     fn control_bonus_does_not_change_raw_attack_or_valuation_skill() {
-        let template = super::super::BattleTemplate::parse("JR7-D",include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"))
+        let template = super::super::BattleTemplate::parse(
+            "JR7-D",
+            include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"),
+        )
         .unwrap();
         let unit = super::super::BattleUnit::from_template(template).unwrap();
         for (chassis, expected) in [("Biped", 6), ("Quad", 4)] {

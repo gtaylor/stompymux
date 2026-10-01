@@ -8,7 +8,7 @@ use stompymux_rs::{
 /// A fresh Jenner with reference armor and structure quantities.
 fn jenner() -> BattleUnit {
     BattleUnit::from_template(
-        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap()
 }
@@ -72,7 +72,7 @@ async fn core_damage_survives_restart_and_rejects_invalid_phase_targets_atomical
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     let map = world.create(&config, "Damage field".into(), Kind::Room);

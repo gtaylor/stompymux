@@ -7,7 +7,7 @@ fn aircraft(combustion: bool, fuel: u32, speed: f64, seed: u8) -> BattleVehicle 
         "{}\nFuel {{ {fuel} }}\n",
         include_str!("../game/mechs/Kestrel.toml")
     );
-    let mut template = BattleVehicleTemplate::parse("test",&source).unwrap();
+    let mut template = BattleVehicleTemplate::parse("test", &source).unwrap();
     if !combustion {
         template
             .attributes
@@ -110,7 +110,8 @@ fn low_speed_fuel_checks_and_exemptions_replay_the_same_saved_dice() {
 #[test]
 fn fuel_defaults_and_invalid_snapshots_are_checked_against_the_chassis() {
     let aircraft = BattleVehicle::new(
-        BattleVehicleTemplate::parse("Kestrel",include_str!("../game/mechs/Kestrel.toml")).unwrap(),
+        BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
+            .unwrap(),
     )
     .unwrap();
     assert_eq!(aircraft.vtol_fuel().unwrap().capacity(), 4000);
@@ -123,7 +124,8 @@ fn fuel_defaults_and_invalid_snapshots_are_checked_against_the_chassis() {
     saved["vtol_fuel"]["capacity"] = 4001.into();
     assert!(serde_json::from_value::<BattleVehicle>(saved).is_err());
     let ground = BattleVehicle::new(
-        BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap(),
+        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+            .unwrap(),
     )
     .unwrap();
     assert!(ground.vtol_fuel().is_none());
@@ -154,7 +156,8 @@ fn overspeed_fuel_cost_depends_on_altitude_and_shutdown_does_not_draw_dice() {
         );
     }
     let mut unit = BattleVehicle::new(
-        BattleVehicleTemplate::parse("Kestrel",include_str!("../game/mechs/Kestrel.toml")).unwrap(),
+        BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
+            .unwrap(),
     )
     .unwrap();
     let before = unit.clone();

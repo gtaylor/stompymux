@@ -54,7 +54,9 @@ fn scan(root: &Path) -> Result<BTreeMap<String, PathBuf>> {
             if kind.is_dir() {
                 pending.push(path);
             } else if kind.is_file()
-                && path.extension().is_some_and(|ext| ext == TEMPLATE_EXTENSION)
+                && path
+                    .extension()
+                    .is_some_and(|ext| ext == TEMPLATE_EXTENSION)
                 && let Some(stem) = path.file_stem().and_then(|stem| stem.to_str())
             {
                 found.push((stem.to_ascii_lowercase(), path));
@@ -317,7 +319,10 @@ mod tests {
                 .is_none()
         );
         write_template(&mut cache, &root, "new", "new").unwrap();
-        assert_eq!(std::fs::read_to_string(root.join("new.toml")).unwrap(), "new");
+        assert_eq!(
+            std::fs::read_to_string(root.join("new.toml")).unwrap(),
+            "new"
+        );
         assert!(
             resolve_template_path_cached(&mut cache, &root, "new")
                 .unwrap()
@@ -336,7 +341,10 @@ mod tests {
         assert!(write_template(&mut cache, &root, "linked", "bad").is_err());
         assert_eq!(std::fs::read_to_string(outside).unwrap(), "safe");
         for bad in ["../escape", "a/b", ".hidden", ""] {
-            assert!(write_template(&mut cache, &root, bad, "bad").is_err(), "{bad}");
+            assert!(
+                write_template(&mut cache, &root, bad, "bad").is_err(),
+                "{bad}"
+            );
         }
     }
 }

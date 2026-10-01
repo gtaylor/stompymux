@@ -144,7 +144,7 @@ mod tests {
         let config = crate::Config::load("tests/fixtures/game").unwrap();
         let mut world = crate::World::default();
         let id = world.create(&config, "Loadout scope".into(), crate::Kind::Thing);
-        crate::BattleUnitTemplate::parse("JR7-D",include_str!("../../game/mechs/JR7-D.toml"))
+        crate::BattleUnitTemplate::parse("JR7-D", include_str!("../../game/mechs/JR7-D.toml"))
             .unwrap()
             .create(&mut world, id)
             .unwrap();

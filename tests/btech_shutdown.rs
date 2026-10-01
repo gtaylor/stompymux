@@ -20,9 +20,12 @@ async fn shutdown_speed_boundaries_share_native_lua_and_restart() {
             if chassis == 5 && value != 0.0 {
                 continue;
             }
-            let (_dir, config, mut world, id, _, _) =
-                firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml"))
-                    .await;
+            let (_dir, config, mut world, id, _, _) = firing::fixture_with_target(
+                &source,
+                None,
+                include_str!("../game/mechs/AS7-D.toml"),
+            )
+            .await;
             speed(&mut world, id, value);
             world.validate(&config).unwrap();
             let before = world.btech.clone();
@@ -139,7 +142,8 @@ async fn airborne_shutdown_preserves_descent_and_startup_abort_does_not_fall() {
     }
     for source in firing::templates() {
         let (_dir, config, mut world, id, _, _) =
-            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml")).await;
+            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml"))
+                .await;
         firing::edit(&mut world, id, |state| {
             state["target_lock"] = serde_json::Value::Null;
             state["power"] = serde_json::to_value(BattlePower::Starting { remaining: 10 }).unwrap();

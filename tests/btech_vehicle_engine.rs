@@ -4,7 +4,8 @@ use stompymux_rs::*;
 /// A tracked 80-ton chassis with three walking movement points has a 240-rating powerplant.
 fn tracked(flags: &str) -> BattleVehicleTemplate {
     let mut template =
-        BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap();
+        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+            .unwrap();
     template.attributes.insert("specials".into(), flags.into());
     template
 }
@@ -83,13 +84,16 @@ fn vehicle_suspension_and_missing_engine_diagnostics() {
         assert_eq!(BattleVehicleMovement::Wheeled.suspension(tons), 20);
         assert_eq!(BattleVehicleMovement::Tracked.suspension(tons), 0);
     }
-    let truck = BattleVehicleTemplate::parse("Flatbed_Truck",include_str!("../game/mechs/Flatbed_Truck.toml"))
-        .unwrap()
-        .engine()
-        .unwrap();
+    let truck = BattleVehicleTemplate::parse(
+        "Flatbed_Truck",
+        include_str!("../game/mechs/Flatbed_Truck.toml"),
+    )
+    .unwrap()
+    .engine()
+    .unwrap();
     assert_eq!((truck.nominal_rating, truck.weight_rating), (50, 30));
     assert_eq!(truck.installed_mass, 2 * 1024);
-    let hover = BattleVehicleTemplate::parse("Fulcrum",include_str!("../game/mechs/Fulcrum.toml"))
+    let hover = BattleVehicleTemplate::parse("Fulcrum", include_str!("../game/mechs/Fulcrum.toml"))
         .unwrap()
         .engine()
         .unwrap();

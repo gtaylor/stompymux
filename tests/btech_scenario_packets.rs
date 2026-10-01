@@ -174,7 +174,7 @@ async fn scenario_packets_work_without_placement_and_preserve_safe_material() {
         let (_dir, config, mut world) = support::isolated_world().await;
         let unit = world.create(&config, "Scenario unit".into(), Kind::Thing);
         world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse("test",&source)
+        BattleUnitTemplate::parse("test", &source)
             .unwrap()
             .create(&mut world, unit)
             .unwrap();

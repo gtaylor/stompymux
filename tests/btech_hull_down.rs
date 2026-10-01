@@ -22,7 +22,7 @@ async fn fixture(
     let id = world.create(&config, "Quad".into(), Kind::Thing);
     let shooter = world.create(&config, "Observer".into(), Kind::Thing);
     for (id, source, x) in [(id, source, 2), (shooter, observer, 0)] {
-        BattleUnitTemplate::parse("test",source)
+        BattleUnitTemplate::parse("test", source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();

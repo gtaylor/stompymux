@@ -10,15 +10,16 @@ const ATLAS: &str = include_str!("fixtures/btech/mechs/AS7-D.toml");
 
 #[test]
 fn construction_sets_original_protection_and_independent_ammunition() {
-    let unit = BattleUnit::from_template(BattleTemplate::parse("JR7-D",JENNER).unwrap()).unwrap();
+    let unit = BattleUnit::from_template(BattleTemplate::parse("JR7-D", JENNER).unwrap()).unwrap();
     assert_eq!(unit.sections()[&BattleSection::CenterTorso].armor, 10);
     assert_eq!(unit.sections()[&BattleSection::CenterTorso].internal, 11);
     assert_eq!(unit.sections()[&BattleSection::CenterTorso].rear, 3);
     assert_eq!(unit.ammunition(), &[25]);
-    let atlas = BattleUnit::from_template(BattleTemplate::parse("AS7-D",ATLAS).unwrap()).unwrap();
+    let atlas = BattleUnit::from_template(BattleTemplate::parse("AS7-D", ATLAS).unwrap()).unwrap();
     assert_eq!(atlas.ammunition(), &[15, 6, 6, 5, 5]);
     let ams_source = JENNER.replace("IS.MediumLaser", "CL.Anti-MissileSystem");
-    let ams = BattleUnit::from_template(BattleTemplate::parse("test",&ams_source).unwrap()).unwrap();
+    let ams =
+        BattleUnit::from_template(BattleTemplate::parse("test", &ams_source).unwrap()).unwrap();
     assert_eq!(
         ams.loadout()
             .unwrap()
@@ -34,7 +35,9 @@ fn construction_sets_original_protection_and_independent_ammunition() {
         JENNER.replace("Computer", "UnknownField"),
         JENNER.replace("IS.MediumLaser", "IS.UnknownDefense"),
     ] {
-        assert!(BattleUnit::from_template(BattleTemplate::parse("test",&source).unwrap()).is_err());
+        assert!(
+            BattleUnit::from_template(BattleTemplate::parse("test", &source).unwrap()).is_err()
+        );
     }
 }
 
@@ -106,7 +109,12 @@ async fn constructed_units_survive_source_removal_and_purge_atomically() {
     assert_eq!(loaded.btech, candidate.btech);
     let unchanged = loaded.btech.clone();
     assert!(
-        create_battle_unit(&mut loaded, first, BattleTemplate::parse("JR7-D",JENNER).unwrap()).is_err()
+        create_battle_unit(
+            &mut loaded,
+            first,
+            BattleTemplate::parse("JR7-D", JENNER).unwrap()
+        )
+        .is_err()
     );
     assert_eq!(loaded.btech, unchanged);
     loaded

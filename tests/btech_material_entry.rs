@@ -22,7 +22,12 @@ async fn biped_and_quad_material_entries_consume_exact_dice_and_replay() {
         let (_dir, config, mut base) = support::isolated_world().await;
         let id = base.create(&config, "Material target".into(), Kind::Thing);
         base.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        create_battle_unit(&mut base, id, BattleTemplate::parse("test",source).unwrap()).unwrap();
+        create_battle_unit(
+            &mut base,
+            id,
+            BattleTemplate::parse("test", source).unwrap(),
+        )
+        .unwrap();
         for scenario in ["zero", "armor", "internal", "missing_sections", "overflow"] {
             let mut before = base.clone();
             let section = BattleSection::LeftArm;

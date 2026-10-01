@@ -21,11 +21,11 @@ async fn observers_share_admin_disclosure_radio_and_saved_role() {
         .unwrap();
         let id = world.create(&config, "Observer".into(), Kind::Thing);
         let target = world.create(&config, "Subject".into(), Kind::Thing);
-        BattleUnitTemplate::parse("test",template)
+        BattleUnitTemplate::parse("test", template)
             .unwrap()
             .create(&mut world, id)
             .unwrap();
-        BattleUnitTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml"))
+        BattleUnitTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap()
             .create(&mut world, target)
             .unwrap();

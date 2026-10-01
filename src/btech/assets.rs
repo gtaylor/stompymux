@@ -74,8 +74,7 @@ pub(super) fn publish_map_warnings(
 /// Decode a biped template from a configured mech directory.
 pub fn read_template(root: &Path, name: &str) -> Result<BattleTemplate> {
     let (reference, source) = super::template_contract_assets::read_template_document(root, name)?;
-    BattleTemplate::parse(&reference, &source)
-        .with_context(|| format!("template {name}"))
+    BattleTemplate::parse(&reference, &source).with_context(|| format!("template {name}"))
 }
 
 /// Decode a ground-vehicle definition from the configured game asset directory.

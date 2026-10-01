@@ -37,7 +37,12 @@ async fn battlefield() -> (tempfile::TempDir, Config, [ObjectId; 2]) {
     ] {
         let id = world.create(&config, name.into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        create_battle_unit(&mut world, id, BattleTemplate::parse("test",template).unwrap()).unwrap();
+        create_battle_unit(
+            &mut world,
+            id,
+            BattleTemplate::parse("test", template).unwrap(),
+        )
+        .unwrap();
         place_battle_unit(&mut world, id, map, 10, y).unwrap();
         world.objects.get_mut(&player).unwrap().location = Some(map);
         set_battle_character(

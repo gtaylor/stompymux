@@ -1446,8 +1446,10 @@ async fn engine_sink_override_validates_authored_values_across_chassis_scenario(
         let candidate = world.create(config, "Invalid construction".into(), Kind::Thing);
         let before = world.btech.clone();
         for value in ["no", "2147483648", "-2147483649", "1.5"] {
-            let template =
-                BattleUnitTemplate::parse("test",&format!("HSEngOverRide {{ {value} }}\n{source}"));
+            let template = BattleUnitTemplate::parse(
+                "test",
+                &format!("HSEngOverRide {{ {value} }}\n{source}"),
+            );
             let result = template.and_then(|template| template.create(&mut world, candidate));
             assert!(
                 result
@@ -1549,7 +1551,7 @@ async fn crew_and_target_fields_share_native_lua_validation_and_restart_scenario
         prepare_battle_recovery(&mut world, replacement).unwrap();
         let unplaced = world.create(config, "Unplaced unit".into(), Kind::Thing);
         world.objects.get_mut(&unplaced).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse("test",&source)
+        BattleUnitTemplate::parse("test", &source)
             .unwrap()
             .create(&mut world, unplaced)
             .unwrap();

@@ -13,7 +13,8 @@ fn precision_bins_have_half_capacity_without_double_halving() {
     ] {
         for half in [false, true] {
             let mut definition =
-                BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                    .unwrap();
             let mut part = definition.sections[&BattleSection::LeftArm].criticals[&2].clone();
             part.equipment = weapon.name().into();
             part.modes = vec!["Precision".into()];

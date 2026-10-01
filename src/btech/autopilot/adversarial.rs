@@ -88,7 +88,11 @@ struct Participant {
 /// Install validated orders without invoking the player takeover boundary.
 /// Stock template reference each scenario chassis is built from.
 fn stock_reference(chassis: &str) -> &'static str {
-    if chassis == "mech" { "JR7-D" } else { "Demolisher" }
+    if chassis == "mech" {
+        "JR7-D"
+    } else {
+        "Demolisher"
+    }
 }
 
 fn orders(world: &mut World, id: ObjectId, orders: Vec<AutopilotOrder>, fire: bool) -> Result<()> {
@@ -278,18 +282,23 @@ pub async fn run_policy(
             name
         };
         for (chassis, mut source) in [
-            ("mech", include_str!("../../../game/mechs/JR7-D.toml").to_owned()),
+            (
+                "mech",
+                include_str!("../../../game/mechs/JR7-D.toml").to_owned(),
+            ),
             (
                 "tracked",
                 include_str!("../../../game/mechs/Demolisher.toml").to_owned(),
             ),
             (
                 "wheeled",
-                include_str!("../../../game/mechs/Demolisher.toml").replace("movement = \"track\"", "movement = \"wheel\""),
+                include_str!("../../../game/mechs/Demolisher.toml")
+                    .replace("movement = \"track\"", "movement = \"wheel\""),
             ),
             (
                 "hover",
-                include_str!("../../../game/mechs/Demolisher.toml").replace("movement = \"track\"", "movement = \"hover\""),
+                include_str!("../../../game/mechs/Demolisher.toml")
+                    .replace("movement = \"track\"", "movement = \"hover\""),
             ),
         ] {
             if name == "mixed_arcs" {
@@ -421,7 +430,8 @@ pub async fn run_policy(
                 if matches!(name, "pursuers" | "bottleneck" | "no_passing_space") {
                     for n in 0..2 {
                         let id = world.create(&config, format!("ally {n}"), crate::Kind::Thing);
-                        crate::BattleUnitTemplate::parse(stock_reference(chassis), &source)?.create(&mut world, id)?;
+                        crate::BattleUnitTemplate::parse(stock_reference(chassis), &source)?
+                            .create(&mut world, id)?;
                         if let Some(u) = world.btech.constructed.get_mut(&id) {
                             u.signature.team = 1;
                         }
@@ -480,7 +490,8 @@ pub async fn run_policy(
                             format!("waiting follower {n}"),
                             crate::Kind::Thing,
                         );
-                        crate::BattleUnitTemplate::parse(stock_reference(chassis), &source)?.create(&mut world, id)?;
+                        crate::BattleUnitTemplate::parse(stock_reference(chassis), &source)?
+                            .create(&mut world, id)?;
                         if let Some(u) = world.btech.constructed.get_mut(&id) {
                             u.signature.team = 1;
                         }

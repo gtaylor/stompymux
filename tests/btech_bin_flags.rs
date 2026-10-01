@@ -9,7 +9,8 @@ fn bin_hotload_does_not_change_supply_or_launcher_behavior() {
         .filter(|weapon| weapon.profile().ammunition_per_ton > 0)
     {
         let mut template =
-            BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                .unwrap();
         let bin = template
             .sections
             .get_mut(&BattleSection::RightTorso)
@@ -61,7 +62,8 @@ fn bin_hotload_does_not_change_supply_or_launcher_behavior() {
 /// Fire metadata composes with half-ton sizing and compatible rounds, without bypassing validation.
 #[test]
 fn bin_hotload_half_ton_and_artemis_remain_independent() {
-    let mut template = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+    let mut template =
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let part = template
         .sections
         .get_mut(&BattleSection::RightTorso)

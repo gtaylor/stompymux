@@ -472,7 +472,8 @@ async fn core_exposure_shares_engine_and_reactor_consequences() {
 async fn exposed_support_cancels_prone_stand_recovery() {
     for template in firing::templates().into_iter().take(2) {
         let (_dir, config, mut world, id, _, _) =
-            firing::fixture_with_target(&template, None, include_str!("../game/mechs/AS7-D.toml")).await;
+            firing::fixture_with_target(&template, None, include_str!("../game/mechs/AS7-D.toml"))
+                .await;
         firing::edit(&mut world, id, |state| {
             state["posture"] = serde_json::to_value(BattlePosture::Prone).unwrap();
             state["stand_timer"] =

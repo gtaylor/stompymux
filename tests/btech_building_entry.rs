@@ -48,7 +48,7 @@ async fn entry_delay_replays_and_rechecks_live_routes_for_every_chassis() {
         )
         .unwrap();
         let id = world.create(&config, "Traveler".into(), Kind::Thing);
-        BattleUnitTemplate::parse("test",source)
+        BattleUnitTemplate::parse("test", source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();

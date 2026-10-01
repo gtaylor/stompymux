@@ -17,7 +17,8 @@ async fn report_layout_and_names_share_all_chassis() {
         "VTOL",
     ]) {
         let (_dir, config, mut world, scanner, target, _) =
-            firing::fixture_with_target(include_str!("../game/mechs/JR7-D.toml"), None, &template).await;
+            firing::fixture_with_target(include_str!("../game/mechs/JR7-D.toml"), None, &template)
+                .await;
         firing::edit(&mut world, target, |state| {
             state["display_name"] = "[bold]123456789012345678901234567890123456789".into()
         });
@@ -108,7 +109,8 @@ async fn lateral_and_torso_rows_use_committed_state() {
 async fn turret_summary_uses_absolute_bearing_and_signed_offset() {
     for template in firing::templates().into_iter().skip(2).take(4) {
         let (_dir, _, world, scanner, target, _) =
-            firing::fixture_with_target(include_str!("../game/mechs/JR7-D.toml"), None, &template).await;
+            firing::fixture_with_target(include_str!("../game/mechs/JR7-D.toml"), None, &template)
+                .await;
         let fixed = world.btech.vehicles()[&target].definition().movement
             == BattleVehicleMovement::Stationary;
         for (offset, absolute, signed) in [
@@ -146,7 +148,8 @@ async fn scan_conditions_share_state_without_cockpit_only_flags() {
         include_str!("../game/mechs/Demolisher.toml"),
     ] {
         let (_dir, _, mut world, scanner, target, _) =
-            firing::fixture_with_target(include_str!("../game/mechs/JR7-D.toml"), None, template).await;
+            firing::fixture_with_target(include_str!("../game/mechs/JR7-D.toml"), None, template)
+                .await;
         firing::edit(&mut world, target, |state| {
             state["fortified"] = true.into();
             state["weapons_hold"] = true.into();
@@ -233,10 +236,11 @@ async fn scan_info_towing_uses_shared_relationship_and_literal_names() {
         ),
     ] {
         let (_dir, config, mut world, scanner, target, _) =
-            firing::fixture_with_target(include_str!("../game/mechs/JR7-D.toml"), None, carrier).await;
+            firing::fixture_with_target(include_str!("../game/mechs/JR7-D.toml"), None, carrier)
+                .await;
         let tow = world.create(&config, "Tow".into(), Kind::Thing);
         world.objects.get_mut(&tow).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse("test",towed_template)
+        BattleUnitTemplate::parse("test", towed_template)
             .unwrap()
             .create(&mut world, tow)
             .unwrap();

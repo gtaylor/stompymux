@@ -609,7 +609,7 @@ async fn changed_target_class_preserves_selection_and_numeric_immobile_hits() {
             let map = base.btech.vehicles()[&selected].position().unwrap().map;
             let actual = base.create(&config, "Alternate Mech".into(), Kind::Thing);
             base.objects.get_mut(&actual).unwrap().home = Some(ObjectId(config.home()));
-            BattleUnitTemplate::parse("JR7-D",include_str!("../game/mechs/JR7-D.toml"))
+            BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
                 .unwrap()
                 .create(&mut base, actual)
                 .unwrap();

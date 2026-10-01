@@ -26,30 +26,35 @@ fn unit(
         "biped" | "quad" => create_battle_unit(
             world,
             id,
-            BattleTemplate::parse("test",if chassis == "quad" {
-                include_str!("../game/mechs/GOL-1H.toml")
-            } else {
-                include_str!("../game/mechs/Daishi-H.toml")
-            })
+            BattleTemplate::parse(
+                "test",
+                if chassis == "quad" {
+                    include_str!("../game/mechs/GOL-1H.toml")
+                } else {
+                    include_str!("../game/mechs/Daishi-H.toml")
+                },
+            )
             .unwrap(),
         )
         .unwrap(),
         other => {
             let source = match other {
                 "vtol" => include_str!("../game/mechs/Kestrel.toml").to_owned(),
-                "wheel" => {
-                    include_str!("../game/mechs/Demolisher.toml").replace("movement = \"track\"", "movement = \"wheel\"")
-                }
-                "hover" => {
-                    include_str!("../game/mechs/Demolisher.toml").replace("movement = \"track\"", "movement = \"hover\"")
-                }
+                "wheel" => include_str!("../game/mechs/Demolisher.toml")
+                    .replace("movement = \"track\"", "movement = \"wheel\""),
+                "hover" => include_str!("../game/mechs/Demolisher.toml")
+                    .replace("movement = \"track\"", "movement = \"hover\""),
                 "stationary" => include_str!("../game/mechs/Demolisher.toml")
                     .replace("movement = \"track\"", "movement = \"none\"")
                     .replace("max_speed = 53.75", "max_speed = 0"),
                 _ => include_str!("../game/mechs/Demolisher.toml").to_owned(),
             };
-            create_battle_vehicle(world, id, BattleVehicleTemplate::parse("test",&source).unwrap())
-                .unwrap();
+            create_battle_vehicle(
+                world,
+                id,
+                BattleVehicleTemplate::parse("test", &source).unwrap(),
+            )
+            .unwrap();
         }
     };
     place_battle_unit(world, id, map, i64::from(x), i64::from(y)).unwrap();

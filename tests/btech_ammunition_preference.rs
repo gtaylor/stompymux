@@ -16,7 +16,7 @@ async fn preferred_sections_controls_feed_and_restart() {
         let id = world.create(&config, "Ammo preference".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         let (weapon, preference, preferred_bin, other_bin) = if vehicle {
-            let mut definition = BattleVehicleTemplate::parse("test",source).unwrap();
+            let mut definition = BattleVehicleTemplate::parse("test", source).unwrap();
             let bin = definition
                 .sections
                 .values()
@@ -59,7 +59,7 @@ async fn preferred_sections_controls_feed_and_restart() {
                     .unwrap(),
             )
         } else {
-            let mut definition = BattleTemplate::parse("test",source).unwrap();
+            let mut definition = BattleTemplate::parse("test", source).unwrap();
             let bin = definition
                 .sections
                 .values()
@@ -252,11 +252,12 @@ async fn laser_defense_rejects_preferred_ammunition() {
         let (_dir, config, mut world) = support::isolated_world().await;
         let id = world.create(&config, "Laser defense".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        let source = include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", weapon.name());
+        let source =
+            include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", weapon.name());
         create_battle_vehicle(
             &mut world,
             id,
-            BattleVehicleTemplate::parse("test",&source).unwrap(),
+            BattleVehicleTemplate::parse("test", &source).unwrap(),
         )
         .unwrap();
         let map = world.create(&config, "Field".into(), Kind::Room);

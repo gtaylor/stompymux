@@ -4,7 +4,8 @@ use stompymux_rs::*;
 
 /// A bounded ammunition template with independently supplied quantity and bin flags.
 fn definition(weapon: BattleWeapon, quantity: u16, flags: &[&str]) -> BattleTemplate {
-    let mut template = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+    let mut template =
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let bin = template
         .sections
         .get_mut(&BattleSection::RightTorso)
@@ -89,8 +90,8 @@ fn ammunition_template_normalization_boundaries() {
 async fn ammunition_template_native_lua_creation_and_empty_restart() {
     let (dir, config, mut world) = support::isolated_world().await;
     std::fs::create_dir_all(dir.path().join("mechs")).unwrap();
-    let source =
-        include_str!("fixtures/btech/mechs/JR7-D.toml").replace("Ammo_IS.SRM-4 25", "Ammo_IS.SRM-4 7");
+    let source = include_str!("fixtures/btech/mechs/JR7-D.toml")
+        .replace("Ammo_IS.SRM-4 25", "Ammo_IS.SRM-4 7");
     std::fs::write(dir.path().join("mechs/partial.toml"), &source).unwrap();
     let id = world.create(&config, "Normalized Jenner".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));

@@ -8,7 +8,8 @@ use stompymux_rs::*;
 async fn map_check_preserves_each_chassis_and_matches_lua_after_restart() {
     for template in firing::templates() {
         let (_dir, config, mut world, source, target, _) =
-            firing::fixture_with_target(&template, None, include_str!("../game/mechs/AS7-D.toml")).await;
+            firing::fixture_with_target(&template, None, include_str!("../game/mechs/AS7-D.toml"))
+                .await;
         let map = world.btech.units()[&source].map.unwrap();
         let actor = world.create(&config, "Map checker".into(), Kind::Player);
         world
@@ -52,7 +53,8 @@ async fn map_check_preserves_each_chassis_and_matches_lua_after_restart() {
 async fn invalid_membership_rejects_without_success_or_destructive_repair() {
     for template in firing::templates() {
         let (_dir, config, world, source, target, _) =
-            firing::fixture_with_target(&template, None, include_str!("../game/mechs/AS7-D.toml")).await;
+            firing::fixture_with_target(&template, None, include_str!("../game/mechs/AS7-D.toml"))
+                .await;
         let map = world.btech.units()[&source].map.unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let valid = scripts.world().clone();
@@ -169,7 +171,7 @@ async fn membership_span_survives_holes_reuse_and_restart() {
             });
         }
         let last = world.create(&config, "Last member".into(), Kind::Thing);
-        BattleUnitTemplate::parse("test",&template)
+        BattleUnitTemplate::parse("test", &template)
             .unwrap()
             .create(&mut world, last)
             .unwrap();

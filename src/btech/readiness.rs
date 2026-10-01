@@ -387,10 +387,13 @@ mod tests {
         let mut world = World::default();
         let id = world.create(&config, "Readiness batch test".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse("JR7-D",include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"))
-            .unwrap()
-            .create(&mut world, id)
-            .unwrap();
+        BattleUnitTemplate::parse(
+            "JR7-D",
+            include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"),
+        )
+        .unwrap()
+        .create(&mut world, id)
+        .unwrap();
 
         let (ammo_index, ammo_bin, damaged_location, weapon_count) = {
             let unit = world.btech.constructed_units().get(&id).unwrap();

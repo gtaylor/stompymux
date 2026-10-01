@@ -9,7 +9,8 @@ use stompymux_rs::*;
 async fn unregister_map_shuts_down_all_chassis_and_survives_restart() {
     for source in firing::templates() {
         let (_dir, config, world, unit, target, _) =
-            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml")).await;
+            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml"))
+                .await;
         let map = world.btech.units()[&unit].map.unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         scripts

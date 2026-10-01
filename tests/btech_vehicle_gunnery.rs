@@ -9,9 +9,14 @@ async fn fixture(weapon: &str) -> (tempfile::TempDir, Config, World, ObjectId) {
     let object = world.objects.get_mut(&id).unwrap();
     object.home = Some(ObjectId(config.home()));
     object.location = Some(ObjectId(config.start()));
-    let text =
-        include_str!("../game/mechs/Demolisher.toml").replace("\"IS.AC/20\"", &format!("\"{weapon}\""));
-    create_battle_vehicle(&mut world, id, BattleVehicleTemplate::parse("test",&text).unwrap()).unwrap();
+    let text = include_str!("../game/mechs/Demolisher.toml")
+        .replace("\"IS.AC/20\"", &format!("\"{weapon}\""));
+    create_battle_vehicle(
+        &mut world,
+        id,
+        BattleVehicleTemplate::parse("test", &text).unwrap(),
+    )
+    .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
     (dir, config, world, id)

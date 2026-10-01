@@ -21,7 +21,7 @@ async fn fixture_source(
         BattleMapAsset::parse("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
-    let mut template = BattleTemplate::parse("test",source).unwrap();
+    let mut template = BattleTemplate::parse("test", source).unwrap();
     for section in template.sections.values_mut() {
         section
             .criticals
@@ -853,7 +853,11 @@ async fn mech_artillery_uses_vehicle_observers_in_slot_order() {
         create_battle_vehicle(
             &mut world,
             observer,
-            BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap(),
+            BattleVehicleTemplate::parse(
+                "Demolisher",
+                include_str!("../game/mechs/Demolisher.toml"),
+            )
+            .unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, observer, map, 2, 1).unwrap();

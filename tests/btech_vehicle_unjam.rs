@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test",template).unwrap(),
+        BattleVehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -173,7 +173,8 @@ async fn vehicle_feed_clearing_admission_lua_rollback_and_silent_expiry() {
 
 #[tokio::test]
 async fn vehicle_feed_clearing_character_xp_and_output_roll_back_together() {
-    let (_dir, config, mut world, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+    let (_dir, config, mut world, id) =
+        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     jam(&mut world, id);
     world
         .objects
@@ -282,14 +283,16 @@ async fn idle_vehicle_feed_countdown_retries_failed_server_commits() {
 
 #[tokio::test]
 async fn vehicle_feed_clearing_broadcasts_only_to_current_contacts() {
-    let (_dir, config, mut world, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+    let (_dir, config, mut world, id) =
+        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     jam(&mut world, id);
     let observer = world.create(&config, "Observer".into(), Kind::Thing);
     world.objects.get_mut(&observer).unwrap().home = Some(ObjectId(config.home()));
     create_battle_vehicle(
         &mut world,
         observer,
-        BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap(),
+        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+            .unwrap(),
     )
     .unwrap();
     let map = world.btech.vehicles()[&id].position().unwrap().map;
