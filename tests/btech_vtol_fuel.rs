@@ -3,11 +3,13 @@ use stompymux_rs::*;
 
 /// Material-only running aircraft with configurable powerplant and fuel capacity.
 fn aircraft(combustion: bool, fuel: u32, speed: f64, seed: u8) -> BattleVehicle {
-    let source = format!(
-        "{}\nFuel {{ {fuel} }}\n",
-        include_str!("../game/mechs/Kestrel.toml")
+    let source = include_str!("../game/mechs/Kestrel.toml").replacen(
+        "tons = 25\n",
+        &format!("tons = 25\nfuel = {fuel}\n"),
+        1,
     );
-    let mut template = BattleVehicleTemplate::parse("test", &source).unwrap();
+    assert!(source.contains(&format!("\nfuel = {fuel}\n")));
+    let mut template = BattleVehicleTemplate::parse("Kestrel", &source).unwrap();
     if !combustion {
         template
             .attributes

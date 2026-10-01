@@ -921,8 +921,8 @@ async fn native_and_lua_asset_loading_admit_flying_and_stationary_aircraft() {
     let mut ids = Vec::new();
     for name in ["Kestrel", "ObservationVTOL"] {
         std::fs::copy(
-            format!("game/mechs/{name}"),
-            dir.path().join("mechs").join(name),
+            format!("game/mechs/{name}.toml"),
+            dir.path().join("mechs").join(format!("{name}.toml")),
         )
         .unwrap();
         let native = world.create(&config, format!("Native {name}"), Kind::Thing);

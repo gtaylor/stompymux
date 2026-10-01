@@ -90,13 +90,16 @@ fn advanced_aircraft_locations_share_armor_gate_draws_without_direct_rotor_effec
     use BattleVehicleSection as S;
     for proof in [false, true] {
         let source = if proof {
-            include_str!("../game/mechs/Kestrel.toml")
-                .replace("CargoTech", "CargoTech CritProof_Tech")
+            include_str!("../game/mechs/Kestrel.toml").replacen(
+                "\"CargoTech\"",
+                "\"CargoTech\", \"CritProof_Tech\"",
+                1,
+            )
         } else {
             include_str!("../game/mechs/Kestrel.toml").into()
         };
         let unit =
-            BattleVehicle::new(BattleVehicleTemplate::parse("test", &source).unwrap()).unwrap();
+            BattleVehicle::new(BattleVehicleTemplate::parse("Kestrel", &source).unwrap()).unwrap();
         for (arc, row) in [
             (BattleHitArc::Front, "FFORFFFLOOO"),
             (BattleHitArc::Rear, "BBOLBBBROOO"),

@@ -19,7 +19,7 @@ fn construction_sets_original_protection_and_independent_ammunition() {
     assert_eq!(atlas.ammunition(), &[15, 6, 6, 5, 5]);
     let ams_source = JENNER.replace("IS.MediumLaser", "CL.Anti-MissileSystem");
     let ams =
-        BattleUnit::from_template(BattleTemplate::parse("test", &ams_source).unwrap()).unwrap();
+        BattleUnit::from_template(BattleTemplate::parse("JR7-D", &ams_source).unwrap()).unwrap();
     assert_eq!(
         ams.loadout()
             .unwrap()
@@ -31,14 +31,17 @@ fn construction_sets_original_protection_and_independent_ammunition() {
     );
     assert!(ams.ams_enabled());
     for source in [
-        JENNER.replace("FlipArms", "TripleStrengthMyomer"),
-        JENNER.replace("Computer", "UnknownField"),
+        JENNER.replace("\"FlipArms\"", "\"TripleStrengthMyomer\""),
         JENNER.replace("IS.MediumLaser", "IS.UnknownDefense"),
     ] {
+        assert_ne!(source, JENNER);
         assert!(
-            BattleUnit::from_template(BattleTemplate::parse("test", &source).unwrap()).is_err()
+            BattleUnit::from_template(BattleTemplate::parse("JR7-D", &source).unwrap()).is_err()
         );
     }
+    let unknown_field = JENNER.replace("computer = 2", "unknown_field = 2");
+    assert_ne!(unknown_field, JENNER);
+    assert!(BattleTemplate::parse("JR7-D", &unknown_field).is_err());
 }
 
 #[tokio::test]

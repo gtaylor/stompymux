@@ -90,8 +90,10 @@ fn ammunition_template_normalization_boundaries() {
 async fn ammunition_template_native_lua_creation_and_empty_restart() {
     let (dir, config, mut world) = support::isolated_world().await;
     std::fs::create_dir_all(dir.path().join("mechs")).unwrap();
-    let source = include_str!("fixtures/btech/mechs/JR7-D.toml")
-        .replace("Ammo_IS.SRM-4 25", "Ammo_IS.SRM-4 7");
+    let source = include_str!("fixtures/btech/mechs/JR7-D.toml").replace(
+        "item = \"Ammo_IS.SRM-4\", rounds = 25",
+        "item = \"Ammo_IS.SRM-4\", rounds = 7",
+    );
     std::fs::write(dir.path().join("mechs/partial.toml"), &source).unwrap();
     let id = world.create(&config, "Normalized Jenner".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));

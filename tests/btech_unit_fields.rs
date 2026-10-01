@@ -804,7 +804,7 @@ async fn authored_and_edited_metadata_share_validation_across_chassis_and_restar
 ) {
     let config = &f.config;
     for source in firing::templates() {
-        let source = format!("{source}\nUnit_Era {{ Clan Invasion }}\nUnit_TRO {{ TRO 3050 }}\n");
+        let source = format!("unit_era = \"Clan Invasion\"\nunit_tro = \"TRO 3050\"\n{source}");
         let (world, id, _, _) = f.pair(&source, &source);
         let native = &f.native;
         let lua = &f.lua;
@@ -1441,22 +1441,19 @@ async fn construction_fields_share_storage_authority_and_restart_without_changin
 async fn engine_sink_override_validates_authored_values_across_chassis_scenario(f: &UnitFields) {
     let config = &f.config;
     for source in firing::templates() {
-        let authored = format!("HSEngOverRide {{ 14 }}\n{source}");
+        let authored = format!("hs_engine_override = 14\n{source}");
         let (mut world, id, _, _) = f.pair(&authored, &source);
         let candidate = world.create(config, "Invalid construction".into(), Kind::Thing);
         let before = world.btech.clone();
-        for value in ["no", "2147483648", "-2147483649", "1.5"] {
+        // Typed TOML values reject non-integers and values outside a signed 32-bit range.
+        for value in ["\"no\"", "2147483648", "-2147483649", "1.5"] {
             let template = BattleUnitTemplate::parse(
                 "test",
-                &format!("HSEngOverRide {{ {value} }}\n{source}"),
+                &format!("hs_engine_override = {value}\n{source}"),
             );
             let result = template.and_then(|template| template.create(&mut world, candidate));
-            assert!(
-                result
-                    .unwrap_err()
-                    .to_string()
-                    .contains("engine heat-sink override")
-            );
+            let error = format!("{:#}", result.unwrap_err());
+            assert!(error.contains("hs_engine_override"), "{error}");
             assert_eq!(world.btech, before);
         }
         let scripts = &f.native;

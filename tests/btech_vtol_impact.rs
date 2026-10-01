@@ -9,13 +9,16 @@ async fn aircraft_impacts_apply_location_rotor_and_armor_effects_with_saved_repl
 
     for proof in [false, true] {
         let source = if proof {
-            include_str!("../game/mechs/Kestrel.toml")
-                .replace("CargoTech", "CargoTech CritProof_Tech")
+            include_str!("../game/mechs/Kestrel.toml").replacen(
+                "\"CargoTech\"",
+                "\"CargoTech\", \"CritProof_Tech\"",
+                1,
+            )
         } else {
             include_str!("../game/mechs/Kestrel.toml").into()
         };
         let unit =
-            BattleVehicle::new(BattleVehicleTemplate::parse("test", &source).unwrap()).unwrap();
+            BattleVehicle::new(BattleVehicleTemplate::parse("Kestrel", &source).unwrap()).unwrap();
         for arc in [
             BattleHitArc::Front,
             BattleHitArc::Rear,
