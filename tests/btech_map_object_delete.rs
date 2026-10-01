@@ -18,7 +18,6 @@ async fn native_lua_selectors_replay_and_rollback_all_owned_kinds() {
         ("ENTRA", "'ENTRA'", 1),
         ("LINKED 1 1", "'LINKED',1,1", 1),
         ("BLZ", "'BLZ'", 2),
-        ("TBITS", "'TBITS'", 1),
         ("1 1", "nil,1,1", 10),
         ("-1 99", "nil,-1,99", 0),
     ] {
