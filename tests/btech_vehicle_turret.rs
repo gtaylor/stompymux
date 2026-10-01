@@ -18,7 +18,8 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap(),
+        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+            .unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -455,7 +456,7 @@ async fn automatic_turret_tracks_moving_units_and_hexes() {
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, target, map, 1, 0).unwrap();
@@ -509,7 +510,7 @@ async fn automatic_tracking_is_shared_by_ground_and_rotorcraft() {
         ground
             .replace("movement = \"track\"", "movement = \"none\"")
             .replace("53.75", "0.0"),
-        format!("{vtol}\nTurret\n Armor {{ 1 }}\n Internals {{ 1 }}\n"),
+        format!("{vtol}\n[sections.turret]\narmor = 1\ninternals = 1\n"),
         vtol.into(),
     ] {
         let (_dir, config, mut world) = support::isolated_world().await;
@@ -526,7 +527,7 @@ async fn automatic_tracking_is_shared_by_ground_and_rotorcraft() {
         create_battle_vehicle(
             &mut world,
             id,
-            BattleVehicleTemplate::parse("test",&source).unwrap(),
+            BattleVehicleTemplate::parse("test", &source).unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();

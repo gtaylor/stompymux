@@ -390,7 +390,7 @@ async fn gyro_reconstruction_preserves_secondary_protection_and_future_hit_behav
         let source = if source.contains("FlipArms") {
             source.replace("FlipArms", "HDGYRO")
         } else {
-            format!("Specials {{ HDGYRO }}\n{source}")
+            format!("specials = [\"HDGYRO\"]\n{source}")
         };
         for protection_used in [false, true] {
             let (_dir, config, world, id, _, _) =

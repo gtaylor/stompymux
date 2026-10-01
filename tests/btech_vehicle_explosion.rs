@@ -58,7 +58,10 @@ async fn ground_powerplant_explosions_ignore_case_and_persist() {
     for case in [false, true] {
         let text = if case {
             include_str!("../game/mechs/Demolisher.toml")
-                .replace("Aft_Side\n", "Aft_Side\n    CRIT_1 { CASE - - }\n")
+                .replace(
+                    "[sections.aft_side]\n",
+                    "[sections.aft_side]\nslots = [{ at = 1, item = \"CASE\" }]\n",
+                )
         } else {
             include_str!("../game/mechs/Demolisher.toml").into()
         };
@@ -107,7 +110,10 @@ async fn ground_powerplant_explosions_ignore_case_and_persist() {
 #[tokio::test]
 async fn fuel_explosions_ignore_case_and_do_not_damage_nearby_units() {
     let text = include_str!("../game/mechs/Demolisher.toml")
-        .replace("Aft_Side\n", "Aft_Side\n    CRIT_1 { CASE - - }\n");
+        .replace(
+                    "[sections.aft_side]\n",
+                    "[sections.aft_side]\nslots = [{ at = 1, item = \"CASE\" }]\n",
+                );
     let (_dir, config, mut world, id) = fixture(&text).await;
     let map = world.btech.vehicles()[&id].position().unwrap().map;
     let neighbor = world.create(&config, "Neighbor".into(), Kind::Thing);
@@ -148,8 +154,18 @@ async fn fuel_explosions_ignore_case_and_do_not_damage_nearby_units() {
 async fn case_requires_installed_equipment_and_character_explosions_record_crew_loss() {
     for extra in ["", "Clan"] {
         let text = include_str!("../game/mechs/Demolisher.toml")
-            .replace("ICEEngine_Tech", &format!("ICEEngine_Tech {extra}"))
-            .replace("Aft_Side\n", "Aft_Side\n    Config { CASE }\n");
+            .replace(
+                "\"ICEEngine_Tech\"",
+                &if extra.is_empty() {
+                    "\"ICEEngine_Tech\"".to_owned()
+                } else {
+                    format!("\"ICEEngine_Tech\", \"{extra}\"")
+                },
+            )
+            .replace(
+                "[sections.aft_side]\n",
+                "[sections.aft_side]\nconfig = \"CASE\"\n",
+            );
         let (_dir, _config, world, id) = fixture(&text).await;
         assert!(!world.btech.vehicles()[&id].has_powerplant_containment());
     }

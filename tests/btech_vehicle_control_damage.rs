@@ -35,8 +35,8 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 async fn vehicle_control_damage_stacks_without_changing_skills_or_construction() {
     use BattleVehicleControlHit as H;
     let text = include_str!("../game/mechs/Demolisher.toml").replace(
-        "Front_Side\n",
-        "Front_Side\n    CRIT_1 { IS.MediumLaser - - }\n",
+        "[sections.front_side]\n",
+        "[sections.front_side]\nslots = [{ at = 1, item = \"IS.MediumLaser\" }]\n",
     );
     let (_dir, config, mut world, id) = fixture(&text).await;
     let definition = world.btech.vehicles()[&id].definition().clone();

@@ -13,7 +13,7 @@ async fn tic_membership_native_lua_and_persistence() {
         let (_dir, config, mut world) = support::isolated_world().await;
         let id = world.create(&config, "TIC unit".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        if source.contains("Rotor") || source.contains("Turret") {
+        if source.contains("[sections.rotor]") || source.contains("[sections.turret]") {
             create_battle_vehicle(
                 &mut world,
                 id,

@@ -3,28 +3,42 @@ use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
-/// Representative assets, including stationary construction authored from a tracked chassis.
-fn templates() -> Vec<String> {
+/// Representative assets as (reference, document) pairs, including stationary construction
+/// authored from a tracked chassis.
+fn templates() -> Vec<(&'static str, String)> {
     let vehicle = include_str!("../game/mechs/Demolisher.toml");
     vec![
-        include_str!("../game/mechs/JR7-D.toml").into(),
-        include_str!("../game/mechs/GOL-1H.toml").into(),
-        vehicle.into(),
-        vehicle.replace("movement = \"track\"", "movement = \"wheel\""),
-        vehicle.replace("movement = \"track\"", "movement = \"hover\""),
-        vehicle
-            .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("max_speed = 53.75", "max_speed = 0.0"),
-        include_str!("../game/mechs/Kestrel.toml").into(),
+        ("JR7-D", include_str!("../game/mechs/JR7-D.toml").into()),
+        ("GOL-1H", include_str!("../game/mechs/GOL-1H.toml").into()),
+        ("Demolisher", vehicle.into()),
+        (
+            "Demolisher",
+            vehicle.replace("movement = \"track\"", "movement = \"wheel\""),
+        ),
+        (
+            "Demolisher",
+            vehicle.replace("movement = \"track\"", "movement = \"hover\""),
+        ),
+        (
+            "Demolisher",
+            vehicle
+                .replace("movement = \"track\"", "movement = \"none\"")
+                .replace("max_speed = 53.75", "max_speed = 0.0"),
+        ),
+        ("Kestrel", include_str!("../game/mechs/Kestrel.toml").into()),
     ]
 }
 
 /// Shutdown units with an ordinary passenger exercise report access without a pilot assignment.
-async fn fixture(source: &str, placed: bool) -> (tempfile::TempDir, Config, World, ObjectId) {
+async fn fixture(
+    reference: &str,
+    source: &str,
+    placed: bool,
+) -> (tempfile::TempDir, Config, World, ObjectId) {
     let (dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Equipment report".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    BattleUnitTemplate::parse("test",source)
+    BattleUnitTemplate::parse(reference, source)
         .unwrap()
         .create(&mut world, id)
         .unwrap();
@@ -46,8 +60,8 @@ async fn fixture(source: &str, placed: bool) -> (tempfile::TempDir, Config, Worl
 /// Native reports, detached Lua data and restart agree without consuming dice or changing equipment.
 #[tokio::test]
 async fn reports_share_chassis_state_and_preserve_empty_ammunition() {
-    for source in templates() {
-        let (_dir, config, mut world, id) = fixture(&source, true).await;
+    for (reference, source) in templates() {
+        let (_dir, config, mut world, id) = fixture(reference, &source, true).await;
         let mut state = serde_json::to_value(&world.btech).unwrap();
         let group = if world.btech.vehicles().contains_key(&id) {
             "vehicles"
@@ -151,11 +165,11 @@ async fn reports_share_chassis_state_and_preserve_empty_ammunition() {
 /// Mapless specifications remain available; damage diagnostics retain battlefield admission.
 #[tokio::test]
 async fn report_access_and_artillery_ranges() {
-    for source in [
-        include_str!("../game/mechs/Daishi-H.toml"),
-        include_str!("../game/mechs/Naga-A.toml"),
+    for (reference, source) in [
+        ("Daishi-H", include_str!("../game/mechs/Daishi-H.toml")),
+        ("Naga-A", include_str!("../game/mechs/Naga-A.toml")),
     ] {
-        let (_dir, config, world, id) = fixture(source, false).await;
+        let (_dir, config, world, id) = fixture(reference, source, false).await;
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         assert!(
             support::run_text(&scripts, &config, ObjectId(1), 1, "weaponstatus")
@@ -179,7 +193,8 @@ async fn report_access_and_artillery_ranges() {
 /// Whole-weapon diagnostics retain mount numbers, report live damage and keep destroyed types in specs.
 #[tokio::test]
 async fn damage_and_vehicle_failures_are_distinct_from_readiness() {
-    let (_dir, config, mut world, id) = fixture(include_str!("../game/mechs/GOL-1H.toml"), true).await;
+    let (_dir, config, mut world, id) =
+        fixture("GOL-1H", include_str!("../game/mechs/GOL-1H.toml"), true).await;
     let loadout = world.btech.constructed_units()[&id].loadout().unwrap();
     let index = loadout
         .weapons
@@ -229,8 +244,12 @@ async fn damage_and_vehicle_failures_are_distinct_from_readiness() {
         specs
     );
 
-    let (_dir, _config, mut world, id) =
-        fixture(include_str!("../game/mechs/Demolisher.toml"), true).await;
+    let (_dir, _config, mut world, id) = fixture(
+        "Demolisher",
+        include_str!("../game/mechs/Demolisher.toml"),
+        true,
+    )
+    .await;
     let jam = jam_battle_vehicle_weapon(&mut world, id, BattleVehicleSection::Turret)
         .unwrap()
         .unwrap();
@@ -243,8 +262,8 @@ async fn damage_and_vehicle_failures_are_distinct_from_readiness() {
 /// Diagnostic observation requires consciousness and vision; catalogue inspection has no such gate.
 #[tokio::test]
 async fn report_observation_guards_preserve_state() {
-    for source in templates() {
-        let (_dir, config, mut world, _) = fixture(&source, true).await;
+    for (reference, source) in templates() {
+        let (_dir, config, mut world, _) = fixture(reference, &source, true).await;
         let mut state = serde_json::to_value(&world.btech).unwrap();
         state["recoveries"]["1"] = serde_json::json!({
             "remaining": 1, "pain_resistance": false, "toughness": false,
@@ -266,8 +285,8 @@ async fn report_observation_guards_preserve_state() {
 /// The reference menu has fixed columns, literal model titles and configured range headings.
 #[tokio::test]
 async fn specification_menu_matches_reference_columns_and_preserves_state() {
-    for source in templates() {
-        let (_dir, config, world, id) = fixture(&source, false).await;
+    for (reference, source) in templates() {
+        let (_dir, config, world, id) = fixture(reference, &source, false).await;
         let before = world.btech.clone();
         for extended in [false, true] {
             let report = battle_weapon_specification_text(&world, id, extended).unwrap();

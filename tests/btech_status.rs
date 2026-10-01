@@ -301,8 +301,16 @@ async fn landed_rotor_loss_has_its_own_damage_banner() {
     assert_eq!(world.btech, before);
 }
 
-/// An occupied vehicle and a separate observer Mech on unobstructed terrain.
+/// An occupied unit under a placeholder reference, with an observer Mech on unobstructed terrain.
 async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
+    named_fixture("test", source).await
+}
+
+/// An occupied unit with the given reference and a separate observer Mech on unobstructed terrain.
+async fn named_fixture(
+    reference: &str,
+    source: &str,
+) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Status yard".into(), Kind::Room);
     create_battle_map(
@@ -313,7 +321,7 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId, O
     )
     .unwrap();
     let id = world.create(&config, "Vehicle".into(), Kind::Thing);
-    BattleUnitTemplate::parse("test",source)
+    BattleUnitTemplate::parse(reference, source)
         .unwrap()
         .create(&mut world, id)
         .unwrap();
@@ -517,17 +525,17 @@ async fn vehicle_status_tracks_live_load_damage_ammunition_and_flight() {
 /// Whole-display snapshots make whitespace, silhouette choice and block order reviewable.
 #[tokio::test]
 async fn status_layout_snapshots_cover_every_diagram() {
-    for (name, source) in [
-        ("light", include_str!("../game/mechs/JR7-D.toml")),
-        ("medium", include_str!("../game/mechs/SHD-2H.toml")),
-        ("heavy", include_str!("../game/mechs/WHM-6R.toml")),
-        ("assault", include_str!("../game/mechs/AS7-D.toml")),
-        ("quad", include_str!("../game/mechs/GOL-1H.toml")),
-        ("vehicle", include_str!("../game/mechs/Demolisher.toml")),
-        ("turretless", include_str!("../game/mechs/Savannah_Master.toml")),
-        ("vtol", include_str!("../game/mechs/Kestrel.toml")),
+    for (name, reference, source) in [
+        ("light", "JR7-D", include_str!("../game/mechs/JR7-D.toml")),
+        ("medium", "SHD-2H", include_str!("../game/mechs/SHD-2H.toml")),
+        ("heavy", "WHM-6R", include_str!("../game/mechs/WHM-6R.toml")),
+        ("assault", "AS7-D", include_str!("../game/mechs/AS7-D.toml")),
+        ("quad", "GOL-1H", include_str!("../game/mechs/GOL-1H.toml")),
+        ("vehicle", "Demolisher", include_str!("../game/mechs/Demolisher.toml")),
+        ("turretless", "Savannah_Master", include_str!("../game/mechs/Savannah_Master.toml")),
+        ("vtol", "Kestrel", include_str!("../game/mechs/Kestrel.toml")),
     ] {
-        let (_dir, config, world, id, _) = fixture(source).await;
+        let (_dir, config, world, id, _) = named_fixture(reference, source).await;
         let before = world.btech.clone();
         let rendered = battle_unit_status(&world, id, "").unwrap();
         let plain = text::plain(&rendered).replace("\r\n", "\n");

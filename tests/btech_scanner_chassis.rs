@@ -20,7 +20,7 @@ fn templates() -> Vec<String> {
 
 /// Add probes to unoccupied slots without changing the unit's weapons or required equipment.
 fn equipment(source: &str) -> BattleUnitTemplate {
-    let mut template = BattleUnitTemplate::parse("test",source).unwrap();
+    let mut template = BattleUnitTemplate::parse("test", source).unwrap();
     let (attributes, section, parts) = match &mut template {
         BattleUnitTemplate::Mech(definition) => {
             let section = definition
@@ -117,7 +117,7 @@ async fn fixture(
     let mut ids = Vec::new();
     for (index, template) in [
         equipment(source),
-        BattleUnitTemplate::parse("test",target).unwrap(),
+        BattleUnitTemplate::parse("test", target).unwrap(),
     ]
     .into_iter()
     .enumerate()
@@ -328,8 +328,13 @@ async fn stationary_probe_extension_and_shared_radar_ceiling() {
 async fn probe_contacts_cross_obstacles_and_reconcile_after_equipment_loss() {
     use std::{cell::RefCell, rc::Rc};
     for source in templates() {
-        let (_dir, config, world, observer, target) =
-            fixture(&source, include_str!("../game/mechs/Demolisher.toml"), 3, true).await;
+        let (_dir, config, world, observer, target) = fixture(
+            &source,
+            include_str!("../game/mechs/Demolisher.toml"),
+            3,
+            true,
+        )
+        .await;
         let terrain = battle_unit_terrain_los(&world, observer, target).unwrap();
         assert!(terrain.blocked);
         let cover = if terrain.partial_cover { 3 } else { 0 };

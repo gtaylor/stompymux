@@ -35,7 +35,7 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
     .unwrap();
     let stationary = include_str!("../game/mechs/Demolisher.toml")
         .replace("movement = \"track\"", "movement = \"none\"")
-        .replace("{ 53.75 }", "{ 0 }");
+        .replace("max_speed = 53.75", "max_speed = 0.0");
     let sources = [
         (include_str!("fixtures/btech/mechs/JR7-D.toml"), 'b'),
         (include_str!("../game/mechs/SCP-1N.toml"), 'q'),
@@ -48,7 +48,7 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
     let mut ids = Vec::new();
     for (x, (source, _)) in sources.iter().enumerate() {
         let id = base.create(&config, "Formation unit".into(), Kind::Thing);
-        BattleUnitTemplate::parse("test",source)
+        BattleUnitTemplate::parse("test", source)
             .unwrap()
             .create(&mut base, id)
             .unwrap();

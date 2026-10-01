@@ -54,11 +54,14 @@ fn probe_vehicle(
 ) -> ObjectId {
     let id = world.create(config, "Probe carrier".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    let mut definition = BattleVehicleTemplate::parse("test",if stationary {
-        include_str!("../game/mechs/RadioTower.toml")
-    } else {
-        include_str!("../game/mechs/Demolisher.toml")
-    })
+    let mut definition = BattleVehicleTemplate::parse(
+        "test",
+        if stationary {
+            include_str!("../game/mechs/RadioTower.toml")
+        } else {
+            include_str!("../game/mechs/Demolisher.toml")
+        },
+    )
     .unwrap();
     let front = definition
         .sections
@@ -93,7 +96,7 @@ fn mech(
 ) -> ObjectId {
     let id = world.create(config, "Probe subject".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    create_battle_unit(world, id, BattleTemplate::parse("test",source).unwrap()).unwrap();
+    create_battle_unit(world, id, BattleTemplate::parse("test", source).unwrap()).unwrap();
     place_battle_unit(world, id, map, 0, y).unwrap();
     running(world, id);
     set_battle_unit_signature(
@@ -320,8 +323,8 @@ async fn hostile_ecm_map_switch_and_angel_protection_reject_probes() {
     let (_dir, config, mut world, map) = hill_lane(9).await;
     let observer = probe_vehicle(&mut world, &config, map, Some("BloodhoundProbe"), false, 0);
     let source = include_str!("../game/mechs/JR7-D.toml").replace(
-        "Left_Torso\n",
-        "Left_Torso\n    CRIT_3-4 { AngelEcm - - }\n",
+        r#"{ at = "1-2", item = "JumpJet" },"#,
+        r#"{ at = "1-2", item = "JumpJet" }, { at = "3-4", item = "AngelEcm" },"#,
     );
     let target = mech(&mut world, &config, map, &source, 2, 8);
     seat(&mut world, target, ObjectId(2));
@@ -418,8 +421,8 @@ async fn probe_contacts_behind_hills_lock_and_spot_but_refuse_direct_fire_and_sc
     let (_dir, config, mut world, map) = lane(&[".0", ".0", ".9", ".0", ".0", ".0", ".0"]).await;
     let target = target(&mut world, &config, map, 0);
     let observer_source = include_str!("../game/mechs/JR7-D.toml").replace(
-        "Left_Torso\n",
-        "Left_Torso\n    CRIT_3 { BeagleProbe - - }\n",
+        r#"{ at = "1-2", item = "JumpJet" },"#,
+        r#"{ at = "1-2", item = "JumpJet" }, { at = 3, item = "BeagleProbe" },"#,
     );
     let observer = mech(&mut world, &config, map, &observer_source, 0, 3);
     let shooter = mech(

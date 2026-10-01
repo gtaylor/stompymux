@@ -17,6 +17,14 @@ fn rules() -> BattleAimRules {
     }
 }
 
+/// Insert one slot entry at the start of a section's existing `slots` array.
+fn add_slot(source: &str, section: &str, entry: &str) -> String {
+    let start = source.find(&format!("[sections.{section}]\n")).unwrap();
+    let opening = "slots = [\n";
+    let offset = start + source[start..].find(opening).unwrap() + opening.len();
+    format!("{}    {entry},\n{}", &source[..offset], &source[offset..])
+}
+
 /// Both adapters use signed attacker elevation; shallow-water Mechs can fire their torso lasers.
 #[tokio::test]
 async fn water_modifier_is_attacker_owned_and_shared_by_supported_chassis() {
@@ -159,21 +167,21 @@ async fn shallow_water_aim_uses_mount_anatomy_and_posture() {
     for (source, headings) in [
         (
             include_str!("../game/mechs/JR7-D.toml"),
-            ["Left_Arm", "Left_Leg", "Left_Torso"],
+            ["left_arm", "left_leg", "left_torso"],
         ),
         (
             include_str!("../game/mechs/GOL-1H.toml"),
-            ["Front_Left_Leg", "Rear_Left_Leg", "Left_Torso"],
+            ["front_left_leg", "rear_left_leg", "left_torso"],
         ),
     ] {
         for (mount_number, heading) in headings.into_iter().enumerate() {
-            let source = source.replace(
-                &format!("{heading}\n"),
-                &format!("{heading}\n    CRIT_6 {{ IS.SmallLaser - - }}\n"),
-            );
-            let (_dir, config, mut world, shooter, target, _) =
-                firing::fixture_with_target(&source, None, include_str!("../game/mechs/JR7-D.toml"))
-                    .await;
+            let source = add_slot(source, heading, r#"{ at = 6, item = "IS.SmallLaser" }"#);
+            let (_dir, config, mut world, shooter, target, _) = firing::fixture_with_target(
+                &source,
+                None,
+                include_str!("../game/mechs/JR7-D.toml"),
+            )
+            .await;
             let index = world.btech.constructed_units()[&shooter]
                 .loadout()
                 .unwrap()

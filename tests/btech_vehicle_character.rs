@@ -508,11 +508,10 @@ async fn nested_crew_death_finishes_weapon_damage_before_single_evacuation() {
 async fn ground_explosions_evacuate_crew_and_restore_failed_actions() {
     for (case, fuel) in [(false, false), (true, false), (true, true)] {
         let template = if case {
-            include_str!("../game/mechs/Demolisher.toml")
-                .replace(
-                    "[sections.aft_side]\n",
-                    "[sections.aft_side]\nslots = [{ at = 1, item = \"CASE\" }]\n",
-                )
+            include_str!("../game/mechs/Demolisher.toml").replace(
+                "[sections.aft_side]\n",
+                "[sections.aft_side]\nslots = [{ at = 1, item = \"CASE\" }]\n",
+            )
         } else {
             include_str!("../game/mechs/Demolisher.toml").to_owned()
         };
@@ -1180,16 +1179,22 @@ async fn transport_loss_shares_nested_chassis_destruction_and_transactional_dise
                         create_battle_vehicle(
                             &mut world,
                             id,
-                            BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml"))
-                                .unwrap(),
+                            BattleVehicleTemplate::parse(
+                                "Demolisher",
+                                include_str!("../game/mechs/Demolisher.toml"),
+                            )
+                            .unwrap(),
                         )
                         .unwrap();
                     } else {
                         create_battle_unit(
                             &mut world,
                             id,
-                            BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml"))
-                                .unwrap(),
+                            BattleTemplate::parse(
+                                "JR7-D",
+                                include_str!("fixtures/btech/mechs/JR7-D.toml"),
+                            )
+                            .unwrap(),
                         )
                         .unwrap();
                     }

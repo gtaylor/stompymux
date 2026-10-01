@@ -41,12 +41,12 @@ async fn fixture(
     .unwrap();
     let id = world.create(&config, "Hiding unit".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    let source = if camouflage {
-        format!("{source}\nSpecials {{ Camo_Tech }}\n")
-    } else {
-        source.to_owned()
+    let source = match (camouflage, source.contains("specials = [")) {
+        (false, _) => source.to_owned(),
+        (true, true) => source.replacen("specials = [", "specials = [\"Camo_Tech\", ", 1),
+        (true, false) => format!("specials = [\"Camo_Tech\"]\n{source}"),
     };
-    BattleUnitTemplate::parse("test",&source)
+    BattleUnitTemplate::parse("test", &source)
         .unwrap()
         .create(&mut world, id)
         .unwrap();
@@ -183,7 +183,7 @@ async fn hiding_authority_and_cached_observer_rules() {
             result.unwrap();
             let observer = world.create(&config, "Observer".into(), Kind::Thing);
             world.objects.get_mut(&observer).unwrap().home = Some(ObjectId(config.home()));
-            BattleUnitTemplate::parse("Hunter",include_str!("../game/mechs/Hunter.toml"))
+            BattleUnitTemplate::parse("Hunter", include_str!("../game/mechs/Hunter.toml"))
                 .unwrap()
                 .create(&mut world, observer)
                 .unwrap();

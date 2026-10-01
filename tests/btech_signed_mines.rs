@@ -47,11 +47,14 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
             create_battle_unit(
                 &mut base,
                 id,
-                BattleTemplate::parse("test",if chassis == "quad" {
-                    include_str!("../game/mechs/SCP-1N.toml")
-                } else {
-                    include_str!("../game/mechs/JR7-D.toml")
-                })
+                BattleTemplate::parse(
+                    "test",
+                    if chassis == "quad" {
+                        include_str!("../game/mechs/SCP-1N.toml")
+                    } else {
+                        include_str!("../game/mechs/JR7-D.toml")
+                    },
+                )
                 .unwrap(),
             )
             .unwrap();
@@ -61,16 +64,18 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
                 "stationary" => include_str!("../game/mechs/Demolisher.toml")
                     .replace("movement = \"track\"", "movement = \"none\"")
                     .replace("max_speed = 53.75", "max_speed = 0"),
-                "wheeled" => {
-                    include_str!("../game/mechs/Demolisher.toml").replace("movement = \"track\"", "movement = \"wheel\"")
-                }
-                "hover" => {
-                    include_str!("../game/mechs/Demolisher.toml").replace("movement = \"track\"", "movement = \"hover\"")
-                }
+                "wheeled" => include_str!("../game/mechs/Demolisher.toml")
+                    .replace("movement = \"track\"", "movement = \"wheel\""),
+                "hover" => include_str!("../game/mechs/Demolisher.toml")
+                    .replace("movement = \"track\"", "movement = \"hover\""),
                 _ => include_str!("../game/mechs/Demolisher.toml").to_owned(),
             };
-            create_battle_vehicle(&mut base, id, BattleVehicleTemplate::parse("test",&text).unwrap())
-                .unwrap();
+            create_battle_vehicle(
+                &mut base,
+                id,
+                BattleVehicleTemplate::parse("test", &text).unwrap(),
+            )
+            .unwrap();
         }
         place_battle_unit(&mut base, id, map, 1, 1).unwrap();
         for kind in [

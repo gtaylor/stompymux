@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test",template).unwrap(),
+        BattleVehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -218,15 +218,17 @@ async fn disabled_safe_critproof_and_stationary_criticals_preserve_draw_order() 
             false,
         ),
         (
-            include_str!("../game/mechs/Demolisher.toml")
-                .replace("ICEEngine_Tech", "ICEEngine_Tech CritProof_Tech"),
+            include_str!("../game/mechs/Demolisher.toml").replace(
+                "\"ICEEngine_Tech\"",
+                "\"ICEEngine_Tech\", \"CritProof_Tech\"",
+            ),
             true,
             false,
         ),
         (
             include_str!("../game/mechs/Demolisher.toml")
                 .replace("movement = \"track\"", "movement = \"none\"")
-                .replace("{ 53.75 }", "{ 0.00 }"),
+                .replace("max_speed = 53.75", "max_speed = 0.0"),
             false,
             true,
         ),

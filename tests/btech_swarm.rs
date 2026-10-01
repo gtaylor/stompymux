@@ -59,7 +59,7 @@ async fn fixture(
         (if index == 0 {
             launcher(source, "Swarm")
         } else {
-            BattleUnitTemplate::parse("test",source).unwrap()
+            BattleUnitTemplate::parse("test", source).unwrap()
         })
         .create(&mut world, id)
         .unwrap();
@@ -114,8 +114,8 @@ fn shot_rules() -> BattleShotRules {
 
 /// Install the same Clan LRM-20 and full Swarm bin in either construction anatomy.
 fn launcher(source: &str, mode: &str) -> BattleUnitTemplate {
-    let mut definition = BattleUnitTemplate::parse("test",source).unwrap();
-    let part = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml"))
+    let mut definition = BattleUnitTemplate::parse("test", source).unwrap();
+    let part = BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
         .unwrap()
         .sections[&BattleSection::LeftArm]
         .criticals[&2]
@@ -325,7 +325,7 @@ fn candidate(
     };
     let id = world.create(config, "Retarget candidate".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    BattleUnitTemplate::parse("test",source)
+    BattleUnitTemplate::parse("test", source)
         .unwrap()
         .create(world, id)
         .unwrap();
@@ -764,7 +764,8 @@ fn swarm_template_modes_cover_compatible_catalogue() {
                 continue;
             }
             let mut template =
-                BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                    .unwrap();
             let arm = template.sections.get_mut(&BattleSection::LeftArm).unwrap();
             let mut mount = arm.criticals[&2].clone();
             mount.equipment = weapon.name().into();

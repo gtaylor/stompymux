@@ -60,7 +60,14 @@ async fn internal_damage_handles_structure_rounding_and_vehicle_local_overflow()
         ("CompositeInternal_Tech", 10, 8),
     ] {
         let text = include_str!("../game/mechs/Demolisher.toml")
-            .replace("ICEEngine_Tech", &format!("ICEEngine_Tech {special}"));
+            .replace(
+                "\"ICEEngine_Tech\"",
+                &if special.is_empty() {
+                    "\"ICEEngine_Tech\"".to_owned()
+                } else {
+                    format!("\"ICEEngine_Tech\", \"{special}\"")
+                },
+            );
         let (_dir, config, mut world, id) = fixture(&text).await;
         seed(&mut world, id, 31);
         let mut dice = BattleDice::seeded([31; 32]);
@@ -164,8 +171,8 @@ async fn internal_criticals_precede_structure_and_nested_errors_roll_back_all_da
 #[tokio::test]
 async fn weapon_explosions_disable_mount_before_damage_and_injure_surviving_crew() {
     let text = include_str!("../game/mechs/Demolisher.toml").replace(
-        "Front_Side\n",
-        "Front_Side\n    CRIT_1 { IS.MagshotGaussRifle - - }\n",
+        "[sections.front_side]\n",
+        "[sections.front_side]\nslots = [{ at = 1, item = \"IS.MagshotGaussRifle\" }]\n",
     );
     let (_dir, config, base, id) = fixture(&text).await;
     let value = (0..=255)
@@ -329,20 +336,22 @@ async fn hotloaded_vehicle_criticals_require_usable_normal_ammunition() {
         dice.two_d6() < 8
     });
     for (mode, rounds, lost_bin, disabled, expected) in [
-        ("-", 2, false, false, 5),
-        ("-", 0, false, false, 0),
-        ("Sguided", 2, false, false, 0),
-        ("-", 2, true, false, 0),
-        ("-", 2, false, true, 0),
+        ("", 2, false, false, 5),
+        ("", 0, false, false, 0),
+        (", modes = [\"Sguided\"]", 2, false, false, 0),
+        ("", 2, true, false, 0),
+        ("", 2, false, true, 0),
     ] {
         let text = include_str!("../game/mechs/Demolisher.toml")
             .replace(
-                "Front_Side\n",
-                "Front_Side\n CRIT_1 { IS.LRM-5 - Hotload }\n",
+                "[sections.front_side]\n",
+                "[sections.front_side]\nslots = [{ at = 1, item = \"IS.LRM-5\", modes = [\"Hotload\"] }]\n",
             )
             .replace(
-                "Left_Side\n",
-                &format!("Left_Side\n CRIT_1 {{ Ammo_IS.LRM-5 {rounds} {mode} }}\n"),
+                "[sections.left_side]\n",
+                &format!(
+                    "[sections.left_side]\nslots = [{{ at = 1, item = \"Ammo_IS.LRM-5\", rounds = {rounds}{mode} }}]\n"
+                ),
             );
         let (_dir, config, mut world, id) = fixture(&text).await;
         let index = world.btech.vehicles()[&id]
@@ -425,19 +434,21 @@ async fn incendiary_vehicle_criticals_require_recycling_and_matching_supply() {
         dice.two_d6() < 8
     });
     for (recycling, rounds, bin_mode, expected) in [
-        (true, 2, "Incendiary", 2),
-        (false, 2, "Incendiary", 0),
-        (true, 0, "Incendiary", 0),
-        (true, 2, "-", 0),
+        (true, 2, ", modes = [\"Incendiary\"]", 2),
+        (false, 2, ", modes = [\"Incendiary\"]", 0),
+        (true, 0, ", modes = [\"Incendiary\"]", 0),
+        (true, 2, "", 0),
     ] {
         let text = include_str!("../game/mechs/Demolisher.toml")
             .replace(
-                "Front_Side\n",
-                "Front_Side\n CRIT_1 { IS.AC/2 - Incendiary }\n",
+                "[sections.front_side]\n",
+                "[sections.front_side]\nslots = [{ at = 1, item = \"IS.AC/2\", modes = [\"Incendiary\"] }]\n",
             )
             .replace(
-                "Left_Side\n",
-                &format!("Left_Side\n CRIT_1 {{ Ammo_IS.AC/2 {rounds} {bin_mode} }}\n"),
+                "[sections.left_side]\n",
+                &format!(
+                    "[sections.left_side]\nslots = [{{ at = 1, item = \"Ammo_IS.AC/2\", rounds = {rounds}{bin_mode} }}]\n"
+                ),
             );
         let (_dir, config, mut world, id) = fixture(&text).await;
         let index = world.btech.vehicles()[&id]
@@ -487,10 +498,13 @@ async fn incendiary_vehicle_criticals_require_recycling_and_matching_supply() {
 async fn hotloaded_nested_crew_and_hull_loss_preserves_surviving_ammunition() {
     let text = include_str!("../game/mechs/Demolisher.toml")
         .replace(
-            "Front_Side\n",
-            "Front_Side\n CRIT_1 { IS.LRM-10 - Hotload }\n",
+            "[sections.front_side]\n",
+            "[sections.front_side]\nslots = [{ at = 1, item = \"IS.LRM-10\", modes = [\"Hotload\"] }]\n",
         )
-        .replace("Left_Side\n", "Left_Side\n CRIT_1 { Ammo_IS.LRM-10 2 - }\n");
+        .replace(
+            "[sections.left_side]\n",
+            "[sections.left_side]\nslots = [{ at = 1, item = \"Ammo_IS.LRM-10\", rounds = 2 }]\n",
+        );
     let (_dir, _config, mut world, id) = fixture(&text).await;
     world
         .objects
@@ -524,10 +538,13 @@ async fn hotloaded_nested_crew_and_hull_loss_preserves_surviving_ammunition() {
 
 #[tokio::test]
 async fn nonexplosive_vehicle_firing_modes_allow_weapon_destruction() {
-    for weapon in ["IS.UltraAC/2 - UltraMode", "IS.Flamer - Heat"] {
+    for weapon in [
+        "item = \"IS.UltraAC/2\", modes = [\"UltraMode\"]",
+        "item = \"IS.Flamer\", modes = [\"Heat\"]",
+    ] {
         let text = include_str!("../game/mechs/Demolisher.toml").replace(
-            "Front_Side\n",
-            &format!("Front_Side\n CRIT_1 {{ {weapon} }}\n"),
+            "[sections.front_side]\n",
+            &format!("[sections.front_side]\nslots = [{{ at = 1, {weapon} }}]\n"),
         );
         let (_dir, _config, mut world, id) = fixture(&text).await;
         let stream = matching_seed(|dice| dice.two_d6() == 11);

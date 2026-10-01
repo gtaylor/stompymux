@@ -21,15 +21,15 @@ fn vehicle_assets_decode_without_mech_anatomy() {
             BattleVehicleMovement::Stationary,
         ),
     ] {
-        let vehicle = BattleVehicleTemplate::parse("test",source).unwrap();
+        let vehicle = BattleVehicleTemplate::parse("test", source).unwrap();
         assert_eq!(vehicle.movement, movement);
-        assert!(BattleTemplate::parse("test",source).is_err());
+        assert!(BattleTemplate::parse("test", source).is_err());
         assert!(vehicle.sections.contains_key(&BattleVehicleSection::Front));
         let restored: BattleVehicleTemplate =
             serde_json::from_value(serde_json::to_value(&vehicle).unwrap()).unwrap();
         assert_eq!(restored, vehicle);
     }
-    let vehicle = BattleVehicleTemplate::parse("Demolisher",DEMOLISHER).unwrap();
+    let vehicle = BattleVehicleTemplate::parse("Demolisher", DEMOLISHER).unwrap();
     assert_eq!(vehicle.tons, 80);
     assert_eq!(vehicle.max_speed, 53.75);
     assert_eq!(vehicle.heat_sinks, None);
@@ -39,7 +39,11 @@ fn vehicle_assets_decode_without_mech_anatomy() {
     assert_eq!(turret.criticals[&0].equipment, "IS.AC/20");
     assert_eq!(turret.criticals[&1].equipment, "IS.AC/20");
     assert_eq!(turret.criticals[&2].data, "5");
-    let truck = BattleVehicleTemplate::parse("Flatbed_Truck",include_str!("../game/mechs/Flatbed_Truck.toml")).unwrap();
+    let truck = BattleVehicleTemplate::parse(
+        "Flatbed_Truck",
+        include_str!("../game/mechs/Flatbed_Truck.toml"),
+    )
+    .unwrap();
     assert!(!truck.sections.contains_key(&BattleVehicleSection::Turret));
     assert_eq!(truck.attributes["computer"], "3");
 }
@@ -48,29 +52,40 @@ fn vehicle_assets_decode_without_mech_anatomy() {
 #[test]
 fn vehicle_template_validation_and_shared_syntax() {
     for source in [
-        DEMOLISHER.replace("Track", "VTOL"),
-        DEMOLISHER.replace("Left_Side", "Left_Arm"),
-        DEMOLISHER.replace("Turret", "Rotor"),
-        DEMOLISHER.replace("{ 80 }", "{ 0 }"),
-        DEMOLISHER.replace("53.75", "NaN"),
-        DEMOLISHER.replace("53.75", "-1"),
-        DEMOLISHER.replace("CRIT_1-2", "CRIT_1-13"),
-        format!("{DEMOLISHER}\nCRIT_1 {{ IS.MediumLaser - - }}"),
-        format!("{DEMOLISHER}\nName {{ Duplicate }}"),
-        format!("{DEMOLISHER}\nLeft_Side\nArmor {{ 1 }}"),
-        format!("{DEMOLISHER}\nSpecials {{ unclosed"),
+        DEMOLISHER.replace("movement = \"track\"", "movement = \"vtol\""),
+        DEMOLISHER.replace("class = \"vehicle\"", "class = \"Vehicle\""),
+        DEMOLISHER.replace("[sections.left_side]", "[sections.left_arm]"),
+        DEMOLISHER.replace("[sections.turret]", "[sections.rotor]"),
+        DEMOLISHER.replace("tons = 80", "tons = 0"),
+        DEMOLISHER.replace("max_speed = 53.75", "max_speed = nan"),
+        DEMOLISHER.replace("max_speed = 53.75", "max_speed = -1"),
+        DEMOLISHER.replace("at = \"1-2\"", "at = \"1-13\""),
+        DEMOLISHER.replace("at = \"3-6\"", "at = \"2-6\""),
+        format!("slots = [{{ at = 1, item = \"IS.MediumLaser\" }}]\n{DEMOLISHER}"),
+        format!("name = \"Duplicate\"\n{DEMOLISHER}"),
+        format!("future_field = \"preserved\"\n{DEMOLISHER}"),
+        format!("{DEMOLISHER}\n[sections.left_side]\narmor = 1\n"),
+        format!("specials = [\"unclosed\"\n{DEMOLISHER}"),
         "x".repeat(1_048_577),
     ] {
-        assert!(BattleVehicleTemplate::parse("test",&source).is_err());
+        assert_ne!(source, DEMOLISHER);
+        assert!(BattleVehicleTemplate::parse("Demolisher", &source).is_err());
     }
-    assert!(BattleVehicleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).is_err());
-    let custom = format!(
-        "{}\nSpecials {{\n ICEEngine_Tech CargoTech\n}}\nFuture_Field {{ preserved }}",
-        DEMOLISHER.replace("IS.AC/20 - -", "IS.AC/20 - Hotload|RearMount")
+    assert!(
+        BattleVehicleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+            .is_err()
     );
-    let parsed = BattleVehicleTemplate::parse("test",&custom).unwrap();
+    let custom = DEMOLISHER
+        .replace(
+            "specials = [\"ICEEngine_Tech\"]",
+            "specials = [\"ICEEngine_Tech\", \"CargoTech\", \"iceengine_tech\"]",
+        )
+        .replace(
+            "item = \"IS.AC/20\" }",
+            "item = \"IS.AC/20\", modes = [\"Hotload\", \"RearMount\"] }",
+        );
+    let parsed = BattleVehicleTemplate::parse("Demolisher", &custom).unwrap();
     assert_eq!(parsed.attributes["specials"], "ICEEngine_Tech CargoTech");
-    assert_eq!(parsed.attributes["future_field"], "preserved");
     assert_eq!(
         parsed.sections[&BattleVehicleSection::Turret].criticals[&0].modes,
         ["Hotload", "RearMount"]
@@ -81,10 +96,10 @@ fn vehicle_template_validation_and_shared_syntax() {
 #[test]
 fn vehicle_asset_reader_is_confined() {
     let directory = tempfile::tempdir().unwrap();
-    std::fs::write(directory.path().join("vehicle"), DEMOLISHER).unwrap();
+    std::fs::write(directory.path().join("vehicle.toml"), DEMOLISHER).unwrap();
     assert_eq!(
         read_battle_vehicle_template(directory.path(), "vehicle").unwrap(),
-        BattleVehicleTemplate::parse("Demolisher",DEMOLISHER).unwrap()
+        BattleVehicleTemplate::parse("vehicle", DEMOLISHER).unwrap()
     );
     assert!(read_battle_vehicle_template(directory.path(), "../vehicle").is_err());
     assert!(read_battle_vehicle_template(directory.path(), "/etc/passwd").is_err());
@@ -97,7 +112,7 @@ fn vehicle_assets_accept_multiple_ammunition_mode_words() {
         include_str!("../game/mechs/Jeep.toml"),
         include_str!("../game/mechs/HTracked_APC.toml"),
     ] {
-        let definition = BattleVehicleTemplate::parse("test",source).unwrap();
+        let definition = BattleVehicleTemplate::parse("test", source).unwrap();
         let unit = BattleVehicle::new(definition).unwrap();
         let loadout = unit.loadout().unwrap();
         let bin = loadout
@@ -121,7 +136,7 @@ fn artillery_vehicle_assets_decode_abbreviated_ecm() {
         include_str!("../game/mechs/Huey.toml"),
         include_str!("../game/mechs/Huitzilopochtli.toml"),
     ] {
-        let definition = BattleVehicleTemplate::parse("test",source).unwrap();
+        let definition = BattleVehicleTemplate::parse("test", source).unwrap();
         let vehicle = BattleVehicle::new(definition).unwrap();
         assert!(
             vehicle
@@ -137,8 +152,11 @@ fn artillery_vehicle_assets_decode_abbreviated_ecm() {
 /// The copied Streak carrier asset records the reference loader's effective full-bin quantity.
 #[test]
 fn svantovit_streak_records_valid_full_bin_capacity() {
-    let definition =
-        BattleVehicleTemplate::parse("Svantovit-Streak",include_str!("../game/mechs/Svantovit-Streak.toml")).unwrap();
+    let definition = BattleVehicleTemplate::parse(
+        "Svantovit-Streak",
+        include_str!("../game/mechs/Svantovit-Streak.toml"),
+    )
+    .unwrap();
     let vehicle = BattleVehicle::new(definition).unwrap();
     let loadout = vehicle.loadout().unwrap();
     let bin = loadout
@@ -153,8 +171,11 @@ fn svantovit_streak_records_valid_full_bin_capacity() {
 /// The copied tracked transport has ground anatomy, without the stray aircraft section.
 #[test]
 fn tracked_transport_asset_has_only_ground_sections() {
-    let definition =
-        BattleVehicleTemplate::parse("J-27_Transport",include_str!("../game/mechs/J-27_Transport.toml")).unwrap();
+    let definition = BattleVehicleTemplate::parse(
+        "J-27_Transport",
+        include_str!("../game/mechs/J-27_Transport.toml"),
+    )
+    .unwrap();
     assert_eq!(definition.movement, BattleVehicleMovement::Tracked);
     assert_eq!(definition.sections.len(), 5);
     let vehicle = BattleVehicle::new(definition).unwrap();
@@ -172,13 +193,11 @@ fn vtol_assets_share_vehicle_anatomy_and_equipment_without_ground_admission() {
             continue;
         }
         let source = std::fs::read_to_string(&path).unwrap();
-        if !source
-            .lines()
-            .any(|line| line.starts_with("Type") && line.contains("VTOL"))
-        {
+        if !source.lines().any(|line| line == "class = \"vtol\"") {
             continue;
         }
-        let template = BattleVehicleTemplate::parse("test",&source)
+        let reference = path.file_stem().unwrap().to_str().unwrap();
+        let template = BattleVehicleTemplate::parse(reference, &source)
             .unwrap_or_else(|error| panic!("{}: {error:#}", path.display()));
         assert!(template.is_vtol());
         assert!(matches!(
@@ -210,11 +229,15 @@ fn vtol_assets_share_vehicle_anatomy_and_equipment_without_ground_admission() {
 fn vtol_anatomy_requires_matching_type_movement_and_rotor() {
     let source = include_str!("../game/mechs/Kestrel.toml");
     for invalid in [
-        source.replacen("{ VTOL }", "{ Vehicle }", 1),
-        source.replace("Move_Type        { VTOL }", "Move_Type        { Track }"),
-        source.replace("Rotor", "Turret"),
+        source.replace("class = \"vtol\"", "class = \"vehicle\""),
+        source.replace("movement = \"vtol\"", "movement = \"track\""),
+        source.replace("[sections.rotor]", "[sections.turret]"),
     ] {
-        assert!(BattleVehicleTemplate::parse("test",&invalid).is_err(), "{invalid}");
+        assert_ne!(invalid, source);
+        assert!(
+            BattleVehicleTemplate::parse("Kestrel", &invalid).is_err(),
+            "{invalid}"
+        );
     }
     for extended in [false, true] {
         assert_eq!(
@@ -225,10 +248,10 @@ fn vtol_anatomy_requires_matching_type_movement_and_rotor() {
     for (tons, suspension) in [(10, 50), (11, 95), (20, 95), (21, 140), (30, 140)] {
         assert_eq!(BattleVehicleMovement::Vtol.suspension(tons), suspension);
     }
-    let mut forged = BattleVehicleTemplate::parse("Demolisher",DEMOLISHER).unwrap();
+    let mut forged = BattleVehicleTemplate::parse("Demolisher", DEMOLISHER).unwrap();
     forged.movement = BattleVehicleMovement::Vtol;
     assert!(BattleVehicle::new(forged).is_err());
-    let template = BattleVehicleTemplate::parse("test",source).unwrap();
+    let template = BattleVehicleTemplate::parse("Kestrel", source).unwrap();
     let engine = template.engine().unwrap();
     assert_eq!(engine.nominal_rating, 300);
     assert_eq!(engine.weight_rating, 160);

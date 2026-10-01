@@ -130,8 +130,8 @@ async fn gauss_power_down_guards_and_validation() {
     for source in templates() {
         // Keep a non-Gauss mount when the front-mounted VTOL armament is replaced.
         let source = source.replace(
-            "Left_Side\n",
-            "Left_Side\n  CRIT_12 { IS.MediumLaser - - }\n",
+            "[sections.left_side]\n",
+            "[sections.left_side]\nslots = [{ at = 12, item = \"IS.MediumLaser\" }]\n",
         );
         let (_dir, config, base, id, _, index) = fixture_with_target(
             &source,

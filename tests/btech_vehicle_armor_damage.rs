@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test",template).unwrap(),
+        BattleVehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -86,8 +86,10 @@ fn hit(amount: u32) -> BattleVehicleArmorHit {
 /// Reflective armor halves energy hits, doubles area-effect hits and ignores ordinary ones.
 #[tokio::test]
 async fn reflective_armor_depends_on_the_damage_class() {
-    let text = include_str!("../game/mechs/Demolisher.toml")
-        .replace("ICEEngine_Tech", "ICEEngine_Tech LaserRefArmor_Tech");
+    let text = include_str!("../game/mechs/Demolisher.toml").replace(
+        "\"ICEEngine_Tech\"",
+        "\"ICEEngine_Tech\", \"LaserRefArmor_Tech\"",
+    );
     // The Demolisher's front carries forty armor points over eight internal.
     for (class, amount, armor_damage, overflow) in [
         (BattleDamageClass::Ordinary, 43, 43, 3),
@@ -133,8 +135,15 @@ async fn armor_penetration_uses_one_entry_roll_and_applies_material_modifiers() 
         ("ReinforcedInternal_Tech", 43, 43, 3, 2),
         ("CompositeInternal_Tech", 43, 43, 3, 6),
     ] {
-        let text = include_str!("../game/mechs/Demolisher.toml")
-            .replace("ICEEngine_Tech", &format!("ICEEngine_Tech {special}"));
+        let text = include_str!("../game/mechs/Demolisher.toml");
+        let text = if special.is_empty() {
+            text.to_owned()
+        } else {
+            text.replace(
+                "\"ICEEngine_Tech\"",
+                &format!("\"ICEEngine_Tech\", \"{special}\""),
+            )
+        };
         let (_dir, config, mut world, id) = fixture(&text).await;
         seed(&mut world, id, 21);
         persistence::save(&config.database(), &world).await.unwrap();
@@ -557,8 +566,14 @@ async fn vacuum_internal_damage_and_safety_preserve_check_boundaries() {
 #[tokio::test]
 async fn vacuum_disables_remote_supply_and_electronics_without_destroying_them() {
     let template = include_str!("../game/mechs/Demolisher.toml")
-        .replace("    CRIT_3-6\t\t  { Ammo_IS.AC/20 5 - }", "")
-        .replace("Front_Side", "Front_Side\n  CRIT_1 { Ammo_IS.AC/20 5 - }\n  CRIT_2 { Ecm - - }\n  CRIT_3 { C3Slave - - }");
+        .replace(
+            "    { at = \"3-6\", item = \"Ammo_IS.AC/20\", rounds = 5 },\n",
+            "",
+        )
+        .replace(
+            "[sections.front_side]\narmor = 40\ninternals = 8\n",
+            "[sections.front_side]\narmor = 40\ninternals = 8\nslots = [\n    { at = 1, item = \"Ammo_IS.AC/20\", rounds = 5 },\n    { at = 2, item = \"Ecm\" },\n    { at = 3, item = \"C3Slave\" },\n]\n",
+        );
     let (_dir, config, mut world, id) = fixture(&template).await;
     assert_eq!(
         world.btech.vehicles()[&id]
@@ -627,10 +642,17 @@ async fn vacuum_disabled_ams_preserves_whole_unit_capability() {
     let name = BattleWeapon::AntiMissileSystem.name();
     let template = include_str!("../game/mechs/Demolisher.toml")
         .replace(
-            "Front_Side",
-            &format!("Front_Side\n CRIT_1 {{ {name} - - }}"),
+            "[sections.front_side]\narmor = 40\ninternals = 8\n",
+            &format!(
+                "[sections.front_side]\narmor = 40\ninternals = 8\nslots = [{{ at = 1, item = \"{name}\" }}]\n"
+            ),
         )
-        .replace("Aft_Side", &format!("Aft_Side\n CRIT_1 {{ {name} - - }}"));
+        .replace(
+            "[sections.aft_side]\narmor = 20\ninternals = 8\n",
+            &format!(
+                "[sections.aft_side]\narmor = 20\ninternals = 8\nslots = [{{ at = 1, item = \"{name}\" }}]\n"
+            ),
+        );
     let (_dir, config, mut world, id) = fixture(&template).await;
     environment(&mut world, id, 100, true);
     let _report = resolve_battle_vehicle_armor_damage(&mut world, id, hit(41), rules()).unwrap();
@@ -651,8 +673,8 @@ async fn vacuum_disabled_ams_preserves_whole_unit_capability() {
 /// Scaling is applied once to external rotor hits, before material modifiers, without extra rolls.
 #[tokio::test]
 async fn rotor_divisor_preserves_minimum_internal_damage_and_restart() {
-    let template = include_str!("../game/mechs/Kestrel.toml")
-        .replace("Armor            { 2 }", "Armor            { 40 }");
+    let template =
+        include_str!("../game/mechs/Kestrel.toml").replace("armor = 2\n", "armor = 40\n");
     let (_dir, config, base, id) = fixture(&template).await;
     for (divisor, amount, expected) in [
         (0, 7, 7),
@@ -713,7 +735,10 @@ async fn rotor_divisor_preserves_minimum_internal_damage_and_restart() {
 #[tokio::test]
 async fn hardened_armor_hampers_vehicle_driving() {
     let standard = include_str!("../game/mechs/Demolisher.toml");
-    let hardened = standard.replace("ICEEngine_Tech", "ICEEngine_Tech HardenedArmor_Tech");
+    let hardened = standard.replace(
+        "\"ICEEngine_Tech\"",
+        "\"ICEEngine_Tech\", \"HardenedArmor_Tech\"",
+    );
     let (_dir, _config, mut plain, plain_id) = fixture(standard).await;
     let (_dir, _config, mut world, id) = fixture(&hardened).await;
     assert_eq!(
@@ -730,16 +755,15 @@ async fn hardened_armor_hampers_vehicle_driving() {
 #[test]
 fn hardened_armor_is_barred_from_hovercraft_and_vtols() {
     let tracked = include_str!("../game/mechs/Demolisher.toml");
-    let harden = |source: &str| {
-        source.replacen(
-            "Specials         {",
-            "Specials         { HardenedArmor_Tech",
-            1,
-        )
-    };
-    assert!(BattleVehicleTemplate::parse("test",&harden(tracked)).is_ok());
+    let harden =
+        |source: &str| source.replacen("specials = [", "specials = [\"HardenedArmor_Tech\", ", 1);
+    assert!(BattleVehicleTemplate::parse("test", &harden(tracked)).is_ok());
     assert!(
-        BattleVehicleTemplate::parse("test",&harden(&tracked.replace("movement = \"track\"", "movement = \"wheel\""))).is_ok()
+        BattleVehicleTemplate::parse(
+            "test",
+            &harden(&tracked.replace("movement = \"track\"", "movement = \"wheel\""))
+        )
+        .is_ok()
     );
     for source in [
         tracked.replace("movement = \"track\"", "movement = \"hover\""),
@@ -747,11 +771,11 @@ fn hardened_armor_is_barred_from_hovercraft_and_vtols() {
     ] {
         let hardened = harden(&source);
         assert!(hardened.contains("HardenedArmor_Tech"));
-        let error = BattleVehicleTemplate::parse("test",&hardened).unwrap_err();
+        let error = BattleVehicleTemplate::parse("test", &hardened).unwrap_err();
         assert!(
             format!("{error:#}").contains("Hovercraft and VTOLs cannot mount hardened armor"),
             "{error:#}"
         );
-        assert!(BattleVehicleTemplate::parse("test",&source).is_ok());
+        assert!(BattleVehicleTemplate::parse("test", &source).is_ok());
     }
 }

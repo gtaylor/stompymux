@@ -53,7 +53,7 @@ async fn fixture(
     )
     .unwrap();
     let id = world.create(&config, "Traveler".into(), Kind::Thing);
-    BattleUnitTemplate::parse("test",source)
+    BattleUnitTemplate::parse("test", source)
         .unwrap()
         .create(&mut world, id)
         .unwrap();
@@ -229,7 +229,11 @@ async fn entry_feedback_uses_hex_visibility_and_captured_contacts() {
         create_battle_vehicle(
             &mut world,
             observer,
-            BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap(),
+            BattleVehicleTemplate::parse(
+                "Demolisher",
+                include_str!("../game/mechs/Demolisher.toml"),
+            )
+            .unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, observer, exterior, 1, 0).unwrap();
@@ -295,7 +299,11 @@ async fn interior_arrival_uses_normal_acquisition_without_extra_dice() {
         create_battle_vehicle(
             &mut world,
             observer,
-            BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap(),
+            BattleVehicleTemplate::parse(
+                "Demolisher",
+                include_str!("../game/mechs/Demolisher.toml"),
+            )
+            .unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, observer, interior, 0, 0).unwrap();
@@ -395,7 +403,8 @@ async fn building_exit_shares_placement_and_continues_vtol_flight() {
         create_battle_unit(
             &mut world,
             occupant,
-            BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                .unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, occupant, exterior, 1, 0).unwrap();
@@ -521,7 +530,11 @@ async fn host_exits_share_teleport_policy_and_callback_rollback() {
         create_battle_vehicle(
             &mut world,
             observer,
-            BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap(),
+            BattleVehicleTemplate::parse(
+                "Demolisher",
+                include_str!("../game/mechs/Demolisher.toml"),
+            )
+            .unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, observer, exterior, 1, 0).unwrap();
@@ -599,8 +612,10 @@ async fn movement_edges_dispatch_shared_exits_and_keep_blocked_units_stopped() {
         include_str!("fixtures/btech/mechs/JR7-D.toml").to_owned(),
         include_str!("../game/mechs/GOL-1H.toml").to_owned(),
         include_str!("../game/mechs/Demolisher.toml").to_owned(),
-        include_str!("../game/mechs/Demolisher.toml").replace("movement = \"track\"", "movement = \"wheel\""),
-        include_str!("../game/mechs/Demolisher.toml").replace("movement = \"track\"", "movement = \"hover\""),
+        include_str!("../game/mechs/Demolisher.toml")
+            .replace("movement = \"track\"", "movement = \"wheel\""),
+        include_str!("../game/mechs/Demolisher.toml")
+            .replace("movement = \"track\"", "movement = \"hover\""),
         include_str!("../game/mechs/Kestrel.toml").to_owned(),
     ] {
         for heading in [0, 90, 180, 270] {
@@ -876,7 +891,7 @@ async fn in_character_unpiloted_exits_warn_without_inventing_destruction() {
 /// Add a shutdown passenger unit to a carrier's battlefield without pickup gameplay policy.
 fn attach(world: &mut World, config: &Config, carrier: ObjectId, source: &str) -> ObjectId {
     let target = world.create(config, "Tow target".into(), Kind::Thing);
-    BattleUnitTemplate::parse("test",source)
+    BattleUnitTemplate::parse("test", source)
         .unwrap()
         .create(world, target)
         .unwrap();
@@ -1341,6 +1356,14 @@ fn cover_state(world: &World, id: ObjectId) -> (bool, Option<u16>) {
     (unit.signature().hidden, unit.hide_elapsed())
 }
 
+/// Add quoted special flags to a template document's existing or new top-level `specials` array.
+fn with_specials(source: &str, flags: &str) -> String {
+    if source.starts_with("specials = [") || source.contains("\nspecials = [") {
+        return source.replacen("specials = [", &format!("specials = [{flags}, "), 1);
+    }
+    format!("specials = [{flags}]\n{source}")
+}
+
 /// Explicit entry preserves cover; edge movement reveals only the carrier, including after restart.
 #[tokio::test]
 async fn cover_distinguishes_entry_and_tow_mirroring_from_edge_movement() {
@@ -1359,7 +1382,7 @@ async fn cover_distinguishes_entry_and_tow_mirroring_from_edge_movement() {
     for source in chassis.iter().take(6) {
         for target_source in &chassis {
             // Towing hardware admits every tested mass pairing without bypassing load rules.
-            let equipped = format!("{source}\nSpecials {{ SalvageTech Carrier_Tech }}\n");
+            let equipped = with_specials(source, "\"SalvageTech\", \"Carrier_Tech\"");
             let (_dir, config, mut world, carrier, exterior, interior) = fixture(&equipped).await;
             set_battle_building_exit(&mut world, interior, 0, Some(exterior)).unwrap();
             set_building_state(

@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test",template).unwrap(),
+        BattleVehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -33,7 +33,8 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 
 #[tokio::test]
 async fn critical_jams_select_unaffected_weapons_and_replay_powered_recovery() {
-    let (_dir, config, mut world, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+    let (_dir, config, mut world, id) =
+        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     encoded["vehicles"][id.0.to_string()]["dice"] =
         serde_json::to_value(BattleDice::seeded([31; 32])).unwrap();
@@ -128,8 +129,8 @@ async fn critical_jams_select_unaffected_weapons_and_replay_powered_recovery() {
 #[tokio::test]
 async fn critical_shorts_validate_snapshots_and_disappear_with_destroyed_mounts() {
     let text = include_str!("../game/mechs/Demolisher.toml").replace(
-        "Front_Side\n",
-        "Front_Side\n    CRIT_1 { IS.MediumLaser - - }\n",
+        "[sections.front_side]\n",
+        "[sections.front_side]\nslots = [{ at = 1, item = \"IS.MediumLaser\" }]\n",
     );
     let (_dir, _config, mut world, id) = fixture(&text).await;
     let jam = jam_battle_vehicle_weapon(&mut world, id, BattleVehicleSection::Front)

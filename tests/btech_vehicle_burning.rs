@@ -40,14 +40,19 @@ async fn fixture_movement(
             .replace("max_speed = 53.75", "max_speed = 0.0");
     }
     text = text.replace(
-        "{ Track }",
+        "movement = \"track\"",
         match movement {
-            BattleVehicleMovement::Wheeled => "{ Wheel }",
-            BattleVehicleMovement::Hover => "{ Hover }",
-            _ => "{ Track }",
+            BattleVehicleMovement::Wheeled => "movement = \"wheel\"",
+            BattleVehicleMovement::Hover => "movement = \"hover\"",
+            _ => "movement = \"track\"",
         },
     );
-    create_battle_vehicle(&mut world, id, BattleVehicleTemplate::parse("test",&text).unwrap()).unwrap();
+    create_battle_vehicle(
+        &mut world,
+        id,
+        BattleVehicleTemplate::parse("test", &text).unwrap(),
+    )
+    .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();

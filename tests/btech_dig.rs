@@ -21,7 +21,7 @@ async fn fixture(
     let target = world.create(&config, "Defender".into(), Kind::Thing);
     let shooter = world.create(&config, "Shooter".into(), Kind::Thing);
     for (id, source, y) in [(target, target_source, 1), (shooter, shooter_source, 0)] {
-        BattleUnitTemplate::parse("test",source)
+        BattleUnitTemplate::parse("test", source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();
@@ -238,7 +238,10 @@ async fn dug_in_cover_is_shared_by_mech_and_vehicle_aim_with_arc_and_height_gate
 
 #[tokio::test]
 async fn cover_blocks_hull_weapons_at_the_shared_reservation_boundary() {
-    let source = VEHICLE.replace("Aft_Side", "  CRIT_1 { IS.MediumLaser - - }\nAft_Side");
+    let source = VEHICLE.replace(
+        "[sections.front_side]\n",
+        "[sections.front_side]\nslots = [{ at = 1, item = \"IS.MediumLaser\" }]\n",
+    );
     let (_dir, _, mut world, id, _) = fixture(&source, MECH).await;
     let loadout = world.btech.vehicles()[&id].loadout().unwrap();
     let hull = loadout

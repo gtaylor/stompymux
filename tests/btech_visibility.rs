@@ -55,7 +55,7 @@ async fn fixture(
     for (index, source) in [observer, target].into_iter().enumerate() {
         let id = world.create(&config, format!("Unit {index}"), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse("test",source)
+        BattleUnitTemplate::parse("test", source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();
@@ -313,7 +313,18 @@ async fn clairvoyance_preserves_physical_los_and_unacquired_aim() {
 /// Every perception channel rejects invisible targets, even for a clairvoyant operator with working hardware.
 #[tokio::test]
 async fn invisibility_suppresses_all_perception_channels_without_acquisition() {
-    let source = include_str!("../game/mechs/JR7-D.toml").replace("Left_Torso\n", "Left_Torso\n    CRIT_3-4 { BeagleProbe - - }\n    CRIT_5 { Light_BAP - - }\n    CRIT_6-8 { BloodhoundProbe - - }\n") + "\nSpecials { AntiAircraft }\n";
+    let source = include_str!("../game/mechs/JR7-D.toml")
+        .replace(
+            r#"{ at = "1-2", item = "JumpJet" },"#,
+            r#"{ at = "1-2", item = "JumpJet" },
+    { at = "3-4", item = "BeagleProbe" },
+    { at = 5, item = "Light_BAP" },
+    { at = "6-8", item = "BloodhoundProbe" },"#,
+        )
+        .replace(
+            r#"specials = ["FlipArms"]"#,
+            r#"specials = ["FlipArms", "AntiAircraft"]"#,
+        );
     let (_dir, config, base, observer, target) =
         fixture(&source, include_str!("../game/mechs/JR7-D.toml"), false).await;
     let map = base.btech.units()[&observer].map.unwrap();

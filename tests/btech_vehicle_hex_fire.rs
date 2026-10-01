@@ -172,7 +172,7 @@ async fn vehicle_surface_shots_use_shooter_dice_and_shared_fracture() {
 async fn vehicle_coordinate_misload_is_tagged_and_rolls_back_with_terrain_action() {
     let template = include_str!("../game/mechs/Demolisher.toml")
         .replace("IS.AC/20", "IS.AC/2")
-        .replace("IS.AC/2 - -", "IS.AC/2 - RapidFire");
+        .replace("\"IS.AC/2\" }", "\"IS.AC/2\", modes = [\"RapidFire\"] }");
     let (_dir, config, mut world, shooter, _map, index) =
         fixture_with_template(BattleHexTargetMode::Hex, "heavy_forest", &template).await;
     let seed = (0..=255)
@@ -320,7 +320,7 @@ async fn character_vehicle_terrain_fire_shares_commands_replay_and_rollback() {
 async fn character_coordinate_misload_publishes_injuries_and_rolls_back_failed_evacuation() {
     let template = include_str!("../game/mechs/Demolisher.toml")
         .replace("IS.AC/20", "IS.AC/2")
-        .replace("IS.AC/2 - -", "IS.AC/2 - RapidFire");
+        .replace("\"IS.AC/2\" }", "\"IS.AC/2\", modes = [\"RapidFire\"] }");
     for fatal in [false, true] {
         let (dir, _config, mut world, shooter, _, index) =
             fixture_with_template(BattleHexTargetMode::Hex, "heavy_forest", &template).await;

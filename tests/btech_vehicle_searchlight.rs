@@ -6,22 +6,10 @@ use stompymux_rs::*;
 
 /// Add installed lighting without changing the fixture's other technologies.
 fn with_lamp(source: &str) -> String {
-    let mut found = false;
-    let mut lines: Vec<_> = source
-        .lines()
-        .map(|line| {
-            if line.split_whitespace().next() == Some("Specials") {
-                found = true;
-                line.replacen('{', "{ Searchlight ", 1)
-            } else {
-                line.into()
-            }
-        })
-        .collect();
-    if !found {
-        lines.insert(0, "Specials { Searchlight }".into());
+    if source.starts_with("specials = [") || source.contains("\nspecials = [") {
+        return source.replacen("specials = [", "specials = [\"Searchlight\", ", 1);
     }
-    lines.join("\n")
+    format!("specials = [\"Searchlight\"]\n{source}")
 }
 
 /// Switching and illumination use shared native/Lua controls across ground and rotorcraft anatomy.

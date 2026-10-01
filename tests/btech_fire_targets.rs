@@ -22,14 +22,14 @@ async fn fixture(
     for id in [shooter, target] {
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     }
-    BattleUnitTemplate::parse("test",source)
+    BattleUnitTemplate::parse("test", source)
         .unwrap()
         .create(&mut world, shooter)
         .unwrap();
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse("AS7-D",include_str!("../game/mechs/AS7-D.toml")).unwrap(),
+        BattleTemplate::parse("AS7-D", include_str!("../game/mechs/AS7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, shooter, map, 1, 4).unwrap();
@@ -583,7 +583,10 @@ async fn defensive_weapon_admission_precedes_targets_without_disabling_ams() {
     for source in [
         include_str!("../game/mechs/JR7-D.toml")
             .replace("IS.MediumLaser", "IS.LaserAMS")
-            .replace("Ammo_IS.SRM-4 25", "Ammo_IS.LaserAMS 24"),
+            .replace(
+                "item = \"Ammo_IS.SRM-4\", rounds = 25",
+                "item = \"Ammo_IS.LaserAMS\", rounds = 24",
+            ),
         include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", "IS.Anti-MissileSystem"),
     ] {
         let (_dir, config, world, shooter, _) =

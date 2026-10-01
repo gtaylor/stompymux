@@ -91,9 +91,9 @@ fn request(weapon: BattleWeapon) -> BattleVehicleSalvoRequest {
 #[tokio::test]
 async fn vehicle_salvos_share_packet_rules_and_order_every_impact() {
     let template = include_str!("../game/mechs/Demolisher.toml")
-        .replace("{ 30 }", "{ 200 }")
-        .replace("{ 40 }", "{ 200 }")
-        .replace("{ 20 }", "{ 200 }");
+        .replace("armor = 30\n", "armor = 200\n")
+        .replace("armor = 40\n", "armor = 200\n")
+        .replace("armor = 20\n", "armor = 200\n");
     let (_dir, config, base, id) = fixture(&template).await;
     let seed = matching_seed(|dice| dice.two_d6() == 12);
     for (weapon, mode, ammunition, expected) in [

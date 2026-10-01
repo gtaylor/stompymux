@@ -19,19 +19,14 @@ async fn fixture_with_mml(
 ) -> (tempfile::TempDir, Config, World, [ObjectId; 3], usize) {
     let source = |text: &str| {
         if mml {
-            text.replace("IS.LRM-20", "IS.MML-9")
-                .lines()
-                .map(|line| {
-                    if line.contains("Ammo_IS.MML-9") {
-                        line.replace(" 6 -", " 13 MML_LRM")
-                    } else if line.contains("IS.MML-9") {
-                        line.replace(" - -", " - MML_LRM")
-                    } else {
-                        line.into()
-                    }
-                })
-                .collect::<Vec<_>>()
-                .join("\n")
+            text.replace(
+                "item = \"Ammo_IS.LRM-20\", rounds = 6",
+                "item = \"Ammo_IS.MML-9\", rounds = 13, modes = [\"MML_LRM\"]",
+            )
+            .replace(
+                "item = \"IS.LRM-20\"",
+                "item = \"IS.MML-9\", modes = [\"MML_LRM\"]",
+            )
         } else {
             text.into()
         }
@@ -56,15 +51,19 @@ async fn fixture_with_mml(
             create_battle_vehicle(
                 &mut world,
                 id,
-                BattleVehicleTemplate::parse("test",&source(include_str!("../game/mechs/Hunter.toml")))
-                    .unwrap(),
+                BattleVehicleTemplate::parse(
+                    "test",
+                    &source(include_str!("../game/mechs/Hunter.toml")),
+                )
+                .unwrap(),
             )
             .unwrap();
         } else {
             create_battle_unit(
                 &mut world,
                 id,
-                BattleTemplate::parse("test",&source(include_str!("../game/mechs/AS7-D.toml"))).unwrap(),
+                BattleTemplate::parse("test", &source(include_str!("../game/mechs/AS7-D.toml")))
+                    .unwrap(),
             )
             .unwrap();
         }

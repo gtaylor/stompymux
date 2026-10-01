@@ -19,7 +19,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test",template).unwrap(),
+        BattleVehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -35,10 +35,18 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 /// Demolisher with radar, a two-slot Beagle probe in front slots 0-1 and a Bloodhound in slot 2.
 fn equipped() -> String {
     include_str!("../game/mechs/Demolisher.toml")
-        .replace("ICEEngine_Tech", "ICEEngine_Tech AntiAircraft")
         .replace(
-            "Front_Side\n",
-            "Front_Side\n CRIT_1-2 { BeagleProbe - - }\n CRIT_3 { BloodhoundProbe - - }\n",
+            r#"specials = ["ICEEngine_Tech"]"#,
+            r#"specials = ["ICEEngine_Tech", "AntiAircraft"]"#,
+        )
+        .replace(
+            "[sections.front_side]\n",
+            r#"[sections.front_side]
+slots = [
+    { at = "1-2", item = "BeagleProbe" },
+    { at = 3, item = "BloodhoundProbe" },
+]
+"#,
         )
 }
 
