@@ -2,21 +2,20 @@ name = "Crusader"
 class = "mech"
 movement = "biped"
 tons = 65
-max_speed = 64.5
-jump_speed = 43.0
+walk_mp = 6
+jump_mp = 4
 heat_sinks = 20
 computer = 4
 radio = 4
-specials = ["DoubleHS", "EndoSteel_Tech", "XLEngine_Tech"]
+
+[construction]
+engine = "xl"
+structure = "endo_steel"
+heat_sinks = "double"
 
 [sections.left_arm]
 armor = 17
-internals = 10
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "IS.LRM-10" },
     { at = 7, item = "IS.MediumLaser" },
     { at = "8-12", item = "EndoSteel" },
@@ -24,12 +23,7 @@ slots = [
 
 [sections.right_arm]
 armor = 17
-internals = 10
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "IS.LRM-10" },
     { at = 7, item = "IS.MediumLaser" },
     { at = "9-12", item = "EndoSteel" },
@@ -37,8 +31,8 @@ slots = [
 
 [sections.left_torso]
 armor = 19
-internals = 15
 rear = 6
+explicit = true
 slots = [
     { at = 1, item = "Engine" },
     { at = "2-12", item = "IS.HeavyGaussRifle" },
@@ -46,10 +40,8 @@ slots = [
 
 [sections.right_torso]
 armor = 19
-internals = 15
 rear = 6
 slots = [
-    { at = "1-3", item = "Engine" },
     { at = 4, item = "Ammo_IS.LRM-10", rounds = 12 },
     { at = "5-6", item = "Ammo_IS.HeavyGaussRifle", rounds = 4 },
     { at = 7, item = "Case" },
@@ -58,8 +50,8 @@ slots = [
 
 [sections.center_torso]
 armor = 25
-internals = 21
 rear = 8
+explicit = true
 slots = [
     { at = "1-3", item = "Engine" },
     { at = "4-7", item = "Gyro" },
@@ -68,33 +60,15 @@ slots = [
 
 [sections.left_leg]
 armor = 25
-internals = 15
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 25
-internals = 15
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.head]
 armor = 9
-internals = 3
-slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
-]

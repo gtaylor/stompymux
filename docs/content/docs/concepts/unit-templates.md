@@ -21,16 +21,20 @@ lives, or creates `<reference>.toml` at the top of the template root.
 
 ## Unit fields
 
+A template states construction choices, not their consequences. The loader
+derives the rest: technology flags, the fixed equipment in mech critical slots,
+internal structure and speeds.
+
 ```toml
 name = "Zeus"
 class = "mech"
 movement = "biped"
 tons = 80
-max_speed = 64.5
+walk_mp = 6
 heat_sinks = 34
 computer = 4
 radio = 4
-specials = ["DoubleHS"]
+specials = ["SearchLight"]
 ```
 
 | Key | Type | Meaning |
@@ -39,7 +43,8 @@ specials = ["DoubleHS"]
 | `class` | string | `mech`, `vehicle`, `vtol`, `naval`, `aerofighter`, `spheroid_dropship`, `aerodyne_dropship`, `mechwarrior` or `battlesuit`. |
 | `movement` | string | `biped`, `quad`, `track`, `wheel`, `hover`, `vtol`, `hull`, `foil`, `fly`, `sub` or `none`. |
 | `tons` | integer | Tonnage. |
-| `max_speed`, `jump_speed` | number | Speeds in km/h. |
+| `walk_mp`, `jump_mp` | integer | Cruising and jumping movement points; each is 10.75 km/h. |
+| `max_speed`, `jump_speed` | number | Speeds in km/h, for the few units whose speed is not whole movement points. Give either the speed or its movement points, not both. |
 | `heat_sinks` | integer | Installed heat sinks. |
 | `hs_engine_override` | integer | Engine heat sink override. |
 | `computer`, `radio`, `radio_type`, `radio_range` | integer | Electronics. |
@@ -47,9 +52,42 @@ specials = ["DoubleHS"]
 | `si`, `fuel`, `cargo_space`, `max_suits`, `max_ton`, `carrier_maximum_tonnage` | integer | Class-specific capacities. |
 | `template_speed` | number | Movement baseline written when a saved unit's speed was edited. |
 | `unit_era`, `unit_tro` | string | Era and technical readout identity. |
-| `specials`, `infantry_specials` | array of strings | Feature flags, one word each; repeats are ignored case-insensitively. |
+| `specials` | array of strings | Feature flags such as `SearchLight`, `CargoTech` or `ECM`, one word each, matched case-insensitively against the known flags. |
+| `infantry_specials` | array of strings | Battle suit abilities such as `Swarm_Attack_Tech`. |
 
-Unknown keys are errors, as are values of the wrong type.
+Unknown keys, unknown flags and values of the wrong type are errors.
+`specials` cannot list a flag that a construction choice owns (for example
+`XLEngine_Tech` or `Clan`) or `FlipArms`, which a biped mech has exactly when
+neither arm carries a lower or hand actuator.
+
+## Construction
+
+The optional `[construction]` table names the unit's technology. Every key
+defaults to the standard choice shown first.
+
+```toml
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+brand = 3
+```
+
+| Key | Choices |
+| --- | --- |
+| `tech_base` | `inner_sphere`, `clan` |
+| `engine` | `standard`, `xl`, `light`, `xxl`, `compact`, `ice` |
+| `gyro` | `standard`, `xl`, `compact`, `heavy_duty` |
+| `cockpit` | `standard`, `small` |
+| `structure` | `standard`, `endo_steel`, `composite`, `reinforced` |
+| `armor` | `standard`, `ferro_fibrous`, `light_ferro_fibrous`, `heavy_ferro_fibrous`, `stealth`, `hardened`, `laser_reflective`, `reactive` |
+| `heat_sinks` | `single`, `double`, `laser`, `compact`; Clan units default to and require doubles or better |
+| `myomer` | `standard`, `triple_strength` |
+| `brand` | Manufacturer brand number stamped on the fixed equipment construction places |
+
+Endo steel and ferro-fibrous slots are still listed in the sections: where
+they go is a design choice, not a consequence of the type.
 
 ## Sections
 
@@ -61,18 +99,46 @@ headings for the unit's anatomy: `left_arm` through `head` for bipeds,
 ```toml
 [sections.left_torso]
 armor = 25
-internals = 17
 rear = 6
 config = "Case"
+engine_at = 4
 slots = [
-    { at = "1-9", item = "HeatSink", brand = 3 },
+    { at = "1-3", item = "HeatSink", brand = 3 },
     { at = "10-11", item = "IS.ERLargeLaser", brand = 3 },
     { at = 12, item = "IS.MediumPulseLaser", modes = ["RearMount"], brand = 3 },
 ]
 ```
 
-`armor`, `internals` and `rear` default to zero. Mech and vehicle internal
-structure is recomputed from tonnage on load.
+`armor` and `rear` default to zero. Mech internal structure comes from the
+tonnage chart and vehicle structure from tonnage, so `internals` appears only
+where a unit differs, such as a vehicle location with no structure
+(`internals = 0`) or a tonnage the chart does not cover. Other classes list
+`internals` for every section.
+
+### Fixed equipment
+
+In biped and quad mechs, construction places the fixed equipment, which
+`slots` then leaves out:
+
+- **Head:** life support, sensors and cockpit, laid out for the cockpit type.
+- **Centre torso:** engine and gyro slots for the engine and gyro types.
+- **Side torsos:** the engine's side slots, starting at slot 1 or at
+  `engine_at`.
+- **Arms and legs:** shoulder or hip, then upper, lower and hand or foot
+  actuators.
+
+A section adjusts that with:
+
+| Key | Meaning |
+| --- | --- |
+| `omit` | Actuators the section lacks: `upper_actuator`, `lower_actuator`, `hand_actuator` (biped arms) or `foot_actuator` (legs). |
+| `engine_at` | The side torso slot where the engine's slots begin. |
+| `explicit` | `true` when the section's layout is irregular: nothing is placed, and `slots` lists the fixed equipment too. |
+
+Listing a fixed item in a constructed section, or a slot that collides with
+one, is an error.
+
+### Slots
 
 Each slot entry places one item in a run of consecutive critical slots:
 

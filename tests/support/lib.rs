@@ -13,6 +13,7 @@ mod database;
 mod fixtures;
 mod reuse;
 mod server;
+pub mod templates;
 pub use client::Client;
 pub use commands::{run_text, run_text_for_player};
 pub use database::{stable_world, store_unit_record, unit_record};

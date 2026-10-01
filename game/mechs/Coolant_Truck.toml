@@ -2,29 +2,27 @@ name = "Coolant Truck"
 class = "vehicle"
 movement = "wheel"
 tons = 30
-max_speed = 64.5
+walk_mp = 6
 cargo_space = 0
 max_suits = 0
-specials = ["ICEEngine_Tech"]
+
+[construction]
+engine = "ice"
 
 [sections.left_side]
 armor = 28
-internals = 3
 
 [sections.right_side]
 armor = 28
-internals = 3
 
 [sections.front_side]
 armor = 24
-internals = 3
 slots = [
     { at = "1-2", item = "IS.VehicleFlamer" },
 ]
 
 [sections.aft_side]
 armor = 20
-internals = 3
 slots = [
     { at = "1-4", item = "Ammo_IS.VehicleFlamer", rounds = 20 },
     { at = "5-8", item = "Ammo_IS.CoolantGun", rounds = 25 },
@@ -32,7 +30,6 @@ slots = [
 
 [sections.turret]
 armor = 12
-internals = 3
 slots = [
     { at = "1-2", item = "IS.VehicleFlamer" },
     { at = "3-4", item = "IS.CoolantGun" },

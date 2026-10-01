@@ -315,8 +315,8 @@ pub async fn run_policy(
                             "{ at = 1, item = \"IS.MediumLaser\" }",
                         )
                         .replace(
-                            "[sections.front_side]\narmor = 40\ninternals = 8\n",
-                            "[sections.front_side]\narmor = 40\ninternals = 8\nslots = [{ at = \"1-2\", item = \"IS.AC/20\" }]\n",
+                            "[sections.front_side]\narmor = 40\n",
+                            "[sections.front_side]\narmor = 40\nslots = [{ at = \"1-2\", item = \"IS.AC/20\" }]\n",
                         );
                 }
             }

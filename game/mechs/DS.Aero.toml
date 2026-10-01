@@ -2,7 +2,7 @@ name = "Aerodyne Tester"
 class = "aerodyne_dropship"
 movement = "fly"
 tons = 10000
-max_speed = 86.0
+walk_mp = 8
 computer = 4
 fuel = 7500
 

@@ -12,7 +12,7 @@ pub fn templates() -> Vec<String> {
         tracked.replace("movement = \"track\"", "movement = \"hover\""),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("max_speed = 53.75", "max_speed = 0"),
+            .replace("walk_mp = 5", "walk_mp = 0"),
         include_str!("../../game/mechs/Kestrel.toml").into(),
     ]
 }

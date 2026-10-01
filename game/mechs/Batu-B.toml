@@ -2,10 +2,13 @@ name = "Batu"
 class = "aerofighter"
 movement = "fly"
 tons = 40
-max_speed = 150.5
+walk_mp = 14
 heat_sinks = 20
 fuel = 450
-specials = ["Clan", "FerroFibrous_Tech"]
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
 
 [sections.nose]
 armor = 38

@@ -2,7 +2,7 @@ name = "Parity Spheroid"
 class = "spheroid_dropship"
 movement = "fly"
 tons = 6000
-max_speed = 21.5
+walk_mp = 2
 
 [sections.front_right_side]
 armor = 21

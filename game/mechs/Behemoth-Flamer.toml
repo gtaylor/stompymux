@@ -2,12 +2,11 @@ name = "Behemoth"
 class = "vehicle"
 movement = "track"
 tons = 100
-max_speed = 32.25
+walk_mp = 3
 cargo_space = 0
 
 [sections.left_side]
 armor = 38
-internals = 10
 slots = [
     { at = "1-2", item = "IS.Flamer", brand = 3 },
     { at = 3, item = "IS.MachineGun", brand = 3 },
@@ -15,7 +14,6 @@ slots = [
 
 [sections.right_side]
 armor = 38
-internals = 10
 slots = [
     { at = "1-2", item = "IS.Flamer", brand = 3 },
     { at = 3, item = "IS.MachineGun", brand = 3 },
@@ -23,7 +21,6 @@ slots = [
 
 [sections.front_side]
 armor = 46
-internals = 10
 slots = [
     { at = "1-4", item = "IS.LRM-5", brand = 3 },
     { at = "5-6", item = "IS.Flamer", brand = 3 },
@@ -34,11 +31,9 @@ slots = [
 
 [sections.aft_side]
 armor = 40
-internals = 10
 
 [sections.turret]
 armor = 46
-internals = 10
 slots = [
     { at = "1-2", item = "IS.AC/10", brand = 3 },
     { at = "3-4", item = "IS.SRM-6", brand = 3 },

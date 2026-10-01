@@ -2,21 +2,18 @@ name = "Warrior"
 class = "vtol"
 movement = "vtol"
 tons = 21
-max_speed = 161.25
+walk_mp = 15
 computer = 4
-specials = ["Searchlight"]
+specials = ["SearchLight"]
 
 [sections.left_side]
 armor = 5
-internals = 2
 
 [sections.right_side]
 armor = 5
-internals = 2
 
 [sections.front_side]
 armor = 6
-internals = 2
 slots = [
     { at = 1, item = "IS.AC/5" },
     { at = "2-3", item = "Ammo_IS.AC/5", rounds = 20 },
@@ -26,8 +23,6 @@ slots = [
 
 [sections.aft_side]
 armor = 6
-internals = 2
 
 [sections.rotor]
 armor = 2
-internals = 2

@@ -59,13 +59,9 @@ async fn internal_damage_handles_structure_rounding_and_vehicle_local_overflow()
         ("ReinforcedInternal_Tech", 3, 3),
         ("CompositeInternal_Tech", 10, 8),
     ] {
-        let text = include_str!("../game/mechs/Demolisher.toml").replace(
-            "\"ICEEngine_Tech\"",
-            &if special.is_empty() {
-                "\"ICEEngine_Tech\"".to_owned()
-            } else {
-                format!("\"ICEEngine_Tech\", \"{special}\"")
-            },
+        let text = support::templates::with_flags(
+            include_str!("../game/mechs/Demolisher.toml"),
+            &[special],
         );
         let (_dir, config, mut world, id) = fixture(&text).await;
         seed(&mut world, id, 31);

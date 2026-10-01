@@ -194,7 +194,7 @@ fn advanced_motive_rolls_apply_class_modifiers_and_critical_immunity() {
                 &format!("movement = \"{movement}\""),
             )
             .replace("armor = 40", "armor = 0")
-            .replace("max_speed = 53.75", "max_speed = 86.0");
+            .replace("walk_mp = 5", "walk_mp = 8");
         let vehicle =
             BattleVehicle::new(BattleVehicleTemplate::parse("test", &text).unwrap()).unwrap();
         for roll in 2..=12 {
@@ -225,10 +225,7 @@ fn advanced_motive_rolls_apply_class_modifiers_and_critical_immunity() {
             expected.two_d6();
             assert_eq!(dice.d6(), expected.d6());
         }
-        let text = text.replace(
-            "\"ICEEngine_Tech\"",
-            "\"ICEEngine_Tech\", \"CritProof_Tech\"",
-        );
+        let text = support::templates::with_flags(&text, &["CritProof_Tech"]);
         let immune =
             BattleVehicle::new(BattleVehicleTemplate::parse("test", &text).unwrap()).unwrap();
         let mut dice = BattleDice::seeded([9; 32]);

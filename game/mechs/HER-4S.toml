@@ -2,95 +2,63 @@ name = "Hermes"
 class = "mech"
 movement = "biped"
 tons = 30
-max_speed = 150.5
+walk_mp = 14
 heat_sinks = 20
 computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0
-specials = ["DoubleHS"]
+
+[construction]
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+heat_sinks = "double"
+brand = 3
 
 [sections.left_arm]
 armor = 9
-internals = 5
+omit = ["hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
     { at = 4, item = "IS.MediumPulseLaser", brand = 3 },
     { at = "5-11", item = "FerroFibrous", brand = 3 },
 ]
 
 [sections.right_arm]
 armor = 9
-internals = 5
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = 5, item = "IS.MediumPulseLaser", brand = 3 },
     { at = "6-12", item = "FerroFibrous", brand = 3 },
 ]
 
 [sections.left_torso]
 armor = 10
-internals = 7
 rear = 4
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
     { at = "4-5", item = "Masc", brand = 3 },
     { at = "6-12", item = "EndoSteel", brand = 3 },
 ]
 
 [sections.right_torso]
 armor = 10
-internals = 7
 rear = 4
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
     { at = "4-5", item = "Ecm", brand = 3 },
     { at = "6-12", item = "EndoSteel", brand = 3 },
 ]
 
 [sections.center_torso]
 armor = 15
-internals = 10
 rear = 5
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
-    { at = "4-7", item = "Gyro", brand = 3 },
-    { at = "8-10", item = "Engine", brand = 3 },
     { at = 11, item = "IS.MediumPulseLaser", brand = 3 },
 ]
 
 [sections.left_leg]
 armor = 12
-internals = 7
-slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
-]
 
 [sections.right_leg]
 armor = 12
-internals = 7
-slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
-]
 
 [sections.head]
 armor = 8
-internals = 3
-slots = [
-    { at = 1, item = "LifeSupport", brand = 3 },
-    { at = 2, item = "Sensors", brand = 3 },
-    { at = 3, item = "Cockpit", brand = 3 },
-    { at = 5, item = "Sensors", brand = 3 },
-    { at = 6, item = "LifeSupport", brand = 3 },
-]

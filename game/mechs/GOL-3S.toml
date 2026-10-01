@@ -2,48 +2,36 @@ name = "Goliath"
 class = "mech"
 movement = "quad"
 tons = 80
-max_speed = 64.5
+walk_mp = 6
 heat_sinks = 20
 computer = 4
 radio = 4
-specials = ["DoubleHS", "ArtemisIV", "LightEngine_Tech"]
+specials = ["ArtemisIV"]
+
+[construction]
+engine = "light"
+heat_sinks = "double"
 
 [sections.front_left_leg]
 armor = 28
-internals = 17
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = 5, item = "IS.ERMediumLaser" },
 ]
 
 [sections.front_right_leg]
 armor = 28
-internals = 17
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = 5, item = "IS.ERMediumLaser" },
 ]
 
 [sections.left_torso]
 armor = 21
-internals = 17
 rear = 7
-slots = [
-    { at = "1-2", item = "Engine" },
-]
 
 [sections.right_torso]
 armor = 21
-internals = 17
 rear = 7
 slots = [
-    { at = "1-2", item = "Engine" },
     { at = "3-4", item = "IS.LRM-10" },
     { at = "5-6", item = "Ammo_IS.LB20-XAC", rounds = 5 },
     { at = "7-8", item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
@@ -54,45 +42,21 @@ slots = [
 
 [sections.center_torso]
 armor = 29
-internals = 25
 rear = 10
 slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
     { at = "11-12", item = "IS.ERLargeLaser" },
 ]
 
 [sections.rear_left_leg]
 armor = 28
-internals = 17
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.rear_right_leg]
 armor = 28
-internals = 17
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.head]
 armor = 9
-internals = 3
 slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
     { at = 4, item = "IS.ERMediumLaser" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
 ]
 
 [[split_mounts]]

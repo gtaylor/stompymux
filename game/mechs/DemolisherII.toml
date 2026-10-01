@@ -2,34 +2,30 @@ name = "Demolisher II"
 class = "vehicle"
 movement = "track"
 tons = 100
-max_speed = 53.75
+walk_mp = 5
 cargo_space = 0
 max_suits = 0
 
 [sections.left_side]
 armor = 50
-internals = 10
 slots = [
     { at = 12, item = "FerroFibrous" },
 ]
 
 [sections.right_side]
 armor = 50
-internals = 10
 slots = [
     { at = 12, item = "FerroFibrous" },
 ]
 
 [sections.front_side]
 armor = 60
-internals = 10
 slots = [
     { at = "1-2", item = "IS.MachineGun" },
 ]
 
 [sections.aft_side]
 armor = 40
-internals = 10
 slots = [
     { at = "1-4", item = "Ammo_IS.UltraAC/20", rounds = 5 },
     { at = "5-6", item = "Ammo_IS.LB20-XAC", rounds = 5 },
@@ -40,7 +36,6 @@ slots = [
 
 [sections.turret]
 armor = 60
-internals = 10
 slots = [
     { at = 1, item = "IS.LB20-XAC" },
     { at = 2, item = "IS.UltraAC/20" },

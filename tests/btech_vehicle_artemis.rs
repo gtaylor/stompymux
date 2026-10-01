@@ -13,10 +13,10 @@ fn templates() -> Vec<String> {
         ground.replace("movement = \"track\"", "movement = \"hover\""),
         ground
             .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("max_speed = 53.75", "max_speed = 0"),
+            .replace("walk_mp = 5", "walk_mp = 0"),
         vtol.into(),
         vtol.replace("movement = \"vtol\"", "movement = \"none\"")
-            .replace("max_speed = 193.5", "max_speed = 0"),
+            .replace("walk_mp = 18", "walk_mp = 0"),
     ]
 }
 

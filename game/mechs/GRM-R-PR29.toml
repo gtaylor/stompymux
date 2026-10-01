@@ -2,20 +2,20 @@ name = "Grim Reaper"
 class = "mech"
 movement = "biped"
 tons = 55
-max_speed = 86.0
+walk_mp = 8
 heat_sinks = 20
 computer = 4
 radio = 4
-specials = ["DoubleHS"]
+
+[construction]
+engine = "xl"
+armor = "ferro_fibrous"
+heat_sinks = "double"
+brand = 3
 
 [sections.left_arm]
 armor = 18
-internals = 9
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-6", item = "IS.SRM-6", brand = 3 },
     { at = 7, item = "IS.MediumPulseLaser", brand = 3 },
     { at = "8-9", item = "FerroFibrous", brand = 3 },
@@ -23,22 +23,15 @@ slots = [
 
 [sections.right_arm]
 armor = 18
-internals = 9
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-6", item = "IS.ERLargeLaser", brand = 3 },
     { at = "7-8", item = "FerroFibrous", brand = 3 },
 ]
 
 [sections.left_torso]
 armor = 18
-internals = 13
 rear = 8
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
     { at = 4, item = "Ammo_IS.SRM-6", rounds = 15 },
     { at = "5-7", item = "FerroFibrous", brand = 3 },
     { at = 8, item = "Case", brand = 3 },
@@ -46,10 +39,8 @@ slots = [
 
 [sections.right_torso]
 armor = 18
-internals = 13
 rear = 8
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
     { at = "4-8", item = "IS.LRM-20", brand = 3 },
     { at = "9-10", item = "Ammo_IS.LRM-20", rounds = 6 },
     { at = 11, item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
@@ -58,46 +49,26 @@ slots = [
 
 [sections.center_torso]
 armor = 26
-internals = 18
 rear = 10
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
-    { at = "4-7", item = "Gyro", brand = 3 },
-    { at = "8-10", item = "Engine", brand = 3 },
     { at = 11, item = "IS.Anti-MissileSystem", brand = 3 },
     { at = 12, item = "FerroFibrous", brand = 3 },
 ]
 
 [sections.left_leg]
 armor = 26
-internals = 13
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-6", item = "FerroFibrous", brand = 3 },
 ]
 
 [sections.right_leg]
 armor = 26
-internals = 13
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-6", item = "FerroFibrous", brand = 3 },
 ]
 
 [sections.head]
 armor = 9
-internals = 3
 slots = [
-    { at = 1, item = "LifeSupport", brand = 3 },
-    { at = 2, item = "Sensors", brand = 3 },
-    { at = 3, item = "Cockpit", brand = 3 },
     { at = 4, item = "FerroFibrous", brand = 3 },
-    { at = 5, item = "Sensors", brand = 3 },
-    { at = 6, item = "LifeSupport", brand = 3 },
 ]

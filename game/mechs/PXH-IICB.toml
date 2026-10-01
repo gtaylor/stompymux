@@ -2,20 +2,20 @@ name = "Phoenix Hawk"
 class = "mech"
 movement = "biped"
 tons = 80
-max_speed = 86.0
-jump_speed = 53.75
+walk_mp = 8
+jump_mp = 5
 heat_sinks = 20
 computer = 4
-specials = ["Clan", "FerroFibrous_Tech", "EndoSteel_Tech", "XLEngine_Tech"]
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
 
 [sections.left_arm]
 armor = 20
-internals = 13
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-8", item = "Ammo_CL.LRM-20", rounds = 6 },
     { at = "9-10", item = "FerroFibrous" },
     { at = "11-12", item = "EndoSteel" },
@@ -23,12 +23,7 @@ slots = [
 
 [sections.right_arm]
 armor = 20
-internals = 13
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-8", item = "Ammo_CL.LRM-20", rounds = 6 },
     { at = "9-10", item = "FerroFibrous" },
     { at = "11-12", item = "EndoSteel" },
@@ -36,68 +31,44 @@ slots = [
 
 [sections.left_torso]
 armor = 20
-internals = 17
 rear = 10
 slots = [
-    { at = "1-2", item = "Engine" },
     { at = "3-10", item = "CL.LRM-20" },
     { at = "11-12", item = "JumpJet" },
 ]
 
 [sections.right_torso]
 armor = 20
-internals = 17
 rear = 10
 slots = [
-    { at = "1-2", item = "Engine" },
     { at = "3-10", item = "CL.LRM-20" },
     { at = "11-12", item = "JumpJet" },
 ]
 
 [sections.center_torso]
 armor = 27
-internals = 25
 rear = 15
 slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
     { at = 11, item = "JumpJet" },
     { at = 12, item = "EndoSteel" },
 ]
 
 [sections.left_leg]
 armor = 30
-internals = 17
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = 5, item = "FerroFibrous" },
     { at = 6, item = "EndoSteel" },
 ]
 
 [sections.right_leg]
 armor = 30
-internals = 17
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = 5, item = "FerroFibrous" },
     { at = 6, item = "EndoSteel" },
 ]
 
 [sections.head]
 armor = 9
-internals = 3
 slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
     { at = 4, item = "FerroFibrous" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
 ]

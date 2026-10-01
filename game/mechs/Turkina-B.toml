@@ -2,29 +2,28 @@ name = "Turkina"
 class = "mech"
 movement = "biped"
 tons = 95
-max_speed = 53.75
-jump_speed = 32.25
+walk_mp = 5
+jump_mp = 3
 heat_sinks = 50
 computer = 5
 radio = 5
-specials = ["DoubleHS", "Clan", "FlipArms"]
+
+[construction]
+tech_base = "clan"
+engine = "xl"
 
 [sections.left_arm]
 armor = 32
-internals = 16
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
     { at = "3-6", item = "CL.LargePulseLaser", modes = ["OnTC"] },
     { at = "7-12", item = "HeatSink" },
 ]
 
 [sections.right_arm]
 armor = 32
-internals = 16
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
     { at = "3-4", item = "CL.ERLargeLaser", modes = ["OnTC"] },
     { at = "5-6", item = "HeatSink" },
     { at = "7-12", item = "TargetingComputer" },
@@ -32,10 +31,8 @@ slots = [
 
 [sections.left_torso]
 armor = 30
-internals = 20
 rear = 10
 slots = [
-    { at = "1-2", item = "Engine" },
     { at = "3-6", item = "HeatSink" },
     { at = 7, item = "JumpJet" },
     { at = 8, item = "CL.ERMediumLaser", modes = ["OnTC"] },
@@ -44,10 +41,8 @@ slots = [
 
 [sections.right_torso]
 armor = 30
-internals = 20
 rear = 10
 slots = [
-    { at = "1-2", item = "Engine" },
     { at = "3-6", item = "HeatSink" },
     { at = 7, item = "JumpJet" },
     { at = 8, item = "CL.ERMediumLaser", modes = ["OnTC"] },
@@ -56,46 +51,26 @@ slots = [
 
 [sections.center_torso]
 armor = 45
-internals = 30
 rear = 10
 slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
     { at = 11, item = "JumpJet" },
     { at = 12, item = "CL.MediumPulseLaser", modes = ["OnTC"] },
 ]
 
 [sections.left_leg]
 armor = 40
-internals = 20
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "HeatSink" },
 ]
 
 [sections.right_leg]
 armor = 40
-internals = 20
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "HeatSink" },
 ]
 
 [sections.head]
 armor = 9
-internals = 3
 slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
     { at = 4, item = "CL.MediumPulseLaser", modes = ["OnTC"] },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
 ]

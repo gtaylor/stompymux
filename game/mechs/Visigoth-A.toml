@@ -2,10 +2,14 @@ name = "Visigoth"
 class = "aerofighter"
 movement = "fly"
 tons = 60
-max_speed = 118.25
+walk_mp = 11
 heat_sinks = 32
 fuel = 750
-specials = ["Clan", "ArtemisIV", "FerroFibrous_Tech"]
+specials = ["ArtemisIV"]
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
 
 [sections.nose]
 armor = 50

@@ -2,19 +2,22 @@ name = "Perseus"
 class = "mech"
 movement = "biped"
 tons = 75
-max_speed = 64.5
+walk_mp = 6
 heat_sinks = 24
 computer = 4
 radio = 4
 cargo_space = 0
-specials = ["DoubleHS", "FlipArms"]
+
+[construction]
+engine = "xl"
+structure = "endo_steel"
+heat_sinks = "double"
+brand = 3
 
 [sections.left_arm]
 armor = 21
-internals = 12
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
     { at = 3, item = "IS.LRM-20", modes = ["Artemis/Mine"], brand = 3 },
     { at = "4-7", item = "IS.LRM-20", brand = 3 },
     { at = 8, item = "ArtemisIV", brand = 3 },
@@ -23,10 +26,8 @@ slots = [
 
 [sections.right_arm]
 armor = 21
-internals = 12
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
     { at = "3-8", item = "IS.LB10-XAC", brand = 3 },
     { at = 9, item = "IS.ERMediumLaser", brand = 3 },
     { at = "10-12", item = "EndoSteel", brand = 3 },
@@ -34,10 +35,8 @@ slots = [
 
 [sections.left_torso]
 armor = 24
-internals = 16
 rear = 8
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
     { at = "4-5", item = "IS.ERMediumLaser", brand = 3 },
     { at = "6-8", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
     { at = "9-12", item = "EndoSteel", brand = 3 },
@@ -45,10 +44,8 @@ slots = [
 
 [sections.right_torso]
 armor = 24
-internals = 16
 rear = 8
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
     { at = 4, item = "IS.ERSmallLaser", brand = 3 },
     { at = 5, item = "Ammo_IS.LB10-XAC", rounds = 10 },
     { at = 6, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
@@ -58,46 +55,26 @@ slots = [
 
 [sections.center_torso]
 armor = 36
-internals = 23
 rear = 9
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
-    { at = "4-7", item = "Gyro", brand = 3 },
-    { at = "8-10", item = "Engine", brand = 3 },
     { at = 11, item = "IS.SRM-6", modes = ["Artemis/Mine"], brand = 3 },
     { at = 12, item = "IS.SRM-6", brand = 3 },
 ]
 
 [sections.left_leg]
 armor = 32
-internals = 16
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-6", item = "Ecm", brand = 3 },
 ]
 
 [sections.right_leg]
 armor = 32
-internals = 16
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-6", item = "BeagleProbe", brand = 3 },
 ]
 
 [sections.head]
 armor = 9
-internals = 3
 slots = [
-    { at = 1, item = "LifeSupport", brand = 3 },
-    { at = 2, item = "Sensors", brand = 3 },
-    { at = 3, item = "Cockpit", brand = 3 },
     { at = 4, item = "ArtemisIV", brand = 3 },
-    { at = 5, item = "Sensors", brand = 3 },
-    { at = 6, item = "LifeSupport", brand = 3 },
 ]

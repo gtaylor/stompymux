@@ -2,20 +2,23 @@ name = "Grand Crusader"
 class = "mech"
 movement = "biped"
 tons = 80
-max_speed = 53.75
+walk_mp = 5
 heat_sinks = 20
 computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0
-specials = ["DoubleHS", "FlipArms"]
+
+[construction]
+engine = "xl"
+structure = "endo_steel"
+heat_sinks = "double"
+brand = 3
 
 [sections.left_arm]
 armor = 26
-internals = 13
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
     { at = "3-5", item = "HeatSink", brand = 3 },
     { at = "6-7", item = "IS.LargePulseLaser", brand = 3 },
     { at = 8, item = "IS.MediumPulseLaser", brand = 3 },
@@ -24,10 +27,8 @@ slots = [
 
 [sections.right_arm]
 armor = 26
-internals = 13
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
     { at = "3-4", item = "IS.LargePulseLaser", brand = 3 },
     { at = 5, item = "IS.MediumPulseLaser", brand = 3 },
     { at = "6-11", item = "EndoSteel", brand = 3 },
@@ -35,10 +36,8 @@ slots = [
 
 [sections.left_torso]
 armor = 24
-internals = 17
 rear = 10
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
     { at = "4-8", item = "IS.LRM-20", brand = 3 },
     { at = 9, item = "ArtemisIV", brand = 3 },
     { at = "10-12", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
@@ -46,10 +45,8 @@ slots = [
 
 [sections.right_torso]
 armor = 24
-internals = 17
 rear = 10
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
     { at = "4-8", item = "IS.LRM-20", brand = 3 },
     { at = 9, item = "ArtemisIV", brand = 3 },
     { at = "10-12", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
@@ -57,45 +54,25 @@ slots = [
 
 [sections.center_torso]
 armor = 35
-internals = 25
 rear = 15
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
-    { at = "4-7", item = "Gyro", brand = 3 },
-    { at = "8-10", item = "Engine", brand = 3 },
     { at = "11-12", item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
 ]
 
 [sections.left_leg]
 armor = 34
-internals = 17
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-6", item = "EndoSteel", brand = 3 },
 ]
 
 [sections.right_leg]
 armor = 34
-internals = 17
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-6", item = "EndoSteel", brand = 3 },
 ]
 
 [sections.head]
 armor = 9
-internals = 3
 slots = [
-    { at = 1, item = "LifeSupport", brand = 3 },
-    { at = 2, item = "Sensors", brand = 3 },
-    { at = 3, item = "Cockpit", brand = 3 },
     { at = 4, item = "IS.Anti-MissileSystem", brand = 3 },
-    { at = 5, item = "Sensors", brand = 3 },
-    { at = 6, item = "LifeSupport", brand = 3 },
 ]

@@ -2,10 +2,12 @@ name = "Kirghiz"
 class = "aerofighter"
 movement = "fly"
 tons = 100
-max_speed = 86.0
+walk_mp = 8
 heat_sinks = 48
 fuel = 750
-specials = ["Clan"]
+
+[construction]
+tech_base = "clan"
 
 [sections.nose]
 armor = 65

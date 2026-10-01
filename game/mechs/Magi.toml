@@ -2,7 +2,7 @@ name = "Magi"
 class = "vehicle"
 movement = "track"
 tons = 70
-max_speed = 86.0
+walk_mp = 8
 computer = 3
 cargo_space = 0
 max_suits = 0
@@ -10,21 +10,18 @@ max_ton = 1
 
 [sections.left_side]
 armor = 43
-internals = 7
 slots = [
     { at = 1, item = "IS.MediumLaser" },
 ]
 
 [sections.right_side]
 armor = 43
-internals = 7
 slots = [
     { at = 1, item = "IS.MediumLaser" },
 ]
 
 [sections.front_side]
 armor = 44
-internals = 7
 slots = [
     { at = 1, item = "IS.MediumLaser" },
     { at = "2-3", item = "IS.MachineGun" },
@@ -32,7 +29,6 @@ slots = [
 
 [sections.aft_side]
 armor = 40
-internals = 7
 slots = [
     { at = 1, item = "Ammo_IS.MachineGun", rounds = 200 },
     { at = "2-3", item = "FerroFibrous" },

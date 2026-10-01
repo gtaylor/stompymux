@@ -2,21 +2,20 @@ name = "Rotunda"
 class = "vehicle"
 movement = "wheel"
 tons = 20
-max_speed = 150.5
+walk_mp = 14
 computer = 3
-specials = ["FerroFibrous_Tech"]
+
+[construction]
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 4
-internals = 2
 
 [sections.right_side]
 armor = 4
-internals = 2
 
 [sections.front_side]
 armor = 6
-internals = 2
 slots = [
     { at = 1, item = "IS.LargeLaser" },
     { at = 2, item = "IS.SRM-2" },
@@ -25,4 +24,3 @@ slots = [
 
 [sections.aft_side]
 armor = 4
-internals = 2

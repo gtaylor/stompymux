@@ -2,31 +2,21 @@ name = "Phoenix Hawk"
 class = "mech"
 movement = "biped"
 tons = 45
-max_speed = 96.75
-jump_speed = 64.5
+walk_mp = 9
+jump_mp = 6
 computer = 4
 radio = 4
 
 [sections.left_arm]
 armor = 10
-internals = 7
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = 5, item = "IS.MediumLaser" },
     { at = 6, item = "IS.MachineGun" },
 ]
 
 [sections.right_arm]
 armor = 10
-internals = 7
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "IS.LargeLaser" },
     { at = 7, item = "IS.MediumLaser" },
     { at = 8, item = "IS.MachineGun" },
@@ -34,7 +24,6 @@ slots = [
 
 [sections.left_torso]
 armor = 18
-internals = 11
 rear = 4
 slots = [
     { at = "1-3", item = "JumpJet" },
@@ -42,7 +31,6 @@ slots = [
 
 [sections.right_torso]
 armor = 18
-internals = 11
 rear = 4
 slots = [
     { at = "1-3", item = "JumpJet" },
@@ -50,42 +38,16 @@ slots = [
 
 [sections.center_torso]
 armor = 23
-internals = 14
 rear = 5
 slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
     { at = 11, item = "Ammo_IS.MachineGun", rounds = 200 },
 ]
 
 [sections.left_leg]
 armor = 15
-internals = 11
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.right_leg]
 armor = 15
-internals = 11
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.head]
 armor = 6
-internals = 3
-slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
-]

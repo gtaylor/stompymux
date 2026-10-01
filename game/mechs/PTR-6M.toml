@@ -2,36 +2,32 @@ name = "Penetrator"
 class = "mech"
 movement = "biped"
 tons = 75
-max_speed = 64.5
-jump_speed = 43.0
+walk_mp = 6
+jump_mp = 4
 heat_sinks = 34
 computer = 4
 radio = 4
-specials = ["DoubleHS"]
+
+[construction]
+heat_sinks = "double"
+brand = 3
 
 [sections.left_arm]
 armor = 20
-internals = 12
+omit = ["hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
     { at = "4-5", item = "IS.ERLargeLaser", brand = 3 },
 ]
 
 [sections.right_arm]
 armor = 20
-internals = 12
+omit = ["hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
     { at = "4-5", item = "IS.ERLargeLaser", brand = 3 },
 ]
 
 [sections.left_torso]
 armor = 23
-internals = 16
 rear = 6
 slots = [
     { at = "1-2", item = "IS.MediumPulseLaser", brand = 3 },
@@ -40,7 +36,6 @@ slots = [
 
 [sections.right_torso]
 armor = 23
-internals = 16
 rear = 6
 slots = [
     { at = "1-2", item = "IS.MediumPulseLaser", brand = 3 },
@@ -49,45 +44,23 @@ slots = [
 
 [sections.center_torso]
 armor = 29
-internals = 23
 rear = 8
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
-    { at = "4-7", item = "Gyro", brand = 3 },
-    { at = "8-10", item = "Engine", brand = 3 },
     { at = 11, item = "IS.Anti-MissileSystem", brand = 3 },
     { at = 12, item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
 ]
 
 [sections.left_leg]
 armor = 24
-internals = 16
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-6", item = "JumpJet", brand = 3 },
 ]
 
 [sections.right_leg]
 armor = 24
-internals = 16
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-6", item = "JumpJet", brand = 3 },
 ]
 
 [sections.head]
 armor = 9
-internals = 3
-slots = [
-    { at = 1, item = "LifeSupport", brand = 3 },
-    { at = 2, item = "Sensors", brand = 3 },
-    { at = 3, item = "Cockpit", brand = 3 },
-    { at = 5, item = "Sensors", brand = 3 },
-    { at = 6, item = "LifeSupport", brand = 3 },
-]

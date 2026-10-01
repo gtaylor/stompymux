@@ -218,9 +218,9 @@ async fn disabled_safe_critproof_and_stationary_criticals_preserve_draw_order() 
             false,
         ),
         (
-            include_str!("../game/mechs/Demolisher.toml").replace(
-                "\"ICEEngine_Tech\"",
-                "\"ICEEngine_Tech\", \"CritProof_Tech\"",
+            support::templates::with_flags(
+                include_str!("../game/mechs/Demolisher.toml"),
+                &["CritProof_Tech"],
             ),
             true,
             false,
@@ -228,7 +228,7 @@ async fn disabled_safe_critproof_and_stationary_criticals_preserve_draw_order() 
         (
             include_str!("../game/mechs/Demolisher.toml")
                 .replace("movement = \"track\"", "movement = \"none\"")
-                .replace("max_speed = 53.75", "max_speed = 0.0"),
+                .replace("walk_mp = 5", "walk_mp = 0"),
             false,
             true,
         ),

@@ -2,7 +2,7 @@ name = "Swift"
 class = "aerofighter"
 movement = "fly"
 tons = 25
-max_speed = 215.0
+walk_mp = 20
 computer = 3
 fuel = 450
 

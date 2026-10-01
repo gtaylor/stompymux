@@ -2,38 +2,35 @@ name = "Asshur"
 class = "vehicle"
 movement = "hover"
 tons = 20
-max_speed = 150.5
+walk_mp = 14
 heat_sinks = 10
-specials = ["FerroFibrous_Tech"]
+
+[construction]
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 11
-internals = 2
 slots = [
     { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.right_side]
 armor = 11
-internals = 2
 slots = [
     { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.front_side]
 armor = 13
-internals = 2
 slots = [
     { at = 1, item = "TAG" },
 ]
 
 [sections.aft_side]
 armor = 10
-internals = 2
 
 [sections.turret]
 armor = 13
-internals = 2
 slots = [
     { at = "1-2", item = "CL.ERMediumLaser" },
     { at = 3, item = "CL.StreakSRM-6" },

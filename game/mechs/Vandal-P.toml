@@ -2,10 +2,13 @@ name = "Vandal"
 class = "aerofighter"
 movement = "fly"
 tons = 30
-max_speed = 225.75
+walk_mp = 21
 heat_sinks = 20
 fuel = 600
-specials = ["Clan", "FerroFibrous_Tech"]
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
 
 [sections.nose]
 armor = 20

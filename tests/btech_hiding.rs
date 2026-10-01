@@ -72,7 +72,7 @@ async fn hiding_native_lua_all_chassis_timing_and_restart() {
     let hover = tracked.replace("movement = \"track\"", "movement = \"hover\"");
     let stationary = tracked
         .replace("movement = \"track\"", "movement = \"none\"")
-        .replace("max_speed = 53.75", "max_speed = 0");
+        .replace("walk_mp = 5", "walk_mp = 0");
     for source in [
         include_str!("../game/mechs/JR7-D.toml"),
         include_str!("../game/mechs/GOL-1H.toml"),
@@ -689,7 +689,7 @@ async fn weapons_hold_controls_admission_cover_and_saved_state() {
         tracked.replace("movement = \"track\"", "movement = \"hover\""),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("max_speed = 53.75", "max_speed = 0"),
+            .replace("walk_mp = 5", "walk_mp = 0"),
         include_str!("../game/mechs/Kestrel.toml").to_owned(),
     ];
     for source in chassis {

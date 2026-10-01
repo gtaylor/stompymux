@@ -2,31 +2,25 @@ name = "Catapult"
 class = "mech"
 movement = "biped"
 tons = 65
-max_speed = 64.5
-jump_speed = 43.0
-specials = ["FlipArms"]
+walk_mp = 6
+jump_mp = 4
 
 [sections.left_arm]
 armor = 13
-internals = 10
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
     { at = "3-7", item = "IS.LRM-20", brand = 4 },
 ]
 
 [sections.right_arm]
 armor = 13
-internals = 10
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
     { at = "3-7", item = "IS.LRM-20", brand = 4 },
 ]
 
 [sections.left_torso]
 armor = 19
-internals = 15
 rear = 8
 slots = [
     { at = "1-2", item = "Ammo_IS.LRM-20", rounds = 6 },
@@ -35,7 +29,6 @@ slots = [
 
 [sections.right_torso]
 armor = 19
-internals = 15
 rear = 8
 slots = [
     { at = "1-2", item = "Ammo_IS.LRM-20", rounds = 6 },
@@ -44,42 +37,16 @@ slots = [
 
 [sections.center_torso]
 armor = 24
-internals = 21
 rear = 11
 slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
     { at = "11-12", item = "IS.SmallLaser", brand = 4 },
 ]
 
 [sections.left_leg]
 armor = 18
-internals = 15
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.right_leg]
 armor = 18
-internals = 15
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.head]
 armor = 9
-internals = 3
-slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
-]

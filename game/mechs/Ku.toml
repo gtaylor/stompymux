@@ -2,27 +2,27 @@ name = "Ku"
 class = "vehicle"
 movement = "wheel"
 tons = 50
-max_speed = 64.5
+walk_mp = 6
 heat_sinks = 14
-specials = ["Clan", "FerroFibrous_Tech"]
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 29
-internals = 5
 slots = [
     { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.right_side]
 armor = 29
-internals = 5
 slots = [
     { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.front_side]
 armor = 30
-internals = 5
 slots = [
     { at = 1, item = "CL.StreakSRM-4" },
     { at = 2, item = "Ammo_CL.StreakSRM-4", rounds = 25 },
@@ -30,11 +30,9 @@ slots = [
 
 [sections.aft_side]
 armor = 26
-internals = 5
 
 [sections.turret]
 armor = 20
-internals = 5
 slots = [
     { at = 1, item = "CL.ERLargeLaser" },
     { at = 2, item = "CL.ERSmallLaser" },

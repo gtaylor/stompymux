@@ -2,30 +2,30 @@ name = "Anhur"
 class = "vtol"
 movement = "vtol"
 tons = 30
-max_speed = 129.0
+walk_mp = 12
 heat_sinks = 13
 computer = 5
 radio = 5
 cargo_space = 700
-specials = ["Clan", "CargoTech"]
+specials = ["CargoTech"]
+
+[construction]
+tech_base = "clan"
 
 [sections.left_side]
 armor = 14
-internals = 3
 slots = [
     { at = "6-12", item = "FerroFibrous", brand = 5 },
 ]
 
 [sections.right_side]
 armor = 14
-internals = 3
 slots = [
     { at = "6-12", item = "FerroFibrous", brand = 5 },
 ]
 
 [sections.front_side]
 armor = 16
-internals = 3
 slots = [
     { at = 1, item = "CL.ERMediumLaser", brand = 5 },
     { at = 2, item = "CL.MediumPulseLaser", brand = 5 },
@@ -33,11 +33,9 @@ slots = [
 
 [sections.aft_side]
 armor = 9
-internals = 3
 slots = [
     { at = 1, item = "CL.MediumPulseLaser", brand = 5 },
 ]
 
 [sections.rotor]
 armor = 2
-internals = 3

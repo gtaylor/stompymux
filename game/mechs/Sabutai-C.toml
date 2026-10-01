@@ -2,10 +2,13 @@ name = "Sabutai"
 class = "aerofighter"
 movement = "fly"
 tons = 75
-max_speed = 96.75
+walk_mp = 9
 heat_sinks = 54
 fuel = 450
-specials = ["Clan", "FerroFibrous_Tech"]
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
 
 [sections.nose]
 armor = 46

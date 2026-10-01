@@ -2,7 +2,7 @@ name = "Rhino"
 class = "vehicle"
 movement = "track"
 tons = 80
-max_speed = 53.75
+walk_mp = 5
 computer = 3
 cargo_space = 0
 max_suits = 0
@@ -11,15 +11,12 @@ specials = ["CargoTech"]
 
 [sections.left_side]
 armor = 54
-internals = 8
 
 [sections.right_side]
 armor = 54
-internals = 8
 
 [sections.front_side]
 armor = 64
-internals = 8
 slots = [
     { at = 1, item = "IS.LRM-10" },
     { at = 2, item = "Ammo_IS.LRM-10", rounds = 12 },
@@ -27,11 +24,9 @@ slots = [
 
 [sections.aft_side]
 armor = 40
-internals = 8
 
 [sections.turret]
 armor = 60
-internals = 8
 slots = [
     { at = "1-2", item = "IS.LRM-20" },
     { at = "3-5", item = "Ammo_IS.LRM-20", rounds = 6 },

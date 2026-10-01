@@ -2,25 +2,22 @@ name = "Peregrine"
 class = "vtol"
 movement = "vtol"
 tons = 30
-max_speed = 193.5
+walk_mp = 18
 
 [sections.left_side]
 armor = 2
-internals = 3
 slots = [
     { at = 1, item = "IS.SRM-4" },
 ]
 
 [sections.right_side]
 armor = 2
-internals = 3
 slots = [
     { at = 1, item = "IS.SRM-4" },
 ]
 
 [sections.front_side]
 armor = 2
-internals = 3
 slots = [
     { at = "1-2", item = "IS.MachineGun" },
     { at = 3, item = "Ammo_IS.MachineGun", rounds = 200 },
@@ -29,8 +26,6 @@ slots = [
 
 [sections.aft_side]
 armor = 1
-internals = 3
 
 [sections.rotor]
 armor = 1
-internals = 3

@@ -2,10 +2,13 @@ name = "Bashkir"
 class = "aerofighter"
 movement = "fly"
 tons = 20
-max_speed = 215.0
+walk_mp = 20
 heat_sinks = 22
 fuel = 450
-specials = ["Clan", "FerroFibrous_Tech"]
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
 
 [sections.nose]
 armor = 14

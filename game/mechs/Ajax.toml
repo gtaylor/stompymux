@@ -2,28 +2,26 @@ name = "Ajax"
 class = "vehicle"
 movement = "track"
 tons = 90
-max_speed = 53.75
+walk_mp = 5
 computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0
-specials = ["XLEngine_Tech"]
+
+[construction]
+engine = "xl"
 
 [sections.left_side]
 armor = 60
-internals = 9
 
 [sections.right_side]
 armor = 60
-internals = 9
 
 [sections.front_side]
 armor = 76
-internals = 9
 
 [sections.aft_side]
 armor = 40
-internals = 9
 slots = [
     { at = "1-3", item = "Ammo_IS.UltraAC/10", rounds = 10 },
     { at = "4-5", item = "Ammo_IS.GaussRifle", rounds = 8 },
@@ -34,7 +32,6 @@ slots = [
 
 [sections.turret]
 armor = 68
-internals = 9
 slots = [
     { at = 1, item = "IS.UltraAC/10" },
     { at = 2, item = "IS.GaussRifle" },

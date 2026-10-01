@@ -2,14 +2,13 @@ name = "Puma"
 class = "vehicle"
 movement = "track"
 tons = 95
-max_speed = 53.75
+walk_mp = 5
 heat_sinks = 20
 cargo_space = 0
 max_suits = 0
 
 [sections.left_side]
 armor = 40
-internals = 10
 slots = [
     { at = 1, item = "IS.LRM-20" },
     { at = 2, item = "Ammo_IS.LRM-20", rounds = 6 },
@@ -17,7 +16,6 @@ slots = [
 
 [sections.right_side]
 armor = 40
-internals = 10
 slots = [
     { at = 1, item = "IS.LRM-20" },
     { at = 2, item = "Ammo_IS.LRM-20", rounds = 6 },
@@ -25,7 +23,6 @@ slots = [
 
 [sections.front_side]
 armor = 52
-internals = 10
 slots = [
     { at = "1-2", item = "IS.MediumLaser" },
     { at = 3, item = "IS.SRM-4" },
@@ -35,7 +32,6 @@ slots = [
 
 [sections.aft_side]
 armor = 25
-internals = 10
 slots = [
     { at = 1, item = "IS.Flamer" },
     { at = 2, item = "IS.SmallLaser" },

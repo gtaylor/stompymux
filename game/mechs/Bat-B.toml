@@ -2,37 +2,34 @@ name = "Battle Cobra"
 class = "mech"
 movement = "biped"
 tons = 40
-max_speed = 96.75
+walk_mp = 9
 heat_sinks = 20
 computer = 4
 radio = 5
-specials = ["Clan"]
+
+[construction]
+tech_base = "clan"
+structure = "endo_steel"
+armor = "ferro_fibrous"
 
 [sections.left_arm]
 armor = 11
-internals = 6
+omit = ["hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
     { at = "4-5", item = "CL.ERPPC" },
     { at = 6, item = "CL.SmallPulseLaser" },
 ]
 
 [sections.right_arm]
 armor = 11
-internals = 6
+omit = ["hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
     { at = "4-5", item = "CL.ERPPC" },
     { at = 6, item = "CL.SmallPulseLaser" },
 ]
 
 [sections.left_torso]
 armor = 14
-internals = 10
 rear = 5
 slots = [
     { at = "1-3", item = "FerroFibrous" },
@@ -41,7 +38,6 @@ slots = [
 
 [sections.right_torso]
 armor = 14
-internals = 10
 rear = 5
 slots = [
     { at = "1-3", item = "FerroFibrous" },
@@ -51,43 +47,17 @@ slots = [
 
 [sections.center_torso]
 armor = 17
-internals = 12
 rear = 5
 slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
     { at = 11, item = "FerroFibrous" },
     { at = 12, item = "EndoSteel" },
 ]
 
 [sections.left_leg]
 armor = 17
-internals = 10
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.right_leg]
 armor = 17
-internals = 10
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.head]
 armor = 9
-internals = 3
-slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
-]

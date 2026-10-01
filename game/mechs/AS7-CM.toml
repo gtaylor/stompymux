@@ -2,19 +2,18 @@ name = "Atlas"
 class = "mech"
 movement = "biped"
 tons = 100
-max_speed = 53.75
+walk_mp = 5
 heat_sinks = 20
 computer = 4
 radio = 4
 
+[construction]
+engine = "xl"
+brand = 3
+
 [sections.left_arm]
 armor = 34
-internals = 17
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-6", item = "HeatSink", brand = 3 },
     { at = 7, item = "IS.Anti-MissileSystem", brand = 3 },
     { at = "8-12", item = "C3Master", brand = 3 },
@@ -22,12 +21,7 @@ slots = [
 
 [sections.right_arm]
 armor = 34
-internals = 17
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-6", item = "HeatSink", brand = 3 },
     { at = "7-8", item = "IS.ERLargeLaser", brand = 3 },
     { at = "9-10", item = "Ammo_IS.GaussRifle", rounds = 8 },
@@ -35,10 +29,8 @@ slots = [
 
 [sections.left_torso]
 armor = 32
-internals = 21
 rear = 10
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
     { at = "4-8", item = "IS.LRM-20", brand = 3 },
     { at = "9-10", item = "Ammo_IS.LRM-20", rounds = 6 },
     { at = 11, item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
@@ -47,54 +39,30 @@ slots = [
 
 [sections.right_torso]
 armor = 32
-internals = 21
 rear = 10
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
     { at = "4-10", item = "IS.GaussRifle", brand = 3 },
     { at = 11, item = "Case", brand = 3 },
 ]
 
 [sections.center_torso]
 armor = 47
-internals = 31
 rear = 14
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
-    { at = "4-7", item = "Gyro", brand = 3 },
-    { at = "8-10", item = "Engine", brand = 3 },
     { at = "11-12", item = "IS.MediumPulseLaser", modes = ["RearMount"], brand = 3 },
 ]
 
 [sections.left_leg]
 armor = 41
-internals = 21
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-6", item = "HeatSink", brand = 3 },
 ]
 
 [sections.right_leg]
 armor = 41
-internals = 21
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-6", item = "HeatSink", brand = 3 },
 ]
 
 [sections.head]
 armor = 9
-internals = 3
-slots = [
-    { at = 1, item = "LifeSupport", brand = 3 },
-    { at = 2, item = "Sensors", brand = 3 },
-    { at = 3, item = "Cockpit", brand = 3 },
-    { at = 5, item = "Sensors", brand = 3 },
-    { at = 6, item = "LifeSupport", brand = 3 },
-]

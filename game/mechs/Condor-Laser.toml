@@ -2,7 +2,7 @@ name = "Condor"
 class = "vehicle"
 movement = "hover"
 tons = 50
-max_speed = 118.25
+walk_mp = 11
 heat_sinks = 20
 computer = 3
 tac_range = 30
@@ -11,23 +11,18 @@ scan_range = 30
 
 [sections.left_side]
 armor = 24
-internals = 5
 
 [sections.right_side]
 armor = 24
-internals = 5
 
 [sections.front_side]
 armor = 36
-internals = 5
 
 [sections.aft_side]
 armor = 16
-internals = 5
 
 [sections.turret]
 armor = 20
-internals = 5
 slots = [
     { at = "1-4", item = "IS.ERMediumLaser" },
     { at = "5-7", item = "IS.SRM-2" },

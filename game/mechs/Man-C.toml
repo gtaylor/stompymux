@@ -2,92 +2,63 @@ name = "ManO'War"
 class = "mech"
 movement = "biped"
 tons = 80
-max_speed = 86.0
+walk_mp = 8
 heat_sinks = 32
 computer = 4
-specials = ["Clan"]
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+armor = "ferro_fibrous"
 
 [sections.left_arm]
 armor = 23
-internals = 13
+omit = ["hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
     { at = "4-11", item = "CL.UltraAC/20" },
 ]
 
 [sections.right_arm]
 armor = 23
-internals = 13
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-10", item = "CL.ERMediumLaser" },
 ]
 
 [sections.left_torso]
 armor = 24
-internals = 17
 rear = 10
+engine_at = 3
 slots = [
     { at = "1-2", item = "Ammo_CL.UltraAC/20", rounds = 5 },
-    { at = "3-4", item = "Engine" },
     { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 24
-internals = 17
 rear = 10
 slots = [
-    { at = "1-2", item = "Engine" },
     { at = "10-12", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 30
-internals = 25
 rear = 10
-slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
-]
 
 [sections.left_leg]
 armor = 24
-internals = 17
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = 5, item = "CL.A-Pod" },
     { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.right_leg]
 armor = 24
-internals = 17
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "CL.A-Pod" },
 ]
 
 [sections.head]
 armor = 9
-internals = 3
 slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
     { at = 4, item = "FerroFibrous" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
 ]

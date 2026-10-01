@@ -2,35 +2,33 @@ name = "Karnov UR"
 class = "vtol"
 movement = "vtol"
 tons = 30
-max_speed = 161.25
+walk_mp = 15
 cargo_space = 7168
-specials = ["CargoTech", "ICEEngine_Tech"]
+specials = ["CargoTech"]
+
+[construction]
+engine = "ice"
 
 [sections.left_side]
 armor = 6
-internals = 3
 slots = [
     { at = 1, item = "IS.MachineGun", brand = 3 },
 ]
 
 [sections.right_side]
 armor = 6
-internals = 3
 slots = [
     { at = 1, item = "IS.MachineGun", brand = 3 },
 ]
 
 [sections.front_side]
 armor = 7
-internals = 3
 slots = [
     { at = 1, item = "Ammo_IS.MachineGun", rounds = 200 },
 ]
 
 [sections.aft_side]
 armor = 6
-internals = 3
 
 [sections.rotor]
 armor = 2
-internals = 3

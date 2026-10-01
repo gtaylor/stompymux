@@ -2,29 +2,27 @@ name = "Blizzard"
 class = "vehicle"
 movement = "hover"
 tons = 25
-max_speed = 150.5
+walk_mp = 14
 cargo_space = 6144
-specials = ["CargoTech", "ICEEngine_Tech"]
+specials = ["CargoTech"]
+
+[construction]
+engine = "ice"
 
 [sections.left_side]
 armor = 10
-internals = 3
 
 [sections.right_side]
 armor = 10
-internals = 3
 
 [sections.front_side]
 armor = 10
-internals = 3
 
 [sections.aft_side]
 armor = 9
-internals = 3
 
 [sections.turret]
 armor = 9
-internals = 3
 slots = [
     { at = 1, item = "IS.LRM-5", brand = 3 },
     { at = 2, item = "Ammo_IS.LRM-5", rounds = 24 },

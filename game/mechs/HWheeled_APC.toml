@@ -2,24 +2,24 @@ name = "Wheeled APC"
 class = "vehicle"
 movement = "wheel"
 tons = 20
-max_speed = 96.75
+walk_mp = 9
 computer = 3
 cargo_space = 600
 max_suits = 0
 max_ton = 5
-specials = ["CargoTech", "ICEEngine_Tech"]
+specials = ["CargoTech"]
+
+[construction]
+engine = "ice"
 
 [sections.left_side]
 armor = 13
-internals = 2
 
 [sections.right_side]
 armor = 13
-internals = 2
 
 [sections.front_side]
 armor = 20
-internals = 2
 slots = [
     { at = "1-2", item = "IS.MachineGun" },
     { at = 3, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload", "Halfton"] },
@@ -27,4 +27,3 @@ slots = [
 
 [sections.aft_side]
 armor = 10
-internals = 2

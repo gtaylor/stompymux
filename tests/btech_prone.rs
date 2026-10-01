@@ -402,7 +402,7 @@ async fn prone_rejects_vehicle_chassis() {
             )
         };
         let text = if movement == "none" {
-            text.replace("max_speed = 53.75", "max_speed = 0.0")
+            text.replace("walk_mp = 5", "walk_mp = 0")
         } else {
             text
         };

@@ -2,21 +2,20 @@ name = "Mech Recovery Vehicle"
 class = "vehicle"
 movement = "wheel"
 tons = 50
-max_speed = 96.75
-specials = ["SalvageTech", "ICEEngine_Tech"]
+walk_mp = 9
+specials = ["SalvageTech"]
+
+[construction]
+engine = "ice"
 
 [sections.left_side]
 armor = 2
-internals = 5
 
 [sections.right_side]
 armor = 2
-internals = 5
 
 [sections.front_side]
 armor = 2
-internals = 5
 
 [sections.aft_side]
 armor = 2
-internals = 5

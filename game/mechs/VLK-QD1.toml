@@ -2,41 +2,36 @@ name = "Valkyrie"
 class = "mech"
 movement = "biped"
 tons = 30
-max_speed = 86.0
-jump_speed = 53.75
+walk_mp = 8
+jump_mp = 5
 heat_sinks = 20
 computer = 4
 radio = 4
-specials = ["DoubleHS", "ArtemisIV", "EndoSteel_Tech", "XLEngine_Tech"]
+specials = ["ArtemisIV"]
+
+[construction]
+engine = "xl"
+structure = "endo_steel"
+heat_sinks = "double"
 
 [sections.left_arm]
 armor = 9
-internals = 5
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-11", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 9
-internals = 5
+omit = ["hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
     { at = 4, item = "IS.ERMediumLaser", modes = ["OnTC"] },
     { at = "5-11", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
 armor = 10
-internals = 7
 rear = 3
 slots = [
-    { at = "1-3", item = "Engine" },
     { at = "4-6", item = "HeatSink" },
     { at = "7-9", item = "IS.LRM-15" },
     { at = 10, item = "ArtemisIV" },
@@ -45,54 +40,30 @@ slots = [
 
 [sections.right_torso]
 armor = 10
-internals = 7
 rear = 3
 slots = [
-    { at = "1-3", item = "Engine" },
     { at = "4-12", item = "HeatSink" },
 ]
 
 [sections.center_torso]
 armor = 13
-internals = 10
 rear = 4
 slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
     { at = 11, item = "JumpJet" },
     { at = 12, item = "TargetingComputer" },
 ]
 
 [sections.left_leg]
 armor = 13
-internals = 7
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 13
-internals = 7
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.head]
 armor = 9
-internals = 3
-slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
-]

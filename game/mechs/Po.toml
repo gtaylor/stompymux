@@ -2,20 +2,19 @@ name = "Po"
 class = "vehicle"
 movement = "track"
 tons = 60
-max_speed = 64.5
-specials = ["ICEEngine_Tech"]
+walk_mp = 6
+
+[construction]
+engine = "ice"
 
 [sections.left_side]
 armor = 32
-internals = 6
 
 [sections.right_side]
 armor = 32
-internals = 6
 
 [sections.front_side]
 armor = 40
-internals = 6
 slots = [
     { at = 1, item = "IS.MachineGun", brand = 3 },
     { at = 2, item = "Ammo_IS.MachineGun", rounds = 200 },
@@ -23,11 +22,9 @@ slots = [
 
 [sections.aft_side]
 armor = 30
-internals = 6
 
 [sections.turret]
 armor = 34
-internals = 6
 slots = [
     { at = 1, item = "IS.MachineGun", brand = 3 },
     { at = 2, item = "IS.AC/10", brand = 3 },

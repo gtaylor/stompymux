@@ -2,17 +2,21 @@ name = "Cauldron Born"
 class = "mech"
 movement = "biped"
 tons = 65
-max_speed = 86.0
+walk_mp = 8
 heat_sinks = 26
 computer = 4
-specials = ["BeagleProbe", "Clan", "Fliparms"]
+specials = ["BeagleProbe"]
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
 
 [sections.left_arm]
 armor = 17
-internals = 10
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
     { at = "3-4", item = "FerroFibrous" },
     { at = "5-6", item = "CL.ERPPC" },
     { at = "7-8", item = "CL.LargePulseLaser" },
@@ -20,10 +24,8 @@ slots = [
 
 [sections.right_arm]
 armor = 17
-internals = 10
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
     { at = "3-4", item = "FerroFibrous" },
     { at = "5-6", item = "CL.ERPPC" },
     { at = "7-8", item = "CL.LargePulseLaser" },
@@ -31,20 +33,16 @@ slots = [
 
 [sections.left_torso]
 armor = 24
-internals = 15
 rear = 8
 slots = [
-    { at = "1-2", item = "Engine" },
     { at = 3, item = "FerroFibrous" },
     { at = 4, item = "CL.MediumPulseLaser" },
 ]
 
 [sections.right_torso]
 armor = 24
-internals = 15
 rear = 8
 slots = [
-    { at = "1-2", item = "Engine" },
     { at = "3-4", item = "EndoSteel" },
     { at = 5, item = "CL.MediumPulseLaser" },
     { at = 6, item = "BeagleProbe" },
@@ -52,46 +50,26 @@ slots = [
 
 [sections.center_torso]
 armor = 32
-internals = 21
 rear = 9
 slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
     { at = 11, item = "EndoSteel" },
     { at = 12, item = "FerroFibrous" },
 ]
 
 [sections.left_leg]
 armor = 19
-internals = 15
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.right_leg]
 armor = 19
-internals = 15
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.head]
 armor = 9
-internals = 3
 slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
     { at = 4, item = "FerroFibrous" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
 ]

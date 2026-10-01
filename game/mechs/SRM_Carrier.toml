@@ -2,33 +2,32 @@ name = "SRM Carrier"
 class = "vehicle"
 movement = "track"
 tons = 60
-max_speed = 53.75
+walk_mp = 5
 computer = 3
 cargo_space = 0
 max_suits = 0
-specials = ["SearchLight", "ICEEngine_Tech"]
+specials = ["SearchLight"]
+
+[construction]
+engine = "ice"
 
 [sections.left_side]
 armor = 12
-internals = 6
 slots = [
     { at = "1-2", item = "Ammo_IS.SRM-6", rounds = 15 },
 ]
 
 [sections.right_side]
 armor = 12
-internals = 6
 slots = [
     { at = "1-2", item = "Ammo_IS.SRM-6", rounds = 15 },
 ]
 
 [sections.front_side]
 armor = 12
-internals = 6
 slots = [
     { at = "1-10", item = "IS.SRM-6" },
 ]
 
 [sections.aft_side]
 armor = 12
-internals = 6

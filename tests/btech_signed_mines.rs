@@ -63,7 +63,7 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
                 "vtol" => include_str!("../game/mechs/Kestrel.toml").to_owned(),
                 "stationary" => include_str!("../game/mechs/Demolisher.toml")
                     .replace("movement = \"track\"", "movement = \"none\"")
-                    .replace("max_speed = 53.75", "max_speed = 0"),
+                    .replace("walk_mp = 5", "walk_mp = 0"),
                 "wheeled" => include_str!("../game/mechs/Demolisher.toml")
                     .replace("movement = \"track\"", "movement = \"wheel\""),
                 "hover" => include_str!("../game/mechs/Demolisher.toml")

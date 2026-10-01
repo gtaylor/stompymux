@@ -2,29 +2,26 @@ name = "Parity Ground Vehicle"
 class = "vehicle"
 movement = "track"
 tons = 60
-max_speed = 43.0
+walk_mp = 4
 heat_sinks = 10
-specials = ["ICEEngine_Tech"]
+
+[construction]
+engine = "ice"
 
 [sections.left_side]
 armor = 24
-internals = 6
 
 [sections.right_side]
 armor = 25
-internals = 6
 
 [sections.front_side]
 armor = 36
-internals = 6
 
 [sections.aft_side]
 armor = 18
-internals = 6
 
 [sections.turret]
 armor = 30
-internals = 6
 slots = [
     { at = 1, item = "Agra.IS.PPC", brand = 5 },
 ]

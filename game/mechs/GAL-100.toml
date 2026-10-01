@@ -2,34 +2,31 @@ name = "Galleon"
 class = "vehicle"
 movement = "track"
 tons = 30
-max_speed = 96.75
-specials = ["ICEEngine_Tech"]
+walk_mp = 9
+
+[construction]
+engine = "ice"
 
 [sections.left_side]
 armor = 10
-internals = 3
 slots = [
     { at = 1, item = "IS.SmallLaser" },
 ]
 
 [sections.right_side]
 armor = 10
-internals = 3
 slots = [
     { at = 1, item = "IS.SmallLaser" },
 ]
 
 [sections.front_side]
 armor = 11
-internals = 3
 
 [sections.aft_side]
 armor = 11
-internals = 3
 
 [sections.turret]
 armor = 14
-internals = 3
 slots = [
     { at = 1, item = "IS.MediumLaser" },
 ]

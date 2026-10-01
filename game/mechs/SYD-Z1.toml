@@ -2,7 +2,7 @@ name = "Seydlitz"
 class = "aerofighter"
 movement = "fly"
 tons = 20
-max_speed = 182.75
+walk_mp = 17
 computer = 3
 fuel = 450
 

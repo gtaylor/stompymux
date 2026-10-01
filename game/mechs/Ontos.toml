@@ -2,29 +2,27 @@ name = "Ontos"
 class = "vehicle"
 movement = "track"
 tons = 95
-max_speed = 53.75
+walk_mp = 5
 heat_sinks = 24
-specials = ["SearchLight", "ICEEngine_Tech"]
+specials = ["SearchLight"]
+
+[construction]
+engine = "ice"
 
 [sections.left_side]
 armor = 25
-internals = 10
 
 [sections.right_side]
 armor = 25
-internals = 10
 
 [sections.front_side]
 armor = 30
-internals = 10
 
 [sections.aft_side]
 armor = 26
-internals = 10
 
 [sections.turret]
 armor = 30
-internals = 10
 slots = [
     { at = "1-8", item = "IS.MediumLaser", brand = 3 },
     { at = "9-10", item = "IS.LRM-5", brand = 3 },

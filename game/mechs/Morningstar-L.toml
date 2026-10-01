@@ -2,32 +2,30 @@ name = "Morningstar"
 class = "vehicle"
 movement = "wheel"
 tons = 60
-max_speed = 86.0
+walk_mp = 8
 computer = 4
 radio = 4
 cargo_space = 2500
 max_suits = 0
 max_ton = 5
-specials = ["XLEngine_Tech"]
+
+[construction]
+engine = "xl"
 
 [sections.left_side]
 armor = 29
-internals = 6
 
 [sections.right_side]
 armor = 29
-internals = 6
 
 [sections.front_side]
 armor = 43
-internals = 6
 slots = [
     { at = 1, item = "IS.LargeLaser", modes = ["OnTC"] },
 ]
 
 [sections.aft_side]
 armor = 19
-internals = 6
 slots = [
     { at = "1-2", item = "Ammo_IS.AC/10", rounds = 10 },
     { at = 3, item = "TargetingComputer" },
@@ -35,7 +33,6 @@ slots = [
 
 [sections.turret]
 armor = 24
-internals = 6
 slots = [
     { at = 1, item = "IS.AC/10", modes = ["OnTC"] },
 ]

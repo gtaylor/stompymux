@@ -62,7 +62,7 @@ fn supplied_templates_and_maps_decode_without_asset_conversion() {
 fn malformed_templates_do_not_become_partially_supported_units() {
     let source = include_str!("fixtures/btech/mechs/JR7-D.toml");
     for malformed in [
-        source.replace("max_speed = 118.25", "max_speed = nan"),
+        source.replace("walk_mp = 11", "max_speed = nan"),
         source.replace("movement = \"biped\"", "movement = \"quad\""),
         source.replace("class = \"mech\"", "class = \"Mech\""),
         source.replace("at = \"1-3\"", "at = \"0-3\""),

@@ -2,20 +2,19 @@ name = "Padilla"
 class = "vehicle"
 movement = "track"
 tons = 75
-max_speed = 86.0
-specials = ["XLEngine_Tech"]
+walk_mp = 8
+
+[construction]
+engine = "xl"
 
 [sections.left_side]
 armor = 24
-internals = 8
 
 [sections.right_side]
 armor = 24
-internals = 8
 
 [sections.front_side]
 armor = 28
-internals = 8
 slots = [
     { at = 1, item = "TAG" },
     { at = 2, item = "IS.ArrowIVSystem" },
@@ -27,7 +26,6 @@ slots = [
 
 [sections.aft_side]
 armor = 12
-internals = 8
 slots = [
     { at = 1, item = "Ammo_IS.ArrowIVSystem", rounds = 5 },
 ]

@@ -57,8 +57,8 @@ fn vehicle_template_validation_and_shared_syntax() {
         DEMOLISHER.replace("[sections.left_side]", "[sections.left_arm]"),
         DEMOLISHER.replace("[sections.turret]", "[sections.rotor]"),
         DEMOLISHER.replace("tons = 80", "tons = 0"),
-        DEMOLISHER.replace("max_speed = 53.75", "max_speed = nan"),
-        DEMOLISHER.replace("max_speed = 53.75", "max_speed = -1"),
+        DEMOLISHER.replace("walk_mp = 5", "max_speed = nan"),
+        DEMOLISHER.replace("walk_mp = 5", "walk_mp = -1"),
         DEMOLISHER.replace("at = \"1-2\"", "at = \"1-13\""),
         DEMOLISHER.replace("at = \"3-6\"", "at = \"2-6\""),
         format!("slots = [{{ at = 1, item = \"IS.MediumLaser\" }}]\n{DEMOLISHER}"),
@@ -77,8 +77,8 @@ fn vehicle_template_validation_and_shared_syntax() {
     );
     let custom = DEMOLISHER
         .replace(
-            "specials = [\"ICEEngine_Tech\"]",
-            "specials = [\"ICEEngine_Tech\", \"CargoTech\", \"iceengine_tech\"]",
+            "walk_mp = 5\n",
+            "walk_mp = 5\nspecials = [\"CargoTech\", \"cargotech\"]\n",
         )
         .replace(
             "item = \"IS.AC/20\" }",

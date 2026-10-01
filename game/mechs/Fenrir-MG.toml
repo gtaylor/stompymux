@@ -2,7 +2,7 @@ name = "Fenrir"
 class = "battlesuit"
 movement = "biped"
 tons = 1
-max_speed = 43.0
+walk_mp = 4
 cargo_space = 0
 max_suits = 4
 

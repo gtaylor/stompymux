@@ -2,7 +2,7 @@ name = "Cheetah"
 class = "aerofighter"
 movement = "fly"
 tons = 25
-max_speed = 193.5
+walk_mp = 18
 computer = 3
 fuel = 900
 

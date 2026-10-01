@@ -490,10 +490,7 @@ async fn technology_fixture(
     let source = if specials.is_empty() {
         source.to_owned()
     } else {
-        source.replace(
-            "specials = [\"FlipArms\"]",
-            &format!("specials = [\"FlipArms\", \"{specials}\"]"),
-        )
+        support::templates::with_flags(source, &[specials])
     };
     create_battle_unit(
         &mut world,
@@ -580,11 +577,10 @@ async fn technology_flags_change_mech_mass() {
 #[tokio::test]
 async fn laser_heat_sinks_glow_while_running() {
     let original = include_str!("../game/mechs/NightGyr-A.toml");
-    assert!(original.contains("LaserHS_Tech"));
+    assert!(original.contains("heat_sinks = \"laser\"\n"));
     for (source, glows) in [
         (original.to_string(), true),
-        (original.replace("LaserHS_Tech", "LHS"), true),
-        (original.replace(", \"LaserHS_Tech\"", ""), false),
+        (original.replace("heat_sinks = \"laser\"\n", ""), false),
     ] {
         let (_dir, config, mut world) = support::isolated_world().await;
         let id = world.create(&config, "Glowing Nightgyr".into(), Kind::Thing);

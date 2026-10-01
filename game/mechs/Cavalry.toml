@@ -2,20 +2,19 @@ name = "Cavalry"
 class = "vtol"
 movement = "vtol"
 tons = 25
-max_speed = 161.25
-specials = ["ICEEngine_Tech"]
+walk_mp = 15
+
+[construction]
+engine = "ice"
 
 [sections.left_side]
 armor = 13
-internals = 3
 
 [sections.right_side]
 armor = 13
-internals = 3
 
 [sections.front_side]
 armor = 20
-internals = 3
 slots = [
     { at = 1, item = "IS.SRM-6" },
     { at = "2-4", item = "IS.SRM-2" },
@@ -25,8 +24,6 @@ slots = [
 
 [sections.aft_side]
 armor = 8
-internals = 3
 
 [sections.rotor]
 armor = 2
-internals = 3

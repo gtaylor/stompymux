@@ -2,33 +2,27 @@ name = "Naginata"
 class = "mech"
 movement = "biped"
 tons = 95
-max_speed = 53.75
+walk_mp = 5
 heat_sinks = 30
 computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0
-specials = ["DoubleHS"]
+
+[construction]
+heat_sinks = "double"
 
 [sections.left_arm]
 armor = 25
-internals = 16
+omit = ["hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
     { at = "4-9", item = "HeatSink" },
     { at = "10-12", item = "IS.ERPPC" },
 ]
 
 [sections.right_arm]
 armor = 25
-internals = 16
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-7", item = "HeatSink" },
     { at = 8, item = "IS.LRM-15", modes = ["Artemis/Mine"] },
     { at = "9-10", item = "IS.LRM-15" },
@@ -37,7 +31,6 @@ slots = [
 
 [sections.left_torso]
 armor = 26
-internals = 20
 rear = 8
 slots = [
     { at = 1, item = "IS.LRM-15", modes = ["Artemis/Mine"] },
@@ -50,7 +43,6 @@ slots = [
 
 [sections.right_torso]
 armor = 26
-internals = 20
 rear = 8
 slots = [
     { at = "1-3", item = "HeatSink" },
@@ -63,41 +55,13 @@ slots = [
 
 [sections.center_torso]
 armor = 35
-internals = 30
 rear = 14
-slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
-]
 
 [sections.left_leg]
 armor = 32
-internals = 20
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.right_leg]
 armor = 32
-internals = 20
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.head]
 armor = 9
-internals = 3
-slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
-]

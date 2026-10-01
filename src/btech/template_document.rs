@@ -2,22 +2,28 @@
 //!
 //! A document decodes into [`ParsedTemplate`], the class-neutral field and
 //! section layout that the mech, vehicle and raw decoders validate further.
-//! Rendering goes the other way, so saved units use the same syntax as the
-//! stock assets.
+//! Documents state construction choices rather than their consequences: the
+//! loader derives technology flags from `[construction]`, places the engine,
+//! gyro, cockpit and actuators in mech sections, fills internal structure from
+//! tonnage and converts movement points to speeds. Rendering goes the other
+//! way, so saved units use the same syntax as the stock assets.
 //!
 //! ```toml
 //! name = "Zeus"
 //! class = "mech"
 //! movement = "biped"
 //! tons = 80
-//! max_speed = 64.5
-//! specials = ["DoubleHS"]
+//! walk_mp = 6
+//!
+//! [construction]
+//! engine = "xl"
+//! heat_sinks = "double"
+//! brand = 3
 //!
 //! [sections.left_arm]
 //! armor = 22
-//! internals = 13
+//! omit = ["hand_actuator"]
 //! slots = [
-//!     { at = 1, item = "ShoulderOrHip", brand = 3 },
 //!     { at = "4-6", item = "IS.ERPPC", brand = 3 },
 //! ]
 //!
@@ -25,10 +31,18 @@
 //! item = "IS.AC/20"
 //! placements = [
 //!     { section = "center_torso", at = "11-12" },
-//!     { section = "left_torso", at = "1-8" },
+//!     { section = "left_torso", at = "4-11" },
 //! ]
 //! ```
-use super::{BattleSection, CriticalDefinition, RawMovement, RawUnitClass, SectionDefinition};
+use super::template_construction::{
+    Construction, FLIP_ARMS, Omission, SPEED_PER_MP, SectionPlan, arms_flip,
+    canonical_infantry_special, canonical_special, derives_internals, fixed_equipment,
+    is_fixed_item, mech_internal, movement_points, vehicle_internal,
+};
+use super::{
+    BattleMechChassis, BattleSection, CriticalDefinition, RawMovement, RawUnitClass,
+    SectionDefinition,
+};
 use anyhow::{Context, Result, bail, ensure};
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -86,6 +100,9 @@ const FIELDS: &[(&str, &str, Kind)] = &[
     ("infantry_specials", "infantryspecials", Kind::Flags),
 ];
 
+/// Movement point keys and the speed attribute each one sets.
+const MOVEMENT_POINTS: [(&str, &str); 2] = [("walk_mp", "max_speed"), ("jump_mp", "jump_speed")];
+
 /// Internal attributes that a rendered document carries elsewhere or not at all.
 const UNRENDERED: &[&str] = &[
     "reference",
@@ -95,17 +112,32 @@ const UNRENDERED: &[&str] = &[
     "administrative_movement_type",
 ];
 
+/// Whether a document states construction choices, or spells every flag and slot out.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum DocumentMode {
+    /// Construction choices drive flags, fixed equipment and internal structure.
+    Constructed,
+    /// Every flag, slot and internal structure value is written out; used to read
+    /// documents saved before construction choices existed.
+    Literal,
+}
+
 /// One section's protection and occupied slots.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct SectionDocument {
     #[serde(default)]
     armor: u16,
-    #[serde(default)]
-    internals: u16,
+    internals: Option<u16>,
     #[serde(default)]
     rear: u16,
     config: Option<String>,
+    /// The slots list the section's fixed equipment too; nothing is placed for it.
+    #[serde(default)]
+    explicit: bool,
+    #[serde(default)]
+    omit: Vec<String>,
+    engine_at: Option<i64>,
     #[serde(default)]
     slots: Vec<SlotDocument>,
 }
@@ -180,9 +212,30 @@ pub(super) struct ParsedTemplate {
     pub sections: BTreeMap<String, SectionDefinition>,
 }
 
+/// Unit facts the section decoder needs, read from the unit-level fields first.
+struct Unit {
+    mode: DocumentMode,
+    class: Option<RawUnitClass>,
+    chassis: Option<BattleMechChassis>,
+    tons: i64,
+    construction: Construction,
+}
+
+impl Unit {
+    /// Whether construction places fixed equipment: constructed biped and quad mechs.
+    fn places_equipment(&self) -> bool {
+        self.mode == DocumentMode::Constructed && self.chassis.is_some()
+    }
+}
+
 impl ParsedTemplate {
     /// Decode a TOML document, recording `reference` as the unit's identity.
     pub fn parse(reference: &str, source: &str) -> Result<Self> {
+        Self::parse_mode(reference, source, DocumentMode::Constructed)
+    }
+
+    /// Decode a TOML document in the given mode.
+    pub fn parse_mode(reference: &str, source: &str, mode: DocumentMode) -> Result<Self> {
         ensure!(
             source.len() <= TEMPLATE_SIZE_LIMIT,
             "template exceeds size limit"
@@ -190,19 +243,78 @@ impl ParsedTemplate {
         let mut document: toml::Table = toml::from_str(source)?;
         let sections = document.remove("sections");
         let split_mounts = document.remove("split_mounts");
+        let construction = document.remove("construction");
+        ensure!(
+            mode == DocumentMode::Constructed || construction.is_none(),
+            "literal documents have no construction table"
+        );
+        let construction = construction
+            .map(Construction::decode)
+            .transpose()
+            .context("invalid construction")?
+            .unwrap_or_default();
         let mut fields = BTreeMap::new();
         if !reference.is_empty() {
             fields.insert("reference".to_owned(), reference.to_owned());
         }
         for (key, value) in document {
+            if let Some((_, speed)) = MOVEMENT_POINTS.iter().find(|(name, _)| *name == key) {
+                let toml::Value::Integer(points) = value else {
+                    bail!("{key} must be an integer");
+                };
+                ensure!((0..=100).contains(&points), "{key} is out of range");
+                ensure!(
+                    fields
+                        .insert(
+                            (*speed).to_owned(),
+                            (points as f64 * SPEED_PER_MP).to_string()
+                        )
+                        .is_none(),
+                    "give either {key} or {speed}, not both"
+                );
+                continue;
+            }
             let (_, attribute, kind) = FIELDS
                 .iter()
                 .find(|(name, _, _)| *name == key)
                 .with_context(|| format!("unsupported template field {key}"))?;
-            if let Some(value) = decode_field(&key, *kind, value)? {
-                fields.insert((*attribute).to_owned(), value);
+            if let Some(value) = decode_field(&key, *kind, value, mode)? {
+                ensure!(
+                    fields.insert((*attribute).to_owned(), value).is_none(),
+                    "give either {attribute} or its movement points, not both"
+                );
             }
         }
+        let flags: Vec<_> = construction.flags();
+        if !flags.is_empty() {
+            let specials = fields.remove("specials").unwrap_or_default();
+            let combined: Vec<&str> = flags
+                .iter()
+                .copied()
+                .chain(specials.split_ascii_whitespace())
+                .collect();
+            fields.insert("specials".into(), combined.join(" "));
+        }
+        let class = fields
+            .get("type")
+            .map(|class| RawUnitClass::parse(class))
+            .transpose()?;
+        let chassis = match class {
+            Some(RawUnitClass::Mech) => fields
+                .get("move_type")
+                .and_then(|movement| BattleMechChassis::parse(movement).ok()),
+            _ => None,
+        };
+        let unit = Unit {
+            mode,
+            class,
+            chassis,
+            tons: fields
+                .get("tons")
+                .and_then(|tons| tons.parse().ok())
+                .unwrap_or_default(),
+            construction,
+        };
         let mut parsed = Self {
             fields,
             sections: BTreeMap::new(),
@@ -213,7 +325,7 @@ impl ParsedTemplate {
             };
             for (name, section) in sections {
                 parsed
-                    .add_section(&name, section)
+                    .add_section(&name, section, &unit)
                     .with_context(|| format!("section {name}"))?;
             }
         }
@@ -227,6 +339,9 @@ impl ParsedTemplate {
                     .with_context(|| format!("split mount {item}"))?;
             }
         }
+        if unit.places_equipment() && unit.chassis == Some(BattleMechChassis::Biped) {
+            parsed.derive_flip_arms();
+        }
         Ok(parsed)
     }
 
@@ -239,25 +354,84 @@ impl ParsedTemplate {
             .with_context(|| format!("missing template field {name}"))
     }
 
-    /// Decode one `[sections.<name>]` table and its single-section slots.
-    fn add_section(&mut self, name: &str, section: toml::Value) -> Result<()> {
+    /// Decode one `[sections.<name>]` table, placing its fixed equipment and structure.
+    fn add_section(&mut self, name: &str, section: toml::Value, unit: &Unit) -> Result<()> {
         let key = name.to_ascii_lowercase();
         ensure!(!self.sections.contains_key(&key), "duplicate section");
         let section: SectionDocument = section.try_into()?;
+        let mech = match unit.class {
+            Some(RawUnitClass::Mech) => mech_section(&key).ok(),
+            _ => None,
+        };
+        let constructed = unit.places_equipment() && !section.explicit;
+        ensure!(
+            unit.places_equipment() || !section.explicit,
+            "only mech sections can be explicit"
+        );
+        ensure!(
+            constructed || (section.omit.is_empty() && section.engine_at.is_none()),
+            "omit and engine_at need constructed mech equipment"
+        );
+        let internal = match section.internals {
+            Some(internal) => internal,
+            None if unit.mode == DocumentMode::Literal => 0,
+            None => default_internal(unit, mech).with_context(|| {
+                format!("internals are required for {key} at {} tons", unit.tons)
+            })?,
+        };
         let mut layout = SectionDefinition {
             armor: section.armor,
-            internal: section.internals,
+            internal,
             rear: section.rear,
             criticals: BTreeMap::new(),
             configuration: section.config,
         };
+        if constructed {
+            let (Some(chassis), Some(mech)) = (unit.chassis, mech) else {
+                bail!("unknown mech section");
+            };
+            let omit = section
+                .omit
+                .iter()
+                .map(|omission| Omission::parse(omission))
+                .collect::<Result<Vec<_>>>()?;
+            let engine_at = section
+                .engine_at
+                .map(|slot| {
+                    ensure!(
+                        (1..=12).contains(&slot),
+                        "engine_at must be a slot from 1 to 12"
+                    );
+                    Ok(slot as u8 - 1)
+                })
+                .transpose()?;
+            let plan = SectionPlan {
+                omit: &omit,
+                engine_at,
+            };
+            for (slot, item) in fixed_equipment(&unit.construction, chassis, mech, plan)? {
+                let critical = CriticalDefinition {
+                    equipment: item.into(),
+                    data: "-".into(),
+                    modes: Vec::new(),
+                    brand: unit.construction.brand,
+                };
+                occupy(&mut layout, slot, slot, &critical)?;
+            }
+        }
         for slot in section.slots {
             let (first, last) = slot
                 .at
                 .bounds()
                 .with_context(|| format!("item {}", slot.item))?;
+            ensure!(
+                !constructed || !is_fixed_item(&slot.item),
+                "{} is placed by construction; mark the section explicit to list it",
+                slot.item
+            );
             let critical = slot_critical(slot)?;
-            occupy(&mut layout, first, last, &critical)?;
+            occupy(&mut layout, first, last, &critical)
+                .context("slot already holds fixed equipment or another item")?;
         }
         self.sections.insert(key, layout);
         Ok(())
@@ -308,10 +482,49 @@ impl ParsedTemplate {
             .with_context(|| format!("missing section {}", extension.section))?;
         occupy(layout, first, last, &proxy)
     }
+
+    /// Record flippable arms exactly when neither biped arm has a lower or hand actuator.
+    fn derive_flip_arms(&mut self) {
+        let (Some(left), Some(right)) = (
+            self.sections.get("left_arm"),
+            self.sections.get("right_arm"),
+        ) else {
+            return;
+        };
+        if !arms_flip([left, right]) {
+            return;
+        }
+        let specials = self.fields.entry("specials".into()).or_default();
+        if !specials.is_empty() {
+            specials.push(' ');
+        }
+        specials.push_str(FLIP_ARMS);
+    }
+}
+
+/// Internal structure a section receives when its document leaves it out.
+fn default_internal(unit: &Unit, mech: Option<BattleSection>) -> Option<u16> {
+    let class = unit.class?;
+    if !derives_internals(class) {
+        return Some(0);
+    }
+    match mech {
+        Some(section) => mech_internal(
+            u16::try_from(unit.tons).ok()?,
+            section,
+            unit.chassis == Some(BattleMechChassis::Quad),
+        ),
+        None => Some(vehicle_internal(unit.tons)),
+    }
 }
 
 /// Convert one typed document value into its internal attribute spelling.
-fn decode_field(key: &str, kind: Kind, value: toml::Value) -> Result<Option<String>> {
+fn decode_field(
+    key: &str,
+    kind: Kind,
+    value: toml::Value,
+    mode: DocumentMode,
+) -> Result<Option<String>> {
     Ok(Some(match (kind, value) {
         (Kind::Integer, toml::Value::Integer(value)) => i32::try_from(value)
             .with_context(|| format!("{key} is out of range"))?
@@ -348,6 +561,11 @@ fn decode_field(key: &str, kind: Kind, value: toml::Value) -> Result<Option<Stri
                     !flag.is_empty() && !flag.contains(char::is_whitespace),
                     "{key} entries must be single words"
                 );
+                let flag = match (mode, key) {
+                    (DocumentMode::Literal, _) => flag,
+                    (DocumentMode::Constructed, "specials") => canonical_special(&flag)?.to_owned(),
+                    (DocumentMode::Constructed, _) => canonical_infantry_special(&flag)?.to_owned(),
+                };
                 if !flags.iter().any(|known| known.eq_ignore_ascii_case(&flag)) {
                     flags.push(flag);
                 }
@@ -467,12 +685,13 @@ pub(super) fn parse_split_link(data: &str) -> Result<(BattleSection, u8)> {
 pub(super) struct RenderSection<'a> {
     /// Lowercase document heading such as `left_arm`.
     pub heading: String,
-    /// The stable mech section, so split links can name their sections.
+    /// The stable mech section, so split links and fixed equipment can name it.
     pub mech: Option<BattleSection>,
     pub layout: &'a SectionDefinition,
 }
 
-/// Render internal attributes and section layouts as a TOML template document.
+/// Render internal attributes and section layouts as a TOML template document,
+/// stating construction choices and leaving out everything they imply.
 pub(super) fn render(
     attributes: &BTreeMap<String, String>,
     sections: &[RenderSection<'_>],
@@ -484,6 +703,39 @@ pub(super) fn render(
             "unsupported template attribute {key}"
         );
     }
+    let flags: Vec<&str> = attributes
+        .get("specials")
+        .map(|specials| {
+            specials
+                .split_ascii_whitespace()
+                .filter(|flag| *flag != "-")
+                .collect()
+        })
+        .unwrap_or_default();
+    let (mut construction, specials) = Construction::from_flags(&flags)?;
+    let class = attributes
+        .get("type")
+        .map(|class| RawUnitClass::parse(class))
+        .transpose()?;
+    let chassis = match class {
+        Some(RawUnitClass::Mech) => attributes
+            .get("move_type")
+            .and_then(|movement| BattleMechChassis::parse(movement).ok()),
+        _ => None,
+    };
+    if chassis.is_some() {
+        construction.brand = fixed_brand(sections);
+    }
+    let unit = Unit {
+        mode: DocumentMode::Constructed,
+        class,
+        chassis,
+        tons: attributes
+            .get("tons")
+            .and_then(|tons| tons.trim().parse().ok())
+            .unwrap_or_default(),
+        construction,
+    };
     let mut output = String::new();
     for (name, attribute, kind) in FIELDS {
         let Some(value) = attributes.get(*attribute) else {
@@ -500,6 +752,14 @@ pub(super) fn render(
                     .trim()
                     .parse()
                     .with_context(|| format!("invalid {attribute} {value}"))?;
+                let points = MOVEMENT_POINTS
+                    .iter()
+                    .find(|(_, speed)| speed == attribute)
+                    .and_then(|(key, _)| Some((key, movement_points(value)?)));
+                if let Some((key, points)) = points {
+                    writeln!(output, "{key} = {points}")?;
+                    continue;
+                }
                 toml::Value::Float(value).to_string()
             }
             Kind::Text if matches!(*name, "class" | "movement") => {
@@ -507,11 +767,18 @@ pub(super) fn render(
             }
             Kind::Text => quote(value),
             Kind::Flags => {
-                let flags: Vec<_> = value
-                    .split_ascii_whitespace()
-                    .filter(|flag| *flag != "-")
-                    .map(str::to_owned)
-                    .collect();
+                let flags = if *attribute == "specials" {
+                    specials
+                        .iter()
+                        .map(|flag| canonical_special(flag).map(str::to_owned))
+                        .collect::<Result<Vec<_>>>()?
+                } else {
+                    value
+                        .split_ascii_whitespace()
+                        .filter(|flag| *flag != "-")
+                        .map(|flag| canonical_infantry_special(flag).map(str::to_owned))
+                        .collect::<Result<Vec<_>>>()?
+                };
                 if flags.is_empty() {
                     continue;
                 }
@@ -520,9 +787,10 @@ pub(super) fn render(
         };
         writeln!(output, "{name} = {rendered}")?;
     }
+    output.push_str(&unit.construction.render());
     let mounts = split_mounts(sections)?;
     for section in sections {
-        render_section(&mut output, section, &mounts)?;
+        render_section(&mut output, section, &mounts, &unit)?;
     }
     for mount in &mounts {
         render_split_mount(&mut output, mount, sections)?;
@@ -530,6 +798,78 @@ pub(super) fn render(
     Ok(output)
 }
 
+/// The brand most of a mech's fixed equipment carries.
+fn fixed_brand(sections: &[RenderSection<'_>]) -> Option<u8> {
+    let mut counts: BTreeMap<Option<u8>, usize> = BTreeMap::new();
+    for critical in sections
+        .iter()
+        .filter(|section| section.mech.is_some())
+        .flat_map(|section| section.layout.criticals.values())
+        .filter(|critical| is_fixed_item(&critical.equipment))
+    {
+        *counts.entry(critical.brand).or_default() += 1;
+    }
+    counts
+        .into_iter()
+        .max_by_key(|(brand, count)| (*count, std::cmp::Reverse(*brand)))
+        .and_then(|(brand, _)| brand)
+}
+
+/// How construction reproduces a section's fixed equipment, if it can.
+struct SectionFit {
+    omit: Vec<Omission>,
+    engine_at: Option<u8>,
+    placed: BTreeMap<u8, &'static str>,
+}
+
+/// Find the omissions and engine placement under which construction places exactly the
+/// fixed equipment a mech section holds; `None` means the section must be explicit.
+fn fit_section(
+    unit: &Unit,
+    section: BattleSection,
+    layout: &SectionDefinition,
+) -> Option<SectionFit> {
+    use Omission::*;
+    let chassis = unit.chassis?;
+    let biped_arm = chassis == BattleMechChassis::Biped
+        && matches!(section, BattleSection::LeftArm | BattleSection::RightArm);
+    let omissions: &[&[Omission]] = if biped_arm {
+        &[&[], &[HandActuator], &[LowerActuator, HandActuator]]
+    } else {
+        &[&[]]
+    };
+    let engine_at = layout
+        .criticals
+        .iter()
+        .find(|(_, critical)| critical.equipment == "Engine")
+        .map(|(slot, _)| *slot)
+        .filter(|slot| {
+            *slot != 0
+                && matches!(
+                    section,
+                    BattleSection::LeftTorso | BattleSection::RightTorso
+                )
+        });
+    omissions.iter().find_map(|omit| {
+        let plan = SectionPlan { omit, engine_at };
+        let placed = fixed_equipment(&unit.construction, chassis, section, plan).ok()?;
+        let reproduced = placed.iter().all(|(slot, item)| {
+            layout.criticals.get(slot).is_some_and(|critical| {
+                critical.equipment == *item
+                    && critical.data == "-"
+                    && critical.modes.is_empty()
+                    && critical.brand == unit.construction.brand
+            })
+        }) && layout.criticals.iter().all(|(slot, critical)| {
+            !is_fixed_item(&critical.equipment) || placed.contains_key(slot)
+        });
+        reproduced.then(|| SectionFit {
+            omit: omit.to_vec(),
+            engine_at,
+            placed,
+        })
+    })
+}
 /// A split mount recovered from its primary run and linked extension slots.
 struct RenderedMount {
     primary: BattleSection,
@@ -625,22 +965,51 @@ fn render_section(
     output: &mut String,
     section: &RenderSection<'_>,
     mounts: &[RenderedMount],
+    unit: &Unit,
 ) -> Result<()> {
     let layout = section.layout;
     writeln!(output, "\n[sections.{}]", section.heading)?;
     writeln!(output, "armor = {}", layout.armor)?;
-    writeln!(output, "internals = {}", layout.internal)?;
+    if default_internal(unit, section.mech) != Some(layout.internal) {
+        writeln!(output, "internals = {}", layout.internal)?;
+    }
     if layout.rear > 0 {
         writeln!(output, "rear = {}", layout.rear)?;
     }
     if let Some(config) = &layout.configuration {
         writeln!(output, "config = {}", quote(config))?;
     }
+    let fit = match section.mech {
+        Some(mech) if unit.places_equipment() => {
+            let fit = fit_section(unit, mech, layout);
+            if fit.is_none() {
+                writeln!(output, "explicit = true")?;
+            }
+            fit
+        }
+        _ => None,
+    };
+    if let Some(fit) = &fit {
+        if !fit.omit.is_empty() {
+            let omit: Vec<_> = fit
+                .omit
+                .iter()
+                .map(|omission| omission.spelling().to_owned())
+                .collect();
+            writeln!(output, "omit = {}", quoted_list(&omit))?;
+        }
+        if let Some(slot) = fit.engine_at {
+            writeln!(output, "engine_at = {}", slot + 1)?;
+        }
+    }
     let in_mount = |slot: u8| {
-        mounts.iter().any(|mount| {
-            (Some(mount.primary) == section.mech && (mount.first..=mount.last).contains(&slot))
-                || (Some(mount.extension) == section.mech && mount.extension_slots.contains(&slot))
-        })
+        fit.as_ref()
+            .is_some_and(|fit| fit.placed.contains_key(&slot))
+            || mounts.iter().any(|mount| {
+                (Some(mount.primary) == section.mech && (mount.first..=mount.last).contains(&slot))
+                    || (Some(mount.extension) == section.mech
+                        && mount.extension_slots.contains(&slot))
+            })
     };
     let mut runs: Vec<(u8, u8, &CriticalDefinition)> = Vec::new();
     for (&slot, critical) in &layout.criticals {
@@ -767,49 +1136,99 @@ fn quote(value: &str) -> String {
 mod tests {
     use super::*;
 
-    const ZEUS_ARM: &str = r#"
+    /// A complete standard biped: every fixed item, internal value and flag is implied.
+    const ZEUS: &str = r#"
 name = "Zeus"
 class = "mech"
 movement = "biped"
 tons = 80
-max_speed = 64.5
-specials = ["DoubleHS", "doublehs", "FlipArms"]
+walk_mp = 6
+specials = ["searchlight"]
+
+[construction]
+engine = "xl"
+heat_sinks = "double"
+brand = 3
 
 [sections.left_arm]
 armor = 22
-internals = 13
+omit = ["hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
     { at = "4-6", item = "IS.ERPPC", modes = ["OnTC"], brand = 3 },
 ]
 
+[sections.right_arm]
+armor = 22
+omit = ["lower_actuator", "hand_actuator"]
+
 [sections.left_torso]
 armor = 25
-internals = 17
 rear = 6
+engine_at = 4
 slots = [
-    { at = 7, item = "Ammo_IS.LRM-15", rounds = 8 },
-    { at = 8, item = "ArtemisIV", link = 2 },
+    { at = 1, item = "Ammo_IS.LRM-15", rounds = 8 },
+    { at = 2, item = "ArtemisIV", link = 2 },
 ]
+
+[sections.right_torso]
+armor = 25
+rear = 6
+
+[sections.center_torso]
+armor = 26
+rear = 8
+
+[sections.left_leg]
+armor = 24
+
+[sections.right_leg]
+armor = 24
+
+[sections.head]
+armor = 9
 "#;
 
     #[test]
-    fn documents_decode_into_internal_fields_and_slots() {
-        let parsed = ParsedTemplate::parse("ZEU-9S", ZEUS_ARM).unwrap();
+    fn construction_places_fixed_equipment_flags_structure_and_speed() {
+        let parsed = ParsedTemplate::parse("ZEU-9S", ZEUS).unwrap();
         assert_eq!(parsed.fields["reference"], "ZEU-9S");
         assert_eq!(parsed.fields["type"], "Mech");
-        assert_eq!(parsed.fields["move_type"], "Biped");
         assert_eq!(parsed.fields["max_speed"], "64.5");
-        assert_eq!(parsed.fields["specials"], "DoubleHS FlipArms");
+        assert_eq!(
+            parsed.fields["specials"],
+            "XLEngine_Tech DoubleHS SearchLight"
+        );
         let arm = &parsed.sections["left_arm"];
-        assert_eq!((arm.armor, arm.internal), (22, 13));
-        assert_eq!(arm.criticals.len(), 4);
-        assert_eq!(arm.criticals[&5].modes, ["OnTC"]);
-        assert_eq!(arm.criticals[&5].brand, Some(3));
+        assert_eq!(arm.internal, 13);
+        assert_eq!(arm.criticals[&0].equipment, "ShoulderOrHip");
+        assert_eq!(arm.criticals[&2].equipment, "LowerActuator");
+        assert!(!arm.criticals.contains_key(&3));
+        assert_eq!(arm.criticals[&4].modes, ["OnTC"]);
+        assert_eq!(arm.criticals[&0].brand, Some(3));
         let torso = &parsed.sections["left_torso"];
-        assert_eq!(torso.rear, 6);
-        assert_eq!(torso.criticals[&6].data, "8");
-        assert_eq!(torso.criticals[&7].data, "2");
+        assert_eq!(torso.criticals[&0].data, "8");
+        assert_eq!(torso.criticals[&1].data, "2");
+        assert_eq!(
+            torso
+                .criticals
+                .iter()
+                .filter(|(_, critical)| critical.equipment == "Engine")
+                .map(|(slot, _)| *slot)
+                .collect::<Vec<_>>(),
+            [3, 4, 5]
+        );
+        assert_eq!(parsed.sections["right_torso"].criticals.len(), 3);
+        assert_eq!(parsed.sections["center_torso"].criticals.len(), 10);
+        assert_eq!(parsed.sections["center_torso"].internal, 25);
+        assert_eq!(parsed.sections["head"].criticals.len(), 5);
+        assert_eq!(parsed.sections["head"].internal, 3);
+
+        let flipping = ZEUS.replace(
+            "omit = [\"hand_actuator\"]",
+            "omit = [\"lower_actuator\", \"hand_actuator\"]",
+        );
+        let parsed = ParsedTemplate::parse("ZEU-9S", &flipping).unwrap();
+        assert!(parsed.fields["specials"].ends_with(" FlipArms"));
     }
 
     #[test]
@@ -821,7 +1240,13 @@ slots = [
             "class = \"Mech\"",
             "class = \"tank\"",
             "max_speed = nan",
+            "walk_mp = 4\nmax_speed = 43.0",
+            "walk_mp = -1",
             "specials = [\"Two Words\"]",
+            "specials = [\"XLEngine_Tech\"]",
+            "specials = [\"FlipArms\"]",
+            "specials = [\"Mystery\"]",
+            "[construction]\nengine = \"warp\"",
             "[sections.head]\nslots = [{ at = 0, item = \"Cockpit\" }]",
             "[sections.head]\nslots = [{ at = \"3-2\", item = \"Cockpit\" }]",
             "[sections.head]\nslots = [{ at = 13, item = \"Cockpit\" }]",
@@ -831,9 +1256,47 @@ slots = [
             "[sections.head]\nslots = [{ at = 1, item = \"Ammo_IS.AC/2\", link = 4 }]",
             "[sections.head]\nslots = [{ at = 1, item = \"SplitCrit_Left\", link = 4 }]",
             "[sections.head]\nshield = 1",
+            "class = \"mech\"\nmovement = \"biped\"\ntons = 20\n[sections.head]\nslots = [{ at = 3, item = \"IS.SmallLaser\" }]",
+            "class = \"mech\"\nmovement = \"biped\"\ntons = 20\n[sections.head]\nslots = [{ at = 4, item = \"Sensors\" }]",
+            "class = \"mech\"\nmovement = \"biped\"\ntons = 20\n[sections.left_leg]\nomit = [\"hand_actuator\"]",
+            "class = \"mech\"\nmovement = \"biped\"\ntons = 20\n[sections.left_torso]\nengine_at = 3",
+            "class = \"mech\"\nmovement = \"biped\"\ntons = 22\n[sections.head]",
+            "class = \"vehicle\"\nmovement = \"track\"\ntons = 20\n[sections.turret]\nexplicit = true",
         ] {
             assert!(ParsedTemplate::parse("X", source).is_err(), "{source}");
         }
+    }
+
+    #[test]
+    fn explicit_sections_list_their_own_fixed_equipment() {
+        let source = ZEUS.replace(
+            "[sections.head]\narmor = 9\n",
+            "[sections.head]\narmor = 9\nexplicit = true\nslots = [{ at = 1, item = \"Cockpit\" }]\n",
+        );
+        let parsed = ParsedTemplate::parse("ZEU-9S", &source).unwrap();
+        let head = &parsed.sections["head"];
+        assert_eq!(head.criticals.len(), 1);
+        assert_eq!(head.criticals[&0].brand, None);
+    }
+
+    #[test]
+    fn vehicles_and_other_classes_keep_their_own_structure_rules() {
+        let parsed = ParsedTemplate::parse(
+            "Truck",
+            "class = \"vehicle\"\nmovement = \"wheel\"\ntons = 40\nwalk_mp = 5\n[construction]\nengine = \"ice\"\n[sections.front_side]\narmor = 10\n[sections.turret]\ninternals = 0\n",
+        )
+        .unwrap();
+        assert_eq!(parsed.fields["specials"], "ICEEngine_Tech");
+        assert_eq!(parsed.fields["max_speed"], "53.75");
+        assert_eq!(parsed.sections["front_side"].internal, 4);
+        assert_eq!(parsed.sections["turret"].internal, 0);
+        assert!(parsed.sections["front_side"].criticals.is_empty());
+        let aero = ParsedTemplate::parse(
+            "Aero",
+            "class = \"aerofighter\"\nmovement = \"fly\"\ntons = 50\n[sections.nose]\narmor = 3\n",
+        )
+        .unwrap();
+        assert_eq!(aero.sections["nose"].internal, 0);
     }
 
     #[test]
@@ -841,6 +1304,7 @@ slots = [
         let source = r#"
 class = "mech"
 movement = "biped"
+tons = 50
 [sections.center_torso]
 [sections.left_torso]
 [sections.left_arm]
@@ -867,39 +1331,93 @@ placements = [
 
         for (placements, class) in [
             (
-                "{ section = \"left_arm\", at = 1 }, { section = \"center_torso\", at = 1 }",
+                "{ section = \"left_arm\", at = 5 }, { section = \"center_torso\", at = 11 }",
                 "mech",
             ),
             ("{ section = \"left_torso\", at = 1 }", "mech"),
             (
-                "{ section = \"left_torso\", at = 1 }, { section = \"center_torso\", at = 1 }, { section = \"left_arm\", at = 1 }",
+                "{ section = \"left_torso\", at = 1 }, { section = \"center_torso\", at = 11 }, { section = \"left_arm\", at = 5 }",
                 "mech",
             ),
             (
-                "{ section = \"left_torso\", at = 1 }, { section = \"center_torso\", at = 1 }",
+                "{ section = \"left_torso\", at = 1 }, { section = \"center_torso\", at = 11 }",
                 "vehicle",
+            ),
+            (
+                "{ section = \"center_torso\", at = \"1-2\" }, { section = \"left_torso\", at = \"1-8\" }",
+                "mech",
             ),
         ] {
             let source = format!(
-                "class = \"{class}\"\n[sections.center_torso]\n[sections.left_torso]\n[sections.left_arm]\n[[split_mounts]]\nitem = \"IS.AC/20\"\nplacements = [{placements}]"
+                "class = \"{class}\"\nmovement = \"biped\"\ntons = 50\n[sections.center_torso]\n[sections.left_torso]\n[sections.left_arm]\n[[split_mounts]]\nitem = \"IS.AC/20\"\nplacements = [{placements}]"
             );
             assert!(ParsedTemplate::parse("X", &source).is_err(), "{source}");
         }
     }
 
+    /// Render the sections of a parsed mech in anatomical order.
+    fn render_mech(parsed: &ParsedTemplate) -> String {
+        let sections: Vec<_> = BattleSection::ALL
+            .into_iter()
+            .filter_map(|mech| {
+                let heading = BattleMechChassis::Biped
+                    .section_name(mech)
+                    .to_ascii_lowercase();
+                let layout = parsed.sections.get(&heading)?;
+                Some(RenderSection {
+                    heading,
+                    mech: Some(mech),
+                    layout,
+                })
+            })
+            .collect();
+        render(&parsed.fields, &sections).unwrap()
+    }
+
     #[test]
-    fn rendering_round_trips_slots_and_split_mounts() {
+    fn rendering_states_choices_and_leaves_out_what_they_imply() {
+        let parsed = ParsedTemplate::parse("ZEU-9S", ZEUS).unwrap();
+        let rendered = render_mech(&parsed);
+        assert!(rendered.contains("walk_mp = 6\n"));
+        assert!(rendered.contains("specials = [\"SearchLight\"]\n"));
+        assert!(
+            rendered
+                .contains("[construction]\nengine = \"xl\"\nheat_sinks = \"double\"\nbrand = 3\n")
+        );
+        assert!(rendered.contains("omit = [\"hand_actuator\"]"));
+        assert!(rendered.contains("engine_at = 4"));
+        assert!(!rendered.contains("internals"));
+        assert!(!rendered.contains("Engine"));
+        assert!(!rendered.contains("FlipArms"));
+        let reparsed = ParsedTemplate::parse("ZEU-9S", &rendered).unwrap();
+        assert_eq!(reparsed.fields, parsed.fields);
+        assert_eq!(reparsed.sections, parsed.sections);
+
+        let mut irregular = ParsedTemplate::parse("ZEU-9S", ZEUS).unwrap();
+        let head = irregular.sections.get_mut("head").unwrap();
+        head.criticals.get_mut(&1).unwrap().brand = Some(5);
+        head.internal = 4;
+        let rendered = render_mech(&irregular);
+        assert!(rendered.contains("[sections.head]\narmor = 9\ninternals = 4\nexplicit = true\n"));
+        let reparsed = ParsedTemplate::parse("ZEU-9S", &rendered).unwrap();
+        assert_eq!(reparsed.sections["head"], irregular.sections["head"]);
+    }
+
+    #[test]
+    fn rendering_round_trips_split_mounts() {
         let source = r#"
 name = "Split"
 class = "mech"
 movement = "quad"
 tons = 50
-max_speed = 86.0
-specials = ["Searchlight"]
+max_speed = 86.5
+specials = ["SearchLight"]
+
+[construction]
+tech_base = "clan"
 
 [sections.front_left_leg]
 armor = 1
-internals = 2
 
 [sections.left_torso]
 armor = 3
@@ -913,10 +1431,6 @@ slots = [
 
 [sections.center_torso]
 armor = 6
-internals = 7
-slots = [
-    { at = "1-3", item = "Engine" },
-]
 
 [[split_mounts]]
 item = "IS.AC/20"

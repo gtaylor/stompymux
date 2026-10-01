@@ -2,31 +2,20 @@ name = "Charger"
 class = "mech"
 movement = "biped"
 tons = 80
-max_speed = 86.0
+walk_mp = 8
 
 [sections.left_arm]
 armor = 7
-internals = 13
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-]
+omit = ["hand_actuator"]
 
 [sections.right_arm]
 armor = 7
-internals = 13
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "IS.LargeLaser", brand = 2 },
 ]
 
 [sections.left_torso]
 armor = 9
-internals = 17
 rear = 5
 slots = [
     { at = 1, item = "IS.MediumLaser" },
@@ -34,7 +23,6 @@ slots = [
 
 [sections.right_torso]
 armor = 9
-internals = 17
 rear = 5
 slots = [
     { at = 1, item = "IS.MediumLaser" },
@@ -42,41 +30,13 @@ slots = [
 
 [sections.center_torso]
 armor = 10
-internals = 25
 rear = 6
-slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
-]
 
 [sections.left_leg]
 armor = 11
-internals = 17
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.right_leg]
 armor = 11
-internals = 17
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.head]
 armor = 8
-internals = 3
-slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
-]

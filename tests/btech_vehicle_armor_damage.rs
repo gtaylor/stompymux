@@ -86,9 +86,9 @@ fn hit(amount: u32) -> BattleVehicleArmorHit {
 /// Reflective armor halves energy hits, doubles area-effect hits and ignores ordinary ones.
 #[tokio::test]
 async fn reflective_armor_depends_on_the_damage_class() {
-    let text = include_str!("../game/mechs/Demolisher.toml").replace(
-        "\"ICEEngine_Tech\"",
-        "\"ICEEngine_Tech\", \"LaserRefArmor_Tech\"",
+    let text = support::templates::with_flags(
+        include_str!("../game/mechs/Demolisher.toml"),
+        &["LaserRefArmor_Tech"],
     );
     // The Demolisher's front carries forty armor points over eight internal.
     for (class, amount, armor_damage, overflow) in [
@@ -139,10 +139,7 @@ async fn armor_penetration_uses_one_entry_roll_and_applies_material_modifiers() 
         let text = if special.is_empty() {
             text.to_owned()
         } else {
-            text.replace(
-                "\"ICEEngine_Tech\"",
-                &format!("\"ICEEngine_Tech\", \"{special}\""),
-            )
+            support::templates::with_flags(&text, &[special])
         };
         let (_dir, config, mut world, id) = fixture(&text).await;
         seed(&mut world, id, 21);
@@ -387,7 +384,7 @@ async fn vacuum_penetration_disables_equipment_and_survives_environment_change_a
         tracked.replace("movement = \"track\"", "movement = \"hover\""),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("max_speed = 53.75", "max_speed = 0.0"),
+            .replace("walk_mp = 5", "walk_mp = 0"),
         include_str!("../game/mechs/Kestrel.toml").to_owned(),
     ];
     for template in templates {
@@ -571,8 +568,8 @@ async fn vacuum_disables_remote_supply_and_electronics_without_destroying_them()
             "",
         )
         .replace(
-            "[sections.front_side]\narmor = 40\ninternals = 8\n",
-            "[sections.front_side]\narmor = 40\ninternals = 8\nslots = [\n    { at = 1, item = \"Ammo_IS.AC/20\", rounds = 5 },\n    { at = 2, item = \"Ecm\" },\n    { at = 3, item = \"C3Slave\" },\n]\n",
+            "[sections.front_side]\narmor = 40\n",
+            "[sections.front_side]\narmor = 40\nslots = [\n    { at = 1, item = \"Ammo_IS.AC/20\", rounds = 5 },\n    { at = 2, item = \"Ecm\" },\n    { at = 3, item = \"C3Slave\" },\n]\n",
         );
     let (_dir, config, mut world, id) = fixture(&template).await;
     assert_eq!(
@@ -642,15 +639,15 @@ async fn vacuum_disabled_ams_preserves_whole_unit_capability() {
     let name = BattleWeapon::AntiMissileSystem.name();
     let template = include_str!("../game/mechs/Demolisher.toml")
         .replace(
-            "[sections.front_side]\narmor = 40\ninternals = 8\n",
+            "[sections.front_side]\narmor = 40\n",
             &format!(
-                "[sections.front_side]\narmor = 40\ninternals = 8\nslots = [{{ at = 1, item = \"{name}\" }}]\n"
+                "[sections.front_side]\narmor = 40\nslots = [{{ at = 1, item = \"{name}\" }}]\n"
             ),
         )
         .replace(
-            "[sections.aft_side]\narmor = 20\ninternals = 8\n",
+            "[sections.aft_side]\narmor = 20\n",
             &format!(
-                "[sections.aft_side]\narmor = 20\ninternals = 8\nslots = [{{ at = 1, item = \"{name}\" }}]\n"
+                "[sections.aft_side]\narmor = 20\nslots = [{{ at = 1, item = \"{name}\" }}]\n"
             ),
         );
     let (_dir, config, mut world, id) = fixture(&template).await;
@@ -735,10 +732,7 @@ async fn rotor_divisor_preserves_minimum_internal_damage_and_restart() {
 #[tokio::test]
 async fn hardened_armor_hampers_vehicle_driving() {
     let standard = include_str!("../game/mechs/Demolisher.toml");
-    let hardened = standard.replace(
-        "\"ICEEngine_Tech\"",
-        "\"ICEEngine_Tech\", \"HardenedArmor_Tech\"",
-    );
+    let hardened = support::templates::with_flags(standard, &["HardenedArmor_Tech"]);
     let (_dir, _config, mut plain, plain_id) = fixture(standard).await;
     let (_dir, _config, mut world, id) = fixture(&hardened).await;
     assert_eq!(

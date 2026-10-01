@@ -2,21 +2,22 @@ name = "Wraith"
 class = "mech"
 movement = "biped"
 tons = 55
-max_speed = 118.25
-jump_speed = 75.25
+walk_mp = 11
+jump_mp = 7
 heat_sinks = 20
 computer = 4
 radio = 4
-specials = ["DoubleHS"]
+
+[construction]
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+heat_sinks = "double"
+brand = 3
 
 [sections.left_arm]
 armor = 14
-internals = 9
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-6", item = "IS.MediumPulseLaser", brand = 3 },
     { at = "7-8", item = "FerroFibrous", brand = 3 },
     { at = "9-11", item = "EndoSteel", brand = 3 },
@@ -24,12 +25,7 @@ slots = [
 
 [sections.right_arm]
 armor = 14
-internals = 9
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-6", item = "IS.LargePulseLaser", brand = 3 },
     { at = "7-8", item = "FerroFibrous", brand = 3 },
     { at = "9-11", item = "EndoSteel", brand = 3 },
@@ -37,10 +33,8 @@ slots = [
 
 [sections.left_torso]
 armor = 18
-internals = 13
 rear = 5
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
     { at = "4-6", item = "JumpJet", brand = 3 },
     { at = "7-10", item = "FerroFibrous", brand = 3 },
     { at = "11-12", item = "EndoSteel", brand = 3 },
@@ -48,10 +42,8 @@ slots = [
 
 [sections.right_torso]
 armor = 18
-internals = 13
 rear = 5
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
     { at = "4-6", item = "JumpJet", brand = 3 },
     { at = "7-10", item = "FerroFibrous", brand = 3 },
     { at = "11-12", item = "EndoSteel", brand = 3 },
@@ -59,46 +51,26 @@ slots = [
 
 [sections.center_torso]
 armor = 23
-internals = 18
 rear = 7
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
-    { at = "4-7", item = "Gyro", brand = 3 },
-    { at = "8-10", item = "Engine", brand = 3 },
     { at = 11, item = "JumpJet", brand = 3 },
     { at = 12, item = "FerroFibrous", brand = 3 },
 ]
 
 [sections.left_leg]
 armor = 20
-internals = 13
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-6", item = "EndoSteel", brand = 3 },
 ]
 
 [sections.right_leg]
 armor = 20
-internals = 13
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-6", item = "EndoSteel", brand = 3 },
 ]
 
 [sections.head]
 armor = 8
-internals = 3
 slots = [
-    { at = 1, item = "LifeSupport", brand = 3 },
-    { at = 2, item = "Sensors", brand = 3 },
-    { at = 3, item = "Cockpit", brand = 3 },
     { at = 4, item = "FerroFibrous", brand = 3 },
-    { at = 5, item = "Sensors", brand = 3 },
-    { at = 6, item = "LifeSupport", brand = 3 },
 ]

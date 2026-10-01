@@ -2,10 +2,12 @@ name = "Sparrowhawk"
 class = "aerofighter"
 movement = "fly"
 tons = 30
-max_speed = 161.25
+walk_mp = 15
 computer = 3
 fuel = 750
-specials = ["DoubleHS"]
+
+[construction]
+heat_sinks = "double"
 
 [sections.nose]
 armor = 24

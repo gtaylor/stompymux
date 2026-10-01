@@ -2,18 +2,19 @@ name = "Uller"
 class = "mech"
 movement = "biped"
 tons = 30
-max_speed = 96.75
+walk_mp = 9
 heat_sinks = 20
-specials = ["Clan", "Searchlight"]
+specials = ["SearchLight"]
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
 
 [sections.left_arm]
 armor = 7
-internals = 5
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "CL.LRM-15" },
     { at = 7, item = "CL.LRM-5" },
     { at = "8-9", item = "Ammo_CL.LRM-15", rounds = 8, modes = ["Narc/Smoke"] },
@@ -23,12 +24,7 @@ slots = [
 
 [sections.right_arm]
 armor = 7
-internals = 5
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "CL.LRM-15" },
     { at = 7, item = "CL.NarcBeacon" },
     { at = 8, item = "EndoSteel" },
@@ -37,10 +33,8 @@ slots = [
 
 [sections.left_torso]
 armor = 8
-internals = 7
 rear = 4
 slots = [
-    { at = "1-2", item = "Engine" },
     { at = "3-6", item = "HeatSink" },
     { at = 7, item = "Ammo_CL.LRM-5", rounds = 24, modes = ["Narc/Smoke"] },
     { at = "8-9", item = "EndoSteel" },
@@ -49,10 +43,8 @@ slots = [
 
 [sections.right_torso]
 armor = 8
-internals = 7
 rear = 4
 slots = [
-    { at = "1-2", item = "Engine" },
     { at = "3-4", item = "Ammo_CL.LRM-15", rounds = 8, modes = ["Narc/Smoke"] },
     { at = 5, item = "Ammo_CL.NarcBeacon", rounds = 6 },
     { at = "6-8", item = "EndoSteel" },
@@ -61,43 +53,19 @@ slots = [
 
 [sections.center_torso]
 armor = 9
-internals = 10
 rear = 5
 slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
     { at = "11-12", item = "HeatSink" },
 ]
 
 [sections.left_leg]
 armor = 8
-internals = 7
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.right_leg]
 armor = 8
-internals = 7
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.head]
 armor = 9
-internals = 3
 slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
     { at = 4, item = "FerroFibrous" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
 ]

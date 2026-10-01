@@ -2,37 +2,32 @@ name = "Partisan"
 class = "vehicle"
 movement = "track"
 tons = 80
-max_speed = 53.75
+walk_mp = 5
 specials = ["AntiAircraft"]
 
 [sections.left_side]
 armor = 26
-internals = 8
 slots = [
     { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.right_side]
 armor = 26
-internals = 8
 slots = [
     { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.front_side]
 armor = 35
-internals = 8
 
 [sections.aft_side]
 armor = 21
-internals = 8
 slots = [
     { at = "1-2", item = "C3Master" },
 ]
 
 [sections.turret]
 armor = 35
-internals = 8
 slots = [
     { at = "1-2", item = "IS.LB10-XAC" },
     { at = "3-9", item = "Ammo_IS.LB10-XAC", rounds = 10 },

@@ -35,7 +35,7 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
     .unwrap();
     let stationary = include_str!("../game/mechs/Demolisher.toml")
         .replace("movement = \"track\"", "movement = \"none\"")
-        .replace("max_speed = 53.75", "max_speed = 0.0");
+        .replace("walk_mp = 5", "walk_mp = 0");
     let sources = [
         (include_str!("fixtures/btech/mechs/JR7-D.toml"), 'b'),
         (include_str!("../game/mechs/SCP-1N.toml"), 'q'),

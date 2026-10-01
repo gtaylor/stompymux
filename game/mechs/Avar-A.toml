@@ -2,10 +2,14 @@ name = "Avar"
 class = "aerofighter"
 movement = "fly"
 tons = 35
-max_speed = 161.25
+walk_mp = 15
 heat_sinks = 20
 fuel = 450
-specials = ["Clan", "FerroFibrous_Tech", "ArtemisIV"]
+specials = ["ArtemisIV"]
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
 
 [sections.nose]
 armor = 30

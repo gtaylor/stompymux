@@ -2,49 +2,43 @@ name = "Warhammer"
 class = "mech"
 movement = "biped"
 tons = 70
-max_speed = 64.5
+walk_mp = 6
 heat_sinks = 40
 computer = 4
 radio = 4
-specials = ["DoubleHS", "LightEngine_Tech", "Searchlight"]
+specials = ["SearchLight"]
+
+[construction]
+engine = "light"
+heat_sinks = "double"
 
 [sections.left_arm]
 armor = 21
-internals = 11
+omit = ["hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
     { at = "4-9", item = "HeatSink" },
     { at = "10-12", item = "IS.ERPPC" },
 ]
 
 [sections.right_arm]
 armor = 21
-internals = 11
+omit = ["hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
     { at = "4-9", item = "HeatSink" },
     { at = "10-12", item = "IS.ERPPC" },
 ]
 
 [sections.left_torso]
 armor = 22
-internals = 15
 rear = 7
 slots = [
-    { at = "1-2", item = "Engine" },
     { at = "3-11", item = "HeatSink" },
 ]
 
 [sections.right_torso]
 armor = 22
-internals = 15
 rear = 7
 slots = [
-    { at = "1-2", item = "Engine" },
     { at = "3-8", item = "HeatSink" },
     { at = "9-10", item = "IS.StreakSRM-6" },
     { at = 11, item = "Ammo_IS.StreakSRM-6", rounds = 15 },
@@ -53,42 +47,16 @@ slots = [
 
 [sections.center_torso]
 armor = 31
-internals = 22
 rear = 10
 slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
     { at = "11-12", item = "IS.ERMediumLaser" },
 ]
 
 [sections.left_leg]
 armor = 29
-internals = 15
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.right_leg]
 armor = 29
-internals = 15
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.head]
 armor = 9
-internals = 3
-slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
-]

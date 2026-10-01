@@ -2,31 +2,29 @@ name = "Vedette"
 class = "vehicle"
 movement = "track"
 tons = 50
-max_speed = 86.0
+walk_mp = 8
 tac_range = 30
 lrs_range = 60
 scan_range = 30
-specials = ["SearchLight", "ICEEngine_Tech"]
+specials = ["SearchLight"]
+
+[construction]
+engine = "ice"
 
 [sections.left_side]
 armor = 14
-internals = 5
 
 [sections.right_side]
 armor = 14
-internals = 5
 
 [sections.front_side]
 armor = 22
-internals = 5
 
 [sections.aft_side]
 armor = 10
-internals = 5
 
 [sections.turret]
 armor = 12
-internals = 5
 slots = [
     { at = 1, item = "IS.RotaryAC/5" },
     { at = "2-3", item = "Ammo_IS.RotaryAC/5", rounds = 20 },

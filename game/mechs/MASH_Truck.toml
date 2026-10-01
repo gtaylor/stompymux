@@ -2,7 +2,7 @@ name = "MASH Truck"
 class = "vehicle"
 movement = "wheel"
 tons = 35
-max_speed = 86.0
+walk_mp = 8
 cargo_space = 10000
 max_suits = 0
 max_ton = 100
@@ -10,23 +10,18 @@ specials = ["Carrier_Tech"]
 
 [sections.left_side]
 armor = 16
-internals = 4
 
 [sections.right_side]
 armor = 16
-internals = 4
 
 [sections.front_side]
 armor = 12
-internals = 4
 
 [sections.aft_side]
 armor = 10
-internals = 4
 
 [sections.turret]
 armor = 10
-internals = 4
 slots = [
     { at = "1-2", item = "IS.SmallLaser" },
 ]

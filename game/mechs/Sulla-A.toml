@@ -2,10 +2,14 @@ name = "Sulla"
 class = "aerofighter"
 movement = "fly"
 tons = 45
-max_speed = 150.5
+walk_mp = 14
 heat_sinks = 26
 fuel = 750
-specials = ["Clan", "ArtemisIV", "FerroFibrous_Tech"]
+specials = ["ArtemisIV"]
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
 
 [sections.nose]
 armor = 30

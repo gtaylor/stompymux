@@ -14,7 +14,7 @@ pub fn templates() -> Vec<String> {
         tracked.replace("movement = \"track\"", "movement = \"hover\""),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("max_speed = 64.5", "max_speed = 0"),
+            .replace("walk_mp = 6", "walk_mp = 0"),
         include_str!("../../game/mechs/Kestrel.toml").replace(
             "[sections.aft_side]\n",
             "[sections.aft_side]\nslots = [\n    { at = 1, item = \"IS.Anti-MissileSystem\" },\n    { at = 2, item = \"Ammo_IS.Anti-MissileSystem\", rounds = 12 },\n]\n",

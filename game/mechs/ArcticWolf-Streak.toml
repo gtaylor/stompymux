@@ -2,94 +2,64 @@ name = "Arctic Wolf"
 class = "mech"
 movement = "biped"
 tons = 40
-max_speed = 118.25
+walk_mp = 11
 heat_sinks = 20
-specials = ["Clan"]
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
 
 [sections.left_arm]
 armor = 8
-internals = 6
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "CL.StreakSRM-6" },
     { at = 7, item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 8
-internals = 6
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "CL.StreakSRM-6" },
     { at = 7, item = "EndoSteel" },
 ]
 
 [sections.left_torso]
 armor = 14
-internals = 10
 rear = 3
 slots = [
-    { at = "1-2", item = "Engine" },
     { at = "3-4", item = "CL.StreakSRM-6" },
     { at = "5-7", item = "Ammo_CL.StreakSRM-6", rounds = 15 },
 ]
 
 [sections.right_torso]
 armor = 14
-internals = 10
 rear = 3
 slots = [
-    { at = "1-2", item = "Engine" },
     { at = "3-4", item = "CL.StreakSRM-6" },
 ]
 
 [sections.center_torso]
 armor = 13
-internals = 12
 rear = 4
 slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
     { at = "11-12", item = "CL.StreakSRM-6" },
 ]
 
 [sections.left_leg]
 armor = 10
-internals = 10
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.right_leg]
 armor = 10
-internals = 10
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.head]
 armor = 9
-internals = 3
 slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
     { at = 4, item = "EndoSteel" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
 ]

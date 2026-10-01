@@ -2,36 +2,25 @@ name = "Goliath"
 class = "mech"
 movement = "quad"
 tons = 80
-max_speed = 64.5
+walk_mp = 6
 heat_sinks = 20
 computer = 4
 radio = 4
-specials = ["DoubleHS", "LightEngine_Tech"]
+
+[construction]
+engine = "light"
+heat_sinks = "double"
 
 [sections.front_left_leg]
 armor = 33
-internals = 17
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.front_right_leg]
 armor = 33
-internals = 17
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.left_torso]
 armor = 25
-internals = 17
 rear = 8
+explicit = true
 slots = [
     { at = "1-11", item = "IS.HeavyGaussRifle" },
     { at = 12, item = "Case" },
@@ -39,10 +28,8 @@ slots = [
 
 [sections.right_torso]
 armor = 25
-internals = 17
 rear = 8
 slots = [
-    { at = "1-2", item = "Engine" },
     { at = "3-4", item = "IS.ERMediumLaser" },
     { at = "5-6", item = "IS.LRM-10" },
     { at = "7-8", item = "Ammo_IS.LRM-10", rounds = 12 },
@@ -51,8 +38,8 @@ slots = [
 
 [sections.center_torso]
 armor = 37
-internals = 25
 rear = 12
+explicit = true
 slots = [
     { at = "1-3", item = "Engine" },
     { at = "4-7", item = "Gyro" },
@@ -61,33 +48,15 @@ slots = [
 
 [sections.rear_left_leg]
 armor = 33
-internals = 17
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "Ammo_IS.HeavyGaussRifle", rounds = 4 },
 ]
 
 [sections.rear_right_leg]
 armor = 33
-internals = 17
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "Ammo_IS.HeavyGaussRifle", rounds = 4 },
 ]
 
 [sections.head]
 armor = 9
-internals = 3
-slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
-]

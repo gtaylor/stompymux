@@ -10,27 +10,24 @@ lrs_range = 31
 scan_range = 12
 cargo_space = 0
 max_suits = 0
-specials = ["ICEEngine_Tech"]
+
+[construction]
+engine = "ice"
 
 [sections.left_side]
 armor = 6
-internals = 1
 
 [sections.right_side]
 armor = 6
-internals = 1
 
 [sections.front_side]
 armor = 6
-internals = 1
 
 [sections.aft_side]
 armor = 4
-internals = 1
 
 [sections.turret]
 armor = 2
-internals = 1
 slots = [
     { at = 1, item = "IS.MachineGun" },
     { at = 3, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload", "Halfton"] },

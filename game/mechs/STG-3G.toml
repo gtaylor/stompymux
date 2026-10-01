@@ -2,35 +2,24 @@ name = "Stinger"
 class = "mech"
 movement = "biped"
 tons = 20
-max_speed = 96.75
-jump_speed = 64.5
-specials = ["Searchlight"]
+walk_mp = 9
+jump_mp = 6
+specials = ["SearchLight"]
 
 [sections.left_arm]
 armor = 6
-internals = 3
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = 5, item = "IS.MediumLaser", brand = 4 },
 ]
 
 [sections.right_arm]
 armor = 6
-internals = 3
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = 5, item = "IS.MediumLaser", brand = 4 },
 ]
 
 [sections.left_torso]
 armor = 7
-internals = 5
 rear = 3
 slots = [
     { at = "1-3", item = "JumpJet" },
@@ -39,7 +28,6 @@ slots = [
 
 [sections.right_torso]
 armor = 7
-internals = 5
 rear = 3
 slots = [
     { at = "1-3", item = "JumpJet" },
@@ -48,43 +36,19 @@ slots = [
 
 [sections.center_torso]
 armor = 8
-internals = 6
 rear = 4
-slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
-]
 
 [sections.left_leg]
 armor = 7
-internals = 4
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "HeatSink" },
 ]
 
 [sections.right_leg]
 armor = 7
-internals = 4
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "HeatSink" },
 ]
 
 [sections.head]
 armor = 6
-internals = 3
-slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
-]

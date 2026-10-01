@@ -28,12 +28,28 @@ fn template_check_reports_normalization_and_construction_failures() {
         }]
     );
     assert_eq!(template, original);
-    for invalid in [
-        source.replace("IS.MediumLaser", "IS.Unknown"),
-        source.replace("Gyro", "HeatSink"),
-        source.replace("FlipArms", "UnknownTechnology"),
+    let unknown_weapon = source.replace("IS.MediumLaser", "IS.Unknown");
+    assert_ne!(unknown_weapon, source);
+    let mut missing_gyro = original.clone();
+    for critical in missing_gyro
+        .sections
+        .get_mut(&BattleSection::CenterTorso)
+        .unwrap()
+        .criticals
+        .values_mut()
+        .filter(|critical| critical.equipment == "Gyro")
+    {
+        critical.equipment = "HeatSink".into();
+    }
+    let mut unknown_technology = original.clone();
+    unknown_technology
+        .attributes
+        .insert("specials".into(), "UnknownTechnology".into());
+    for template in [
+        BattleTemplate::parse("JR7-D", &unknown_weapon).unwrap(),
+        missing_gyro,
+        unknown_technology,
     ] {
-        let template = BattleTemplate::parse("JR7-D", &invalid).unwrap();
         let expected = BattleUnit::from_template(template.clone()).unwrap_err();
         let report = check_battle_template(&template);
         assert!(!report.constructible);

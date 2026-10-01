@@ -130,7 +130,7 @@ async fn stationary_vehicles_extend_sensor_and_probe_reach() {
         (
             equipped()
                 .replace("movement = \"track\"", "movement = \"none\"")
-                .replace("max_speed = 53.75", "max_speed = 0.0"),
+                .replace("walk_mp = 5", "walk_mp = 0"),
             21,
             11,
             180,

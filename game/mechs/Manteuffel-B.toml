@@ -2,24 +2,23 @@ name = "Manteuffel"
 class = "vehicle"
 movement = "track"
 tons = 70
-max_speed = 86.0
+walk_mp = 8
 computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0
-specials = ["XLEngine_Tech"]
+
+[construction]
+engine = "xl"
 
 [sections.left_side]
 armor = 40
-internals = 7
 
 [sections.right_side]
 armor = 40
-internals = 7
 
 [sections.front_side]
 armor = 56
-internals = 7
 slots = [
     { at = 1, item = "IS.ERSmallLaser", brand = 3 },
     { at = 2, item = "IS.HeavyGaussRifle", brand = 0 },
@@ -27,7 +26,6 @@ slots = [
 
 [sections.aft_side]
 armor = 25
-internals = 7
 slots = [
     { at = "1-4", item = "Ammo_IS.HeavyGaussRifle", rounds = 4 },
     { at = 5, item = "FerroFibrous", brand = 3 },
@@ -36,7 +34,6 @@ slots = [
 
 [sections.turret]
 armor = 45
-internals = 7
 slots = [
     { at = 1, item = "IS.MediumLaser", brand = 3 },
 ]

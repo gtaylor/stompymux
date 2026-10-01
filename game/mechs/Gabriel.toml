@@ -2,29 +2,26 @@ name = "Gabriel"
 class = "vehicle"
 movement = "hover"
 tons = 5
-max_speed = 247.25
+walk_mp = 23
 computer = 3
-specials = ["FerroFibrous_Tech"]
+
+[construction]
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 3
-internals = 1
 
 [sections.right_side]
 armor = 3
-internals = 1
 
 [sections.front_side]
 armor = 5
-internals = 1
 
 [sections.aft_side]
 armor = 3
-internals = 1
 
 [sections.turret]
 armor = 4
-internals = 1
 slots = [
     { at = 1, item = "IS.MediumLaser" },
 ]

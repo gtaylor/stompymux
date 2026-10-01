@@ -2,7 +2,7 @@ name = "Long Tom"
 class = "vehicle"
 movement = "track"
 tons = 10
-max_speed = 86.0
+walk_mp = 8
 heat_sinks = 0
 radio = 2
 radio_range = 100
@@ -12,20 +12,15 @@ max_suits = 0
 
 [sections.left_side]
 armor = 1
-internals = 1
 
 [sections.right_side]
 armor = 1
-internals = 1
 
 [sections.front_side]
 armor = 2
-internals = 1
 
 [sections.aft_side]
 armor = 2
-internals = 1
 
 [sections.turret]
 armor = 2
-internals = 1

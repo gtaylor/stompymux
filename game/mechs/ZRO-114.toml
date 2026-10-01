@@ -2,7 +2,7 @@ name = "Zero"
 class = "aerofighter"
 movement = "fly"
 tons = 35
-max_speed = 96.75
+walk_mp = 9
 computer = 3
 fuel = 750
 

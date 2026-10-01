@@ -85,7 +85,7 @@ async fn coordinates_share_all_chassis_single_tic_and_restart() {
     let hover = tracked.replace("movement = \"track\"", "movement = \"hover\"");
     let stationary = tracked
         .replace("movement = \"track\"", "movement = \"none\"")
-        .replace("max_speed = 53.75", "max_speed = 0");
+        .replace("walk_mp = 5", "walk_mp = 0");
     for source in [
         include_str!("../game/mechs/JR7-D.toml"),
         include_str!("../game/mechs/GOL-1H.toml"),
@@ -345,7 +345,7 @@ async fn weapon_mechanics_precede_targets_across_chassis_and_restart() {
     let hover = tracked.replace("movement = \"track\"", "movement = \"hover\"");
     let stationary = tracked
         .replace("movement = \"track\"", "movement = \"none\"")
-        .replace("max_speed = 53.75", "max_speed = 0");
+        .replace("walk_mp = 5", "walk_mp = 0");
     for source in [
         include_str!("../game/mechs/JR7-D.toml"),
         include_str!("../game/mechs/GOL-1H.toml"),

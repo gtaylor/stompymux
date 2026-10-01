@@ -2,34 +2,29 @@ name = "Striker"
 class = "vehicle"
 movement = "wheel"
 tons = 35
-max_speed = 86.0
+walk_mp = 8
 specials = ["SearchLight"]
 
 [sections.left_side]
 armor = 23
-internals = 4
 slots = [
     { at = "6-12", item = "FerroFibrous", brand = 3 },
 ]
 
 [sections.right_side]
 armor = 23
-internals = 4
 slots = [
     { at = "6-12", item = "FerroFibrous", brand = 3 },
 ]
 
 [sections.front_side]
 armor = 26
-internals = 4
 
 [sections.aft_side]
 armor = 20
-internals = 4
 
 [sections.turret]
 armor = 24
-internals = 4
 slots = [
     { at = 1, item = "IS.NarcBeacon", brand = 3 },
     { at = 2, item = "IS.LRM-10", brand = 3 },

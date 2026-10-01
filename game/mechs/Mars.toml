@@ -2,13 +2,16 @@ name = "Mars"
 class = "vehicle"
 movement = "track"
 tons = 100
-max_speed = 32.25
+walk_mp = 3
 heat_sinks = 12
-specials = ["Clan", "FerroFibrous_Tech", "ArtemisIV"]
+specials = ["ArtemisIV"]
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 43
-internals = 10
 slots = [
     { at = 1, item = "CL.StreakSRM-6" },
     { at = 2, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
@@ -17,7 +20,6 @@ slots = [
 
 [sections.right_side]
 armor = 43
-internals = 10
 slots = [
     { at = 1, item = "CL.StreakSRM-6" },
     { at = 2, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
@@ -26,7 +28,6 @@ slots = [
 
 [sections.front_side]
 armor = 50
-internals = 10
 slots = [
     { at = 1, item = "CL.LB10-XAC" },
     { at = 2, item = "CL.LRM-15" },
@@ -42,14 +43,12 @@ slots = [
 
 [sections.aft_side]
 armor = 37
-internals = 10
 slots = [
     { at = 1, item = "Ecm" },
 ]
 
 [sections.turret]
 armor = 47
-internals = 10
 slots = [
     { at = 1, item = "CL.ERLargeLaser" },
     { at = 2, item = "CL.GaussRifle" },

@@ -44,9 +44,11 @@ async fn critical_resolution_applies_all_tables_for_tactical_crews() {
     use BattleVehicleCriticalEffect as E;
     use BattleVehicleCriticalTable as T;
     use BattleVehicleSection as S;
-    let fusion = include_str!("../game/mechs/Demolisher.toml")
-        .replace("specials = [\"ICEEngine_Tech\"]\n", "");
-    assert!(!fusion.contains("ICEEngine_Tech"));
+    let fusion = support::templates::without_flags(
+        include_str!("../game/mechs/Demolisher.toml"),
+        &["ICEEngine_Tech"],
+    );
+    assert!(!fusion.contains("engine = \"ice\""));
     let (_dir, config, base, id) = fixture(&fusion).await;
     let mut seen = std::collections::BTreeSet::new();
     let mut saved = None;

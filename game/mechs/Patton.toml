@@ -2,21 +2,18 @@ name = "Patton"
 class = "vehicle"
 movement = "track"
 tons = 65
-max_speed = 64.5
+walk_mp = 6
 heat_sinks = 10
 computer = 3
 
 [sections.left_side]
 armor = 46
-internals = 7
 
 [sections.right_side]
 armor = 46
-internals = 7
 
 [sections.front_side]
 armor = 51
-internals = 7
 slots = [
     { at = 1, item = "IS.SmallLaser", brand = 3 },
     { at = 2, item = "IS.Flamer", brand = 3 },
@@ -24,11 +21,9 @@ slots = [
 
 [sections.aft_side]
 armor = 38
-internals = 7
 
 [sections.turret]
 armor = 51
-internals = 7
 slots = [
     { at = 1, item = "IS.AC/10", brand = 3 },
     { at = "2-3", item = "Ammo_IS.AC/10", rounds = 10 },

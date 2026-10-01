@@ -2,11 +2,13 @@ name = "Chippewa"
 class = "aerofighter"
 movement = "fly"
 tons = 90
-max_speed = 86.0
+walk_mp = 8
 heat_sinks = 50
 computer = 3
 fuel = 750
-specials = ["DoubleHS"]
+
+[construction]
+heat_sinks = "double"
 
 [sections.nose]
 armor = 24

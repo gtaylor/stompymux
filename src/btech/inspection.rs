@@ -66,7 +66,12 @@ pub fn inspection_template_battle_value(template: &BattleTemplate) -> Result<sup
         .sum();
     let tons = super::administrative_template_tonnage(&template.attributes, template.tons);
     let mut defense = armor as f32 * 2.5 + structure as f32 * 1.5 * engine_factor;
-    defense += tons as f32 * if flag("HDGyro_Tech") { 1.0 } else { 0.5 };
+    defense += tons as f32
+        * if flag("HDGyro_Tech") || flag("HDGYRO") {
+            1.0
+        } else {
+            0.5
+        };
     let settings = super::BattleWeaponSettings::default();
     let has_case_ii = |section| {
         loadout.systems.iter().any(|part| {

@@ -2,12 +2,14 @@ name = "Rose"
 class = "spheroid_dropship"
 movement = "fly"
 tons = 16000
-max_speed = 64.5
+walk_mp = 6
 heat_sinks = 127
 tac_range = 50
 lrs_range = 100
 scan_range = 50
-specials = ["DoubleHS"]
+
+[construction]
+heat_sinks = "double"
 
 [sections.front_right_side]
 armor = 80

@@ -2,7 +2,7 @@ name = "Kanazuchi"
 class = "battlesuit"
 movement = "biped"
 tons = 1
-max_speed = 21.5
+walk_mp = 2
 cargo_space = 0
 max_suits = 4
 

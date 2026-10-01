@@ -2,38 +2,37 @@ name = "Indra"
 class = "vehicle"
 movement = "wheel"
 tons = 35
-max_speed = 86.0
+walk_mp = 8
 heat_sinks = 15
-specials = ["Clan", "CargoTech", "FerroFibrous_Tech"]
+specials = ["CargoTech"]
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 20
-internals = 4
 slots = [
     { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.right_side]
 armor = 20
-internals = 4
 slots = [
     { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.front_side]
 armor = 25
-internals = 4
 slots = [
     { at = 1, item = "CL.ERPPC" },
 ]
 
 [sections.aft_side]
 armor = 14
-internals = 4
 
 [sections.turret]
 armor = 17
-internals = 4
 slots = [
     { at = "1-4", item = "CL.MachineGun" },
     { at = 5, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Hotload"] },

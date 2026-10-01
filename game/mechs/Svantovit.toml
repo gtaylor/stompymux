@@ -2,12 +2,15 @@ name = "Svantovit"
 class = "vehicle"
 movement = "hover"
 tons = 35
-max_speed = 161.25
-specials = ["Clan", "CargoTech", "FerroFibrous_Tech"]
+walk_mp = 15
+specials = ["CargoTech"]
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 11
-internals = 4
 slots = [
     { at = 1, item = "CL.MachineGun" },
     { at = "6-12", item = "FerroFibrous" },
@@ -15,7 +18,6 @@ slots = [
 
 [sections.right_side]
 armor = 11
-internals = 4
 slots = [
     { at = 1, item = "CL.MachineGun" },
     { at = "6-12", item = "FerroFibrous" },
@@ -23,7 +25,6 @@ slots = [
 
 [sections.front_side]
 armor = 14
-internals = 4
 slots = [
     { at = "1-2", item = "CL.LRM-5" },
     { at = 3, item = "Ammo_CL.LRM-5", rounds = 24 },
@@ -32,11 +33,9 @@ slots = [
 
 [sections.aft_side]
 armor = 10
-internals = 4
 
 [sections.turret]
 armor = 12
-internals = 4
 slots = [
     { at = "1-2", item = "CL.StreakSRM-2" },
     { at = 3, item = "Ammo_CL.StreakSRM-2", rounds = 50 },

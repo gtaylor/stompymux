@@ -2,33 +2,30 @@ name = "Rifleman"
 class = "mech"
 movement = "biped"
 tons = 60
-max_speed = 64.5
+walk_mp = 6
 computer = 4
-specials = ["Clan"]
+
+[construction]
+tech_base = "clan"
 
 [sections.left_arm]
 armor = 15
-internals = 10
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
     { at = "3-6", item = "CL.LB5-XAC" },
     { at = "7-8", item = "CL.LargePulseLaser" },
 ]
 
 [sections.right_arm]
 armor = 15
-internals = 10
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
     { at = "3-6", item = "CL.LB5-XAC" },
     { at = "7-8", item = "CL.LargePulseLaser" },
 ]
 
 [sections.left_torso]
 armor = 15
-internals = 14
 rear = 2
 slots = [
     { at = "1-2", item = "HeatSink" },
@@ -36,7 +33,6 @@ slots = [
 
 [sections.right_torso]
 armor = 15
-internals = 14
 rear = 2
 slots = [
     { at = 1, item = "Ammo_CL.LB5-XAC", rounds = 20 },
@@ -44,41 +40,13 @@ slots = [
 
 [sections.center_torso]
 armor = 20
-internals = 20
 rear = 4
-slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
-]
 
 [sections.left_leg]
 armor = 12
-internals = 14
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.right_leg]
 armor = 12
-internals = 14
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.head]
 armor = 6
-internals = 3
-slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
-]

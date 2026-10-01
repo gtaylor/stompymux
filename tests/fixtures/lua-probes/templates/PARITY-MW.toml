@@ -2,7 +2,7 @@ name = "Parity MechWarrior"
 class = "mechwarrior"
 movement = "biped"
 tons = 1
-max_speed = 10.75
+walk_mp = 1
 
 [sections.left_arm]
 armor = 1

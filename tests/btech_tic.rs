@@ -124,7 +124,7 @@ async fn tic_firing_reuses_shots_and_rolls_back_callbacks() {
     let hover = tracked.replace("movement = \"track\"", "movement = \"hover\"");
     let stationary = tracked
         .replace("movement = \"track\"", "movement = \"none\"")
-        .replace("max_speed = 53.75", "max_speed = 0");
+        .replace("walk_mp = 5", "walk_mp = 0");
     for (source, vehicle) in [
         (include_str!("../game/mechs/JR7-D.toml"), false),
         (include_str!("../game/mechs/GOL-1H.toml"), false),

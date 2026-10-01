@@ -2,7 +2,7 @@ name = "Pegasus"
 class = "vehicle"
 movement = "hover"
 tons = 35
-max_speed = 150.5
+walk_mp = 14
 tac_range = 30
 lrs_range = 60
 scan_range = 30
@@ -12,32 +12,27 @@ specials = ["SearchLight"]
 
 [sections.left_side]
 armor = 17
-internals = 4
 slots = [
     { at = "6-12", item = "FerroFibrous", brand = 3 },
 ]
 
 [sections.right_side]
 armor = 17
-internals = 4
 slots = [
     { at = "6-12", item = "FerroFibrous", brand = 3 },
 ]
 
 [sections.front_side]
 armor = 30
-internals = 4
 
 [sections.aft_side]
 armor = 10
-internals = 4
 slots = [
     { at = 1, item = "C3Slave", brand = 3 },
 ]
 
 [sections.turret]
 armor = 25
-internals = 4
 slots = [
     { at = "1-2", item = "IS.StreakSRM-4", brand = 3 },
     { at = "3-4", item = "IS.MediumPulseLaser", brand = 3 },

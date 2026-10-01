@@ -102,10 +102,7 @@ async fn failed_landings_apply_shared_fall_damage_and_replay() {
 #[tokio::test]
 async fn successful_water_landings_use_chassis_support_and_waterproofing() {
     let sources = firing::templates();
-    let waterproof = sources[2].replace(
-        "\"ICEEngine_Tech\"",
-        "\"ICEEngine_Tech\", \"Waterproof_Tech\"",
-    );
+    let waterproof = crate::support::templates::with_flags(&sources[2], &["Waterproof_Tech"]);
     for source in [&sources[2], &sources[4], &waterproof] {
         for safe in [false, true] {
             let (_dir, config, mut world, unit, _, _) =

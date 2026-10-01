@@ -2,21 +2,20 @@ name = "Thor"
 class = "vehicle"
 movement = "wheel"
 tons = 55
-max_speed = 86.0
+walk_mp = 8
 computer = 3
-specials = ["FerroFibrous_Tech"]
+
+[construction]
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 25
-internals = 6
 
 [sections.right_side]
 armor = 25
-internals = 6
 
 [sections.front_side]
 armor = 30
-internals = 6
 config = "Case"
 slots = [
     { at = 1, item = "IS.Thumper" },
@@ -26,11 +25,9 @@ slots = [
 
 [sections.aft_side]
 armor = 24
-internals = 6
 
 [sections.turret]
 armor = 30
-internals = 6
 slots = [
     { at = "1-2", item = "IS.MediumLaser" },
 ]

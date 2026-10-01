@@ -2,33 +2,29 @@ name = "Catapult"
 class = "mech"
 movement = "biped"
 tons = 65
-max_speed = 64.5
-jump_speed = 43.0
+walk_mp = 6
+jump_mp = 4
 heat_sinks = 24
 computer = 4
 radio = 4
-specials = ["DoubleHS", "FlipArms", "EndoSteel_Tech"]
+
+[construction]
+structure = "endo_steel"
+heat_sinks = "double"
 
 [sections.left_arm]
 armor = 20
-internals = 10
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
     { at = "3-12", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 20
-internals = 10
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-]
+omit = ["lower_actuator", "hand_actuator"]
 
 [sections.left_torso]
 armor = 22
-internals = 15
 rear = 8
 slots = [
     { at = "1-3", item = "HeatSink" },
@@ -41,7 +37,6 @@ slots = [
 
 [sections.right_torso]
 armor = 22
-internals = 15
 rear = 8
 slots = [
     { at = "1-3", item = "HeatSink" },
@@ -51,47 +46,25 @@ slots = [
 
 [sections.center_torso]
 armor = 28
-internals = 21
 rear = 11
 slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
     { at = "11-12", item = "IS.ERMediumLaser" },
 ]
 
 [sections.left_leg]
 armor = 26
-internals = 15
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.right_leg]
 armor = 26
-internals = 15
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = 5, item = "EndoSteel" },
 ]
 
 [sections.head]
 armor = 9
-internals = 3
-slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
-]
 
 [[split_mounts]]
 item = "IS.ArrowIVSystem"

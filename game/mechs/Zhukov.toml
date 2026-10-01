@@ -2,20 +2,19 @@ name = "Zhukov"
 class = "vehicle"
 movement = "track"
 tons = 75
-max_speed = 53.75
-specials = ["ICEEngine_Tech"]
+walk_mp = 5
+
+[construction]
+engine = "ice"
 
 [sections.left_side]
 armor = 32
-internals = 8
 
 [sections.right_side]
 armor = 32
-internals = 8
 
 [sections.front_side]
 armor = 44
-internals = 8
 slots = [
     { at = 1, item = "IS.SRM-6", brand = 3 },
     { at = 2, item = "Ammo_IS.SRM-6", rounds = 15 },
@@ -23,11 +22,9 @@ slots = [
 
 [sections.aft_side]
 armor = 24
-internals = 8
 
 [sections.turret]
 armor = 44
-internals = 8
 slots = [
     { at = "1-2", item = "IS.AC/10", brand = 3 },
     { at = "3-4", item = "Ammo_IS.AC/10", rounds = 10 },

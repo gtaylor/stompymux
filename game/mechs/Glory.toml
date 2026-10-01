@@ -2,7 +2,7 @@ name = "Glory"
 class = "vehicle"
 movement = "track"
 tons = 85
-max_speed = 53.75
+walk_mp = 5
 computer = 4
 radio = 4
 cargo_space = 0
@@ -10,22 +10,18 @@ max_suits = 0
 
 [sections.left_side]
 armor = 50
-internals = 9
 
 [sections.right_side]
 armor = 50
-internals = 9
 
 [sections.front_side]
 armor = 60
-internals = 9
 slots = [
     { at = "1-2", item = "IS.ERMediumLaser" },
 ]
 
 [sections.aft_side]
 armor = 31
-internals = 9
 slots = [
     { at = "1-2", item = "Ammo_IS.RotaryAC/5", rounds = 20 },
     { at = "3-6", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
@@ -35,7 +31,6 @@ slots = [
 
 [sections.turret]
 armor = 60
-internals = 9
 slots = [
     { at = 1, item = "IS.RotaryAC/5" },
     { at = 2, item = "IS.LRM-15", modes = ["Artemis/Mine"] },

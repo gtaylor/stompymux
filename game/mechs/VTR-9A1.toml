@@ -2,33 +2,25 @@ name = "Victor"
 class = "mech"
 movement = "biped"
 tons = 80
-max_speed = 64.5
-jump_speed = 43.0
+walk_mp = 6
+jump_mp = 4
 heat_sinks = 15
 
 [sections.left_arm]
 armor = 15
-internals = 13
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "IS.MediumLaser" },
 ]
 
 [sections.right_arm]
 armor = 15
-internals = 13
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
     { at = "3-12", item = "IS.AC/20" },
 ]
 
 [sections.left_torso]
 armor = 15
-internals = 17
 rear = 7
 slots = [
     { at = 1, item = "IS.SRM-4", brand = 4 },
@@ -39,7 +31,6 @@ slots = [
 
 [sections.right_torso]
 armor = 15
-internals = 17
 rear = 7
 slots = [
     { at = "1-3", item = "Ammo_IS.AC/20", rounds = 5 },
@@ -48,46 +39,24 @@ slots = [
 
 [sections.center_torso]
 armor = 25
-internals = 25
 rear = 12
 slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
     { at = "11-12", item = "JumpJet" },
 ]
 
 [sections.left_leg]
 armor = 20
-internals = 17
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = 5, item = "JumpJet" },
     { at = 6, item = "IS.MachineGun" },
 ]
 
 [sections.right_leg]
 armor = 20
-internals = 17
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = 5, item = "JumpJet" },
     { at = 6, item = "IS.MachineGun" },
 ]
 
 [sections.head]
 armor = 9
-internals = 3
-slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
-]

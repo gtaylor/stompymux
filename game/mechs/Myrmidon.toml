@@ -2,27 +2,22 @@ name = "Myrmidon"
 class = "vehicle"
 movement = "track"
 tons = 40
-max_speed = 86.0
+walk_mp = 8
 
 [sections.left_side]
 armor = 25
-internals = 4
 
 [sections.right_side]
 armor = 25
-internals = 4
 
 [sections.front_side]
 armor = 35
-internals = 4
 
 [sections.aft_side]
 armor = 24
-internals = 4
 
 [sections.turret]
 armor = 35
-internals = 4
 slots = [
     { at = 1, item = "IS.PPC", brand = 3 },
     { at = 2, item = "IS.SRM-6", brand = 3 },

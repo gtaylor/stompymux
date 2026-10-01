@@ -2,30 +2,26 @@ name = "Lightning"
 class = "vehicle"
 movement = "hover"
 tons = 35
-max_speed = 182.75
+walk_mp = 17
 computer = 3
 
 [sections.left_side]
 armor = 16
-internals = 4
 slots = [
     { at = 1, item = "IS.SRM-4", modes = ["OneShot"], brand = 4 },
 ]
 
 [sections.right_side]
 armor = 16
-internals = 4
 slots = [
     { at = 1, item = "IS.SRM-4", modes = ["OneShot"], brand = 4 },
 ]
 
 [sections.front_side]
 armor = 20
-internals = 4
 slots = [
     { at = "1-2", item = "IS.MediumPulseLaser", brand = 3 },
 ]
 
 [sections.aft_side]
 armor = 11
-internals = 4

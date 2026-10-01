@@ -2,19 +2,16 @@ name = "Command_Van"
 class = "vehicle"
 movement = "wheel"
 tons = 15
-max_speed = 96.75
+walk_mp = 9
 
 [sections.left_side]
 armor = 14
-internals = 2
 
 [sections.right_side]
 armor = 14
-internals = 2
 
 [sections.front_side]
 armor = 16
-internals = 2
 slots = [
     { at = 1, item = "IS.MachineGun" },
     { at = 2, item = "Ammo_IS.MachineGun", rounds = 200 },
@@ -22,11 +19,9 @@ slots = [
 
 [sections.aft_side]
 armor = 12
-internals = 2
 
 [sections.turret]
 armor = 8
-internals = 2
 slots = [
     { at = 1, item = "IS.LRM-5" },
     { at = 2, item = "Ammo_IS.LRM-5", rounds = 24 },

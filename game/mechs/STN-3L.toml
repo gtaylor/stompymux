@@ -2,32 +2,22 @@ name = "Sentinel"
 class = "mech"
 movement = "biped"
 tons = 40
-max_speed = 96.75
+walk_mp = 9
 computer = 4
 radio = 4
 
 [sections.left_arm]
 armor = 8
-internals = 6
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
     { at = "3-7", item = "IS.UltraAC/5" },
 ]
 
 [sections.right_arm]
 armor = 8
-internals = 6
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.left_torso]
 armor = 8
-internals = 10
 rear = 5
 slots = [
     { at = 1, item = "Ammo_IS.UltraAC/5", rounds = 20 },
@@ -36,7 +26,6 @@ slots = [
 
 [sections.right_torso]
 armor = 8
-internals = 10
 rear = 5
 slots = [
     { at = 1, item = "IS.StreakSRM-2" },
@@ -46,41 +35,13 @@ slots = [
 
 [sections.center_torso]
 armor = 10
-internals = 12
 rear = 7
-slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
-]
 
 [sections.left_leg]
 armor = 10
-internals = 10
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.right_leg]
 armor = 10
-internals = 10
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.head]
 armor = 9
-internals = 3
-slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
-]

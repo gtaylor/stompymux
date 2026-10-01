@@ -2,11 +2,13 @@ name = "Tomahawk"
 class = "aerofighter"
 movement = "fly"
 tons = 45
-max_speed = 129.0
+walk_mp = 12
 heat_sinks = 24
 computer = 3
 fuel = 750
-specials = ["DoubleHS"]
+
+[construction]
+heat_sinks = "double"
 
 [sections.nose]
 armor = 40

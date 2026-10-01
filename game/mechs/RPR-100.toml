@@ -2,11 +2,13 @@ name = "Rapier"
 class = "aerofighter"
 movement = "fly"
 tons = 85
-max_speed = 96.75
+walk_mp = 9
 heat_sinks = 24
 computer = 3
 fuel = 750
-specials = ["DoubleHS"]
+
+[construction]
+heat_sinks = "double"
 
 [sections.nose]
 armor = 45

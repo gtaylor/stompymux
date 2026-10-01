@@ -2,7 +2,7 @@ name = "Minion"
 class = "vehicle"
 movement = "hover"
 tons = 20
-max_speed = 150.5
+walk_mp = 14
 computer = 4
 radio = 4
 cargo_space = 0
@@ -11,22 +11,18 @@ specials = ["SearchLight"]
 
 [sections.left_side]
 armor = 22
-internals = 2
 
 [sections.right_side]
 armor = 22
-internals = 2
 
 [sections.front_side]
 armor = 28
-internals = 2
 slots = [
     { at = "1-2", item = "IS.MediumPulseLaser", brand = 0 },
 ]
 
 [sections.aft_side]
 armor = 16
-internals = 2
 slots = [
     { at = 1, item = "C3Slave", brand = 0 },
 ]

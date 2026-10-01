@@ -2,10 +2,14 @@ name = "Jengiz"
 class = "aerofighter"
 movement = "fly"
 tons = 80
-max_speed = 86.0
+walk_mp = 8
 heat_sinks = 54
 fuel = 600
-specials = ["Clan", "CargoTech", "FerroFibrous_Tech"]
+specials = ["CargoTech"]
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
 
 [sections.nose]
 armor = 65

@@ -2,7 +2,7 @@ name = "Glaive"
 class = "vehicle"
 movement = "wheel"
 tons = 45
-max_speed = 86.0
+walk_mp = 8
 computer = 4
 radio = 4
 cargo_space = 0
@@ -10,15 +10,12 @@ max_suits = 0
 
 [sections.left_side]
 armor = 17
-internals = 5
 
 [sections.right_side]
 armor = 17
-internals = 5
 
 [sections.front_side]
 armor = 27
-internals = 5
 slots = [
     { at = 1, item = "IS.LRM-15", brand = 0 },
     { at = 2, item = "ArtemisIV", brand = 0 },
@@ -26,7 +23,6 @@ slots = [
 
 [sections.aft_side]
 armor = 12
-internals = 5
 slots = [
     { at = 1, item = "Ammo_IS.MachineGun", rounds = 200 },
     { at = "2-3", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
@@ -34,7 +30,6 @@ slots = [
 
 [sections.turret]
 armor = 15
-internals = 5
 slots = [
     { at = 1, item = "IS.ERLargeLaser", brand = 0 },
     { at = "2-3", item = "IS.MachineGun", brand = 0 },

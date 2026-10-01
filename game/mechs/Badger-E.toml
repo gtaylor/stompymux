@@ -2,7 +2,7 @@ name = "Badger"
 class = "vehicle"
 movement = "track"
 tons = 30
-max_speed = 96.75
+walk_mp = 9
 cargo_space = 400
 max_suits = 0
 max_ton = 4
@@ -10,35 +10,30 @@ specials = ["CargoTech"]
 
 [sections.left_side]
 armor = 18
-internals = 3
 slots = [
     { at = 1, item = "IS.SmallLaser" },
 ]
 
 [sections.right_side]
 armor = 18
-internals = 3
 slots = [
     { at = 1, item = "IS.SmallLaser" },
 ]
 
 [sections.front_side]
 armor = 20
-internals = 3
 slots = [
     { at = 1, item = "IS.SmallLaser" },
 ]
 
 [sections.aft_side]
 armor = 16
-internals = 3
 slots = [
     { at = 1, item = "IS.SmallLaser" },
 ]
 
 [sections.turret]
 armor = 8
-internals = 3
 slots = [
     { at = "1-6", item = "IS.SmallLaser" },
 ]

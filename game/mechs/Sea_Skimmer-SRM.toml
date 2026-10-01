@@ -2,9 +2,11 @@ name = "Sea_Skimmer"
 class = "naval"
 movement = "foil"
 tons = 25
-max_speed = 193.5
+walk_mp = 18
 computer = 3
-specials = ["ICEEngine_Tech"]
+
+[construction]
+engine = "ice"
 
 [sections.left_side]
 armor = 9

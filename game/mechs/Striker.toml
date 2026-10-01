@@ -2,29 +2,27 @@ name = "Striker"
 class = "vehicle"
 movement = "wheel"
 tons = 35
-max_speed = 86.0
+walk_mp = 8
 computer = 3
-specials = ["SearchLight", "ICEEngine_Tech"]
+specials = ["SearchLight"]
+
+[construction]
+engine = "ice"
 
 [sections.left_side]
 armor = 20
-internals = 4
 
 [sections.right_side]
 armor = 20
-internals = 4
 
 [sections.front_side]
 armor = 24
-internals = 4
 
 [sections.aft_side]
 armor = 18
-internals = 4
 
 [sections.turret]
 armor = 22
-internals = 4
 slots = [
     { at = 1, item = "IS.SRM-6", brand = 3 },
     { at = 2, item = "IS.LRM-10", brand = 3 },

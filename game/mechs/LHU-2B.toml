@@ -2,26 +2,28 @@ name = "Lao Hu"
 class = "mech"
 movement = "biped"
 tons = 75
-max_speed = 86.0
+walk_mp = 8
 heat_sinks = 20
 computer = 4
 radio = 4
 cargo_space = 0
-specials = ["DoubleHS"]
+
+[construction]
+engine = "xl"
+structure = "endo_steel"
+heat_sinks = "double"
+brand = 3
 
 [sections.left_arm]
 armor = 23
-internals = 12
+omit = ["hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
     { at = "4-5", item = "IS.ERLargeLaser", brand = 3 },
 ]
 
 [sections.right_arm]
 armor = 23
-internals = 12
+explicit = true
 slots = [
     { at = 1, item = "ShoulderOrHip", brand = 3 },
     { at = "2-12", item = "IS.LB20-XAC", brand = 3 },
@@ -29,10 +31,8 @@ slots = [
 
 [sections.left_torso]
 armor = 24
-internals = 16
 rear = 7
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
     { at = "4-6", item = "IS.LRM-15", brand = 3 },
     { at = "7-8", item = "Ammo_IS.LRM-15", rounds = 8 },
     { at = "9-12", item = "EndoSteel", brand = 3 },
@@ -40,10 +40,8 @@ slots = [
 
 [sections.right_torso]
 armor = 24
-internals = 16
 rear = 7
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
     { at = "4-5", item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
     { at = 6, item = "Ammo_IS.LB20-XAC", rounds = 5 },
     { at = "8-12", item = "EndoSteel", brand = 3 },
@@ -51,44 +49,22 @@ slots = [
 
 [sections.center_torso]
 armor = 33
-internals = 23
 rear = 10
-slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
-    { at = "4-7", item = "Gyro", brand = 3 },
-    { at = "8-10", item = "Engine", brand = 3 },
-]
 
 [sections.left_leg]
 armor = 28
-internals = 16
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-6", item = "EndoSteel", brand = 3 },
 ]
 
 [sections.right_leg]
 armor = 28
-internals = 16
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-6", item = "EndoSteel", brand = 3 },
 ]
 
 [sections.head]
 armor = 9
-internals = 3
 slots = [
-    { at = 1, item = "LifeSupport", brand = 3 },
-    { at = 2, item = "Sensors", brand = 3 },
-    { at = 3, item = "Cockpit", brand = 3 },
     { at = 4, item = "EndoSteel", brand = 3 },
-    { at = 5, item = "Sensors", brand = 3 },
-    { at = 6, item = "LifeSupport", brand = 3 },
 ]

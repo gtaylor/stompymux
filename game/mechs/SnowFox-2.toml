@@ -2,33 +2,21 @@ name = "Snow Fox"
 class = "mech"
 movement = "quad"
 tons = 20
-max_speed = 129.0
+walk_mp = 12
 heat_sinks = 10
-specials = ["Clan"]
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
 
 [sections.front_left_leg]
 armor = 5
-internals = 4
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.front_right_leg]
 armor = 5
-internals = 4
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.left_torso]
 armor = 8
-internals = 5
 rear = 2
 slots = [
     { at = "3-5", item = "FerroFibrous" },
@@ -36,7 +24,6 @@ slots = [
 
 [sections.right_torso]
 armor = 6
-internals = 5
 rear = 1
 slots = [
     { at = 3, item = "Ammo_CL.LRM-10", rounds = 12 },
@@ -45,43 +32,17 @@ slots = [
 
 [sections.center_torso]
 armor = 6
-internals = 6
 rear = 1
 slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
     { at = 11, item = "Masc" },
     { at = 12, item = "FerroFibrous" },
 ]
 
 [sections.rear_left_leg]
 armor = 5
-internals = 4
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.rear_right_leg]
 armor = 5
-internals = 4
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.head]
 armor = 7
-internals = 3
-slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
-]

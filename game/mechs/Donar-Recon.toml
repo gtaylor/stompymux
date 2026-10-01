@@ -2,27 +2,27 @@ name = "Donar"
 class = "vtol"
 movement = "vtol"
 tons = 21
-max_speed = 150.5
+walk_mp = 14
 heat_sinks = 12
-specials = ["Clan", "FerroFibrous_Tech"]
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 14
-internals = 2
 slots = [
     { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.right_side]
 armor = 14
-internals = 2
 slots = [
     { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.front_side]
 armor = 16
-internals = 2
 slots = [
     { at = 1, item = "CL.ERLargeLaser" },
     { at = 2, item = "Ecm" },
@@ -32,8 +32,6 @@ slots = [
 
 [sections.aft_side]
 armor = 12
-internals = 2
 
 [sections.rotor]
 armor = 2
-internals = 2

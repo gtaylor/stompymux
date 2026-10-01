@@ -85,8 +85,7 @@ async fn electronic_status_colors_follow_countering_without_refreshing_the_field
 /// TAG precedes booster counters even when all three installations share a cockpit.
 #[tokio::test]
 async fn advanced_technology_keeps_reference_order_and_counter_colors() {
-    let source = include_str!("../game/mechs/JR7-D.toml")
-        .replace("\"FlipArms\"", "\"FlipArms\", \"SuperCharger_Tech\"")
+    let source = support::templates::with_flags(include_str!("../game/mechs/JR7-D.toml"), &["SuperCharger_Tech"])
         .replace(
             "slots = [\n    { at = \"1-2\", item = \"JumpJet\" },\n]\n\n[sections.right_torso]",
             "slots = [\n    { at = \"1-2\", item = \"JumpJet\" },\n    { at = 3, item = \"TAG\" },\n    { at = 4, item = \"Masc\" },\n]\n\n[sections.right_torso]",
@@ -358,7 +357,10 @@ async fn vehicle_cockpit_sections_share_native_lua_observer_and_restart_reports(
         (include_str!("../game/mechs/Demolisher.toml").to_owned(), 0),
         (include_str!("../game/mechs/Kestrel.toml").to_owned(), 0),
         (
-            include_str!("../game/mechs/Kestrel.toml").replace(", \"ICEEngine_Tech\"", ""),
+            support::templates::without_flags(
+                include_str!("../game/mechs/Kestrel.toml"),
+                &["ICEEngine_Tech"],
+            ),
             10,
         ),
     ] {

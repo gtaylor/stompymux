@@ -2,7 +2,7 @@ name = "ObservationVTOL"
 class = "vtol"
 movement = "none"
 tons = 20
-max_speed = 0.0
+walk_mp = 0
 computer = 3
 radio_range = 1000
 tac_range = 127
@@ -13,22 +13,17 @@ specials = ["SalvageTech"]
 
 [sections.left_side]
 armor = 1
-internals = 2
 
 [sections.right_side]
 armor = 1
-internals = 2
 
 [sections.front_side]
 armor = 1
-internals = 2
 rear = 1
 
 [sections.aft_side]
 armor = 1
-internals = 2
 rear = 1
 
 [sections.rotor]
 armor = 1
-internals = 2

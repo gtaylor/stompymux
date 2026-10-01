@@ -2,30 +2,25 @@ name = "Pilum"
 class = "vehicle"
 movement = "wheel"
 tons = 70
-max_speed = 64.5
+walk_mp = 6
 
 [sections.left_side]
 armor = 33
-internals = 7
 
 [sections.right_side]
 armor = 33
-internals = 7
 
 [sections.front_side]
 armor = 40
-internals = 7
 slots = [
     { at = "1-2", item = "IS.MediumPulseLaser", brand = 3 },
 ]
 
 [sections.aft_side]
 armor = 33
-internals = 7
 
 [sections.turret]
 armor = 40
-internals = 7
 slots = [
     { at = 1, item = "IS.LRM-15", brand = 3 },
     { at = 2, item = "ArtemisIV", brand = 3 },

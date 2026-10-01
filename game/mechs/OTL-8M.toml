@@ -2,20 +2,20 @@ name = "Ostsol"
 class = "mech"
 movement = "biped"
 tons = 60
-max_speed = 96.75
+walk_mp = 9
 heat_sinks = 22
 computer = 4
 radio = 4
-specials = ["DoubleHS", "TripleMyomerTech", "EndoSteel_Tech", "XLEngine_Tech"]
+
+[construction]
+engine = "xl"
+structure = "endo_steel"
+heat_sinks = "double"
+myomer = "triple_strength"
 
 [sections.left_arm]
 armor = 14
-internals = 10
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "EndoSteel" },
     { at = "7-8", item = "TripleStrengthMyomer" },
     { at = 9, item = "EndoSteel" },
@@ -23,22 +23,15 @@ slots = [
 
 [sections.right_arm]
 armor = 14
-internals = 10
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "EndoSteel" },
     { at = "7-8", item = "TripleStrengthMyomer" },
 ]
 
 [sections.left_torso]
 armor = 24
-internals = 14
 rear = 4
 slots = [
-    { at = "1-3", item = "Engine" },
     { at = 4, item = "IS.MediumPulseLaser" },
     { at = "5-6", item = "IS.LargePulseLaser" },
     { at = 7, item = "IS.MediumPulseLaser" },
@@ -48,10 +41,8 @@ slots = [
 
 [sections.right_torso]
 armor = 24
-internals = 14
 rear = 4
 slots = [
-    { at = "1-3", item = "Engine" },
     { at = "4-6", item = "IS.PPC" },
     { at = 7, item = "IS.MediumPulseLaser" },
     { at = "8-9", item = "EndoSteel" },
@@ -60,46 +51,26 @@ slots = [
 
 [sections.center_torso]
 armor = 25
-internals = 20
 rear = 6
 slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
     { at = 11, item = "IS.ERSmallLaser" },
     { at = 12, item = "IS.ERMediumLaser" },
 ]
 
 [sections.left_leg]
 armor = 26
-internals = 14
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.right_leg]
 armor = 26
-internals = 14
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.head]
 armor = 9
-internals = 3
 slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
     { at = 4, item = "EndoSteel" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
 ]

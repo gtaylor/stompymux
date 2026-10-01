@@ -2,11 +2,13 @@ name = "Seydlitz"
 class = "aerofighter"
 movement = "fly"
 tons = 20
-max_speed = 215.0
+walk_mp = 20
 heat_sinks = 20
 computer = 3
 fuel = 450
-specials = ["DoubleHS"]
+
+[construction]
+heat_sinks = "double"
 
 [sections.nose]
 armor = 16

@@ -2,54 +2,45 @@ name = "Commando"
 class = "mech"
 movement = "biped"
 tons = 25
-max_speed = 96.75
+walk_mp = 9
 heat_sinks = 20
 computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0
-specials = ["DoubleHS"]
+
+[construction]
+engine = "light"
+structure = "endo_steel"
+heat_sinks = "double"
+brand = 3
 
 [sections.left_arm]
 armor = 5
-internals = 4
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-10", item = "HeatSink", brand = 3 },
     { at = "11-12", item = "IS.ERMediumLaser", brand = 3 },
 ]
 
 [sections.right_arm]
 armor = 5
-internals = 4
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-7", item = "HeatSink", brand = 3 },
     { at = "8-9", item = "IS.StreakSRM-2", brand = 3 },
 ]
 
 [sections.left_torso]
 armor = 7
-internals = 6
 rear = 2
 slots = [
-    { at = "1-2", item = "Engine", brand = 3 },
     { at = "3-5", item = "HeatSink", brand = 3 },
     { at = "6-12", item = "EndoSteel", brand = 3 },
 ]
 
 [sections.right_torso]
 armor = 7
-internals = 6
 rear = 2
 slots = [
-    { at = "1-2", item = "Engine", brand = 3 },
     { at = 3, item = "Ammo_IS.SRM-4", rounds = 25, modes = ["Artemis/Mine"] },
     { at = 4, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
     { at = "5-11", item = "EndoSteel", brand = 3 },
@@ -58,43 +49,17 @@ slots = [
 
 [sections.center_torso]
 armor = 8
-internals = 8
 rear = 3
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
-    { at = "4-7", item = "Gyro", brand = 3 },
-    { at = "8-10", item = "Engine", brand = 3 },
     { at = 11, item = "IS.SRM-4", brand = 3 },
     { at = 12, item = "ArtemisIV", brand = 3 },
 ]
 
 [sections.left_leg]
 armor = 6
-internals = 6
-slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
-]
 
 [sections.right_leg]
 armor = 6
-internals = 6
-slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
-]
 
 [sections.head]
 armor = 5
-internals = 3
-slots = [
-    { at = 1, item = "LifeSupport", brand = 3 },
-    { at = 2, item = "Sensors", brand = 3 },
-    { at = 3, item = "Cockpit", brand = 3 },
-    { at = 5, item = "Sensors", brand = 3 },
-    { at = 6, item = "LifeSupport", brand = 3 },
-]

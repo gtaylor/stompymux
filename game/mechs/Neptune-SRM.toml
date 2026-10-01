@@ -2,9 +2,11 @@ name = "Neptune"
 class = "naval"
 movement = "sub"
 tons = 100
-max_speed = 53.75
+walk_mp = 5
 heat_sinks = 0
-specials = ["ICEEngine_Tech"]
+
+[construction]
+engine = "ice"
 
 [sections.left_side]
 armor = 60

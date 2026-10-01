@@ -2,35 +2,33 @@ name = "Pegasus"
 class = "vehicle"
 movement = "hover"
 tons = 35
-max_speed = 129.0
+walk_mp = 12
 heat_sinks = 3
 computer = 4
 cargo_space = 0
 max_suits = 0
-specials = ["SearchLight", "ICEEngine_Tech"]
+specials = ["SearchLight"]
+
+[construction]
+engine = "ice"
 
 [sections.left_side]
 armor = 19
-internals = 4
 
 [sections.right_side]
 armor = 19
-internals = 4
 
 [sections.front_side]
 armor = 26
-internals = 4
 slots = [
     { at = 1, item = "IS.MediumLaser" },
 ]
 
 [sections.aft_side]
 armor = 19
-internals = 4
 
 [sections.turret]
 armor = 21
-internals = 4
 slots = [
     { at = "1-2", item = "IS.SRM-6" },
     { at = 3, item = "Ammo_IS.SRM-6", rounds = 15 },

@@ -2,33 +2,32 @@ name = "Partisan"
 class = "vehicle"
 movement = "track"
 tons = 80
-max_speed = 53.75
+walk_mp = 5
 heat_sinks = 9
 cargo_space = 0
 max_suits = 0
-specials = ["AntiAircraft", "XLEngine_Tech"]
+specials = ["AntiAircraft"]
+
+[construction]
+engine = "xl"
 
 [sections.left_side]
 armor = 26
-internals = 8
 slots = [
     { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.right_side]
 armor = 26
-internals = 8
 slots = [
     { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.front_side]
 armor = 35
-internals = 8
 
 [sections.aft_side]
 armor = 21
-internals = 8
 slots = [
     { at = "1-2", item = "Ammo_IS.LB10-XAC", rounds = 10 },
     { at = 3, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
@@ -37,7 +36,6 @@ slots = [
 
 [sections.turret]
 armor = 35
-internals = 8
 slots = [
     { at = "1-2", item = "IS.LB10-XAC" },
     { at = "3-4", item = "IS.UltraAC/5" },

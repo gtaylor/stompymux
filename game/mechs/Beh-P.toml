@@ -2,35 +2,30 @@ name = "Behemoth"
 class = "mech"
 movement = "biped"
 tons = 100
-max_speed = 53.75
-jump_speed = 32.25
+walk_mp = 5
+jump_mp = 3
 heat_sinks = 20
 computer = 4
-specials = ["DoubleHS", "Clan"]
+
+[construction]
+tech_base = "clan"
 
 [sections.left_arm]
 armor = 32
-internals = 17
+omit = ["hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
     { at = "4-5", item = "CL.LargePulseLaser" },
 ]
 
 [sections.right_arm]
 armor = 32
-internals = 17
+omit = ["hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
     { at = "4-5", item = "CL.LargePulseLaser" },
 ]
 
 [sections.left_torso]
 armor = 27
-internals = 21
 rear = 14
 slots = [
     { at = "1-6", item = "CL.GaussRifle" },
@@ -39,7 +34,6 @@ slots = [
 
 [sections.right_torso]
 armor = 27
-internals = 21
 rear = 14
 slots = [
     { at = "1-6", item = "CL.GaussRifle" },
@@ -48,45 +42,25 @@ slots = [
 
 [sections.center_torso]
 armor = 46
-internals = 31
 rear = 15
 slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
     { at = 11, item = "JumpJet" },
 ]
 
 [sections.left_leg]
 armor = 36
-internals = 21
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = 5, item = "JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 36
-internals = 21
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = 5, item = "JumpJet" },
 ]
 
 [sections.head]
 armor = 9
-internals = 3
 slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
     { at = 4, item = "CL.SmallPulseLaser" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
 ]

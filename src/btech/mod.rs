@@ -188,8 +188,11 @@ mod state;
 mod stun;
 pub use salvo::{BattleSalvoGroup, BattleSalvoReport, resolve_salvo, resolve_tactical_salvo};
 pub use stun::{advance_stun, stun_unit};
+mod legacy_construction;
 mod template;
+mod template_construction;
 mod template_document;
+pub use legacy_construction::convert_constructed_template;
 mod unit;
 
 pub use assets::{read_map, read_template, read_unit_template, read_vehicle_template};

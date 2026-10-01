@@ -2,7 +2,7 @@ name = "Sloth"
 class = "battlesuit"
 movement = "biped"
 tons = 1
-max_speed = 32.25
+walk_mp = 3
 cargo_space = 0
 max_suits = 4
 

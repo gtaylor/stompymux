@@ -2,20 +2,20 @@ name = "SturmFeur"
 class = "vehicle"
 movement = "track"
 tons = 85
-max_speed = 53.75
-specials = ["AntiAircraft", "ICEEngine_Tech"]
+walk_mp = 5
+specials = ["AntiAircraft"]
+
+[construction]
+engine = "ice"
 
 [sections.left_side]
 armor = 66
-internals = 9
 
 [sections.right_side]
 armor = 66
-internals = 9
 
 [sections.front_side]
 armor = 66
-internals = 9
 slots = [
     { at = 1, item = "IS.LRM-20", brand = 3 },
     { at = 2, item = "Ammo_IS.LRM-20", rounds = 6 },
@@ -23,11 +23,9 @@ slots = [
 
 [sections.aft_side]
 armor = 48
-internals = 9
 
 [sections.turret]
 armor = 66
-internals = 9
 slots = [
     { at = 1, item = "IS.LRM-20", brand = 3 },
     { at = "2-3", item = "Ammo_IS.LRM-20", rounds = 6 },

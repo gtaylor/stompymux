@@ -2,17 +2,19 @@ name = "Blood Asp"
 class = "mech"
 movement = "biped"
 tons = 90
-max_speed = 64.5
-jump_speed = 53.75
+walk_mp = 6
+jump_mp = 5
 heat_sinks = 50
-specials = ["Clan", "FlipArms"]
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
 
 [sections.left_arm]
 armor = 28
-internals = 15
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
     { at = "3-4", item = "CL.ERPPC" },
     { at = "5-7", item = "CL.HeavyLargeLaser" },
     { at = "8-9", item = "HeatSink" },
@@ -21,10 +23,8 @@ slots = [
 
 [sections.right_arm]
 armor = 28
-internals = 15
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
     { at = "3-4", item = "CL.ERPPC" },
     { at = "5-7", item = "CL.HeavyLargeLaser" },
     { at = "8-11", item = "HeatSink" },
@@ -33,10 +33,8 @@ slots = [
 
 [sections.left_torso]
 armor = 24
-internals = 19
 rear = 11
 slots = [
-    { at = "1-2", item = "Engine" },
     { at = "3-10", item = "HeatSink" },
     { at = 11, item = "JumpJet" },
     { at = 12, item = "EndoSteel" },
@@ -44,10 +42,8 @@ slots = [
 
 [sections.right_torso]
 armor = 24
-internals = 19
 rear = 11
 slots = [
-    { at = "1-2", item = "Engine" },
     { at = "3-6", item = "TargetingComputer" },
     { at = "7-10", item = "HeatSink" },
     { at = 11, item = "JumpJet" },
@@ -56,46 +52,26 @@ slots = [
 
 [sections.center_torso]
 armor = 40
-internals = 29
 rear = 13
 slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
     { at = 11, item = "JumpJet" },
     { at = 12, item = "Ecm" },
 ]
 
 [sections.left_leg]
 armor = 34
-internals = 19
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "HeatSink" },
 ]
 
 [sections.right_leg]
 armor = 34
-internals = 19
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "HeatSink" },
 ]
 
 [sections.head]
 armor = 9
-internals = 3
 slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
     { at = 4, item = "EndoSteel" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
 ]

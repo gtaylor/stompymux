@@ -2,33 +2,33 @@ name = "Yeoman"
 class = "mech"
 movement = "biped"
 tons = 60
-max_speed = 64.5
+walk_mp = 6
 heat_sinks = 20
 computer = 4
 radio = 4
-specials = ["DoubleHS", "FlipArms"]
+
+[construction]
+structure = "endo_steel"
+armor = "ferro_fibrous"
+heat_sinks = "double"
+brand = 3
 
 [sections.left_arm]
 armor = 15
-internals = 10
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
     { at = "3-10", item = "FerroFibrous", brand = 3 },
 ]
 
 [sections.right_arm]
 armor = 15
-internals = 10
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
     { at = "3-12", item = "EndoSteel", brand = 3 },
 ]
 
 [sections.left_torso]
 armor = 21
-internals = 14
 rear = 6
 slots = [
     { at = "1-3", item = "IS.LRM-15", brand = 3 },
@@ -41,7 +41,6 @@ slots = [
 
 [sections.right_torso]
 armor = 21
-internals = 14
 rear = 6
 slots = [
     { at = "1-3", item = "HeatSink", brand = 3 },
@@ -54,45 +53,25 @@ slots = [
 
 [sections.center_torso]
 armor = 23
-internals = 20
 rear = 6
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
-    { at = "4-7", item = "Gyro", brand = 3 },
-    { at = "8-10", item = "Engine", brand = 3 },
     { at = "11-12", item = "EndoSteel", brand = 3 },
 ]
 
 [sections.left_leg]
 armor = 15
-internals = 14
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-6", item = "FerroFibrous", brand = 3 },
 ]
 
 [sections.right_leg]
 armor = 15
-internals = 14
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-6", item = "EndoSteel", brand = 3 },
 ]
 
 [sections.head]
 armor = 9
-internals = 3
 slots = [
-    { at = 1, item = "LifeSupport", brand = 3 },
-    { at = 2, item = "Sensors", brand = 3 },
-    { at = 3, item = "Cockpit", brand = 3 },
     { at = 4, item = "FerroFibrous", brand = 3 },
-    { at = 5, item = "Sensors", brand = 3 },
-    { at = 6, item = "LifeSupport", brand = 3 },
 ]

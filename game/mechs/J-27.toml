@@ -2,29 +2,27 @@ name = "J-27"
 class = "vehicle"
 movement = "track"
 tons = 20
-max_speed = 86.0
+walk_mp = 8
 cargo_space = 3072
-specials = ["CargoTech", "ICEEngine_Tech"]
+specials = ["CargoTech"]
+
+[construction]
+engine = "ice"
 
 [sections.left_side]
 armor = 5
-internals = 2
 
 [sections.right_side]
 armor = 5
-internals = 2
 
 [sections.front_side]
 armor = 6
-internals = 2
 
 [sections.aft_side]
 armor = 6
-internals = 2
 
 [sections.turret]
 armor = 2
-internals = 2
 slots = [
     { at = 1, item = "IS.MachineGun", brand = 3 },
     { at = 2, item = "Ammo_IS.MachineGun", rounds = 200 },

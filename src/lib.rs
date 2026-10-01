@@ -4,7 +4,7 @@ pub use btech::insert_minefield;
 pub use btech::view_map_action as view_battle_map_action;
 pub use btech::{
     BattleArtilleryAim, BattleArtilleryAimInput, BattleArtilleryObserver, BattleArtilleryRange,
-    unit_artillery_gunnery_target,
+    convert_constructed_template, unit_artillery_gunnery_target,
 };
 pub use btech::{
     BattleArtilleryCell, BattleArtilleryEffect, BattleArtilleryFlight,

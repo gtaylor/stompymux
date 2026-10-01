@@ -46,7 +46,7 @@ fn unit(
                     .replace("movement = \"track\"", "movement = \"hover\""),
                 "stationary" => include_str!("../game/mechs/Demolisher.toml")
                     .replace("movement = \"track\"", "movement = \"none\"")
-                    .replace("max_speed = 53.75", "max_speed = 0"),
+                    .replace("walk_mp = 5", "walk_mp = 0"),
                 _ => include_str!("../game/mechs/Demolisher.toml").to_owned(),
             };
             create_battle_vehicle(

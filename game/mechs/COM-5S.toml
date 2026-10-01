@@ -2,39 +2,32 @@ name = "Commando"
 class = "mech"
 movement = "biped"
 tons = 25
-max_speed = 96.75
+walk_mp = 9
 computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0
 
+[construction]
+structure = "endo_steel"
+armor = "ferro_fibrous"
+
 [sections.left_arm]
 armor = 5
-internals = 4
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = 5, item = "IS.MediumLaser" },
     { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 5
-internals = 4
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = 5, item = "IS.StreakSRM-2" },
     { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 6
-internals = 6
 rear = 2
 slots = [
     { at = "1-7", item = "EndoSteel" },
@@ -42,7 +35,6 @@ slots = [
 
 [sections.right_torso]
 armor = 6
-internals = 6
 rear = 2
 slots = [
     { at = "1-2", item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Artemis/Mine"] },
@@ -53,46 +45,26 @@ slots = [
 
 [sections.center_torso]
 armor = 8
-internals = 8
 rear = 3
 slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
     { at = 11, item = "IS.SRM-6", modes = ["Artemis/Mine"] },
     { at = 12, item = "IS.SRM-6" },
 ]
 
 [sections.left_leg]
 armor = 6
-internals = 6
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "HeatSink" },
 ]
 
 [sections.right_leg]
 armor = 6
-internals = 6
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "HeatSink" },
 ]
 
 [sections.head]
 armor = 5
-internals = 3
 slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
     { at = 4, item = "ArtemisIV" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
 ]

@@ -2,19 +2,21 @@ name = "Salamander"
 class = "mech"
 movement = "biped"
 tons = 80
-max_speed = 64.5
+walk_mp = 6
 heat_sinks = 20
 computer = 4
 radio = 4
-specials = ["DoubleHS"]
+
+[construction]
+engine = "xl"
+structure = "endo_steel"
+heat_sinks = "double"
+brand = 3
 
 [sections.left_arm]
 armor = 26
-internals = 13
+omit = ["hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
     { at = "4-8", item = "IS.LRM-20", brand = 3 },
     { at = "9-11", item = "Ammo_IS.LRM-20", rounds = 6 },
     { at = 12, item = "EndoSteel", brand = 3 },
@@ -22,21 +24,14 @@ slots = [
 
 [sections.right_arm]
 armor = 26
-internals = 13
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-12", item = "EndoSteel", brand = 3 },
 ]
 
 [sections.left_torso]
 armor = 28
-internals = 17
 rear = 6
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
     { at = "4-8", item = "IS.LRM-20", brand = 3 },
     { at = "9-11", item = "Ammo_IS.LRM-20", rounds = 6 },
     { at = 12, item = "Case", brand = 3 },
@@ -44,10 +39,8 @@ slots = [
 
 [sections.right_torso]
 armor = 28
-internals = 17
 rear = 6
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
     { at = "4-8", item = "IS.LRM-20", brand = 3 },
     { at = "9-11", item = "Ammo_IS.LRM-20", rounds = 6 },
     { at = 12, item = "Case", brand = 3 },
@@ -55,45 +48,25 @@ slots = [
 
 [sections.center_torso]
 armor = 42
-internals = 25
 rear = 8
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
-    { at = "4-7", item = "Gyro", brand = 3 },
-    { at = "8-10", item = "Engine", brand = 3 },
     { at = "11-12", item = "IS.MediumLaser", brand = 3 },
 ]
 
 [sections.left_leg]
 armor = 34
-internals = 17
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-6", item = "EndoSteel", brand = 3 },
 ]
 
 [sections.right_leg]
 armor = 34
-internals = 17
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
-    { at = 2, item = "UpperActuator", brand = 3 },
-    { at = 3, item = "LowerActuator", brand = 3 },
-    { at = 4, item = "HandOrFootActuator", brand = 3 },
     { at = "5-6", item = "EndoSteel", brand = 3 },
 ]
 
 [sections.head]
 armor = 9
-internals = 3
 slots = [
-    { at = 1, item = "LifeSupport", brand = 3 },
-    { at = 2, item = "Sensors", brand = 3 },
-    { at = 3, item = "Cockpit", brand = 3 },
     { at = 4, item = "EndoSteel", brand = 3 },
-    { at = 5, item = "Sensors", brand = 3 },
-    { at = 6, item = "LifeSupport", brand = 3 },
 ]

@@ -2,34 +2,27 @@ name = "Orion"
 class = "mech"
 movement = "biped"
 tons = 75
-max_speed = 64.5
+walk_mp = 6
 specials = ["AntiAircraft"]
 
 [sections.left_arm]
 armor = 19
-internals = 12
+omit = ["hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
     { at = 4, item = "IS.MediumLaser" },
     { at = 5, item = "IS.SRM-4" },
 ]
 
 [sections.right_arm]
 armor = 19
-internals = 12
+omit = ["hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
     { at = 4, item = "IS.MediumLaser" },
     { at = 5, item = "IS.SRM-4" },
 ]
 
 [sections.left_torso]
 armor = 20
-internals = 16
 rear = 8
 slots = [
     { at = "1-3", item = "IS.LRM-15", brand = 2 },
@@ -39,7 +32,6 @@ slots = [
 
 [sections.right_torso]
 armor = 20
-internals = 16
 rear = 8
 slots = [
     { at = "1-7", item = "IS.AC/10", brand = 1 },
@@ -48,41 +40,13 @@ slots = [
 
 [sections.center_torso]
 armor = 32
-internals = 23
 rear = 9
-slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
-]
 
 [sections.left_leg]
 armor = 20
-internals = 16
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.right_leg]
 armor = 20
-internals = 16
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.head]
 armor = 9
-internals = 3
-slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
-]

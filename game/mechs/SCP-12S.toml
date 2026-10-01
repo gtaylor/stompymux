@@ -2,39 +2,29 @@ name = "Scorpion"
 class = "mech"
 movement = "quad"
 tons = 55
-max_speed = 96.75
+walk_mp = 9
 heat_sinks = 20
 computer = 4
 radio = 4
-specials = ["DoubleHS", "EndoSteel_Tech", "LightEngine_Tech"]
+
+[construction]
+engine = "light"
+structure = "endo_steel"
+heat_sinks = "double"
 
 [sections.front_left_leg]
 armor = 16
-internals = 13
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.front_right_leg]
 armor = 16
-internals = 13
-slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
-]
 
 [sections.left_torso]
 armor = 18
-internals = 13
 rear = 4
 slots = [
-    { at = "1-2", item = "Engine" },
     { at = 3, item = "Ammo_IS.SRM-6", rounds = 15 },
     { at = 4, item = "Ammo_IS.LB10-XAC", rounds = 10 },
     { at = 5, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
@@ -44,10 +34,8 @@ slots = [
 
 [sections.right_torso]
 armor = 18
-internals = 13
 rear = 4
 slots = [
-    { at = "1-2", item = "Engine" },
     { at = "3-8", item = "IS.LB10-XAC" },
     { at = "9-10", item = "IS.SRM-6" },
     { at = "11-12", item = "EndoSteel" },
@@ -55,43 +43,19 @@ slots = [
 
 [sections.center_torso]
 armor = 21
-internals = 18
 rear = 6
-slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
-]
 
 [sections.rear_left_leg]
 armor = 16
-internals = 13
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.rear_right_leg]
 armor = 16
-internals = 13
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.head]
 armor = 9
-internals = 3
-slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
-]

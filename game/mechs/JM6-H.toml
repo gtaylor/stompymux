@@ -2,18 +2,19 @@ name = "Jagermech"
 class = "mech"
 movement = "biped"
 tons = 65
-max_speed = 64.5
+walk_mp = 6
 heat_sinks = 20
 computer = 4
 radio = 4
-specials = ["DoubleHS", "FlipArms", "FerroFibrous_Tech"]
+
+[construction]
+armor = "ferro_fibrous"
+heat_sinks = "double"
 
 [sections.left_arm]
 armor = 16
-internals = 10
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
     { at = "3-6", item = "IS.LB2-XAC" },
     { at = "7-8", item = "IS.LargeLaser" },
     { at = "9-12", item = "FerroFibrous" },
@@ -21,17 +22,14 @@ slots = [
 
 [sections.right_arm]
 armor = 16
-internals = 10
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
     { at = "3-6", item = "IS.LB2-XAC" },
     { at = "7-8", item = "IS.LargeLaser" },
 ]
 
 [sections.left_torso]
 armor = 24
-internals = 15
 rear = 5
 slots = [
     { at = "1-6", item = "IS.RL-15", modes = ["OneShot"] },
@@ -41,7 +39,6 @@ slots = [
 
 [sections.right_torso]
 armor = 24
-internals = 15
 rear = 5
 slots = [
     { at = "1-6", item = "IS.RL-15", modes = ["OneShot"] },
@@ -50,43 +47,19 @@ slots = [
 
 [sections.center_torso]
 armor = 29
-internals = 21
 rear = 7
-slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-10", item = "Engine" },
-]
 
 [sections.left_leg]
 armor = 22
-internals = 15
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "FerroFibrous" },
 ]
 
 [sections.right_leg]
 armor = 22
-internals = 15
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
-    { at = 3, item = "LowerActuator" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = "5-6", item = "FerroFibrous" },
 ]
 
 [sections.head]
 armor = 9
-internals = 3
-slots = [
-    { at = 1, item = "LifeSupport" },
-    { at = 2, item = "Sensors" },
-    { at = 3, item = "Cockpit" },
-    { at = 5, item = "Sensors" },
-    { at = 6, item = "LifeSupport" },
-]

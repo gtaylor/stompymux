@@ -2,14 +2,20 @@ name = "Parity Technology"
 class = "mech"
 movement = "biped"
 tons = 55
-max_speed = 53.75
-jump_speed = 21.5
+walk_mp = 5
+jump_mp = 2
 heat_sinks = 12
-specials = ["Clan", "DoubleHS", "HardenedArmor_Tech", "ImprovedJJ_Tech", "HDGyro_Tech"]
+specials = ["ImprovedJJ_Tech"]
+
+[construction]
+tech_base = "clan"
+gyro = "heavy_duty"
+armor = "hardened"
 
 [sections.left_arm]
 armor = 18
 internals = 1
+explicit = true
 slots = [
     { at = "1-3", item = "Agra.IS.PPC", brand = 5 },
 ]
@@ -17,6 +23,7 @@ slots = [
 [sections.right_arm]
 armor = 18
 internals = 1
+explicit = true
 
 [sections.left_torso]
 armor = 22
@@ -32,15 +39,19 @@ rear = 6
 armor = 30
 internals = 1
 rear = 8
+explicit = true
 
 [sections.left_leg]
 armor = 24
 internals = 1
+explicit = true
 
 [sections.right_leg]
 armor = 24
 internals = 1
+explicit = true
 
 [sections.head]
 armor = 9
 internals = 1
+explicit = true

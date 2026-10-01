@@ -2,23 +2,23 @@ name = "Maultier"
 class = "vehicle"
 movement = "hover"
 tons = 15
-max_speed = 150.5
+walk_mp = 14
 cargo_space = 300
 max_suits = 0
 max_ton = 3
-specials = ["CargoTech", "ICEEngine_Tech"]
+specials = ["CargoTech"]
+
+[construction]
+engine = "ice"
 
 [sections.left_side]
 armor = 10
-internals = 2
 
 [sections.right_side]
 armor = 10
-internals = 2
 
 [sections.front_side]
 armor = 15
-internals = 2
 slots = [
     { at = 1, item = "IS.StreakSRM-2" },
     { at = 2, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
@@ -26,4 +26,3 @@ slots = [
 
 [sections.aft_side]
 armor = 10
-internals = 2

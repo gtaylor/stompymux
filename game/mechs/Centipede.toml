@@ -2,23 +2,22 @@ name = "Centipede"
 class = "vehicle"
 movement = "hover"
 tons = 20
-max_speed = 129.0
+walk_mp = 12
 heat_sinks = 3
 cargo_space = 0
 max_suits = 0
-specials = ["ICEEngine_Tech"]
+
+[construction]
+engine = "ice"
 
 [sections.left_side]
 armor = 14
-internals = 2
 
 [sections.right_side]
 armor = 14
-internals = 2
 
 [sections.front_side]
 armor = 14
-internals = 2
 slots = [
     { at = 1, item = "IS.MediumLaser" },
     { at = 2, item = "BeagleProbe" },
@@ -26,7 +25,6 @@ slots = [
 
 [sections.aft_side]
 armor = 14
-internals = 2
 slots = [
     { at = 1, item = "IS.VehicleFlamer" },
     { at = 2, item = "Ammo_IS.VehicleFlamer", rounds = 20 },

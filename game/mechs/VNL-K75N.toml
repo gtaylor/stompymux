@@ -2,7 +2,7 @@ name = "Von Luckner"
 class = "vehicle"
 movement = "track"
 tons = 75
-max_speed = 53.75
+walk_mp = 5
 tac_range = 30
 lrs_range = 60
 scan_range = 30
@@ -11,21 +11,18 @@ max_suits = 0
 
 [sections.left_side]
 armor = 30
-internals = 8
 slots = [
     { at = "6-12", item = "FerroFibrous", brand = 3 },
 ]
 
 [sections.right_side]
 armor = 30
-internals = 8
 slots = [
     { at = "6-12", item = "FerroFibrous", brand = 3 },
 ]
 
 [sections.front_side]
 armor = 43
-internals = 8
 slots = [
     { at = "1-2", item = "IS.MachineGun", brand = 3 },
     { at = 3, item = "IS.MRM-20", brand = 3 },
@@ -35,11 +32,9 @@ slots = [
 
 [sections.aft_side]
 armor = 30
-internals = 8
 
 [sections.turret]
 armor = 46
-internals = 8
 slots = [
     { at = 1, item = "IS.UltraAC/20", brand = 3 },
     { at = 2, item = "IS.SRM-6", brand = 3 },

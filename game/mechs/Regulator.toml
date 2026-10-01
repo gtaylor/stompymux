@@ -2,33 +2,28 @@ name = "Regulator"
 class = "vehicle"
 movement = "hover"
 tons = 45
-max_speed = 150.5
+walk_mp = 14
 
 [sections.left_side]
 armor = 16
-internals = 5
 slots = [
     { at = "6-12", item = "FerroFibrous", brand = 3 },
 ]
 
 [sections.right_side]
 armor = 16
-internals = 5
 slots = [
     { at = "6-12", item = "FerroFibrous", brand = 3 },
 ]
 
 [sections.front_side]
 armor = 30
-internals = 5
 
 [sections.aft_side]
 armor = 16
-internals = 5
 
 [sections.turret]
 armor = 30
-internals = 5
 slots = [
     { at = 1, item = "IS.GaussRifle", brand = 3 },
     { at = "2-3", item = "Ammo_IS.GaussRifle", rounds = 8 },

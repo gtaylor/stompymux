@@ -2,7 +2,7 @@ name = "Monitor"
 class = "naval"
 movement = "hull"
 tons = 75
-max_speed = 53.75
+walk_mp = 5
 computer = 3
 
 [sections.left_side]

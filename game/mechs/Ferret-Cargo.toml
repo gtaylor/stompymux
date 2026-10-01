@@ -2,28 +2,26 @@ name = "Ferret"
 class = "vtol"
 movement = "vtol"
 tons = 5
-max_speed = 247.25
+walk_mp = 23
 cargo_space = 200
 max_suits = 0
 max_ton = 1
-specials = ["CargoTech", "ICEEngine_Tech"]
+specials = ["CargoTech"]
+
+[construction]
+engine = "ice"
 
 [sections.left_side]
 armor = 0
-internals = 1
 
 [sections.right_side]
 armor = 0
-internals = 1
 
 [sections.front_side]
 armor = 0
-internals = 1
 
 [sections.aft_side]
 armor = 0
-internals = 1
 
 [sections.rotor]
 armor = 0
-internals = 1

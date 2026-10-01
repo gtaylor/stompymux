@@ -31,12 +31,14 @@ fn construction_sets_original_protection_and_independent_ammunition() {
     );
     assert!(ams.ams_enabled());
     for source in [
-        JENNER.replace("\"FlipArms\"", "\"TripleStrengthMyomer\""),
+        format!("specials = [\"TripleStrengthMyomer\"]\n{JENNER}"),
         JENNER.replace("IS.MediumLaser", "IS.UnknownDefense"),
     ] {
         assert_ne!(source, JENNER);
         assert!(
-            BattleUnit::from_template(BattleTemplate::parse("JR7-D", &source).unwrap()).is_err()
+            BattleTemplate::parse("JR7-D", &source)
+                .and_then(BattleUnit::from_template)
+                .is_err()
         );
     }
     let unknown_field = JENNER.replace("computer = 2", "unknown_field = 2");
