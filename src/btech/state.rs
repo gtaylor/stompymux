@@ -14,9 +14,6 @@ pub struct StoredBattleMap {
     /// Allocated membership span, including holes retained after removal.
     #[serde(default)]
     pub(crate) membership_extent: u32,
-    /// None means no TBITS object; empty and zero-filled rows retain independent allocation.
-    #[serde(default)]
-    pub(crate) lookup_bits: Option<Arc<BTreeMap<u32, Vec<u8>>>>,
     /// Optional loading location and its coordinate disclosure policy.
     #[serde(default)]
     pub(crate) cargo_transfer_point: Option<super::BattleCargoTransferPoint>,
@@ -100,12 +97,12 @@ pub struct StoredBattleMap {
 impl StoredBattleMap {
     /// The saved map restriction blocks non-coolant fire between teammates.
     pub fn blocks_friendly_fire(&self) -> bool {
-        self.flags & 256 != 0
+        self.has_flag(super::BattleMapFlag::NoFriendlyFire)
     }
 
     /// Environmental rules are enabled by the map's persisted special-conditions flag.
     pub fn uses_special_rules(&self) -> bool {
-        self.flags & 2 != 0
+        self.has_flag(super::BattleMapFlag::SpecialRules)
     }
 
     /// Whether every tile has a known terrain/elevation interpretation.
@@ -168,7 +165,6 @@ impl StoredBattleMap {
             point.validate(self)?;
         }
         self.validate_artillery()?;
-        self.validate_lookup_bits()?;
         ensure!(
             self.landing_exclusion_order.len() == self.landing_exclusions.len()
                 && self
@@ -1133,11 +1129,6 @@ pub(super) fn replace_map_asset(
     map.building_repair = old.building_repair;
     map.artillery_shots = old.artillery_shots.clone();
     map.landing_exclusions = old.landing_exclusions.clone();
-    map.lookup_bits = old.lookup_bits.clone();
-    if map.lookup_bits.is_some() {
-        // Retained lookup allocation remains a map object after replacing terrain flags.
-        map.flags |= 1;
-    }
     map.membership_extent = old.membership_extent;
     map.landing_exclusion_order = old.landing_exclusion_order.clone();
     map.minefields = old.minefields.clone();
@@ -1167,7 +1158,7 @@ fn map_target(world: &World, id: ObjectId) -> Result<()> {
 }
 
 /// Turn a parsed source into a checked persistent domain record.
-fn map_from_asset(name: &str, mut asset: BattleMapAsset) -> Result<StoredBattleMap> {
+pub(super) fn map_from_asset(name: &str, mut asset: BattleMapAsset) -> Result<StoredBattleMap> {
     ensure!(
         !name.is_empty() && name.len() <= 1024 && !name.contains('\0'),
         "Invalid map asset name"
@@ -1187,7 +1178,6 @@ fn map_from_asset(name: &str, mut asset: BattleMapAsset) -> Result<StoredBattleM
         building_repair: None,
         cargo_transfer_point: None,
         landing_exclusions: Default::default(),
-        lookup_bits: None,
         landing_exclusion_order: Default::default(),
         minefields: Default::default(),
         minefield_order: Default::default(),

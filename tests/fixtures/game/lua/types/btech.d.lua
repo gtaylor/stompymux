@@ -39,7 +39,7 @@
 ---@field height integer
 ---@field gravity integer
 ---@field temperature integer
----@field flags integer
+---@field flags BattleMapFlag[] Map flags the asset enables.
 
 ---@class BattleHex
 ---@field terrain string Snake_case terrain name.
@@ -56,7 +56,7 @@
 ---@field gravity integer
 ---@field temperature integer
 
----@field flags integer
+---@field flags BattleMapFlag[] Enabled map flags.
 ---@field light integer 0 night, 1 twilight, 2 day
 ---@field visibility integer Weather range in hexes
 ---@field sensor_flags integer Disabled perception channels: sensor band bit 0 (1), radar bit 5 (32), probes bit 6 (64).
@@ -130,6 +130,9 @@ function btech_template.loadout(name) end
 ---@field reveal_hint boolean|nil Defaults to false; disclose coordinates in location failures only when true.
 
 local btech_map = {}
+---Terrain names accepted by set_hex and reported by hex and terrain queries.
+---@type BattleTerrainTypes
+btech_map.terrain_types = {}
 
 ---Read the detached saved cargo location, or nil when the map has no location restriction.
 ---@param map integer
@@ -1005,7 +1008,7 @@ function btech_map.add_block(actor, dbref, x, y, radius, team) end
 ---@param dbref integer
 ---@param x integer
 ---@param y integer
----@param terrain string Canonical terrain symbol; a leading dot selects grassland.
+---@param terrain BattleTerrainName Name from btech.map.terrain_types.
 ---@param elevation integer Absolute magnitude capped at nine.
 ---@return BattleMapHexChange
 function btech_map.set_hex(actor, dbref, x, y, terrain, elevation) end
@@ -1075,6 +1078,23 @@ function btech_map.set_cargo_transfer_point(map, point) end
 function btech_map.elevation(map, hex) end
 
 ---@alias BattleTerrainName "grassland"|"road"|"light_forest"|"heavy_forest"|"water"|"ice"|"bridge"|"high_water"|"rough"|"mountains"|"fire"|"smoke"|"snow"|"building"|"wall"|"sand"
+---@class BattleTerrainTypes
+---@field GRASSLAND "grassland"
+---@field ROAD "road"
+---@field LIGHT_FOREST "light_forest"
+---@field HEAVY_FOREST "heavy_forest"
+---@field WATER "water"
+---@field ICE "ice"
+---@field BRIDGE "bridge"
+---@field HIGH_WATER "high_water"
+---@field ROUGH "rough"
+---@field MOUNTAINS "mountains"
+---@field FIRE "fire"
+---@field SMOKE "smoke"
+---@field SNOW "snow"
+---@field BUILDING "building"
+---@field WALL "wall"
+---@field SAND "sand"
 
 ---Read one decoded terrain kind.
 ---@param map DbRef|Object
@@ -3160,6 +3180,8 @@ function btech_unit.set_field(actor, unit, field, value) end
 ---@class BattleRepairOperation
 ---Typed battlefield light constant from btech.map.light_levels.
 ---@class BattleLightLevel
+---Typed battlefield rule switch from btech.map.flags.
+---@class BattleMapFlag
 ---Typed searchlight switching policy from btech.unit.searchlight_modes.
 ---@class BattleSearchlightMode
 
@@ -4017,5 +4039,18 @@ function btech_unit.firevibrabomb(dbref, pilot, weapon) end
 ---@param weapon integer
 ---@return BattleAmmunitionMode
 function btech_unit.fireactive(dbref, pilot, weapon) end
+
+---Whether a map has one rule switch enabled.
+---@param dbref integer Map object dbref.
+---@param flag BattleMapFlag Typed constant from btech.map.flags.
+---@return boolean
+function btech_map.has_flag(dbref, flag) end
+
+---Wizard-only switch of one map rule flag, leaving the others unchanged.
+---@param actor integer
+---@param map integer
+---@param flag BattleMapFlag Typed constant from btech.map.flags.
+---@param enabled boolean
+function btech_map.set_flag(actor, map, flag, enabled) end
 
 return btech

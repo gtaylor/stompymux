@@ -152,6 +152,9 @@ mod ground_proposal;
 mod loadout;
 mod loadout_context;
 mod map;
+mod map_flags;
+mod terrain_rules;
+pub use map_flags::{BattleMapFlag, format_map_flags, parse_map_flags};
 mod mobility;
 mod motion;
 pub use ground_proposal::{
@@ -295,8 +298,9 @@ pub use perception::{
     BattleDetectionChannel, BattleMapPerceptionFlag, BattlePerception, BattlePerceptionProfile,
     BattlePerceptionReport, BattlePerceptionStatus, BattleProbeProfile, BattleRadarProfile,
     BattleRadarTarget, BattleSensorArc, BattleSensorRange, DEFAULT_SENSOR_RANGE,
-    HIDDEN_DETECTION_RANGE, RADAR_RANGE, configure_perception, hex_perception, perceive,
-    perception_factor, perception_profile, perception_report, set_map_perception,
+    HIDDEN_DETECTION_RANGE, RADAR_RANGE, configure_perception, format_perception_flags,
+    hex_perception, parse_perception_flags, perceive, perception_factor, perception_profile,
+    perception_report, set_map_perception,
 };
 
 mod contacts;
@@ -606,7 +610,6 @@ pub use targeting::{BattleHexLock, BattleHexTargetMode, BattleTargetSelection, s
 
 pub use targeting::hex_occupant;
 
-pub(crate) mod map_bits;
 mod map_slots;
 pub use map_slots::map_unit_order;
 
@@ -1322,7 +1325,7 @@ pub(crate) mod map_update_links;
 pub use map_update_links::{BattleMapLinkUpdate, update_map_links_action};
 
 pub(crate) mod map_fields;
-pub use map_fields::set_map_field_action;
+pub use map_fields::{set_map_field_action, set_map_flag_action};
 
 pub(crate) mod map_check;
 pub use map_check::{BattleMapCheck, check_map_action};

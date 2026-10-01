@@ -242,6 +242,9 @@ pub enum BattleMapPerceptionFlag {
 }
 
 impl BattleMapPerceptionFlag {
+    /// Every perception switch, in bit order.
+    pub const ALL: [Self; 3] = [Self::Sensors, Self::Radar, Self::Probes];
+
     /// Persisted `sensor_flags` bit. Positions match the maps shared with the reference server.
     pub fn bit(self) -> i64 {
         match self {
@@ -250,6 +253,46 @@ impl BattleMapPerceptionFlag {
             Self::Probes => 64,
         }
     }
+
+    /// Operator-facing spelling used by `@SETMAP sensorflags` and `@VIEWMAP`.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Sensors => "sensors",
+            Self::Radar => "radar",
+            Self::Probes => "probes",
+        }
+    }
+}
+
+/// Parse a whitespace- or comma-separated list of disabled perception channels; `-` means none.
+pub fn parse_perception_flags(value: &str) -> Result<i64> {
+    let value = value.trim();
+    if value == "-" {
+        return Ok(0);
+    }
+    value
+        .split([' ', '\t', ','])
+        .filter(|name| !name.is_empty())
+        .try_fold(0, |flags, name| {
+            let flag = BattleMapPerceptionFlag::ALL
+                .into_iter()
+                .find(|flag| flag.name().eq_ignore_ascii_case(name))
+                .with_context(|| format!("Unknown sensor flag {name:?}"))?;
+            Ok(flags | flag.bit())
+        })
+}
+
+/// Display the disabled perception channels in `flags`; `-` when none are disabled.
+pub fn format_perception_flags(flags: i64) -> String {
+    let names: Vec<_> = BattleMapPerceptionFlag::ALL
+        .into_iter()
+        .filter(|flag| flags & flag.bit() != 0)
+        .map(BattleMapPerceptionFlag::name)
+        .collect();
+    if names.is_empty() {
+        return "-".into();
+    }
+    names.join(" ")
 }
 
 impl StoredBattleMap {

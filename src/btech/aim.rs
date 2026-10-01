@@ -888,11 +888,7 @@ pub(super) fn occupied_woods(world: &World, target: ObjectId) -> Result<i8> {
     if elevation > i32::from(tile.elevation) + 2 {
         return Ok(0);
     }
-    Ok(match tile.terrain {
-        super::Terrain::LightForest => 1,
-        super::Terrain::HeavyForest => 2,
-        _ => 0,
-    })
+    Ok(tile.terrain.woods_density() as i8)
 }
 
 /// LBX gains two more points against rotorcraft; Stinger distinguishes flight from orbital orbital descents.

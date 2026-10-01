@@ -25,15 +25,6 @@ pub(super) fn entered(
     }
     let pilot = unit.pilot();
     let map = &world.btech.maps()[&position.map];
-    if !map.lookup_bit(
-        super::BattleHexCoordinate {
-            x: i32::from(position.x),
-            y: i32::from(position.y),
-        },
-        super::map_bits::LookupKind::Hangar,
-    )? {
-        return Ok((None, None));
-    }
     let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
     if super::unit_elevation(world, id)? != Some(i32::from(tile.elevation)) {
         return Ok((None, None));

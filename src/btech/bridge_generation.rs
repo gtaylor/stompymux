@@ -13,7 +13,7 @@ impl BattleMapAsset {
                 && self.hexes.len() == usize::from(self.width) * usize::from(self.height),
             "Invalid map grid"
         );
-        if self.flags & 128 != 0 {
+        if self.has_flag(super::BattleMapFlag::NoBridgeGeneration) {
             return Ok(0);
         }
         let mut spans = Vec::new();

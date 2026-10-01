@@ -31,6 +31,7 @@ no_list: true
 - [`emit_as`](emit-as/)
 - [`environment`](environment/)
 - [`fields`](fields/)
+- [`has_flag`](has-flag/)
 - [`hex`](hex/)
 - [`in_blast_zone`](in-blast-zone/)
 - [`inspect`](inspect/)
@@ -50,6 +51,7 @@ no_list: true
 - [`set_cargo_point`](set-cargo-point/)
 - [`set_cargo_transfer_point`](set-cargo-transfer-point/)
 - [`set_field`](set-field/)
+- [`set_flag`](set-flag/)
 - [`set_hex`](set-hex/)
 - [`set_link`](set-link/)
 - [`terrain`](terrain/)
@@ -62,4 +64,6 @@ no_list: true
 
 ## Constants
 
+- [`btech.map.flags`](flags/)
 - [`btech.map.light_levels`](light_levels/)
+- [`btech.map.terrain_types`](terrain_types/)

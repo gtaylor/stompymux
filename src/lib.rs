@@ -393,13 +393,13 @@ pub use btech::clear_recent_fire as clear_battle_recent_fire;
 /// Automatic perception: sensor band, sight, active probes and radar.
 pub use btech::{
     AUTOMATIC_DETECTION_RANGE, BattleAcquisitionRules, BattleActiveProbe, BattleDetectionChannel,
-    BattleMapPerceptionFlag, BattlePerception, BattlePerceptionProfile, BattlePerceptionReport,
-    BattlePerceptionStatus, BattleProbeProfile, BattleRadarProfile, BattleRadarTarget,
-    BattleSensorRange, DEFAULT_SENSOR_RANGE, HIDDEN_DETECTION_RANGE, RADAR_RANGE,
-    configure_perception as configure_battle_perception, hex_perception as battle_hex_perception,
-    perceive as battle_perceive, perception_factor as battle_perception_factor,
-    perception_profile as battle_perception_profile, perception_report as battle_perception_report,
-    set_map_perception as set_battle_map_perception,
+    BattleMapFlag, BattleMapPerceptionFlag, BattlePerception, BattlePerceptionProfile,
+    BattlePerceptionReport, BattlePerceptionStatus, BattleProbeProfile, BattleRadarProfile,
+    BattleRadarTarget, BattleSensorRange, DEFAULT_SENSOR_RANGE, HIDDEN_DETECTION_RANGE,
+    RADAR_RANGE, configure_perception as configure_battle_perception,
+    hex_perception as battle_hex_perception, perceive as battle_perceive,
+    perception_factor as battle_perception_factor, perception_profile as battle_perception_profile,
+    perception_report as battle_perception_report, set_map_perception as set_battle_map_perception,
 };
 
 pub use btech::{
@@ -1098,6 +1098,7 @@ pub use btech::{BattleMapEntrance, BattleMapLink, set_map_link as set_battle_map
 pub use btech::{BattleMapLinkUpdate, update_map_links_action as update_battle_map_links_action};
 
 pub use btech::set_map_field_action as set_battle_map_field_action;
+pub use btech::set_map_flag_action as set_battle_map_flag_action;
 
 pub use btech::{BattleMapCheck, check_map_action as check_battle_map_action};
 

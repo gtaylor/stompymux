@@ -51,7 +51,7 @@
 //|---@field height integer
 //|---@field gravity integer
 //|---@field temperature integer
-//|---@field flags integer
+//|---@field flags BattleMapFlag[] Map flags the asset enables.
 // lua-types-end
 
 // lua-types-begin btech 00007
@@ -74,7 +74,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00009
-//|---@field flags integer
+//|---@field flags BattleMapFlag[] Enabled map flags.
 //|---@field light integer 0 night, 1 twilight, 2 day
 //|---@field visibility integer Weather range in hexes
 //|---@field sensor_flags integer Disabled perception channels: sensor band bit 0 (1), radar bit 5 (32), probes bit 6 (64).
@@ -162,6 +162,9 @@
 
 // lua-types-begin btech 00023
 //|local btech_map = {}
+//|---Terrain names accepted by set_hex and reported by hex and terrain queries.
+//|---@type BattleTerrainTypes
+//|btech_map.terrain_types = {}
 // lua-types-end
 
 // lua-types-begin btech 00031
@@ -658,6 +661,23 @@
 
 // lua-types-begin btech 00142
 //|---@alias BattleTerrainName "grassland"|"road"|"light_forest"|"heavy_forest"|"water"|"ice"|"bridge"|"high_water"|"rough"|"mountains"|"fire"|"smoke"|"snow"|"building"|"wall"|"sand"
+//|---@class BattleTerrainTypes
+//|---@field GRASSLAND "grassland"
+//|---@field ROAD "road"
+//|---@field LIGHT_FOREST "light_forest"
+//|---@field HEAVY_FOREST "heavy_forest"
+//|---@field WATER "water"
+//|---@field ICE "ice"
+//|---@field BRIDGE "bridge"
+//|---@field HIGH_WATER "high_water"
+//|---@field ROUGH "rough"
+//|---@field MOUNTAINS "mountains"
+//|---@field FIRE "fire"
+//|---@field SMOKE "smoke"
+//|---@field SNOW "snow"
+//|---@field BUILDING "building"
+//|---@field WALL "wall"
+//|---@field SAND "sand"
 // lua-types-end
 
 // lua-types-begin btech 00145
@@ -1603,6 +1623,8 @@
 //|---@class BattleRepairOperation
 //|---Typed battlefield light constant from btech.map.light_levels.
 //|---@class BattleLightLevel
+//|---Typed battlefield rule switch from btech.map.flags.
+//|---@class BattleMapFlag
 //|---Typed searchlight switching policy from btech.unit.searchlight_modes.
 //|---@class BattleSearchlightMode
 // lua-types-end
@@ -2088,6 +2110,6 @@
 //|btech.tactical = btech_tactical
 // lua-types-end
 
-// lua-types-begin btech 00552
+// lua-types-begin btech 00554
 //|return btech
 // lua-types-end

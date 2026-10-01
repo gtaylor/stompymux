@@ -1,5 +1,5 @@
 //! Persistent flooded equipment, submerged armor breaches and immediate BattleMech falls.
-use super::{BattleFallRules, BattlePosture, BattleSection, BattleSectionExposureReport, Terrain};
+use super::{BattleFallRules, BattlePosture, BattleSection, BattleSectionExposureReport};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
@@ -101,12 +101,7 @@ fn flood_section_inner(
     } else {
         -elevation
     };
-    if !matches!(
-        tile.terrain,
-        Terrain::Water | Terrain::Ice | Terrain::Bridge
-    ) || elevation >= 0
-        || depth <= 0
-    {
+    if !tile.terrain.holds_water() || elevation >= 0 || depth <= 0 {
         return Ok(None);
     }
     let leg = unit.chassis().is_leg(section);

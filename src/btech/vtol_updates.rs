@@ -58,7 +58,7 @@ pub(super) fn advance_all(
             .get(&position.map)
             .context("Aircraft map is unavailable")?;
         if matches!(flight.phase, BattleVtolFlightPhase::Launching { .. }) {
-            let underground = map.flags & 16 != 0;
+            let underground = map.has_flag(super::BattleMapFlag::Underground);
             let result = world
                 .btech
                 .vehicles

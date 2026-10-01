@@ -77,18 +77,12 @@ fn terrain_los_with_endpoint(
     let end_ground = f64::from(destination.standing_height());
     let start_height = airborne.0.unwrap_or(start_ground) + eyes.0;
     let end_height = airborne.1.unwrap_or(end_ground) + eyes.1;
-    let water_terrain =
-        |terrain| matches!(terrain, Terrain::Water | Terrain::Ice | Terrain::Bridge);
-    let underwater = water_terrain(source.terrain) && start_height < 0.0;
-    let target_underwater = water_terrain(destination.terrain) && end_height < 0.0;
-    let both_worlds = water_terrain(source.terrain) && start_ground == -1.0;
-    let target_both_worlds = water_terrain(destination.terrain) && end_ground == -1.0;
+    let underwater = source.terrain.holds_water() && start_height < 0.0;
+    let target_underwater = destination.terrain.holds_water() && end_height < 0.0;
+    let both_worlds = source.terrain.holds_water() && start_ground == -1.0;
+    let target_both_worlds = destination.terrain.holds_water() && end_ground == -1.0;
     let mut report = BattleTerrainLos {
-        target_woods: match visible_destination.terrain {
-            Terrain::LightForest => 1,
-            Terrain::HeavyForest => 2,
-            _ => 0,
-        },
+        target_woods: visible_destination.terrain.woods_density(),
         ..BattleTerrainLos::default()
     };
     if start_height > 10.0 && end_height > 10.0 {
@@ -111,7 +105,7 @@ fn terrain_los_with_endpoint(
         let sight_height = start_height + (end_height - start_height) * index as f64 / steps as f64;
         let intervening = index < steps;
         if underwater {
-            if !water_terrain(ground.terrain)
+            if !ground.terrain.holds_water()
                 || (ground.terrain != Terrain::Bridge && height >= sight_height)
                 || (!target_both_worlds && sight_height > 0.0)
             {
@@ -140,14 +134,8 @@ fn terrain_los_with_endpoint(
                 report.water = report.water.saturating_add(1).min(7);
             }
             match tile.terrain {
-                Terrain::LightForest | Terrain::HeavyForest if intervening => {
-                    report.woods = (report.woods
-                        + if tile.terrain == Terrain::LightForest {
-                            1
-                        } else {
-                            2
-                        })
-                    .min(15);
+                terrain if terrain.is_woods() && intervening => {
+                    report.woods = (report.woods + terrain.woods_density()).min(15);
                 }
                 Terrain::Smoke if intervening => report.smoke = true,
                 Terrain::Fire if intervening => report.fire = true,
@@ -441,7 +429,6 @@ mod tests {
             building: Default::default(),
             building_repair: None,
             landing_exclusions: Default::default(),
-            lookup_bits: None,
             landing_exclusion_order: Default::default(),
             minefields: Default::default(),
             minefield_order: Default::default(),

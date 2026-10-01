@@ -339,12 +339,6 @@ pub fn update_battle_map_links_trusted_action(
                     .get(&map)
                     .context("Map not found")?
                     .clone();
-                candidate
-                    .btech
-                    .maps
-                    .get_mut(&map)
-                    .unwrap()
-                    .clear_lookup_kind(super::map_bits::LookupKind::Hangar);
                 if let Some(parent) = parent {
                     let stored = candidate.btech.maps.get_mut(&map).unwrap();
                     stored.building_parent = parent.0;

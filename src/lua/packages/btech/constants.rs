@@ -972,6 +972,72 @@ pub(super) static LIGHT_LEVELS: Catalog = Catalog {
     ],
 };
 
+/// Battlefield rule switches; values are the persisted `BattleMapFlag` bits.
+pub(super) static MAP_FLAGS: Catalog = Catalog {
+    qualified_name: "btech.map.flags",
+    entries: &[
+        Entry {
+            name: "SPECIAL_RULES",
+            value: 2,
+        },
+        Entry {
+            name: "VACUUM",
+            value: 4,
+        },
+        Entry {
+            name: "PERMANENT_FIRE",
+            value: 8,
+        },
+        Entry {
+            name: "UNDERGROUND",
+            value: 16,
+        },
+        Entry {
+            name: "DARK",
+            value: 32,
+        },
+        Entry {
+            name: "INDESTRUCTIBLE_BRIDGES",
+            value: 64,
+        },
+        Entry {
+            name: "NO_BRIDGE_GENERATION",
+            value: 128,
+        },
+        Entry {
+            name: "NO_FRIENDLY_FIRE",
+            value: 256,
+        },
+        Entry {
+            name: "NO_PHYSICAL_ATTACKS",
+            value: 512,
+        },
+    ],
+};
+
+/// Decode a checked `btech.map.flags` constant.
+pub(super) fn require_map_flag(
+    value: Value,
+    argument: usize,
+) -> mlua::Result<crate::BattleMapFlag> {
+    let bit = i64::from(require(value, argument, "flag", &MAP_FLAGS)?);
+    crate::BattleMapFlag::ALL
+        .into_iter()
+        .find(|flag| flag.bit() == bit)
+        .ok_or_else(|| mlua::Error::external("unknown map flag"))
+}
+
+/// Push every map flag set in `flags` as an array of `btech.map.flags` constants.
+pub(super) fn push_map_flags(lua: &Lua, flags: i64) -> mlua::Result<Table> {
+    let result = lua.create_table()?;
+    for flag in crate::BattleMapFlag::ALL {
+        if flag.is_set(flags) {
+            result.raw_push(push(lua, &MAP_FLAGS, flag.bit() as i32)?)?;
+        }
+    }
+    Ok(result)
+}
+
 /// Searchlight switching policies accepted by `btech.unit.slite`; zero is automatic.
 pub(super) static SEARCHLIGHT_MODES: Catalog = Catalog {
     qualified_name: "btech.unit.searchlight_modes",
@@ -1010,6 +1076,77 @@ pub(super) static DETECTION_CHANNELS: StringCatalog = StringCatalog {
         StringEntry {
             name: "PROBE",
             value: "probe",
+        },
+    ],
+};
+
+/// Terrain names accepted by `btech.map.set_hex` and reported by map tile queries.
+pub(super) static TERRAIN_TYPES: StringCatalog = StringCatalog {
+    qualified_name: "btech.map.terrain_types",
+    entries: &[
+        StringEntry {
+            name: "GRASSLAND",
+            value: "grassland",
+        },
+        StringEntry {
+            name: "ROAD",
+            value: "road",
+        },
+        StringEntry {
+            name: "LIGHT_FOREST",
+            value: "light_forest",
+        },
+        StringEntry {
+            name: "HEAVY_FOREST",
+            value: "heavy_forest",
+        },
+        StringEntry {
+            name: "WATER",
+            value: "water",
+        },
+        StringEntry {
+            name: "ICE",
+            value: "ice",
+        },
+        StringEntry {
+            name: "BRIDGE",
+            value: "bridge",
+        },
+        StringEntry {
+            name: "HIGH_WATER",
+            value: "high_water",
+        },
+        StringEntry {
+            name: "ROUGH",
+            value: "rough",
+        },
+        StringEntry {
+            name: "MOUNTAINS",
+            value: "mountains",
+        },
+        StringEntry {
+            name: "FIRE",
+            value: "fire",
+        },
+        StringEntry {
+            name: "SMOKE",
+            value: "smoke",
+        },
+        StringEntry {
+            name: "SNOW",
+            value: "snow",
+        },
+        StringEntry {
+            name: "BUILDING",
+            value: "building",
+        },
+        StringEntry {
+            name: "WALL",
+            value: "wall",
+        },
+        StringEntry {
+            name: "SAND",
+            value: "sand",
         },
     ],
 };
@@ -1334,6 +1471,8 @@ pub(super) fn install(lua: &Lua, package: &Table) -> mlua::Result<()> {
 
     let map = table(lua, package, "map")?;
     map.raw_set("light_levels", namespace(lua, &LIGHT_LEVELS)?)?;
+    map.raw_set("flags", namespace(lua, &MAP_FLAGS)?)?;
+    map.raw_set("terrain_types", string_namespace(lua, &TERRAIN_TYPES)?)?;
     package.raw_set("map", map)?;
 
     let repair = table(lua, package, "repair")?;
@@ -1378,6 +1517,26 @@ mod tests {
             );
         }
         assert_eq!(LIGHT_LEVELS.entries.len(), 3);
+    }
+
+    /// Terrain constants name every Rust terrain in order.
+    #[test]
+    fn terrain_type_catalog_matches_terrain_names() {
+        assert_eq!(TERRAIN_TYPES.entries.len(), crate::Terrain::ALL.len());
+        for (entry, terrain) in TERRAIN_TYPES.entries.iter().zip(crate::Terrain::ALL) {
+            assert_eq!(entry.value, terrain.name());
+            assert_eq!(entry.name, terrain.name().to_ascii_uppercase());
+        }
+    }
+
+    /// Map flag constants match the named Rust flags bit for bit.
+    #[test]
+    fn map_flag_catalog_matches_battle_map_flags() {
+        assert_eq!(MAP_FLAGS.entries.len(), crate::BattleMapFlag::ALL.len());
+        for (entry, flag) in MAP_FLAGS.entries.iter().zip(crate::BattleMapFlag::ALL) {
+            assert_eq!(i64::from(entry.value), flag.bit());
+            assert_eq!(entry.name, flag.name().to_ascii_uppercase());
+        }
     }
 
     /// Searchlight mode constants decode to the matching mode and command spelling.

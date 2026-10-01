@@ -46,7 +46,7 @@ Alias: `"LeftArm"|"RightArm"|"LeftTorso"|"RightTorso"|"CenterTorso"|"LeftLeg"|"R
 - `height`: `integer`
 - `gravity`: `integer`
 - `temperature`: `integer`
-- `flags`: `integer`
+- `flags`: `BattleMapFlag[]` — Map flags the asset enables.
 
 ## BattleHex
 
@@ -589,6 +589,25 @@ Alias: `{mode: "offset", offset: integer}|{mode: "exact", x: integer, y: integer
 ## BattleTerrainName
 
 Alias: `"grassland"|"road"|"light_forest"|"heavy_forest"|"water"|"ice"|"bridge"|"high_water"|"rough"|"mountains"|"fire"|"smoke"|"snow"|"building"|"wall"|"sand"`
+
+## BattleTerrainTypes
+
+- `GRASSLAND`: `"grassland"`
+- `ROAD`: `"road"`
+- `LIGHT_FOREST`: `"light_forest"`
+- `HEAVY_FOREST`: `"heavy_forest"`
+- `WATER`: `"water"`
+- `ICE`: `"ice"`
+- `BRIDGE`: `"bridge"`
+- `HIGH_WATER`: `"high_water"`
+- `ROUGH`: `"rough"`
+- `MOUNTAINS`: `"mountains"`
+- `FIRE`: `"fire"`
+- `SMOKE`: `"smoke"`
+- `SNOW`: `"snow"`
+- `BUILDING`: `"building"`
+- `WALL`: `"wall"`
+- `SAND`: `"sand"`
 
 ## BattleLineOfSight
 

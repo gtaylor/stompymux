@@ -76,7 +76,7 @@ impl BattleUnit {
 /// Validate the currently supported route on launch and persisted-world loading.
 pub(super) fn validate_route(map: &super::StoredBattleMap, path: BattleJumpPath) -> Result<()> {
     ensure!(
-        map.flags & 16 == 0,
+        !map.has_flag(super::BattleMapFlag::Underground),
         "The underground ceiling prevents jumping"
     );
     let start = path.sample(0.0, path.movement_points())?;
@@ -340,7 +340,8 @@ fn launch(
         "You haven't finished standing up yet."
     );
     ensure!(
-        map.context("Unit is not on a battlefield")?.flags & 16 == 0,
+        !map.context("Unit is not on a battlefield")?
+            .has_flag(super::BattleMapFlag::Underground),
         "The underground ceiling prevents jumping"
     );
     let checked = unit.stagger().action_level() > 0;

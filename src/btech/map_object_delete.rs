@@ -16,13 +16,12 @@ pub enum BattleMapObjectKind {
     Leave,
     Entrance,
     Linked,
-    Bits,
     LandingBlock,
 }
 
 impl BattleMapObjectKind {
     /// Stable operator spellings; prefix matching follows this order.
-    pub const ALL: [Self; 10] = [
+    pub const ALL: [Self; 9] = [
         Self::Fire,
         Self::Smoke,
         Self::Decoration,
@@ -31,7 +30,6 @@ impl BattleMapObjectKind {
         Self::Leave,
         Self::Entrance,
         Self::Linked,
-        Self::Bits,
         Self::LandingBlock,
     ];
     /// Canonical spelling used in operator confirmations.
@@ -45,7 +43,6 @@ impl BattleMapObjectKind {
             Self::Leave => "LEAVE",
             Self::Entrance => "ENTRA",
             Self::Linked => "LINKED",
-            Self::Bits => "TBITS",
             Self::LandingBlock => "BLZ",
         }
     }
@@ -96,23 +93,11 @@ pub fn delete_map_objects_action(
             "A type or coordinate selector is required"
         );
         let mut count = 0;
-        let mut rebuild_mines = kind == Some(BattleMapObjectKind::Mine) && coordinate.is_none();
         for selected in BattleMapObjectKind::ALL
             .into_iter()
             .filter(|selected| kind.is_none_or(|kind| kind == *selected))
         {
-            let removed = remove_kind(&mut scripts.world_mut(), map, selected, coordinate)?;
-            rebuild_mines |= selected == BattleMapObjectKind::Mine && removed > 0;
-            count += removed;
-        }
-        if rebuild_mines {
-            scripts
-                .world_mut()
-                .btech
-                .maps
-                .get_mut(&map)
-                .unwrap()
-                .rebuild_mine_lookup()?;
+            count += remove_kind(&mut scripts.world_mut(), map, selected, coordinate)?;
         }
         let text = match (kind, coordinate) {
             (Some(kind), Some(p)) => {
@@ -165,16 +150,6 @@ fn remove_kind(
     coordinate: Option<BattleHexCoordinate>,
 ) -> Result<usize> {
     let record = world.btech.maps().get(&map).context("Map not found")?;
-    if kind == BattleMapObjectKind::Bits {
-        // Rust-created and restored information objects use canonical zero coordinates.
-        if record.has_lookup_object()
-            && coordinate.is_none_or(|p| p == BattleHexCoordinate { x: 0, y: 0 })
-        {
-            world.btech.maps.get_mut(&map).unwrap().lookup_bits = None;
-            return Ok(1);
-        }
-        return Ok(0);
-    }
     let entries = object_positions(record, kind);
     let mut count = 0;
     for (slot, position) in entries
@@ -214,7 +189,6 @@ fn remove_kind(
             BattleMapObjectKind::LandingBlock => {
                 super::set_landing_exclusion(world, map, slot, None)?
             }
-            BattleMapObjectKind::Bits => unreachable!(),
         }
         count += 1;
     }
@@ -314,7 +288,6 @@ pub(super) fn object_positions(
             .ordered_landing_exclusions()
             .map(|(&slot, d)| (MapObjectSlot::Stored(slot), d.coordinate))
             .collect(),
-        BattleMapObjectKind::Bits => Vec::new(),
     };
     if let Some(stored_kind) = restoration_kind(kind) {
         positions.extend(

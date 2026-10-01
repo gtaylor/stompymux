@@ -104,13 +104,6 @@ fn resolve(
         }
     }
     world.attempt(|world| {
-        if neighbors {
-            world.btech.maps.get_mut(&map).unwrap().set_lookup_bit(
-                mine.coordinate,
-                super::map_bits::LookupKind::Mine,
-                false,
-            )?;
-        }
         let mut report = BattleMineBlastReport {
             map,
             mine,
@@ -138,12 +131,6 @@ fn resolve(
                 super::set_minefield(world, map, ordinal, None)?;
             }
         }
-        world
-            .btech
-            .maps
-            .get_mut(&map)
-            .unwrap()
-            .rebuild_mine_lookup()?;
         world.btech.validate_action(world)?;
         Ok(report)
     })
@@ -160,11 +147,7 @@ fn hit_hex(
 ) -> Result<()> {
     let tile = world.btech.maps()[&report.map]
         .base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
-    let ground = if matches!(tile.terrain, Terrain::Water | Terrain::Ice) {
-        -i32::from(tile.elevation)
-    } else {
-        i32::from(tile.elevation)
-    };
+    let ground = i32::from(tile.surface_height());
     let neighbor = coordinate != report.mine.coordinate;
     let inferno = report.mine.kind == BattleMineKind::Inferno;
     // Rear armor remains selected after a rear-facing occupant within this blast cell.

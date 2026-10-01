@@ -139,13 +139,7 @@ impl super::BattleVehicle {
 
 /// Speed divisor a vehicle's terrain imposes on its desired throttle.
 fn terrain_divisor(terrain: Terrain, movement: BattleVehicleMovement) -> f64 {
-    match terrain {
-        Terrain::Rough | Terrain::Snow | Terrain::LightForest => 2.0,
-        Terrain::Mountains | Terrain::HeavyForest => 3.0,
-        // Loose sand bogs down wheels; tracks and hover skirts cross it like clear ground.
-        Terrain::Sand if movement == BattleVehicleMovement::Wheeled => 2.0,
-        _ => 1.0,
-    }
+    terrain.ground_speed_divisor(movement == BattleVehicleMovement::Wheeled)
 }
 
 #[cfg(test)]

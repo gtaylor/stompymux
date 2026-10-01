@@ -3,7 +3,6 @@ use super::{BattleHex, BattleHexCoordinate, Terrain};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
-use std::sync::Arc;
 
 /// A committed woodland reduction; the enclosing attack owns notifications.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -52,9 +51,11 @@ pub fn apply_woodland_clearing(
         ..before
     };
     world.attempt(|world| {
-        let record = world.btech.maps.get_mut(&map).unwrap();
-        let index = (i64::from(coordinate.y) * record.width + i64::from(coordinate.x)) as usize;
-        Arc::make_mut(record.terrain.as_mut().unwrap())[index] = after;
+        world.btech.maps.get_mut(&map).unwrap().write_hex(
+            i64::from(coordinate.x),
+            i64::from(coordinate.y),
+            after,
+        )?;
         world.btech.validate(world)?;
         Ok(BattleWoodlandChange {
             map,

@@ -36,9 +36,9 @@ Inspect the BattleTech foundation:
 directory. `inspect` reports saved map or unit metadata for a database object.
 `status` reports the loaded identity counts and implementation status.
 
-Map assets containing `&` fire terrain automatically enable permanent fires
-(map flag 8). An explicit `flags: gravity temperature` line overrides that
-default; retain flag 8 to preserve those fires when saving. Temporary-fire `>`
+Map assets containing `&` fire terrain automatically enable the `permanent_fire`
+map flag. An explicit `flags: gravity temperature` line overrides that
+default; retain bit 8 (`permanent_fire`) to preserve those fires when saving. Temporary-fire `>`
 and smoke `:` markers load as grassland.
 
 Unknown terrain characters also load as grassland, retaining their elevation.
@@ -94,7 +94,7 @@ does not establish complete gameplay parity. Maps without a saved terrain dictio
 tile queries are available. Reload replaces terrain from the asset; it cannot
 recover saved terrain edits. It requires unchanged dimensions, no units on the
 map. Supported map objects are retained; unrecognized object types prevent saving
-the reload. Terrain and mine/building changes invalidate saved lookup caches.
+the reload. Terrain changes invalidate saved line-of-sight caches.
 
 `map-create` registers an existing room or thing. Both map operations require
 control of the target and save terrain and environment together. A failed save
@@ -485,20 +485,42 @@ and any surface-break reports. Terrain, dice, occupant effects and notifications
 roll back together if the action fails.
 
 `ADDHEX <x> <y> <terrain> <elevation>` changes one base tile on the wizard's
-current map. Use a map terrain symbol (`.` for grassland); elevation is converted
+current map. Use a terrain symbol from the table below; elevation is converted
 to a positive magnitude and capped at nine. Units retain their physical altitude
 and current movement or flight state. Editing ice into water is a direct terrain
 edit; use `DELICE` to melt ice with normal occupant falls and flooding. Temporary
 fire/smoke overlays remain independent of the underlying tile. Lua offers
-`btech.map.set_hex(actor, map, x, y, terrain, elevation)` and returns the previous
-and resulting tiles. Occupied maps can be edited and saved without reloading
-their source assets.
+`btech.map.set_hex(actor, map, x, y, terrain, elevation)`, taking a name from
+`btech.map.terrain_types`, and returns the previous and resulting tiles. Occupied
+maps can be edited and saved without reloading their source assets.
+
+| Symbol | Terrain | Lua name | Elevation digit means |
+| --- | --- | --- | --- |
+| `.` | Grassland | `grassland` | height |
+| `#` | Road | `road` | height |
+| `` ` `` | Light forest | `light_forest` | height |
+| `"` | Heavy forest | `heavy_forest` | height |
+| `~` | Water | `water` | depth |
+| `-` | Ice | `ice` | depth of the water below |
+| `/` | Bridge | `bridge` | deck height |
+| `?` | High water | `high_water` | height |
+| `%` | Rough | `rough` | height |
+| `^` | Mountains | `mountains` | height |
+| `&` | Fire | `fire` | height |
+| `:` | Smoke | `smoke` | height |
+| `+` | Snow | `snow` | height |
+| `@` | Building | `building` | height |
+| `=` | Wall | `wall` | height |
+| `}` | Sand | `sand` | height |
+
+In map files `.` is grassland, `'` is light forest, and `>` (temporary fire) and
+`:` load as grassland.
 
 `@MAPEMIT <message>` broadcasts to the occupants of running units on the wizard's
 current map and privately confirms `Message sent!`. Unconscious crews do not receive
 the message. No sensor contact
 or line of sight is required. Players standing directly in the map room are
-outside this cockpit audience. Lua provides `btech.map.emit(actor, map, text)`,
+outside this cockpit audience. Lua provides `btech.map.emit_as(actor, map, text)`,
 returning eligible unit dbrefs in battlefield slot order. If delivery fails, all
 staged messages are discarded together.
 
@@ -541,7 +563,7 @@ the map; other wizards shut down and clear units after loading. Shutdown falls
 therefore use the newly loaded terrain and conditions. Units keep their physical
 altitude until movement resolves it. Other map settings, including cloud base,
 remain intact. Invalid assets or crops that exclude placed units fail atomically;
-use `CLEARMECHS` first for such crops. Lua uses `btech.map.load(actor, map, name)`.
+use `CLEARMECHS` first for such crops. Lua uses `btech.map.load_as(actor, map, name)`.
 
 ## Link opposite map edges
 
@@ -584,8 +606,8 @@ The reported count covers selected records, excluding reciprocal cleanup.
 
 Lua uses `btech.map.delete_objects(actor, map, type, x, y)`; omit type to select all
 kinds at a coordinate, or omit both coordinates to select a type across the map.
-Rust derives mine/building lookups from their definitions. `DELOBJ TBITS` reports
-that there is no separate lookup cache to delete and leaves those definitions active.
+Mine coverage and building entry are read directly from the mine and entrance
+records, so a new minefield (including one laid by artillery) is live at once.
 
 ## List map contents
 
@@ -634,9 +656,24 @@ match in full without regard to case. Lua uses
 Writable fields are `cf`, `cfmax`, `regen_factor`, `gravity`, `temperature`,
 `maplight`, `mapname`, `mapvis`, `winddir`, `windspeed`, `cloudbase`, `flags`
 and `sensorflags`. Dimensions, `maxvis`, `buildonmap` and `firstfree` are read-only.
-`sensorflags` switches perception off for everyone on the map: bit 0 (`a`, value 1)
-disables the sensor band, bit 5 (`f`, 32) radar and bit 6 (`g`, 64) active probes.
-Other bits have no effect.
+`flags` and `sensorflags` take a list of names separated by spaces or commas,
+which replaces the current set; `-` clears every flag. `@VIEWMAP` shows the same
+names. Map `flags` are:
+
+| Name | Effect |
+| --- | --- |
+| `special_rules` | Environmental rules (gravity, temperature, vacuum) apply. |
+| `vacuum` | The map has no atmosphere. |
+| `permanent_fire` | Authored fire never burns out. |
+| `underground` | A ceiling blocks jumping and flight; artillery needs a spotter. |
+| `dark` | Units see only terrain in their line of sight. |
+| `indestructible_bridges` | Weapon fire cannot break bridges. |
+| `no_bridge_generation` | Loading does not turn roads over water into bridges. |
+| `no_friendly_fire` | Teammates cannot damage each other with non-coolant weapons. |
+| `no_physical_attacks` | Physical attacks are not allowed. |
+
+`sensorflags` switches perception off for everyone on the map: `sensors`
+disables the sensor band, `radar` radar and `probes` active probes.
 Light accepts 0–2 and visibility 0–60. Wind direction must be 0–359 and speed
 nonnegative. Integrity must stay between zero and its maximum; set the maximum
 first when creating a structure. Numeric input must fit a signed 32-bit integer.
@@ -646,10 +683,7 @@ its unsigned value: 1000 becomes 127, -1 becomes 255 and -1000 becomes 128.
 Use `SETCOND` to enter gravity directly as 0–255. Names retain at most 29 UTF-8 bytes without
 splitting a character. Renaming does not reload terrain.
 
-Bitvectors accept a signed integer or letters `a`–`z`, then `A`–`F`, for bits
-0–31. `!` clears the following letter from a value constructed from zero;
-`ab!a` yields only bit `b`. Invalid letters or incomplete negation reject the
-edit. Environment field edits preserve flags; use `SETCOND` for its combined
+Unknown flag names reject the edit. Environment field edits preserve flags; use `SETCOND` for its combined
 condition and flag update. These edits do not advance time or schedule repairs.
 
 

@@ -260,6 +260,8 @@ pub(in crate::lua::packages) fn install(lua: &Lua, api: &Table, mux: &Table) -> 
         ("map", "map_create", "create"),
         ("map", "map_reload", "reload"),
         ("map", "map_conditions", "conditions"),
+        ("map", "map_has_flag", "has_flag"),
+        ("map", "map_set_flag", "set_flag"),
         ("map", "map_cloud", "cloud_base"),
         ("map", "map_environment", "environment"),
         ("map", "map_add_ice", "add_ice"),

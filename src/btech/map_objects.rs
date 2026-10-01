@@ -23,12 +23,10 @@ pub(super) fn clear(world: &mut World, id: ObjectId) -> Result<()> {
     map.minefields = Default::default();
     map.minefield_order = Default::default();
     map.landing_exclusions = Default::default();
-    map.lookup_bits = None;
     map.landing_exclusion_order = Default::default();
     map.building_entrances = Default::default();
     map.building_entry_points = Default::default();
     map.building_exits = Default::default();
     map.linked_markers = Default::default();
-    map.flags &= !1;
     Ok(())
 }

@@ -43,7 +43,6 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
                 building_repair: None,
                 cargo_transfer_point: None,
                 landing_exclusions: Default::default(),
-                lookup_bits: None,
                 landing_exclusion_order: Default::default(),
                 minefields: Default::default(),
             minefield_order: Default::default(),
@@ -100,7 +99,6 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
     super::btech_landing_exclusions::load(c, &mut maps).await?;
     super::btech_wrapping::load(c, &mut maps).await?;
     super::btech_minefields::load(c, &mut maps).await?;
-    super::btech_map_bits::load(c, &mut maps).await?;
     super::btech_building_repair::load(c, &mut maps, clock).await?;
     super::btech_decorations::load(c, &mut maps, clock).await?;
     super::btech_static_decorations::load(c, &mut maps).await?;
@@ -467,7 +465,6 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
     changed |= super::btech_minefields::save(c, before, after).await?;
     changed |= super::btech_building_repair::save(c, before, after).await?;
     changed |= super::btech_artillery::save(c, before, after).await?;
-    changed |= super::btech_map_bits::save(c, before, after).await?;
     Ok(changed)
 }
 

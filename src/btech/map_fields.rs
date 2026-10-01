@@ -65,8 +65,8 @@ fn edit(
         "gravity" => record.gravity = i64::from(integer()?.clamp(-128, 127) as i8 as u8),
         "temperature" => record.temperature = i64::from(integer()?.clamp(-128, 127)),
         "cloudbase" => record.cloud_base = short()? as i16,
-        "flags" => record.flags = super::field_bits::parse(value)?,
-        "sensorflags" => record.sensor_flags = super::field_bits::parse(value)?,
+        "flags" => record.flags = super::parse_map_flags(value)?,
+        "sensorflags" => record.sensor_flags = super::parse_perception_flags(value)?,
         "mapname" => {
             ensure!(!value.chars().any(char::is_control), "Invalid map name");
             let mut end = value.len().min(29);
@@ -110,6 +110,26 @@ pub fn set_map_field_action(
         scripts.effects.validate()?;
         Ok(())
     })
+}
+
+/// Switch one named map flag with the same authority and rollback as `@SETMAP flags`.
+pub fn set_map_flag_action(
+    scripts: &Scripts,
+    config: &Config,
+    actor: ObjectId,
+    map: ObjectId,
+    flag: super::BattleMapFlag,
+    enabled: bool,
+) -> Result<()> {
+    let flags = scripts
+        .world()
+        .btech
+        .maps()
+        .get(&map)
+        .context("Map not found")?
+        .flags;
+    let names = super::format_map_flags(flag.apply(flags, enabled));
+    set_map_field_action(scripts, config, actor, map, "flags", &names)
 }
 
 /// Native SETMAP uses the selected map and preserves spaces in the supplied value.

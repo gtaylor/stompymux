@@ -94,10 +94,12 @@ async fn rebuild_order_native_lua_rollback_and_restart() {
         persistence::load(&config.database()).await.unwrap().btech,
         world.btech
     );
-    let lookup = serde_json::to_value(&world.btech).unwrap();
-    assert_eq!(
-        lookup["maps"][root.0.to_string()]["lookup_bits"],
-        serde_json::json!({"1":[8,0]})
+    let stale_entrance = BattleHexCoordinate { x: 1, y: 1 };
+    assert!(
+        world.btech.maps()[&root]
+            .building_at(stale_entrance)
+            .unwrap()
+            .is_some()
     );
     let before = world.btech.clone();
     let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
@@ -124,12 +126,18 @@ async fn rebuild_order_native_lua_rollback_and_restart() {
     );
     assert_eq!(native.world().btech, lua.world().btech);
     let saved = native.world().clone();
-    // Rebuilding marks authored entrances at zero and clears the stale hangar at (1,1).
-    // The cleared row stays allocated and survives persistence below.
-    let lookup = serde_json::to_value(&saved.btech).unwrap();
-    assert_eq!(
-        lookup["maps"][root.0.to_string()]["lookup_bits"],
-        serde_json::json!({"0":[2,0],"1":[0,0]})
+    // Rebuilding replaces the stale entrance at (1,1) with authored entrances on row zero.
+    assert!(
+        saved.btech.maps()[&root]
+            .building_at(stale_entrance)
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        saved.btech.maps()[&root]
+            .building_entrances()
+            .values()
+            .all(|entrance| entrance.coordinate.y == 0)
     );
 
     assert_eq!(

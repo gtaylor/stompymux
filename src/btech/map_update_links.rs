@@ -105,12 +105,6 @@ pub fn update_map_links_action(
                         .get(&map)
                         .context("Map not found")?
                         .clone();
-                    world
-                        .btech
-                        .maps
-                        .get_mut(&map)
-                        .unwrap()
-                        .clear_lookup_kind(super::map_bits::LookupKind::Hangar);
                     if let Some(parent) = parent {
                         world.btech.maps.get_mut(&map).unwrap().building_parent = parent.0;
                         world.btech.maps.get_mut(&map).unwrap().building_exits = Default::default();

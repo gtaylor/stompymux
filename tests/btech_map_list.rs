@@ -220,14 +220,12 @@ async fn object_listing_shares_native_lua_order_and_owned_details() {
             .unwrap()
     );
     let lines = output(&lua);
-    assert_eq!(lines.len(), 16);
+    assert_eq!(lines.len(), 15);
     assert_eq!(lines[0], "X   Y   Type  obj   dc   ds     di");
     assert_eq!(lines[1], "--------------------------------------------");
-    assert_eq!(lines[15], lines[1]);
-    assert_eq!(lines[12], "--- MAP/HANGAR INFORMATION OBJECT ---");
-    let kinds: Vec<_> = lines[2..15]
+    assert_eq!(lines[14], lines[1]);
+    let kinds: Vec<_> = lines[2..14]
         .iter()
-        .filter(|line| !line.contains("MAP/HANGAR INFORMATION"))
         .map(|line| line.split_whitespace().nth(2).unwrap())
         .collect();
     assert_eq!(
@@ -240,7 +238,7 @@ async fn object_listing_shares_native_lua_order_and_owned_details() {
     assert_eq!(lines[2], "1   1   FIRE  0     32   0      0");
     assert_eq!(lines[3], "2   2   SMOKE 0     32   20     0");
     assert_eq!(lines[4], "1   1   DECO  0     126  0      0");
-    assert_eq!(lines[14], "1   1   BLZ   1     0    0      1");
+    assert_eq!(lines[13], "1   1   BLZ   1     0    0      1");
     let text = support::run_text(&native, &config, ObjectId(1), 1, "list objs");
     for line in lines {
         assert!(text.contains(&line), "Missing {line:?}");

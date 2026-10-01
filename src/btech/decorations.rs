@@ -123,8 +123,7 @@ pub(super) fn install_decoration(
     for records in &mut map.static_decorations {
         Arc::make_mut(records).retain(|_, record| record.coordinate != coordinate);
     }
-    Arc::make_mut(map.terrain.as_mut().context("Map terrain is unavailable")?)[index as usize] =
-        underlying;
+    map.write_hex(i64::from(coordinate.x), i64::from(coordinate.y), underlying)?;
     Arc::make_mut(&mut map.decorations).insert(index, effect);
     Ok(())
 }

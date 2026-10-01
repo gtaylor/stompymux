@@ -113,10 +113,23 @@ impl BattleMinefield {
 }
 
 impl StoredBattleMap {
-    /// Query committed mine coverage, rejecting coordinates outside decoded terrain.
+    /// Whether any committed minefield covers `coordinate`, rejecting coordinates outside
+    /// decoded terrain. Coverage is derived from the minefield records on every query.
     pub fn mine_coverage(&self, coordinate: BattleHexCoordinate) -> Result<bool> {
         self.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
-        self.lookup_bit(coordinate, super::map_bits::LookupKind::Mine)
+        for mine in self.minefields.values() {
+            let radius = mine.coverage_radius();
+            if radius < 0
+                || (i64::from(mine.coordinate.x) - i64::from(coordinate.x)).abs() > radius
+                || (i64::from(mine.coordinate.y) - i64::from(coordinate.y)).abs() > radius
+            {
+                continue;
+            }
+            if mine.covers(coordinate)? {
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 }
 

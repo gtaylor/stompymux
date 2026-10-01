@@ -17,8 +17,8 @@ mod btech_jump_heading;
 #[path = "../btech_losemit.rs"]
 mod btech_losemit;
 
-#[path = "../btech_map_bits.rs"]
-mod btech_map_bits;
+#[path = "../btech_mine_coverage.rs"]
+mod btech_mine_coverage;
 
 #[path = "../btech_map_dispatch.rs"]
 mod btech_map_dispatch;

@@ -137,7 +137,7 @@ pub fn resolve_woodland_effect(
     intent: BattleWoodlandIntent,
     dice: &mut BattleDice,
 ) -> BattleWoodlandEffect {
-    let woods = matches!(terrain, Terrain::LightForest | Terrain::HeavyForest);
+    let woods = terrain.is_woods();
     if intent != BattleWoodlandIntent::Ignite {
         let ignition_roll = dice.generic_roll();
         let clearing_roll = dice.generic_roll();

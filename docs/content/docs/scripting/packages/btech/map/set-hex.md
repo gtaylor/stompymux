@@ -21,7 +21,7 @@ btech.map.set_hex(actor, dbref, x, y, terrain, elevation)
 | `dbref` | `integer` |  |
 | `x` | `integer` |  |
 | `y` | `integer` |  |
-| `terrain` | `string` | Canonical terrain symbol; a leading dot selects grassland. |
+| `terrain` | `BattleTerrainName` | Name from btech.map.terrain_types. |
 | `elevation` | `integer` | Absolute magnitude capped at nine. |
 
 ## Returns
