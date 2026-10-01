@@ -1,0 +1,50 @@
+name = "Vandal"
+class = "aerofighter"
+movement = "fly"
+tons = 30
+max_speed = 225.75
+heat_sinks = 20
+fuel = 450
+specials = ["Clan", "FerroFibrous_Tech"]
+
+[sections.nose]
+armor = 20
+internals = 14
+slots = [
+    { at = 1, item = "CL.MediumPulseLaser" },
+]
+
+[sections.left_wing]
+armor = 15
+internals = 14
+slots = [
+    { at = 1, item = "CL.ERSmallLaser" },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_wing]
+armor = 15
+internals = 14
+slots = [
+    { at = 1, item = "CL.ERSmallLaser" },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.cockpit]
+armor = 16
+internals = 14
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "Sensors" },
+    { at = 5, item = "LifeSupport" },
+]
+
+[sections.engine]
+armor = 12
+internals = 14
+
+[sections.fuselage]
+armor = 18
+internals = 14

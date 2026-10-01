@@ -1,0 +1,92 @@
+name = "Charger"
+class = "mech"
+movement = "biped"
+tons = 80
+max_speed = 86.0
+heat_sinks = 10
+computer = 4
+radio = 4
+specials = ["FerroFibrous_Tech"]
+
+[sections.left_arm]
+armor = 15
+internals = 13
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "IS.RL-10", modes = ["OneShot"] },
+]
+
+[sections.right_arm]
+armor = 15
+internals = 13
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 5, item = "IS.MediumLaser" },
+]
+
+[sections.left_torso]
+armor = 20
+internals = 17
+rear = 5
+slots = [
+    { at = "1-2", item = "IS.RL-10", modes = ["OneShot"] },
+    { at = "3-6", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 20
+internals = 17
+rear = 5
+slots = [
+    { at = "1-2", item = "IS.RL-10", modes = ["OneShot"] },
+    { at = "3-6", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 25
+internals = 25
+rear = 6
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = "11-12", item = "FerroFibrous" },
+]
+
+[sections.left_leg]
+armor = 20
+internals = 17
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.right_leg]
+armor = 20
+internals = 17
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

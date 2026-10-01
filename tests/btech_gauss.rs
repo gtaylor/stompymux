@@ -4,7 +4,7 @@ use stompymux_rs::*;
 
 /// Install one supported Gauss mount and matching inert ammunition in an isolated biped template.
 fn definition(weapon: BattleWeapon, case: bool) -> BattleTemplate {
-    let mut definition = BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+    let mut definition = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let (section, first) = if weapon == BattleWeapon::HeavyGaussRifle {
         (BattleSection::LeftTorso, 0)
     } else {
@@ -149,7 +149,7 @@ fn gauss_catalog_inert_bins_and_mount_destruction() {
         }
     }
     let highlander = BattleUnit::from_template(
-        BattleTemplate::parse(include_str!("../game/mechs/HGN-732")).unwrap(),
+        BattleTemplate::parse("HGN-732",include_str!("../game/mechs/HGN-732.toml")).unwrap(),
     )
     .unwrap();
     assert!(

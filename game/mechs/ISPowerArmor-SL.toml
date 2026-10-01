@@ -1,0 +1,36 @@
+name = "IS PowerArmor"
+class = "battlesuit"
+movement = "biped"
+tons = 1
+max_speed = 32.5
+jump_speed = 32.5
+max_suits = 4
+infantry_specials = ["Swarm_Attack_Tech", "Mount_Friends_Tech", "AntiLeg_Attack_Tech"]
+
+[sections.suit_1]
+armor = 9
+internals = 1
+slots = [
+    { at = 1, item = "IS.SmallLaser" },
+]
+
+[sections.suit_2]
+armor = 9
+internals = 1
+slots = [
+    { at = 1, item = "IS.SmallLaser" },
+]
+
+[sections.suit_3]
+armor = 9
+internals = 1
+slots = [
+    { at = 1, item = "IS.SmallLaser" },
+]
+
+[sections.suit_4]
+armor = 9
+internals = 1
+slots = [
+    { at = 1, item = "IS.SmallLaser" },
+]

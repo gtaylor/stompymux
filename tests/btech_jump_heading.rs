@@ -22,10 +22,10 @@ async fn jump_heading_rates_preserve_trajectory_and_replay_across_chassis() {
                 )
                 .unwrap();
                 let id = world.create(&config, "Jumper".into(), Kind::Thing);
-                let mut definition = BattleTemplate::parse(if quad {
-                    include_str!("../game/mechs/SCP-1N")
+                let mut definition = BattleTemplate::parse("test",if quad {
+                    include_str!("../game/mechs/SCP-1N.toml")
                 } else {
-                    include_str!("fixtures/btech/mechs/JR7-D")
+                    include_str!("fixtures/btech/mechs/JR7-D.toml")
                 })
                 .unwrap();
                 definition.jump_speed = 53.75;

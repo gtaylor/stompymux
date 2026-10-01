@@ -1,0 +1,105 @@
+name = "Highlander"
+class = "mech"
+movement = "biped"
+tons = 90
+max_speed = 53.75
+jump_speed = 32.25
+heat_sinks = 20
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+specials = ["DoubleHS"]
+
+[sections.left_arm]
+armor = 30
+internals = 15
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = 4, item = "HandOrFootActuator", brand = 3 },
+    { at = 5, item = "IS.StreakSRM-4", brand = 3 },
+    { at = "6-10", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 30
+internals = 15
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = "4-10", item = "IS.GaussRifle", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 28
+internals = 19
+rear = 10
+slots = [
+    { at = 1, item = "JumpJet", brand = 3 },
+    { at = "2-6", item = "IS.LRM-20", brand = 3 },
+    { at = 7, item = "ArtemisIV", brand = 3 },
+    { at = 8, item = "Ammo_IS.StreakSRM-4", rounds = 25 },
+    { at = "9-10", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
+    { at = 11, item = "Case", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 28
+internals = 19
+rear = 10
+slots = [
+    { at = 1, item = "JumpJet", brand = 3 },
+    { at = "2-3", item = "IS.MediumLaser", brand = 3 },
+    { at = "4-5", item = "Ammo_IS.GaussRifle", rounds = 8 },
+    { at = "6-7", item = "C3i", brand = 3 },
+    { at = "8-10", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 40
+internals = 29
+rear = 17
+slots = [
+    { at = "1-3", item = "Engine", brand = 3 },
+    { at = "4-7", item = "Gyro", brand = 3 },
+    { at = "8-10", item = "Engine", brand = 3 },
+    { at = 11, item = "JumpJet", brand = 3 },
+    { at = 12, item = "FerroFibrous", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 38
+internals = 19
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = 4, item = "HandOrFootActuator", brand = 3 },
+    { at = "5-6", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 38
+internals = 19
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = 4, item = "HandOrFootActuator", brand = 3 },
+    { at = "5-6", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport", brand = 3 },
+    { at = 2, item = "Sensors", brand = 3 },
+    { at = 3, item = "Cockpit", brand = 3 },
+    { at = 4, item = "FerroFibrous", brand = 3 },
+    { at = 5, item = "Sensors", brand = 3 },
+    { at = 6, item = "LifeSupport", brand = 3 },
+]

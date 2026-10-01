@@ -81,13 +81,13 @@ mod tests {
         crate::create_battle_unit(
             &mut world,
             mech,
-            BattleTemplate::parse(include_str!("../../game/mechs/JR7-D")).unwrap(),
+            BattleTemplate::parse("JR7-D",include_str!("../../game/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         crate::create_battle_vehicle(
             &mut world,
             vehicle,
-            BattleVehicleTemplate::parse(include_str!("../../game/mechs/Demolisher")).unwrap(),
+            BattleVehicleTemplate::parse("Demolisher",include_str!("../../game/mechs/Demolisher.toml")).unwrap(),
         )
         .unwrap();
         crate::create_battle_map(

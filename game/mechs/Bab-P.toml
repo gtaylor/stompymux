@@ -1,0 +1,94 @@
+name = "Baboon"
+class = "mech"
+movement = "biped"
+tons = 20
+max_speed = 118.25
+heat_sinks = 20
+computer = 4
+specials = ["DoubleHS", "Clan"]
+
+[sections.left_arm]
+armor = 5
+internals = 3
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.right_arm]
+armor = 5
+internals = 3
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.left_torso]
+armor = 7
+internals = 5
+rear = 2
+slots = [
+    { at = "1-6", item = "HeatSink" },
+    { at = "7-9", item = "FerroFibrous" },
+    { at = "10-12", item = "EndoSteel" },
+]
+
+[sections.right_torso]
+armor = 7
+internals = 5
+rear = 2
+slots = [
+    { at = "1-3", item = "CL.LRM-5" },
+    { at = "4-6", item = "Ammo_CL.LRM-5", rounds = 24 },
+    { at = "7-9", item = "FerroFibrous" },
+    { at = "10-12", item = "EndoSteel" },
+]
+
+[sections.center_torso]
+armor = 9
+internals = 6
+rear = 2
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = 11, item = "FerroFibrous" },
+    { at = 12, item = "EndoSteel" },
+]
+
+[sections.left_leg]
+armor = 6
+internals = 4
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 6
+internals = 4
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.head]
+armor = 7
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

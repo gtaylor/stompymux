@@ -1,0 +1,33 @@
+name = "Nightshade"
+class = "vtol"
+movement = "vtol"
+tons = 25
+max_speed = 225.75
+computer = 3
+cargo_space = 250
+max_suits = 0
+max_ton = 1
+
+[sections.left_side]
+armor = 6
+internals = 3
+
+[sections.right_side]
+armor = 6
+internals = 3
+
+[sections.front_side]
+armor = 10
+internals = 3
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+    { at = 2, item = "Ecm" },
+]
+
+[sections.aft_side]
+armor = 8
+internals = 3
+
+[sections.rotor]
+armor = 2
+internals = 3

@@ -6,7 +6,7 @@ use stompymux_rs::*;
 /// Intact vehicle with a working electronic suite and command computer.
 fn template() -> BattleVehicleTemplate {
     let mut template =
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap();
+        BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap();
     for (slot, equipment) in [(0, "Ecm"), (1, "C3Master")] {
         template
             .sections

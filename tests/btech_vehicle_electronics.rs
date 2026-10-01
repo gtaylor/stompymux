@@ -20,7 +20,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if index != 1 {
             let mut template =
-                BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap();
+                BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap();
             for (slot, equipment) in [(0, "Ecm"), (1, "AngelEcm")] {
                 template
                     .sections
@@ -42,7 +42,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
             create_battle_unit(
                 &mut world,
                 id,
-                BattleTemplate::parse(include_str!("../game/mechs/AS7-D")).unwrap(),
+                BattleTemplate::parse("AS7-D",include_str!("../game/mechs/AS7-D.toml")).unwrap(),
             )
             .unwrap();
         }

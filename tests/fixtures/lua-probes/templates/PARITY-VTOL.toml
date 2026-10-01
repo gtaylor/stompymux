@@ -1,0 +1,34 @@
+name = "Parity VTOL"
+class = "vtol"
+movement = "vtol"
+tons = 25
+max_speed = 107.5
+heat_sinks = 10
+specials = ["ICEEngine_Tech", "SearchLight"]
+
+[sections.left_side]
+armor = 12
+internals = 3
+
+[sections.right_side]
+armor = 13
+internals = 3
+
+[sections.front_side]
+armor = 20
+internals = 3
+slots = [
+    { at = 1, item = "Agra.IS.PPC", brand = 5 },
+]
+
+[sections.aft_side]
+armor = 10
+internals = 3
+
+[sections.turret]
+armor = 8
+internals = 3
+
+[sections.rotor]
+armor = 2
+internals = 3

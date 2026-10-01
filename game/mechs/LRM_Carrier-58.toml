@@ -1,0 +1,30 @@
+name = "LRM Carrier"
+class = "vehicle"
+movement = "track"
+tons = 60
+max_speed = 32.25
+specials = ["ICEEngine_Tech"]
+
+[sections.left_side]
+armor = 12
+internals = 6
+
+[sections.right_side]
+armor = 12
+internals = 6
+
+[sections.front_side]
+armor = 12
+internals = 6
+slots = [
+    { at = "1-3", item = "IS.LRM-20", brand = 3 },
+    { at = "4-6", item = "ArtemisIV", brand = 3 },
+    { at = "7-12", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
+]
+
+[sections.aft_side]
+armor = 12
+internals = 6
+slots = [
+    { at = 1, item = "C3Slave", brand = 3 },
+]

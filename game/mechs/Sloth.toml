@@ -1,0 +1,35 @@
+name = "Sloth"
+class = "battlesuit"
+movement = "biped"
+tons = 1
+max_speed = 32.25
+cargo_space = 0
+max_suits = 4
+
+[sections.suit_1]
+armor = 5
+internals = 1
+slots = [
+    { at = "1-2", item = "IS.SmallLaser" },
+]
+
+[sections.suit_2]
+armor = 5
+internals = 1
+slots = [
+    { at = "1-2", item = "IS.SmallLaser" },
+]
+
+[sections.suit_3]
+armor = 5
+internals = 1
+slots = [
+    { at = "1-2", item = "IS.SmallLaser" },
+]
+
+[sections.suit_4]
+armor = 5
+internals = 1
+slots = [
+    { at = "1-2", item = "IS.SmallLaser" },
+]

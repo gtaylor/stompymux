@@ -1,0 +1,49 @@
+name = "Turk"
+class = "aerofighter"
+movement = "fly"
+tons = 50
+max_speed = 118.25
+heat_sinks = 32
+fuel = 750
+specials = ["Clan", "CargoTech", "FerroFibrous_Tech"]
+
+[sections.nose]
+armor = 30
+internals = 7
+
+[sections.left_wing]
+armor = 30
+internals = 7
+slots = [
+    { at = 1, item = "CL.ERPPC" },
+    { at = 2, item = "CL.ERLargeLaser" },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_wing]
+armor = 30
+internals = 7
+slots = [
+    { at = 1, item = "CL.ERPPC" },
+    { at = 2, item = "CL.ERLargeLaser" },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.cockpit]
+armor = 16
+internals = 7
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "Sensors" },
+    { at = 5, item = "LifeSupport" },
+]
+
+[sections.engine]
+armor = 32
+internals = 7
+
+[sections.fuselage]
+armor = 54
+internals = 7

@@ -22,7 +22,7 @@ fn operator(world: &mut World, config: &Config, map: ObjectId) -> ObjectId {
 async fn resizing_preserves_units_and_replays_native_lua() {
     for source in firing::templates() {
         let (_dir, config, mut world, unit, _, _) =
-            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D")).await;
+            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml")).await;
         let map = world.btech.units()[&unit].map.unwrap();
         let actor = operator(&mut world, &config, map);
         persistence::save(&config.database(), &world).await.unwrap();

@@ -1,0 +1,44 @@
+name = "Ajax"
+class = "vehicle"
+movement = "track"
+tons = 90
+max_speed = 53.75
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+specials = ["XLEngine_Tech"]
+
+[sections.left_side]
+armor = 60
+internals = 9
+
+[sections.right_side]
+armor = 60
+internals = 9
+
+[sections.front_side]
+armor = 76
+internals = 9
+
+[sections.aft_side]
+armor = 40
+internals = 9
+slots = [
+    { at = "1-6", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
+    { at = 11, item = "C3Master", brand = 0 },
+    { at = 12, item = "Case", brand = 3 },
+]
+
+[sections.turret]
+armor = 68
+internals = 9
+slots = [
+    { at = 1, item = "IS.PPC", brand = 0 },
+    { at = 2, item = "IS.LRM-15", brand = 0 },
+    { at = 3, item = "ArtemisIV", brand = 0 },
+    { at = 4, item = "IS.LRM-15", brand = 0 },
+    { at = 5, item = "ArtemisIV", brand = 0 },
+    { at = 6, item = "IS.LRM-15", brand = 0 },
+    { at = 7, item = "ArtemisIV", brand = 0 },
+]

@@ -1,0 +1,58 @@
+name = "Chippewa"
+class = "aerofighter"
+movement = "fly"
+tons = 90
+max_speed = 86.0
+heat_sinks = 50
+computer = 3
+fuel = 750
+specials = ["DoubleHS"]
+
+[sections.nose]
+armor = 24
+internals = 10
+slots = [
+    { at = "1-2", item = "IS.MediumPulseLaser" },
+    { at = "3-4", item = "IS.LRM-15" },
+    { at = 5, item = "IS.SRM-6" },
+]
+
+[sections.left_wing]
+armor = 15
+internals = 10
+slots = [
+    { at = "1-2", item = "IS.LargePulseLaser" },
+]
+
+[sections.right_wing]
+armor = 15
+internals = 10
+slots = [
+    { at = "1-2", item = "IS.LargePulseLaser" },
+]
+
+[sections.cockpit]
+armor = 16
+internals = 10
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "Sensors" },
+    { at = 5, item = "LifeSupport" },
+]
+
+[sections.engine]
+armor = 20
+internals = 10
+slots = [
+    { at = 1, item = "IS.SmallPulseLaser" },
+]
+
+[sections.fuselage]
+armor = 30
+internals = 10
+slots = [
+    { at = "1-4", item = "Ammo_IS.LRM-15", rounds = 8 },
+    { at = 5, item = "Ammo_IS.SRM-6", rounds = 15 },
+]

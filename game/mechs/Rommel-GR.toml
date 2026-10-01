@@ -1,0 +1,48 @@
+name = "Rommel"
+class = "vehicle"
+movement = "track"
+tons = 65
+max_speed = 64.5
+computer = 3
+tac_range = 30
+lrs_range = 60
+scan_range = 30
+
+[sections.left_side]
+armor = 40
+internals = 7
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 40
+internals = 7
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 42
+internals = 7
+slots = [
+    { at = "1-2", item = "IS.MachineGun" },
+]
+
+[sections.aft_side]
+armor = 26
+internals = 7
+slots = [
+    { at = 1, item = "IS.MachineGun" },
+    { at = 2, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
+]
+
+[sections.turret]
+armor = 40
+internals = 7
+slots = [
+    { at = 1, item = "IS.GaussRifle" },
+    { at = "2-3", item = "IS.MediumLaser" },
+    { at = "4-5", item = "IS.MachineGun" },
+    { at = "6-7", item = "Ammo_IS.GaussRifle", rounds = 8 },
+]

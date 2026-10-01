@@ -18,7 +18,7 @@ fn fixture() -> (Config, World, Vec<ObjectId>) {
     let mut units = Vec::new();
     for row in [2, 8, 14] {
         let id = world.create(&config, format!("Scheduler unit {row}"), Kind::Thing);
-        BattleUnitTemplate::parse(include_str!("../../../game/mechs/JR7-D"))
+        BattleUnitTemplate::parse("JR7-D",include_str!("../../../game/mechs/JR7-D.toml"))
             .unwrap()
             .create(&mut world, id)
             .unwrap();
@@ -238,7 +238,7 @@ fn crowded_world(config: Config, mut world: World) -> (Config, World, Vec<Object
     let mut ids = Vec::new();
     for index in 0..5 {
         let id = world.create(&config, format!("unit {index}"), Kind::Thing);
-        BattleUnitTemplate::parse(include_str!("../../../game/mechs/JR7-D"))
+        BattleUnitTemplate::parse("JR7-D",include_str!("../../../game/mechs/JR7-D.toml"))
             .unwrap()
             .create(&mut world, id)
             .unwrap();
@@ -368,7 +368,7 @@ fn waiting_controller_polling_benchmark() {
     let controller = base.btech.controllers()[&ids[0]].clone();
     for n in 1..100 {
         let id = base.create(&config, format!("waiter {n}"), Kind::Thing);
-        BattleUnitTemplate::parse(include_str!("../../../game/mechs/JR7-D"))
+        BattleUnitTemplate::parse("JR7-D",include_str!("../../../game/mechs/JR7-D.toml"))
             .unwrap()
             .create(&mut base, id)
             .unwrap();

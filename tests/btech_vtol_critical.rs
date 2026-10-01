@@ -8,7 +8,7 @@ async fn advanced_rotor_criticals_commit_saved_dice_and_material_effects_togethe
     let id = world.create(&config, "Rotor critical fixture".into(), Kind::Thing);
     // Install material directly for the critical transaction; this does not admit a live VTOL.
     let aircraft = BattleVehicle::new(
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Kestrel")).unwrap(),
+        BattleVehicleTemplate::parse("Kestrel",include_str!("../game/mechs/Kestrel.toml")).unwrap(),
     )
     .unwrap();
     let rules = BattleVehicleCriticalRules {
@@ -112,11 +112,11 @@ async fn suppressed_rotor_criticals_do_not_draw_dice_or_change_material() {
     let id = world.create(&config, "Protected rotor".into(), Kind::Thing);
     for suppression in ["disabled", "safe", "proof"] {
         let source = if suppression == "proof" {
-            include_str!("../game/mechs/Kestrel").replace("CargoTech", "CargoTech CritProof_Tech")
+            include_str!("../game/mechs/Kestrel.toml").replace("CargoTech", "CargoTech CritProof_Tech")
         } else {
-            include_str!("../game/mechs/Kestrel").into()
+            include_str!("../game/mechs/Kestrel.toml").into()
         };
-        let aircraft = BattleVehicle::new(BattleVehicleTemplate::parse(&source).unwrap()).unwrap();
+        let aircraft = BattleVehicle::new(BattleVehicleTemplate::parse("test",&source).unwrap()).unwrap();
         let mut state = serde_json::to_value(&world.btech).unwrap();
         state["vehicles"][id.0.to_string()] = serde_json::to_value(aircraft).unwrap();
         world.btech = serde_json::from_value(state).unwrap();
@@ -147,7 +147,7 @@ async fn stationary_observation_aircraft_still_use_the_rotor_critical_table() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Observation rotor".into(), Kind::Thing);
     let unit = BattleVehicle::new(
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/ObservationVTOL")).unwrap(),
+        BattleVehicleTemplate::parse("ObservationVTOL",include_str!("../game/mechs/ObservationVTOL.toml")).unwrap(),
     )
     .unwrap();
     let seed = (0..=255)
@@ -248,10 +248,10 @@ async fn advanced_aircraft_hull_rows_share_selection_dice_and_control_effects() 
         ),
     ];
     for source in [
-        include_str!("../game/mechs/Kestrel"),
-        include_str!("../game/mechs/ObservationVTOL"),
+        include_str!("../game/mechs/Kestrel.toml"),
+        include_str!("../game/mechs/ObservationVTOL.toml"),
     ] {
-        let unit = BattleVehicle::new(BattleVehicleTemplate::parse(source).unwrap()).unwrap();
+        let unit = BattleVehicle::new(BattleVehicleTemplate::parse("test",source).unwrap()).unwrap();
         for (section, row) in rows {
             for roll in 2..=12 {
                 let seed = (0..=255)
@@ -307,7 +307,7 @@ async fn airborne_engine_critical_requires_emergency_resolution_without_partial_
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Airborne engine".into(), Kind::Thing);
     let unit = BattleVehicle::new(
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Kestrel")).unwrap(),
+        BattleVehicleTemplate::parse("Kestrel",include_str!("../game/mechs/Kestrel.toml")).unwrap(),
     )
     .unwrap();
     let seed = (0..=255)
@@ -358,10 +358,10 @@ async fn standard_vtol_criticals_share_common_effects_without_ground_preliminary
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Standard aircraft criticals".into(), Kind::Thing);
     for source in [
-        include_str!("../game/mechs/Kestrel"),
-        include_str!("../game/mechs/ObservationVTOL"),
+        include_str!("../game/mechs/Kestrel.toml"),
+        include_str!("../game/mechs/ObservationVTOL.toml"),
     ] {
-        let aircraft = BattleVehicle::new(BattleVehicleTemplate::parse(source).unwrap()).unwrap();
+        let aircraft = BattleVehicle::new(BattleVehicleTemplate::parse("test",source).unwrap()).unwrap();
         for table in [BattleVehicleCriticalTable::Standard] {
             for (index, effect) in [
                 E::CrewKilled,
@@ -458,12 +458,12 @@ async fn aircraft_explosions_settle_at_surface_and_share_case_containment_atomic
     };
     for case in [false, true] {
         let source = if case {
-            include_str!("../game/mechs/Kestrel")
+            include_str!("../game/mechs/Kestrel.toml")
                 .replace("Aft_Side\n", "Aft_Side\n    CRIT_1 { CASE - - }\n")
         } else {
-            include_str!("../game/mechs/Kestrel").into()
+            include_str!("../game/mechs/Kestrel.toml").into()
         };
-        let unit = BattleVehicle::new(BattleVehicleTemplate::parse(&source).unwrap()).unwrap();
+        let unit = BattleVehicle::new(BattleVehicleTemplate::parse("test",&source).unwrap()).unwrap();
         assert_eq!(unit.has_powerplant_containment(), case);
         let mut saved = serde_json::to_value(unit).unwrap();
         saved["position"] = serde_json::json!({"map":map.0,"x":0,"y":0});
@@ -533,7 +533,7 @@ async fn engine_emergency_landings_use_shared_checks_and_commit_failed_attempts_
     .unwrap();
     let id = world.create(&config, "Emergency aircraft".into(), Kind::Thing);
     let unit = BattleVehicle::new(
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Kestrel")).unwrap(),
+        BattleVehicleTemplate::parse("Kestrel",include_str!("../game/mechs/Kestrel.toml")).unwrap(),
     )
     .unwrap();
     for advanced in [false, true] {
@@ -679,7 +679,7 @@ async fn engine_loss_over_water_starts_falling_without_a_landing_roll() {
     .unwrap();
     let id = world.create(&config, "Aircraft".into(), Kind::Thing);
     let unit = BattleVehicle::new(
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Kestrel")).unwrap(),
+        BattleVehicleTemplate::parse("Kestrel",include_str!("../game/mechs/Kestrel.toml")).unwrap(),
     )
     .unwrap();
     let seed = (0..=255)
@@ -750,7 +750,7 @@ async fn emergency_landing_feedback_is_private_and_replayable() {
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Kestrel")).unwrap(),
+        BattleVehicleTemplate::parse("Kestrel",include_str!("../game/mechs/Kestrel.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();

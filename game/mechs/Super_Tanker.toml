@@ -1,0 +1,32 @@
+name = "Monitor"
+class = "naval"
+movement = "hull"
+tons = 200
+max_speed = 32.25
+computer = 3
+cargo_space = 0
+max_suits = 0
+
+[sections.left_side]
+armor = 40
+internals = 20
+
+[sections.right_side]
+armor = 40
+internals = 20
+
+[sections.front_side]
+armor = 40
+internals = 20
+
+[sections.aft_side]
+armor = 40
+internals = 20
+
+[sections.turret]
+armor = 40
+internals = 20
+
+[sections.rotor]
+armor = 40
+internals = 200

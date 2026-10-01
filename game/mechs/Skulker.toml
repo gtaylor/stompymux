@@ -1,0 +1,28 @@
+name = "Skulker"
+class = "vehicle"
+movement = "wheel"
+tons = 20
+max_speed = 118.25
+heat_sinks = 3
+computer = 4
+radio = 3
+specials = ["ICEEngine_Tech"]
+
+[sections.left_side]
+armor = 18
+internals = 2
+
+[sections.right_side]
+armor = 18
+internals = 2
+
+[sections.front_side]
+armor = 18
+internals = 2
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]
+
+[sections.aft_side]
+armor = 18
+internals = 2

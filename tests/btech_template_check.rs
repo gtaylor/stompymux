@@ -6,8 +6,8 @@ use stompymux_rs::*;
 #[test]
 fn template_check_reports_normalization_and_construction_failures() {
     let source =
-        include_str!("fixtures/btech/mechs/JR7-D").replace("Ammo_IS.SRM-4 25", "Ammo_IS.SRM-4 7");
-    let template = BattleTemplate::parse(&source).unwrap();
+        include_str!("fixtures/btech/mechs/JR7-D.toml").replace("Ammo_IS.SRM-4 25", "Ammo_IS.SRM-4 7");
+    let template = BattleTemplate::parse("test",&source).unwrap();
     let original = template.clone();
     let report = check_battle_template(&template);
     assert!(report.constructible);
@@ -31,7 +31,7 @@ fn template_check_reports_normalization_and_construction_failures() {
         source.replace("Gyro", "HeatSink"),
         source.replace("FlipArms", "UnknownTechnology"),
     ] {
-        let template = BattleTemplate::parse(&invalid).unwrap();
+        let template = BattleTemplate::parse("test",&invalid).unwrap();
         let expected = BattleUnit::from_template(template.clone()).unwrap_err();
         let report = check_battle_template(&template);
         assert!(!report.constructible);
@@ -46,10 +46,10 @@ async fn template_check_native_lua_read_only_and_bounded_asset_access() {
     let (dir, config, world) = support::isolated_world().await;
     std::fs::create_dir_all(dir.path().join("mechs")).unwrap();
     let source =
-        include_str!("fixtures/btech/mechs/JR7-D").replace("Ammo_IS.SRM-4 25", "Ammo_IS.SRM-4 7");
-    std::fs::write(dir.path().join("mechs/partial"), &source).unwrap();
+        include_str!("fixtures/btech/mechs/JR7-D.toml").replace("Ammo_IS.SRM-4 25", "Ammo_IS.SRM-4 7");
+    std::fs::write(dir.path().join("mechs/partial.toml"), &source).unwrap();
     std::fs::write(
-        dir.path().join("mechs/unsupported"),
+        dir.path().join("mechs/unsupported.toml"),
         source.replace("IS.MediumLaser", "IS.Unknown"),
     )
     .unwrap();
@@ -118,7 +118,7 @@ async fn template_check_native_lua_read_only_and_bounded_asset_access() {
     assert_eq!(scripts.world().objects.len(), world.objects.len());
     assert!(scripts.drain_outbox().is_empty());
     assert_eq!(
-        std::fs::read_to_string(dir.path().join("mechs/partial")).unwrap(),
+        std::fs::read_to_string(dir.path().join("mechs/partial.toml")).unwrap(),
         source
     );
 }
@@ -126,7 +126,7 @@ async fn template_check_native_lua_read_only_and_bounded_asset_access() {
 /// Construction-time failures identify the exact bin even before normal loadout validation.
 #[test]
 fn ammunition_rejections_include_location_equipment_and_flags() {
-    let original = BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+    let original = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     for (equipment, data, flags, expected) in [
         (
             "Ammo_IS.SRM-4",
@@ -174,7 +174,7 @@ fn ammunition_rejections_include_location_equipment_and_flags() {
 /// Narc-compatible SRM bins are constructible and retain their selected ammunition type.
 #[test]
 fn narc_ammunition_is_constructible() {
-    let mut template = BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+    let mut template = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     template
         .sections
         .get_mut(&BattleSection::RightTorso)
@@ -194,7 +194,7 @@ fn narc_ammunition_is_constructible() {
 /// Quad assets decode and construct with four load-bearing legs.
 #[test]
 fn quad_anatomy_decodes_and_constructs_assets() {
-    let template = BattleTemplate::parse(include_str!("../game/mechs/SCP-1N")).unwrap();
+    let template = BattleTemplate::parse("SCP-1N",include_str!("../game/mechs/SCP-1N.toml")).unwrap();
     let chassis = template.chassis().unwrap();
     assert_eq!(chassis, BattleMechChassis::Quad);
     assert_eq!(chassis.legs().len(), 4);
@@ -226,24 +226,24 @@ fn quad_anatomy_decodes_and_constructs_assets() {
 /// Chassis fields can follow sections, but mixed, duplicate or missing limb headings are rejected.
 #[test]
 fn chassis_section_parsing_is_order_independent_and_rejects_mixed_anatomy() {
-    let source = include_str!("../game/mechs/SCP-1N");
+    let source = include_str!("../game/mechs/SCP-1N.toml");
     let movement = source
         .lines()
         .find(|line| line.starts_with("Move_Type"))
         .unwrap();
     let reordered = format!("{}\n{movement}\n", source.replace(movement, ""));
     assert_eq!(
-        BattleTemplate::parse(&reordered).unwrap(),
-        BattleTemplate::parse(source).unwrap()
+        BattleTemplate::parse("test",&reordered).unwrap(),
+        BattleTemplate::parse("test",source).unwrap()
     );
     for bad in [
         source.replace("Front_Left_Leg", "Left_Arm"),
         source.replace("Rear_Right_Leg", "Rear_Left_Leg"),
         source.replace("Quad", "Biped"),
     ] {
-        assert!(BattleTemplate::parse(&bad).is_err());
+        assert!(BattleTemplate::parse("test",&bad).is_err());
     }
-    let biped = BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+    let biped = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let chassis = biped.chassis().unwrap();
     assert_eq!(chassis, BattleMechChassis::Biped);
     assert!(!chassis.is_leg(BattleSection::LeftArm));

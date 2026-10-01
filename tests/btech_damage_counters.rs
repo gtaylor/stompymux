@@ -107,10 +107,10 @@ async fn located_packets_count_overflow_once_and_combat_safe_counts_nothing() {
 async fn accounting_uses_the_admitted_packet_before_material_reductions() {
     for rotor in [false, true] {
         let source = if rotor {
-            include_str!("../game/mechs/Kestrel")
+            include_str!("../game/mechs/Kestrel.toml")
                 .replace("ICEEngine_Tech", "ICEEngine_Tech ReinforcedInternal_Tech")
         } else {
-            include_str!("../game/mechs/Demolisher").replace(
+            include_str!("../game/mechs/Demolisher.toml").replace(
                 "ICEEngine_Tech",
                 "ICEEngine_Tech HardenedArmor_Tech ReinforcedInternal_Tech",
             )

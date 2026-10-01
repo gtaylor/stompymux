@@ -26,10 +26,10 @@ async fn fixture(quad: bool, tile: &str) -> (tempfile::TempDir, Config, World, O
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse(if quad {
-            include_str!("../game/mechs/SCP-1N")
+        BattleTemplate::parse("test",if quad {
+            include_str!("../game/mechs/SCP-1N.toml")
         } else {
-            include_str!("../game/mechs/JR7-D")
+            include_str!("../game/mechs/JR7-D.toml")
         })
         .unwrap(),
     )
@@ -391,9 +391,9 @@ async fn prone_rejects_vehicle_chassis() {
         let id = world.create(&config, "Vehicle".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         let text = if movement == "VTOL" {
-            include_str!("../game/mechs/Kestrel").to_owned()
+            include_str!("../game/mechs/Kestrel.toml").to_owned()
         } else {
-            include_str!("../game/mechs/Demolisher")
+            include_str!("../game/mechs/Demolisher.toml")
                 .replace("{ Track }", &format!("{{ {movement} }}"))
         };
         let text = if movement == "None" {
@@ -401,7 +401,7 @@ async fn prone_rejects_vehicle_chassis() {
         } else {
             text
         };
-        create_battle_vehicle(&mut world, id, BattleVehicleTemplate::parse(&text).unwrap())
+        create_battle_vehicle(&mut world, id, BattleVehicleTemplate::parse("test",&text).unwrap())
             .unwrap();
         let before = world.btech.clone();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

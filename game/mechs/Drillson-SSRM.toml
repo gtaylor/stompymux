@@ -1,0 +1,37 @@
+name = "Drillson"
+class = "vehicle"
+movement = "hover"
+tons = 50
+max_speed = 150.5
+tac_range = 30
+lrs_range = 60
+scan_range = 30
+
+[sections.left_side]
+armor = 21
+internals = 5
+
+[sections.right_side]
+armor = 21
+internals = 5
+
+[sections.front_side]
+armor = 25
+internals = 5
+slots = [
+    { at = "1-2", item = "IS.StreakSRM-2" },
+    { at = 3, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+]
+
+[sections.aft_side]
+armor = 20
+internals = 5
+
+[sections.turret]
+armor = 25
+internals = 5
+slots = [
+    { at = 1, item = "IS.LargePulseLaser" },
+    { at = "2-3", item = "IS.StreakSRM-2" },
+    { at = 4, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+]

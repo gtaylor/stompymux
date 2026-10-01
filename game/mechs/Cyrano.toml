@@ -1,0 +1,40 @@
+name = "Cyrano"
+class = "vtol"
+movement = "vtol"
+tons = 30
+max_speed = 193.5
+computer = 3
+radio = 3
+specials = ["FerroFibrous_Tech"]
+
+[sections.left_side]
+armor = 2
+internals = 3
+slots = [
+    { at = "1-2", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 2
+internals = 3
+slots = [
+    { at = "1-2", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 3
+internals = 3
+rear = 2
+slots = [
+    { at = 1, item = "IS.LargeLaser" },
+    { at = 2, item = "BeagleProbe" },
+]
+
+[sections.aft_side]
+armor = 1
+internals = 3
+rear = 2
+
+[sections.rotor]
+armor = 1
+internals = 3

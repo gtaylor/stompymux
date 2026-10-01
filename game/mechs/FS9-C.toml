@@ -1,0 +1,100 @@
+name = "Firestarter"
+class = "mech"
+movement = "biped"
+tons = 35
+max_speed = 96.75
+jump_speed = 64.5
+heat_sinks = 20
+computer = 4
+radio = 4
+specials = ["DoubleHS", "FerroFibrous_Tech"]
+
+[sections.left_arm]
+armor = 8
+internals = 6
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "IS.Flamer" },
+    { at = 5, item = "IS.MediumLaser" },
+    { at = "6-8", item = "HeatSink" },
+    { at = "9-10", item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 8
+internals = 6
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "IS.Flamer" },
+    { at = 5, item = "IS.MediumLaser" },
+    { at = "6-8", item = "HeatSink" },
+    { at = "9-10", item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 11
+internals = 8
+rear = 5
+slots = [
+    { at = "1-3", item = "JumpJet" },
+    { at = "4-5", item = "IS.RL-10", modes = ["OneShot"] },
+    { at = "6-8", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 11
+internals = 8
+rear = 5
+slots = [
+    { at = "1-3", item = "JumpJet" },
+    { at = "4-7", item = "IS.RL-15", modes = ["OneShot"] },
+    { at = "8-10", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 15
+internals = 11
+rear = 6
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = "11-12", item = "IS.RL-10", modes = ["OneShot"] },
+]
+
+[sections.left_leg]
+armor = 10
+internals = 8
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.right_leg]
+armor = 10
+internals = 8
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

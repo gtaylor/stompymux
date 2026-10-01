@@ -1,0 +1,58 @@
+name = "Seeker"
+class = "spheroid_dropship"
+movement = "fly"
+tons = 3700
+max_speed = 86.0
+heat_sinks = 88
+tac_range = 50
+lrs_range = 100
+scan_range = 50
+
+[sections.front_right_side]
+armor = 80
+internals = 73
+slots = [
+    { at = 1, item = "IS.ERPPC" },
+]
+
+[sections.front_left_side]
+armor = 80
+internals = 73
+slots = [
+    { at = 1, item = "IS.ERPPC" },
+]
+
+[sections.rear_left_side]
+armor = 80
+internals = 73
+slots = [
+    { at = 1, item = "IS.LRM-10" },
+    { at = 2, item = "ArtemisIV" },
+    { at = 3, item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
+    { at = 4, item = "IS.ERLargeLaser" },
+    { at = "5-6", item = "IS.MediumLaser" },
+]
+
+[sections.rear_right_side]
+armor = 80
+internals = 73
+slots = [
+    { at = 1, item = "IS.LRM-10" },
+    { at = 2, item = "ArtemisIV" },
+    { at = 3, item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
+    { at = 4, item = "IS.ERLargeLaser" },
+    { at = "5-6", item = "IS.MediumLaser" },
+]
+
+[sections.aft]
+armor = 70
+internals = 37
+slots = [
+    { at = 1, item = "IS.ERLargeLaser" },
+    { at = "2-3", item = "IS.MediumLaser" },
+    { at = 6, item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
+]
+
+[sections.nose]
+armor = 100
+internals = 37

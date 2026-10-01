@@ -1,0 +1,36 @@
+name = "Tokugawa"
+class = "vehicle"
+movement = "wheel"
+tons = 60
+max_speed = 64.5
+cargo_space = 0
+max_suits = 0
+
+[sections.left_side]
+armor = 26
+internals = 6
+
+[sections.right_side]
+armor = 26
+internals = 6
+
+[sections.front_side]
+armor = 24
+internals = 6
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]
+
+[sections.aft_side]
+armor = 20
+internals = 6
+
+[sections.turret]
+armor = 20
+internals = 6
+slots = [
+    { at = "1-2", item = "IS.AC/2" },
+    { at = 3, item = "IS.SRM-6" },
+    { at = 4, item = "Ammo_IS.AC/2", rounds = 45 },
+    { at = 5, item = "Ammo_IS.SRM-6", rounds = 15 },
+]

@@ -1,0 +1,45 @@
+name = "Parity Probe"
+class = "mech"
+movement = "biped"
+tons = 75
+max_speed = 64.5
+heat_sinks = 10
+specials = ["ICEEngine_Tech"]
+
+[sections.left_arm]
+armor = 10
+internals = 5
+slots = [
+    { at = "1-3", item = "Agra.IS.PPC", brand = 5 },
+]
+
+[sections.right_arm]
+armor = 11
+internals = 6
+
+[sections.left_torso]
+armor = 12
+internals = 7
+rear = 3
+
+[sections.right_torso]
+armor = 13
+internals = 8
+rear = 4
+
+[sections.center_torso]
+armor = 20
+internals = 12
+rear = 5
+
+[sections.left_leg]
+armor = 14
+internals = 9
+
+[sections.right_leg]
+armor = 15
+internals = 10
+
+[sections.head]
+armor = 9
+internals = 3

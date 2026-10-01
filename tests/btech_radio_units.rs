@@ -17,9 +17,9 @@ fn fact(world: &mut World, id: ObjectId, update: impl FnOnce(&mut serde_json::Va
 #[tokio::test]
 async fn targeted_radio_mixed_pairs_share_visibility_delivery_and_restart() {
     const CHASSIS: [&str; 3] = [
-        include_str!("fixtures/btech/mechs/JR7-D"),
-        include_str!("../game/mechs/Demolisher"),
-        include_str!("../game/mechs/Kestrel"),
+        include_str!("fixtures/btech/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/mechs/Kestrel.toml"),
     ];
     for sender_template in CHASSIS {
         for target_template in CHASSIS {
@@ -39,7 +39,7 @@ async fn targeted_radio_mixed_pairs_share_visibility_delivery_and_restart() {
                 (target_template, listener, 1),
             ] {
                 let id = world.create(&config, "Radio unit".into(), Kind::Thing);
-                BattleUnitTemplate::parse(template)
+                BattleUnitTemplate::parse("test",template)
                     .unwrap()
                     .create(&mut world, id)
                     .unwrap();
@@ -148,15 +148,15 @@ async fn targeted_radio_mixed_pairs_share_visibility_delivery_and_restart() {
 
 #[tokio::test]
 async fn channel_radio_rotates_mixed_transmitters_relays_and_receivers() {
-    let ground = include_str!("../game/mechs/Demolisher");
+    let ground = include_str!("../game/mechs/Demolisher.toml");
     let templates = [
-        include_str!("fixtures/btech/mechs/JR7-D").to_string(),
-        include_str!("../game/mechs/GOL-1H").to_string(),
+        include_str!("fixtures/btech/mechs/JR7-D.toml").to_string(),
+        include_str!("../game/mechs/GOL-1H.toml").to_string(),
         ground.to_string(),
         ground.replace("Tracked", "Wheeled"),
         ground.replace("Tracked", "Hover"),
         ground.replace("Tracked", "None"),
-        include_str!("../game/mechs/Kestrel").to_string(),
+        include_str!("../game/mechs/Kestrel.toml").to_string(),
     ];
     for rotation in 0..templates.len() {
         let (_dir, config, mut world) = support::isolated_world().await;
@@ -191,7 +191,7 @@ async fn channel_radio_rotates_mixed_transmitters_relays_and_receivers() {
             )
             .unwrap();
             let id = world.create(&config, "Radio unit".into(), Kind::Thing);
-            BattleUnitTemplate::parse(&templates[(index + rotation) % templates.len()])
+            BattleUnitTemplate::parse("test",&templates[(index + rotation) % templates.len()])
                 .unwrap()
                 .create(&mut world, id)
                 .unwrap();

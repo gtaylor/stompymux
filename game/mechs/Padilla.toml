@@ -1,0 +1,33 @@
+name = "Padilla"
+class = "vehicle"
+movement = "track"
+tons = 75
+max_speed = 86.0
+specials = ["XLEngine_Tech"]
+
+[sections.left_side]
+armor = 24
+internals = 8
+
+[sections.right_side]
+armor = 24
+internals = 8
+
+[sections.front_side]
+armor = 28
+internals = 8
+slots = [
+    { at = 1, item = "TAG" },
+    { at = 2, item = "IS.ArrowIVSystem" },
+    { at = "3-4", item = "IS.MediumPulseLaser" },
+    { at = 5, item = "IS.Anti-MissileSystem" },
+    { at = "6-7", item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
+    { at = "8-12", item = "Ammo_IS.ArrowIVSystem", rounds = 5 },
+]
+
+[sections.aft_side]
+armor = 12
+internals = 8
+slots = [
+    { at = 1, item = "Ammo_IS.ArrowIVSystem", rounds = 5 },
+]

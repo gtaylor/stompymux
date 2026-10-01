@@ -1,0 +1,94 @@
+name = "Firestarter"
+class = "mech"
+movement = "biped"
+tons = 35
+max_speed = 96.75
+jump_speed = 64.5
+cargo_space = 0
+max_suits = 0
+
+[sections.left_arm]
+armor = 6
+internals = 6
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "IS.Flamer" },
+    { at = 5, item = "IS.MediumLaser" },
+]
+
+[sections.right_arm]
+armor = 6
+internals = 6
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "IS.Flamer" },
+    { at = 5, item = "IS.MediumLaser" },
+]
+
+[sections.left_torso]
+armor = 11
+internals = 8
+rear = 5
+slots = [
+    { at = 1, item = "IS.MachineGun" },
+    { at = "2-4", item = "JumpJet" },
+]
+
+[sections.right_torso]
+armor = 11
+internals = 8
+rear = 5
+slots = [
+    { at = 1, item = "IS.MachineGun" },
+    { at = 2, item = "Ammo_IS.MachineGun", rounds = 200 },
+    { at = "3-5", item = "JumpJet" },
+]
+
+[sections.center_torso]
+armor = 13
+internals = 11
+rear = 6
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = 11, item = "IS.Flamer" },
+    { at = 12, item = "IS.Flamer", modes = ["RearMount"] },
+]
+
+[sections.left_leg]
+armor = 8
+internals = 8
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 5, item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 8
+internals = 8
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 5, item = "HeatSink" },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

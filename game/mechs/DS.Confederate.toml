@@ -1,0 +1,64 @@
+name = "Confederate"
+class = "spheroid_dropship"
+movement = "fly"
+tons = 1860
+max_speed = 53.75
+heat_sinks = 92
+tac_range = 50
+lrs_range = 100
+scan_range = 50
+specials = ["DoubleHS"]
+
+[sections.front_right_side]
+armor = 125
+internals = 19
+slots = [
+    { at = "1-3", item = "IS.LargeLaser" },
+    { at = "4-7", item = "IS.MediumLaser" },
+    { at = 8, item = "DSMechDoor" },
+]
+
+[sections.front_left_side]
+armor = 125
+internals = 19
+slots = [
+    { at = "1-3", item = "IS.LargeLaser" },
+    { at = "4-7", item = "IS.MediumLaser" },
+    { at = 8, item = "DSMechDoor" },
+]
+
+[sections.rear_left_side]
+armor = 125
+internals = 19
+slots = [
+    { at = "1-2", item = "IS.LargeLaser" },
+    { at = "3-5", item = "IS.MediumLaser" },
+    { at = 6, item = "DSMechDoor" },
+]
+
+[sections.rear_right_side]
+armor = 125
+internals = 19
+slots = [
+    { at = "1-2", item = "IS.LargeLaser" },
+    { at = "3-5", item = "IS.MediumLaser" },
+    { at = 6, item = "DSMechDoor" },
+]
+
+[sections.aft]
+armor = 70
+internals = 19
+slots = [
+    { at = "1-2", item = "IS.LargeLaser" },
+    { at = "3-4", item = "IS.MediumLaser" },
+    { at = 5, item = "DSAeroDoor" },
+]
+
+[sections.nose]
+armor = 127
+internals = 19
+slots = [
+    { at = "1-2", item = "IS.LargeLaser" },
+    { at = "3-4", item = "IS.MediumLaser" },
+    { at = 5, item = "DSAeroDoor" },
+]

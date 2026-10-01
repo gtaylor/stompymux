@@ -1,0 +1,26 @@
+name = "Gladius"
+class = "vehicle"
+movement = "hover"
+tons = 40
+max_speed = 129.0
+specials = ["ICEEngine_Tech"]
+
+[sections.left_side]
+armor = 24
+internals = 4
+
+[sections.right_side]
+armor = 24
+internals = 4
+
+[sections.front_side]
+armor = 30
+internals = 4
+slots = [
+    { at = 1, item = "IS.AC/10", brand = 3 },
+    { at = "2-3", item = "Ammo_IS.AC/10", rounds = 10 },
+]
+
+[sections.aft_side]
+armor = 18
+internals = 4

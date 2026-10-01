@@ -1,0 +1,36 @@
+name = "Beagle"
+class = "vehicle"
+movement = "hover"
+tons = 15
+max_speed = 193.5
+computer = 3
+cargo_space = 0
+max_suits = 0
+
+[sections.left_side]
+armor = 12
+internals = 2
+
+[sections.right_side]
+armor = 12
+internals = 2
+
+[sections.front_side]
+armor = 15
+internals = 2
+slots = [
+    { at = 1, item = "IS.SmallLaser" },
+    { at = 2, item = "FerroFibrous" },
+]
+
+[sections.aft_side]
+armor = 10
+internals = 2
+
+[sections.turret]
+armor = 14
+internals = 2
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+    { at = 2, item = "BeagleProbe" },
+]

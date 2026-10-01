@@ -1,0 +1,52 @@
+name = "Rouge"
+class = "aerofighter"
+movement = "fly"
+tons = 40
+max_speed = 118.25
+computer = 3
+fuel = 750
+
+[sections.nose]
+armor = 20
+internals = 10
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]
+
+[sections.left_wing]
+armor = 22
+internals = 10
+slots = [
+    { at = 1, item = "IS.LRM-15" },
+    { at = 2, item = "Ammo_IS.LRM-15", rounds = 8 },
+]
+
+[sections.right_wing]
+armor = 22
+internals = 10
+slots = [
+    { at = 1, item = "IS.LRM-15" },
+    { at = 2, item = "Ammo_IS.LRM-15", rounds = 8 },
+]
+
+[sections.cockpit]
+armor = 15
+internals = 10
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "Sensors" },
+    { at = 5, item = "LifeSupport" },
+]
+
+[sections.engine]
+armor = 10
+internals = 10
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]
+
+[sections.fuselage]
+armor = 20
+internals = 10

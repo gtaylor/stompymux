@@ -1,0 +1,36 @@
+name = "Chevalier"
+class = "vehicle"
+movement = "wheel"
+tons = 35
+max_speed = 96.75
+heat_sinks = 12
+
+[sections.left_side]
+armor = 12
+internals = 4
+
+[sections.right_side]
+armor = 12
+internals = 4
+
+[sections.front_side]
+armor = 16
+internals = 4
+slots = [
+    { at = "1-2", item = "IS.StreakSRM-2" },
+    { at = 3, item = "IS.MachineGun" },
+    { at = 4, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+    { at = 5, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = 6, item = "BeagleProbe" },
+]
+
+[sections.aft_side]
+armor = 10
+internals = 4
+
+[sections.turret]
+armor = 14
+internals = 4
+slots = [
+    { at = 1, item = "IS.ERLargeLaser" },
+]

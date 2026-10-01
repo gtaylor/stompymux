@@ -3,10 +3,10 @@ use stompymux_rs::*;
 
 /// A supported standard-fusion fixture, independent of map state.
 fn unit(source: &str) -> BattleUnit {
-    BattleUnit::from_template(BattleTemplate::parse(source).unwrap()).unwrap()
+    BattleUnit::from_template(BattleTemplate::parse("test",source).unwrap()).unwrap()
 }
-const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D");
-const ATLAS: &str = include_str!("fixtures/btech/mechs/AS7-D");
+const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D.toml");
+const ATLAS: &str = include_str!("fixtures/btech/mechs/AS7-D.toml");
 
 #[test]
 fn intact_mass_uses_catalog_components_and_per_slot_weapon_rounding() {
@@ -80,7 +80,7 @@ fn sink_losses_and_destroyed_core_preserve_component_accounting() {
 
 /// Add distributed construction slots without replacing weapons or conventional systems.
 fn with_material(name: &str, count: usize) -> BattleUnit {
-    let mut template = BattleTemplate::parse(JENNER).unwrap();
+    let mut template = BattleTemplate::parse("JR7-D",JENNER).unwrap();
     let mut part = template.sections[&BattleSection::Head].criticals[&3].clone();
     part.equipment = name.into();
     let mut remaining = count;

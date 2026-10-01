@@ -38,9 +38,9 @@ async fn tracked_wheeled_and_hover_vehicles_accept_and_drive_move_orders() {
             )
             .unwrap();
             let templates = [
-                include_str!("../game/mechs/Demolisher"),
-                include_str!("../game/mechs/Flatbed_Truck"),
-                include_str!("../game/mechs/Fulcrum"),
+                include_str!("../game/mechs/Demolisher.toml"),
+                include_str!("../game/mechs/Flatbed_Truck.toml"),
+                include_str!("../game/mechs/Fulcrum.toml"),
             ];
             let mut units = Vec::new();
             for (index, template) in templates.into_iter().enumerate() {
@@ -49,7 +49,7 @@ async fn tracked_wheeled_and_hover_vehicles_accept_and_drive_move_orders() {
                 create_battle_vehicle(
                     &mut world,
                     id,
-                    BattleVehicleTemplate::parse(template).unwrap(),
+                    BattleVehicleTemplate::parse("test",template).unwrap(),
                 )
                 .unwrap();
                 place_battle_unit(&mut world, id, map, (index * 2) as i64, 5).unwrap();
@@ -111,7 +111,7 @@ async fn ground_fixture(positions: &[(u16, u16)], pilot_first: bool) -> GroundFi
     for (index, &(x, y)) in positions.iter().enumerate() {
         let id = world.create(&config, format!("Autopilot unit {index}"), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse(include_str!("../game/mechs/JR7-D"))
+        BattleUnitTemplate::parse("JR7-D",include_str!("../game/mechs/JR7-D.toml"))
             .unwrap()
             .create(&mut world, id)
             .unwrap();

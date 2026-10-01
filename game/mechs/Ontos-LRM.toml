@@ -1,0 +1,35 @@
+name = "Ontos"
+class = "vehicle"
+movement = "track"
+tons = 95
+max_speed = 53.75
+specials = ["SearchLight", "ICEEngine_Tech"]
+
+[sections.left_side]
+armor = 30
+internals = 10
+
+[sections.right_side]
+armor = 30
+internals = 10
+
+[sections.front_side]
+armor = 35
+internals = 10
+slots = [
+    { at = "1-5", item = "Ammo_IS.LRM-20", rounds = 6 },
+]
+
+[sections.aft_side]
+armor = 30
+internals = 10
+
+[sections.turret]
+armor = 35
+internals = 10
+slots = [
+    { at = "1-2", item = "IS.LRM-20", brand = 3 },
+    { at = "3-7", item = "Ammo_IS.LRM-20", rounds = 6 },
+    { at = "8-9", item = "IS.LRM-5", brand = 3 },
+    { at = 10, item = "Ammo_IS.LRM-5", rounds = 24 },
+]

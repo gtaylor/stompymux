@@ -1,0 +1,35 @@
+name = "Shamash"
+class = "vehicle"
+movement = "hover"
+tons = 11
+max_speed = 215.0
+specials = ["Clan", "FerroFibrous_Tech"]
+
+[sections.left_side]
+armor = 7
+internals = 1
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 7
+internals = 1
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 9
+internals = 1
+
+[sections.aft_side]
+armor = 7
+internals = 1
+
+[sections.turret]
+armor = 8
+internals = 1
+slots = [
+    { at = "1-4", item = "CL.ERSmallLaser" },
+]

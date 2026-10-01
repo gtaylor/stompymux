@@ -1,0 +1,96 @@
+name = "Clint"
+class = "mech"
+movement = "biped"
+tons = 40
+max_speed = 96.75
+specials = ["Clan"]
+
+[sections.left_arm]
+armor = 9
+internals = 6
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.right_arm]
+armor = 9
+internals = 6
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = "4-8", item = "CL.LB10-XAC" },
+]
+
+[sections.left_torso]
+armor = 13
+internals = 10
+rear = 4
+slots = [
+    { at = "1-2", item = "Engine" },
+    { at = 3, item = "JumpJet" },
+    { at = 4, item = "CL.ERMediumLaser" },
+    { at = "5-7", item = "EndoSteel" },
+]
+
+[sections.right_torso]
+armor = 13
+internals = 10
+rear = 4
+slots = [
+    { at = "1-2", item = "Engine" },
+    { at = "3-4", item = "HeatSink" },
+    { at = "5-6", item = "Ammo_CL.LB10-XAC", rounds = 10 },
+    { at = "7-8", item = "Ammo_CL.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = "9-11", item = "EndoSteel" },
+    { at = 12, item = "JumpJet" },
+]
+
+[sections.center_torso]
+armor = 15
+internals = 12
+rear = 4
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = 11, item = "CL.ERMediumLaser" },
+    { at = 12, item = "EndoSteel" },
+]
+
+[sections.left_leg]
+armor = 16
+internals = 10
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 16
+internals = 10
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "EndoSteel" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

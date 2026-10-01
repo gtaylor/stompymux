@@ -1,0 +1,79 @@
+name = "Overlord"
+class = "spheroid_dropship"
+movement = "fly"
+tons = 9700
+max_speed = 53.75
+heat_sinks = 120
+tac_range = 50
+lrs_range = 100
+scan_range = 50
+
+[sections.front_right_side]
+armor = 127
+internals = 97
+slots = [
+    { at = 1, item = "IS.GaussRifle" },
+    { at = "2-3", item = "Ammo_IS.GaussRifle", rounds = 8 },
+    { at = 4, item = "IS.LRM-20" },
+    { at = 5, item = "ArtemisIV" },
+    { at = "6-9", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
+    { at = 10, item = "IS.ERLargeLaser" },
+    { at = "11-12", item = "IS.MediumLaser" },
+]
+
+[sections.front_left_side]
+armor = 127
+internals = 97
+slots = [
+    { at = 1, item = "IS.GaussRifle" },
+    { at = "2-3", item = "Ammo_IS.GaussRifle", rounds = 8 },
+    { at = 4, item = "IS.LRM-20" },
+    { at = 5, item = "ArtemisIV" },
+    { at = "6-9", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
+    { at = 10, item = "IS.ERLargeLaser" },
+    { at = "11-12", item = "IS.MediumLaser" },
+]
+
+[sections.rear_left_side]
+armor = 127
+internals = 97
+slots = [
+    { at = 1, item = "IS.ERPPC" },
+    { at = 2, item = "IS.ERLargeLaser" },
+    { at = "3-4", item = "IS.MediumPulseLaser" },
+    { at = "10-11", item = "Ammo_IS.GaussRifle", rounds = 8 },
+    { at = 12, item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
+]
+
+[sections.rear_right_side]
+armor = 127
+internals = 97
+slots = [
+    { at = 1, item = "IS.ERPPC" },
+    { at = 2, item = "IS.ERLargeLaser" },
+    { at = "3-4", item = "IS.MediumPulseLaser" },
+    { at = "10-11", item = "Ammo_IS.GaussRifle", rounds = 8 },
+    { at = 12, item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
+]
+
+[sections.aft]
+armor = 100
+internals = 97
+slots = [
+    { at = 1, item = "IS.GaussRifle" },
+    { at = "2-3", item = "Ammo_IS.GaussRifle", rounds = 8 },
+    { at = 4, item = "IS.LRM-20" },
+    { at = 5, item = "ArtemisIV" },
+    { at = "6-7", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
+    { at = "9-10", item = "IS.ERLargeLaser" },
+    { at = "11-12", item = "IS.MediumLaser" },
+]
+
+[sections.nose]
+armor = 127
+internals = 97
+slots = [
+    { at = "1-2", item = "IS.ERPPC" },
+    { at = "3-5", item = "IS.GaussRifle" },
+    { at = "7-12", item = "Ammo_IS.GaussRifle", rounds = 8 },
+]

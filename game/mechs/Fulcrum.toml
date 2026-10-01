@@ -1,0 +1,38 @@
+name = "Fulcrum"
+class = "vehicle"
+movement = "hover"
+tons = 50
+max_speed = 161.25
+specials = ["XLEngine_Tech"]
+
+[sections.left_side]
+armor = 27
+internals = 5
+
+[sections.right_side]
+armor = 27
+internals = 5
+
+[sections.front_side]
+armor = 46
+internals = 5
+slots = [
+    { at = 1, item = "TAG", brand = 3 },
+]
+
+[sections.aft_side]
+armor = 20
+internals = 5
+slots = [
+    { at = 1, item = "Ecm", brand = 3 },
+]
+
+[sections.turret]
+armor = 40
+internals = 5
+slots = [
+    { at = 1, item = "IS.LargeLaser", brand = 3 },
+    { at = 2, item = "IS.MediumLaser", brand = 3 },
+    { at = 3, item = "IS.LRM-10", brand = 3 },
+    { at = 4, item = "Ammo_IS.LRM-10", rounds = 12 },
+]

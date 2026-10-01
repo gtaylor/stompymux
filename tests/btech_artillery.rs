@@ -352,7 +352,7 @@ fn artillery_aim_ranges_observers_and_corrections() {
 /// Artillery construction uses the same structural validation as other launchers.
 #[test]
 fn artillery_catalogue_admits_delayed_launchers() {
-    let mut template = BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+    let mut template = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let section = template
         .sections
         .get_mut(&BattleSection::LeftTorso)

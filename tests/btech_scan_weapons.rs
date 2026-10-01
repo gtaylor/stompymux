@@ -8,7 +8,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId,
     let (dir, config, mut world, subject, scanner, index) = firing::fixture_with_target(
         template,
         Some(BattleWeapon::ClanArrowIv),
-        include_str!("../game/mechs/JR7-D"),
+        include_str!("../game/mechs/JR7-D.toml"),
     )
     .await;
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(scanner);
@@ -135,7 +135,7 @@ async fn scan_weapon_damage_uses_first_critical() {
 #[tokio::test]
 async fn scan_numbers_skip_destroyed_sections_without_reindexing_state() {
     let (_dir, config, mut world, subject, scanner, index) =
-        fixture(include_str!("../game/mechs/JR7-D")).await;
+        fixture(include_str!("../game/mechs/JR7-D.toml")).await;
     assert!(index > 0);
     let lost = world.btech.constructed_units()[&subject]
         .loadout()

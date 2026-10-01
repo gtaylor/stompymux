@@ -102,9 +102,9 @@ use crate::support::btech_firing as firing;
 #[tokio::test]
 async fn live_low_altitude_vtol_receives_radar_bonus_after_restart() {
     let (_dir, config, mut world, observer, target, _) = firing::fixture_with_target(
-        include_str!("../game/mechs/RadioTower"),
+        include_str!("../game/mechs/RadioTower.toml"),
         None,
-        include_str!("../game/mechs/Kestrel"),
+        include_str!("../game/mechs/Kestrel.toml"),
     )
     .await;
     firing::edit(&mut world, target, |state| {

@@ -1,0 +1,51 @@
+name = "Sabutai"
+class = "aerofighter"
+movement = "fly"
+tons = 75
+max_speed = 96.75
+heat_sinks = 54
+fuel = 450
+specials = ["Clan", "FerroFibrous_Tech"]
+
+[sections.nose]
+armor = 46
+internals = 7
+slots = [
+    { at = "1-4", item = "CL.ERLargeLaser" },
+    { at = 5, item = "CL.ERSmallLaser" },
+]
+
+[sections.left_wing]
+armor = 35
+internals = 7
+slots = [
+    { at = "1-3", item = "CL.ERMediumLaser" },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_wing]
+armor = 35
+internals = 7
+slots = [
+    { at = "1-3", item = "CL.ERMediumLaser" },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.cockpit]
+armor = 16
+internals = 7
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "Sensors" },
+    { at = 5, item = "LifeSupport" },
+]
+
+[sections.engine]
+armor = 30
+internals = 7
+
+[sections.fuselage]
+armor = 40
+internals = 7

@@ -378,9 +378,7 @@ mod tests {
                 let mut map = lane(&[(Terrain::Grassland, 0); 201]);
                 map.maximum_visibility = maximum;
                 world.btech.maps.insert(ObjectId(99), map);
-                let mut template = crate::BattleTemplate::parse(include_str!(
-                    "../../tests/fixtures/btech/mechs/JR7-D"
-                ))
+                let mut template = crate::BattleTemplate::parse("JR7-D",include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"))
                 .unwrap();
                 if radar {
                     template

@@ -5,17 +5,17 @@ use stompymux_rs::*;
 
 /// Representative assets, including stationary construction authored from a tracked chassis.
 fn templates() -> Vec<String> {
-    let vehicle = include_str!("../game/mechs/Demolisher");
+    let vehicle = include_str!("../game/mechs/Demolisher.toml");
     vec![
-        include_str!("../game/mechs/JR7-D").into(),
-        include_str!("../game/mechs/GOL-1H").into(),
+        include_str!("../game/mechs/JR7-D.toml").into(),
+        include_str!("../game/mechs/GOL-1H.toml").into(),
         vehicle.into(),
-        vehicle.replace("{ Track }", "{ Wheel }"),
-        vehicle.replace("{ Track }", "{ Hover }"),
+        vehicle.replace("movement = \"track\"", "movement = \"wheel\""),
+        vehicle.replace("movement = \"track\"", "movement = \"hover\""),
         vehicle
-            .replace("{ Track }", "{ None }")
-            .replace("{ 53.75 }", "{ 0 }"),
-        include_str!("../game/mechs/Kestrel").into(),
+            .replace("movement = \"track\"", "movement = \"none\"")
+            .replace("max_speed = 53.75", "max_speed = 0.0"),
+        include_str!("../game/mechs/Kestrel.toml").into(),
     ]
 }
 
@@ -24,7 +24,7 @@ async fn fixture(source: &str, placed: bool) -> (tempfile::TempDir, Config, Worl
     let (dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Equipment report".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    BattleUnitTemplate::parse(source)
+    BattleUnitTemplate::parse("test",source)
         .unwrap()
         .create(&mut world, id)
         .unwrap();
@@ -152,8 +152,8 @@ async fn reports_share_chassis_state_and_preserve_empty_ammunition() {
 #[tokio::test]
 async fn report_access_and_artillery_ranges() {
     for source in [
-        include_str!("../game/mechs/Daishi-H"),
-        include_str!("../game/mechs/Naga-A"),
+        include_str!("../game/mechs/Daishi-H.toml"),
+        include_str!("../game/mechs/Naga-A.toml"),
     ] {
         let (_dir, config, world, id) = fixture(source, false).await;
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -179,7 +179,7 @@ async fn report_access_and_artillery_ranges() {
 /// Whole-weapon diagnostics retain mount numbers, report live damage and keep destroyed types in specs.
 #[tokio::test]
 async fn damage_and_vehicle_failures_are_distinct_from_readiness() {
-    let (_dir, config, mut world, id) = fixture(include_str!("../game/mechs/GOL-1H"), true).await;
+    let (_dir, config, mut world, id) = fixture(include_str!("../game/mechs/GOL-1H.toml"), true).await;
     let loadout = world.btech.constructed_units()[&id].loadout().unwrap();
     let index = loadout
         .weapons
@@ -230,7 +230,7 @@ async fn damage_and_vehicle_failures_are_distinct_from_readiness() {
     );
 
     let (_dir, _config, mut world, id) =
-        fixture(include_str!("../game/mechs/Demolisher"), true).await;
+        fixture(include_str!("../game/mechs/Demolisher.toml"), true).await;
     let jam = jam_battle_vehicle_weapon(&mut world, id, BattleVehicleSection::Turret)
         .unwrap()
         .unwrap();

@@ -1,0 +1,28 @@
+name = "Parity Naval"
+class = "naval"
+movement = "hull"
+tons = 60
+max_speed = 32.5
+
+[sections.left_side]
+armor = 11
+internals = 3
+slots = [
+    { at = 1, item = "Agra.IS.PPC", brand = 5 },
+]
+
+[sections.right_side]
+armor = 12
+internals = 4
+
+[sections.front_side]
+armor = 13
+internals = 5
+
+[sections.aft_side]
+armor = 14
+internals = 6
+
+[sections.turret]
+armor = 15
+internals = 7

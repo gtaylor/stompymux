@@ -1,0 +1,98 @@
+name = "JagerMech"
+class = "mech"
+movement = "biped"
+tons = 70
+max_speed = 64.5
+heat_sinks = 26
+computer = 4
+radio = 4
+cargo_space = 0
+specials = ["DoubleHS", "FlipArms", "AntiAircraft"]
+
+[sections.left_arm]
+armor = 22
+internals = 11
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = "3-7", item = "IS.UltraAC/5", brand = 3 },
+    { at = "8-9", item = "IS.ERLargeLaser", brand = 3 },
+    { at = "10-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 22
+internals = 11
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = "3-7", item = "IS.UltraAC/5", brand = 3 },
+    { at = "8-9", item = "IS.ERLargeLaser", brand = 3 },
+    { at = "10-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 24
+internals = 15
+rear = 6
+slots = [
+    { at = "1-3", item = "Engine", brand = 3 },
+    { at = "4-6", item = "HeatSink", brand = 3 },
+    { at = 7, item = "Ammo_IS.UltraAC/5", rounds = 20 },
+    { at = "8-11", item = "FerroFibrous", brand = 3 },
+    { at = 12, item = "Case", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 24
+internals = 15
+rear = 6
+slots = [
+    { at = "1-3", item = "Engine", brand = 3 },
+    { at = "4-6", item = "HeatSink", brand = 3 },
+    { at = 7, item = "Ammo_IS.UltraAC/5", rounds = 20 },
+    { at = "8-11", item = "FerroFibrous", brand = 3 },
+    { at = 12, item = "Case", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 34
+internals = 22
+rear = 6
+slots = [
+    { at = "1-3", item = "Engine", brand = 3 },
+    { at = "4-7", item = "Gyro", brand = 3 },
+    { at = "8-10", item = "Engine", brand = 3 },
+    { at = "11-12", item = "IS.MediumPulseLaser", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 22
+internals = 15
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = 4, item = "HandOrFootActuator", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 22
+internals = 15
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = 4, item = "HandOrFootActuator", brand = 3 },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport", brand = 3 },
+    { at = 2, item = "Sensors", brand = 3 },
+    { at = 3, item = "Cockpit", brand = 3 },
+    { at = 5, item = "Sensors", brand = 3 },
+    { at = 6, item = "LifeSupport", brand = 3 },
+]

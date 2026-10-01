@@ -1,0 +1,41 @@
+name = "Demolisher"
+class = "vehicle"
+movement = "track"
+tons = 80
+max_speed = 53.75
+tac_range = 30
+lrs_range = 60
+scan_range = 30
+
+[sections.left_side]
+armor = 28
+internals = 8
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 28
+internals = 8
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 38
+internals = 8
+slots = [
+    { at = "1-2", item = "IS.MediumLaser" },
+]
+
+[sections.aft_side]
+armor = 20
+internals = 8
+
+[sections.turret]
+armor = 38
+internals = 8
+slots = [
+    { at = "1-2", item = "IS.ArrowIVSystem" },
+    { at = "3-9", item = "Ammo_IS.ArrowIVSystem", rounds = 5 },
+]

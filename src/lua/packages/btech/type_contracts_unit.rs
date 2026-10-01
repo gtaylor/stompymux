@@ -29,7 +29,7 @@
 // lua-types-begin btech 00058
 //|---Construct a persistent Mech or ground vehicle on an unused live thing. Transactional.
 //|---@param dbref integer
-//|---@param name string Relative name under database.mech_database.
+//|---@param name string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
 //|---@return boolean
 //|function btech_unit.create(dbref, name) end
 // lua-types-end
@@ -1822,14 +1822,14 @@
 // lua-types-begin btech 00488
 //|---Replace the unit definition from a saved template reference.
 //|---@param unit DbRef|Object
-//|---@param reference string Relative name under database.mech_database.
+//|---@param reference string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
 //|function btech_unit.load_template(unit, reference) end
 // lua-types-end
 
 // lua-types-begin btech 00489
 //|---Save the unit definition under a template reference in the mech database.
 //|---@param unit DbRef|Object
-//|---@param reference string Relative name under database.mech_database.
+//|---@param reference string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
 //|function btech_unit.save_template(unit, reference) end
 // lua-types-end
 

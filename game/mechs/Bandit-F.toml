@@ -1,0 +1,36 @@
+name = "Bandit"
+class = "vehicle"
+movement = "hover"
+tons = 50
+max_speed = 150.5
+heat_sinks = 11
+cargo_space = 400
+max_suits = 0
+max_ton = 4
+specials = ["CargoTech"]
+
+[sections.left_side]
+armor = 40
+internals = 5
+
+[sections.right_side]
+armor = 40
+internals = 5
+
+[sections.front_side]
+armor = 42
+internals = 5
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]
+
+[sections.aft_side]
+armor = 32
+internals = 5
+
+[sections.turret]
+armor = 22
+internals = 5
+slots = [
+    { at = 1, item = "IS.LargeLaser" },
+]

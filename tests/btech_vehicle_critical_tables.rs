@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse(template).unwrap(),
+        BattleVehicleTemplate::parse("test",template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -42,7 +42,7 @@ fn seed(world: &mut World, id: ObjectId, value: u8) {
 #[tokio::test]
 async fn advanced_ground_tables_cover_every_face_and_roll() {
     use BattleVehicleSection as S;
-    let (_dir, _config, base, id) = fixture(include_str!("../game/mechs/Demolisher")).await;
+    let (_dir, _config, base, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     let rules = BattleVehicleCriticalRules {
         rotor_damage_divisor: 0,
         extended_piloting: false,
@@ -112,7 +112,7 @@ async fn advanced_ground_tables_cover_every_face_and_roll() {
 async fn standard_branches_preserve_suppression_and_replay() {
     use BattleVehicleCriticalEffect as E;
     use BattleVehicleCriticalTable as T;
-    let (_dir, config, base, id) = fixture(include_str!("../game/mechs/Demolisher")).await;
+    let (_dir, config, base, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     for table in [T::Standard] {
         for section in [BattleVehicleSection::Front, BattleVehicleSection::Turret] {
             for damaged in [false, true] {
@@ -213,19 +213,19 @@ async fn disabled_safe_critproof_and_stationary_criticals_preserve_draw_order() 
     assert_eq!(T::from_settings(false), T::Standard);
     for (template, critproof, stationary) in [
         (
-            include_str!("../game/mechs/Demolisher").to_owned(),
+            include_str!("../game/mechs/Demolisher.toml").to_owned(),
             false,
             false,
         ),
         (
-            include_str!("../game/mechs/Demolisher")
+            include_str!("../game/mechs/Demolisher.toml")
                 .replace("ICEEngine_Tech", "ICEEngine_Tech CritProof_Tech"),
             true,
             false,
         ),
         (
-            include_str!("../game/mechs/Demolisher")
-                .replace("{ Track }", "{ None }")
+            include_str!("../game/mechs/Demolisher.toml")
+                .replace("movement = \"track\"", "movement = \"none\"")
                 .replace("{ 53.75 }", "{ 0.00 }"),
             false,
             true,

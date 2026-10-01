@@ -4,7 +4,7 @@ use stompymux_rs::*;
 
 /// A complete Clan biped with two external double sinks and ordinary fusion construction.
 fn definition() -> BattleTemplate {
-    let mut template = BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+    let mut template = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     template
         .attributes
         .insert("specials".into(), "Clan FlipArms".into());
@@ -177,11 +177,11 @@ async fn clan_ammunition_containment_and_sink_losses_survive_restart() {
 #[test]
 fn clan_game_assets_construct_without_rewriting_templates() {
     for (source, cooling) in [
-        (include_str!("../game/mechs/MadCat-A"), 40.0),
-        (include_str!("../game/mechs/Vulture-C"), 24.0),
-        (include_str!("../game/mechs/Vixen-1"), 20.0),
+        (include_str!("../game/mechs/MadCat-A.toml"), 40.0),
+        (include_str!("../game/mechs/Vulture-C.toml"), 24.0),
+        (include_str!("../game/mechs/Vixen-1.toml"), 20.0),
     ] {
-        let unit = BattleUnit::from_template(BattleTemplate::parse(source).unwrap()).unwrap();
+        let unit = BattleUnit::from_template(BattleTemplate::parse("test",source).unwrap()).unwrap();
         assert_eq!(unit.engine().unwrap(), BattleEngine::Xl);
         assert_eq!(unit.heat_rates(&World::default()).dissipation, cooling);
         assert!(
@@ -200,7 +200,7 @@ fn clan_game_assets_construct_without_rewriting_templates() {
 #[test]
 fn laser_sink_designation_preserves_single_and_double_sink_behavior() {
     for mut template in [
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
         definition(),
     ] {
         let baseline = BattleUnit::from_template(template.clone()).unwrap();
@@ -248,12 +248,12 @@ fn laser_sink_designation_preserves_single_and_double_sink_behavior() {
 async fn night_gyr_laser_sink_assets_construct_and_replay_damage() {
     let (_dir, config, mut world) = support::isolated_world().await;
     for source in [
-        include_str!("../game/mechs/NightGyr-Prime"),
-        include_str!("../game/mechs/NightGyr-A"),
-        include_str!("../game/mechs/NightGyr-C"),
-        include_str!("../game/mechs/NightGyr-D"),
+        include_str!("../game/mechs/NightGyr-Prime.toml"),
+        include_str!("../game/mechs/NightGyr-A.toml"),
+        include_str!("../game/mechs/NightGyr-C.toml"),
+        include_str!("../game/mechs/NightGyr-D.toml"),
     ] {
-        let template = BattleTemplate::parse(source).unwrap();
+        let template = BattleTemplate::parse("test",source).unwrap();
         let cooling = f64::from(template.heat_sinks);
         let id = world.create(&config, template.name.clone(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
@@ -285,7 +285,7 @@ async fn night_gyr_laser_sink_assets_construct_and_replay_damage() {
 /// Recognizing a designation does not bypass incomplete equipment checks.
 #[test]
 fn laser_sink_designation_does_not_accept_incomplete_clan_sinks() {
-    let mut template = BattleTemplate::parse(include_str!("../game/mechs/NightGyr-B")).unwrap();
+    let mut template = BattleTemplate::parse("NightGyr-B",include_str!("../game/mechs/NightGyr-B.toml")).unwrap();
     assert!(BattleUnit::from_template(template.clone()).is_ok());
     template
         .sections
@@ -305,10 +305,10 @@ fn laser_sink_designation_does_not_accept_incomplete_clan_sinks() {
 #[test]
 fn low_capacity_clan_cooling_constructs_and_replays() {
     for source in [
-        include_str!("../game/mechs/SnowFox-1"),
-        include_str!("../game/mechs/SnowFox-2"),
+        include_str!("../game/mechs/SnowFox-1.toml"),
+        include_str!("../game/mechs/SnowFox-2.toml"),
     ] {
-        let template = BattleTemplate::parse(source).unwrap();
+        let template = BattleTemplate::parse("test",source).unwrap();
         for capacity in [10, 12, 14, 16, 18, 20] {
             let mut adjusted = template.clone();
             adjusted.heat_sinks = capacity;

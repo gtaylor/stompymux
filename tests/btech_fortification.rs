@@ -2,10 +2,10 @@
 use crate::support;
 use stompymux_rs::*;
 const CHASSIS: [&str; 4] = [
-    include_str!("fixtures/btech/mechs/JR7-D"),
-    include_str!("../game/mechs/SCP-1N"),
-    include_str!("../game/mechs/Demolisher"),
-    include_str!("../game/mechs/Kestrel"),
+    include_str!("fixtures/btech/mechs/JR7-D.toml"),
+    include_str!("../game/mechs/SCP-1N.toml"),
+    include_str!("../game/mechs/Demolisher.toml"),
+    include_str!("../game/mechs/Kestrel.toml"),
 ];
 
 /// A stationary unit and its assigned running pilot, ready for shared control admission.
@@ -20,7 +20,7 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId) {
     )
     .unwrap();
     let id = world.create(&config, "Unit".into(), Kind::Thing);
-    BattleUnitTemplate::parse(source)
+    BattleUnitTemplate::parse("test",source)
         .unwrap()
         .create(&mut world, id)
         .unwrap();
@@ -204,7 +204,7 @@ async fn tow_pairs_reject_either_fortified_endpoint_and_cannot_be_fortified_afte
             let (_dir, config, mut world, id) = fixture(source).await;
             let map = world.objects[&id].location.unwrap();
             let target = world.create(&config, "Target".into(), Kind::Thing);
-            BattleUnitTemplate::parse(target_source)
+            BattleUnitTemplate::parse("test",target_source)
                 .unwrap()
                 .create(&mut world, target)
                 .unwrap();

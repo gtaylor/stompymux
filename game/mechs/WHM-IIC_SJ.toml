@@ -1,0 +1,106 @@
+name = "Warhammer"
+class = "mech"
+movement = "biped"
+tons = 80
+max_speed = 64.5
+heat_sinks = 40
+computer = 4
+radio = 5
+specials = ["DoubleHS", "Clan"]
+
+[sections.left_arm]
+armor = 24
+internals = 13
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 5 },
+    { at = 2, item = "UpperActuator", brand = 5 },
+    { at = 3, item = "LowerActuator", brand = 5 },
+    { at = "4-5", item = "CL.ERPPC", brand = 5 },
+    { at = 9, item = "FerroFibrous", brand = 0 },
+    { at = "10-11", item = "FerroFibrous", brand = 5 },
+    { at = 12, item = "EndoSteel", brand = 5 },
+]
+
+[sections.right_arm]
+armor = 24
+internals = 13
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 5 },
+    { at = 2, item = "UpperActuator", brand = 5 },
+    { at = 3, item = "LowerActuator", brand = 5 },
+    { at = "4-5", item = "CL.ERPPC", brand = 5 },
+    { at = 9, item = "FerroFibrous", brand = 0 },
+    { at = 10, item = "FerroFibrous", brand = 5 },
+    { at = "11-12", item = "EndoSteel", brand = 5 },
+]
+
+[sections.left_torso]
+armor = 24
+internals = 17
+rear = 10
+slots = [
+    { at = "1-2", item = "CL.LRM-15", brand = 5 },
+    { at = "3-8", item = "HeatSink", brand = 5 },
+    { at = 9, item = "Ammo_CL.LRM-15", rounds = 8 },
+    { at = 10, item = "FerroFibrous", brand = 5 },
+    { at = "11-12", item = "EndoSteel", brand = 5 },
+]
+
+[sections.right_torso]
+armor = 24
+internals = 17
+rear = 10
+slots = [
+    { at = "1-2", item = "CL.LRM-15", brand = 5 },
+    { at = 3, item = "CL.SRM-6", brand = 5 },
+    { at = 4, item = "Ammo_CL.SRM-6", rounds = 15 },
+    { at = "5-8", item = "HeatSink", brand = 5 },
+    { at = 9, item = "Ammo_CL.LRM-15", rounds = 8 },
+    { at = 10, item = "FerroFibrous", brand = 5 },
+    { at = "11-12", item = "EndoSteel", brand = 5 },
+]
+
+[sections.center_torso]
+armor = 30
+internals = 25
+rear = 15
+slots = [
+    { at = "1-3", item = "Engine", brand = 5 },
+    { at = "4-7", item = "Gyro", brand = 5 },
+    { at = "8-10", item = "Engine", brand = 5 },
+    { at = "11-12", item = "HeatSink", brand = 5 },
+]
+
+[sections.left_leg]
+armor = 30
+internals = 17
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 5 },
+    { at = 2, item = "UpperActuator", brand = 5 },
+    { at = 3, item = "LowerActuator", brand = 5 },
+    { at = 4, item = "HandOrFootActuator", brand = 5 },
+    { at = "5-6", item = "HeatSink", brand = 5 },
+]
+
+[sections.right_leg]
+armor = 30
+internals = 17
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 5 },
+    { at = 2, item = "UpperActuator", brand = 5 },
+    { at = 3, item = "LowerActuator", brand = 5 },
+    { at = 4, item = "HandOrFootActuator", brand = 5 },
+    { at = "5-6", item = "HeatSink", brand = 5 },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport", brand = 5 },
+    { at = 2, item = "Sensors", brand = 5 },
+    { at = 3, item = "Cockpit", brand = 5 },
+    { at = 4, item = "CL.ERMediumLaser", brand = 5 },
+    { at = 5, item = "Sensors", brand = 5 },
+    { at = 6, item = "LifeSupport", brand = 5 },
+]

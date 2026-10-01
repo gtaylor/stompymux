@@ -771,8 +771,8 @@ async fn secondary_critical_edits_preserve_material_and_follow_later_hits() {
 #[tokio::test]
 async fn hardened_gyro_piloting_contribution_survives_restart() {
     for source in [
-        include_str!("../game/mechs/JR7-D"),
-        include_str!("../game/mechs/GOL-1H"),
+        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/GOL-1H.toml"),
     ] {
         let (_dir, config, mut world, id, _, _) =
             firing::fixture_with_target(source, None, source).await;

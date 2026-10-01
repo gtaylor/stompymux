@@ -1,0 +1,32 @@
+name = "Cavalry"
+class = "vtol"
+movement = "vtol"
+tons = 25
+max_speed = 161.25
+specials = ["ICEEngine_Tech"]
+
+[sections.left_side]
+armor = 10
+internals = 3
+
+[sections.right_side]
+armor = 10
+internals = 3
+
+[sections.front_side]
+armor = 12
+internals = 3
+slots = [
+    { at = 1, item = "IS.SRM-6" },
+    { at = "2-5", item = "IS.SRM-2" },
+    { at = 6, item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = 7, item = "Ammo_IS.SRM-2", rounds = 50 },
+]
+
+[sections.aft_side]
+armor = 6
+internals = 3
+
+[sections.rotor]
+armor = 2
+internals = 3

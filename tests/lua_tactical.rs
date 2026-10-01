@@ -17,7 +17,7 @@ async fn fixture() -> (tempfile::TempDir, Config, Scripts, Vec<ObjectId>, Object
     for index in 0..3 {
         let id = world.create(&config, format!("Tactical {index}"), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse(include_str!("../game/mechs/JR7-D"))
+        BattleUnitTemplate::parse("JR7-D",include_str!("../game/mechs/JR7-D.toml"))
             .unwrap()
             .create(&mut world, id)
             .unwrap();

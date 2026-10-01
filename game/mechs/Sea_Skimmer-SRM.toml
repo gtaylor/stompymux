@@ -1,0 +1,37 @@
+name = "Sea_Skimmer"
+class = "naval"
+movement = "foil"
+tons = 25
+max_speed = 193.5
+computer = 3
+specials = ["ICEEngine_Tech"]
+
+[sections.left_side]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "IS.SRM-2" },
+]
+
+[sections.right_side]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "IS.SRM-2" },
+]
+
+[sections.front_side]
+armor = 10
+internals = 3
+
+[sections.aft_side]
+armor = 6
+internals = 3
+
+[sections.turret]
+armor = 6
+internals = 3
+slots = [
+    { at = "1-2", item = "IS.SRM-2" },
+    { at = "3-4", item = "Ammo_IS.SRM-2", rounds = 50 },
+]

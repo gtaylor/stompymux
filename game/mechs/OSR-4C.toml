@@ -1,0 +1,97 @@
+name = "Ostroc"
+class = "mech"
+movement = "biped"
+tons = 60
+max_speed = 86.0
+heat_sinks = 15
+computer = 4
+radio = 4
+specials = ["FerroFibrous_Tech"]
+
+[sections.left_arm]
+armor = 13
+internals = 10
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-12", item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 13
+internals = 10
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.left_torso]
+armor = 22
+internals = 14
+rear = 4
+slots = [
+    { at = "1-2", item = "IS.RL-15", modes = ["OneShot"] },
+    { at = 3, item = "IS.RL-10", modes = ["OneShot"] },
+    { at = "4-5", item = "IS.LargeLaser" },
+    { at = 6, item = "IS.MediumLaser" },
+    { at = "7-12", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 22
+internals = 14
+rear = 4
+slots = [
+    { at = "1-2", item = "IS.RL-15", modes = ["OneShot"] },
+    { at = 3, item = "IS.RL-10", modes = ["OneShot"] },
+    { at = "4-5", item = "IS.LargeLaser" },
+    { at = 6, item = "IS.MediumLaser" },
+]
+
+[sections.center_torso]
+armor = 24
+internals = 20
+rear = 6
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+]
+
+[sections.left_leg]
+armor = 22
+internals = 14
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 5, item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 22
+internals = 14
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 5, item = "HeatSink" },
+]
+
+[sections.head]
+armor = 8
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "HeatSink" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

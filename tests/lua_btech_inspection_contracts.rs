@@ -66,7 +66,7 @@ async fn registered_unit_defaults_are_inspectable_without_constructed_runtime() 
 async fn mech_inspection_projects_exact_record_shapes_and_keeps_the_old_report() {
     let (_directory, _config, scripts) = isolated_scripts().await;
     let template =
-        stompymux_rs::BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+        stompymux_rs::BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     stompymux_rs::create_battle_unit(
         &mut scripts.world_mut(),
         stompymux_rs::ObjectId(14),
@@ -141,10 +141,10 @@ async fn template_lookup_is_case_insensitive_bounded_and_registry_gated() {
     std::fs::create_dir_all(root.join("stock")).unwrap();
     std::fs::write(
         root.join("stock/JR7-D"),
-        include_str!("fixtures/btech/mechs/JR7-D"),
+        include_str!("fixtures/btech/mechs/JR7-D.toml"),
     )
     .unwrap();
-    let modes = include_str!("fixtures/btech/mechs/JR7-D")
+    let modes = include_str!("fixtures/btech/mechs/JR7-D.toml")
         .replace("Reference        { JR7-D }", "Reference        { MODES }")
         .replace("LifeSupport - -", "LifeSupport - - 20")
         .replace(
@@ -154,7 +154,7 @@ async fn template_lookup_is_case_insensitive_bounded_and_registry_gated() {
     std::fs::write(root.join("stock/MODES"), modes).unwrap();
     std::fs::write(
         root.join("PARITY"),
-        include_str!("fixtures/btech/mechs/PARITY"),
+        include_str!("fixtures/btech/mechs/PARITY.toml"),
     )
     .unwrap();
     scripts
@@ -188,7 +188,7 @@ async fn template_lookup_is_case_insensitive_bounded_and_registry_gated() {
         .unwrap();
     std::fs::write(
         root.join("stock/LateTemplate"),
-        include_str!("fixtures/btech/mechs/PARITY"),
+        include_str!("fixtures/btech/mechs/PARITY.toml"),
     )
     .unwrap();
     scripts
@@ -205,8 +205,8 @@ async fn template_lookup_is_case_insensitive_bounded_and_registry_gated() {
 #[tokio::test(flavor = "current_thread")]
 async fn vehicle_inspection_uses_vehicle_sections_and_raw_slot_inventory() {
     let (_directory, config, scripts) = isolated_scripts().await;
-    let source = include_str!("../game/mechs/Demolisher");
-    let template = stompymux_rs::BattleVehicleTemplate::parse(source).unwrap();
+    let source = include_str!("../game/mechs/Demolisher.toml");
+    let template = stompymux_rs::BattleVehicleTemplate::parse("test",source).unwrap();
     stompymux_rs::create_battle_vehicle(
         &mut scripts.world_mut(),
         stompymux_rs::ObjectId(14),
@@ -261,7 +261,7 @@ async fn vehicle_inspection_uses_vehicle_sections_and_raw_slot_inventory() {
 async fn inspection_getters_follow_c_argument_contracts() {
     let (_directory, _config, scripts) = isolated_scripts().await;
     let template =
-        stompymux_rs::BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+        stompymux_rs::BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     stompymux_rs::create_battle_unit(
         &mut scripts.world_mut(),
         stompymux_rs::ObjectId(14),
@@ -380,7 +380,7 @@ async fn inspection_getters_follow_c_argument_contracts() {
 async fn engine_suspension_factor_matches_c_susp_factor() {
     let (_directory, _config, scripts) = isolated_scripts().await;
     let template =
-        stompymux_rs::BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+        stompymux_rs::BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     stompymux_rs::create_battle_unit(
         &mut scripts.world_mut(),
         stompymux_rs::ObjectId(14),
@@ -442,15 +442,15 @@ async fn inspection_getters_are_unavailable_while_checking() {
 
 #[test]
 fn parity_probe_templates_parse_through_unit_construction() {
-    let ground = include_str!("fixtures/lua-probes/templates/PARITY-GROUND");
-    let vtol = include_str!("fixtures/lua-probes/templates/PARITY-VTOL");
-    let naval = include_str!("fixtures/lua-probes/templates/PARITY-NAVAL");
-    assert!(stompymux_rs::BattleUnitTemplate::parse(ground).is_ok());
-    assert!(stompymux_rs::BattleUnitTemplate::parse(vtol).is_ok());
+    let ground = include_str!("fixtures/lua-probes/templates/PARITY-GROUND.toml");
+    let vtol = include_str!("fixtures/lua-probes/templates/PARITY-VTOL.toml");
+    let naval = include_str!("fixtures/lua-probes/templates/PARITY-NAVAL.toml");
+    assert!(stompymux_rs::BattleUnitTemplate::parse("test",ground).is_ok());
+    assert!(stompymux_rs::BattleUnitTemplate::parse("test",vtol).is_ok());
     // Naval unit construction stays blocked until the loader accepts the class
     // (C template_load.c loads every unit class).
     assert_eq!(
-        stompymux_rs::BattleUnitTemplate::parse(naval)
+        stompymux_rs::BattleUnitTemplate::parse("test",naval)
             .unwrap_err()
             .to_string(),
         "Unsupported unit template type Naval"
@@ -464,12 +464,12 @@ async fn parity_probe_vehicle_templates_load_and_project() {
     std::fs::create_dir_all(&root).unwrap();
     std::fs::write(
         root.join("PARITY-GROUND"),
-        include_str!("fixtures/lua-probes/templates/PARITY-GROUND"),
+        include_str!("fixtures/lua-probes/templates/PARITY-GROUND.toml"),
     )
     .unwrap();
     std::fs::write(
         root.join("PARITY-VTOL"),
-        include_str!("fixtures/lua-probes/templates/PARITY-VTOL"),
+        include_str!("fixtures/lua-probes/templates/PARITY-VTOL.toml"),
     )
     .unwrap();
     stompymux_rs::btech::register_empty_battle_unit(

@@ -151,7 +151,7 @@ async fn atm_modes_matrix(weapon: BattleWeapon) {
                 &config,
                 &source,
                 Some(weapon),
-                include_str!("../game/mechs/AS7-D"),
+                include_str!("../game/mechs/AS7-D.toml"),
                 false,
                 Some(flag),
             );
@@ -283,7 +283,7 @@ async fn atm_ams_and_missing_supply() {
         let (_dir, config, world, shooter, target, index) = firing::fixture_with_target(
             &source,
             Some(BattleWeapon::ClanAtm3),
-            include_str!("../game/mechs/AS7-D"),
+            include_str!("../game/mechs/AS7-D.toml"),
         )
         .await;
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -313,7 +313,7 @@ async fn atm_mode_controls_share_eligibility_and_exclusivity() {
             let (_dir, config, mut world, id, _, index) = firing::fixture_with_target(
                 &source,
                 Some(weapon),
-                include_str!("../game/mechs/AS7-D"),
+                include_str!("../game/mechs/AS7-D.toml"),
             )
             .await;
             let before = world.btech.clone();

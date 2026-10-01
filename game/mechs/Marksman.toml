@@ -1,0 +1,34 @@
+name = "Marksman"
+class = "vehicle"
+movement = "track"
+tons = 65
+max_speed = 64.5
+computer = 3
+specials = ["FerroFibrous_Tech"]
+
+[sections.left_side]
+armor = 20
+internals = 7
+
+[sections.right_side]
+armor = 20
+internals = 7
+
+[sections.front_side]
+armor = 54
+internals = 7
+slots = [
+    { at = 1, item = "IS.Sniper" },
+    { at = "2-3", item = "Ammo_IS.Sniper", rounds = 10 },
+]
+
+[sections.aft_side]
+armor = 20
+internals = 7
+
+[sections.turret]
+armor = 20
+internals = 7
+slots = [
+    { at = 1, item = "IS.LargeLaser" },
+]

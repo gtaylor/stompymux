@@ -7,16 +7,16 @@ use stompymux_rs::*;
 #[tokio::test]
 async fn preferred_sections_controls_feed_and_restart() {
     for (source, vehicle) in [
-        (include_str!("../game/mechs/JR7-D"), false),
-        (include_str!("../game/mechs/GOL-1H"), false),
-        (include_str!("../game/mechs/Demolisher"), true),
-        (include_str!("../game/mechs/Kestrel"), true),
+        (include_str!("../game/mechs/JR7-D.toml"), false),
+        (include_str!("../game/mechs/GOL-1H.toml"), false),
+        (include_str!("../game/mechs/Demolisher.toml"), true),
+        (include_str!("../game/mechs/Kestrel.toml"), true),
     ] {
         let (_dir, config, mut world) = support::isolated_world().await;
         let id = world.create(&config, "Ammo preference".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         let (weapon, preference, preferred_bin, other_bin) = if vehicle {
-            let mut definition = BattleVehicleTemplate::parse(source).unwrap();
+            let mut definition = BattleVehicleTemplate::parse("test",source).unwrap();
             let bin = definition
                 .sections
                 .values()
@@ -59,7 +59,7 @@ async fn preferred_sections_controls_feed_and_restart() {
                     .unwrap(),
             )
         } else {
-            let mut definition = BattleTemplate::parse(source).unwrap();
+            let mut definition = BattleTemplate::parse("test",source).unwrap();
             let bin = definition
                 .sections
                 .values()
@@ -252,11 +252,11 @@ async fn laser_defense_rejects_preferred_ammunition() {
         let (_dir, config, mut world) = support::isolated_world().await;
         let id = world.create(&config, "Laser defense".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        let source = include_str!("../game/mechs/Demolisher").replace("IS.AC/20", weapon.name());
+        let source = include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", weapon.name());
         create_battle_vehicle(
             &mut world,
             id,
-            BattleVehicleTemplate::parse(&source).unwrap(),
+            BattleVehicleTemplate::parse("test",&source).unwrap(),
         )
         .unwrap();
         let map = world.create(&config, "Field".into(), Kind::Room);

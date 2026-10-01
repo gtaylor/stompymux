@@ -20,7 +20,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse(template).unwrap(),
+        BattleVehicleTemplate::parse("test",template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -35,7 +35,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 
 #[tokio::test]
 async fn vehicle_perception_captures_completion_and_replays_until_next_startup() {
-    let (_dir, config, mut world, id) = fixture(include_str!("../game/mechs/Demolisher")).await;
+    let (_dir, config, mut world, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     assert_eq!(world.btech.vehicles()[&id].scanner_perception(), 18);
     stop_battle_unit(
         &mut world,
@@ -118,14 +118,14 @@ async fn vehicle_perception_captures_completion_and_replays_until_next_startup()
 #[tokio::test]
 async fn vehicle_signature_drives_scenario_lighting_and_detached_lua_state() {
     let (_dir, config, mut world, observer) =
-        fixture(include_str!("../game/mechs/Demolisher")).await;
+        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     let map = world.btech.vehicles()[&observer].position().unwrap().map;
     let target = world.create(&config, "Target".into(), Kind::Thing);
     world.objects.get_mut(&target).unwrap().home = Some(ObjectId(config.home()));
     create_battle_vehicle(
         &mut world,
         target,
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap(),
+        BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap(),
     )
     .unwrap();
     // Beyond the fifteen-hex sensor band, only night sight reaches the target.

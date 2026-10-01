@@ -46,18 +46,18 @@ async fn fixture(
     for id in [shooter, target] {
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     }
-    BattleUnitTemplate::parse(if vehicle {
-        include_str!("../game/mechs/Demolisher")
+    BattleUnitTemplate::parse("test",if vehicle {
+        include_str!("../game/mechs/Demolisher.toml")
     } else {
-        include_str!("fixtures/btech/mechs/JR7-D")
+        include_str!("fixtures/btech/mechs/JR7-D.toml")
     })
     .unwrap()
     .create(&mut world, shooter)
     .unwrap();
-    let mut template = BattleTemplate::parse(if quad {
-        include_str!("../game/mechs/GOL-1H")
+    let mut template = BattleTemplate::parse("test",if quad {
+        include_str!("../game/mechs/GOL-1H.toml")
     } else {
-        include_str!("fixtures/btech/mechs/JR7-D")
+        include_str!("fixtures/btech/mechs/JR7-D.toml")
     })
     .unwrap();
     if proof {

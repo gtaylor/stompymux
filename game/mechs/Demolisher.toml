@@ -1,0 +1,30 @@
+name = "Demolisher"
+class = "vehicle"
+movement = "track"
+tons = 80
+max_speed = 53.75
+specials = ["ICEEngine_Tech"]
+
+[sections.left_side]
+armor = 30
+internals = 8
+
+[sections.right_side]
+armor = 30
+internals = 8
+
+[sections.front_side]
+armor = 40
+internals = 8
+
+[sections.aft_side]
+armor = 20
+internals = 8
+
+[sections.turret]
+armor = 40
+internals = 8
+slots = [
+    { at = "1-2", item = "IS.AC/20" },
+    { at = "3-6", item = "Ammo_IS.AC/20", rounds = 5 },
+]

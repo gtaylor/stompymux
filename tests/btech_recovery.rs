@@ -56,7 +56,7 @@ async fn recovery_preserves_dice_and_timer_across_injury_restart_and_cockpit_rel
     stompymux_rs::create_battle_unit(
         &mut world,
         unit,
-        stompymux_rs::BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        stompymux_rs::BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     stompymux_rs::place_battle_unit(&mut world, unit, map, 0, 0).unwrap();

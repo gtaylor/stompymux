@@ -16,13 +16,13 @@ fn hit(section: BattleSection) -> BattleHit {
 #[tokio::test]
 async fn biped_and_quad_material_entries_consume_exact_dice_and_replay() {
     for source in [
-        include_str!("../game/mechs/JR7-D"),
-        include_str!("../game/mechs/GOL-1H"),
+        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/GOL-1H.toml"),
     ] {
         let (_dir, config, mut base) = support::isolated_world().await;
         let id = base.create(&config, "Material target".into(), Kind::Thing);
         base.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        create_battle_unit(&mut base, id, BattleTemplate::parse(source).unwrap()).unwrap();
+        create_battle_unit(&mut base, id, BattleTemplate::parse("test",source).unwrap()).unwrap();
         for scenario in ["zero", "armor", "internal", "missing_sections", "overflow"] {
             let mut before = base.clone();
             let section = BattleSection::LeftArm;

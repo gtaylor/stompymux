@@ -5,20 +5,20 @@ use stompymux_rs::{
     BattleSection, BattleTemplate, BattleUnit, Flag, Kind, ObjectId, Scripts, create_battle_unit,
     dbck, persistence,
 };
-const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D");
-const ATLAS: &str = include_str!("fixtures/btech/mechs/AS7-D");
+const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D.toml");
+const ATLAS: &str = include_str!("fixtures/btech/mechs/AS7-D.toml");
 
 #[test]
 fn construction_sets_original_protection_and_independent_ammunition() {
-    let unit = BattleUnit::from_template(BattleTemplate::parse(JENNER).unwrap()).unwrap();
+    let unit = BattleUnit::from_template(BattleTemplate::parse("JR7-D",JENNER).unwrap()).unwrap();
     assert_eq!(unit.sections()[&BattleSection::CenterTorso].armor, 10);
     assert_eq!(unit.sections()[&BattleSection::CenterTorso].internal, 11);
     assert_eq!(unit.sections()[&BattleSection::CenterTorso].rear, 3);
     assert_eq!(unit.ammunition(), &[25]);
-    let atlas = BattleUnit::from_template(BattleTemplate::parse(ATLAS).unwrap()).unwrap();
+    let atlas = BattleUnit::from_template(BattleTemplate::parse("AS7-D",ATLAS).unwrap()).unwrap();
     assert_eq!(atlas.ammunition(), &[15, 6, 6, 5, 5]);
     let ams_source = JENNER.replace("IS.MediumLaser", "CL.Anti-MissileSystem");
-    let ams = BattleUnit::from_template(BattleTemplate::parse(&ams_source).unwrap()).unwrap();
+    let ams = BattleUnit::from_template(BattleTemplate::parse("test",&ams_source).unwrap()).unwrap();
     assert_eq!(
         ams.loadout()
             .unwrap()
@@ -34,7 +34,7 @@ fn construction_sets_original_protection_and_independent_ammunition() {
         JENNER.replace("Computer", "UnknownField"),
         JENNER.replace("IS.MediumLaser", "IS.UnknownDefense"),
     ] {
-        assert!(BattleUnit::from_template(BattleTemplate::parse(&source).unwrap()).is_err());
+        assert!(BattleUnit::from_template(BattleTemplate::parse("test",&source).unwrap()).is_err());
     }
 }
 
@@ -42,7 +42,7 @@ fn construction_sets_original_protection_and_independent_ammunition() {
 async fn constructed_units_survive_source_removal_and_purge_atomically() {
     let (dir, config, mut world) = support::isolated_world().await;
     std::fs::create_dir_all(dir.path().join("mechs")).unwrap();
-    std::fs::write(dir.path().join("mechs/JR7-D"), JENNER).unwrap();
+    std::fs::write(dir.path().join("mechs/JR7-D.toml"), JENNER).unwrap();
     let first = world.create(&config, "First Jenner".into(), Kind::Thing);
     let second = world.create(&config, "Second Jenner".into(), Kind::Thing);
     for id in [first, second] {
@@ -100,13 +100,13 @@ async fn constructed_units_survive_source_removal_and_purge_atomically() {
         .unwrap();
     let armor: u16 = scripts.eval_callback(&format!("local u=btech.unit.state({}); u.sections.CenterTorso.armor=0; return btech.unit.state({}).sections.CenterTorso.armor", first.0, first.0)).unwrap();
     assert_eq!(armor, 10);
-    std::fs::remove_file(dir.path().join("mechs/JR7-D")).unwrap();
+    std::fs::remove_file(dir.path().join("mechs/JR7-D.toml")).unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     assert_eq!(loaded.btech.constructed_units().len(), 2);
     assert_eq!(loaded.btech, candidate.btech);
     let unchanged = loaded.btech.clone();
     assert!(
-        create_battle_unit(&mut loaded, first, BattleTemplate::parse(JENNER).unwrap()).is_err()
+        create_battle_unit(&mut loaded, first, BattleTemplate::parse("JR7-D",JENNER).unwrap()).is_err()
     );
     assert_eq!(loaded.btech, unchanged);
     loaded

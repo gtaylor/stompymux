@@ -1447,7 +1447,7 @@ async fn engine_sink_override_validates_authored_values_across_chassis_scenario(
         let before = world.btech.clone();
         for value in ["no", "2147483648", "-2147483649", "1.5"] {
             let template =
-                BattleUnitTemplate::parse(&format!("HSEngOverRide {{ {value} }}\n{source}"));
+                BattleUnitTemplate::parse("test",&format!("HSEngOverRide {{ {value} }}\n{source}"));
             let result = template.and_then(|template| template.create(&mut world, candidate));
             assert!(
                 result
@@ -1549,7 +1549,7 @@ async fn crew_and_target_fields_share_native_lua_validation_and_restart_scenario
         prepare_battle_recovery(&mut world, replacement).unwrap();
         let unplaced = world.create(config, "Unplaced unit".into(), Kind::Thing);
         world.objects.get_mut(&unplaced).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse(&source)
+        BattleUnitTemplate::parse("test",&source)
             .unwrap()
             .create(&mut world, unplaced)
             .unwrap();
@@ -2805,7 +2805,7 @@ async fn pilot_damage_fields_share_recovery_and_fatal_cleanup_scenario(f: &UnitF
 /// Saved propulsion must satisfy the same low-gravity capacity bounds as administrative edits.
 async fn saved_jump_override_rejects_capacity_overflow_before_runtime_scenario(f: &UnitFields) {
     let config = &f.config;
-    let source = include_str!("../game/mechs/JR7-D");
+    let source = include_str!("../game/mechs/JR7-D.toml");
     let (mut world, id, _, _) = f.pair(source, source);
     let location = world.btech.constructed_units()[&id]
         .loadout()
@@ -2885,7 +2885,7 @@ async fn live_mass_fields_share_load_and_expire_on_material_changes_scenario(f: 
         let (world, id, target, index) = f.supply(
             &source,
             Some(BattleWeapon::Mml3),
-            include_str!("../game/mechs/AS7-D"),
+            include_str!("../game/mechs/AS7-D.toml"),
             Some(""),
         );
         let original = battle_unit_load(&world, id, false).unwrap();

@@ -73,9 +73,9 @@ async fn occupied_woods_accuracy_is_shared_across_shooter_and_target_chassis() {
 #[tokio::test]
 async fn woods_canopy_boundary_overlays_and_restart() {
     let (_dir, config, base, shooter, target, index) = firing::fixture_with_target(
-        include_str!("../game/mechs/JR7-D"),
+        include_str!("../game/mechs/JR7-D.toml"),
         Some(BattleWeapon::MediumLaser),
-        include_str!("../game/mechs/Kestrel"),
+        include_str!("../game/mechs/Kestrel.toml"),
     )
     .await;
     for altitude in [1.0, 2.0, 3.0] {
@@ -124,7 +124,7 @@ async fn configured_sighting_uses_woods_accuracy_for_every_shooter() {
         let (dir, _initial, mut world, shooter, target, index) = firing::fixture_with_target(
             &source,
             Some(BattleWeapon::MediumLaser),
-            include_str!("../game/mechs/JR7-D"),
+            include_str!("../game/mechs/JR7-D.toml"),
         )
         .await;
         terrain(&mut world, target, Terrain::HeavyForest);

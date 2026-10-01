@@ -1,0 +1,29 @@
+name = "J Edgar"
+class = "vehicle"
+movement = "hover"
+tons = 25
+max_speed = 182.75
+
+[sections.left_side]
+armor = 19
+internals = 3
+
+[sections.right_side]
+armor = 19
+internals = 3
+
+[sections.front_side]
+armor = 30
+internals = 3
+
+[sections.aft_side]
+armor = 12
+internals = 3
+
+[sections.turret]
+armor = 24
+internals = 3
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+    { at = "2-4", item = "IS.Flamer" },
+]

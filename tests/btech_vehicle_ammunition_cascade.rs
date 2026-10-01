@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse(template).unwrap(),
+        BattleVehicleTemplate::parse("test",template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -33,7 +33,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 
 /// Mixed bins in separate hull and turret sections, including an inert Gauss supply.
 fn template() -> String {
-    include_str!("../game/mechs/Demolisher").replace("Left_Side\n", "Left_Side\n    CRIT_1 { Ammo_IS.GaussRifle 3 - }\n    CRIT_2 { Ammo_IS.PlasmaRifle 3 - }\n    CRIT_3 { Ammo_IS.LRM-5 2 - }\n    CRIT_4 { Ammo_IS.AC/20 2 Precision }\n    CRIT_5 { Ammo_IS.NarcBeacon 2 - }\n")
+    include_str!("../game/mechs/Demolisher.toml").replace("Left_Side\n", "Left_Side\n    CRIT_1 { Ammo_IS.GaussRifle 3 - }\n    CRIT_2 { Ammo_IS.PlasmaRifle 3 - }\n    CRIT_3 { Ammo_IS.LRM-5 2 - }\n    CRIT_4 { Ammo_IS.AC/20 2 Precision }\n    CRIT_5 { Ammo_IS.NarcBeacon 2 - }\n")
 }
 
 #[tokio::test]

@@ -4,7 +4,7 @@ use stompymux_rs::*;
 /// The tracked Demolisher supplies a fixed 80-ton chassis and two whole turret weapons.
 fn vehicle(flags: &str) -> BattleVehicleTemplate {
     let mut template =
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap();
+        BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap();
     template.attributes.insert("specials".into(), flags.into());
     template
 }
@@ -55,12 +55,12 @@ fn intact_vehicle_mass_separates_design_bins_from_loaded_rounds() {
     let half_bin = template.mass().unwrap();
     assert_eq!(half_bin.design_total, mass.design_total - 512);
     assert_eq!(half_bin.total, empty_bin.total);
-    let truck = BattleVehicleTemplate::parse(include_str!("../game/mechs/Flatbed_Truck"))
+    let truck = BattleVehicleTemplate::parse("Flatbed_Truck",include_str!("../game/mechs/Flatbed_Truck.toml"))
         .unwrap()
         .mass()
         .unwrap();
     assert_eq!((truck.total, truck.turret), (4 * 1024, 0));
-    let hover = BattleVehicleTemplate::parse(include_str!("../game/mechs/Fulcrum"))
+    let hover = BattleVehicleTemplate::parse("Fulcrum",include_str!("../game/mechs/Fulcrum.toml"))
         .unwrap()
         .mass()
         .unwrap();
@@ -211,7 +211,7 @@ fn stationary_construction_has_no_propulsion_mass() {
 /// Non-catalogue hover ratings retain diagnostics but use the reference propulsion minimum.
 #[test]
 fn hovercraft_missing_catalogue_rating_uses_mass_floor() {
-    let template = BattleVehicleTemplate::parse(include_str!("../game/mechs/Shamash")).unwrap();
+    let template = BattleVehicleTemplate::parse("Shamash",include_str!("../game/mechs/Shamash.toml")).unwrap();
     let engine = template.engine().unwrap();
     assert_eq!(engine.weight_rating, 58);
     assert_eq!(engine.standard_mass, None);

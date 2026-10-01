@@ -1,0 +1,37 @@
+name = "Chaparral"
+class = "vehicle"
+movement = "track"
+tons = 50
+max_speed = 64.5
+heat_sinks = 10
+computer = 3
+
+[sections.left_side]
+armor = 18
+internals = 5
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]
+
+[sections.right_side]
+armor = 18
+internals = 5
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]
+
+[sections.front_side]
+armor = 16
+internals = 5
+slots = [
+    { at = 1, item = "IS.ArrowIVSystem" },
+    { at = "2-4", item = "Ammo_IS.ArrowIVSystem", rounds = 5 },
+]
+
+[sections.aft_side]
+armor = 36
+internals = 5
+slots = [
+    { at = 4, item = "IS.SRM-6" },
+    { at = 5, item = "Ammo_IS.SRM-6", rounds = 15 },
+]

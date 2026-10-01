@@ -53,7 +53,7 @@ async fn fixture(
     )
     .unwrap();
     let id = world.create(&config, "Traveler".into(), Kind::Thing);
-    BattleUnitTemplate::parse(source)
+    BattleUnitTemplate::parse("test",source)
         .unwrap()
         .create(&mut world, id)
         .unwrap();
@@ -87,9 +87,9 @@ fn host(config: &Config, world: World) -> Scripts {
 #[tokio::test]
 async fn delayed_entry_moves_all_chassis_and_rolls_back_arrival_failure() {
     for source in [
-        include_str!("fixtures/btech/mechs/JR7-D"),
-        include_str!("../game/mechs/Demolisher"),
-        include_str!("../game/mechs/Kestrel"),
+        include_str!("fixtures/btech/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/mechs/Kestrel.toml"),
     ] {
         let (_dir, config, world, id, exterior, interior) = fixture(source).await;
         let scripts = host(&config, world);
@@ -137,7 +137,7 @@ async fn delayed_entry_moves_all_chassis_and_rolls_back_arrival_failure() {
 #[tokio::test]
 async fn changed_enter_lock_consumes_event_without_moving() {
     let (_dir, config, world, id, exterior, _interior) =
-        fixture(include_str!("../game/mechs/Demolisher")).await;
+        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     let scripts = host(&config, world);
     assert!(begin_battle_building_entry_action(&scripts, id, ObjectId(1), None).unwrap());
     scripts
@@ -157,9 +157,9 @@ async fn changed_enter_lock_consumes_event_without_moving() {
 #[tokio::test]
 async fn native_and_lua_entry_share_admission_parsing_and_rollback() {
     for source in [
-        include_str!("fixtures/btech/mechs/JR7-D"),
-        include_str!("../game/mechs/Demolisher"),
-        include_str!("../game/mechs/Kestrel"),
+        include_str!("fixtures/btech/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/mechs/Kestrel.toml"),
     ] {
         let (_dir, config, world, id, _exterior, _interior) = fixture(source).await;
         let scripts = host(&config, world.clone());
@@ -219,9 +219,9 @@ async fn native_and_lua_entry_share_admission_parsing_and_rollback() {
 #[tokio::test]
 async fn entry_feedback_uses_hex_visibility_and_captured_contacts() {
     for source in [
-        include_str!("fixtures/btech/mechs/JR7-D"),
-        include_str!("../game/mechs/Demolisher"),
-        include_str!("../game/mechs/Kestrel"),
+        include_str!("fixtures/btech/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/mechs/Kestrel.toml"),
     ] {
         let (_dir, config, mut world, id, exterior, interior) = fixture(source).await;
         world.objects.get_mut(&interior).unwrap().name = "North Depot".into();
@@ -229,7 +229,7 @@ async fn entry_feedback_uses_hex_visibility_and_captured_contacts() {
         create_battle_vehicle(
             &mut world,
             observer,
-            BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap(),
+            BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, observer, exterior, 1, 0).unwrap();
@@ -286,16 +286,16 @@ async fn entry_feedback_uses_hex_visibility_and_captured_contacts() {
 #[tokio::test]
 async fn interior_arrival_uses_normal_acquisition_without_extra_dice() {
     for source in [
-        include_str!("fixtures/btech/mechs/JR7-D"),
-        include_str!("../game/mechs/Demolisher"),
-        include_str!("../game/mechs/Kestrel"),
+        include_str!("fixtures/btech/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/mechs/Kestrel.toml"),
     ] {
         let (_dir, config, mut world, id, exterior, interior) = fixture(source).await;
         let observer = world.create(&config, "Interior observer".into(), Kind::Thing);
         create_battle_vehicle(
             &mut world,
             observer,
-            BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap(),
+            BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, observer, interior, 0, 0).unwrap();
@@ -356,9 +356,9 @@ async fn interior_arrival_uses_normal_acquisition_without_extra_dice() {
 #[tokio::test]
 async fn building_exit_shares_placement_and_continues_vtol_flight() {
     for source in [
-        include_str!("fixtures/btech/mechs/JR7-D"),
-        include_str!("../game/mechs/Demolisher"),
-        include_str!("../game/mechs/Kestrel"),
+        include_str!("fixtures/btech/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/mechs/Kestrel.toml"),
     ] {
         let (_dir, config, mut world, id, exterior, interior) = fixture(source).await;
         set_battle_building_exit(&mut world, interior, 0, Some(exterior)).unwrap();
@@ -395,7 +395,7 @@ async fn building_exit_shares_placement_and_continues_vtol_flight() {
         create_battle_unit(
             &mut world,
             occupant,
-            BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+            BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, occupant, exterior, 1, 0).unwrap();
@@ -490,9 +490,9 @@ async fn building_exit_shares_placement_and_continues_vtol_flight() {
 #[tokio::test]
 async fn host_exits_share_teleport_policy_and_callback_rollback() {
     for source in [
-        include_str!("fixtures/btech/mechs/JR7-D"),
-        include_str!("../game/mechs/Demolisher"),
-        include_str!("../game/mechs/Kestrel"),
+        include_str!("fixtures/btech/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/mechs/Kestrel.toml"),
     ] {
         let (_dir, config, mut world, id, exterior, interior) = fixture(source).await;
         set_battle_building_exit(&mut world, interior, 0, Some(exterior)).unwrap();
@@ -521,7 +521,7 @@ async fn host_exits_share_teleport_policy_and_callback_rollback() {
         create_battle_vehicle(
             &mut world,
             observer,
-            BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap(),
+            BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, observer, exterior, 1, 0).unwrap();
@@ -596,12 +596,12 @@ async fn host_exits_share_teleport_policy_and_callback_rollback() {
 #[tokio::test]
 async fn movement_edges_dispatch_shared_exits_and_keep_blocked_units_stopped() {
     for source in [
-        include_str!("fixtures/btech/mechs/JR7-D").to_owned(),
-        include_str!("../game/mechs/GOL-1H").to_owned(),
-        include_str!("../game/mechs/Demolisher").to_owned(),
-        include_str!("../game/mechs/Demolisher").replace("{ Track }", "{ Wheel }"),
-        include_str!("../game/mechs/Demolisher").replace("{ Track }", "{ Hover }"),
-        include_str!("../game/mechs/Kestrel").to_owned(),
+        include_str!("fixtures/btech/mechs/JR7-D.toml").to_owned(),
+        include_str!("../game/mechs/GOL-1H.toml").to_owned(),
+        include_str!("../game/mechs/Demolisher.toml").to_owned(),
+        include_str!("../game/mechs/Demolisher.toml").replace("movement = \"track\"", "movement = \"wheel\""),
+        include_str!("../game/mechs/Demolisher.toml").replace("movement = \"track\"", "movement = \"hover\""),
+        include_str!("../game/mechs/Kestrel.toml").to_owned(),
     ] {
         for heading in [0, 90, 180, 270] {
             let (_dir, config, mut world, id, exterior, interior) = fixture(&source).await;
@@ -788,9 +788,9 @@ async fn movement_edges_dispatch_shared_exits_and_keep_blocked_units_stopped() {
 #[tokio::test]
 async fn in_character_unpiloted_exits_warn_without_inventing_destruction() {
     for source in [
-        include_str!("fixtures/btech/mechs/JR7-D"),
-        include_str!("../game/mechs/Demolisher"),
-        include_str!("../game/mechs/Kestrel"),
+        include_str!("fixtures/btech/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/mechs/Kestrel.toml"),
     ] {
         for in_character in [false, true] {
             for assigned in [false, true] {
@@ -876,7 +876,7 @@ async fn in_character_unpiloted_exits_warn_without_inventing_destruction() {
 /// Add a shutdown passenger unit to a carrier's battlefield without pickup gameplay policy.
 fn attach(world: &mut World, config: &Config, carrier: ObjectId, source: &str) -> ObjectId {
     let target = world.create(config, "Tow target".into(), Kind::Thing);
-    BattleUnitTemplate::parse(source)
+    BattleUnitTemplate::parse("test",source)
         .unwrap()
         .create(world, target)
         .unwrap();
@@ -909,9 +909,9 @@ fn attach(world: &mut World, config: &Config, carrier: ObjectId, source: &str) -
 #[tokio::test]
 async fn towing_pairs_enter_and_exit_together_across_all_chassis_and_restart() {
     let chassis = [
-        include_str!("fixtures/btech/mechs/JR7-D"),
-        include_str!("../game/mechs/Demolisher"),
-        include_str!("../game/mechs/Kestrel"),
+        include_str!("fixtures/btech/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/mechs/Kestrel.toml"),
     ];
     for (index, source) in chassis.iter().enumerate() {
         for target_source in chassis {
@@ -998,7 +998,7 @@ async fn towing_pairs_enter_and_exit_together_across_all_chassis_and_restart() {
 #[tokio::test]
 async fn tow_transfer_denial_and_either_arrival_callback_restore_the_entire_pair() {
     let (_dir, config, mut world, carrier, exterior, interior) =
-        fixture(include_str!("fixtures/btech/mechs/JR7-D")).await;
+        fixture(include_str!("fixtures/btech/mechs/JR7-D.toml")).await;
     set_battle_building_exit(&mut world, interior, 0, Some(exterior)).unwrap();
     set_building_state(
         &mut world,
@@ -1015,7 +1015,7 @@ async fn tow_transfer_denial_and_either_arrival_callback_restore_the_entire_pair
         &mut world,
         &config,
         carrier,
-        include_str!("../game/mechs/Kestrel"),
+        include_str!("../game/mechs/Kestrel.toml"),
     );
     transfer_battle_unit(
         &mut world,
@@ -1122,9 +1122,9 @@ fn actual_speed(world: &mut World, id: ObjectId, speed: f64) {
 #[tokio::test]
 async fn building_speed_limits_include_tow_load_at_admission_recheck_and_exit() {
     for source in [
-        include_str!("fixtures/btech/mechs/JR7-D"),
-        include_str!("../game/mechs/Demolisher"),
-        include_str!("../game/mechs/Kestrel"),
+        include_str!("fixtures/btech/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/mechs/Kestrel.toml"),
     ] {
         let (_dir, config, mut world, id, exterior, interior) = fixture(source).await;
         set_battle_building_exit(&mut world, interior, 0, Some(exterior)).unwrap();
@@ -1144,7 +1144,7 @@ async fn building_speed_limits_include_tow_load_at_admission_recheck_and_exit() 
             &mut world,
             &config,
             id,
-            include_str!("../game/mechs/Savannah_Master"),
+            include_str!("../game/mechs/Savannah_Master.toml"),
         );
         let maximum = battle_effective_maximum_speed(&world, id, true).unwrap();
         assert!(maximum >= 10.75 && maximum < unloaded);
@@ -1217,7 +1217,7 @@ async fn building_speed_limits_include_tow_load_at_admission_recheck_and_exit() 
 #[tokio::test]
 async fn building_host_honors_configured_hot_myomer_load_assistance() {
     let (_dir, config, mut world, id, exterior, interior) =
-        fixture(include_str!("fixtures/btech/mechs/JR7-D")).await;
+        fixture(include_str!("fixtures/btech/mechs/JR7-D.toml")).await;
     set_battle_building_exit(&mut world, interior, 0, Some(exterior)).unwrap();
     set_building_state(
         &mut world,
@@ -1260,7 +1260,7 @@ async fn building_host_honors_configured_hot_myomer_load_assistance() {
         &mut world,
         &config,
         id,
-        include_str!("fixtures/btech/mechs/JR7-D"),
+        include_str!("fixtures/btech/mechs/JR7-D.toml"),
     );
     let disabled = battle_effective_maximum_speed(&world, id, false).unwrap();
     let enabled = battle_effective_maximum_speed(&world, id, true).unwrap();
@@ -1344,17 +1344,17 @@ fn cover_state(world: &World, id: ObjectId) -> (bool, Option<u16>) {
 /// Explicit entry preserves cover; edge movement reveals only the carrier, including after restart.
 #[tokio::test]
 async fn cover_distinguishes_entry_and_tow_mirroring_from_edge_movement() {
-    let tracked = include_str!("../game/mechs/Demolisher");
+    let tracked = include_str!("../game/mechs/Demolisher.toml");
     let chassis = [
-        include_str!("../game/mechs/JR7-D").to_owned(),
-        include_str!("../game/mechs/GOL-1H").to_owned(),
+        include_str!("../game/mechs/JR7-D.toml").to_owned(),
+        include_str!("../game/mechs/GOL-1H.toml").to_owned(),
         tracked.to_owned(),
-        tracked.replace("{ Track }", "{ Wheel }"),
-        tracked.replace("{ Track }", "{ Hover }"),
-        include_str!("../game/mechs/Kestrel").to_owned(),
+        tracked.replace("movement = \"track\"", "movement = \"wheel\""),
+        tracked.replace("movement = \"track\"", "movement = \"hover\""),
+        include_str!("../game/mechs/Kestrel.toml").to_owned(),
         tracked
-            .replace("{ Track }", "{ None }")
-            .replace("{ 53.75 }", "{ 0 }"),
+            .replace("movement = \"track\"", "movement = \"none\"")
+            .replace("max_speed = 53.75", "max_speed = 0.0"),
     ];
     for source in chassis.iter().take(6) {
         for target_source in &chassis {
@@ -1474,9 +1474,9 @@ async fn cover_distinguishes_entry_and_tow_mirroring_from_edge_movement() {
 async fn entry_posture_and_flight_refusals_match_native_and_lua() {
     for case in 0..4 {
         let source = if case == 2 {
-            include_str!("../game/mechs/Kestrel")
+            include_str!("../game/mechs/Kestrel.toml")
         } else {
-            include_str!("../game/mechs/JR7-D")
+            include_str!("../game/mechs/JR7-D.toml")
         };
         let (_dir, config, mut world, id, _, _) = fixture(source).await;
         let expected = match case {

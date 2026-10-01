@@ -1,0 +1,33 @@
+name = "Main Gauche"
+class = "vehicle"
+movement = "track"
+tons = 30
+max_speed = 64.5
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+
+[sections.left_side]
+armor = 19
+internals = 3
+
+[sections.right_side]
+armor = 19
+internals = 3
+
+[sections.front_side]
+armor = 29
+internals = 3
+slots = [
+    { at = 1, item = "IS.LightGaussRifle", brand = 3 },
+    { at = 2, item = "IS.ERSmallLaser", brand = 3 },
+]
+
+[sections.aft_side]
+armor = 13
+internals = 3
+slots = [
+    { at = 1, item = "Ammo_IS.LightGaussRifle", rounds = 16 },
+    { at = 12, item = "C3Slave", brand = 0 },
+]

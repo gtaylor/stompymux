@@ -7,7 +7,7 @@ use support::isolated_scripts;
 /// PARITY fixture uses branded criticals exclusively and is loadable on both
 /// sides (differentially proven by the template_catalog/template_inspection
 /// probes).
-const LOADABLE: &str = include_str!("fixtures/btech/mechs/PARITY");
+const LOADABLE: &str = include_str!("fixtures/btech/mechs/PARITY.toml");
 
 fn seed(config: &stompymux_rs::Config) {
     let root = config.path(&config.database.mech_database);
@@ -15,7 +15,7 @@ fn seed(config: &stompymux_rs::Config) {
     std::fs::write(root.join("PARITY"), LOADABLE).unwrap();
     std::fs::write(
         root.join("stock/JR7-D"),
-        include_str!("fixtures/btech/mechs/JR7-D"),
+        include_str!("fixtures/btech/mechs/JR7-D.toml"),
     )
     .unwrap();
     std::fs::write(root.join("BROKEN"), "not a template at all").unwrap();

@@ -1,8 +1,8 @@
 //! Digging cover shares timers, controls, firing readiness, target aim and hit routing.
 use crate::support;
 use stompymux_rs::*;
-const VEHICLE: &str = include_str!("../game/mechs/Demolisher");
-const MECH: &str = include_str!("fixtures/btech/mechs/JR7-D");
+const VEHICLE: &str = include_str!("../game/mechs/Demolisher.toml");
+const MECH: &str = include_str!("fixtures/btech/mechs/JR7-D.toml");
 
 /// A piloted target and an optional uncrewed running shooter with an acquired contact.
 async fn fixture(
@@ -21,7 +21,7 @@ async fn fixture(
     let target = world.create(&config, "Defender".into(), Kind::Thing);
     let shooter = world.create(&config, "Shooter".into(), Kind::Thing);
     for (id, source, y) in [(target, target_source, 1), (shooter, shooter_source, 0)] {
-        BattleUnitTemplate::parse(source)
+        BattleUnitTemplate::parse("test",source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();
@@ -75,7 +75,7 @@ fn aim_rules() -> BattleAimRules {
 async fn dig_timer_native_lua_controls_shutdown_and_persistence_share_state() {
     for source in [
         VEHICLE.to_owned(),
-        VEHICLE.replace("{ Track }", "{ Wheel }"),
+        VEHICLE.replace("movement = \"track\"", "movement = \"wheel\""),
     ] {
         let (_dir, config, world, id, _) = fixture(&source, MECH).await;
         let native = Scripts::new(
@@ -323,8 +323,8 @@ async fn dug_in_turret_routing_uses_the_41_42_boundary_for_each_hit_table() {
 async fn unsupported_chassis_and_invalid_saved_countdowns_are_rejected() {
     for source in [
         MECH,
-        include_str!("../game/mechs/J_Edgar"),
-        include_str!("../game/mechs/Kestrel"),
+        include_str!("../game/mechs/J_Edgar.toml"),
+        include_str!("../game/mechs/Kestrel.toml"),
     ] {
         let (_dir, _, mut world, id, _) = fixture(source, MECH).await;
         let before = world.btech.clone();
@@ -357,7 +357,7 @@ async fn unsupported_chassis_and_invalid_saved_countdowns_are_rejected() {
 #[tokio::test]
 async fn pickup_clears_completed_cover_but_shutdown_preserves_it() {
     let (_dir, config, mut world, target, carrier) =
-        fixture(VEHICLE, include_str!("fixtures/btech/mechs/AS7-D")).await;
+        fixture(VEHICLE, include_str!("fixtures/btech/mechs/AS7-D.toml")).await;
     complete(&mut world, target);
     stop_battle_unit(
         &mut world,
@@ -458,7 +458,7 @@ async fn raw_dig_flags_preserve_overlapping_completion_deadlines() {
     use std::{cell::RefCell, rc::Rc};
     for source in [
         VEHICLE.to_owned(),
-        VEHICLE.replace("{ Track }", "{ Wheel }"),
+        VEHICLE.replace("movement = \"track\"", "movement = \"wheel\""),
     ] {
         let (_dir, config, mut world, id, _) = fixture(&source, MECH).await;
         dig_battle_unit(&mut world, id, ObjectId(1)).unwrap();

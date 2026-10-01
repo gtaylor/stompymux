@@ -1,0 +1,37 @@
+name = "Vedette"
+class = "vehicle"
+movement = "track"
+tons = 50
+max_speed = 86.0
+computer = 3
+specials = ["SearchLight", "ICEEngine_Tech"]
+
+[sections.left_side]
+armor = 18
+internals = 5
+
+[sections.right_side]
+armor = 18
+internals = 5
+
+[sections.front_side]
+armor = 20
+internals = 5
+slots = [
+    { at = 1, item = "IS.MachineGun", brand = 3 },
+    { at = 2, item = "Ammo_IS.MachineGun", rounds = 200 },
+]
+
+[sections.aft_side]
+armor = 20
+internals = 5
+
+[sections.turret]
+armor = 20
+internals = 5
+slots = [
+    { at = 1, item = "IS.AC/2", brand = 3 },
+    { at = 2, item = "Ammo_IS.AC/2", rounds = 45 },
+    { at = 3, item = "IS.SRM-2", brand = 3 },
+    { at = 4, item = "Ammo_IS.SRM-2", rounds = 50 },
+]

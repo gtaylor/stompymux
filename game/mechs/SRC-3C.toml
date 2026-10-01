@@ -1,0 +1,100 @@
+name = "Sirocco"
+class = "mech"
+movement = "quad"
+tons = 95
+max_speed = 53.75
+heat_sinks = 26
+computer = 5
+radio = 5
+specials = ["DoubleHS"]
+
+[sections.front_left_leg]
+armor = 40
+internals = 20
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 5 },
+    { at = 2, item = "UpperActuator", brand = 5 },
+    { at = 3, item = "LowerActuator", brand = 5 },
+    { at = 4, item = "HandOrFootActuator", brand = 5 },
+    { at = 5, item = "IS.ERMediumLaser", brand = 5 },
+    { at = 6, item = "IS.A-Pod", brand = 5 },
+]
+
+[sections.front_right_leg]
+armor = 40
+internals = 20
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 5 },
+    { at = 2, item = "UpperActuator", brand = 5 },
+    { at = 3, item = "LowerActuator", brand = 5 },
+    { at = 4, item = "HandOrFootActuator", brand = 5 },
+    { at = 5, item = "IS.ERMediumLaser", brand = 5 },
+    { at = 6, item = "IS.A-Pod", brand = 5 },
+]
+
+[sections.left_torso]
+armor = 25
+internals = 20
+rear = 15
+slots = [
+    { at = "1-3", item = "HeatSink", brand = 5 },
+    { at = 4, item = "IS.ERMediumLaser", brand = 5 },
+    { at = 5, item = "IS.ERMediumLaser", modes = ["RearMount"], brand = 5 },
+    { at = "6-12", item = "IS.UltraAC/10", brand = 5 },
+]
+
+[sections.right_torso]
+armor = 25
+internals = 20
+rear = 15
+slots = [
+    { at = "1-3", item = "HeatSink", brand = 5 },
+    { at = 4, item = "IS.ERMediumLaser", brand = 5 },
+    { at = 5, item = "IS.ERMediumLaser", modes = ["RearMount"], brand = 5 },
+    { at = "6-12", item = "IS.UltraAC/10", brand = 5 },
+]
+
+[sections.center_torso]
+armor = 40
+internals = 30
+rear = 20
+slots = [
+    { at = "1-3", item = "Engine", brand = 5 },
+    { at = "4-7", item = "Gyro", brand = 5 },
+    { at = "8-10", item = "Engine", brand = 5 },
+    { at = "11-12", item = "Ecm", brand = 5 },
+]
+
+[sections.rear_left_leg]
+armor = 40
+internals = 20
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 5 },
+    { at = 2, item = "UpperActuator", brand = 5 },
+    { at = 3, item = "LowerActuator", brand = 5 },
+    { at = 4, item = "HandOrFootActuator", brand = 5 },
+    { at = "5-6", item = "Ammo_IS.UltraAC/10", rounds = 10 },
+]
+
+[sections.rear_right_leg]
+armor = 40
+internals = 20
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 5 },
+    { at = 2, item = "UpperActuator", brand = 5 },
+    { at = 3, item = "LowerActuator", brand = 5 },
+    { at = 4, item = "HandOrFootActuator", brand = 5 },
+    { at = "5-6", item = "Ammo_IS.UltraAC/10", rounds = 10 },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport", brand = 5 },
+    { at = 2, item = "Sensors", brand = 5 },
+    { at = 3, item = "Cockpit", brand = 5 },
+    { at = 4, item = "IS.MediumPulseLaser", brand = 5 },
+    { at = 5, item = "Sensors", brand = 5 },
+    { at = 6, item = "LifeSupport", brand = 5 },
+]

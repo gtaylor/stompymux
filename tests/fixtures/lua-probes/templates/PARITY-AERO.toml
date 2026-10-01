@@ -1,0 +1,24 @@
+name = "Parity Aero"
+class = "aerofighter"
+movement = "fly"
+tons = 90
+max_speed = 96.75
+
+[sections.nose]
+armor = 31
+internals = 7
+slots = [
+    { at = 1, item = "Agra.IS.PPC", brand = 5 },
+]
+
+[sections.left_wing]
+armor = 32
+internals = 8
+
+[sections.right_wing]
+armor = 33
+internals = 9
+
+[sections.aft_side]
+armor = 34
+internals = 10

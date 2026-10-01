@@ -1,0 +1,102 @@
+name = "Archer"
+class = "mech"
+movement = "biped"
+tons = 70
+max_speed = 64.5
+heat_sinks = 24
+computer = 4
+radio = 4
+specials = ["DoubleHS", "ArtemisIV", "EndoSteel_Tech"]
+
+[sections.left_arm]
+armor = 22
+internals = 11
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 5, item = "IS.ERMediumLaser" },
+    { at = "6-12", item = "EndoSteel" },
+]
+
+[sections.right_arm]
+armor = 22
+internals = 11
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 5, item = "IS.ERMediumLaser" },
+]
+
+[sections.left_torso]
+armor = 24
+internals = 15
+rear = 6
+slots = [
+    { at = "1-3", item = "HeatSink" },
+    { at = "4-6", item = "IS.LRM-15" },
+    { at = "7-8", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
+    { at = "9-10", item = "EndoSteel" },
+    { at = 11, item = "Case" },
+    { at = 12, item = "ArtemisIV" },
+]
+
+[sections.right_torso]
+armor = 24
+internals = 15
+rear = 6
+slots = [
+    { at = "1-3", item = "IS.LRM-15" },
+    { at = "4-5", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
+    { at = 6, item = "EndoSteel" },
+    { at = 11, item = "Case" },
+    { at = 12, item = "ArtemisIV" },
+]
+
+[sections.center_torso]
+armor = 33
+internals = 22
+rear = 10
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = "11-12", item = "IS.ERLargeLaser" },
+]
+
+[sections.left_leg]
+armor = 30
+internals = 15
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 30
+internals = 15
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "IS.ERMediumLaser" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

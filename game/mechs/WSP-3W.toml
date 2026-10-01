@@ -1,0 +1,96 @@
+name = "Wasp"
+class = "mech"
+movement = "biped"
+tons = 20
+max_speed = 96.75
+jump_speed = 64.5
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+
+[sections.left_arm]
+armor = 3
+internals = 3
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = 4, item = "HandOrFootActuator", brand = 3 },
+    { at = "5-7", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 3
+internals = 3
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = "4-5", item = "IS.SmallPulseLaser", brand = 3 },
+    { at = "6-8", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 5
+internals = 5
+rear = 1
+slots = [
+    { at = "1-3", item = "HeatSink", brand = 3 },
+    { at = "4-5", item = "JumpJet", brand = 3 },
+    { at = "6-7", item = "IS.SmallLaser", brand = 3 },
+    { at = "8-11", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 5
+internals = 5
+rear = 1
+slots = [
+    { at = "1-3", item = "HeatSink", brand = 3 },
+    { at = "4-5", item = "JumpJet", brand = 3 },
+    { at = "6-9", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 5
+internals = 6
+rear = 2
+slots = [
+    { at = "1-3", item = "Engine", brand = 3 },
+    { at = "4-7", item = "Gyro", brand = 3 },
+    { at = "8-10", item = "Engine", brand = 3 },
+    { at = "11-12", item = "JumpJet", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 4
+internals = 4
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = 4, item = "HandOrFootActuator", brand = 3 },
+    { at = "5-6", item = "IS.SmallLaser", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 4
+internals = 4
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = 4, item = "HandOrFootActuator", brand = 3 },
+]
+
+[sections.head]
+armor = 3
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport", brand = 3 },
+    { at = 2, item = "Sensors", brand = 3 },
+    { at = 3, item = "Cockpit", brand = 3 },
+    { at = 5, item = "Sensors", brand = 3 },
+    { at = 6, item = "LifeSupport", brand = 3 },
+]

@@ -29,7 +29,7 @@ async fn clear_map_units_shares_chassis_shutdown_and_restart() {
                 continue;
             }
             let (_dir, config, mut world, id, target, _) =
-                firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D"))
+                firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml"))
                     .await;
             let map = world.btech.units()[&id].map.unwrap();
             let actor = operator(&mut world, &config, map);
@@ -135,7 +135,7 @@ async fn clear_map_units_authority_empty_map_and_output_rollback() {
     let (dir, config, mut world, id, target, _) = firing::fixture_with_target(
         &firing::templates()[0],
         None,
-        include_str!("../game/mechs/AS7-D"),
+        include_str!("../game/mechs/AS7-D.toml"),
     )
     .await;
     let map = world.btech.units()[&id].map.unwrap();
@@ -223,7 +223,7 @@ async fn clear_map_tows_in_either_slot_order() {
     ] {
         for load_first in [false, true] {
             let (_dir, config, mut world, id, target, _) =
-                firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D"))
+                firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml"))
                     .await;
             let map = world.btech.units()[&id].map.unwrap();
             let actor = operator(&mut world, &config, map);
@@ -270,9 +270,9 @@ async fn clear_map_tows_in_either_slot_order() {
 #[tokio::test]
 async fn selected_map_shutdown_is_guarded_and_bare_shutdown_remains_local() {
     let (_dir, config, world, source, target, _) = firing::fixture_with_target(
-        include_str!("../game/mechs/JR7-D"),
+        include_str!("../game/mechs/JR7-D.toml"),
         None,
-        include_str!("../game/mechs/AS7-D"),
+        include_str!("../game/mechs/AS7-D.toml"),
     )
     .await;
     let map = world.btech.units()[&source].map.unwrap();

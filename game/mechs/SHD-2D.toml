@@ -1,0 +1,97 @@
+name = "Shadow Hawk"
+class = "mech"
+movement = "biped"
+tons = 55
+max_speed = 86.0
+jump_speed = 32.25
+heat_sinks = 14
+specials = ["Searchlight"]
+
+[sections.left_arm]
+armor = 5
+internals = 9
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 5, item = "IS.MediumLaser" },
+]
+
+[sections.right_arm]
+armor = 5
+internals = 9
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 5, item = "IS.MediumLaser" },
+]
+
+[sections.left_torso]
+armor = 9
+internals = 13
+rear = 5
+slots = [
+    { at = "1-4", item = "IS.AC/5", brand = 5 },
+    { at = 5, item = "Ammo_IS.AC/5", rounds = 20 },
+    { at = 6, item = "Ammo_IS.SRM-2", rounds = 50 },
+    { at = 7, item = "JumpJet" },
+]
+
+[sections.right_torso]
+armor = 9
+internals = 13
+rear = 5
+slots = [
+    { at = 1, item = "IS.LRM-5", brand = 4 },
+    { at = 2, item = "Ammo_IS.LRM-5", rounds = 24 },
+    { at = 3, item = "Ammo_IS.SRM-2", rounds = 50 },
+    { at = 4, item = "JumpJet" },
+    { at = "5-7", item = "HeatSink" },
+]
+
+[sections.center_torso]
+armor = 12
+internals = 18
+rear = 6
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = 11, item = "IS.SRM-2", brand = 4 },
+    { at = 12, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 5
+internals = 13
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.right_leg]
+armor = 5
+internals = 13
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.head]
+armor = 6
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "IS.SRM-2" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

@@ -1,0 +1,42 @@
+name = "Saracen"
+class = "vehicle"
+movement = "hover"
+tons = 35
+max_speed = 129.0
+computer = 3
+tac_range = 30
+lrs_range = 60
+scan_range = 30
+specials = ["ICEEngine_Tech"]
+
+[sections.left_side]
+armor = 21
+internals = 4
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 21
+internals = 4
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 25
+internals = 4
+
+[sections.aft_side]
+armor = 24
+internals = 4
+
+[sections.turret]
+armor = 25
+internals = 4
+slots = [
+    { at = 1, item = "IS.MRM-20" },
+    { at = 2, item = "IS.StreakSRM-2" },
+    { at = "3-4", item = "Ammo_IS.MRM-20", rounds = 12 },
+    { at = 5, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+]

@@ -1,0 +1,40 @@
+name = "Mithras"
+class = "vehicle"
+movement = "track"
+tons = 25
+max_speed = 64.5
+specials = ["Clan", "FerroFibrous_Tech"]
+
+[sections.left_side]
+armor = 14
+internals = 3
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 14
+internals = 3
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 16
+internals = 3
+slots = [
+    { at = 1, item = "CL.ERMediumLaser" },
+]
+
+[sections.aft_side]
+armor = 9
+internals = 3
+
+[sections.turret]
+armor = 14
+internals = 3
+slots = [
+    { at = 1, item = "CL.ERMediumLaser" },
+    { at = 2, item = "CL.UltraAC/2" },
+    { at = 3, item = "Ammo_CL.UltraAC/2", rounds = 45 },
+]

@@ -1,0 +1,32 @@
+name = "Fury"
+class = "vehicle"
+movement = "track"
+tons = 80
+max_speed = 64.5
+computer = 3
+cargo_space = 768
+specials = ["SearchLight"]
+
+[sections.left_side]
+armor = 40
+internals = 8
+
+[sections.right_side]
+armor = 40
+internals = 8
+
+[sections.front_side]
+armor = 60
+internals = 8
+
+[sections.aft_side]
+armor = 40
+internals = 8
+
+[sections.turret]
+armor = 60
+internals = 8
+slots = [
+    { at = 1, item = "IS.GaussRifle", brand = 3 },
+    { at = "2-3", item = "Ammo_IS.GaussRifle", rounds = 8 },
+]

@@ -22,7 +22,7 @@ async fn fixture(
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if index < 2 {
             let mut definition =
-                BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+                BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
             definition
                 .attributes
                 .insert("specials".into(), "FlipArms Searchlight".into());
@@ -31,7 +31,7 @@ async fn fixture(
             create_battle_vehicle(
                 &mut world,
                 id,
-                BattleVehicleTemplate::parse(vehicle).unwrap(),
+                BattleVehicleTemplate::parse("test",vehicle).unwrap(),
             )
             .unwrap();
         }
@@ -59,7 +59,7 @@ fn power(world: &mut World, ids: &[ObjectId], value: BattlePower) {
 async fn formation() -> (tempfile::TempDir, Config, World, [ObjectId; 4]) {
     let (dir, config, mut world, map, ids) = fixture(
         ".0\n.0\n.0\n.0\n.0\n",
-        include_str!("../game/mechs/Demolisher"),
+        include_str!("../game/mechs/Demolisher.toml"),
     )
     .await;
     for id in ids {
@@ -195,7 +195,7 @@ async fn vehicle_aim_rechecks_contact_sensors_and_does_not_spend_candidate_dice(
 
 #[tokio::test]
 async fn vehicle_aim_applies_computer_and_ammunition_accuracy_without_fire_admission() {
-    let template = include_str!("../game/mechs/Demolisher").replace(
+    let template = include_str!("../game/mechs/Demolisher.toml").replace(
         "Front_Side\n",
         "Front_Side\n CRIT_1 { TargetingComputer - - }\n",
     );
@@ -244,7 +244,7 @@ async fn vehicle_aim_applies_computer_and_ammunition_accuracy_without_fire_admis
 /// Every shooter uses the same vehicle movement and beacon terms, including after restart.
 #[tokio::test]
 async fn mech_and_vehicle_aim_share_vehicle_target_terms_without_spending_dice() {
-    let template = include_str!("../game/mechs/Demolisher").replace("IS.AC/20", "IS.SRM-4");
+    let template = include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", "IS.SRM-4");
     let (_dir, config, mut world, map, ids) = fixture(".0\n.0\n.0\n.0\n.0\n", &template).await;
     let [mech, _, vehicle, target] = ids;
     for id in ids {
@@ -324,7 +324,7 @@ async fn explicit_vehicle_links_share_targeting_computer_aim_and_critical_loss()
         BattleWeapon::MachineGun,
         BattleWeapon::ClanMachineGun,
     ] {
-        let template = include_str!("../game/mechs/Demolisher")
+        let template = include_str!("../game/mechs/Demolisher.toml")
             .replace("IS.AC/20 - -", &format!("{} - OnTC", weapon.name()))
             .replace("Ammo_IS.AC/20", &format!("Ammo_{}", weapon.name()))
             .replace(

@@ -23,7 +23,7 @@ async fn lua_controls_a_typed_autopilot_queue() {
     std::fs::create_dir_all(&root).unwrap();
     std::fs::write(
         root.join("PARITY"),
-        include_str!("fixtures/btech/mechs/PARITY"),
+        include_str!("fixtures/btech/mechs/PARITY.toml"),
     )
     .unwrap();
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();

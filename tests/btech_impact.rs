@@ -28,7 +28,7 @@ async fn fixture() -> (
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     seed(&mut world, id, 0);
@@ -403,11 +403,11 @@ async fn case_ii_vents_ammunition_explosion_through_local_armor() {
     let object = baseline.objects.get_mut(&id).unwrap();
     object.location = Some(ObjectId(config.start()));
     object.home = Some(ObjectId(config.home()));
-    let source = include_str!("fixtures/btech/mechs/JR7-D").replace(
+    let source = include_str!("fixtures/btech/mechs/JR7-D.toml").replace(
         "    CRIT_2-3\t\t  { JumpJet - - }\nCenter_Torso",
         "    CRIT_2-3\t\t  { JumpJet - - }\n    CRIT_4\t\t  { CASE-II - - }\nCenter_Torso",
     );
-    let template = BattleTemplate::parse(&source).unwrap();
+    let template = BattleTemplate::parse("test",&source).unwrap();
     assert!(
         template.sections[&Section::RightTorso]
             .criticals
@@ -486,11 +486,11 @@ async fn technology_fixture(
     let object = world.objects.get_mut(&id).unwrap();
     object.location = Some(ObjectId(config.start()));
     object.home = Some(ObjectId(config.home()));
-    let source = include_str!("fixtures/btech/mechs/JR7-D").replace(
+    let source = include_str!("fixtures/btech/mechs/JR7-D.toml").replace(
         "Specials\t { FlipArms }",
         &format!("Specials\t {{ FlipArms {specials} }}"),
     );
-    create_battle_unit(&mut world, id, BattleTemplate::parse(&source).unwrap()).unwrap();
+    create_battle_unit(&mut world, id, BattleTemplate::parse("test",&source).unwrap()).unwrap();
     seed(&mut world, id, 0);
     (dir, config, world, id)
 }
@@ -569,7 +569,7 @@ async fn technology_flags_change_mech_mass() {
 /// with laser heat sinks; the abbreviation behaves the same and removing the flag stops the glow.
 #[tokio::test]
 async fn laser_heat_sinks_glow_while_running() {
-    let original = include_str!("../game/mechs/NightGyr-A");
+    let original = include_str!("../game/mechs/NightGyr-A.toml");
     assert!(original.contains("LaserHS_Tech"));
     for (source, glows) in [
         (original.to_string(), true),
@@ -581,7 +581,7 @@ async fn laser_heat_sinks_glow_while_running() {
         let object = world.objects.get_mut(&id).unwrap();
         object.location = Some(ObjectId(config.start()));
         object.home = Some(ObjectId(config.home()));
-        create_battle_unit(&mut world, id, BattleTemplate::parse(&source).unwrap()).unwrap();
+        create_battle_unit(&mut world, id, BattleTemplate::parse("test",&source).unwrap()).unwrap();
         assert!(
             world.btech.constructed_units()[&id]
                 .definition()

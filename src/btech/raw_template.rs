@@ -3,6 +3,7 @@ use super::{
     BattleSection, BattleTemplate, BattleVehicleMovement, BattleVehicleSection,
     BattleVehicleTemplate, CriticalDefinition, SectionDefinition,
 };
+use super::template_document::ParsedTemplate;
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -348,8 +349,52 @@ impl RawTemplate {
         }
     }
 
-    /// Decode bounded template syntax into class-neutral native state.
-    pub fn parse(source: &str) -> Result<Self> {
+    /// Decode a TOML template document whose file stem is `reference` into class-neutral native state.
+    pub fn parse(reference: &str, source: &str) -> Result<Self> {
+        Self::from_parsed(ParsedTemplate::parse(reference, source)?)
+    }
+
+    /// Place decoded sections by class anatomy, narrowing values to native storage.
+    pub(super) fn from_parsed(parsed: ParsedTemplate) -> Result<Self> {
+        let ParsedTemplate { fields, sections } = parsed;
+        let class = fields
+            .get("type")
+            .map(|value| RawUnitClass::parse(value))
+            .transpose()?
+            .unwrap_or(RawUnitClass::Mech);
+        let movement = fields
+            .get("move_type")
+            .map(|value| RawMovement::parse(value))
+            .transpose()?
+            .unwrap_or(RawMovement::Biped);
+        let mut layouts: BTreeMap<_, _> = RawSectionCode::for_unit(class, movement)
+            .iter()
+            .map(|section| (*section, SectionDefinition::default()))
+            .collect();
+        for (heading, mut layout) in sections {
+            let section = RawSectionCode::parse_template_heading(class, movement, &heading)?;
+            layout.armor = layout.armor.min(255);
+            layout.internal = layout.internal.min(255);
+            layout.rear = layout.rear.min(255);
+            layouts.insert(section, layout);
+        }
+        let heat_sinks = loaded_heat_sinks(&fields)?;
+        Ok(Self {
+            name: fields.get("name").cloned().unwrap_or_default(),
+            reference: fields.get("reference").cloned().unwrap_or_default(),
+            class,
+            movement,
+            tons: parse_i32_field(&fields, "tons")?,
+            max_speed: parse_f32_field(&fields, "max_speed")?,
+            jump_speed: parse_f32_field(&fields, "jump_speed")?,
+            heat_sinks,
+            sections: layouts,
+            attributes: fields,
+        })
+    }
+
+    /// Decode the brace-delimited syntax used before TOML documents.
+    pub(super) fn parse_legacy(source: &str) -> Result<Self> {
         ensure_source_bound(source)?;
         let mut class = RawUnitClass::Mech;
         let mut movement = RawMovement::Biped;
@@ -393,17 +438,7 @@ impl RawTemplate {
             .enumerate()
             .map(|(index, section)| (section, layouts[index].clone()))
             .collect();
-        let specials = attributes.get("specials").map(String::as_str).unwrap_or("");
-        let authored_sinks = parse_i32_field(&attributes, "heat_sinks")?.clamp(-128, 127);
-        let heat_sinks = if authored_sinks == 0
-            && !specials
-                .split_ascii_whitespace()
-                .any(|flag| flag.eq_ignore_ascii_case("ICEEngine_Tech"))
-        {
-            10
-        } else {
-            authored_sinks
-        };
+        let heat_sinks = loaded_heat_sinks(&attributes)?;
         Ok(Self {
             name: attributes.get("name").cloned().unwrap_or_default(),
             reference: attributes.get("reference").cloned().unwrap_or_default(),
@@ -417,6 +452,16 @@ impl RawTemplate {
             attributes,
         })
     }
+}
+
+/// Authored sinks narrowed to native storage; non-ICE units without any receive the loader default.
+fn loaded_heat_sinks(fields: &BTreeMap<String, String>) -> Result<i32> {
+    let specials = fields.get("specials").map(String::as_str).unwrap_or("");
+    let authored = parse_i32_field(fields, "heat_sinks")?.clamp(-128, 127);
+    let ice = specials
+        .split_ascii_whitespace()
+        .any(|flag| flag.eq_ignore_ascii_case("ICEEngine_Tech"));
+    Ok(if authored == 0 && !ice { 10 } else { authored })
 }
 
 fn ensure_source_bound(source: &str) -> Result<()> {
@@ -797,10 +842,12 @@ mod tests {
     #[test]
     fn parses_noncombat_classes_without_a_runtime_constructor() {
         let template = RawTemplate::parse(
-            "Type { AeroFighter }\nMove_Type { Fly }\nTons { 90 }\nNose\nArmor { 67 }\nInternals { 9 }\n",
+            "AERO",
+            "class = \"aerofighter\"\nmovement = \"fly\"\ntons = 90\n[sections.nose]\narmor = 67\ninternals = 9\n",
         )
         .unwrap();
         assert_eq!(template.class, RawUnitClass::AeroFighter);
+        assert_eq!(template.reference, "AERO");
         assert_eq!(template.sections.len(), 4);
         assert_eq!(template.sections[&RawSectionCode::Nose].armor, 67);
         assert_eq!(template.sections[&RawSectionCode::AftSide].armor, 0);
@@ -820,34 +867,38 @@ mod tests {
     #[test]
     fn source_integers_follow_native_signed_and_narrow_storage() {
         let template = RawTemplate::parse(
-            "Tons { -2147483648 }\nHeat_Sinks { 999 }\nHead\nArmor { -1 }\nInternals { 256 }\nRear { 2147483647 }\n",
+            "X",
+            "tons = -2147483648\nheat_sinks = 999\n[sections.head]\narmor = 300\ninternals = 256\nrear = 65535\n",
         )
         .unwrap();
         assert_eq!(template.tons, i32::MIN);
         assert_eq!(template.heat_sinks, 127);
         let head = &template.sections[&RawSectionCode::Head];
-        assert_eq!((head.armor, head.internal, head.rear), (0, 255, 255));
-        assert!(RawTemplate::parse("Tons { 2147483648 }").is_err());
-        assert!(RawTemplate::parse("Head\nArmor { --1 }").is_err());
+        assert_eq!((head.armor, head.internal, head.rear), (255, 255, 255));
+        assert!(RawTemplate::parse("X", "tons = 2147483648").is_err());
+        assert!(RawTemplate::parse("X", "[sections.head]\narmor = -1").is_err());
     }
 
     #[test]
-    fn ordered_records_revisit_sections_accumulate_flags_and_remap_indices() {
+    fn sections_follow_class_anatomy_and_flags_merge_case_insensitively() {
         let template = RawTemplate::parse(
-            "Left_Arm\nArmor { 1 }\nLeft_Arm\nArmor { 2 }\nSpecials { Clan }\nSpecials { ECM Clan }\nType { AeroFighter }\nMove_Type { Fly }\n",
+            "X",
+            "class = \"aerofighter\"\nmovement = \"fly\"\nspecials = [\"Clan\", \"ECM\", \"clan\"]\n[sections.left_wing]\narmor = 2\n",
         )
         .unwrap();
         assert_eq!(template.class, RawUnitClass::AeroFighter);
-        assert_eq!(template.sections[&RawSectionCode::Nose].armor, 2);
+        assert_eq!(template.sections[&RawSectionCode::LeftWing].armor, 2);
         assert_eq!(template.attributes["specials"], "Clan ECM");
-        assert!(RawTemplate::parse("Unknown_Field { 1 }").is_err());
+        assert!(RawTemplate::parse("X", "[sections.left_arm]\n[sections.LEFT_ARM]").is_err());
+        assert!(RawTemplate::parse("X", "class = \"aerofighter\"\n[sections.left_arm]").is_err());
+        assert!(RawTemplate::parse("X", "unknown_field = 1").is_err());
     }
 
     #[test]
     fn missing_heat_sinks_receive_only_the_non_ice_loader_default() {
-        assert_eq!(RawTemplate::parse("").unwrap().heat_sinks, 10);
+        assert_eq!(RawTemplate::parse("X", "").unwrap().heat_sinks, 10);
         assert_eq!(
-            RawTemplate::parse("Specials { ICEEngine_Tech }")
+            RawTemplate::parse("X", "specials = [\"ICEEngine_Tech\"]")
                 .unwrap()
                 .heat_sinks,
             0

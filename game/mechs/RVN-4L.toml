@@ -1,0 +1,98 @@
+name = "Raven"
+class = "mech"
+movement = "biped"
+tons = 35
+max_speed = 96.75
+heat_sinks = 20
+computer = 4
+radio = 4
+specials = ["DoubleHS", "FlipArms", "StealthArmor_Tech", "XLEngine_Tech", "BeagleProbe", "ECM"]
+
+[sections.left_arm]
+armor = 10
+internals = 6
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = "3-5", item = "HeatSink" },
+    { at = "6-7", item = "IS.NarcBeacon" },
+    { at = "8-9", item = "StealthArmor" },
+]
+
+[sections.right_arm]
+armor = 10
+internals = 6
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = "3-4", item = "IS.ERMediumLaser" },
+    { at = "5-6", item = "StealthArmor" },
+]
+
+[sections.left_torso]
+armor = 10
+internals = 8
+rear = 4
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-5", item = "Ecm" },
+    { at = 6, item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = "7-8", item = "Ammo_IS.NarcBeacon", rounds = 6 },
+    { at = "9-10", item = "StealthArmor" },
+]
+
+[sections.right_torso]
+armor = 10
+internals = 8
+rear = 4
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-8", item = "IS.SRM-6" },
+    { at = 9, item = "TAG" },
+    { at = "10-11", item = "StealthArmor" },
+]
+
+[sections.center_torso]
+armor = 15
+internals = 11
+rear = 4
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = "11-12", item = "BeagleProbe" },
+]
+
+[sections.left_leg]
+armor = 10
+internals = 8
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "StealthArmor" },
+]
+
+[sections.right_leg]
+armor = 10
+internals = 8
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "StealthArmor" },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

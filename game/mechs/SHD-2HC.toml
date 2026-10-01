@@ -1,0 +1,97 @@
+name = "Shadow Hawk"
+class = "mech"
+movement = "biped"
+tons = 55
+max_speed = 86.0
+jump_speed = 53.75
+heat_sinks = 24
+computer = 4
+specials = ["Clan"]
+
+[sections.left_arm]
+armor = 16
+internals = 9
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.right_arm]
+armor = 16
+internals = 9
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "CL.ERMediumLaser" },
+]
+
+[sections.left_torso]
+armor = 18
+internals = 13
+rear = 6
+slots = [
+    { at = "1-4", item = "CL.LB5-XAC" },
+    { at = 5, item = "Ammo_CL.LB5-XAC", rounds = 20 },
+    { at = 6, item = "JumpJet" },
+]
+
+[sections.right_torso]
+armor = 18
+internals = 13
+rear = 6
+slots = [
+    { at = 1, item = "CL.LRM-5" },
+    { at = 2, item = "Ammo_CL.LRM-5", rounds = 24 },
+    { at = 3, item = "JumpJet" },
+    { at = "4-5", item = "HeatSink" },
+]
+
+[sections.center_torso]
+armor = 23
+internals = 18
+rear = 8
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = 11, item = "Ammo_CL.StreakSRM-2", rounds = 50 },
+    { at = 12, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 16
+internals = 13
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 6, item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 16
+internals = 13
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 6, item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "CL.StreakSRM-2" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

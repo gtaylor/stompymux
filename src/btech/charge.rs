@@ -884,7 +884,7 @@ mod tests {
     #[test]
     fn charge_roles_distinguish_raw_and_control_skill() {
         let template =
-            BattleTemplate::parse(include_str!("../../tests/fixtures/btech/mechs/JR7-D")).unwrap();
+            BattleTemplate::parse("JR7-D",include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml")).unwrap();
         let base = BattleUnit::from_template(template).unwrap();
         for attacker in ["Biped", "Quad"] {
             for target in ["Biped", "Quad"] {

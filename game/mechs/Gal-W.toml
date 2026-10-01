@@ -1,0 +1,96 @@
+name = "Galahad"
+class = "mech"
+movement = "biped"
+tons = 60
+max_speed = 64.5
+heat_sinks = 32
+computer = 4
+specials = ["Clan"]
+
+[sections.left_arm]
+armor = 20
+internals = 10
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "CL.LargePulseLaser", modes = ["OnTC"] },
+    { at = "7-12", item = "EndoSteel" },
+]
+
+[sections.right_arm]
+armor = 20
+internals = 10
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "CL.LargePulseLaser", modes = ["OnTC"] },
+    { at = "7-12", item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 20
+internals = 14
+rear = 8
+slots = [
+    { at = "1-2", item = "CL.MediumPulseLaser", modes = ["OnTC"] },
+    { at = "3-6", item = "HeatSink" },
+    { at = 7, item = "EndoSteel" },
+    { at = "8-11", item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 20
+internals = 14
+rear = 8
+slots = [
+    { at = "1-4", item = "TargetingComputer" },
+    { at = "5-7", item = "CL.SmallPulseLaser", modes = ["OnTC"] },
+    { at = 8, item = "FerroFibrous" },
+    { at = "9-12", item = "HeatSink" },
+]
+
+[sections.center_torso]
+armor = 30
+internals = 20
+rear = 10
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = "11-12", item = "HeatSink" },
+]
+
+[sections.left_leg]
+armor = 28
+internals = 14
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.right_leg]
+armor = 28
+internals = 14
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

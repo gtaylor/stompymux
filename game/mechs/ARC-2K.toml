@@ -1,0 +1,88 @@
+name = "Archer"
+class = "mech"
+movement = "biped"
+tons = 70
+max_speed = 64.5
+heat_sinks = 12
+
+[sections.left_arm]
+armor = 18
+internals = 11
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "IS.LargeLaser", brand = 2 },
+]
+
+[sections.right_arm]
+armor = 18
+internals = 11
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "IS.LargeLaser", brand = 2 },
+]
+
+[sections.left_torso]
+armor = 20
+internals = 15
+rear = 5
+slots = [
+    { at = "1-3", item = "IS.LRM-15", brand = 4 },
+    { at = "4-5", item = "Ammo_IS.LRM-15", rounds = 8 },
+]
+
+[sections.right_torso]
+armor = 20
+internals = 15
+rear = 5
+slots = [
+    { at = "1-3", item = "IS.LRM-15", brand = 4 },
+    { at = "4-5", item = "Ammo_IS.LRM-15", rounds = 8 },
+]
+
+[sections.center_torso]
+armor = 29
+internals = 22
+rear = 8
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = 11, item = "HeatSink" },
+]
+
+[sections.left_leg]
+armor = 22
+internals = 15
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.right_leg]
+armor = 22
+internals = 15
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

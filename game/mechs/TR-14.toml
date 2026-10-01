@@ -1,0 +1,53 @@
+name = "Transgressor AC"
+class = "aerofighter"
+movement = "fly"
+tons = 75
+max_speed = 96.75
+heat_sinks = 25
+computer = 3
+fuel = 750
+
+[sections.nose]
+armor = 60
+internals = 10
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+    { at = 2, item = "IS.AC/20" },
+    { at = "3-4", item = "Ammo_IS.AC/20", rounds = 5 },
+]
+
+[sections.left_wing]
+armor = 35
+internals = 10
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]
+
+[sections.right_wing]
+armor = 35
+internals = 10
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]
+
+[sections.cockpit]
+armor = 16
+internals = 10
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "Sensors" },
+    { at = 5, item = "LifeSupport" },
+]
+
+[sections.engine]
+armor = 24
+internals = 10
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]
+
+[sections.fuselage]
+armor = 64
+internals = 10

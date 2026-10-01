@@ -295,15 +295,16 @@ mod tests {
             ("Medium_Vibroblade", "MVibro", true, true),
             ("Large_Vibroblade", "LVibro", true, true),
         ] {
-            let source = include_str!("../../../game/mechs/AXM-2N")
-                .replace("    CRIT_5\t\t  { IS.MediumLaser - - 3 }\n", "")
-                .replace("    CRIT_6\t\t  { IS.MediumLaser - - 3 }\n", "")
-                .replace("    CRIT_7\t\t  { IS.MediumLaser - - 3 }\n", "")
+            let original = include_str!("../../../game/mechs/AXM-2N.toml");
+            let source = original
+                .replace("    { at = \"5-7\", item = \"IS.MediumLaser\", brand = 3 },\n", "")
                 .replace(
-                    "CRIT_8-12\t\t  { Axe",
-                    &format!("CRIT_5-12\t\t  {{ {equipment}"),
+                    "{ at = \"8-12\", item = \"Axe\"",
+                    &format!("{{ at = \"5-12\", item = \"{equipment}\""),
                 );
-            let unit = BattleUnit::from_template(BattleTemplate::parse(&source).unwrap()).unwrap();
+            assert!(!source.contains("IS.MediumLaser") && source.contains("\"5-12\""));
+            let unit =
+                BattleUnit::from_template(BattleTemplate::parse("AXM-2N", &source).unwrap()).unwrap();
             assert_eq!(
                 text::plain(&physical_readiness(&unit).unwrap().join("")),
                 format!("{label}[RA]: Rdy")

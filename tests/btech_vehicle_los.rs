@@ -22,7 +22,7 @@ async fn fixture(
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if index < 2 {
             let mut definition =
-                BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+                BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
             definition
                 .attributes
                 .insert("specials".into(), "FlipArms Searchlight".into());
@@ -31,7 +31,7 @@ async fn fixture(
             create_battle_vehicle(
                 &mut world,
                 id,
-                BattleVehicleTemplate::parse(vehicle).unwrap(),
+                BattleVehicleTemplate::parse("test",vehicle).unwrap(),
             )
             .unwrap();
         }
@@ -59,8 +59,8 @@ fn running(world: &mut World, ids: &[ObjectId]) {
 #[tokio::test]
 async fn vehicle_eye_height_changes_ridge_visibility_and_stationary_units_remain_tall() {
     for (template, tall) in [
-        (include_str!("../game/mechs/Demolisher"), false),
-        (include_str!("../game/mechs/RadioTower"), true),
+        (include_str!("../game/mechs/Demolisher.toml"), false),
+        (include_str!("../game/mechs/RadioTower.toml"), true),
     ] {
         let (_dir, config, world, _map, [mech_a, mech_b, vehicle_a, vehicle_b]) =
             fixture(".0\n.0\n.1\n.0\n.0\n", template).await;
@@ -100,8 +100,8 @@ async fn vehicle_eye_height_changes_ridge_visibility_and_stationary_units_remain
 #[tokio::test]
 async fn vehicle_water_height_and_perception_use_actual_surface_position() {
     for (template, hover) in [
-        (include_str!("../game/mechs/Demolisher"), false),
-        (include_str!("../game/mechs/Fulcrum"), true),
+        (include_str!("../game/mechs/Demolisher.toml"), false),
+        (include_str!("../game/mechs/Fulcrum.toml"), true),
     ] {
         let (_dir, _config, world, _map, [mech_a, mech_b, vehicle_a, vehicle_b]) =
             fixture("~1\n~1\n~1\n~1\n~1\n", template).await;
@@ -147,7 +147,7 @@ async fn vehicle_water_height_and_perception_use_actual_surface_position() {
 async fn mech_searchlights_illuminate_vehicle_targets_and_replay_perception() {
     let (_dir, config, mut world, map, [lamp, _, observer, target]) = fixture(
         ".0\n.0\n.0\n.0\n.0\n",
-        include_str!("../game/mechs/Demolisher"),
+        include_str!("../game/mechs/Demolisher.toml"),
     )
     .await;
     let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -205,7 +205,7 @@ async fn mech_searchlights_illuminate_vehicle_targets_and_replay_perception() {
 async fn hovercraft_sight_lines_retain_under_bridge_height_after_restart() {
     let (_dir, config, mut world, _map, [_, _, observer, target]) = fixture(
         "/4\n.1\n.1\n.1\n/4\n",
-        include_str!("../game/mechs/Fulcrum"),
+        include_str!("../game/mechs/Fulcrum.toml"),
     )
     .await;
     assert!(
@@ -242,7 +242,7 @@ const HIDDEN: BattleContactRules = BattleContactRules {
 async fn vehicle_acquisition_uses_hull_and_turret_weights_and_saves_exact_dice() {
     let (_dir, config, mut world, map, [_mech_a, mech_b, vehicle_a, vehicle_b]) = fixture(
         ".0\n.0\n.0\n.0\n.0\n",
-        include_str!("../game/mechs/Demolisher"),
+        include_str!("../game/mechs/Demolisher.toml"),
     )
     .await;
     set_battle_map_visibility(&mut world, map, BattleLight::Day, 30).unwrap();
@@ -315,7 +315,7 @@ async fn vehicle_acquisition_uses_hull_and_turret_weights_and_saves_exact_dice()
 async fn vehicle_acquisition_rolls_only_for_hidden_hostiles_beyond_automatic_range() {
     let (_dir, _config, mut world, map, [_mech_a, _mech_b, vehicle_a, vehicle_b]) = fixture(
         ".0\n.0\n.0\n.0\n.0\n",
-        include_str!("../game/mechs/Demolisher"),
+        include_str!("../game/mechs/Demolisher.toml"),
     )
     .await;
     set_battle_map_visibility(&mut world, map, BattleLight::Night, 30).unwrap();
@@ -383,7 +383,7 @@ async fn vehicle_acquisition_rolls_only_for_hidden_hostiles_beyond_automatic_ran
 async fn dug_in_eye_height_changes_live_los_and_survives_restart() {
     let (_dir, config, mut world, _map, [observer, _, _, target]) = fixture(
         ".0\n.1\n.0\n.0\n.2\n",
-        include_str!("../game/mechs/Demolisher"),
+        include_str!("../game/mechs/Demolisher.toml"),
     )
     .await;
     assert!(

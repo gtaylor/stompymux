@@ -1,0 +1,29 @@
+name = "SRM Carrier"
+class = "vehicle"
+movement = "wheel"
+tons = 40
+max_speed = 64.5
+
+[sections.left_side]
+armor = 14
+internals = 4
+
+[sections.right_side]
+armor = 14
+internals = 4
+
+[sections.front_side]
+armor = 16
+internals = 4
+
+[sections.aft_side]
+armor = 16
+internals = 4
+
+[sections.turret]
+armor = 14
+internals = 4
+slots = [
+    { at = "1-5", item = "IS.SRM-6", brand = 3 },
+    { at = "6-8", item = "Ammo_IS.SRM-6", rounds = 15 },
+]

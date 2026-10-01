@@ -18,7 +18,7 @@ async fn vehicle_mine_queries_use_live_mass_and_preserve_saved_state() {
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap(),
+        BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 1, 1).unwrap();
@@ -135,7 +135,7 @@ async fn mine_queries_share_surface_gates_across_ground_vehicle_types() {
         let id = world.create(&config, "Vehicle".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         let mut template =
-            BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap();
+            BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap();
         template.movement = movement;
         create_battle_vehicle(&mut world, id, template).unwrap();
         for x in 0..3 {
@@ -171,12 +171,12 @@ async fn blast_fixture(
             create_battle_unit(
                 &mut world,
                 id,
-                BattleTemplate::parse(include_str!("../game/mechs/AS7-D")).unwrap(),
+                BattleTemplate::parse("AS7-D",include_str!("../game/mechs/AS7-D.toml")).unwrap(),
             )
             .unwrap();
         } else {
             let mut template =
-                BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap();
+                BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap();
             template.movement = movement;
             create_battle_vehicle(&mut world, id, template).unwrap();
         }

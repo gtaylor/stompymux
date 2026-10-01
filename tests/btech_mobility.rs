@@ -7,7 +7,7 @@ use stompymux_rs::{
 /// Reference Jenner with intact conventional biped equipment.
 fn unit() -> BattleUnit {
     BattleUnit::from_template(
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap()
 }
@@ -77,7 +77,7 @@ fn missing_legs_and_gyro_losses_have_distinct_mobility_and_piloting_effects() {
 
 /// Construct the unchanged Scorpion asset for chassis-specific scenarios.
 fn quad() -> BattleUnit {
-    BattleUnit::from_template(BattleTemplate::parse(include_str!("../game/mechs/SCP-1N")).unwrap())
+    BattleUnit::from_template(BattleTemplate::parse("SCP-1N",include_str!("../game/mechs/SCP-1N.toml")).unwrap())
         .unwrap()
 }
 

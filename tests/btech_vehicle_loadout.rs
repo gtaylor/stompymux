@@ -4,7 +4,7 @@ use stompymux_rs::*;
 /// The Demolisher's two consecutive AC/20 slots are two complete weapons, not an incomplete Mech mount.
 #[test]
 fn vehicle_slots_are_complete_weapons_and_independent_bins() {
-    let template = BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap();
+    let template = BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap();
     let loadout = BattleVehicleLoadout::resolve(&template).unwrap();
     assert_eq!(loadout.weapons.len(), 2);
     assert_eq!(loadout.ammunition.len(), 4);
@@ -26,14 +26,14 @@ fn vehicle_slots_are_complete_weapons_and_independent_bins() {
     let template: BattleVehicleTemplate =
         serde_json::from_value(serde_json::to_value(&template).unwrap()).unwrap();
     assert_eq!(BattleVehicleLoadout::resolve(&template).unwrap(), loadout);
-    let truck = BattleVehicleTemplate::parse(include_str!("../game/mechs/Flatbed_Truck")).unwrap();
+    let truck = BattleVehicleTemplate::parse("Flatbed_Truck",include_str!("../game/mechs/Flatbed_Truck.toml")).unwrap();
     assert!(
         BattleVehicleLoadout::resolve(&truck)
             .unwrap()
             .weapons
             .is_empty()
     );
-    let hover = BattleVehicleTemplate::parse(include_str!("../game/mechs/Fulcrum")).unwrap();
+    let hover = BattleVehicleTemplate::parse("Fulcrum",include_str!("../game/mechs/Fulcrum.toml")).unwrap();
     let loadout = BattleVehicleLoadout::resolve(&hover).unwrap();
     assert_eq!(loadout.weapons.len(), 3);
     assert_eq!(loadout.systems.len(), 2);
@@ -52,7 +52,7 @@ fn vehicle_slots_are_complete_weapons_and_independent_bins() {
 #[test]
 fn vehicle_catalogue_uses_shared_modes_and_supply() {
     let mut template =
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap();
+        BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap();
     for &weapon in BattleWeapon::ALL {
         let turret = template
             .sections
@@ -177,7 +177,7 @@ fn vehicle_loadout_rejects_unknown_equipment_and_bad_slots() {
         ("IS.MediumLaser", "-", vec![], 12),
     ] {
         let mut template =
-            BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap();
+            BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap();
         let turret = template
             .sections
             .get_mut(&BattleVehicleSection::Turret)

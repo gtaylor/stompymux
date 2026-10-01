@@ -22,7 +22,7 @@ async fn fixture(
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if index < 2 {
             let mut definition =
-                BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+                BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
             definition
                 .attributes
                 .insert("specials".into(), "FlipArms Searchlight".into());
@@ -31,7 +31,7 @@ async fn fixture(
             create_battle_vehicle(
                 &mut world,
                 id,
-                BattleVehicleTemplate::parse(vehicle).unwrap(),
+                BattleVehicleTemplate::parse("test",vehicle).unwrap(),
             )
             .unwrap();
         }
@@ -192,7 +192,7 @@ fn seed(world: &mut World, id: ObjectId, value: u8) {
 #[tokio::test]
 async fn vehicle_shots_commit_hits_misses_and_restart_replay_for_both_target_classes() {
     let (_dir, config, base, _map, [mech, _, shooter, vehicle]) =
-        engagement(include_str!("../game/mechs/Demolisher")).await;
+        engagement(include_str!("../game/mechs/Demolisher.toml")).await;
     for target in [mech, vehicle] {
         for hit in [false, true] {
             let mut world = base.clone();
@@ -283,7 +283,7 @@ async fn vehicle_shots_commit_hits_misses_and_restart_replay_for_both_target_cla
 
 #[tokio::test]
 async fn vehicle_missiles_use_shooter_dice_for_mech_ams_only_on_admitted_hits() {
-    let template = include_str!("../game/mechs/Demolisher").replace("IS.AC/20", "IS.SRM-6");
+    let template = include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", "IS.SRM-6");
     let (_dir, config, mut base, _map, [target, _, shooter, _]) = engagement(&template).await;
     install_test_ams(&mut base, target, BattleWeapon::AntiMissileSystem);
     let mut saved = serde_json::to_value(&base.btech).unwrap();
@@ -332,7 +332,7 @@ async fn vehicle_missiles_use_shooter_dice_for_mech_ams_only_on_admitted_hits() 
 #[tokio::test]
 async fn vehicle_shot_failures_and_failed_streak_locks_preserve_target_state() {
     let (_dir, _config, mut base, _map, [_, _, shooter, target]) =
-        engagement(include_str!("../game/mechs/Svantovit-Streak")).await;
+        engagement(include_str!("../game/mechs/Svantovit-Streak.toml")).await;
     let index = base.btech.vehicles()[&shooter]
         .loadout()
         .unwrap()
@@ -355,7 +355,7 @@ async fn vehicle_shot_failures_and_failed_streak_locks_preserve_target_state() {
     assert_eq!(base.btech.vehicles()[&shooter].ammunition(), before_ammo);
     assert_eq!(base.btech.vehicles()[&target], before_target);
     let (_dir, _config, base, map, [_, _, shooter, target]) =
-        engagement(include_str!("../game/mechs/Demolisher")).await;
+        engagement(include_str!("../game/mechs/Demolisher.toml")).await;
     for case in ["pilot", "contact", "character"] {
         let mut world = base.clone();
         let pilot = if case == "pilot" {
@@ -394,7 +394,7 @@ async fn vehicle_shots_observe_existing_angel_fields_without_copying_field_rules
         "CL.StreakLRM-15",
         "CL.StreakLRM-20",
     ] {
-        let template = include_str!("../game/mechs/Demolisher").replace("IS.AC/20", weapon);
+        let template = include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", weapon);
         let (_dir, config, mut base, _map, [_, emitter, shooter, target]) =
             engagement(&template).await;
         let mut definition = base.btech.constructed_units()[&emitter]
@@ -468,7 +468,7 @@ async fn vehicle_shots_observe_existing_angel_fields_without_copying_field_rules
 #[tokio::test]
 async fn vehicle_native_and_lua_fire_share_state_feedback_and_callback_rollback() {
     let (_dir, config, base, _map, [mech, _, shooter, vehicle]) =
-        engagement(include_str!("../game/mechs/Demolisher")).await;
+        engagement(include_str!("../game/mechs/Demolisher.toml")).await;
     for target in [mech, vehicle] {
         for hit in [false, true] {
             let mut world = base.clone();
@@ -531,7 +531,7 @@ async fn vehicle_native_and_lua_fire_share_state_feedback_and_callback_rollback(
 #[tokio::test]
 async fn vehicle_occupied_hex_fire_preserves_selection_and_native_lua_parity() {
     let (_dir, config, base, map, [mech, other, shooter, vehicle]) =
-        engagement(include_str!("../game/mechs/Demolisher")).await;
+        engagement(include_str!("../game/mechs/Demolisher.toml")).await;
     let hex = BattleHexCoordinate { x: 0, y: 0 };
     for target in [mech, vehicle] {
         let mut world = base.clone();
@@ -608,7 +608,7 @@ async fn vehicle_occupied_hex_fire_preserves_selection_and_native_lua_parity() {
 #[tokio::test]
 async fn occupied_hex_selection_does_not_skip_hidden_or_forbidden_targets() {
     let (_dir, config, mut base, map, [mech, other, shooter, vehicle]) =
-        engagement(include_str!("../game/mechs/Demolisher")).await;
+        engagement(include_str!("../game/mechs/Demolisher.toml")).await;
     let hex = BattleHexCoordinate { x: 0, y: 0 };
     select_battle_hex_target(
         &mut base,
@@ -714,8 +714,8 @@ async fn occupied_hex_selection_does_not_skip_hidden_or_forbidden_targets() {
 
 /// Replace the target's two mounts and four bins while preserving battlefield membership.
 fn install_vehicle_ams(world: &mut World, target: ObjectId, weapon: BattleWeapon) {
-    let source = include_str!("../game/mechs/Demolisher").replace("IS.AC/20", weapon.name());
-    let unit = BattleVehicle::new(BattleVehicleTemplate::parse(&source).unwrap()).unwrap();
+    let source = include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", weapon.name());
+    let unit = BattleVehicle::new(BattleVehicleTemplate::parse("test",&source).unwrap()).unwrap();
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     saved["vehicles"][target.0.to_string()]["definition"] =
         serde_json::to_value(unit.definition()).unwrap();
@@ -727,7 +727,7 @@ fn install_vehicle_ams(world: &mut World, target: ObjectId, weapon: BattleWeapon
 
 #[tokio::test]
 async fn vehicle_ams_shares_interception_dice_supply_limits_and_restart_replay() {
-    let template = include_str!("../game/mechs/Demolisher").replace("IS.AC/20", "IS.SRM-6");
+    let template = include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", "IS.SRM-6");
     let (_dir, config, base, _, [_, _, shooter, target]) = engagement(&template).await;
     for weapon in [
         BattleWeapon::AntiMissileSystem,
@@ -816,7 +816,7 @@ async fn vehicle_ams_shares_interception_dice_supply_limits_and_restart_replay()
 #[tokio::test]
 async fn vehicle_ams_switch_shares_native_lua_control_and_callback_rollback() {
     let (_dir, config, mut base, _, [_, _, shooter, target]) =
-        engagement(include_str!("../game/mechs/Demolisher")).await;
+        engagement(include_str!("../game/mechs/Demolisher.toml")).await;
     assert!(!base.btech.vehicles()[&target].ams_enabled());
     assert!(set_battle_ams(&mut base, shooter, ObjectId(1), true).is_err());
     install_vehicle_ams(&mut base, target, BattleWeapon::AntiMissileSystem);
@@ -860,7 +860,7 @@ async fn vehicle_ams_switch_shares_native_lua_control_and_callback_rollback() {
 
 #[tokio::test]
 async fn vehicle_ams_selection_obeys_switch_supply_recycle_and_critical_loss() {
-    let template = include_str!("../game/mechs/Demolisher").replace("IS.AC/20", "IS.SRM-6");
+    let template = include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", "IS.SRM-6");
     let (_dir, config, mut base, _, [_, _, shooter, target]) = engagement(&template).await;
     install_vehicle_ams(&mut base, target, BattleWeapon::AntiMissileSystem);
     let value = (0..=255)
@@ -931,7 +931,7 @@ async fn vehicle_ams_selection_obeys_switch_supply_recycle_and_critical_loss() {
 
 #[tokio::test]
 async fn vehicle_ams_expenditure_and_feedback_roll_back_with_host_shots() {
-    let template = include_str!("../game/mechs/Demolisher").replace("IS.AC/20", "IS.SRM-6");
+    let template = include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", "IS.SRM-6");
     let (_dir, config, mut base, _, [_, _, shooter, target]) = engagement(&template).await;
     install_vehicle_ams(&mut base, target, BattleWeapon::ClanAntiMissileSystem);
     let value = (0..=255)
@@ -978,7 +978,7 @@ async fn vehicle_coolant_and_flamer_heat_share_target_effects_and_host_rollback(
         BattleWeapon::VehicleFlamer,
         BattleWeapon::VehicleHeavyFlamer,
     ] {
-        let template = include_str!("../game/mechs/Demolisher").replace("IS.AC/20", weapon.name());
+        let template = include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", weapon.name());
         let (_dir, config, base, _, [target, _, shooter, vehicle]) = engagement(&template).await;
         for hit in [false, true] {
             let mut world = base.clone();
@@ -1115,9 +1115,16 @@ async fn vehicle_beacon_launchers_reuse_attachment_interception_and_replay() {
             BattleBeaconKind::Ecm,
         ),
     ] {
-        let template = include_str!("../game/mechs/Demolisher")
+        let template = include_str!("../game/mechs/Demolisher.toml")
             .replace("IS.AC/20", weapon.name())
-            .replace(" 5 -", &format!(" 4 {flag}"));
+            .replace(
+                "rounds = 5 }",
+                &if flag == "-" {
+                    "rounds = 4 }".to_owned()
+                } else {
+                    format!("rounds = 4, modes = [\"{flag}\"] }}")
+                },
+            );
         let (_dir, config, mut base, _, [target, _, shooter, _]) = engagement(&template).await;
         if weapon == BattleWeapon::INarcBeacon {
             set_battle_inarc_ammunition(&mut base, shooter, ObjectId(1), 0, mode).unwrap();
@@ -1190,7 +1197,7 @@ async fn vehicle_beacon_launchers_reuse_attachment_interception_and_replay() {
 async fn clan_plasma_vehicle_shots_use_ordinary_damage_packets() {
     // Clan plasma is conventional damage in the shared catalogue, without IS plasma heating.
     let template =
-        include_str!("../game/mechs/Demolisher").replace("IS.AC/20 - -", "CL.PlasmaRifle - -");
+        include_str!("../game/mechs/Demolisher.toml").replace("\"IS.AC/20\"", "\"CL.PlasmaRifle\"");
     let (_dir, config, mut world, _, [mech, _, shooter, vehicle]) = engagement(&template).await;
     let value = (0..=255)
         .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
@@ -1247,9 +1254,9 @@ async fn vehicle_beacon_controls_share_native_lua_selection_and_rollback() {
             BattleAmmunitionMode::INarcHaywire,
         ),
     ] {
-        let template = include_str!("../game/mechs/Demolisher")
+        let template = include_str!("../game/mechs/Demolisher.toml")
             .replace("IS.AC/20", weapon.name())
-            .replace(" 5 -", " 4 -");
+            .replace("rounds = 5 }", "rounds = 4 }");
         let (_dir, config, base, _, [_, _, shooter, _]) = engagement(&template).await;
         let native = Scripts::new(
             &config,
@@ -1320,9 +1327,16 @@ async fn vehicle_targets_receive_pods_without_armor_damage_and_replay_intercepti
             BattleBeaconKind::Ecm,
         ),
     ] {
-        let template = include_str!("../game/mechs/Demolisher")
+        let template = include_str!("../game/mechs/Demolisher.toml")
             .replace("IS.AC/20", weapon.name())
-            .replace(" 5 -", &format!(" 4 {flag}"));
+            .replace(
+                "rounds = 5 }",
+                &if flag == "-" {
+                    "rounds = 4 }".to_owned()
+                } else {
+                    format!("rounds = 4, modes = [\"{flag}\"] }}")
+                },
+            );
         let (_dir, config, mut base, _, [_, _, shooter, target]) = engagement(&template).await;
         if weapon == BattleWeapon::INarcBeacon {
             set_battle_inarc_ammunition(&mut base, shooter, ObjectId(1), 0, mode).unwrap();
@@ -1383,7 +1397,7 @@ async fn vehicle_targets_receive_pods_without_armor_damage_and_replay_intercepti
 
 #[tokio::test]
 async fn vehicle_beacons_drive_aim_guidance_interference_and_section_loss() {
-    let template = include_str!("../game/mechs/Demolisher").replace("IS.AC/20", "IS.SRM-6");
+    let template = include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", "IS.SRM-6");
     let (_dir, config, mut world, _, [_, _, shooter, target]) = engagement(&template).await;
     toggle_battle_narc(&mut world, shooter, ObjectId(1), 0).unwrap();
     let before = battle_aim_modifiers(&world, shooter, target, 0, 6, rules()).unwrap();
@@ -1479,7 +1493,7 @@ async fn vehicle_beacons_drive_aim_guidance_interference_and_section_loss() {
 
 #[tokio::test]
 async fn vehicle_pod_host_action_rolls_back_attachment_and_location_effects() {
-    let template = include_str!("../game/mechs/Demolisher").replace("IS.AC/20", "IS.NarcBeacon");
+    let template = include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", "IS.NarcBeacon");
     let (_dir, config, mut world, _, [_, _, shooter, target]) = engagement(&template).await;
     let value = (0..=255)
         .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
@@ -1533,7 +1547,7 @@ fn attach_removal_test_pods(world: &mut World, id: ObjectId) {
 #[tokio::test]
 async fn vehicle_pod_inspection_and_removal_share_controls_and_saved_countdown() {
     let (_dir, config, mut world, _, [target, _, shooter, _]) =
-        engagement(include_str!("../game/mechs/Demolisher")).await;
+        engagement(include_str!("../game/mechs/Demolisher.toml")).await;
     assert!(
         inspect_battle_pods(&world, shooter, ObjectId(1))
             .unwrap()
@@ -1637,7 +1651,7 @@ async fn vehicle_pod_inspection_and_removal_share_controls_and_saved_countdown()
 #[tokio::test]
 async fn vehicle_pod_removal_guards_shutdown_and_destruction_preserve_action_boundaries() {
     let (_dir, config, mut base, _, [_, _, shooter, _]) =
-        engagement(include_str!("../game/mechs/Demolisher")).await;
+        engagement(include_str!("../game/mechs/Demolisher.toml")).await;
     attach_removal_test_pods(&mut base, shooter);
     for condition in [
         "wrong_pilot",
@@ -1723,7 +1737,7 @@ async fn vehicle_pod_removal_guards_shutdown_and_destruction_preserve_action_bou
 async fn shutdown_vehicle_pod_expiry_retries_failed_server_commit() {
     tokio::task::LocalSet::new().run_until(async {
         use sqlx::Connection;
-        let (_dir, config, mut world, _, ids) = engagement(include_str!("../game/mechs/Demolisher")).await;
+        let (_dir, config, mut world, _, ids) = engagement(include_str!("../game/mechs/Demolisher.toml")).await;
         let shooter = ids[2];
         attach_removal_test_pods(&mut world, shooter);
         begin_battle_pod_removal(&mut world, shooter, ObjectId(1)).unwrap();
@@ -1760,7 +1774,7 @@ async fn shutdown_vehicle_pod_expiry_retries_failed_server_commit() {
 /// Put the same pilot in a Mech facing the vehicle target used by the mixed firing scenarios.
 async fn mech_engagement() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
     let (dir, config, mut world, map, [shooter, _, previous, target]) =
-        engagement(include_str!("../game/mechs/Demolisher")).await;
+        engagement(include_str!("../game/mechs/Demolisher.toml")).await;
     release_battle_pilot(&mut world, previous, ObjectId(1)).unwrap();
     power(&mut world, &[shooter], BattlePower::Off);
     place_battle_unit(&mut world, shooter, map, 0, 1).unwrap();
@@ -2132,7 +2146,7 @@ async fn weapon_engagement(
     weapon: BattleWeapon,
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {
     if vehicle {
-        let template = include_str!("../game/mechs/Demolisher").replace("IS.AC/20", weapon.name());
+        let template = include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", weapon.name());
         let (dir, config, world, _, [_, _, shooter, target]) = engagement(&template).await;
         return (dir, config, world, shooter, target, 0);
     }
@@ -2685,7 +2699,7 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
         for vehicle_shooter in [false, true] {
             for vehicle_target in [false, true] {
                 let (_dir, _config, mut world, map, ids) =
-                    engagement(include_str!("../game/mechs/Demolisher")).await;
+                    engagement(include_str!("../game/mechs/Demolisher.toml")).await;
                 let path = _dir.path().join("stompymux.toml");
                 if classic {
                     let text = std::fs::read_to_string(&path)
@@ -2917,7 +2931,7 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
 #[tokio::test]
 async fn vehicle_missile_packets_award_experience_inside_the_firing_transaction() {
     use std::{cell::RefCell, rc::Rc};
-    let template = include_str!("../game/mechs/Demolisher").replace("IS.AC/20", "IS.LRM-20");
+    let template = include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", "IS.LRM-20");
     let (_dir, config, mut world, _map, ids) = engagement(&template).await;
     let [_, _, shooter, target] = ids;
     refresh_battle_contacts(&mut world, &[shooter]).unwrap();
@@ -3016,15 +3030,15 @@ async fn vehicle_missile_packets_award_experience_inside_the_firing_transaction(
 /// Vehicle shooters use the same attributed Mech-target cascade as Mech shooters.
 #[tokio::test]
 async fn weapons_hold_vehicle_shooters_warn_on_mech_damage_without_blocking_it() {
-    let tracked = include_str!("../game/mechs/Demolisher");
+    let tracked = include_str!("../game/mechs/Demolisher.toml");
     for source in [
         tracked.to_owned(),
-        tracked.replace("{ Track }", "{ Wheel }"),
-        tracked.replace("{ Track }", "{ Hover }"),
+        tracked.replace("movement = \"track\"", "movement = \"wheel\""),
+        tracked.replace("movement = \"track\"", "movement = \"hover\""),
         tracked
-            .replace("{ Track }", "{ None }")
-            .replace("{ 53.75 }", "{ 0 }"),
-        include_str!("../game/mechs/Kestrel").to_owned(),
+            .replace("movement = \"track\"", "movement = \"none\"")
+            .replace("max_speed = 53.75", "max_speed = 0"),
+        include_str!("../game/mechs/Kestrel.toml").to_owned(),
     ] {
         let (_dir, config, mut base, _, [target, _, shooter, _]) = engagement(&source).await;
         let high = (0..=255)
@@ -3062,15 +3076,15 @@ async fn weapons_hold_vehicle_shooters_warn_on_mech_damage_without_blocking_it()
 /// Both shooter anatomies retain attribution against every supported vehicle target, including safe routing.
 #[tokio::test]
 async fn weapons_hold_vehicle_targets_preserve_damage_safety_and_restart() {
-    let tracked = include_str!("../game/mechs/Demolisher");
+    let tracked = include_str!("../game/mechs/Demolisher.toml");
     for source in [
         tracked.to_owned(),
-        tracked.replace("{ Track }", "{ Wheel }"),
-        tracked.replace("{ Track }", "{ Hover }"),
+        tracked.replace("movement = \"track\"", "movement = \"wheel\""),
+        tracked.replace("movement = \"track\"", "movement = \"hover\""),
         tracked
-            .replace("{ Track }", "{ None }")
-            .replace("{ 53.75 }", "{ 0 }"),
-        include_str!("../game/mechs/Kestrel").to_owned(),
+            .replace("movement = \"track\"", "movement = \"none\"")
+            .replace("max_speed = 53.75", "max_speed = 0"),
+        include_str!("../game/mechs/Kestrel.toml").to_owned(),
     ] {
         let (_dir, config, initial, map, ids) = engagement(&source).await;
         for vehicle_shooter in [false, true] {
@@ -3147,7 +3161,7 @@ async fn weapons_hold_vehicle_targets_preserve_damage_safety_and_restart() {
 #[tokio::test]
 async fn weapons_hold_vehicle_critical_cascades_keep_incoming_attacker() {
     let (_dir, config, mut base, _, [_, _, shooter, target]) =
-        engagement(include_str!("../game/mechs/Demolisher")).await;
+        engagement(include_str!("../game/mechs/Demolisher.toml")).await;
     let high = (0..=255)
         .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
         .unwrap();
@@ -3228,7 +3242,7 @@ async fn weapons_hold_vehicle_critical_cascades_keep_incoming_attacker() {
 async fn configured_energy_range_damage_is_shared_by_all_unit_pairings() {
     let (dir, _config, base, map, ids) = fixture(
         ".0\n.0\n.0\n.0\n.0\n",
-        include_str!("../game/mechs/Savannah_Master"),
+        include_str!("../game/mechs/Savannah_Master.toml"),
     )
     .await;
 
@@ -3302,7 +3316,7 @@ async fn configured_energy_range_damage_is_shared_by_all_unit_pairings() {
 async fn weapon_fire_preserves_target_emergency_feedback() {
     for vehicle_shooter in [false, true] {
         let (_dir, config, mut base, map, ids) =
-            engagement(include_str!("../game/mechs/Demolisher")).await;
+            engagement(include_str!("../game/mechs/Demolisher.toml")).await;
         let shooter = ids[if vehicle_shooter { 2 } else { 0 }];
         release_battle_pilot(&mut base, ids[2], ObjectId(1)).unwrap();
         power(&mut base, &[shooter], BattlePower::Off);
@@ -3313,7 +3327,7 @@ async fn weapon_fire_preserves_target_emergency_feedback() {
         let target = base.create(&config, "Emergency target".into(), Kind::Thing);
         base.objects.get_mut(&target).unwrap().home = Some(ObjectId(config.home()));
         let mut template =
-            BattleVehicleTemplate::parse(include_str!("../game/mechs/Kestrel")).unwrap();
+            BattleVehicleTemplate::parse("Kestrel",include_str!("../game/mechs/Kestrel.toml")).unwrap();
         for section in template.sections.values_mut() {
             section.internal = 30;
         }

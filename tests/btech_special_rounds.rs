@@ -4,17 +4,17 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 /// Representative construction for every supported movement class.
 fn templates() -> Vec<String> {
-    let tracked = include_str!("../game/mechs/Demolisher");
+    let tracked = include_str!("../game/mechs/Demolisher.toml");
     vec![
-        include_str!("../game/mechs/JR7-D").into(),
-        include_str!("../game/mechs/GOL-1H").into(),
+        include_str!("../game/mechs/JR7-D.toml").into(),
+        include_str!("../game/mechs/GOL-1H.toml").into(),
         tracked.into(),
-        tracked.replace("{ Track }", "{ Wheel }"),
-        tracked.replace("{ Track }", "{ Hover }"),
+        tracked.replace("movement = \"track\"", "movement = \"wheel\""),
+        tracked.replace("movement = \"track\"", "movement = \"hover\""),
         tracked
-            .replace("{ Track }", "{ None }")
-            .replace("{ 53.75 }", "{ 0 }"),
-        include_str!("../game/mechs/Kestrel").into(),
+            .replace("movement = \"track\"", "movement = \"none\"")
+            .replace("max_speed = 53.75", "max_speed = 0"),
+        include_str!("../game/mechs/Kestrel.toml").into(),
     ]
 }
 
@@ -52,7 +52,7 @@ async fn fixture(
         (if index == 0 {
             launcher(source, artillery)
         } else {
-            BattleUnitTemplate::parse(source).unwrap()
+            BattleUnitTemplate::parse("test",source).unwrap()
         })
         .create(&mut world, id)
         .unwrap();
@@ -76,7 +76,7 @@ fn launcher(source: &str, artillery: bool) -> BattleUnitTemplate {
     } else {
         BattleWeapon::ClanLrm20
     };
-    let mut definition = BattleUnitTemplate::parse(source).unwrap();
+    let mut definition = BattleUnitTemplate::parse("test",source).unwrap();
     let part = CriticalDefinition {
         equipment: weapon.name().into(),
         data: "-".into(),
@@ -298,8 +298,8 @@ fn acquire(world: &mut World, shooter: ObjectId, target: ObjectId) {
 async fn missile_special_rounds_use_shared_launch_damage_and_ams_policy() {
     for source in templates() {
         for target_source in [
-            include_str!("../game/mechs/Daishi-A"),
-            include_str!("../game/mechs/Goblin-58"),
+            include_str!("../game/mechs/Daishi-A.toml"),
+            include_str!("../game/mechs/Goblin-58.toml"),
         ] {
             let (_dir, config, mut initial, shooter, target) =
                 fixture(&source, target_source, false).await;

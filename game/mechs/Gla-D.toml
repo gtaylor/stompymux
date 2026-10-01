@@ -1,0 +1,105 @@
+name = "Gladiator"
+class = "mech"
+movement = "biped"
+tons = 95
+max_speed = 64.5
+jump_speed = 43.0
+heat_sinks = 38
+computer = 4
+specials = ["Masc", "Clan"]
+
+[sections.left_arm]
+armor = 32
+internals = 16
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "CL.SRM-6" },
+    { at = "7-9", item = "Ammo_CL.SRM-6", rounds = 15 },
+    { at = 12, item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 32
+internals = 16
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = "4-5", item = "CL.LargePulseLaser" },
+    { at = "6-8", item = "CL.MediumPulseLaser" },
+    { at = "9-11", item = "CL.SmallPulseLaser" },
+    { at = 12, item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 20
+internals = 20
+rear = 10
+slots = [
+    { at = "1-2", item = "Engine" },
+    { at = "3-4", item = "HeatSink" },
+    { at = 5, item = "Masc" },
+    { at = 6, item = "CL.Flamer" },
+    { at = "7-8", item = "HeatSink" },
+    { at = "11-12", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 20
+internals = 20
+rear = 10
+slots = [
+    { at = "1-2", item = "Engine" },
+    { at = 3, item = "Masc" },
+    { at = "4-5", item = "CL.SmallPulseLaser" },
+    { at = "6-9", item = "HeatSink" },
+    { at = "11-12", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 37
+internals = 30
+rear = 9
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = "11-12", item = "Masc" },
+]
+
+[sections.left_leg]
+armor = 40
+internals = 20
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 40
+internals = 20
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "FerroFibrous" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

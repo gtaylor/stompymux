@@ -1,0 +1,36 @@
+name = "Pegasus"
+class = "vehicle"
+movement = "hover"
+tons = 35
+max_speed = 150.5
+specials = ["SearchLight"]
+
+[sections.left_side]
+armor = 14
+internals = 4
+
+[sections.right_side]
+armor = 14
+internals = 4
+
+[sections.front_side]
+armor = 18
+internals = 4
+slots = [
+    { at = 1, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = 2, item = "BeagleProbe", brand = 3 },
+    { at = 3, item = "Ecm", brand = 3 },
+    { at = 4, item = "TAG", brand = 3 },
+]
+
+[sections.aft_side]
+armor = 19
+internals = 4
+
+[sections.turret]
+armor = 16
+internals = 4
+slots = [
+    { at = "1-2", item = "IS.SRM-6", brand = 3 },
+    { at = 3, item = "Ammo_IS.SRM-6", rounds = 15 },
+]

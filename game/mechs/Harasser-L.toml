@@ -1,0 +1,30 @@
+name = "Harasser"
+class = "vehicle"
+movement = "hover"
+tons = 25
+max_speed = 161.25
+computer = 3
+specials = ["ICEEngine_Tech", "Searchlight"]
+
+[sections.left_side]
+armor = 6
+internals = 3
+
+[sections.right_side]
+armor = 6
+internals = 3
+
+[sections.front_side]
+armor = 7
+internals = 3
+
+[sections.aft_side]
+armor = 7
+internals = 3
+
+[sections.turret]
+armor = 6
+internals = 3
+slots = [
+    { at = "1-2", item = "IS.MediumLaser" },
+]

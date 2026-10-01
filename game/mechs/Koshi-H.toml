@@ -1,0 +1,108 @@
+name = "Koshi"
+class = "mech"
+movement = "biped"
+tons = 25
+max_speed = 118.25
+jump_speed = 64.5
+heat_sinks = 20
+specials = ["Clan", "Searchlight"]
+
+[sections.left_arm]
+armor = 4
+internals = 4
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "CL.StreakSRM-6" },
+    { at = 7, item = "CL.Anti-MissileSystem" },
+    { at = 8, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+    { at = 9, item = "Ammo_CL.Anti-MissileSystem", rounds = 24 },
+    { at = 10, item = "EndoSteel" },
+    { at = 11, item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 4
+internals = 4
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "CL.HeavySmallLaser" },
+    { at = "7-8", item = "CL.HeavyMediumLaser" },
+    { at = 9, item = "EndoSteel" },
+    { at = 10, item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 7
+internals = 6
+rear = 5
+slots = [
+    { at = "1-2", item = "Engine" },
+    { at = "3-6", item = "HeatSink" },
+    { at = "7-9", item = "JumpJet" },
+    { at = 10, item = "EndoSteel" },
+    { at = "11-12", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 7
+internals = 6
+rear = 5
+slots = [
+    { at = "1-2", item = "Engine" },
+    { at = "3-4", item = "HeatSink" },
+    { at = "5-7", item = "JumpJet" },
+    { at = 8, item = "EndoSteel" },
+    { at = "9-10", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 10
+internals = 8
+rear = 5
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = 11, item = "EndoSteel" },
+    { at = 12, item = "FerroFibrous" },
+]
+
+[sections.left_leg]
+armor = 5
+internals = 6
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 5, item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 5
+internals = 6
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 5, item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "BeagleProbe" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

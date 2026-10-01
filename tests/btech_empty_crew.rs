@@ -19,14 +19,14 @@ async fn fixture(vehicle: bool) -> (tempfile::TempDir, Config, World, ObjectId, 
         create_battle_vehicle(
             &mut world,
             id,
-            BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap(),
+            BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap(),
         )
         .unwrap();
     } else {
         create_battle_unit(
             &mut world,
             id,
-            BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+            BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap();
     }

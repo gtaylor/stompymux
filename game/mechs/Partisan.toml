@@ -1,0 +1,34 @@
+name = "Partisan"
+class = "vehicle"
+movement = "track"
+tons = 80
+max_speed = 53.75
+specials = ["AntiAircraft", "ICEEngine_Tech"]
+
+[sections.left_side]
+armor = 18
+internals = 8
+
+[sections.right_side]
+armor = 18
+internals = 8
+
+[sections.front_side]
+armor = 22
+internals = 8
+slots = [
+    { at = "1-2", item = "IS.MachineGun", brand = 3 },
+    { at = 3, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
+]
+
+[sections.aft_side]
+armor = 16
+internals = 8
+
+[sections.turret]
+armor = 22
+internals = 8
+slots = [
+    { at = "1-4", item = "IS.AC/5", brand = 3 },
+    { at = "5-6", item = "Ammo_IS.AC/5", rounds = 20 },
+]

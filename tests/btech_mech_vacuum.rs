@@ -60,7 +60,7 @@ async fn penetration_shares_mech_equipment_effects_and_restart() {
         let (_dir, config, mut world, id, _, index) = firing::fixture_with_supply(
             &template,
             Some(BattleWeapon::Lrm5),
-            include_str!("../game/mechs/AS7-D"),
+            include_str!("../game/mechs/AS7-D.toml"),
             false,
             Some(""),
         )
@@ -134,7 +134,7 @@ async fn armor_checks_follow_shared_threshold_dice_and_repeat_policy() {
         let (_dir, config, initial, id, _, _) = firing::fixture_with_target(
             &template,
             Some(BattleWeapon::MediumLaser),
-            include_str!("../game/mechs/AS7-D"),
+            include_str!("../game/mechs/AS7-D.toml"),
         )
         .await;
         for wanted in [9, 10, 12] {
@@ -173,7 +173,7 @@ async fn exposed_legs_fall_without_losing_structure() {
         let (_dir, config, mut world, id, _, _) = firing::fixture_with_target(
             &template,
             Some(BattleWeapon::MediumLaser),
-            include_str!("../game/mechs/AS7-D"),
+            include_str!("../game/mechs/AS7-D.toml"),
         )
         .await;
         let section = if world.btech.constructed_units()[&id].chassis() == BattleMechChassis::Quad {
@@ -216,9 +216,9 @@ async fn exposed_legs_fall_without_losing_structure() {
 #[tokio::test]
 async fn cockpit_exposure_rolls_back_failed_evacuation_and_survives_restart() {
     let (_dir, config, mut world, id, _, _) = firing::fixture_with_target(
-        include_str!("../game/mechs/JR7-D"),
+        include_str!("../game/mechs/JR7-D.toml"),
         Some(BattleWeapon::MediumLaser),
-        include_str!("../game/mechs/AS7-D"),
+        include_str!("../game/mechs/AS7-D.toml"),
     )
     .await;
     release_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
@@ -308,9 +308,9 @@ async fn cockpit_exposure_rolls_back_failed_evacuation_and_survives_restart() {
 #[tokio::test]
 async fn vacuum_loss_of_last_jets_interrupts_flight() {
     let (_dir, config, mut world, id, _, _) = firing::fixture_with_target(
-        include_str!("../game/mechs/JR7-D"),
+        include_str!("../game/mechs/JR7-D.toml"),
         None,
-        include_str!("../game/mechs/AS7-D"),
+        include_str!("../game/mechs/AS7-D.toml"),
     )
     .await;
     let section = BattleSection::RightTorso;
@@ -364,9 +364,9 @@ async fn vacuum_loss_of_last_jets_interrupts_flight() {
 #[tokio::test]
 async fn internal_explosion_can_breach_surviving_armored_section() {
     let (_dir, config, mut initial, id, _, _) = firing::fixture_with_supply(
-        include_str!("../game/mechs/JR7-D"),
+        include_str!("../game/mechs/JR7-D.toml"),
         Some(BattleWeapon::Ac2),
-        include_str!("../game/mechs/AS7-D"),
+        include_str!("../game/mechs/AS7-D.toml"),
         false,
         Some(""),
     )
@@ -421,9 +421,9 @@ async fn internal_explosion_can_breach_surviving_armored_section() {
 #[tokio::test]
 async fn core_exposure_shares_engine_and_reactor_consequences() {
     let (_dir, config, initial, id, _, _) = firing::fixture_with_target(
-        include_str!("../game/mechs/JR7-D"),
+        include_str!("../game/mechs/JR7-D.toml"),
         None,
-        include_str!("../game/mechs/AS7-D"),
+        include_str!("../game/mechs/AS7-D.toml"),
     )
     .await;
     for enabled in [false, true] {
@@ -472,7 +472,7 @@ async fn core_exposure_shares_engine_and_reactor_consequences() {
 async fn exposed_support_cancels_prone_stand_recovery() {
     for template in firing::templates().into_iter().take(2) {
         let (_dir, config, mut world, id, _, _) =
-            firing::fixture_with_target(&template, None, include_str!("../game/mechs/AS7-D")).await;
+            firing::fixture_with_target(&template, None, include_str!("../game/mechs/AS7-D.toml")).await;
         firing::edit(&mut world, id, |state| {
             state["posture"] = serde_json::to_value(BattlePosture::Prone).unwrap();
             state["stand_timer"] =

@@ -1,0 +1,53 @@
+name = "Avar"
+class = "aerofighter"
+movement = "fly"
+tons = 35
+max_speed = 161.25
+heat_sinks = 20
+fuel = 450
+specials = ["Clan", "FerroFibrous_Tech"]
+
+[sections.nose]
+armor = 30
+internals = 10
+slots = [
+    { at = 1, item = "CL.StreakSRM-6" },
+    { at = 2, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+    { at = 3, item = "CL.MediumPulseLaser" },
+    { at = 4, item = "CL.ERLargeLaser" },
+]
+
+[sections.left_wing]
+armor = 24
+internals = 10
+slots = [
+    { at = 1, item = "CL.MediumPulseLaser" },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_wing]
+armor = 24
+internals = 10
+slots = [
+    { at = 1, item = "CL.MediumPulseLaser" },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.cockpit]
+armor = 16
+internals = 10
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "Sensors" },
+    { at = 5, item = "LifeSupport" },
+]
+
+[sections.engine]
+armor = 20
+internals = 10
+
+[sections.fuselage]
+armor = 30
+internals = 10

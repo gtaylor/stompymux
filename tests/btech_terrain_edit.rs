@@ -22,7 +22,7 @@ fn operator(world: &mut World, config: &Config, map: ObjectId) -> ObjectId {
 async fn occupied_edits_share_native_lua_and_incremental_persistence() {
     for source in firing::templates() {
         let (_dir, config, mut world, unit, _, _) =
-            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D")).await;
+            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml")).await;
         let map = world.btech.units()[&unit].map.unwrap();
         let actor = operator(&mut world, &config, map);
         persistence::save(&config.database(), &world).await.unwrap();
@@ -139,7 +139,7 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
 async fn ice_growth_commits_against_an_occupied_durable_map() {
     for source in firing::templates() {
         let (_dir, config, mut world, unit, _, _) =
-            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D")).await;
+            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml")).await;
         let map = world.btech.units()[&unit].map.unwrap();
         let actor = operator(&mut world, &config, map);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -188,7 +188,7 @@ async fn edit_admission_overlays_and_extreme_elevations() {
     let (_dir, config, mut world, unit, _, _) = firing::fixture_with_target(
         &firing::templates()[0],
         None,
-        include_str!("../game/mechs/AS7-D"),
+        include_str!("../game/mechs/AS7-D.toml"),
     )
     .await;
     let map = world.btech.units()[&unit].map.unwrap();
@@ -273,7 +273,7 @@ async fn bridge_edits_and_airborne_edits_preserve_physical_position() {
         firing::templates()[0].clone(),
     ] {
         let (_dir, config, mut world, unit, _, _) =
-            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D")).await;
+            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml")).await;
         let map = world.btech.units()[&unit].map.unwrap();
         let actor = operator(&mut world, &config, map);
         let hover = world.btech.vehicles().contains_key(&unit);
@@ -336,7 +336,7 @@ async fn failed_edit_publication_restores_state() {
     let (dir, config, mut world, unit, _, _) = firing::fixture_with_target(
         &firing::templates()[0],
         None,
-        include_str!("../game/mechs/AS7-D"),
+        include_str!("../game/mechs/AS7-D.toml"),
     )
     .await;
     let map = world.btech.units()[&unit].map.unwrap();
@@ -379,7 +379,7 @@ async fn terrain_saves_preserve_persisted_landing_exclusions() {
     use sqlx::Connection;
     for source in firing::templates() {
         let (_dir, config, mut world, unit, target, _) =
-            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D")).await;
+            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml")).await;
         let map = world.btech.units()[&unit].map.unwrap();
         let actor = operator(&mut world, &config, map);
         let zone = BattleLandingExclusion {

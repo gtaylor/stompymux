@@ -1,0 +1,35 @@
+name = "Sprint"
+class = "vtol"
+movement = "vtol"
+tons = 10
+max_speed = 215.0
+
+[sections.left_side]
+armor = 3
+internals = 1
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 3
+internals = 1
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 7
+internals = 1
+slots = [
+    { at = 1, item = "BeagleProbe" },
+    { at = 2, item = "IS.MediumLaser" },
+]
+
+[sections.aft_side]
+armor = 3
+internals = 1
+
+[sections.rotor]
+armor = 2
+internals = 1

@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse(template).unwrap(),
+        BattleVehicleTemplate::parse("test",template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -34,7 +34,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 #[tokio::test]
 async fn vehicle_control_damage_stacks_without_changing_skills_or_construction() {
     use BattleVehicleControlHit as H;
-    let text = include_str!("../game/mechs/Demolisher").replace(
+    let text = include_str!("../game/mechs/Demolisher.toml").replace(
         "Front_Side\n",
         "Front_Side\n    CRIT_1 { IS.MediumLaser - - }\n",
     );
@@ -123,7 +123,7 @@ async fn vehicle_control_damage_stacks_without_changing_skills_or_construction()
 #[tokio::test]
 async fn vehicle_control_penalties_saturate_and_reject_invalid_state() {
     use BattleVehicleControlHit as H;
-    let (_dir, _config, mut world, id) = fixture(include_str!("../game/mechs/Demolisher")).await;
+    let (_dir, _config, mut world, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     for _ in 0..130 {
         damage_battle_vehicle_controls(&mut world, id, H::Driver).unwrap();
         damage_battle_vehicle_controls(&mut world, id, H::Sensors).unwrap();
@@ -173,7 +173,7 @@ async fn vehicle_control_penalties_saturate_and_reject_invalid_state() {
 
 #[tokio::test]
 async fn crew_stun_limits_controls_restarts_and_recovers_after_shutdown() {
-    let (_dir, config, mut world, id) = fixture(include_str!("../game/mechs/Demolisher")).await;
+    let (_dir, config, mut world, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     let pilot = ObjectId(1);
     let maximum = world.btech.vehicles()[&id].maximum_speed();
     set_battle_speed(&mut world, id, pilot, maximum).unwrap();
@@ -232,7 +232,7 @@ async fn crew_stun_limits_controls_restarts_and_recovers_after_shutdown() {
 async fn powered_off_crew_recovery_retries_failed_server_ticks() {
     use sqlx::Connection;
     tokio::task::LocalSet::new().run_until(async {
-        let (_dir,config,mut world,id)=fixture(include_str!("../game/mechs/Demolisher")).await;
+        let (_dir,config,mut world,id)=fixture(include_str!("../game/mechs/Demolisher.toml")).await;
         damage_battle_vehicle_controls(&mut world,id,BattleVehicleControlHit::CrewStun).unwrap();
         stop_battle_unit(&mut world,id,ObjectId(1),BattleMovementRules::STANDARD.fall).unwrap();
         for _ in 0..58 {advance_battle_units(&mut world, 0);}
@@ -257,7 +257,7 @@ async fn powered_off_crew_recovery_retries_failed_server_ticks() {
 
 #[tokio::test]
 async fn hull_destruction_cancels_crew_recovery() {
-    let (_dir, _config, mut world, id) = fixture(include_str!("../game/mechs/Demolisher")).await;
+    let (_dir, _config, mut world, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     damage_battle_vehicle_controls(&mut world, id, BattleVehicleControlHit::CrewStun).unwrap();
     damage_battle_vehicle_phase(
         &mut world,

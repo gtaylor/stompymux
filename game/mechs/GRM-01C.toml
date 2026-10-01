@@ -1,0 +1,100 @@
+name = "Garm"
+class = "mech"
+movement = "biped"
+tons = 35
+max_speed = 86.0
+jump_speed = 53.75
+heat_sinks = 10
+computer = 4
+radio = 4
+specials = ["FerroFibrous_Tech", "EndoSteel_Tech"]
+
+[sections.left_arm]
+armor = 9
+internals = 6
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-12", item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 9
+internals = 6
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-12", item = "EndoSteel" },
+]
+
+[sections.left_torso]
+armor = 9
+internals = 8
+rear = 3
+slots = [
+    { at = 1, item = "HeatSink" },
+    { at = 2, item = "IS.ERMediumLaser" },
+    { at = "3-4", item = "Ammo_IS.RotaryAC/5", rounds = 20 },
+    { at = 5, item = "Case" },
+    { at = "6-11", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 9
+internals = 8
+rear = 3
+slots = [
+    { at = 1, item = "HeatSink" },
+    { at = "2-7", item = "IS.RotaryAC/5" },
+    { at = "8-12", item = "EndoSteel" },
+]
+
+[sections.center_torso]
+armor = 11
+internals = 11
+rear = 4
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = 11, item = "HeatSink" },
+    { at = 12, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 12
+internals = 8
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 12
+internals = 8
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 8
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "EndoSteel" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

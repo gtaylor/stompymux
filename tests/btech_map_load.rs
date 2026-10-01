@@ -10,7 +10,7 @@ async fn load_map_native_lua_and_restart_across_chassis() {
     for (chassis, source) in firing::templates().into_iter().enumerate() {
         for god in [false, true] {
             let (_dir, config, mut world, id, target, _) =
-                firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D"))
+                firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml"))
                     .await;
             let map = world.btech.units()[&id].map.unwrap();
             let actor = if god {
@@ -98,7 +98,7 @@ async fn invalid_loads_preserve_map_membership_and_messages() {
     let (_dir, config, mut world, id, _, _) = firing::fixture_with_target(
         &firing::templates()[0],
         None,
-        include_str!("../game/mechs/AS7-D"),
+        include_str!("../game/mechs/AS7-D.toml"),
     )
     .await;
     let map = world.btech.units()[&id].map.unwrap();
@@ -168,7 +168,7 @@ async fn loaded_terrain_precedes_shutdown_consequences() {
     let (_dir, config, mut world, id, _, _) = firing::fixture_with_target(
         &firing::templates()[2],
         None,
-        include_str!("../game/mechs/AS7-D"),
+        include_str!("../game/mechs/AS7-D.toml"),
     )
     .await;
     let map = world.btech.units()[&id].map.unwrap();

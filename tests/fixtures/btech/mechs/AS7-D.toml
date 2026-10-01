@@ -1,0 +1,98 @@
+name = "Atlas"
+class = "mech"
+movement = "biped"
+tons = 100
+max_speed = 53.75
+heat_sinks = 20
+computer = 4
+radio = 5
+
+[sections.left_arm]
+armor = 34
+internals = 17
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 5, item = "IS.MediumLaser", brand = 4 },
+    { at = 6, item = "HeatSink" },
+]
+
+[sections.right_arm]
+armor = 34
+internals = 17
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 5, item = "IS.MediumLaser", brand = 4 },
+    { at = 6, item = "HeatSink" },
+]
+
+[sections.left_torso]
+armor = 32
+internals = 21
+rear = 10
+slots = [
+    { at = "1-5", item = "IS.LRM-20", brand = 5 },
+    { at = 6, item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = "7-8", item = "Ammo_IS.LRM-20", rounds = 6 },
+    { at = "9-10", item = "IS.SRM-6", brand = 4 },
+    { at = 11, item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 32
+internals = 21
+rear = 10
+slots = [
+    { at = "1-10", item = "IS.AC/20" },
+    { at = "11-12", item = "Ammo_IS.AC/20", rounds = 5 },
+]
+
+[sections.center_torso]
+armor = 47
+internals = 31
+rear = 14
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = "11-12", item = "IS.MediumLaser", modes = ["RearMount"], brand = 4 },
+]
+
+[sections.left_leg]
+armor = 41
+internals = 21
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 41
+internals = 21
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "HeatSink" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

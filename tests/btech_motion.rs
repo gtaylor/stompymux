@@ -37,7 +37,7 @@ async fn fixture_source(
 ) {
     fixture_assets(
         source,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .await
 }
@@ -666,7 +666,7 @@ async fn occupied_environment_changes_heat_and_survives_restart() {
 #[tokio::test]
 async fn shallow_water_counts_only_surviving_leg_sinks() {
     use stompymux_rs::{BattleSection, CriticalLocation, destroy_battle_critical};
-    let mut template = BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+    let mut template = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let sink = template.sections[&BattleSection::Head].criticals[&3].clone();
     for section in [BattleSection::LeftLeg, BattleSection::RightLeg] {
         for slot in [4, 5] {
@@ -1043,7 +1043,7 @@ async fn aim_breakdown_tracks_turning_equipment_and_heat_without_mutation() {
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, target, map, 5, 7).unwrap();
@@ -1244,7 +1244,7 @@ async fn terrain_los_queries_follow_placement_and_leave_world_unchanged() {
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     assert!(stompymux_rs::battle_unit_terrain_los(&world, id, target).is_err());
@@ -1279,7 +1279,7 @@ async fn perception_query_composes_live_terrain_and_spatial_range_without_acquir
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
@@ -1355,7 +1355,7 @@ async fn saved_map_visibility_changes_occupied_battlefields_and_perception_queri
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, target, map, 5, 9).unwrap();
@@ -1415,7 +1415,7 @@ async fn hidden_contact_search_resumes_observer_dice_after_restart_and_rejects_m
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
@@ -1594,7 +1594,7 @@ async fn contacts_acquire_retain_lose_and_clear_on_administrative_placement() {
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, target, map, 5, 7).unwrap();
@@ -1692,7 +1692,7 @@ async fn saved_perception_disable_flags_gate_contacts_and_preserve_other_sensor_
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, target, map, 5, 7).unwrap();
@@ -1813,7 +1813,7 @@ async fn tactical_scanners_use_saved_signatures_and_startup_perception() {
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, target, map, 5, 11).unwrap();
@@ -1894,7 +1894,7 @@ async fn automatic_stationary_contact_acquisition_retries_a_failed_save() {
         let (_dir, config, mut world, id) = fixture('.').await;
         let map = world.btech.constructed_units()[&id].position().unwrap().map;
         let target = world.create(&config, "Automatic contact target".into(), Kind::Thing);
-        create_battle_unit(&mut world, target, BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap()).unwrap();
+        create_battle_unit(&mut world, target, BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap()).unwrap();
         place_battle_unit(&mut world, target, map, 5, 6).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let before = world.btech.clone();
@@ -1932,7 +1932,7 @@ async fn contact_display_filters_unacquired_and_stale_targets_without_rerolls() 
         create_battle_unit(
             &mut world,
             target,
-            BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+            BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, target, map, 5, y).unwrap();
@@ -2043,7 +2043,7 @@ async fn lock_fixture() -> (
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, target, map, 5, 6).unwrap();
@@ -2306,7 +2306,7 @@ async fn aim_lock_penalty_follows_selected_target_and_committed_settling() {
     create_battle_unit(
         &mut world,
         front,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, front, map, 5, 4).unwrap();
@@ -2433,7 +2433,7 @@ async fn perception_aim_includes_target_woods_and_shallow_water_cover() {
         create_battle_unit(
             &mut world,
             target,
-            BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+            BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, target, map, 5, target_y).unwrap();
@@ -2871,7 +2871,7 @@ async fn direct_shot_partial_cover_uses_one_upper_body_die_per_group() {
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, target, map, 5, 3).unwrap();
@@ -2971,7 +2971,7 @@ async fn direct_out_of_range_shot_still_rolls_and_spends_without_target_damage()
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, target, map, 5, 20).unwrap();
@@ -3367,7 +3367,7 @@ async fn prone_posture_changes_los_and_aim_at_adjacent_and_distant_ranges() {
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, target, map, 5, 3).unwrap();
@@ -4252,7 +4252,7 @@ async fn damage_balance_direct_salvo_uses_fallen_facing_and_replays_after_failed
 #[tokio::test]
 async fn damage_balance_ammunition_fall_precedes_explosion_pilot_injury() {
     use stompymux_rs::{BattleDice, BattleSection as Section, resolve_battle_tactical_impact};
-    let mut template = BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+    let mut template = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let ammunition = template
         .sections
         .get_mut(&Section::RightTorso)
@@ -4571,7 +4571,7 @@ async fn prone_fire_support_depends_on_surviving_arms_and_all_their_weapon_timer
 #[tokio::test]
 async fn prone_fire_forbids_leg_mounts_until_upright() {
     use stompymux_rs::{BattleSection as S, BattleStandMode, begin_battle_stand};
-    let mut template = BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+    let mut template = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let weapon = template
         .sections
         .get_mut(&S::LeftArm)
@@ -4675,7 +4675,7 @@ async fn stagger_fixture() -> (
     let source = format!("12 12\n{}", format!("{}\n", ".0".repeat(12)).repeat(12));
     let (dir, config, mut world, id) = fixture_assets(
         &source,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/AS7-D")).unwrap(),
+        BattleTemplate::parse("AS7-D",include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
     )
     .await;
     balance_skill(&mut world);
@@ -4857,7 +4857,7 @@ async fn stagger_failed_checks_fall_and_clear_history_on_ground_and_bridge_decks
         );
         let (_dir, config, mut world, id) = fixture_assets(
             &source,
-            BattleTemplate::parse(include_str!("fixtures/btech/mechs/AS7-D")).unwrap(),
+            BattleTemplate::parse("AS7-D",include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
         )
         .await;
         stop_battle_unit(
@@ -5009,7 +5009,7 @@ async fn stagger_server_water_fall_retries_failed_save_without_losing_history() 
     };
     tokio::task::LocalSet::new().run_until(async {
         let source = format!("12 12\n{}", format!("{}\n", "~1".repeat(12)).repeat(12));
-        let (_dir, config, mut world, id) = fixture_assets(&source, BattleTemplate::parse(include_str!("fixtures/btech/mechs/AS7-D")).unwrap()).await;
+        let (_dir, config, mut world, id) = fixture_assets(&source, BattleTemplate::parse("AS7-D",include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap()).await;
         shot_seed(&mut world, id, water_fall_seed(false));
         stop_battle_unit(&mut world, id, ObjectId(1), stompymux_rs::BattleMovementRules::STANDARD.fall).unwrap();
         stagger_hit(&mut world, id, S::LeftTorso, 20, M::Retain);
@@ -5784,7 +5784,7 @@ async fn ammunition_hazard_selection_prefers_damage_then_first_bin_and_skips_una
     use stompymux_rs::{BattleCriticalLoss, BattleSection as S};
     let (_dir, _config, mut world, id) = fixture_assets(
         &format!("12 12\n{}", (".0".repeat(12) + "\n").repeat(12)),
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/AS7-D")).unwrap(),
+        BattleTemplate::parse("AS7-D",include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
     )
     .await;
     let before = world.btech.clone();
@@ -5891,7 +5891,7 @@ async fn ammunition_detonation_bypasses_armor_replays_and_honors_pain_resistance
 #[tokio::test]
 async fn ammunition_detonation_leg_falls_on_ground_and_bridge_decks() {
     use stompymux_rs::{BattleSection as S, explode_battle_ammunition};
-    let mut template = BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+    let mut template = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let bin = template
         .sections
         .get_mut(&S::RightTorso)
@@ -7364,7 +7364,7 @@ async fn snub_ppc_range_damage_native_lua_and_restart() {
 #[tokio::test]
 async fn double_heat_sinks_group_damage_mass_cooling_and_restart() {
     use stompymux_rs::*;
-    let mut template = BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+    let mut template = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let sink = template
         .sections
         .get_mut(&BattleSection::Head)
@@ -7507,7 +7507,7 @@ async fn fusion_engine_layout_mass_damage_and_restart() {
         (BattleEngine::Compact, 0, true, 13824, "compact"),
     ] {
         let mut template =
-            BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+            BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
         template.max_speed = 96.75;
         let part = template.sections[&BattleSection::CenterTorso].criticals[&0].clone();
         if compact {
@@ -8481,7 +8481,7 @@ async fn heavy_gauss_range_damage_native_lua_and_restart() {
 #[tokio::test]
 async fn relocated_cestus_engine_damage_native_lua_fire_and_restart() {
     use stompymux_rs::*;
-    let template = BattleTemplate::parse(include_str!("../game/mechs/CES-4S")).unwrap();
+    let template = BattleTemplate::parse("CES-4S",include_str!("../game/mechs/CES-4S.toml")).unwrap();
     let source = format!("12 12\n{}", format!("{}\n", ".0".repeat(12)).repeat(12));
     let (_dir, config, mut base, id) = fixture_assets(&source, template).await;
     let map = base.btech.constructed_units()[&id].position().unwrap().map;
@@ -8489,7 +8489,7 @@ async fn relocated_cestus_engine_damage_native_lua_fire_and_restart() {
     create_battle_unit(
         &mut base,
         target,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut base, target, map, 5, 4).unwrap();
@@ -8632,7 +8632,7 @@ async fn split_weapon_native_lua_fire_guards_and_recycle_restart() {
                 .insert(slot, part.clone());
         }
         part.equipment = "SplitCrit_Left".into();
-        part.data = "4".into();
+        part.data = "Left_Arm:4".into();
         for slot in 2..2 + weapon.profile().critical_slots - 8 {
             definition
                 .sections
@@ -9874,7 +9874,7 @@ async fn half_ton_native_lua_fire_capacity_and_restart() {
 #[tokio::test]
 async fn small_cockpit_piloting_mass_and_restart() {
     use stompymux_rs::{BattleSection, CriticalLocation, roll_battle_piloting};
-    let mut template = BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+    let mut template = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let standard = stompymux_rs::BattleUnit::from_template(template.clone()).unwrap();
     template
         .attributes
@@ -13437,7 +13437,7 @@ async fn firing_observers_hide_unseen_participants_and_replay_transactionally() 
                 create_battle_unit(
                     &mut world,
                     observer,
-                    BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+                    BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
                 )
                 .unwrap();
                 place_battle_unit(&mut world, observer, map, 6, 5).unwrap();
@@ -13846,7 +13846,7 @@ async fn stand_attempt_observers_share_native_lua_order_and_saved_replay() {
     create_battle_unit(
         &mut base,
         observer,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     let map = base.btech.constructed_units()[&subject]
@@ -16866,7 +16866,7 @@ async fn kick_roll_boundaries_replay_and_shutdown_recovery_seeds_24_32() {
 #[tokio::test]
 async fn kick_recovery_blocks_leg_weapons_until_expiry() {
     use stompymux_rs::*;
-    let mut template = BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+    let mut template = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let weapon = template
         .sections
         .get_mut(&BattleSection::LeftArm)
@@ -17474,7 +17474,7 @@ async fn status_rendering_preserves_literal_fields_and_ammunition_colors() {
     use stompymux_rs::text::{ColorDepth, Document, Palette, RenderOptions};
     use stompymux_rs::*;
     let label = "[fg=red]Jenner[/]";
-    let mut template = BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+    let mut template = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     template.name = label.into();
     template
         .sections
@@ -20659,7 +20659,7 @@ async fn dfa_damage_candidate_error_rolls_back() {
     create_battle_unit(
         &mut world,
         third,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -30073,7 +30073,7 @@ async fn radar_fixture() -> (
     ObjectId,
 ) {
     use stompymux_rs::*;
-    let mut template = BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+    let mut template = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     template
         .attributes
         .insert("specials".into(), "AntiAircraft".into());
@@ -30084,7 +30084,7 @@ async fn radar_fixture() -> (
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, target, map, 5, 4).unwrap();
@@ -30865,7 +30865,7 @@ async fn semiguided_fixture() -> (
     state["constructed"][target.0.to_string()]["motion"]["desired_speed"] = 43.0.into();
     world.btech = serde_json::from_value(state).unwrap();
     select_battle_tag(&mut world, tagger, ObjectId(1), Some(target)).unwrap();
-    let mut definition = BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+    let mut definition = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     definition
         .sections
         .get_mut(&BattleSection::CenterTorso)
@@ -33740,7 +33740,7 @@ async fn quad_lateral_requires_intact_support() {
 async fn quad_live_movement_standing_and_restart() {
     use stompymux_rs::*;
     let source = format!("12 12\n{}", format!("{}\n", ".0".repeat(12)).repeat(12));
-    let template = BattleTemplate::parse(include_str!("../game/mechs/SCP-1N")).unwrap();
+    let template = BattleTemplate::parse("SCP-1N",include_str!("../game/mechs/SCP-1N.toml")).unwrap();
     let (_dir, config, mut world, id) = fixture_assets(&source, template).await;
     assert_eq!(
         world.btech.constructed_units()[&id].chassis(),
@@ -33799,7 +33799,7 @@ async fn quad_live_movement_standing_and_restart() {
 async fn quad_live_weapon_and_front_leg_combat() {
     use stompymux_rs::*;
     let source = format!("12 12\n{}", format!("{}\n", ".0".repeat(12)).repeat(12));
-    let template = BattleTemplate::parse(include_str!("../game/mechs/SCP-1N")).unwrap();
+    let template = BattleTemplate::parse("SCP-1N",include_str!("../game/mechs/SCP-1N.toml")).unwrap();
     let (_dir, config, mut world, id) = fixture_assets(&source, template.clone()).await;
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
     let target = world.create(&config, "Target quad".into(), Kind::Thing);
@@ -33848,7 +33848,7 @@ async fn quad_live_weapon_and_front_leg_combat() {
 async fn quad_club_rejection_is_atomic_across_command_paths() {
     use stompymux_rs::*;
     let source = format!("12 12\n{}", format!("{}\n", "`0".repeat(12)).repeat(12));
-    let template = BattleTemplate::parse(include_str!("../game/mechs/SCP-1N")).unwrap();
+    let template = BattleTemplate::parse("SCP-1N",include_str!("../game/mechs/SCP-1N.toml")).unwrap();
     let (_dir, config, mut world, id) = fixture_assets(&source, template).await;
     let before = world.btech.clone();
     for selection in [None, Some("left"), Some("right")] {
@@ -33882,7 +33882,7 @@ async fn quad_club_rejection_is_atomic_across_command_paths() {
 async fn quad_dump_location_selectors_use_live_anatomy() {
     use stompymux_rs::*;
     let source = format!("12 12\n{}", format!("{}\n", ".0".repeat(12)).repeat(12));
-    let mut template = BattleTemplate::parse(include_str!("../game/mechs/SCP-1N")).unwrap();
+    let mut template = BattleTemplate::parse("SCP-1N",include_str!("../game/mechs/SCP-1N.toml")).unwrap();
     let bin = template
         .sections
         .get_mut(&BattleSection::LeftTorso)
@@ -33924,7 +33924,7 @@ async fn quad_dump_location_selectors_use_live_anatomy() {
 async fn quad_pods_inspect_anatomy_and_reject_swatting() {
     use stompymux_rs::*;
     let source = format!("12 12\n{}", format!("{}\n", ".0".repeat(12)).repeat(12));
-    let template = BattleTemplate::parse(include_str!("../game/mechs/SCP-1N")).unwrap();
+    let template = BattleTemplate::parse("SCP-1N",include_str!("../game/mechs/SCP-1N.toml")).unwrap();
     let (_dir, config, mut world, id) = fixture_assets(&source, template).await;
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     encoded["constructed"][id.0.to_string()]["beacons"]["LeftArm"] =
@@ -33977,7 +33977,7 @@ async fn apod_live_fire_and_restart() {
     use stompymux_rs::*;
     for weapon in [BattleWeapon::APod, BattleWeapon::ClanAPod] {
         let source = format!("12 12\n{}", format!("{}\n", ".0".repeat(12)).repeat(12));
-        let mut template = BattleTemplate::parse(include_str!("../game/mechs/SCP-1N")).unwrap();
+        let mut template = BattleTemplate::parse("SCP-1N",include_str!("../game/mechs/SCP-1N.toml")).unwrap();
         template
             .sections
             .get_mut(&BattleSection::LeftArm)
@@ -34048,7 +34048,8 @@ async fn apod_live_fire_and_restart() {
 async fn stinger_airborne_admission_and_shot_replay() {
     use stompymux_rs::*;
     let template = BattleTemplate::parse(
-        &include_str!("fixtures/btech/mechs/JR7-D").replace("IS.SRM-4", "IS.LRM-5"),
+        "test",
+        &include_str!("fixtures/btech/mechs/JR7-D.toml").replace("IS.SRM-4", "IS.LRM-5"),
     )
     .unwrap();
     let mut template = template;
@@ -34073,7 +34074,7 @@ async fn stinger_airborne_admission_and_shot_replay() {
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, target, map, 5, 4).unwrap();
@@ -34581,14 +34582,14 @@ async fn weapons_hold_direct_mech_impacts_retain_shooter_and_weapon_effects() {
 async fn ground_proposals_match_live_trajectories_without_mutating_state() {
     use stompymux_rs::{BattleHexCoordinate, propose_battle_mech_ground_motion};
     for source in [
-        include_str!("../game/mechs/JR7-D"),
-        include_str!("../game/mechs/GOL-1H"),
+        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/GOL-1H.toml"),
     ] {
         for terrain in ['.', '"', '%'] {
             let row = format!("{terrain}0").repeat(12);
             let map = format!("12 12\n{}", format!("{row}\n").repeat(12));
             let (_dir, _config, baseline, id) =
-                fixture_assets(&map, BattleTemplate::parse(source).unwrap()).await;
+                fixture_assets(&map, BattleTemplate::parse("test",source).unwrap()).await;
             for slowdown in 0..=2 {
                 for fasa_turning in [false, true] {
                     for speed in [-10.75, 32.25] {

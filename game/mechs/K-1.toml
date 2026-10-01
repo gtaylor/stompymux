@@ -1,0 +1,47 @@
+name = "Dropshuttle"
+class = "spheroid_dropship"
+movement = "fly"
+tons = 200
+max_speed = 64.5
+tac_range = 50
+lrs_range = 100
+scan_range = 50
+
+[sections.front_right_side]
+armor = 30
+internals = 9
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]
+
+[sections.front_left_side]
+armor = 30
+internals = 9
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]
+
+[sections.rear_left_side]
+armor = 30
+internals = 9
+
+[sections.rear_right_side]
+armor = 30
+internals = 9
+
+[sections.aft]
+armor = 30
+internals = 9
+slots = [
+    { at = "1-2", item = "IS.SmallLaser" },
+]
+
+[sections.nose]
+armor = 40
+internals = 9
+slots = [
+    { at = 1, item = "IS.LRM-5" },
+    { at = "2-3", item = "Ammo_IS.LRM-5", rounds = 24 },
+    { at = 4, item = "IS.MediumLaser" },
+    { at = "5-6", item = "IS.SmallLaser" },
+]

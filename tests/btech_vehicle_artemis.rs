@@ -5,24 +5,24 @@ use stompymux_rs::*;
 
 /// Ground movement classes and rotorcraft, including stationary rotorcraft anatomy.
 fn templates() -> Vec<String> {
-    let ground = include_str!("../game/mechs/Demolisher");
-    let vtol = include_str!("../game/mechs/Kestrel");
+    let ground = include_str!("../game/mechs/Demolisher.toml");
+    let vtol = include_str!("../game/mechs/Kestrel.toml");
     vec![
         ground.into(),
-        ground.replace("{ Track }", "{ Wheel }"),
-        ground.replace("{ Track }", "{ Hover }"),
+        ground.replace("movement = \"track\"", "movement = \"wheel\""),
+        ground.replace("movement = \"track\"", "movement = \"hover\""),
         ground
-            .replace("{ Track }", "{ None }")
-            .replace("{ 53.75 }", "{ 0 }"),
+            .replace("movement = \"track\"", "movement = \"none\"")
+            .replace("max_speed = 53.75", "max_speed = 0"),
         vtol.into(),
-        vtol.replace("Move_Type        { VTOL }", "Move_Type { None }")
-            .replace("{ 193.50 }", "{ 0 }"),
+        vtol.replace("movement = \"vtol\"", "movement = \"none\"")
+            .replace("max_speed = 193.5", "max_speed = 0"),
     ]
 }
 
 /// Install one turret launcher and a controller without changing chassis identity.
 fn definition(source: &str, section: BattleVehicleSection, link: &str) -> BattleVehicleTemplate {
-    let mut template = BattleVehicleTemplate::parse(source).unwrap();
+    let mut template = BattleVehicleTemplate::parse("test",source).unwrap();
     for section in template.sections.values_mut() {
         section.criticals.clear();
     }

@@ -1,0 +1,73 @@
+name = "Union"
+class = "spheroid_dropship"
+movement = "fly"
+tons = 3500
+max_speed = 53.75
+heat_sinks = 90
+tac_range = 50
+lrs_range = 100
+scan_range = 50
+
+[sections.front_right_side]
+armor = 120
+internals = 60
+slots = [
+    { at = 1, item = "IS.PPC" },
+    { at = "2-3", item = "IS.LRM-20" },
+    { at = "4-6", item = "Ammo_IS.LRM-20", rounds = 6 },
+    { at = "7-8", item = "IS.AC/5" },
+    { at = 9, item = "Ammo_IS.AC/5", rounds = 20 },
+    { at = 10, item = "IS.LargeLaser" },
+    { at = "11-12", item = "IS.MediumLaser" },
+]
+
+[sections.front_left_side]
+armor = 120
+internals = 60
+slots = [
+    { at = 1, item = "IS.PPC" },
+    { at = "2-3", item = "IS.LRM-20" },
+    { at = "4-6", item = "Ammo_IS.LRM-20", rounds = 6 },
+    { at = "7-8", item = "IS.AC/5" },
+    { at = 9, item = "Ammo_IS.AC/5", rounds = 20 },
+    { at = 10, item = "IS.LargeLaser" },
+    { at = "11-12", item = "IS.MediumLaser" },
+]
+
+[sections.rear_left_side]
+armor = 120
+internals = 60
+slots = [
+    { at = 1, item = "IS.LargeLaser" },
+    { at = "2-3", item = "IS.MediumLaser" },
+    { at = "4-7", item = "Ammo_IS.AC/5", rounds = 20 },
+]
+
+[sections.rear_right_side]
+armor = 120
+internals = 60
+slots = [
+    { at = 1, item = "IS.LargeLaser" },
+    { at = "2-3", item = "IS.MediumLaser" },
+    { at = "4-7", item = "Ammo_IS.AC/5", rounds = 20 },
+]
+
+[sections.aft]
+armor = 40
+internals = 60
+slots = [
+    { at = 1, item = "IS.LargeLaser" },
+    { at = "2-3", item = "IS.MediumLaser" },
+]
+
+[sections.nose]
+armor = 120
+internals = 60
+slots = [
+    { at = 1, item = "IS.PPC" },
+    { at = "2-3", item = "IS.LRM-20" },
+    { at = "4-6", item = "Ammo_IS.LRM-20", rounds = 6 },
+    { at = "7-8", item = "IS.AC/5" },
+    { at = "9-10", item = "Ammo_IS.AC/5", rounds = 20 },
+    { at = "11-12", item = "IS.MediumLaser" },
+]

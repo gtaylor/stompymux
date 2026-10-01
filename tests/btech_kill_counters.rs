@@ -195,11 +195,11 @@ async fn signed_fields_and_self_destruction_share_the_unit_owner() {
 async fn shot_induced_water_and_vacuum_exposure_use_distinct_attribution() {
     for water in [false, true] {
         for target_source in [
-            include_str!("../game/mechs/JR7-D"),
-            include_str!("../game/mechs/GOL-1H"),
+            include_str!("../game/mechs/JR7-D.toml"),
+            include_str!("../game/mechs/GOL-1H.toml"),
         ] {
             let (_dir, config, mut base, id, target, index) = firing::fixture_with_target(
-                include_str!("../game/mechs/JR7-D"),
+                include_str!("../game/mechs/JR7-D.toml"),
                 Some(BattleWeapon::MediumLaser),
                 target_source,
             )
@@ -307,7 +307,7 @@ async fn shot_induced_water_and_vacuum_exposure_use_distinct_attribution() {
 async fn vehicle_vacuum_breaches_preserve_life_and_award_no_kill() {
     for source in firing::templates().into_iter().skip(2) {
         let (_dir, config, mut base, id, target, index) = firing::fixture_with_target(
-            include_str!("../game/mechs/JR7-D"),
+            include_str!("../game/mechs/JR7-D.toml"),
             Some(BattleWeapon::MediumLaser),
             &source,
         )

@@ -1,0 +1,36 @@
+name = "Partisan"
+class = "vehicle"
+movement = "track"
+tons = 80
+max_speed = 53.75
+specials = ["AntiAircraft"]
+
+[sections.left_side]
+armor = 26
+internals = 8
+
+[sections.right_side]
+armor = 26
+internals = 8
+
+[sections.front_side]
+armor = 35
+internals = 8
+slots = [
+    { at = 1, item = "C3Slave" },
+]
+
+[sections.aft_side]
+armor = 21
+internals = 8
+
+[sections.turret]
+armor = 35
+internals = 8
+slots = [
+    { at = "1-2", item = "IS.LB10-XAC" },
+    { at = "3-4", item = "IS.AC/2" },
+    { at = 5, item = "Ammo_IS.LB10-XAC", rounds = 10 },
+    { at = "6-7", item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = 8, item = "Ammo_IS.AC/2", rounds = 45 },
+]

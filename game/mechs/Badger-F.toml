@@ -1,0 +1,34 @@
+name = "Badger"
+class = "vehicle"
+movement = "track"
+tons = 30
+max_speed = 96.75
+tac_range = 30
+lrs_range = 60
+scan_range = 30
+cargo_space = 4096
+specials = ["CargoTech"]
+
+[sections.left_side]
+armor = 18
+internals = 3
+
+[sections.right_side]
+armor = 18
+internals = 3
+
+[sections.front_side]
+armor = 20
+internals = 3
+
+[sections.aft_side]
+armor = 16
+internals = 3
+
+[sections.turret]
+armor = 8
+internals = 3
+slots = [
+    { at = 1, item = "IS.ERMediumLaser" },
+    { at = 2, item = "IS.ERSmallLaser" },
+]

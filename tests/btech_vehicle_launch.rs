@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse(template).unwrap(),
+        BattleVehicleTemplate::parse("test",template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -63,7 +63,7 @@ fn request(id: ObjectId) -> BattleVehicleLaunchRequest {
 
 #[tokio::test]
 async fn vehicle_launch_glancing_misses_and_out_of_range_attempts_replay_expenditure() {
-    let (_dir, config, mut base, id) = fixture(include_str!("../game/mechs/Demolisher")).await;
+    let (_dir, config, mut base, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     seed(&mut base, id, 17);
     for kind in ["distance", "glancing", "pilot"] {
         let mut world = base.clone();
@@ -152,7 +152,7 @@ async fn vehicle_launch_glancing_misses_and_out_of_range_attempts_replay_expendi
 #[tokio::test]
 async fn vehicle_streak_failure_recycles_without_ammunition_and_confusion_allows_misses() {
     let (_dir, _config, mut base, id) =
-        fixture(include_str!("../game/mechs/Svantovit-Streak")).await;
+        fixture(include_str!("../game/mechs/Svantovit-Streak.toml")).await;
     seed(&mut base, id, 17);
     let index = base.btech.vehicles()[&id]
         .loadout()
@@ -203,7 +203,7 @@ async fn vehicle_streak_failure_recycles_without_ammunition_and_confusion_allows
 
 #[tokio::test]
 async fn vehicle_gatling_preparation_precedes_attack_and_burst_supply_falls_back() {
-    let template = include_str!("../game/mechs/Demolisher")
+    let template = include_str!("../game/mechs/Demolisher.toml")
         .replace("IS.AC/20", "IS.MachineGun")
         .replace("IS.MachineGun - -", "IS.MachineGun - Gattling");
     let (_dir, _config, mut world, id) = fixture(&template).await;
@@ -230,7 +230,7 @@ async fn vehicle_gatling_preparation_precedes_attack_and_burst_supply_falls_back
     );
     assert_eq!(roll_unit_dice(&mut world, id, 1).unwrap(), [dice.d6()]);
     let template =
-        include_str!("../game/mechs/Demolisher").replace("IS.AC/20 - -", "IS.AC/20 - RapidFire");
+        include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20 - -", "IS.AC/20 - RapidFire");
     let (_dir, _config, mut world, id) = fixture(&template).await;
     seed(&mut world, id, 17);
     let mut saved = serde_json::to_value(&world.btech).unwrap();
@@ -255,7 +255,7 @@ async fn vehicle_gatling_preparation_precedes_attack_and_burst_supply_falls_back
 
 #[tokio::test]
 async fn vehicle_ultra_launches_and_loader_loss_replay_without_affecting_other_mounts() {
-    let template = include_str!("../game/mechs/Demolisher")
+    let template = include_str!("../game/mechs/Demolisher.toml")
         .replace("IS.AC/20", "IS.UltraAC/2")
         .replace("IS.UltraAC/2 - -", "IS.UltraAC/2 - UltraMode");
     let (_dir, config, base, id) = fixture(&template).await;
@@ -330,7 +330,7 @@ async fn vehicle_feed_jams_follow_burst_thresholds_and_survive_ticks_and_reload(
         ("IS.RotaryAC/2", "Rotary_SixShot", 4, 6),
         ("IS.LRM-5", "Hotload", 3, 1),
     ] {
-        let template = include_str!("../game/mechs/Demolisher")
+        let template = include_str!("../game/mechs/Demolisher.toml")
             .replace("IS.AC/20", weapon)
             .replace(&format!("{weapon} - -"), &format!("{weapon} - {flag}"));
         let (_dir, config, base, id) = fixture(&template).await;
@@ -419,7 +419,7 @@ async fn vehicle_misloads_and_propellant_checks_replay_damage_supply_and_dice() 
             (true, false) => "RapidFire",
             _ => "Caseless",
         };
-        let mut template = include_str!("../game/mechs/Demolisher")
+        let mut template = include_str!("../game/mechs/Demolisher.toml")
             .replace("IS.AC/20", "IS.AC/2")
             .replace("IS.AC/2 - -", &format!("IS.AC/2 - {flags}"));
         if caseless {
@@ -531,7 +531,7 @@ async fn vehicle_misloads_clamp_destroyed_bins_and_spend_surviving_supply_after_
         .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 2)
         .unwrap();
     for front in [false, true] {
-        let mut template = include_str!("../game/mechs/Demolisher")
+        let mut template = include_str!("../game/mechs/Demolisher.toml")
             .replace("IS.AC/20 - -", "IS.AC/20 - RapidFire");
         if front {
             template = template
@@ -583,7 +583,7 @@ async fn vehicle_misloads_clamp_destroyed_bins_and_spend_surviving_supply_after_
 
 #[tokio::test]
 async fn vehicle_misload_policy_and_caseless_short_supply_are_retained() {
-    let template = include_str!("../game/mechs/Demolisher")
+    let template = include_str!("../game/mechs/Demolisher.toml")
         .replace("IS.AC/20", "IS.AC/2")
         .replace("IS.AC/2 - -", "IS.AC/2 - RapidFire|Caseless")
         .replace("IS.AC/2 5 -", "IS.AC/2 5 Caseless");
@@ -614,7 +614,7 @@ async fn vehicle_misload_policy_and_caseless_short_supply_are_retained() {
         );
         world.validate(&config).unwrap();
     }
-    let template = include_str!("../game/mechs/Demolisher")
+    let template = include_str!("../game/mechs/Demolisher.toml")
         .replace("IS.AC/20", "IS.AC/2")
         .replace("IS.AC/2 - -", "IS.AC/2 - RapidFire");
     let (_dir, _config, mut base, id) = fixture(&template).await;

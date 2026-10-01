@@ -1,0 +1,38 @@
+name = "Pike-RAC"
+class = "vehicle"
+movement = "track"
+tons = 60
+max_speed = 53.75
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+
+[sections.left_side]
+armor = 30
+internals = 6
+
+[sections.right_side]
+armor = 30
+internals = 6
+
+[sections.front_side]
+armor = 42
+internals = 6
+slots = [
+    { at = 1, item = "IS.SmallLaser", brand = 3 },
+]
+
+[sections.aft_side]
+armor = 28
+internals = 6
+slots = [
+    { at = "1-4", item = "Ammo_IS.RotaryAC/2", rounds = 45 },
+]
+
+[sections.turret]
+armor = 40
+internals = 6
+slots = [
+    { at = "1-3", item = "IS.RotaryAC/2", brand = 3 },
+]

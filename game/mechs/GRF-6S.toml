@@ -1,0 +1,99 @@
+name = "Griffin"
+class = "mech"
+movement = "biped"
+tons = 55
+max_speed = 86.0
+jump_speed = 53.75
+heat_sinks = 20
+computer = 4
+radio = 4
+specials = ["DoubleHS", "ArtemisIV", "EndoSteel_Tech", "LightEngine_Tech"]
+
+[sections.left_arm]
+armor = 18
+internals = 9
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 5, item = "IS.ERMediumLaser" },
+    { at = "6-12", item = "EndoSteel" },
+]
+
+[sections.right_arm]
+armor = 18
+internals = 9
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-7", item = "IS.ERPPC" },
+]
+
+[sections.left_torso]
+armor = 20
+internals = 13
+rear = 6
+slots = [
+    { at = "1-2", item = "Engine" },
+    { at = "3-9", item = "EndoSteel" },
+]
+
+[sections.right_torso]
+armor = 20
+internals = 13
+rear = 6
+slots = [
+    { at = "1-2", item = "Engine" },
+    { at = "3-5", item = "IS.LRM-15" },
+    { at = "6-7", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
+    { at = 11, item = "Case" },
+    { at = 12, item = "ArtemisIV" },
+]
+
+[sections.center_torso]
+armor = 27
+internals = 18
+rear = 9
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = 11, item = "IS.ERMediumLaser" },
+    { at = 12, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 26
+internals = 13
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 26
+internals = 13
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

@@ -1,0 +1,43 @@
+name = "Zorya"
+class = "vehicle"
+movement = "track"
+tons = 35
+max_speed = 64.5
+specials = ["Clan", "ICEEngine_Tech", "FerroFibrous_Tech", "ArtemisIV"]
+
+[sections.left_side]
+armor = 9
+internals = 4
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 9
+internals = 4
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 15
+internals = 4
+slots = [
+    { at = 1, item = "Ecm" },
+]
+
+[sections.aft_side]
+armor = 9
+internals = 4
+
+[sections.turret]
+armor = 14
+internals = 4
+slots = [
+    { at = 1, item = "CL.LB5-XAC" },
+    { at = 2, item = "CL.LRM-10" },
+    { at = 3, item = "ArtemisIV" },
+    { at = 4, item = "Ammo_CL.LB5-XAC", rounds = 20 },
+    { at = 5, item = "Ammo_CL.LB5-XAC", rounds = 20, modes = ["LBX/Cluster"] },
+    { at = 6, item = "Ammo_CL.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
+]

@@ -1,0 +1,26 @@
+name = "Saladin"
+class = "vehicle"
+movement = "hover"
+tons = 35
+max_speed = 129.0
+specials = ["SearchLight", "ICEEngine_Tech"]
+
+[sections.left_side]
+armor = 5
+internals = 4
+
+[sections.right_side]
+armor = 5
+internals = 4
+
+[sections.front_side]
+armor = 17
+internals = 4
+slots = [
+    { at = 1, item = "IS.AC/20", brand = 3 },
+    { at = "2-4", item = "Ammo_IS.AC/20", rounds = 5 },
+]
+
+[sections.aft_side]
+armor = 5
+internals = 4

@@ -1,0 +1,97 @@
+name = "Tai-sho"
+class = "mech"
+movement = "biped"
+tons = 85
+max_speed = 53.75
+heat_sinks = 26
+computer = 4
+radio = 4
+specials = ["DoubleHS"]
+
+[sections.left_arm]
+armor = 28
+internals = 14
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = "4-6", item = "HeatSink", brand = 3 },
+    { at = "7-9", item = "IS.ERPPC", brand = 3 },
+    { at = "10-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 28
+internals = 14
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = "4-9", item = "HeatSink", brand = 3 },
+    { at = "10-12", item = "IS.ERPPC", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 27
+internals = 18
+rear = 9
+slots = [
+    { at = "1-10", item = "C3Master", brand = 3 },
+    { at = "11-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 27
+internals = 18
+rear = 9
+slots = [
+    { at = "1-7", item = "IS.UltraAC/10", brand = 3 },
+    { at = "8-9", item = "Ammo_IS.UltraAC/10", rounds = 10 },
+    { at = "10-11", item = "FerroFibrous", brand = 3 },
+    { at = 12, item = "Case", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 41
+internals = 27
+rear = 13
+slots = [
+    { at = "1-3", item = "Engine", brand = 3 },
+    { at = "4-7", item = "Gyro", brand = 3 },
+    { at = "8-10", item = "Engine", brand = 3 },
+    { at = "11-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 36
+internals = 18
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = 4, item = "HandOrFootActuator", brand = 3 },
+    { at = "5-6", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 36
+internals = 18
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = 4, item = "HandOrFootActuator", brand = 3 },
+    { at = "5-6", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport", brand = 3 },
+    { at = 2, item = "Sensors", brand = 3 },
+    { at = 3, item = "Cockpit", brand = 3 },
+    { at = 4, item = "FerroFibrous", brand = 3 },
+    { at = 5, item = "Sensors", brand = 3 },
+    { at = 6, item = "LifeSupport", brand = 3 },
+]

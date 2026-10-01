@@ -3,6 +3,7 @@ pub mod btech;
 pub use btech::insert_minefield;
 pub use btech::view_map_action as view_battle_map_action;
 pub use btech::{
+    convert_legacy_template, verify_legacy_conversion,
     BattleArtilleryAim, BattleArtilleryAimInput, BattleArtilleryObserver, BattleArtilleryRange,
     unit_artillery_gunnery_target,
 };

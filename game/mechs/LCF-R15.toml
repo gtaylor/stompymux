@@ -1,0 +1,56 @@
+name = "Lucifer"
+class = "aerofighter"
+movement = "fly"
+tons = 65
+max_speed = 86.0
+heat_sinks = 20
+computer = 3
+fuel = 750
+
+[sections.nose]
+armor = 50
+internals = 10
+slots = [
+    { at = 1, item = "IS.LRM-20" },
+    { at = 2, item = "IS.Largelaser" },
+    { at = 3, item = "IS.LargeLaser" },
+]
+
+[sections.left_wing]
+armor = 28
+internals = 10
+slots = [
+    { at = "1-2", item = "IS.SmallLaser" },
+]
+
+[sections.right_wing]
+armor = 28
+internals = 10
+slots = [
+    { at = "1-2", item = "IS.SmallLaser" },
+]
+
+[sections.cockpit]
+armor = 15
+internals = 10
+slots = [
+    { at = 1, item = "LifeSupport", brand = 3 },
+    { at = 2, item = "Sensors", brand = 0 },
+    { at = 3, item = "Cockpit", brand = 0 },
+    { at = 4, item = "Sensors", brand = 0 },
+    { at = 5, item = "LifeSupport", brand = 0 },
+]
+
+[sections.engine]
+armor = 27
+internals = 10
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]
+
+[sections.fuselage]
+armor = 38
+internals = 10
+slots = [
+    { at = "1-5", item = "Ammo_IS.LRM-20", rounds = 6 },
+]

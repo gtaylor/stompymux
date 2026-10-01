@@ -1,0 +1,99 @@
+name = "Bloodhound"
+class = "mech"
+movement = "biped"
+tons = 45
+max_speed = 118.25
+heat_sinks = 28
+computer = 4
+radio = 4
+specials = ["DoubleHS", "EndoSteel_Tech", "XLEngine_Tech", "BeagleProbe"]
+
+[sections.left_arm]
+armor = 14
+internals = 7
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 5, item = "IS.ERMediumLaser" },
+    { at = "6-12", item = "EndoSteel" },
+]
+
+[sections.right_arm]
+armor = 14
+internals = 7
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 5, item = "IS.ERMediumLaser" },
+    { at = 6, item = "IS.ERSmallLaser" },
+]
+
+[sections.left_torso]
+armor = 16
+internals = 11
+rear = 6
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-12", item = "EndoSteel" },
+]
+
+[sections.right_torso]
+armor = 16
+internals = 11
+rear = 6
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-8", item = "IS.StreakSRM-6" },
+    { at = 9, item = "Ammo_IS.StreakSRM-6", rounds = 15 },
+    { at = 12, item = "Case" },
+]
+
+[sections.center_torso]
+armor = 20
+internals = 14
+rear = 7
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = "11-12", item = "BeagleProbe" },
+]
+
+[sections.left_leg]
+armor = 22
+internals = 11
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 5, item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 22
+internals = 11
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "IS.ERMediumLaser" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

@@ -60,7 +60,7 @@ fn supplied_templates_and_maps_decode_without_asset_conversion() {
 
 #[test]
 fn malformed_templates_do_not_become_partially_supported_units() {
-    let source = include_str!("fixtures/btech/mechs/JR7-D");
+    let source = include_str!("fixtures/btech/mechs/JR7-D.toml");
     for source in [
         source.replace("118.25", "NaN"),
         source.replace("Biped", "Quad"),
@@ -70,12 +70,12 @@ fn malformed_templates_do_not_become_partially_supported_units() {
         source.replace("Reference        { JR7-D }", "Reference {"),
     ] {
         assert!(
-            BattleTemplate::parse(&source).is_err(),
+            BattleTemplate::parse("test",&source).is_err(),
             "unexpectedly parsed {source}"
         );
     }
     let multiline = source.replace("Name             { Jenner }", "Name {\nJenner\n}");
-    assert_eq!(BattleTemplate::parse(&multiline).unwrap().name, "Jenner");
+    assert_eq!(BattleTemplate::parse("test",&multiline).unwrap().name, "Jenner");
     // Optional metadata is ignored as a whole when its field count is invalid.
     let map = BattleMapAsset::parse("1 1\n.0\n42: 88 19 extra\n").unwrap();
     assert_eq!((map.flags, map.gravity, map.temperature), (0, 100, 20));

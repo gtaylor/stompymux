@@ -94,9 +94,9 @@ async fn digging_alone_keeps_simulation_pending_until_completion() {
         )
         .unwrap();
         let id = world.create(&config, "Digger".into(), Kind::Thing);
-        let source = include_str!("../game/mechs/Demolisher")
+        let source = include_str!("../game/mechs/Demolisher.toml")
             .replace("{ Track }", &format!("{{ {movement} }}"));
-        BattleUnitTemplate::parse(&source)
+        BattleUnitTemplate::parse("test",&source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();

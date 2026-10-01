@@ -1,0 +1,30 @@
+name = "Striker"
+class = "vehicle"
+movement = "wheel"
+tons = 35
+max_speed = 86.0
+specials = ["ICEEngine_Tech", "Searchlight"]
+
+[sections.left_side]
+armor = 20
+internals = 4
+
+[sections.right_side]
+armor = 20
+internals = 4
+
+[sections.front_side]
+armor = 24
+internals = 4
+
+[sections.aft_side]
+armor = 18
+internals = 4
+
+[sections.turret]
+armor = 22
+internals = 4
+slots = [
+    { at = 1, item = "IS.LRM-15" },
+    { at = "2-5", item = "Ammo_IS.LRM-15", rounds = 8 },
+]

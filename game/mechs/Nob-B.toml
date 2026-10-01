@@ -1,0 +1,104 @@
+name = "Nobori-nin"
+class = "mech"
+movement = "biped"
+tons = 50
+max_speed = 86.0
+jump_speed = 53.75
+heat_sinks = 20
+computer = 4
+specials = ["Clan"]
+
+[sections.left_arm]
+armor = 16
+internals = 8
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "FerroFibrous" },
+    { at = "5-6", item = "EndoSteel" },
+    { at = "7-11", item = "CL.LB10-XAC" },
+]
+
+[sections.right_arm]
+armor = 16
+internals = 8
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = "3-4", item = "EndoSteel" },
+    { at = "5-6", item = "CL.ERPPC" },
+    { at = "7-8", item = "CL.MediumPulseLaser" },
+]
+
+[sections.left_torso]
+armor = 18
+internals = 12
+rear = 6
+slots = [
+    { at = "1-2", item = "Engine" },
+    { at = 3, item = "EndoSteel" },
+    { at = "4-6", item = "FerroFibrous" },
+    { at = 7, item = "JumpJet" },
+    { at = 8, item = "Ammo_CL.LB10-XAC", rounds = 10 },
+    { at = 9, item = "Ammo_CL.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+]
+
+[sections.right_torso]
+armor = 18
+internals = 12
+rear = 6
+slots = [
+    { at = "1-2", item = "Engine" },
+    { at = 3, item = "EndoSteel" },
+    { at = "4-5", item = "FerroFibrous" },
+    { at = 6, item = "JumpJet" },
+    { at = "7-8", item = "CL.MachineGun" },
+    { at = 9, item = "Ammo_CL.MachineGun", rounds = 200 },
+]
+
+[sections.center_torso]
+armor = 25
+internals = 16
+rear = 7
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = 11, item = "JumpJet" },
+    { at = 12, item = "EndoSteel" },
+]
+
+[sections.left_leg]
+armor = 24
+internals = 12
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 5, item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 24
+internals = 12
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 5, item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "FerroFibrous" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

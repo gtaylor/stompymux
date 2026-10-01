@@ -1,0 +1,29 @@
+name = "Chevalier"
+class = "vehicle"
+movement = "wheel"
+tons = 35
+max_speed = 118.25
+
+[sections.left_side]
+armor = 14
+internals = 4
+
+[sections.right_side]
+armor = 14
+internals = 4
+
+[sections.front_side]
+armor = 18
+internals = 4
+
+[sections.aft_side]
+armor = 10
+internals = 4
+
+[sections.turret]
+armor = 16
+internals = 4
+slots = [
+    { at = 1, item = "IS.StreakSRM-2" },
+    { at = 2, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+]

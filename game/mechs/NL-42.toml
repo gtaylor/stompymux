@@ -1,0 +1,41 @@
+name = "Battle Taxi"
+class = "spheroid_dropship"
+movement = "fly"
+tons = 200
+max_speed = 96.75
+heat_sinks = 14
+tac_range = 50
+lrs_range = 100
+scan_range = 50
+
+[sections.front_right_side]
+armor = 90
+internals = 9
+slots = [
+    { at = 1, item = "IS.ERLargeLaser" },
+    { at = "2-3", item = "IS.MediumPulseLaser" },
+]
+
+[sections.front_left_side]
+armor = 90
+internals = 9
+slots = [
+    { at = 1, item = "IS.ERLargeLaser" },
+    { at = "2-3", item = "IS.MediumPulseLaser" },
+]
+
+[sections.rear_left_side]
+armor = 90
+internals = 9
+
+[sections.rear_right_side]
+armor = 90
+internals = 9
+
+[sections.aft]
+armor = 80
+internals = 9
+
+[sections.nose]
+armor = 90
+internals = 9

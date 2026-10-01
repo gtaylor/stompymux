@@ -1,0 +1,23 @@
+name = "Engineering"
+class = "vehicle"
+movement = "track"
+tons = 40
+max_speed = 96.75
+computer = 4
+specials = ["ICEEngine_Tech", "CargoTech"]
+
+[sections.left_side]
+armor = 8
+internals = 4
+
+[sections.right_side]
+armor = 8
+internals = 4
+
+[sections.front_side]
+armor = 8
+internals = 4
+
+[sections.aft_side]
+armor = 8
+internals = 4

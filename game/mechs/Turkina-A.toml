@@ -1,0 +1,98 @@
+name = "Turkina"
+class = "mech"
+movement = "biped"
+tons = 95
+max_speed = 53.75
+jump_speed = 32.25
+heat_sinks = 30
+computer = 5
+radio = 5
+specials = ["DoubleHS", "Clan", "FlipArms"]
+
+[sections.left_arm]
+armor = 32
+internals = 16
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = "3-8", item = "CL.GaussRifle" },
+    { at = "9-10", item = "Ammo_CL.GaussRifle", rounds = 8 },
+    { at = 11, item = "Ammo_CL.LRM-20", rounds = 6 },
+]
+
+[sections.right_arm]
+armor = 32
+internals = 16
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = "3-8", item = "CL.GaussRifle" },
+    { at = "9-10", item = "Ammo_CL.GaussRifle", rounds = 8 },
+    { at = 11, item = "Ammo_CL.LRM-20", rounds = 6 },
+]
+
+[sections.left_torso]
+armor = 30
+internals = 20
+rear = 10
+slots = [
+    { at = "1-2", item = "Engine" },
+    { at = "3-6", item = "HeatSink" },
+    { at = 7, item = "JumpJet" },
+    { at = "8-11", item = "CL.LRM-20" },
+    { at = 12, item = "Ammo_CL.LRM-20", rounds = 6 },
+]
+
+[sections.right_torso]
+armor = 30
+internals = 20
+rear = 10
+slots = [
+    { at = "1-2", item = "Engine" },
+    { at = "3-6", item = "HeatSink" },
+    { at = 7, item = "JumpJet" },
+    { at = "8-11", item = "CL.LRM-20" },
+    { at = 12, item = "Ammo_CL.LRM-20", rounds = 6 },
+]
+
+[sections.center_torso]
+armor = 45
+internals = 30
+rear = 10
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = 11, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 40
+internals = 20
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.right_leg]
+armor = 40
+internals = 20
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

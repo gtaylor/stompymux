@@ -1,12 +1,12 @@
 //! Battle Value characterization for conventional constructed bipeds and damaged installations.
 use stompymux_rs::*;
 
-const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D");
-const ATLAS: &str = include_str!("fixtures/btech/mechs/AS7-D");
+const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D.toml");
+const ATLAS: &str = include_str!("fixtures/btech/mechs/AS7-D.toml");
 
 /// Construct a supported fixture without map or pilot dependencies.
 fn unit(source: &str) -> BattleUnit {
-    BattleUnit::from_template(BattleTemplate::parse(source).unwrap()).unwrap()
+    BattleUnit::from_template(BattleTemplate::parse("test",source).unwrap()).unwrap()
 }
 
 /// Defensive scores retain the single-precision two-decimal calculation.
@@ -69,7 +69,7 @@ fn jump_damage_changes_offensive_heat_budget() {
 /// Installed torso containment removes that bin's fifteen-point defensive penalty.
 #[test]
 fn case_changes_ammunition_exposure() {
-    let mut definition = BattleTemplate::parse(JENNER).unwrap();
+    let mut definition = BattleTemplate::parse("JR7-D",JENNER).unwrap();
     let mut case = definition.sections[&BattleSection::Head].criticals[&3].clone();
     case.equipment = "CASE".into();
     definition
@@ -88,7 +88,7 @@ fn case_changes_ammunition_exposure() {
 /// CASE II removes the bin's defensive penalty just as ordinary CASE does in a side torso.
 #[test]
 fn case_ii_changes_ammunition_exposure() {
-    let mut definition = BattleTemplate::parse(JENNER).unwrap();
+    let mut definition = BattleTemplate::parse("JR7-D",JENNER).unwrap();
     let mut case = definition.sections[&BattleSection::Head].criticals[&3].clone();
     case.equipment = "CASE-II".into();
     definition
@@ -108,7 +108,7 @@ fn case_ii_changes_ammunition_exposure() {
 #[test]
 fn gauss_exposure_is_per_slot_and_uses_parent_torso_case() {
     for contained in [false, true] {
-        let mut definition = BattleTemplate::parse(JENNER).unwrap();
+        let mut definition = BattleTemplate::parse("JR7-D",JENNER).unwrap();
         let mut part = definition.sections[&BattleSection::Head].criticals[&3].clone();
         part.equipment = "IS.MagshotGaussRifle".into();
         for slot in [4, 5] {
@@ -144,7 +144,7 @@ fn gauss_exposure_is_per_slot_and_uses_parent_torso_case() {
 /// Hardened gyro protection is weighed against the additional construction mass in running defense.
 #[test]
 fn hardened_gyro_value_includes_mass_speed_tradeoff() {
-    let mut definition = BattleTemplate::parse(JENNER).unwrap();
+    let mut definition = BattleTemplate::parse("JR7-D",JENNER).unwrap();
     definition
         .attributes
         .insert("specials".into(), "HDGYRO".into());
@@ -161,7 +161,7 @@ fn anti_missile_system_value_and_mass() {
         (BattleWeapon::LaserAms, 24, 475.3, 25),
         (BattleWeapon::ClanLaserAms, 24, 475.3, 25),
     ] {
-        let mut definition = BattleTemplate::parse(JENNER).unwrap();
+        let mut definition = BattleTemplate::parse("JR7-D",JENNER).unwrap();
         let arm = definition
             .sections
             .get_mut(&BattleSection::LeftArm)

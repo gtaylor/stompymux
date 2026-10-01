@@ -23,12 +23,12 @@ async fn fixture(
             create_battle_unit(
                 &mut world,
                 id,
-                BattleTemplate::parse(include_str!("../game/mechs/AS7-D")).unwrap(),
+                BattleTemplate::parse("AS7-D",include_str!("../game/mechs/AS7-D.toml")).unwrap(),
             )
             .unwrap();
         } else {
             let mut template =
-                BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap();
+                BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap();
             template.movement = movement;
             create_battle_vehicle(&mut world, id, template).unwrap();
         }
@@ -248,7 +248,7 @@ async fn artillery_water_depth_excludes_submerged_hulls_but_not_hovercraft() {
         let hover = world.create(&config, "Hover target".into(), Kind::Thing);
         world.objects.get_mut(&hover).unwrap().home = Some(ObjectId(config.home()));
         let mut template =
-            BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap();
+            BattleVehicleTemplate::parse("Demolisher",include_str!("../game/mechs/Demolisher.toml")).unwrap();
         template.movement = BattleVehicleMovement::Hover;
         create_battle_vehicle(&mut world, hover, template).unwrap();
         place_battle_unit(&mut world, ids[0], map, 1, 1).unwrap();

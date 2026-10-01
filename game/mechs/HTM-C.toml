@@ -1,0 +1,92 @@
+name = "Hatamoto-Hi"
+class = "mech"
+movement = "biped"
+tons = 80
+max_speed = 64.5
+heat_sinks = 18
+computer = 4
+radio = 4
+
+[sections.left_arm]
+armor = 26
+internals = 13
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = "4-6", item = "IS.PPC", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 26
+internals = 13
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = 4, item = "HandOrFootActuator", brand = 3 },
+    { at = "5-7", item = "IS.PPC", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 25
+internals = 17
+rear = 9
+slots = [
+    { at = "1-2", item = "IS.MediumPulseLaser", brand = 3 },
+    { at = "3-9", item = "EndoSteel", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 25
+internals = 17
+rear = 9
+slots = [
+    { at = "1-2", item = "IS.MediumPulseLaser", brand = 3 },
+    { at = "3-9", item = "EndoSteel", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 34
+internals = 25
+rear = 16
+slots = [
+    { at = "1-3", item = "Engine", brand = 3 },
+    { at = "4-7", item = "Gyro", brand = 3 },
+    { at = "8-10", item = "Engine", brand = 3 },
+    { at = "11-12", item = "HeatSink", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 34
+internals = 17
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = 4, item = "HandOrFootActuator", brand = 3 },
+    { at = "5-6", item = "HeatSink", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 34
+internals = 17
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = 4, item = "HandOrFootActuator", brand = 3 },
+    { at = "5-6", item = "HeatSink", brand = 3 },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport", brand = 3 },
+    { at = 2, item = "Sensors", brand = 3 },
+    { at = 3, item = "Cockpit", brand = 3 },
+    { at = 4, item = "C3Slave", brand = 3 },
+    { at = 5, item = "Sensors", brand = 3 },
+    { at = 6, item = "LifeSupport", brand = 3 },
+]

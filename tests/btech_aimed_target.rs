@@ -119,7 +119,7 @@ async fn ground_target_rejects_rotor_without_changing_selection() {
         let (_dir, config, mut world, shooter, _, _) = fixture_with_target(
             &source,
             Some(BattleWeapon::SmallLaser),
-            include_str!("../game/mechs/Demolisher"),
+            include_str!("../game/mechs/Demolisher.toml"),
         )
         .await;
         set_battle_aimed_section(&mut world, shooter, ObjectId(1), Some("turret")).unwrap();
@@ -162,7 +162,7 @@ async fn head_aim_penalty_and_sight_feedback_share_all_chassis() {
         let (_dir, config, base, shooter, target, index) = fixture_with_target(
             &source,
             Some(BattleWeapon::SmallLaser),
-            include_str!("../game/mechs/JR7-D"),
+            include_str!("../game/mechs/JR7-D.toml"),
         )
         .await;
         for (power, penalty) in [(BattlePower::Running, 25), (BattlePower::Off, 7)] {
@@ -602,14 +602,14 @@ async fn changed_target_class_preserves_selection_and_numeric_immobile_hits() {
                 firing_support::fixture_with_computer(
                     &source,
                     Some(BattleWeapon::SmallLaser),
-                    include_str!("../game/mechs/Demolisher"),
+                    include_str!("../game/mechs/Demolisher.toml"),
                     computer,
                 )
                 .await;
             let map = base.btech.vehicles()[&selected].position().unwrap().map;
             let actual = base.create(&config, "Alternate Mech".into(), Kind::Thing);
             base.objects.get_mut(&actual).unwrap().home = Some(ObjectId(config.home()));
-            BattleUnitTemplate::parse(include_str!("../game/mechs/JR7-D"))
+            BattleUnitTemplate::parse("JR7-D",include_str!("../game/mechs/JR7-D.toml"))
                 .unwrap()
                 .create(&mut base, actual)
                 .unwrap();

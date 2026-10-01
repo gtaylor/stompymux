@@ -1,0 +1,35 @@
+name = "Scorpion"
+class = "vehicle"
+movement = "track"
+tons = 25
+max_speed = 64.5
+computer = 3
+specials = ["ICEEngine_Tech"]
+
+[sections.left_side]
+armor = 13
+internals = 3
+
+[sections.right_side]
+armor = 13
+internals = 3
+
+[sections.front_side]
+armor = 18
+internals = 3
+slots = [
+    { at = 1, item = "IS.MachineGun" },
+    { at = 2, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
+]
+
+[sections.aft_side]
+armor = 11
+internals = 3
+
+[sections.turret]
+armor = 17
+internals = 3
+slots = [
+    { at = 1, item = "IS.MRM-20" },
+    { at = "2-3", item = "Ammo_IS.MRM-20", rounds = 12 },
+]

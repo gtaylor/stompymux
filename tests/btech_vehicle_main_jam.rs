@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse(template).unwrap(),
+        BattleVehicleTemplate::parse("test",template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -41,7 +41,7 @@ fn seed(world: &mut World, id: ObjectId, value: u8) {
 
 #[tokio::test]
 async fn main_jam_ranks_intact_mounts_and_persists_without_a_recycle_timer() {
-    let text = include_str!("../game/mechs/Demolisher").replace(
+    let text = include_str!("../game/mechs/Demolisher.toml").replace(
         "Front_Side\n",
         "Front_Side\n    CRIT_1 { IS.MediumLaser - - }\n",
     );
@@ -110,7 +110,7 @@ async fn main_jam_ranks_intact_mounts_and_persists_without_a_recycle_timer() {
 #[tokio::test]
 async fn main_jam_recovers_on_next_powered_update_only_when_already_recycling() {
     for temporary_failure in [false, true] {
-        let (_dir, config, mut world, id) = fixture(include_str!("../game/mechs/Demolisher")).await;
+        let (_dir, config, mut world, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
         if temporary_failure {
             assert!(
                 jam_battle_vehicle_weapon(&mut world, id, BattleVehicleSection::Turret)

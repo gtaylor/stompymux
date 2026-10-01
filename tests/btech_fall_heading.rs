@@ -23,10 +23,10 @@ async fn falling_units_turn_without_translation_and_replay_shared_chassis_rates(
                 create_battle_unit(
                     &mut world,
                     id,
-                    BattleTemplate::parse(if chassis == "quad" {
-                        include_str!("../game/mechs/SCP-1N")
+                    BattleTemplate::parse("test",if chassis == "quad" {
+                        include_str!("../game/mechs/SCP-1N.toml")
                     } else {
-                        include_str!("../game/mechs/JR7-D")
+                        include_str!("../game/mechs/JR7-D.toml")
                     })
                     .unwrap(),
                 )
@@ -34,14 +34,14 @@ async fn falling_units_turn_without_translation_and_replay_shared_chassis_rates(
             } else {
                 let text =
                     match chassis {
-                        "vtol" => include_str!("../game/mechs/Kestrel").to_owned(),
-                        "wheeled" => include_str!("../game/mechs/Demolisher")
-                            .replace("{ Track }", "{ Wheel }"),
-                        "hover" => include_str!("../game/mechs/Demolisher")
-                            .replace("{ Track }", "{ Hover }"),
-                        _ => include_str!("../game/mechs/Demolisher").to_owned(),
+                        "vtol" => include_str!("../game/mechs/Kestrel.toml").to_owned(),
+                        "wheeled" => include_str!("../game/mechs/Demolisher.toml")
+                            .replace("movement = \"track\"", "movement = \"wheel\""),
+                        "hover" => include_str!("../game/mechs/Demolisher.toml")
+                            .replace("movement = \"track\"", "movement = \"hover\""),
+                        _ => include_str!("../game/mechs/Demolisher.toml").to_owned(),
                     };
-                create_battle_vehicle(&mut world, id, BattleVehicleTemplate::parse(&text).unwrap())
+                create_battle_vehicle(&mut world, id, BattleVehicleTemplate::parse("test",&text).unwrap())
                     .unwrap();
             }
             place_battle_unit(&mut world, id, map, 1, 1).unwrap();

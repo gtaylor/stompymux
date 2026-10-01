@@ -174,7 +174,7 @@ async fn scenario_packets_work_without_placement_and_preserve_safe_material() {
         let (_dir, config, mut world) = support::isolated_world().await;
         let unit = world.create(&config, "Scenario unit".into(), Kind::Thing);
         world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse(&source)
+        BattleUnitTemplate::parse("test",&source)
             .unwrap()
             .create(&mut world, unit)
             .unwrap();
@@ -230,7 +230,7 @@ async fn scenario_packets_work_without_placement_and_preserve_safe_material() {
 /// Damage-induced balance checks stay private and transactional across packet boundaries.
 #[tokio::test]
 async fn scenario_packets_preserve_private_balance_feedback() {
-    let source = include_str!("../game/mechs/JR7-D");
+    let source = include_str!("../game/mechs/JR7-D.toml");
     let (_dir, config, mut baseline, unit, _, _) =
         firing::fixture_with_target(source, Some(BattleWeapon::MediumLaser), source).await;
     baseline

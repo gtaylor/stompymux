@@ -1,0 +1,35 @@
+name = "Saladin"
+class = "vehicle"
+movement = "hover"
+tons = 35
+max_speed = 129.0
+tac_range = 30
+lrs_range = 60
+scan_range = 30
+specials = ["SearchLight", "ICEEngine_Tech"]
+
+[sections.left_side]
+armor = 8
+internals = 4
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 8
+internals = 4
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 15
+internals = 4
+slots = [
+    { at = 1, item = "IS.UltraAC/20" },
+    { at = "2-3", item = "Ammo_IS.UltraAC/20", rounds = 5 },
+]
+
+[sections.aft_side]
+armor = 5
+internals = 4

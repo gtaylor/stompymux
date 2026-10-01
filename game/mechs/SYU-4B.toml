@@ -1,0 +1,102 @@
+name = "ShaYu"
+class = "mech"
+movement = "biped"
+tons = 40
+max_speed = 118.25
+heat_sinks = 22
+computer = 4
+radio = 4
+specials = ["DoubleHS", "StealthArmor_Tech", "EndoSteel_Tech", "XLEngine_Tech", "ECM", "C3SlaveTech"]
+
+[sections.left_arm]
+armor = 12
+internals = 6
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "IS.MediumPulseLaser" },
+    { at = "5-10", item = "EndoSteel" },
+    { at = "11-12", item = "StealthArmor" },
+]
+
+[sections.right_arm]
+armor = 12
+internals = 6
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "IS.MediumPulseLaser" },
+    { at = "11-12", item = "StealthArmor" },
+]
+
+[sections.left_torso]
+armor = 15
+internals = 10
+rear = 5
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = 4, item = "IS.ERMediumLaser" },
+    { at = 5, item = "C3Slave" },
+    { at = "6-10", item = "EndoSteel" },
+    { at = "11-12", item = "StealthArmor" },
+]
+
+[sections.right_torso]
+armor = 15
+internals = 10
+rear = 5
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = 4, item = "IS.ERMediumLaser" },
+    { at = 5, item = "IS.LRM-5" },
+    { at = "6-7", item = "Ammo_IS.LRM-5", rounds = 24 },
+    { at = "8-10", item = "EndoSteel" },
+    { at = "11-12", item = "StealthArmor" },
+]
+
+[sections.center_torso]
+armor = 17
+internals = 12
+rear = 6
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = "11-12", item = "Ecm" },
+]
+
+[sections.left_leg]
+armor = 20
+internals = 10
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "StealthArmor" },
+]
+
+[sections.right_leg]
+armor = 20
+internals = 10
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "StealthArmor" },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "IS.MediumPulseLaser" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

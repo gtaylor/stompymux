@@ -1,0 +1,36 @@
+name = "Drillson"
+class = "vehicle"
+movement = "hover"
+tons = 50
+max_speed = 150.5
+
+[sections.left_side]
+armor = 21
+internals = 5
+
+[sections.right_side]
+armor = 21
+internals = 5
+
+[sections.front_side]
+armor = 25
+internals = 5
+slots = [
+    { at = 1, item = "IS.LRM-10", brand = 3 },
+    { at = "2-3", item = "IS.MachineGun", brand = 3 },
+    { at = "4-5", item = "Ammo_IS.LRM-10", rounds = 12 },
+    { at = 6, item = "Ammo_IS.MachineGun", rounds = 200 },
+]
+
+[sections.aft_side]
+armor = 20
+internals = 5
+
+[sections.turret]
+armor = 25
+internals = 5
+slots = [
+    { at = 1, item = "IS.LargeLaser", brand = 3 },
+    { at = "2-3", item = "IS.SRM-2", brand = 3 },
+    { at = 4, item = "Ammo_IS.SRM-2", rounds = 50 },
+]

@@ -1,0 +1,57 @@
+name = "Lucifer"
+class = "aerofighter"
+movement = "fly"
+tons = 65
+max_speed = 86.0
+heat_sinks = 20
+computer = 3
+fuel = 750
+
+[sections.nose]
+armor = 50
+internals = 10
+slots = [
+    { at = 1, item = "IS.LRM-20" },
+    { at = "2-3", item = "IS.ERLargeLaser" },
+    { at = 4, item = "ArtemisIV" },
+]
+
+[sections.left_wing]
+armor = 28
+internals = 10
+slots = [
+    { at = 1, item = "IS.StreakSRM-2" },
+]
+
+[sections.right_wing]
+armor = 28
+internals = 10
+slots = [
+    { at = 1, item = "IS.StreakSRM-2" },
+]
+
+[sections.cockpit]
+armor = 15
+internals = 10
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "Sensors" },
+    { at = 5, item = "LifeSupport" },
+]
+
+[sections.engine]
+armor = 27
+internals = 10
+slots = [
+    { at = 1, item = "IS.MediumPulseLaser" },
+]
+
+[sections.fuselage]
+armor = 38
+internals = 10
+slots = [
+    { at = "1-5", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
+    { at = 6, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+]

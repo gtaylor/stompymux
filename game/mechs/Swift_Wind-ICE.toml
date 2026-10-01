@@ -1,0 +1,21 @@
+name = "Swift_Wind"
+class = "vehicle"
+movement = "wheel"
+tons = 8
+max_speed = 161.25
+
+[sections.left_side]
+armor = 1
+internals = 1
+
+[sections.right_side]
+armor = 1
+internals = 1
+
+[sections.front_side]
+armor = 4
+internals = 1
+
+[sections.aft_side]
+armor = 2
+internals = 1

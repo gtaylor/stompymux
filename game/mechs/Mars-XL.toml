@@ -1,0 +1,57 @@
+name = "Mars"
+class = "vehicle"
+movement = "track"
+tons = 100
+max_speed = 53.75
+heat_sinks = 12
+specials = ["Clan", "XLEngine_Tech", "FerroFibrous_Tech", "ArtemisIV"]
+
+[sections.left_side]
+armor = 41
+internals = 10
+slots = [
+    { at = 1, item = "CL.StreakSRM-6" },
+    { at = 2, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 41
+internals = 10
+slots = [
+    { at = 1, item = "CL.StreakSRM-6" },
+    { at = 2, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 48
+internals = 10
+slots = [
+    { at = 1, item = "CL.LB10-XAC" },
+    { at = 2, item = "CL.LRM-15" },
+    { at = 3, item = "ArtemisIV" },
+    { at = 4, item = "CL.LRM-15" },
+    { at = 5, item = "ArtemisIV" },
+    { at = 6, item = "CL.LRM-15" },
+    { at = 7, item = "ArtemisIV" },
+    { at = 8, item = "Ammo_CL.LB10-XAC", rounds = 10 },
+    { at = 9, item = "Ammo_CL.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = "10-12", item = "Ammo_CL.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
+]
+
+[sections.aft_side]
+armor = 35
+internals = 10
+slots = [
+    { at = 1, item = "Ecm" },
+]
+
+[sections.turret]
+armor = 46
+internals = 10
+slots = [
+    { at = 1, item = "CL.ERLargeLaser" },
+    { at = 2, item = "CL.GaussRifle" },
+    { at = "3-4", item = "Ammo_CL.GaussRifle", rounds = 8 },
+]

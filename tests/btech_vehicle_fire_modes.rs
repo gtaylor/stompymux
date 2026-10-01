@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse(template).unwrap(),
+        BattleVehicleTemplate::parse("test",template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -51,7 +51,7 @@ async fn native_and_lua_vehicle_firing_controls_share_state_and_rollback() {
             BattleFireMode::Rotary4,
         ),
     ] {
-        let template = include_str!("../game/mechs/Demolisher")
+        let template = include_str!("../game/mechs/Demolisher.toml")
             .replace("IS.AC/20 - -", &format!("{weapon} - {flag}"));
         let (_dir, config, mut world, id) = fixture(&template).await;
         assert_eq!(world.btech.vehicles()[&id].fire_mode(0).unwrap(), mode);
@@ -197,7 +197,7 @@ async fn native_and_lua_vehicle_firing_controls_share_state_and_rollback() {
 #[tokio::test]
 async fn vehicle_firing_mode_guards_and_snapshot_validation_preserve_state() {
     let template =
-        include_str!("../game/mechs/Demolisher").replace("IS.AC/20 - -", "IS.Flamer - Heat");
+        include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20 - -", "IS.Flamer - Heat");
     let (_dir, _config, base, id) = fixture(&template).await;
     for damage in ["unauthorized", "off", "recycling", "destroyed"] {
         let mut world = base.clone();
@@ -246,7 +246,7 @@ async fn vehicle_firing_mode_guards_and_snapshot_validation_preserve_state() {
         assert!(serde_json::from_value::<BtechState>(state).is_err());
     }
     let template =
-        include_str!("../game/mechs/Demolisher").replace("IS.AC/20 - -", "IS.LRM-5 - OneShot");
+        include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20 - -", "IS.LRM-5 - OneShot");
     let (_dir, _config, mut world, id) = fixture(&template).await;
     let before = world.btech.clone();
     assert!(
@@ -260,7 +260,7 @@ async fn vehicle_firing_mode_guards_and_snapshot_validation_preserve_state() {
 
 #[tokio::test]
 async fn live_modes_control_reservations_and_hotloaded_critical_eligibility() {
-    let template = include_str!("../game/mechs/Demolisher")
+    let template = include_str!("../game/mechs/Demolisher.toml")
         .replace(
             "Front_Side\n",
             "Front_Side\n CRIT_1 { IS.LRM-5 - Hotload }\n",
@@ -344,7 +344,7 @@ async fn temporary_weapon_failures_keep_recycle_admission_and_firing_lock() {
         ("IS.AC/2", "rapidfire", BattleEquipmentFailure::Jammed),
         ("IS.AC/2", "rapidfire", BattleEquipmentFailure::Disabled),
     ] {
-        let source = include_str!("../game/mechs/Demolisher")
+        let source = include_str!("../game/mechs/Demolisher.toml")
             .replace("IS.AC/20 - -", &format!("{weapon} - -"));
         let (_dir, config, mut world, id) = fixture(&source).await;
         let mut state = serde_json::to_value(&world.btech).unwrap();

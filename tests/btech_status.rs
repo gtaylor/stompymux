@@ -8,16 +8,16 @@ async fn electronic_status_colors_follow_countering_without_refreshing_the_field
     for (store, source) in [
         (
             "constructed",
-            include_str!("../game/mechs/JR7-D").replace(
-                "Left_Torso\n",
-                "Left_Torso\n  CRIT_3-4 { Ecm - - }\n  CRIT_5-6 { AngelEcm - - }\n",
+            include_str!("../game/mechs/JR7-D.toml").replace(
+                "slots = [\n    { at = \"1-2\", item = \"JumpJet\" },\n]\n\n[sections.right_torso]",
+                "slots = [\n    { at = \"1-2\", item = \"JumpJet\" },\n    { at = \"3-4\", item = \"Ecm\" },\n    { at = \"5-6\", item = \"AngelEcm\" },\n]\n\n[sections.right_torso]",
             ),
         ),
         (
             "vehicles",
-            include_str!("../game/mechs/Demolisher").replace(
-                "Front_Side\n",
-                "Front_Side\n  CRIT_1 { Ecm - - }\n  CRIT_2 { AngelEcm - - }\n",
+            include_str!("../game/mechs/Demolisher.toml").replace(
+                "[sections.front_side]\n",
+                "[sections.front_side]\nslots = [{ at = 1, item = \"Ecm\" }, { at = 2, item = \"AngelEcm\" }]\n",
             ),
         ),
     ] {
@@ -85,11 +85,11 @@ async fn electronic_status_colors_follow_countering_without_refreshing_the_field
 /// TAG precedes booster counters even when all three installations share a cockpit.
 #[tokio::test]
 async fn advanced_technology_keeps_reference_order_and_counter_colors() {
-    let source = include_str!("../game/mechs/JR7-D")
-        .replace("FlipArms", "FlipArms SuperCharger_Tech")
+    let source = include_str!("../game/mechs/JR7-D.toml")
+        .replace("\"FlipArms\"", "\"FlipArms\", \"SuperCharger_Tech\"")
         .replace(
-            "Left_Torso\n",
-            "Left_Torso\n  CRIT_3 { TAG - - }\n  CRIT_4 { Masc - - }\n",
+            "slots = [\n    { at = \"1-2\", item = \"JumpJet\" },\n]\n\n[sections.right_torso]",
+            "slots = [\n    { at = \"1-2\", item = \"JumpJet\" },\n    { at = 3, item = \"TAG\" },\n    { at = 4, item = \"Masc\" },\n]\n\n[sections.right_torso]",
         );
     let (_dir, config, mut world, id, _) = fixture(&source).await;
     for (counter, color) in [
@@ -145,7 +145,7 @@ async fn advanced_technology_keeps_reference_order_and_counter_colors() {
 /// The physical row reaches both command paths and survives a restart unchanged.
 #[tokio::test]
 async fn physical_weapon_row_is_shared_with_lua_and_native_status() {
-    let (_dir, config, world, id, _) = fixture(include_str!("../game/mechs/AXM-2N")).await;
+    let (_dir, config, world, id, _) = fixture(include_str!("../game/mechs/AXM-2N.toml")).await;
     let scripts = Scripts::new(
         &config,
         std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
@@ -182,9 +182,9 @@ async fn physical_weapon_row_is_shared_with_lua_and_native_status() {
 #[tokio::test]
 async fn coordinate_target_labels_keep_reference_spacing() {
     for template in [
-        include_str!("../game/mechs/JR7-D"),
-        include_str!("../game/mechs/Demolisher"),
-        include_str!("../game/mechs/Kestrel"),
+        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/mechs/Kestrel.toml"),
     ] {
         let (_dir, _config, mut world, id, _) = fixture(template).await;
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
@@ -219,7 +219,7 @@ async fn coordinate_target_labels_keep_reference_spacing() {
 /// Limb countdowns use the same rounded two-second display ticks as weapon countdowns.
 #[tokio::test]
 async fn limb_recycling_uses_cockpit_ticks_without_advancing_time() {
-    let (_dir, _config, mut world, id, _) = fixture(include_str!("../game/mechs/JR7-D")).await;
+    let (_dir, _config, mut world, id, _) = fixture(include_str!("../game/mechs/JR7-D.toml")).await;
     for (seconds, ticks) in [(1, 1), (2, 1), (3, 2), (60, 30)] {
         let mut encoded = serde_json::to_value(&world.btech).unwrap();
         encoded["constructed"][id.0.to_string()]["limb_recycle"] = serde_json::to_value(
@@ -238,12 +238,12 @@ async fn limb_recycling_uses_cockpit_ticks_without_advancing_time() {
 #[tokio::test]
 async fn vehicle_damage_banners_follow_owned_motive_state() {
     for (movement, banner) in [
-        ("Track", "TRACK DESTROYED"),
-        ("Wheel", "AXLE DESTROYED"),
-        ("Hover", "LIFT FAN DESTROYED"),
+        ("track", "TRACK DESTROYED"),
+        ("wheel", "AXLE DESTROYED"),
+        ("hover", "LIFT FAN DESTROYED"),
     ] {
-        let source = include_str!("../game/mechs/Demolisher")
-            .replace("{ Track }", &format!("{{ {movement} }}"));
+        let source = include_str!("../game/mechs/Demolisher.toml")
+            .replace("movement = \"track\"", &format!("movement = \"{movement}\""));
         let (_dir, _config, mut world, id, _) = fixture(&source).await;
         assert!(!text::plain(&battle_unit_status(&world, id, "").unwrap()).contains(banner));
         damage_battle_vehicle_motive(
@@ -264,7 +264,7 @@ async fn vehicle_damage_banners_follow_owned_motive_state() {
 /// Independent vehicle and inferno fires share one condition banner.
 #[tokio::test]
 async fn concurrent_fire_sources_have_one_status_banner() {
-    let (_dir, _config, mut world, id, _) = fixture(include_str!("../game/mechs/Demolisher")).await;
+    let (_dir, _config, mut world, id, _) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     for (burning, inferno) in [(true, 0), (false, 30), (true, 30)] {
         let mut encoded = serde_json::to_value(&world.btech).unwrap();
         let vehicle = &mut encoded["vehicles"][id.0.to_string()];
@@ -285,7 +285,7 @@ async fn concurrent_fire_sources_have_one_status_banner() {
 /// A landed rotorcraft names its destroyed rotor without reporting hull destruction.
 #[tokio::test]
 async fn landed_rotor_loss_has_its_own_damage_banner() {
-    let (_dir, _config, mut world, id, _) = fixture(include_str!("../game/mechs/Kestrel")).await;
+    let (_dir, _config, mut world, id, _) = fixture(include_str!("../game/mechs/Kestrel.toml")).await;
     damage_battle_vehicle_phase(
         &mut world,
         id,
@@ -313,7 +313,7 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId, O
     )
     .unwrap();
     let id = world.create(&config, "Vehicle".into(), Kind::Thing);
-    BattleUnitTemplate::parse(source)
+    BattleUnitTemplate::parse("test",source)
         .unwrap()
         .create(&mut world, id)
         .unwrap();
@@ -321,7 +321,7 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId, O
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
     let observer = world.create(&config, "Observer".into(), Kind::Thing);
-    BattleUnitTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D"))
+    BattleUnitTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml"))
         .unwrap()
         .create(&mut world, observer)
         .unwrap();
@@ -343,10 +343,10 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId, O
 #[tokio::test]
 async fn vehicle_cockpit_sections_share_native_lua_observer_and_restart_reports() {
     for (source, sinks) in [
-        (include_str!("../game/mechs/Demolisher").to_owned(), 0),
-        (include_str!("../game/mechs/Kestrel").to_owned(), 0),
+        (include_str!("../game/mechs/Demolisher.toml").to_owned(), 0),
+        (include_str!("../game/mechs/Kestrel.toml").to_owned(), 0),
         (
-            include_str!("../game/mechs/Kestrel").replace("ICEEngine_Tech", ""),
+            include_str!("../game/mechs/Kestrel.toml").replace(", \"ICEEngine_Tech\"", ""),
             10,
         ),
     ] {
@@ -451,9 +451,9 @@ async fn vehicle_cockpit_sections_share_native_lua_observer_and_restart_reports(
 
 #[tokio::test]
 async fn vehicle_status_tracks_live_load_damage_ammunition_and_flight() {
-    let (_dir, config, mut world, id, _) = fixture(include_str!("../game/mechs/Kestrel")).await;
+    let (_dir, config, mut world, id, _) = fixture(include_str!("../game/mechs/Kestrel.toml")).await;
     let target = world.create(&config, "Load".into(), Kind::Thing);
-    BattleUnitTemplate::parse(include_str!("../game/mechs/Savannah_Master"))
+    BattleUnitTemplate::parse("Savannah_Master",include_str!("../game/mechs/Savannah_Master.toml"))
         .unwrap()
         .create(&mut world, target)
         .unwrap();
@@ -488,7 +488,7 @@ async fn vehicle_status_tracks_live_load_damage_ammunition_and_flight() {
     assert!(!info.contains("LANDED"));
     assert!(info.contains("Fuel: 37 (0.93 %)"));
     let (_dir2, config2, mut tank_world, tank, _) =
-        fixture(include_str!("../game/mechs/Demolisher")).await;
+        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     let full = battle_unit_status(&tank_world, tank, "NW").unwrap();
     assert!(full.contains("|AC/20|"), "{full}");
     let bin = tank_world.btech.vehicles()[&tank]
@@ -518,14 +518,14 @@ async fn vehicle_status_tracks_live_load_damage_ammunition_and_flight() {
 #[tokio::test]
 async fn status_layout_snapshots_cover_every_diagram() {
     for (name, source) in [
-        ("light", include_str!("../game/mechs/JR7-D")),
-        ("medium", include_str!("../game/mechs/SHD-2H")),
-        ("heavy", include_str!("../game/mechs/WHM-6R")),
-        ("assault", include_str!("../game/mechs/AS7-D")),
-        ("quad", include_str!("../game/mechs/GOL-1H")),
-        ("vehicle", include_str!("../game/mechs/Demolisher")),
-        ("turretless", include_str!("../game/mechs/Savannah_Master")),
-        ("vtol", include_str!("../game/mechs/Kestrel")),
+        ("light", include_str!("../game/mechs/JR7-D.toml")),
+        ("medium", include_str!("../game/mechs/SHD-2H.toml")),
+        ("heavy", include_str!("../game/mechs/WHM-6R.toml")),
+        ("assault", include_str!("../game/mechs/AS7-D.toml")),
+        ("quad", include_str!("../game/mechs/GOL-1H.toml")),
+        ("vehicle", include_str!("../game/mechs/Demolisher.toml")),
+        ("turretless", include_str!("../game/mechs/Savannah_Master.toml")),
+        ("vtol", include_str!("../game/mechs/Kestrel.toml")),
     ] {
         let (_dir, config, world, id, _) = fixture(source).await;
         let before = world.btech.clone();
@@ -567,7 +567,7 @@ async fn status_layout_snapshots_cover_every_diagram() {
 #[tokio::test]
 async fn status_diagram_damage_and_selectors_preserve_live_state() {
     use std::{cell::RefCell, rc::Rc};
-    let (_dir, config, world, id, _) = fixture(include_str!("../game/mechs/JR7-D")).await;
+    let (_dir, config, world, id, _) = fixture(include_str!("../game/mechs/JR7-D.toml")).await;
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let intact = battle_unit_status(&scripts.world(), id, "a").unwrap();
     set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "mechdamage", "A:0/3")
@@ -621,8 +621,8 @@ async fn status_diagram_damage_and_selectors_preserve_live_state() {
 async fn model_header_selector_retains_custom_name_and_markup_safety() {
     use std::{cell::RefCell, rc::Rc};
     for source in [
-        include_str!("../game/mechs/JR7-D"),
-        include_str!("../game/mechs/Demolisher"),
+        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/Demolisher.toml"),
     ] {
         let (_dir, config, world, id, _) = fixture(source).await;
         let model = battle_unit_status(&world, id, "R").unwrap();
@@ -655,8 +655,8 @@ async fn model_header_selector_retains_custom_name_and_markup_safety() {
 #[tokio::test]
 async fn charge_target_timer_uses_configured_native_and_lua_layout() {
     for template in [
-        include_str!("../game/mechs/JR7-D"),
-        include_str!("../game/mechs/GOL-3S"),
+        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/GOL-3S.toml"),
     ] {
         let (dir, config, mut world, id, target) = fixture(template).await;
         let config_path = dir.path().join("stompymux.toml");

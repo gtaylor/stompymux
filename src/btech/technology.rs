@@ -335,9 +335,7 @@ mod tests {
     /// The twenty-damage piloting check counts each hardened point lost once, plus overflow.
     #[test]
     fn hardened_hits_count_armor_points_toward_piloting_checks() {
-        let mut template = crate::btech::BattleTemplate::parse(include_str!(
-            "../../tests/fixtures/btech/mechs/JR7-D"
-        ))
+        let mut template = crate::btech::BattleTemplate::parse("JR7-D",include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"))
         .unwrap();
         let specials = template.attributes.entry("specials".into()).or_default();
         specials.push_str(" HARM");
@@ -358,9 +356,7 @@ mod tests {
     #[test]
     fn specialized_armor_follows_tabletop_slot_rules() {
         let jenner = |specials: &str, slots: u8| {
-            let mut template = crate::btech::BattleTemplate::parse(include_str!(
-                "../../tests/fixtures/btech/mechs/JR7-D"
-            ))
+            let mut template = crate::btech::BattleTemplate::parse("JR7-D",include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"))
             .unwrap();
             let flags = template.attributes.entry("specials".into()).or_default();
             flags.push(' ');

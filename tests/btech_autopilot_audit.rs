@@ -38,7 +38,7 @@ async fn mech_fixture(
     .unwrap();
     let unit = world.create(&config, "Autopilot audit mech".into(), Kind::Thing);
     world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
-    BattleUnitTemplate::parse(include_str!("../game/mechs/JR7-D"))
+    BattleUnitTemplate::parse("JR7-D",include_str!("../game/mechs/JR7-D.toml"))
         .unwrap()
         .create(&mut world, unit)
         .unwrap();
@@ -142,9 +142,9 @@ async fn vehicle_ground_classes_are_admitted_on_water_and_bridge_maps() {
     )
     .unwrap();
     let templates = [
-        include_str!("../game/mechs/Demolisher"),
-        include_str!("../game/mechs/Flatbed_Truck"),
-        include_str!("../game/mechs/Fulcrum"),
+        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/mechs/Flatbed_Truck.toml"),
+        include_str!("../game/mechs/Fulcrum.toml"),
     ];
     let starts = [(0_i64, 0_i64), (1, 0), (2, 0)];
     let mut units = Vec::new();
@@ -158,7 +158,7 @@ async fn vehicle_ground_classes_are_admitted_on_water_and_bridge_maps() {
         create_battle_vehicle(
             &mut world,
             id,
-            BattleVehicleTemplate::parse(template).unwrap(),
+            BattleVehicleTemplate::parse("test",template).unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, id, map, starts[index].0, starts[index].1).unwrap();
@@ -232,7 +232,7 @@ async fn competing_routes_make_progress_without_permanent_congestion_block() {
     let (_directory, config, mut world, map, first) = mech_fixture(&map_asset, (3, 6)).await;
     let second = world.create(&config, "Autopilot congestion follower".into(), Kind::Thing);
     world.objects.get_mut(&second).unwrap().home = Some(ObjectId(config.home()));
-    BattleUnitTemplate::parse(include_str!("../game/mechs/JR7-D"))
+    BattleUnitTemplate::parse("JR7-D",include_str!("../game/mechs/JR7-D.toml"))
         .unwrap()
         .create(&mut world, second)
         .unwrap();
@@ -338,9 +338,9 @@ async fn successful_manual_control_takes_over_but_rejected_control_does_not() {
 #[tokio::test(flavor = "current_thread")]
 async fn weapons_hold_and_heat_ceiling_admit_no_autonomous_shot() {
     let (_directory, config, mut world, shooter, target, _weapon) = firing::fixture_with_target(
-        include_str!("../game/mechs/JR7-D"),
+        include_str!("../game/mechs/JR7-D.toml"),
         None,
-        include_str!("../game/mechs/JR7-D"),
+        include_str!("../game/mechs/JR7-D.toml"),
     )
     .await;
     set_battle_unit_signature(
@@ -411,9 +411,9 @@ async fn weapons_hold_and_heat_ceiling_admit_no_autonomous_shot() {
 #[tokio::test(flavor = "current_thread")]
 async fn autonomous_fire_rechecks_heat_between_multiple_mounts() {
     let (_directory, config, mut world, shooter, target, _weapon) = firing::fixture_with_target(
-        include_str!("../game/mechs/JR7-D"),
+        include_str!("../game/mechs/JR7-D.toml"),
         None,
-        include_str!("../game/mechs/JR7-D"),
+        include_str!("../game/mechs/JR7-D.toml"),
     )
     .await;
     set_battle_unit_signature(
@@ -566,9 +566,9 @@ async fn failed_heartbeat_commit_restores_motion_intent_and_feedback() {
 #[tokio::test(flavor = "current_thread")]
 async fn failed_firing_heartbeat_discards_shots_and_retries_identically() {
     let (_directory, config, mut world, shooter, target, _) = firing::fixture_with_target(
-        include_str!("../game/mechs/JR7-D"),
+        include_str!("../game/mechs/JR7-D.toml"),
         None,
-        include_str!("../game/mechs/JR7-D"),
+        include_str!("../game/mechs/JR7-D.toml"),
     )
     .await;
     set_battle_unit_signature(

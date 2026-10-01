@@ -1,0 +1,33 @@
+name = "Saracen"
+class = "vehicle"
+movement = "hover"
+tons = 35
+max_speed = 129.0
+computer = 3
+specials = ["ICEEngine_Tech"]
+
+[sections.left_side]
+armor = 20
+internals = 4
+
+[sections.right_side]
+armor = 20
+internals = 4
+
+[sections.front_side]
+armor = 24
+internals = 4
+
+[sections.aft_side]
+armor = 24
+internals = 4
+
+[sections.turret]
+armor = 24
+internals = 4
+slots = [
+    { at = 1, item = "IS.LRM-10", brand = 3 },
+    { at = "2-4", item = "IS.SRM-2", brand = 3 },
+    { at = "5-6", item = "Ammo_IS.LRM-10", rounds = 12 },
+    { at = 7, item = "Ammo_IS.SRM-2", rounds = 50 },
+]

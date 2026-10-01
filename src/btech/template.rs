@@ -1,4 +1,5 @@
 //! Bounded shared template syntax and typed BattleMech decoding; equipment awaits catalogue validation.
+use super::template_document::ParsedTemplate;
 use anyhow::{Context, Result, bail, ensure};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -120,9 +121,14 @@ impl BattleTemplate {
         })
     }
 
-    /// Parse bounded brace-delimited fields and section-local critical ranges.
-    pub fn parse(source: &str) -> Result<Self> {
-        let ParsedTemplate { fields, sections } = ParsedTemplate::parse(source)?;
+    /// Decode a TOML template document whose file stem is `reference`.
+    pub fn parse(reference: &str, source: &str) -> Result<Self> {
+        Self::from_parsed(ParsedTemplate::parse(reference, source)?)
+    }
+
+    /// Validate decoded fields and sections as a BattleMech.
+    pub(super) fn from_parsed(parsed: ParsedTemplate) -> Result<Self> {
+        let ParsedTemplate { fields, sections } = parsed;
         let required = |name: &str| -> Result<String> {
             fields
                 .get(name)
@@ -227,15 +233,12 @@ impl BattleTemplate {
     }
 }
 
-/// Shared bounded syntax, before unit-specific section and metadata validation.
-pub(super) struct ParsedTemplate {
-    pub fields: BTreeMap<String, String>,
-    pub sections: BTreeMap<String, SectionDefinition>,
-}
+/// Brace-delimited syntax read only to convert old assets into TOML documents.
+pub(super) struct LegacyTemplate;
 
-impl ParsedTemplate {
+impl LegacyTemplate {
     /// Decode fields without conflating BattleMech and vehicle anatomy.
-    pub fn parse(source: &str) -> Result<Self> {
+    pub fn parse(source: &str) -> Result<ParsedTemplate> {
         ensure!(source.len() <= 1_048_576, "template exceeds size limit");
         let mut fields = BTreeMap::new();
         let mut sections = BTreeMap::<String, SectionDefinition>::new();
@@ -348,16 +351,7 @@ impl ParsedTemplate {
             pending.is_empty(),
             "unclosed template field on line {pending_line}"
         );
-        Ok(Self { fields, sections })
-    }
-
-    /// Require a nonempty unit-level field while preserving its spelling.
-    pub fn required(&self, name: &str) -> Result<String> {
-        self.fields
-            .get(name)
-            .filter(|value| !value.is_empty())
-            .cloned()
-            .with_context(|| format!("missing template field {name}"))
+        Ok(ParsedTemplate { fields, sections })
     }
 }
 

@@ -24,7 +24,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Flatbed_Truck")).unwrap(),
+        BattleVehicleTemplate::parse("Flatbed_Truck",include_str!("../game/mechs/Flatbed_Truck.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 2, 1).unwrap();

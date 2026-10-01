@@ -1,0 +1,101 @@
+name = "Axeman"
+class = "mech"
+movement = "biped"
+tons = 65
+max_speed = 64.5
+jump_speed = 43.0
+heat_sinks = 20
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+specials = ["DoubleHS"]
+
+[sections.left_arm]
+armor = 17
+internals = 10
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "IS.LargePulseLaser" },
+    { at = "7-12", item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 17
+internals = 10
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-7", item = "IS.MediumLaser" },
+    { at = "8-11", item = "Axe" },
+    { at = 12, item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 21
+internals = 15
+rear = 6
+slots = [
+    { at = "1-4", item = "Engine" },
+    { at = "5-6", item = "Ammo_IS.AC/20", rounds = 5 },
+    { at = 7, item = "Case" },
+    { at = "8-12", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 21
+internals = 15
+rear = 6
+slots = [
+    { at = "1-2", item = "Engine" },
+    { at = "3-12", item = "IS.AC/20" },
+]
+
+[sections.center_torso]
+armor = 28
+internals = 21
+rear = 6
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = "11-12", item = "FerroFibrous" },
+]
+
+[sections.left_leg]
+armor = 24
+internals = 15
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 24
+internals = 15
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

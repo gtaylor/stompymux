@@ -1,0 +1,110 @@
+name = "Hankyu"
+class = "mech"
+movement = "biped"
+tons = 30
+max_speed = 129.0
+jump_speed = 64.5
+heat_sinks = 20
+computer = 4
+radio = 5
+specials = ["Clan"]
+
+[sections.left_arm]
+armor = 7
+internals = 5
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 5 },
+    { at = 2, item = "UpperActuator", brand = 5 },
+    { at = 3, item = "LowerActuator", brand = 5 },
+    { at = 4, item = "HandOrFootActuator", brand = 5 },
+    { at = 5, item = "FerroFibrous", brand = 5 },
+    { at = 6, item = "EndoSteel", brand = 5 },
+    { at = 7, item = "CL.LRM-5", brand = 5 },
+    { at = 8, item = "CL.ERMediumLaser", brand = 5 },
+]
+
+[sections.right_arm]
+armor = 7
+internals = 5
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 5 },
+    { at = 2, item = "UpperActuator", brand = 5 },
+    { at = 3, item = "LowerActuator", brand = 5 },
+    { at = 4, item = "FerroFibrous", brand = 5 },
+    { at = 5, item = "EndoSteel", brand = 5 },
+    { at = 6, item = "CL.LRM-5", brand = 5 },
+    { at = 7, item = "CL.ERMediumLaser", brand = 5 },
+]
+
+[sections.left_torso]
+armor = 8
+internals = 7
+rear = 4
+slots = [
+    { at = "1-2", item = "FerroFibrous", brand = 5 },
+    { at = "3-5", item = "EndoSteel", brand = 5 },
+    { at = "6-7", item = "Engine", brand = 5 },
+    { at = 8, item = "Ammo_CL.LRM-5", rounds = 24 },
+    { at = 9, item = "Ecm", brand = 0 },
+    { at = 10, item = "Ecm", brand = 5 },
+    { at = "11-12", item = "HeatSink", brand = 5 },
+]
+
+[sections.right_torso]
+armor = 8
+internals = 7
+rear = 4
+slots = [
+    { at = "1-2", item = "FerroFibrous", brand = 5 },
+    { at = "3-4", item = "EndoSteel", brand = 5 },
+    { at = "5-6", item = "Engine", brand = 5 },
+    { at = 7, item = "Ammo_CL.LRM-5", rounds = 24 },
+    { at = 8, item = "BeagleProbe", brand = 5 },
+    { at = 9, item = "CL.Flamer", brand = 5 },
+    { at = 10, item = "BeagleProbe", brand = 0 },
+]
+
+[sections.center_torso]
+armor = 9
+internals = 10
+rear = 5
+slots = [
+    { at = "1-3", item = "Engine", brand = 5 },
+    { at = "4-7", item = "Gyro", brand = 5 },
+    { at = "8-10", item = "Engine", brand = 5 },
+    { at = "11-12", item = "JumpJet", brand = 5 },
+]
+
+[sections.left_leg]
+armor = 8
+internals = 7
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 5 },
+    { at = 2, item = "UpperActuator", brand = 5 },
+    { at = 3, item = "LowerActuator", brand = 5 },
+    { at = 4, item = "HandOrFootActuator", brand = 5 },
+    { at = "5-6", item = "JumpJet", brand = 5 },
+]
+
+[sections.right_leg]
+armor = 8
+internals = 7
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 5 },
+    { at = 2, item = "UpperActuator", brand = 5 },
+    { at = 3, item = "LowerActuator", brand = 5 },
+    { at = 4, item = "HandOrFootActuator", brand = 5 },
+    { at = "5-6", item = "JumpJet", brand = 5 },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport", brand = 5 },
+    { at = 2, item = "Sensors", brand = 5 },
+    { at = 3, item = "Cockpit", brand = 5 },
+    { at = 4, item = "FerroFibrous", brand = 5 },
+    { at = 5, item = "Sensors", brand = 5 },
+    { at = 6, item = "LifeSupport", brand = 5 },
+]

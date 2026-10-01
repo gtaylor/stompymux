@@ -1,0 +1,104 @@
+name = "Ti Ts'ang"
+class = "mech"
+movement = "biped"
+tons = 60
+max_speed = 96.75
+jump_speed = 64.5
+heat_sinks = 26
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+specials = ["DoubleHS"]
+
+[sections.left_arm]
+armor = 20
+internals = 10
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "IS.ERMediumLaser" },
+    { at = "5-8", item = "IS.ERSmallLaser" },
+    { at = "9-12", item = "EndoSteel" },
+]
+
+[sections.right_arm]
+armor = 20
+internals = 10
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-8", item = "Axe" },
+    { at = "9-12", item = "EndoSteel" },
+]
+
+[sections.left_torso]
+armor = 22
+internals = 14
+rear = 6
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = 4, item = "JumpJet" },
+    { at = "5-6", item = "IS.ERMediumLaser" },
+    { at = "7-9", item = "EndoSteel" },
+    { at = "10-12", item = "TripleStrengthMyomer" },
+]
+
+[sections.right_torso]
+armor = 22
+internals = 14
+rear = 6
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = 4, item = "JumpJet" },
+    { at = "5-6", item = "IS.ERMediumLaser" },
+    { at = "7-9", item = "EndoSteel" },
+    { at = "10-12", item = "TripleStrengthMyomer" },
+]
+
+[sections.center_torso]
+armor = 30
+internals = 20
+rear = 9
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = 11, item = "TAG" },
+]
+
+[sections.left_leg]
+armor = 28
+internals = 14
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 28
+internals = 14
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

@@ -1,0 +1,89 @@
+name = "Banshee"
+class = "mech"
+movement = "biped"
+tons = 95
+max_speed = 64.5
+heat_sinks = 16
+cargo_space = 0
+max_suits = 0
+
+[sections.left_arm]
+armor = 21
+internals = 16
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.right_arm]
+armor = 21
+internals = 16
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.left_torso]
+armor = 30
+internals = 20
+rear = 10
+slots = [
+    { at = "1-3", item = "IS.PPC" },
+    { at = 4, item = "IS.MediumLaser" },
+]
+
+[sections.right_torso]
+armor = 30
+internals = 20
+rear = 10
+slots = [
+    { at = "1-3", item = "IS.PPC" },
+    { at = 4, item = "IS.MediumLaser" },
+]
+
+[sections.center_torso]
+armor = 40
+internals = 30
+rear = 17
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = 11, item = "HeatSink" },
+]
+
+[sections.left_leg]
+armor = 26
+internals = 20
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.right_leg]
+armor = 26
+internals = 20
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "IS.SmallLaser" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

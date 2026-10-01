@@ -1,0 +1,104 @@
+name = "Firestarter"
+class = "mech"
+movement = "biped"
+tons = 45
+max_speed = 96.75
+jump_speed = 64.5
+heat_sinks = 24
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+specials = ["DoubleHS"]
+
+[sections.left_arm]
+armor = 12
+internals = 7
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = "4-5", item = "IS.LRM-10", brand = 3 },
+    { at = 6, item = "Ammo_IS.LRM-10", rounds = 12 },
+    { at = "7-11", item = "EndoSteel", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 12
+internals = 7
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = "4-5", item = "IS.LRM-10", brand = 3 },
+    { at = 6, item = "Ammo_IS.LRM-10", rounds = 12 },
+    { at = "7-9", item = "EndoSteel", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 16
+internals = 11
+rear = 6
+slots = [
+    { at = "1-3", item = "Engine", brand = 3 },
+    { at = "4-6", item = "HeatSink", brand = 3 },
+    { at = "7-9", item = "JumpJet", brand = 3 },
+    { at = 10, item = "C3Slave", brand = 3 },
+    { at = "11-12", item = "EndoSteel", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 16
+internals = 11
+rear = 6
+slots = [
+    { at = "1-3", item = "Engine", brand = 3 },
+    { at = "4-6", item = "HeatSink", brand = 3 },
+    { at = "7-9", item = "JumpJet", brand = 3 },
+    { at = 10, item = "IS.SmallLaser", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 18
+internals = 14
+rear = 7
+slots = [
+    { at = "1-3", item = "Engine", brand = 3 },
+    { at = "4-7", item = "Gyro", brand = 3 },
+    { at = "8-10", item = "Engine", brand = 3 },
+    { at = 11, item = "IS.Flamer", brand = 3 },
+    { at = 12, item = "IS.Flamer", modes = ["RearMount"], brand = 3 },
+]
+
+[sections.left_leg]
+armor = 16
+internals = 11
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = 4, item = "HandOrFootActuator", brand = 3 },
+    { at = "5-6", item = "EndoSteel", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 16
+internals = 11
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = 4, item = "HandOrFootActuator", brand = 3 },
+    { at = "5-6", item = "EndoSteel", brand = 3 },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport", brand = 3 },
+    { at = 2, item = "Sensors", brand = 3 },
+    { at = 3, item = "Cockpit", brand = 3 },
+    { at = 5, item = "Sensors", brand = 3 },
+    { at = 6, item = "LifeSupport", brand = 3 },
+]

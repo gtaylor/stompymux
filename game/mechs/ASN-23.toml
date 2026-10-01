@@ -1,0 +1,91 @@
+name = "Assassin"
+class = "mech"
+movement = "biped"
+tons = 40
+max_speed = 118.25
+jump_speed = 75.25
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+
+[sections.left_arm]
+armor = 6
+internals = 6
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.right_arm]
+armor = 6
+internals = 6
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "IS.MediumPulseLaser" },
+]
+
+[sections.left_torso]
+armor = 10
+internals = 10
+rear = 2
+slots = [
+    { at = "1-3", item = "JumpJet" },
+]
+
+[sections.right_torso]
+armor = 10
+internals = 10
+rear = 2
+slots = [
+    { at = "1-3", item = "JumpJet" },
+    { at = 4, item = "IS.LRM-5", modes = ["Artemis/Mine"] },
+    { at = 5, item = "ArtemisIV" },
+    { at = 6, item = "Ammo_IS.LRM-5", rounds = 24, modes = ["Artemis/Mine"] },
+]
+
+[sections.center_torso]
+armor = 12
+internals = 12
+rear = 4
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = 11, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 6
+internals = 10
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.right_leg]
+armor = 6
+internals = 10
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.head]
+armor = 8
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

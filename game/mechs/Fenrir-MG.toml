@@ -1,0 +1,39 @@
+name = "Fenrir"
+class = "battlesuit"
+movement = "biped"
+tons = 1
+max_speed = 43.0
+cargo_space = 0
+max_suits = 4
+
+[sections.suit_1]
+armor = 5
+internals = 1
+slots = [
+    { at = "1-3", item = "IS.MachineGun", brand = 3 },
+    { at = 4, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
+]
+
+[sections.suit_2]
+armor = 5
+internals = 1
+slots = [
+    { at = "1-3", item = "IS.MachineGun", brand = 3 },
+    { at = 4, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
+]
+
+[sections.suit_3]
+armor = 5
+internals = 1
+slots = [
+    { at = "1-3", item = "IS.MachineGun", brand = 3 },
+    { at = 4, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
+]
+
+[sections.suit_4]
+armor = 5
+internals = 1
+slots = [
+    { at = "1-3", item = "IS.MachineGun", brand = 3 },
+    { at = 4, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
+]

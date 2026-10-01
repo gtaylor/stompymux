@@ -26,29 +26,29 @@ fn unit(
         "biped" | "quad" => create_battle_unit(
             world,
             id,
-            BattleTemplate::parse(if chassis == "quad" {
-                include_str!("../game/mechs/GOL-1H")
+            BattleTemplate::parse("test",if chassis == "quad" {
+                include_str!("../game/mechs/GOL-1H.toml")
             } else {
-                include_str!("../game/mechs/Daishi-H")
+                include_str!("../game/mechs/Daishi-H.toml")
             })
             .unwrap(),
         )
         .unwrap(),
         other => {
             let source = match other {
-                "vtol" => include_str!("../game/mechs/Kestrel").to_owned(),
+                "vtol" => include_str!("../game/mechs/Kestrel.toml").to_owned(),
                 "wheel" => {
-                    include_str!("../game/mechs/Demolisher").replace("{ Track }", "{ Wheel }")
+                    include_str!("../game/mechs/Demolisher.toml").replace("movement = \"track\"", "movement = \"wheel\"")
                 }
                 "hover" => {
-                    include_str!("../game/mechs/Demolisher").replace("{ Track }", "{ Hover }")
+                    include_str!("../game/mechs/Demolisher.toml").replace("movement = \"track\"", "movement = \"hover\"")
                 }
-                "stationary" => include_str!("../game/mechs/Demolisher")
-                    .replace("{ Track }", "{ None }")
-                    .replace("{ 53.75 }", "{ 0 }"),
-                _ => include_str!("../game/mechs/Demolisher").to_owned(),
+                "stationary" => include_str!("../game/mechs/Demolisher.toml")
+                    .replace("movement = \"track\"", "movement = \"none\"")
+                    .replace("max_speed = 53.75", "max_speed = 0"),
+                _ => include_str!("../game/mechs/Demolisher.toml").to_owned(),
             };
-            create_battle_vehicle(world, id, BattleVehicleTemplate::parse(&source).unwrap())
+            create_battle_vehicle(world, id, BattleVehicleTemplate::parse("test",&source).unwrap())
                 .unwrap();
         }
     };

@@ -1,0 +1,86 @@
+name = "Overlord"
+class = "spheroid_dropship"
+movement = "fly"
+tons = 9700
+max_speed = 53.75
+heat_sinks = 120
+tac_range = 50
+lrs_range = 100
+scan_range = 50
+cargo_space = 0
+max_suits = 0
+
+[sections.front_right_side]
+armor = 127
+internals = 97
+slots = [
+    { at = 1, item = "IS.PPC", brand = 3 },
+    { at = 2, item = "IS.AC/5", brand = 3 },
+    { at = 3, item = "IS.LargeLaser", brand = 3 },
+    { at = "4-5", item = "IS.MediumLaser", brand = 3 },
+    { at = "6-8", item = "Ammo_IS.AC/5", rounds = 20 },
+    { at = "9-12", item = "Ammo_IS.LRM-20", rounds = 6 },
+]
+
+[sections.front_left_side]
+armor = 127
+internals = 97
+slots = [
+    { at = 1, item = "IS.PPC", brand = 3 },
+    { at = 2, item = "IS.AC/5", brand = 3 },
+    { at = 3, item = "IS.LargeLaser", brand = 3 },
+    { at = "4-5", item = "IS.MediumLaser", brand = 3 },
+    { at = "6-8", item = "Ammo_IS.AC/5", rounds = 20 },
+    { at = "9-12", item = "Ammo_IS.LRM-20", rounds = 6 },
+]
+
+[sections.rear_left_side]
+armor = 127
+internals = 97
+slots = [
+    { at = 1, item = "IS.PPC", brand = 3 },
+    { at = 2, item = "DSMechDoor", brand = 0 },
+    { at = 3, item = "IS.LargeLaser", brand = 3 },
+    { at = 5, item = "IS.MediumLaser", brand = 3 },
+    { at = 8, item = "IS.MediumLaser", brand = 3 },
+    { at = "9-10", item = "Ammo_IS.AC/20", rounds = 5 },
+    { at = 12, item = "Ammo_IS.LRM-20", rounds = 6 },
+]
+
+[sections.rear_right_side]
+armor = 127
+internals = 97
+slots = [
+    { at = 1, item = "IS.PPC", brand = 3 },
+    { at = 2, item = "DSMechDoor", brand = 0 },
+    { at = 3, item = "IS.LargeLaser", brand = 3 },
+    { at = 5, item = "IS.MediumLaser", brand = 3 },
+    { at = 8, item = "IS.MediumLaser", brand = 3 },
+    { at = 11, item = "Ammo_IS.AC/5", rounds = 20 },
+    { at = 12, item = "Ammo_IS.LRM-20", rounds = 6 },
+]
+
+[sections.aft]
+armor = 80
+internals = 80
+slots = [
+    { at = "1-2", item = "IS.AC/5", brand = 3 },
+    { at = 3, item = "IS.LRM-20", brand = 3 },
+    { at = "4-5", item = "IS.LargeLaser", brand = 3 },
+    { at = "6-7", item = "IS.MediumLaser", brand = 3 },
+    { at = "8-10", item = "Ammo_IS.AC/20", rounds = 5 },
+    { at = 11, item = "Ammo_IS.AC/5", rounds = 20 },
+    { at = 12, item = "Ammo_IS.LRM-20", rounds = 6 },
+]
+
+[sections.nose]
+armor = 127
+internals = 97
+slots = [
+    { at = 1, item = "DSMechDoor", brand = 0 },
+    { at = "4-5", item = "IS.PPC", brand = 3 },
+    { at = "6-7", item = "IS.AC/5", brand = 3 },
+    { at = "8-9", item = "IS.AC/20", brand = 3 },
+    { at = "10-11", item = "IS.MediumLaser", brand = 3 },
+    { at = 12, item = "Ammo_IS.AC/20", rounds = 5 },
+]

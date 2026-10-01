@@ -1,0 +1,34 @@
+name = "Ferret"
+class = "vtol"
+movement = "vtol"
+tons = 5
+max_speed = 247.25
+computer = 4
+cargo_space = 100
+max_suits = 0
+max_ton = 1
+specials = ["CargoTech", "ICEEngine_Tech"]
+
+[sections.left_side]
+armor = 1
+internals = 1
+
+[sections.right_side]
+armor = 1
+internals = 1
+
+[sections.front_side]
+armor = 2
+internals = 1
+slots = [
+    { at = 1, item = "IS.MachineGun" },
+    { at = 2, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload", "Halfton"] },
+]
+
+[sections.aft_side]
+armor = 2
+internals = 1
+
+[sections.rotor]
+armor = 2
+internals = 1

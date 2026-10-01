@@ -1,0 +1,42 @@
+name = "Odin"
+class = "vehicle"
+movement = "wheel"
+tons = 20
+max_speed = 129.0
+heat_sinks = 10
+specials = ["Clan", "FerroFibrous_Tech"]
+
+[sections.left_side]
+armor = 6
+internals = 2
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 6
+internals = 2
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 7
+internals = 2
+slots = [
+    { at = 1, item = "CL.ERSmallLaser" },
+    { at = 2, item = "BeagleProbe" },
+]
+
+[sections.aft_side]
+armor = 4
+internals = 2
+
+[sections.turret]
+armor = 6
+internals = 2
+slots = [
+    { at = "1-2", item = "CL.MediumPulseLaser" },
+    { at = 3, item = "CL.StreakSRM-2" },
+    { at = 4, item = "Ammo_CL.StreakSRM-2", rounds = 50 },
+]

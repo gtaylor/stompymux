@@ -1,0 +1,31 @@
+name = "Condor"
+class = "vehicle"
+movement = "hover"
+tons = 50
+max_speed = 129.0
+heat_sinks = 12
+computer = 3
+specials = ["ICEEngine_Tech"]
+
+[sections.left_side]
+armor = 23
+internals = 5
+
+[sections.right_side]
+armor = 23
+internals = 5
+
+[sections.front_side]
+armor = 38
+internals = 5
+
+[sections.aft_side]
+armor = 22
+internals = 5
+
+[sections.turret]
+armor = 30
+internals = 5
+slots = [
+    { at = "1-4", item = "IS.MediumLaser", brand = 3 },
+]

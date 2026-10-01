@@ -1,0 +1,29 @@
+name = "Neptune"
+class = "naval"
+movement = "sub"
+tons = 100
+max_speed = 53.75
+heat_sinks = 0
+specials = ["ICEEngine_Tech"]
+
+[sections.left_side]
+armor = 60
+internals = 10
+
+[sections.right_side]
+armor = 60
+internals = 10
+
+[sections.front_side]
+armor = 80
+internals = 10
+slots = [
+    { at = "1-2", item = "IS.LRM-20" },
+    { at = "3-4", item = "IS.SRM-6" },
+    { at = "5-8", item = "Ammo_IS.LRM-20", rounds = 6 },
+    { at = 9, item = "Ammo_IS.SRM-6", rounds = 15 },
+]
+
+[sections.aft_side]
+armor = 40
+internals = 10

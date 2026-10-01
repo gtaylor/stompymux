@@ -19,7 +19,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse(template).unwrap(),
+        BattleVehicleTemplate::parse("test",template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -34,7 +34,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 
 /// Demolisher with radar, a two-slot Beagle probe in front slots 0-1 and a Bloodhound in slot 2.
 fn equipped() -> String {
-    include_str!("../game/mechs/Demolisher")
+    include_str!("../game/mechs/Demolisher.toml")
         .replace("ICEEngine_Tech", "ICEEngine_Tech AntiAircraft")
         .replace(
             "Front_Side\n",
@@ -50,7 +50,7 @@ fn probe(world: &World, id: ObjectId) -> Option<BattleProbeProfile> {
 /// The `sensor` command and Lua share one read-only report and reject mode arguments.
 #[tokio::test]
 async fn vehicle_sensor_command_and_lua_share_the_perception_report() {
-    let (_dir, config, world, id) = fixture(include_str!("../game/mechs/Demolisher")).await;
+    let (_dir, config, world, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     let scripts = Scripts::new(
         &config,
         std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
@@ -121,8 +121,8 @@ async fn stationary_vehicles_extend_sensor_and_probe_reach() {
         (equipped(), 15, 8, 180),
         (
             equipped()
-                .replace("{ Track }", "{ None }")
-                .replace("{ 53.75 }", "{ 0 }"),
+                .replace("movement = \"track\"", "movement = \"none\"")
+                .replace("max_speed = 53.75", "max_speed = 0.0"),
             21,
             11,
             180,

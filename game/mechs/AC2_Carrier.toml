@@ -1,0 +1,26 @@
+name = "AC2_Carrier"
+class = "vehicle"
+movement = "track"
+tons = 60
+max_speed = 53.75
+specials = ["ICEEngine_Tech"]
+
+[sections.left_side]
+armor = 12
+internals = 6
+
+[sections.right_side]
+armor = 12
+internals = 6
+
+[sections.front_side]
+armor = 12
+internals = 6
+slots = [
+    { at = "1-5", item = "IS.AC/2", brand = 3 },
+    { at = "6-9", item = "Ammo_IS.AC/2", rounds = 45 },
+]
+
+[sections.aft_side]
+armor = 12
+internals = 6

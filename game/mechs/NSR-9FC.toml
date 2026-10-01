@@ -1,0 +1,95 @@
+name = "Nightstar"
+class = "mech"
+movement = "biped"
+tons = 95
+max_speed = 64.5
+heat_sinks = 26
+computer = 4
+radio = 4
+specials = ["DoubleHS"]
+
+[sections.left_arm]
+armor = 32
+internals = 16
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = 4, item = "HandOrFootActuator", brand = 3 },
+    { at = "5-10", item = "IS.LB10-XAC", brand = 3 },
+    { at = 11, item = "IS.MediumLaser", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 32
+internals = 16
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = 4, item = "HandOrFootActuator", brand = 3 },
+    { at = "5-10", item = "IS.LB10-XAC", brand = 3 },
+    { at = 11, item = "IS.MediumLaser", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 32
+internals = 20
+rear = 8
+slots = [
+    { at = "1-3", item = "Engine", brand = 3 },
+    { at = "4-5", item = "Ammo_IS.LB10-XAC", rounds = 10 },
+    { at = "6-7", item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = 12, item = "Case", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 32
+internals = 20
+rear = 8
+slots = [
+    { at = "1-3", item = "Engine", brand = 3 },
+    { at = "4-6", item = "IS.ERPPC", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 50
+internals = 30
+rear = 10
+slots = [
+    { at = "1-3", item = "Engine", brand = 3 },
+    { at = "4-7", item = "Gyro", brand = 3 },
+    { at = "8-10", item = "Engine", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 40
+internals = 20
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = 4, item = "HandOrFootActuator", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 40
+internals = 20
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = 2, item = "UpperActuator", brand = 3 },
+    { at = 3, item = "LowerActuator", brand = 3 },
+    { at = 4, item = "HandOrFootActuator", brand = 3 },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport", brand = 3 },
+    { at = 2, item = "Sensors", brand = 3 },
+    { at = 3, item = "Cockpit", brand = 3 },
+    { at = 4, item = "IS.MediumLaser", brand = 3 },
+    { at = 5, item = "Sensors", brand = 3 },
+    { at = 6, item = "LifeSupport", brand = 3 },
+]

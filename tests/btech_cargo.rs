@@ -5,17 +5,17 @@ use stompymux_rs::*;
 
 /// Supported carrier constructions exercise shared rules rather than separate transfer implementations.
 fn templates() -> Vec<String> {
-    let ground = include_str!("../game/mechs/Demolisher");
+    let ground = include_str!("../game/mechs/Demolisher.toml");
     vec![
-        include_str!("../game/mechs/JR7-D").into(),
-        include_str!("../game/mechs/GOL-1H").into(),
+        include_str!("../game/mechs/JR7-D.toml").into(),
+        include_str!("../game/mechs/GOL-1H.toml").into(),
         ground.into(),
-        ground.replace("{ Track }", "{ Wheel }"),
-        ground.replace("{ Track }", "{ Hover }"),
+        ground.replace("movement = \"track\"", "movement = \"wheel\""),
+        ground.replace("movement = \"track\"", "movement = \"hover\""),
         ground
-            .replace("{ Track }", "{ None }")
-            .replace("{ 53.75 }", "{ 0 }"),
-        include_str!("../game/mechs/Kestrel").into(),
+            .replace("movement = \"track\"", "movement = \"none\"")
+            .replace("max_speed = 53.75", "max_speed = 0"),
+        include_str!("../game/mechs/Kestrel.toml").into(),
     ]
 }
 
@@ -42,7 +42,7 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId, O
     )
     .unwrap();
     let unit = world.create(&config, "Carrier".into(), Kind::Thing);
-    let mut template = BattleUnitTemplate::parse(source).unwrap();
+    let mut template = BattleUnitTemplate::parse("test",source).unwrap();
     let attributes = match &mut template {
         BattleUnitTemplate::Mech(unit) => &mut unit.attributes,
         BattleUnitTemplate::Vehicle(unit) => &mut unit.attributes,
@@ -145,7 +145,7 @@ async fn all_chassis_share_load_unload_gates_and_restart() {
 /// Multiple stock edits roll back together on overflow or unknown carried mass, and requests cap at 50,000.
 #[tokio::test]
 async fn multi_part_transfers_are_atomic_and_quantity_bounded() {
-    let (_dir, config, mut world, map, unit) = fixture(include_str!("../game/mechs/JR7-D")).await;
+    let (_dir, config, mut world, map, unit) = fixture(include_str!("../game/mechs/JR7-D.toml")).await;
     set_battle_inventory_named(&mut world, ObjectId(1), map, "Medical_Supplies", 0, 3).unwrap();
     set_battle_inventory_named(
         &mut world,
@@ -189,7 +189,7 @@ async fn multi_part_transfers_are_atomic_and_quantity_bounded() {
 /// Cargo access retains the IC pilot-only rule, OOC/Wizard exceptions, and the global command switch.
 #[tokio::test]
 async fn cargo_authority_and_location_gates_match_the_operation() {
-    let (dir, config, mut world, map, unit) = fixture(include_str!("../game/mechs/JR7-D")).await;
+    let (dir, config, mut world, map, unit) = fixture(include_str!("../game/mechs/JR7-D.toml")).await;
     let passenger = world.create(&config, "Passenger".into(), Kind::Player);
     world.objects.get_mut(&passenger).unwrap().location = Some(unit);
     world
@@ -309,7 +309,7 @@ async fn cargo_commands_and_lua_share_state_and_callback_rollback() {
 /// Manufacturer selection and short names filter stock without duplicating equipment definitions.
 #[tokio::test]
 async fn cargo_patterns_select_brands_and_multiple_part_types() {
-    let (_dir, config, mut world, map, unit) = fixture(include_str!("../game/mechs/JR7-D")).await;
+    let (_dir, config, mut world, map, unit) = fixture(include_str!("../game/mechs/JR7-D.toml")).await;
     for (brand, quantity) in [(1, 2), (4, 3)] {
         set_battle_inventory_named(
             &mut world,
@@ -562,7 +562,7 @@ async fn cargo_economy_failure_is_atomic_for_native_lua_and_direct_actions() {
 /// Loose tanks change capacity without filling themselves; surplus fuel survives unloading and restart.
 #[tokio::test]
 async fn vtol_auxiliary_tanks_share_capacity_mass_and_saved_surplus_fuel() {
-    let (_dir, config, mut world, map, unit) = fixture(include_str!("../game/mechs/Kestrel")).await;
+    let (_dir, config, mut world, map, unit) = fixture(include_str!("../game/mechs/Kestrel.toml")).await;
     let original_speed = battle_throttle_maximum(&world, unit, true).unwrap();
     for (brand, quantity) in [(0, 2), (5, 1)] {
         set_battle_inventory_quantity(&mut world, ObjectId(1), map, 422, brand, quantity).unwrap();
@@ -645,7 +645,7 @@ async fn vtol_auxiliary_tanks_share_capacity_mass_and_saved_surplus_fuel() {
 #[tokio::test]
 async fn vtol_fuel_corrections_are_bounded_authorized_and_transactional() {
     let (_dir, config, mut world, _map, unit) =
-        fixture(include_str!("../game/mechs/Kestrel")).await;
+        fixture(include_str!("../game/mechs/Kestrel.toml")).await;
     let passenger = world.create(&config, "Passenger".into(), Kind::Player);
     let before = world.btech.clone();
     assert!(set_battle_vtol_fuel(&mut world, &config, passenger, unit, 1).is_err());
@@ -693,7 +693,7 @@ async fn vtol_fuel_corrections_are_bounded_authorized_and_transactional() {
 #[tokio::test]
 async fn vtol_tank_capacity_uses_wide_inventory_totals() {
     let (_dir, config, mut world, _map, unit) =
-        fixture(include_str!("../game/mechs/Kestrel")).await;
+        fixture(include_str!("../game/mechs/Kestrel.toml")).await;
     for brand in [0, 5] {
         set_battle_inventory_quantity(&mut world, ObjectId(1), unit, 422, brand, i32::MAX).unwrap();
     }
@@ -900,7 +900,7 @@ async fn operator_stock_commands_and_lua_share_catalogue_edits() {
 /// Authority, catalogue match limits and multi-row publication failures cannot partially change stock.
 #[tokio::test]
 async fn operator_stock_limits_and_batch_rollback_are_shared() {
-    let (_dir, config, mut world, map, unit) = fixture(include_str!("../game/mechs/Kestrel")).await;
+    let (_dir, config, mut world, map, unit) = fixture(include_str!("../game/mechs/Kestrel.toml")).await;
     economy_channel(&mut world);
     let wizard = world.create(&config, "StockWizard".into(), Kind::Player);
     world
@@ -1068,7 +1068,7 @@ async fn scripted_add_stores_uses_first_match_signed_counts_and_atomic_logging()
 #[tokio::test]
 async fn scripted_add_stores_guards_and_failure_rollback() {
     let (_dir, config, mut world, _map, unit) =
-        fixture(include_str!("../game/mechs/Kestrel")).await;
+        fixture(include_str!("../game/mechs/Kestrel.toml")).await;
     economy_channel(&mut world);
     let ordinary = world.create(&config, "Ordinary".into(), Kind::Player);
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -1195,7 +1195,7 @@ async fn inventory_cleanup_preserves_installed_units_and_branded_stock() {
 /// Room inventories can retain unknown imported IDs until cleanup; permissions and output rollback still apply.
 #[tokio::test]
 async fn inventory_cleanup_unknown_stock_authority_and_publication_rollback() {
-    let (dir, config, mut world, room, unit) = fixture(include_str!("../game/mechs/JR7-D")).await;
+    let (dir, config, mut world, room, unit) = fixture(include_str!("../game/mechs/JR7-D.toml")).await;
     release_battle_pilot(&mut world, unit, ObjectId(1)).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(room);
     set_battle_inventory_quantity(&mut world, ObjectId(1), room, i32::MAX, 0, 4).unwrap();

@@ -1,0 +1,39 @@
+name = "Condor"
+class = "vehicle"
+movement = "hover"
+tons = 50
+max_speed = 129.0
+heat_sinks = 6
+computer = 3
+cargo_space = 0
+max_suits = 0
+specials = ["ICEEngine_Tech"]
+
+[sections.left_side]
+armor = 15
+internals = 5
+
+[sections.right_side]
+armor = 15
+internals = 5
+
+[sections.front_side]
+armor = 30
+internals = 5
+slots = [
+    { at = 1, item = "IS.MachineGun", brand = 3 },
+    { at = 2, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
+]
+
+[sections.aft_side]
+armor = 14
+internals = 5
+
+[sections.turret]
+armor = 22
+internals = 5
+slots = [
+    { at = "1-2", item = "IS.MediumLaser", brand = 3 },
+    { at = 3, item = "IS.AC/5", brand = 3 },
+    { at = 4, item = "Ammo_IS.AC/5", rounds = 20 },
+]

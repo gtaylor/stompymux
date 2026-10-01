@@ -1,0 +1,43 @@
+name = "Demon"
+class = "vehicle"
+movement = "wheel"
+tons = 60
+max_speed = 64.5
+computer = 3
+
+[sections.left_side]
+armor = 30
+internals = 6
+slots = [
+    { at = 1, item = "IS.MediumLaser", brand = 3 },
+]
+
+[sections.right_side]
+armor = 30
+internals = 6
+slots = [
+    { at = 1, item = "IS.MediumLaser", brand = 3 },
+]
+
+[sections.front_side]
+armor = 50
+internals = 6
+slots = [
+    { at = 1, item = "IS.SRM-6", brand = 3 },
+]
+
+[sections.aft_side]
+armor = 20
+internals = 6
+slots = [
+    { at = 1, item = "Case", brand = 3 },
+]
+
+[sections.turret]
+armor = 30
+internals = 6
+slots = [
+    { at = 1, item = "IS.GaussRifle", brand = 3 },
+    { at = "2-3", item = "Ammo_IS.GaussRifle", rounds = 8 },
+    { at = "4-5", item = "Ammo_IS.SRM-6", rounds = 15 },
+]

@@ -1,0 +1,94 @@
+name = "Guillotine"
+class = "mech"
+movement = "biped"
+tons = 70
+max_speed = 64.5
+jump_speed = 43.0
+heat_sinks = 22
+specials = ["Searchlight"]
+
+[sections.left_arm]
+armor = 20
+internals = 11
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = "3-4", item = "IS.LargeLaser" },
+]
+
+[sections.right_arm]
+armor = 20
+internals = 11
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = "4-5", item = "IS.MediumLaser" },
+]
+
+[sections.left_torso]
+armor = 22
+internals = 15
+rear = 8
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+    { at = 2, item = "JumpJet" },
+    { at = "3-7", item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 22
+internals = 15
+rear = 8
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+    { at = 2, item = "JumpJet" },
+    { at = "3-6", item = "HeatSink" },
+    { at = 7, item = "Ammo_IS.SRM-6", rounds = 15 },
+]
+
+[sections.center_torso]
+armor = 27
+internals = 22
+rear = 12
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = "11-12", item = "IS.SRM-6" },
+]
+
+[sections.left_leg]
+armor = 22
+internals = 15
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 5, item = "JumpJet" },
+    { at = 6, item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 22
+internals = 15
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 5, item = "JumpJet" },
+    { at = 6, item = "HeatSink" },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

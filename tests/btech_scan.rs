@@ -39,7 +39,7 @@ async fn fixture_with_ranges(
         let id = world.create(&config, "Scan unit".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         let mut template =
-            BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+            BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
         for &(field, value) in ranges {
             template.attributes.insert(field.into(), value.into());
         }
@@ -83,7 +83,7 @@ fn acquire(world: &mut World, source: ObjectId, target: ObjectId) {
 fn sensor_hardware_grades_defaults_and_critical_halving() {
     for (quality, base) in [(0, 25), (1, 16), (2, 20), (3, 25), (4, 30), (5, 35), (6, 0)] {
         let mut template =
-            BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+            BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
         template
             .attributes
             .insert("computer".into(), quality.to_string());
@@ -116,7 +116,7 @@ fn sensor_hardware_grades_defaults_and_critical_halving() {
         .unwrap();
         assert_eq!(unit.sensor_ranges().scan, 0);
     }
-    let mut clan = BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+    let mut clan = BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     clan.attributes
         .insert("specials".into(), "Clan FlipArms".into());
     clan.attributes.remove("computer");
@@ -312,7 +312,7 @@ async fn coordinate_scan_selects_visible_occupants_in_saved_order() {
     create_battle_unit(
         &mut world,
         other,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, other, map, 1, 2).unwrap();
@@ -1420,7 +1420,7 @@ async fn long_range_stacked_markers_share_native_lua_and_restart_order() {
         create_battle_unit(
             &mut world,
             earlier,
-            BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+            BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         place_battle_unit(
@@ -3627,7 +3627,7 @@ async fn contact_modes_order_buildings_wrecks_and_units_without_changing_lua_que
     create_battle_unit(
         &mut world,
         near,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, near, map, 1, 2).unwrap();
@@ -5807,7 +5807,7 @@ async fn ammunition_dump_low_capacity_bins_preserve_cadence_and_shutdown_cancels
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/AS7-D")).unwrap(),
+        BattleTemplate::parse("AS7-D",include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 1, 3).unwrap();
@@ -5897,7 +5897,7 @@ async fn ammunition_dump_server_retries_failed_commits_without_losing_rounds() {
 fn explicit_template_ranges_preserve_defaults_and_damage_limits() {
     for value in ["0", "1", "127"] {
         let mut template =
-            BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+            BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
         for field in ["scan_range", "tac_range", "lrs_range"] {
             template.attributes.insert(field.into(), value.into());
         }
@@ -5962,7 +5962,7 @@ fn explicit_template_ranges_preserve_defaults_and_damage_limits() {
             },
         ] {
             let mut template =
-                BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+                BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
             template.attributes.insert(field.into(), value.into());
             assert!(
                 BattleUnit::from_template(template).is_err(),

@@ -1,0 +1,87 @@
+name = "Bombardier"
+class = "mech"
+movement = "biped"
+tons = 65
+max_speed = 64.5
+
+[sections.left_arm]
+armor = 20
+internals = 10
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.right_arm]
+armor = 20
+internals = 10
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 5, item = "IS.SRM-4" },
+    { at = 6, item = "Ammo_IS.SRM-4", rounds = 25 },
+]
+
+[sections.left_torso]
+armor = 20
+internals = 15
+rear = 10
+slots = [
+    { at = "1-5", item = "IS.LRM-20" },
+]
+
+[sections.right_torso]
+armor = 20
+internals = 15
+rear = 10
+slots = [
+    { at = "1-5", item = "IS.LRM-20" },
+    { at = "6-7", item = "Ammo_IS.LRM-20", rounds = 6 },
+]
+
+[sections.center_torso]
+armor = 24
+internals = 21
+rear = 15
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = 11, item = "IS.MachineGun" },
+    { at = 12, item = "Ammo_IS.MachineGun", rounds = 200 },
+]
+
+[sections.left_leg]
+armor = 26
+internals = 15
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.right_leg]
+armor = 26
+internals = 15
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

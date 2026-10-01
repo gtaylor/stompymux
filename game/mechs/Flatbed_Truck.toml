@@ -1,0 +1,23 @@
+name = "Flatbed Truck"
+class = "vehicle"
+movement = "wheel"
+tons = 10
+max_speed = 86.0
+computer = 3
+specials = ["ICEEngine_Tech", "CargoTech"]
+
+[sections.left_side]
+armor = 2
+internals = 1
+
+[sections.right_side]
+armor = 2
+internals = 1
+
+[sections.front_side]
+armor = 2
+internals = 1
+
+[sections.aft_side]
+armor = 2
+internals = 1

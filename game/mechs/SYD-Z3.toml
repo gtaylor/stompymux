@@ -1,0 +1,45 @@
+name = "Seydlitz"
+class = "aerofighter"
+movement = "fly"
+tons = 20
+max_speed = 182.75
+heat_sinks = 10
+computer = 3
+fuel = 450
+
+[sections.nose]
+armor = 18
+internals = 10
+
+[sections.left_wing]
+armor = 14
+internals = 10
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]
+
+[sections.right_wing]
+armor = 14
+internals = 10
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]
+
+[sections.cockpit]
+armor = 12
+internals = 10
+slots = [
+    { at = 1, item = "LifeSupport", brand = 3 },
+    { at = 2, item = "Sensors", brand = 0 },
+    { at = 3, item = "Cockpit", brand = 0 },
+    { at = 4, item = "Sensors", brand = 0 },
+    { at = 5, item = "LifeSupport", brand = 0 },
+]
+
+[sections.engine]
+armor = 16
+internals = 10
+
+[sections.fuselage]
+armor = 16
+internals = 10

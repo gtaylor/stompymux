@@ -1,0 +1,93 @@
+name = "Cyclops"
+class = "mech"
+movement = "biped"
+tons = 90
+max_speed = 64.5
+heat_sinks = 12
+computer = 4
+radio = 5
+radio_type = 126
+
+[sections.left_arm]
+armor = 10
+internals = 15
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 5, item = "IS.MediumLaser", brand = 4 },
+]
+
+[sections.right_arm]
+armor = 10
+internals = 15
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = 5, item = "IS.MediumLaser", brand = 4 },
+]
+
+[sections.left_torso]
+armor = 20
+internals = 19
+rear = 8
+slots = [
+    { at = "1-2", item = "Ammo_IS.AC/20", rounds = 5 },
+    { at = "3-4", item = "IS.LRM-10" },
+    { at = 5, item = "Ammo_IS.LRM-10", rounds = 12 },
+]
+
+[sections.right_torso]
+armor = 20
+internals = 19
+rear = 8
+slots = [
+    { at = "1-10", item = "IS.AC/20", brand = 4 },
+    { at = "11-12", item = "Ammo_IS.AC/20", rounds = 5 },
+]
+
+[sections.center_torso]
+armor = 30
+internals = 29
+rear = 11
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = 11, item = "IS.SRM-4", brand = 4 },
+    { at = 12, item = "Ammo_IS.SRM-4", rounds = 25 },
+]
+
+[sections.left_leg]
+armor = 17
+internals = 19
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.right_leg]
+armor = 17
+internals = 19
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

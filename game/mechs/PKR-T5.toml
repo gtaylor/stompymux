@@ -1,0 +1,35 @@
+name = "Packrat"
+class = "vehicle"
+movement = "wheel"
+tons = 20
+max_speed = 118.25
+computer = 4
+radio = 5
+radio_type = 126
+cargo_space = 100
+max_suits = 0
+max_ton = 1
+specials = ["CargoTech"]
+
+[sections.left_side]
+armor = 16
+internals = 2
+
+[sections.right_side]
+armor = 16
+internals = 2
+
+[sections.front_side]
+armor = 16
+internals = 2
+slots = [
+    { at = 1, item = "IS.SRM-6" },
+    { at = "2-3", item = "Ammo_IS.SRM-6", rounds = 15 },
+]
+
+[sections.aft_side]
+armor = 16
+internals = 2
+slots = [
+    { at = 4, item = "IS.Flamer" },
+]

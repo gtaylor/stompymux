@@ -56,7 +56,7 @@ async fn fixture_with_mml(
             create_battle_vehicle(
                 &mut world,
                 id,
-                BattleVehicleTemplate::parse(&source(include_str!("../game/mechs/Hunter")))
+                BattleVehicleTemplate::parse("test",&source(include_str!("../game/mechs/Hunter.toml")))
                     .unwrap(),
             )
             .unwrap();
@@ -64,7 +64,7 @@ async fn fixture_with_mml(
             create_battle_unit(
                 &mut world,
                 id,
-                BattleTemplate::parse(&source(include_str!("../game/mechs/AS7-D"))).unwrap(),
+                BattleTemplate::parse("test",&source(include_str!("../game/mechs/AS7-D.toml"))).unwrap(),
             )
             .unwrap();
         }

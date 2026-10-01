@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse(template).unwrap(),
+        BattleVehicleTemplate::parse("test",template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -64,7 +64,7 @@ async fn vehicle_bursts_span_bins_and_persist_single_shot_supply_fallback() {
             6,
         ),
     ] {
-        let template = include_str!("../game/mechs/Demolisher")
+        let template = include_str!("../game/mechs/Demolisher.toml")
             .replace("IS.AC/20", weapon)
             .replace(&format!("{weapon} - -"), &format!("{weapon} - {flag}"))
             .replace(
@@ -143,7 +143,7 @@ async fn vehicle_bursts_span_bins_and_persist_single_shot_supply_fallback() {
 
 #[tokio::test]
 async fn vehicle_gatling_caps_damage_by_supply_and_replays_its_single_roll() {
-    let template = include_str!("../game/mechs/Demolisher")
+    let template = include_str!("../game/mechs/Demolisher.toml")
         .replace("IS.AC/20", "IS.MachineGun")
         .replace("IS.MachineGun - -", "IS.MachineGun - Gattling");
     let (_dir, config, base, id) = fixture(&template).await;
@@ -184,7 +184,7 @@ async fn vehicle_gatling_caps_damage_by_supply_and_replays_its_single_roll() {
 
 #[tokio::test]
 async fn vehicle_feed_skips_lost_and_incompatible_bins_and_heat_cycles_need_no_ammo() {
-    let template = include_str!("../game/mechs/Demolisher")
+    let template = include_str!("../game/mechs/Demolisher.toml")
         .replace("Ammo_IS.AC/20 5 -", "Ammo_IS.AC/20 1 Precision");
     let (_dir, _config, mut world, id) = fixture(&template).await;
     assert!(
@@ -212,7 +212,7 @@ async fn vehicle_feed_skips_lost_and_incompatible_bins_and_heat_cycles_need_no_a
         [1, 2, 3]
     );
     let template =
-        include_str!("../game/mechs/Demolisher").replace("IS.AC/20 - -", "IS.Flamer - Heat");
+        include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20 - -", "IS.Flamer - Heat");
     let (_dir, _config, mut world, id) = fixture(&template).await;
     let before = world.btech.vehicles()[&id].ammunition().to_vec();
     let cycle = reserve_battle_vehicle_weapon(&mut world, id, ObjectId(1), 0, true).unwrap();

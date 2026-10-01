@@ -1,0 +1,36 @@
+name = "Galleon"
+class = "vehicle"
+movement = "track"
+tons = 30
+max_speed = 96.75
+specials = ["ICEEngine_Tech"]
+
+[sections.left_side]
+armor = 13
+internals = 3
+slots = [
+    { at = 1, item = "IS.MachineGun" },
+]
+
+[sections.right_side]
+armor = 13
+internals = 3
+slots = [
+    { at = 1, item = "IS.MachineGun" },
+]
+
+[sections.front_side]
+armor = 14
+internals = 3
+
+[sections.aft_side]
+armor = 14
+internals = 3
+
+[sections.turret]
+armor = 20
+internals = 3
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+    { at = 2, item = "Ammo_IS.MachineGun", rounds = 200 },
+]

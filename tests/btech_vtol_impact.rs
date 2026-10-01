@@ -9,11 +9,11 @@ async fn aircraft_impacts_apply_location_rotor_and_armor_effects_with_saved_repl
 
     for proof in [false, true] {
         let source = if proof {
-            include_str!("../game/mechs/Kestrel").replace("CargoTech", "CargoTech CritProof_Tech")
+            include_str!("../game/mechs/Kestrel.toml").replace("CargoTech", "CargoTech CritProof_Tech")
         } else {
-            include_str!("../game/mechs/Kestrel").into()
+            include_str!("../game/mechs/Kestrel.toml").into()
         };
-        let unit = BattleVehicle::new(BattleVehicleTemplate::parse(&source).unwrap()).unwrap();
+        let unit = BattleVehicle::new(BattleVehicleTemplate::parse("test",&source).unwrap()).unwrap();
         for arc in [
             BattleHitArc::Front,
             BattleHitArc::Rear,
@@ -75,7 +75,7 @@ async fn safe_aircraft_impacts_preserve_material_and_rejected_input_rolls_back()
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Protected aircraft".into(), Kind::Thing);
     let unit = BattleVehicle::new(
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Kestrel")).unwrap(),
+        BattleVehicleTemplate::parse("Kestrel",include_str!("../game/mechs/Kestrel.toml")).unwrap(),
     )
     .unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -109,7 +109,7 @@ async fn advanced_aircraft_impacts_use_the_aircraft_table_and_shared_armor_pipel
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Advanced aircraft".into(), Kind::Thing);
     let unit = BattleVehicle::new(
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Kestrel")).unwrap(),
+        BattleVehicleTemplate::parse("Kestrel",include_str!("../game/mechs/Kestrel.toml")).unwrap(),
     )
     .unwrap();
     for arc in [
@@ -162,7 +162,7 @@ async fn impact_and_critical_routing_honor_aircraft_policy_over_ground_settings(
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Aircraft policy".into(), Kind::Thing);
     let unit = BattleVehicle::new(
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Kestrel")).unwrap(),
+        BattleVehicleTemplate::parse("Kestrel",include_str!("../game/mechs/Kestrel.toml")).unwrap(),
     )
     .unwrap();
     for (ground, aircraft) in [

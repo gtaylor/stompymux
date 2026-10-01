@@ -1,0 +1,55 @@
+name = "Stuka"
+class = "aerofighter"
+movement = "fly"
+tons = 100
+max_speed = 86.0
+heat_sinks = 32
+computer = 3
+fuel = 750
+
+[sections.nose]
+armor = 62
+internals = 10
+slots = [
+    { at = "1-2", item = "IS.SmallLaser" },
+    { at = "3-4", item = "Ammo_IS.LRM-20", rounds = 6 },
+    { at = 6, item = "IS.LRM-20" },
+]
+
+[sections.left_wing]
+armor = 38
+internals = 10
+slots = [
+    { at = "1-2", item = "IS.LargeLaser" },
+    { at = "3-4", item = "IS.SmallLaser" },
+]
+
+[sections.right_wing]
+armor = 38
+internals = 10
+slots = [
+    { at = "1-2", item = "IS.LargeLaser" },
+    { at = "3-4", item = "IS.SmallLaser" },
+]
+
+[sections.cockpit]
+armor = 16
+internals = 10
+slots = [
+    { at = 1, item = "LifeSupport", brand = 3 },
+    { at = 2, item = "Sensors", brand = 0 },
+    { at = 3, item = "Cockpit", brand = 0 },
+    { at = 4, item = "Sensors", brand = 0 },
+    { at = 5, item = "LifeSupport", brand = 0 },
+]
+
+[sections.engine]
+armor = 32
+internals = 10
+slots = [
+    { at = "1-2", item = "IS.SmallLaser" },
+]
+
+[sections.fuselage]
+armor = 64
+internals = 10

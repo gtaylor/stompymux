@@ -1,0 +1,34 @@
+name = "SRM Carrier"
+class = "vehicle"
+movement = "track"
+tons = 60
+max_speed = 53.75
+specials = ["SearchLight", "ICEEngine_Tech"]
+
+[sections.left_side]
+armor = 12
+internals = 6
+slots = [
+    { at = 1, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Narc/Smoke"] },
+]
+
+[sections.right_side]
+armor = 12
+internals = 6
+slots = [
+    { at = 1, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Narc/Smoke"] },
+]
+
+[sections.front_side]
+armor = 12
+internals = 6
+slots = [
+    { at = 1, item = "IS.NarcBeacon", brand = 3 },
+    { at = "2-10", item = "IS.SRM-6", brand = 3 },
+    { at = 11, item = "Ammo_IS.NarcBeacon", rounds = 6 },
+    { at = 12, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Narc/Smoke"] },
+]
+
+[sections.aft_side]
+armor = 12
+internals = 6

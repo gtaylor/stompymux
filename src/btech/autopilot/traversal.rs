@@ -613,7 +613,7 @@ mod tests {
         let target = world.create(&config, "Enemy".into(), Kind::Thing);
         for (id, y) in [(observer, 0), (target, 2)] {
             world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-            BattleUnitTemplate::parse(include_str!("../../../tests/fixtures/btech/mechs/JR7-D"))
+            BattleUnitTemplate::parse("JR7-D",include_str!("../../../tests/fixtures/btech/mechs/JR7-D.toml"))
                 .unwrap()
                 .create(&mut world, id)
                 .unwrap();

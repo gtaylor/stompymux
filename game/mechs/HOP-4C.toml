@@ -1,0 +1,85 @@
+name = "Hoplite"
+class = "mech"
+movement = "biped"
+tons = 55
+max_speed = 64.5
+heat_sinks = 16
+specials = ["Fliparms"]
+
+[sections.left_arm]
+armor = 18
+internals = 9
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+]
+
+[sections.right_arm]
+armor = 18
+internals = 9
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+]
+
+[sections.left_torso]
+armor = 18
+internals = 13
+rear = 8
+slots = [
+    { at = 1, item = "IS.LRM-5" },
+    { at = "2-5", item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 18
+internals = 13
+rear = 8
+slots = [
+    { at = "1-7", item = "IS.AC/10" },
+]
+
+[sections.center_torso]
+armor = 26
+internals = 18
+rear = 9
+slots = [
+    { at = "1-3", item = "Engine" },
+    { at = "4-7", item = "Gyro" },
+    { at = "8-10", item = "Engine" },
+    { at = 11, item = "Ammo_IS.AC/10", rounds = 10 },
+    { at = 12, item = "Ammo_IS.LRM-5", rounds = 24 },
+]
+
+[sections.left_leg]
+armor = 26
+internals = 13
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 26
+internals = 13
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = 2, item = "UpperActuator" },
+    { at = 3, item = "LowerActuator" },
+    { at = 4, item = "HandOrFootActuator" },
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.head]
+armor = 9
+internals = 3
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 5, item = "Sensors" },
+    { at = 6, item = "LifeSupport" },
+]

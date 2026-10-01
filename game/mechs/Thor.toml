@@ -1,0 +1,36 @@
+name = "Thor"
+class = "vehicle"
+movement = "wheel"
+tons = 55
+max_speed = 86.0
+computer = 3
+specials = ["FerroFibrous_Tech"]
+
+[sections.left_side]
+armor = 25
+internals = 6
+
+[sections.right_side]
+armor = 25
+internals = 6
+
+[sections.front_side]
+armor = 30
+internals = 6
+config = "Case"
+slots = [
+    { at = 1, item = "IS.Thumper" },
+    { at = "2-3", item = "Ammo_IS.Thumper", rounds = 20 },
+    { at = 4, item = "Case" },
+]
+
+[sections.aft_side]
+armor = 24
+internals = 6
+
+[sections.turret]
+armor = 30
+internals = 6
+slots = [
+    { at = "1-2", item = "IS.MediumLaser" },
+]

@@ -1,24 +1,25 @@
-//! Confined, bounded template lookup matching the legacy root and immediate-subdirectory registry.
+//! Confined, bounded template lookup: `<reference>.toml` documents anywhere under a unit root.
 
 use super::{BattleUnitTemplate, RawTemplate};
-use anyhow::{Result, ensure};
+use anyhow::{Context, Result, ensure};
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     io::Write,
-    os::unix::ffi::OsStringExt,
     os::unix::fs::OpenOptionsExt,
     path::{Path, PathBuf},
 };
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-struct Entry {
-    name: Vec<u8>,
-    directory: Option<Vec<u8>>,
-}
-/// One BattleTech context's lazily populated legacy template registry.
+/// Extension carried by every unit template document.
+const TEMPLATE_EXTENSION: &str = "toml";
+
+/// Linux `O_NOFOLLOW`, so a symlink swapped in after the check is never written through.
+const O_NOFOLLOW: i32 = 0x20000;
+
+/// One BattleTech context's lazily populated template registry.
 #[derive(Clone, Debug, Default)]
 pub struct TemplateRegistryCache {
-    roots: HashMap<PathBuf, Vec<Entry>>,
+    /// Lowercase reference to document path, per canonical root.
+    roots: HashMap<PathBuf, BTreeMap<String, PathBuf>>,
 }
 
 impl PartialEq for TemplateRegistryCache {
@@ -26,6 +27,7 @@ impl PartialEq for TemplateRegistryCache {
         true
     }
 }
+
 impl Eq for TemplateRegistryCache {}
 
 impl TemplateRegistryCache {
@@ -34,120 +36,40 @@ impl TemplateRegistryCache {
         self.roots.clear();
     }
 }
-fn key(name: &[u8]) -> Vec<u8> {
-    name.iter().take(24).map(u8::to_ascii_lowercase).collect()
-}
-fn scan(root: &Path) -> Result<Vec<Entry>> {
-    let mut templates = Vec::new();
-    let mut directories = Vec::new();
-    for item in std::fs::read_dir(root)? {
-        let item = item?;
-        let ty = item.metadata()?;
-        let name = item.file_name();
-        let bytes = name.as_encoded_bytes();
-        if ty.is_dir() && !bytes.starts_with(b".") && bytes.len() <= 34 {
-            directories.push(item.path())
-        } else if ty.is_file() {
-            templates.push(Entry {
-                name: bytes[..bytes.len().min(34)].to_vec(),
-                directory: None,
-            });
-        }
-    }
-    directories.reverse();
-    for directory in directories {
+
+/// Index every visible `.toml` document under `root` by its lowercase file stem.
+/// When two documents share a reference, the lexically first path wins.
+fn scan(root: &Path) -> Result<BTreeMap<String, PathBuf>> {
+    let mut found = Vec::new();
+    let mut pending = vec![root.to_path_buf()];
+    while let Some(directory) = pending.pop() {
         for item in std::fs::read_dir(&directory)? {
             let item = item?;
-            if item.metadata()?.is_file() {
-                let name = item.file_name();
-                let bytes = name.as_encoded_bytes();
-                templates.push(Entry {
-                    name: bytes[..bytes.len().min(34)].to_vec(),
-                    directory: directory
-                        .file_name()
-                        .map(|name| name.as_encoded_bytes().to_vec()),
-                });
+            let name = item.file_name();
+            if name.as_encoded_bytes().starts_with(b".") {
+                continue;
+            }
+            let kind = item.file_type()?;
+            let path = item.path();
+            if kind.is_dir() {
+                pending.push(path);
+            } else if kind.is_file()
+                && path.extension().is_some_and(|ext| ext == TEMPLATE_EXTENSION)
+                && let Some(stem) = path.file_stem().and_then(|stem| stem.to_str())
+            {
+                found.push((stem.to_ascii_lowercase(), path));
             }
         }
     }
-    heap_sort(&mut templates);
-    Ok(templates)
+    found.sort_by(|left, right| left.1.cmp(&right.1));
+    let mut index = BTreeMap::new();
+    for (key, path) in found {
+        index.entry(key).or_insert(path);
+    }
+    Ok(index)
 }
 
-fn heap_sort(entries: &mut [Entry]) {
-    fn sift(entries: &mut [Entry], mut root: usize, end: usize) {
-        while root < end && root <= (end - 1) / 2 {
-            let mut child = root * 2 + 1;
-            if child < end && key(&entries[child].name) < key(&entries[child + 1].name) {
-                child += 1;
-            }
-            if key(&entries[root].name) >= key(&entries[child].name) {
-                return;
-            }
-            entries.swap(root, child);
-            root = child;
-        }
-    }
-    if entries.len() < 2 {
-        return;
-    }
-    for start in (0..entries.len() / 2).rev() {
-        sift(entries, start, entries.len() - 1);
-    }
-    for end in (1..entries.len()).rev() {
-        entries.swap(0, end);
-        sift(entries, 0, end - 1);
-    }
-}
-
-fn search(entries: &[Entry], wanted: &[u8]) -> Option<usize> {
-    let (mut first, mut remaining) = (0, entries.len());
-    while remaining > 0 {
-        let offset = remaining / 2;
-        let index = first + offset;
-        match wanted.cmp(&key(&entries[index].name)) {
-            std::cmp::Ordering::Equal => return Some(index),
-            std::cmp::Ordering::Less => remaining = offset,
-            std::cmp::Ordering::Greater => {
-                first = index + 1;
-                remaining -= offset + 1;
-            }
-        }
-    }
-    None
-}
-
-fn old_style(root: &Path, reference: &[u8]) -> Option<PathBuf> {
-    const SUBDIRECTORIES: &[&str] = &[
-        "3025",
-        "3050",
-        "3055",
-        "3058",
-        "3060",
-        "2750",
-        "Aero",
-        "MISC",
-        "Clan",
-        "ClanVehicles",
-        "Clan2nd",
-        "ClanAero",
-        "Custom",
-        "Solaris",
-        "Vehicles",
-        "MFNA",
-        "Infantry",
-    ];
-    let reference = std::ffi::OsString::from_vec(reference.to_vec());
-    std::iter::once(root.join(&reference))
-        .chain(
-            SUBDIRECTORIES
-                .iter()
-                .map(|directory| root.join(directory).join(&reference)),
-        )
-        .find(|path| std::fs::File::open(path).is_ok())
-}
-
-/// Find the cached case-insensitive, first-24-byte reference in the root or immediate subdirectories.
+/// Find the cached case-insensitive reference anywhere under the root.
 pub fn resolve_template_path_cached(
     cache: &mut TemplateRegistryCache,
     root: &Path,
@@ -156,7 +78,7 @@ pub fn resolve_template_path_cached(
     resolve_template_path_bytes_cached(cache, root, reference.as_bytes())
 }
 
-/// Resolve an opaque Lua/C reference without imposing UTF-8 validation.
+/// Resolve an opaque Lua reference; references that are not UTF-8 never match a document.
 pub fn resolve_template_path_bytes_cached(
     cache: &mut TemplateRegistryCache,
     root: &Path,
@@ -165,30 +87,23 @@ pub fn resolve_template_path_bytes_cached(
     let Ok(root) = root.canonicalize() else {
         return Ok(None);
     };
-    let wanted = key(reference);
+    let Ok(reference) = std::str::from_utf8(reference) else {
+        return Ok(None);
+    };
+    let wanted = reference.to_ascii_lowercase();
     for attempt in 0..2 {
         if !cache.roots.contains_key(&root) {
-            let Ok(entries) = scan(&root) else {
-                return Ok(old_style(&root, reference));
+            let Ok(index) = scan(&root) else {
+                return Ok(None);
             };
-            cache.roots.insert(root.clone(), entries);
+            cache.roots.insert(root.clone(), index);
         }
-        let found = search(&cache.roots[&root], &wanted).map(|index| {
-            let entry = &cache.roots[&root][index];
-            let mut path = root.clone();
-            if let Some(directory) = &entry.directory {
-                path.push(std::ffi::OsString::from_vec(directory.clone()));
-            }
-            path.push(std::ffi::OsString::from_vec(entry.name.clone()));
-            path
-        });
-        match found {
-            Some(path) if std::fs::File::open(&path).is_ok() => return Ok(Some(path)),
+        match cache.roots[&root].get(&wanted) {
+            Some(path) if path.is_file() => return Ok(Some(path.clone())),
             Some(_) if attempt == 0 => {
                 cache.roots.remove(&root);
             }
-            Some(_) => return Ok(old_style(&root, reference)),
-            None => return Ok(None),
+            _ => return Ok(None),
         }
     }
     Ok(None)
@@ -199,25 +114,43 @@ pub fn resolve_template_path(root: &Path, reference: &str) -> Result<Option<Path
     resolve_template_path_cached(&mut TemplateRegistryCache::default(), root, reference)
 }
 
-/// Read one already-resolved template with confinement and the shared one-megabyte bound.
-pub fn read_resolved_template(root: &Path, path: &Path) -> Result<BattleUnitTemplate> {
+/// Read one resolved document confined to its root; its file stem is the unit reference.
+fn read_confined(root: &Path, path: &Path) -> Result<(String, String)> {
     let root = root.canonicalize()?;
     let path = path.canonicalize()?;
     ensure!(path.starts_with(&root), "template path escapes its root");
     let metadata = std::fs::metadata(&path)?;
-    ensure!(metadata.len() <= 1_048_576, "template exceeds size limit");
-    BattleUnitTemplate::parse(&std::fs::read_to_string(path)?)
+    ensure!(
+        metadata.len() <= super::template_document::TEMPLATE_SIZE_LIMIT as u64,
+        "template exceeds size limit"
+    );
+    let reference = path
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .context("template name is not UTF-8")?
+        .to_owned();
+    Ok((reference, std::fs::read_to_string(path)?))
+}
+
+/// Resolve a reference without a cached registry and read its document, returning the
+/// reference as spelled by the document's file stem.
+pub(super) fn read_template_document(root: &Path, reference: &str) -> Result<(String, String)> {
+    let path = resolve_template_path(root, reference)?
+        .with_context(|| format!("template {reference} not found"))?;
+    read_confined(root, &path)
+}
+
+/// Read one already-resolved template with confinement and the shared size bound.
+pub fn read_resolved_template(root: &Path, path: &Path) -> Result<BattleUnitTemplate> {
+    let (reference, source) = read_confined(root, path)?;
+    BattleUnitTemplate::parse(&reference, &source)
 }
 
 /// Read one resolved template into class-neutral contract state, applying the
 /// native load finalize so every raw read reflects loaded-mech semantics.
 pub fn read_resolved_raw_template(root: &Path, path: &Path) -> Result<RawTemplate> {
-    let root = root.canonicalize()?;
-    let path = path.canonicalize()?;
-    ensure!(path.starts_with(&root), "template path escapes its root");
-    let metadata = std::fs::metadata(&path)?;
-    ensure!(metadata.len() <= 1_048_576, "template exceeds size limit");
-    let mut template = RawTemplate::parse(&std::fs::read_to_string(path)?)?;
+    let (reference, source) = read_confined(root, path)?;
+    let mut template = RawTemplate::parse(&reference, &source)?;
     finalize_raw_load_specials(&mut template);
     Ok(template)
 }
@@ -262,7 +195,9 @@ pub fn finalize_raw_load_specials(template: &mut RawTemplate) {
     }
 }
 
-/// Write one direct-child template after invalidating the owning context's registry.
+/// Write one template document, replacing the existing document for the
+/// reference wherever it lives under the root, else creating `<reference>.toml`
+/// directly in the root. The registry is invalidated before the attempt.
 pub fn write_template(
     cache: &mut TemplateRegistryCache,
     root: &Path,
@@ -272,8 +207,7 @@ pub fn write_template(
     cache.clear();
     ensure!(
         !reference.is_empty()
-            && reference != "."
-            && reference != ".."
+            && !reference.starts_with('.')
             && !reference.as_bytes().contains(&0)
             && !reference.contains('/')
             && !reference.contains('\\'),
@@ -281,7 +215,8 @@ pub fn write_template(
     );
     let root = root.canonicalize()?;
     ensure!(root.is_dir(), "template root is not a directory");
-    let path = root.join(reference);
+    let existing = scan(&root)?.remove(&reference.to_ascii_lowercase());
+    let path = existing.unwrap_or_else(|| root.join(format!("{reference}.{TEMPLATE_EXTENSION}")));
     if let Ok(metadata) = std::fs::symlink_metadata(&path) {
         ensure!(
             !metadata.file_type().is_symlink(),
@@ -294,7 +229,7 @@ pub fn write_template(
         .create(true)
         .truncate(true)
         .mode(0o600)
-        .custom_flags(0x20000)
+        .custom_flags(O_NOFOLLOW)
         .open(&path)?;
     file.write_all(source.as_bytes())?;
     file.sync_all()?;
@@ -306,117 +241,102 @@ mod tests {
     use super::*;
 
     #[test]
-    fn registry_matches_first_24_bytes_and_refreshes_only_an_unreadable_hit() {
+    fn registry_matches_whole_references_case_insensitively_at_any_depth() {
         let directory = tempfile::tempdir().unwrap();
         let root = directory.path();
-        std::fs::create_dir(root.join("stock")).unwrap();
-        let stored = "abcdefghijklmnopqrstuvwx-FIRST-LON";
-        assert_eq!(stored.len(), 34);
-        std::fs::write(root.join("stock").join(stored), "one").unwrap();
-        let mut cache = TemplateRegistryCache::default();
-        let path = resolve_template_path_cached(&mut cache, root, "ABCDEFGHIJKLMNOPQRSTUVWX-other")
-            .unwrap()
-            .unwrap();
-        assert_eq!(
-            path.file_name().unwrap().as_encoded_bytes(),
-            stored.as_bytes()
-        );
-        assert_eq!(
-            resolve_template_path_cached(&mut cache, root, "abcdefghijklmnopqrstuvwx")
-                .unwrap()
-                .unwrap(),
-            path
-        );
-        std::fs::remove_file(&path).unwrap();
-        assert!(
-            resolve_template_path_cached(&mut cache, root, stored)
-                .unwrap()
-                .is_none()
-        );
-
-        let long = "abcdefghijklmnopqrstuvwx-SECOND-LONG-NAME";
-        std::fs::write(root.join(long), "long").unwrap();
-        let mut cache = TemplateRegistryCache::default();
-        assert_eq!(
-            resolve_template_path_cached(&mut cache, root, long).unwrap(),
-            Some(root.join(long))
-        );
-    }
-
-    #[test]
-    fn registry_scans_only_admitted_immediate_directories() {
-        let directory = tempfile::tempdir().unwrap();
-        let root = directory.path();
-        std::fs::create_dir(root.join("stock")).unwrap();
+        std::fs::create_dir_all(root.join("clan/second")).unwrap();
         std::fs::create_dir(root.join(".hidden")).unwrap();
-        std::fs::create_dir(root.join("x".repeat(35))).unwrap();
-        std::fs::create_dir_all(root.join("stock/deeper")).unwrap();
-        std::fs::write(root.join("stock/Visible"), "x").unwrap();
-        std::fs::write(root.join(".hidden/Hidden"), "x").unwrap();
-        std::fs::write(root.join("x".repeat(35)).join("TooDeep"), "x").unwrap();
-        std::fs::write(root.join("stock/deeper/Nested"), "x").unwrap();
+        std::fs::write(root.join("JR7-D.toml"), "x").unwrap();
+        std::fs::write(root.join("clan/second/Mad-Cat-Prime.toml"), "x").unwrap();
+        std::fs::write(root.join(".hidden/Hidden.toml"), "x").unwrap();
+        std::fs::write(root.join("NoExtension"), "x").unwrap();
         let mut cache = TemplateRegistryCache::default();
+        assert_eq!(
+            resolve_template_path_cached(&mut cache, root, "jr7-d").unwrap(),
+            Some(root.canonicalize().unwrap().join("JR7-D.toml"))
+        );
         assert!(
-            resolve_template_path_cached(&mut cache, root, "visible")
+            resolve_template_path_cached(&mut cache, root, "MAD-CAT-PRIME")
                 .unwrap()
                 .is_some()
         );
-        for omitted in ["Hidden", "TooDeep", "Nested"] {
+        for omitted in ["JR7", "Hidden", "NoExtension", "JR7-D.toml"] {
             assert!(
                 resolve_template_path_cached(&mut cache, root, omitted)
                     .unwrap()
-                    .is_none()
+                    .is_none(),
+                "{omitted}"
             );
         }
     }
 
     #[test]
-    fn heap_sort_and_midpoint_search_pin_duplicate_selection() {
-        let mut entries = vec![
-            Entry {
-                name: b"abcdefghijklmnopqrstuvwx-a".to_vec(),
-                directory: None,
-            },
-            Entry {
-                name: b"other".to_vec(),
-                directory: None,
-            },
-            Entry {
-                name: b"abcdefghijklmnopqrstuvwx-b".to_vec(),
-                directory: None,
-            },
-        ];
-        heap_sort(&mut entries);
-        let wanted = b"abcdefghijklmnopqrstuvwx";
-        assert_eq!(search(&entries, wanted), Some(1));
-        assert_eq!(key(&entries[1].name), wanted);
-    }
-
-    #[test]
-    fn writer_invalidates_before_success_or_failure_and_rejects_symlinks() {
-        use std::os::unix::fs::symlink;
+    fn registry_refreshes_once_after_a_document_disappears() {
         let directory = tempfile::tempdir().unwrap();
-        let root = directory.path().join("templates");
-        std::fs::create_dir(&root).unwrap();
-        std::fs::write(root.join("old"), "old").unwrap();
+        let root = directory.path();
+        std::fs::create_dir(root.join("stock")).unwrap();
+        std::fs::write(root.join("stock/Moved.toml"), "x").unwrap();
         let mut cache = TemplateRegistryCache::default();
         assert!(
-            resolve_template_path_cached(&mut cache, &root, "old")
+            resolve_template_path_cached(&mut cache, root, "moved")
                 .unwrap()
                 .is_some()
         );
+        std::fs::rename(root.join("stock/Moved.toml"), root.join("Moved.toml")).unwrap();
+        assert_eq!(
+            resolve_template_path_cached(&mut cache, root, "moved").unwrap(),
+            Some(root.canonicalize().unwrap().join("Moved.toml"))
+        );
+    }
+
+    #[test]
+    fn duplicate_references_resolve_to_the_lexically_first_path() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        std::fs::create_dir_all(root.join("a")).unwrap();
+        std::fs::create_dir_all(root.join("b")).unwrap();
+        std::fs::write(root.join("b/Twin.toml"), "x").unwrap();
+        std::fs::write(root.join("a/twin.toml"), "x").unwrap();
+        assert_eq!(
+            resolve_template_path(root, "TWIN").unwrap(),
+            Some(root.canonicalize().unwrap().join("a/twin.toml"))
+        );
+    }
+
+    #[test]
+    fn writer_replaces_existing_documents_and_rejects_symlinks() {
+        use std::os::unix::fs::symlink;
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path().join("templates");
+        std::fs::create_dir_all(root.join("stock")).unwrap();
+        std::fs::write(root.join("stock/Old.toml"), "old").unwrap();
+        let mut cache = TemplateRegistryCache::default();
+        assert!(
+            resolve_template_path_cached(&mut cache, &root, "new")
+                .unwrap()
+                .is_none()
+        );
         write_template(&mut cache, &root, "new", "new").unwrap();
+        assert_eq!(std::fs::read_to_string(root.join("new.toml")).unwrap(), "new");
         assert!(
             resolve_template_path_cached(&mut cache, &root, "new")
                 .unwrap()
                 .is_some()
         );
+        write_template(&mut cache, &root, "OLD", "replaced").unwrap();
+        assert_eq!(
+            std::fs::read_to_string(root.join("stock/Old.toml")).unwrap(),
+            "replaced"
+        );
+        assert!(!root.join("OLD.toml").exists());
 
         let outside = directory.path().join("outside");
         std::fs::write(&outside, "safe").unwrap();
-        symlink(&outside, root.join("linked")).unwrap();
+        symlink(&outside, root.join("linked.toml")).unwrap();
         assert!(write_template(&mut cache, &root, "linked", "bad").is_err());
         assert_eq!(std::fs::read_to_string(outside).unwrap(), "safe");
-        assert!(write_template(&mut cache, &root, "../escape", "bad").is_err());
+        for bad in ["../escape", "a/b", ".hidden", ""] {
+            assert!(write_template(&mut cache, &root, bad, "bad").is_err(), "{bad}");
+        }
     }
 }

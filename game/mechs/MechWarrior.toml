@@ -1,0 +1,42 @@
+name = "MechWarrior"
+class = "mechwarrior"
+movement = "biped"
+tons = 1
+max_speed = 5.0
+computer = 1
+radio = 1
+radio_type = 129
+radio_range = 30
+scan_range = 1
+
+[sections.left_arm]
+armor = 0
+internals = 1
+
+[sections.right_arm]
+armor = 0
+internals = 1
+
+[sections.left_torso]
+armor = 0
+internals = 1
+
+[sections.right_torso]
+armor = 0
+internals = 1
+
+[sections.center_torso]
+armor = 0
+internals = 1
+
+[sections.left_leg]
+armor = 0
+internals = 1
+
+[sections.right_leg]
+armor = 0
+internals = 1
+
+[sections.head]
+armor = 0
+internals = 1
