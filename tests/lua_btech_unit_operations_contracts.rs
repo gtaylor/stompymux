@@ -735,6 +735,43 @@ async fn load_template_initializes_a_registered_unit_without_runtime_constructio
         .unwrap();
 }
 
+/// Stock templates name their parts without a manufacturer; loading and restoring accept
+/// them, while a part no catalogue knows still rejects the whole template.
+#[tokio::test]
+async fn load_template_accepts_unbranded_stock_parts() {
+    let (_dir, config, mut world) = support::isolated_world().await;
+    let id = world.create(&config, "Stock unit".into(), Kind::Thing);
+    let mut btech = serde_json::to_value(&world.btech).unwrap();
+    btech["registrations"][id.0.to_string()] = serde_json::json!("MECH");
+    world.btech = serde_json::from_value(btech).unwrap();
+    let root = config.path(&config.database.mech_database);
+    std::fs::create_dir_all(&root).unwrap();
+    let stock = include_str!("fixtures/btech/mechs/JR7-D.toml");
+    std::fs::write(root.join("JR7-D.toml"), stock).unwrap();
+    let unknown = stock.replacen("IS.MediumLaser", "IS.NoSuchLaser", 1);
+    assert_ne!(unknown, stock);
+    std::fs::write(root.join("UNKNOWN.toml"), unknown).unwrap();
+    let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+    scripts
+        .inspect_lua()
+        .globals()
+        .set("unit_id", id.0)
+        .unwrap();
+    scripts
+        .eval_callback::<()>(
+            r#"
+        local unit=mux.world.object(unit_id)
+        assert(select('#',btech.unit.load_template(unit,'JR7-D'))==0)
+        assert(#btech.unit.weapons(unit)>0)
+        assert(select('#',btech.unit.restore(unit))==0)
+        local ok,err=mux.error.pcall(btech.unit.load_template,unit,'UNKNOWN')
+        assert(not ok and err.code=='btech.template.invalid' and err.detail.argument==2)
+    "#,
+        )
+        .unwrap();
+    assert!(scripts.world().btech.constructed_units().contains_key(&id));
+}
+
 /// Registered raw unit on a branded template exercising argument coercion,
 /// option-field edges, extra-argument tolerance, and rollback of the lazy
 /// runtime materialization when a mutation rejects.
