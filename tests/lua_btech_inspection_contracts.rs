@@ -232,7 +232,9 @@ async fn vehicle_inspection_uses_vehicle_sections_and_raw_slot_inventory() {
     std::fs::create_dir_all(&root).unwrap();
     std::fs::write(root.join("Demolisher.toml"), source).unwrap();
     // The shipped Demolisher names unbranded criticals, which the template surface accepts.
-    scripts.eval_callback::<()>(r#"
+    scripts
+        .eval_callback::<()>(
+            r#"
       local function fails(f,...)
         local ok,e=mux.error.pcall(f,...)
         return ok and 'ok' or (e.code..' | '..e.message)
@@ -241,7 +243,9 @@ async fn vehicle_inspection_uses_vehicle_sections_and_raw_slot_inventory() {
       assert(fails(btech.template.armor,'demolisher')=='ok')
       assert(#btech.template.weapons('demolisher')>0)
       assert(fails(btech.template.engine,'demolisher')=='ok')
-    "#).unwrap();
+    "#,
+        )
+        .unwrap();
     scripts.eval_callback::<()>(r#"
       local unit=mux.world.object(14)
       local armor=btech.unit.armor(unit)
