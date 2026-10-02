@@ -305,10 +305,9 @@ impl StoredBattleMap {
                 == self.decorations.len(),
             "Duplicate decoration creation order"
         );
-        ensure!(
-            terrain.iter().all(|hex| hex.elevation() <= 9),
-            "Invalid map elevation"
-        );
+        for hex in terrain.iter() {
+            hex.validate().context("Invalid map elevation")?;
+        }
         ensure!(
             (0..=255).contains(&self.gravity) && (-128..=127).contains(&self.temperature),
             "Invalid map environment"

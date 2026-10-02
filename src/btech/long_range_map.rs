@@ -194,8 +194,7 @@ fn render_viewport(
                     {
                         ' '
                     }
-                    0..=9 => char::from(b'0' + hex.elevation()),
-                    _ => '?',
+                    elevation => super::hex::height_glyph(elevation),
                 },
                 _ => hex.terrain().symbol(),
             };

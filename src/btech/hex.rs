@@ -52,6 +52,18 @@ pub enum Structure {
     Bridge { deck: u8 },
 }
 
+/// The largest ground level, structure height or bridge deck a hex may have.
+pub const MAX_HEIGHT: u8 = 35;
+
+/// The deepest water a hex may hold.
+pub const MAX_DEPTH: u8 = 9;
+
+/// One-character height for maps and map files: `0`-`9`, then `a`-`z` for 10 through 35.
+/// Anything higher shows as `?`.
+pub fn height_glyph(height: u8) -> char {
+    char::from_digit(u32::from(height), 36).unwrap_or('?')
+}
+
 /// A battlefield hex. Build one with [`BattleHex::new`] from its single-terrain description.
 /// Saved and scripted as its layers; absent woods, water and structure are omitted.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -132,6 +144,20 @@ impl BattleHex {
             structure: Some(structure),
             ..self
         }
+    }
+
+    /// Check every height and depth is within the battlefield's limits.
+    pub fn validate(self) -> anyhow::Result<()> {
+        let structure = match self.structure {
+            Some(Structure::Building { height } | Structure::Wall { height }) => height,
+            Some(Structure::Bridge { deck }) => deck,
+            None => 0,
+        };
+        anyhow::ensure!(
+            self.level <= MAX_HEIGHT && structure <= MAX_HEIGHT && self.water_depth() <= MAX_DEPTH,
+            "Hex heights exceed map limits"
+        );
+        Ok(())
     }
 
     /// Ground height in levels; water surfaces sit at this height.
@@ -401,6 +427,38 @@ mod tests {
             Some(Structure::Building { height: 5 })
         );
         assert_eq!(building.level(), 0);
+    }
+
+    /// A structure stands on its ground, so its top can rise past what one digit could say.
+    #[test]
+    fn structures_stand_on_raised_ground() {
+        let tower = BattleHex::from_layers(
+            8,
+            Ground::Clear,
+            None,
+            None,
+            Some(Structure::Building { height: 7 }),
+        );
+        assert_eq!(tower.surface_height(), 15);
+        assert_eq!(tower.elevation(), 15);
+        assert!(tower.blocks_jump_entry(14));
+        assert!(!tower.blocks_jump_entry(15));
+        tower.validate().unwrap();
+        assert_eq!(height_glyph(15), 'f');
+        assert_eq!(height_glyph(36), '?');
+        let too_high = BattleHex::from_layers(36, Ground::Clear, None, None, None);
+        assert!(too_high.validate().is_err());
+        let too_deep = BattleHex::from_layers(
+            0,
+            Ground::Clear,
+            None,
+            Some(Water {
+                depth: 10,
+                frozen: false,
+            }),
+            None,
+        );
+        assert!(too_deep.validate().is_err());
     }
 
     /// Hexes are saved as their layers, leaving out the ones that are absent.

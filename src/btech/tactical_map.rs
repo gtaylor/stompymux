@@ -285,8 +285,7 @@ fn terrain_canvas(
                 };
                 let elevation = match hex.elevation() {
                     0 => bottom,
-                    1..=9 => char::from(b'0' + hex.elevation()),
-                    _ => '?',
+                    elevation => super::hex::height_glyph(elevation),
                 };
                 let bottom_style = if ansi
                     && underlying

@@ -29,6 +29,7 @@
 //! `structure_height` gives the height of every `@` (building) and `=` (wall) hex the same way
 //! `depth` does for water. Heights use `0`-`9` then `a`-`z`. Width and height come from the
 //! grids, whose rows must all be the same length.
+use super::hex::MAX_HEIGHT;
 use super::{BattleHex, BattleMapAsset, BattleMapFlag, Ground, Structure, Water, Woods};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -36,9 +37,6 @@ use std::{collections::BTreeMap, fmt::Write, sync::Arc};
 
 /// The largest map either dimension may have.
 const MAX_DIMENSION: usize = 1000;
-
-/// The largest height a grid character can express.
-const MAX_HEIGHT: u8 = 35;
 
 /// The deserialized shape of a map file.
 #[derive(Debug, Deserialize, Serialize)]
@@ -497,6 +495,19 @@ hexes = [[3, 0]]
             "{text}"
         );
         assert_eq!(BattleMapAsset::parse(&text).unwrap(), plain);
+    }
+
+    /// A building on high ground keeps both heights; its top is their sum.
+    #[test]
+    fn structures_on_raised_ground_load_and_validate() {
+        let source = "terrain = '@'\nlevel = 'a'\nstructure_height = 'b'\n";
+        let map = BattleMapAsset::parse(source).unwrap();
+        let tower = map.hex(0, 0).unwrap();
+        assert_eq!((tower.level(), tower.surface_height()), (10, 21));
+        tower.validate().unwrap();
+        assert_eq!(BattleMapAsset::parse(&map.to_file().unwrap()).unwrap(), map);
+        let stored = crate::btech::state::map_from_asset("tower", map).unwrap();
+        stored.validate().unwrap();
     }
 
     #[test]

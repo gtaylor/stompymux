@@ -18,7 +18,7 @@ impl super::StoredBattleMap {
     /// The single write path for base terrain: checks bounds and elevation, then stores `hex`.
     /// Unit altitude, overlays and map objects stay with the caller; see [`replace_hex`].
     pub(crate) fn write_hex(&mut self, x: i64, y: i64, hex: BattleHex) -> Result<()> {
-        ensure!(hex.elevation() <= 9, "Elevation exceeds map limits");
+        hex.validate()?;
         self.stored_hex(x, y)?;
         let index = (y * self.width + x) as usize;
         Arc::make_mut(
@@ -37,7 +37,7 @@ pub(super) fn replace_hex(
     coordinate: BattleHexCoordinate,
     after: BattleHex,
 ) -> Result<BattleMapHexChange> {
-    ensure!(after.elevation() <= 9, "Elevation exceeds map limits");
+    after.validate()?;
     let before = world
         .btech
         .maps()
