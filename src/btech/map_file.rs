@@ -27,7 +27,8 @@
 //!
 //! Grids are TOML literal strings (`'''`), since `"` is the heavy-woods symbol.
 //! `structure_height` gives the height of every `@` (building) and `=` (wall) hex the same way
-//! `depth` does for water. Heights use `0`-`9` then `a`-`z`. Width and height come from the
+//! `depth` does for water. The optional `overlay` grid places permanent fire (`&`) and smoke
+//! (`:`) over any hex. Heights use `0`-`9` then `a`-`z`. Width and height come from the
 //! grids, whose rows must all be the same length.
 use super::hex::MAX_HEIGHT;
 use super::{
@@ -56,6 +57,8 @@ struct MapFile {
     depth: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     structure_height: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    overlay: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     bridges: Vec<Bridge>,
 }
@@ -82,12 +85,8 @@ fn default_temperature() -> i8 {
 #[derive(Clone, Copy)]
 enum Cell {
     Ground(Ground),
-    /// Permanent fire or smoke over clear ground.
-    Overlay(BattleDecorationKind),
     Woods(Woods),
-    Water {
-        frozen: bool,
-    },
+    Water { frozen: bool },
     Building,
     Wall,
 }
@@ -101,8 +100,6 @@ fn cell(symbol: char) -> Option<Cell> {
         '^' => Cell::Ground(Ground::Mountains),
         '+' => Cell::Ground(Ground::Snow),
         '}' => Cell::Ground(Ground::Sand),
-        '&' => Cell::Overlay(BattleDecorationKind::Fire),
-        ':' => Cell::Overlay(BattleDecorationKind::Smoke),
         '`' => Cell::Woods(Woods::Light),
         '"' => Cell::Woods(Woods::Heavy),
         '~' => Cell::Water { frozen: false },
@@ -114,13 +111,7 @@ fn cell(symbol: char) -> Option<Cell> {
 }
 
 /// The terrain-grid character for a hex; bridges show the water beneath them.
-/// Fire and smoke show only over clear ground; the file has no way to place them elsewhere.
 fn symbol(hex: BattleHex) -> char {
-    match hex.overlay() {
-        Some(BattleDecorationKind::Fire) if overlay_fits(hex) => return '&',
-        Some(BattleDecorationKind::Smoke) if overlay_fits(hex) => return ':',
-        _ => {}
-    }
     match (hex.structure(), hex.water(), hex.woods()) {
         (Some(Structure::Building { .. }), _, _) => '@',
         (Some(Structure::Wall { .. }), _, _) => '=',
@@ -139,9 +130,23 @@ fn symbol(hex: BattleHex) -> char {
     }
 }
 
-/// Whether a map file can hold this hex's fire or smoke: only over bare clear ground.
-pub(super) fn overlay_fits(hex: BattleHex) -> bool {
-    hex.with_overlay(None) == BattleHex::from_layers(hex.level(), Ground::Clear, None, None, None)
+/// Decode an overlay-grid character: `&` fire, `:` smoke, `.` neither.
+fn overlay(symbol: char) -> Option<Option<BattleDecorationKind>> {
+    Some(match symbol {
+        '.' => None,
+        '&' => Some(BattleDecorationKind::Fire),
+        ':' => Some(BattleDecorationKind::Smoke),
+        _ => return None,
+    })
+}
+
+/// The overlay-grid character for a hex.
+fn overlay_symbol(hex: BattleHex) -> char {
+    match hex.overlay() {
+        Some(BattleDecorationKind::Fire) => '&',
+        Some(BattleDecorationKind::Smoke) => ':',
+        None => '.',
+    }
 }
 
 /// Decode a height character: `0`-`9`, then `a`-`z` for 10 through 35.
@@ -214,6 +219,7 @@ impl BattleMapAsset {
             width,
             rows,
         )?;
+        let overlays = matching_grid("overlay", file.overlay.as_deref(), width, rows)?;
         let mut hexes = Vec::with_capacity(width * rows);
         for y in 0..rows {
             for x in 0..width {
@@ -246,10 +252,6 @@ impl BattleMapAsset {
                 };
                 let hex = match cell {
                     Cell::Ground(kind) => BattleHex::from_layers(ground, kind, None, None, None),
-                    Cell::Overlay(kind) => {
-                        BattleHex::from_layers(ground, Ground::Clear, None, None, None)
-                            .with_overlay(Some(kind))
-                    }
                     Cell::Woods(woods) => {
                         BattleHex::from_layers(ground, Ground::Clear, Some(woods), None, None)
                     }
@@ -298,6 +300,15 @@ impl BattleMapAsset {
                         at()
                     );
                 }
+                let hex = match &overlays {
+                    Some(rows) => {
+                        let symbol = rows[y][x];
+                        hex.with_overlay(overlay(symbol).with_context(|| {
+                            format!("unknown overlay symbol {symbol:?} {}", at())
+                        })?)
+                    }
+                    None => hex,
+                };
                 hexes.push(hex);
             }
         }
@@ -365,6 +376,7 @@ impl BattleMapAsset {
             }
         }
         let has_water = self.hexes.iter().any(|hex| hex.water().is_some());
+        let has_overlays = self.hexes.iter().any(|hex| hex.overlay().is_some());
         let has_structures = self.hexes.iter().any(|hex| {
             matches!(
                 hex.structure(),
@@ -422,6 +434,9 @@ impl BattleMapAsset {
                     _ => '.',
                 })
             )?;
+        }
+        if has_overlays {
+            writeln!(text, "overlay = '''\n{}'''", rows(&overlay_symbol))?;
         }
         for (deck, hexes) in bridges {
             writeln!(text, "\n[[bridges]]\ndeck = {deck}")?;
@@ -546,25 +561,30 @@ hexes = [[3, 0]]
             .unwrap();
     }
 
-    /// `&` and `:` are permanent fire and smoke over clear ground; the map holds them as
+    /// The overlay grid places permanent fire and smoke over any hex; the map holds them as
     /// decorations, never in its terrain.
     #[test]
-    fn fire_and_smoke_load_as_permanent_overlays() {
-        let map = BattleMapAsset::parse("terrain = '&:'\nlevel = '12'\n").unwrap();
+    fn overlay_grid_loads_permanent_fire_and_smoke() {
+        let source = "terrain = '.`~'\nlevel = '120'\ndepth = '..2'\noverlay = '&:.'\n";
+        let map = BattleMapAsset::parse(source).unwrap();
         let fire = map.hex(0, 0).unwrap();
-        assert_eq!(fire.overlay(), Some(BattleDecorationKind::Fire));
+        assert_eq!(fire, BattleHex::new(Terrain::Fire, 1));
+        let smoky = map.hex(1, 0).unwrap();
+        assert_eq!(smoky.overlay(), Some(BattleDecorationKind::Smoke));
         assert_eq!(
-            fire.with_overlay(None),
-            BattleHex::new(Terrain::Grassland, 1)
+            smoky.with_overlay(None),
+            BattleHex::new(Terrain::LightForest, 2)
         );
-        assert_eq!(map.hex(1, 0).unwrap(), BattleHex::new(Terrain::Smoke, 2));
-        assert_eq!(BattleMapAsset::parse(&map.to_file().unwrap()).unwrap(), map);
+        assert_eq!(map.hex(2, 0).unwrap().overlay(), None);
+        let text = map.to_file().unwrap();
+        assert!(text.contains("overlay = '''\n&:.\n'''"), "{text}");
+        assert_eq!(BattleMapAsset::parse(&text).unwrap(), map);
         let stored = crate::btech::state::map_from_asset("burning", map).unwrap();
         assert_eq!(
-            stored.base_hex(0, 0).unwrap(),
-            BattleHex::new(Terrain::Grassland, 1)
+            stored.base_hex(1, 0).unwrap(),
+            BattleHex::new(Terrain::LightForest, 2)
         );
-        assert_eq!(stored.hex(0, 0).unwrap(), fire);
+        assert_eq!(stored.hex(1, 0).unwrap(), smoky);
         let effect = stored
             .decoration(super::super::BattleHexCoordinate { x: 1, y: 0 })
             .unwrap()
@@ -573,18 +593,16 @@ hexes = [[3, 0]]
             (effect.kind, effect.remaining),
             (BattleDecorationKind::Smoke, 0)
         );
-        // Fire over anything but clear ground has no symbol, so the file keeps the woods.
-        let woods = BattleHex::new(Terrain::LightForest, 1);
-        let burning = BattleMapAsset {
-            hexes: Arc::new(vec![woods.with_overlay(Some(BattleDecorationKind::Fire))]),
-            ..BattleMapAsset::parse("terrain = '.'\nlevel = '0'\n").unwrap()
-        };
-        assert_eq!(
-            BattleMapAsset::parse(&burning.to_file().unwrap())
-                .unwrap()
-                .hex(0, 0),
-            Some(woods)
-        );
+        // Fire and smoke are not terrain symbols, and the overlay grid has only its own.
+        for bad in [
+            "terrain = '&'\nlevel = '0'\n",
+            "terrain = '.'\nlevel = '0'\noverlay = '~'\n",
+            "terrain = '..'\nlevel = '00'\noverlay = '&'\n",
+        ] {
+            assert!(BattleMapAsset::parse(bad).is_err(), "{bad}");
+        }
+        let plain = BattleMapAsset::parse("terrain = '.'\nlevel = '0'\n").unwrap();
+        assert!(!plain.to_file().unwrap().contains("overlay"));
     }
 
     #[test]

@@ -508,8 +508,8 @@ source assets. `btech.map.terrain` reports the terrain name in the table below.
 | `}` | Sand | `sand` | height |
 
 Map files use the same symbols, except that bridges are listed separately and
-buildings, walls and water take their heights from their own grids. In a map file
-`&` and `:` draw permanent fire and smoke over clear ground.
+buildings, walls and water take their heights from their own grids. A map file's
+`overlay` grid places permanent fire (`&`) and smoke (`:`) over any hex.
 
 `@MAPEMIT <message>` broadcasts to the occupants of running units on the wizard's
 current map and privately confirms `Message sent!`. Unconscious crews do not receive
@@ -541,9 +541,9 @@ when shrinking past them. Lua uses `btech.map.resize(actor, map, width, height)`
 
 `SAVEMAP <name>` writes your current map to `<name>.toml` in its configured map
 directory. Existing files are replaced atomically after the world transaction
-commits. Permanent fire and smoke over clear ground are saved; fire and smoke that
-will burn out or drift away, or that cover anything else, are not, and those hexes
-save the terrain beneath them. Map flags, gravity and temperature are always saved. Relative subdirectories must already exist; destinations outside
+commits. Permanent fire and smoke are saved in the overlay grid; fire and smoke that
+will burn out or drift away are not, and those hexes save only the terrain beneath
+them. Map flags, gravity and temperature are always saved. Relative subdirectories must already exist; destinations outside
 the map directory and symlinks are rejected. `Saving complete!` confirms the file
 replacement; a write failure preserves the previous file and reports an error.
 Lua `btech.map.save(actor, map, name)` returns true when queued. A failed callback

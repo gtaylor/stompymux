@@ -57,8 +57,8 @@ line per row. Every grid has the same width and height, which set the map's
 size, up to 1000 by 1000.
 
 `terrain` and `level` are required. `depth` is required when the map has water
-or ice, and `structure_height` when it has buildings or walls. Where a grid
-does not apply to a hex, that hex is `.`.
+or ice, and `structure_height` when it has buildings or walls. `overlay` is
+optional. Where a grid does not apply to a hex, that hex is `.`.
 
 | Grid | Character means |
 | --- | --- |
@@ -66,6 +66,7 @@ does not apply to a hex, that hex is `.`.
 | `level` | Ground height, `0`-`9` then `a`-`z` for 10 to 35. Water and ice surfaces, and the water under a bridge, sit at this height; the water's bed is `depth` levels below it. |
 | `depth` | Water depth below the surface, `0`-`9`, for every `~` and `-` hex. |
 | `structure_height` | Height of the building or wall above the ground, `0`-`9` then `a`-`z`, for every `@` and `=` hex. |
+| `overlay` | Permanent fire (`&`) or smoke (`:`) over the hex, whatever its terrain. |
 
 | Symbol | Terrain |
 | --- | --- |
@@ -81,8 +82,6 @@ does not apply to a hex, that hex is `.`.
 | `-` | Ice over water |
 | `@` | Building |
 | `=` | Wall |
-| `&` | Permanent fire over clear ground |
-| `:` | Permanent smoke over clear ground |
 
 ## Bridges
 
@@ -93,12 +92,11 @@ be water or ice.
 
 ## Saving
 
-Fire and smoke are not terrain. When a map is loaded, each `&` and `:` hex becomes
-clear ground with a fire or smoke effect over it that never burns out or drifts
-away.
+Fire and smoke are not terrain. When a map is loaded, each `&` and `:` in the
+`overlay` grid becomes a fire or smoke effect over that hex's terrain that never
+burns out or drifts away.
 
 `SAVEMAP <name>` writes the current map to `<name>.toml` in this format.
-Permanent fire and smoke over clear ground are saved as `&` and `:`. Fire and smoke
-that will burn out or drift away, or that cover anything other than clear ground,
-are not saved; those hexes save the terrain underneath. Mine fields, landing zones and other map objects are
+Permanent fire and smoke are saved in the `overlay` grid. Fire and smoke that will
+burn out or drift away are not saved; those hexes save only the terrain underneath. Mine fields, landing zones and other map objects are
 kept in the database, not in map files.

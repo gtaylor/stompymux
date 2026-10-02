@@ -3,8 +3,8 @@ use crate::support;
 use stompymux_rs::*;
 
 /// Fire and smoke that will burn out save the terrain beneath them; permanent fire drawn in the
-/// map file is kept; permanent smoke over woods cannot be drawn and saves as the woods;
-/// settings are always written.
+/// map file and permanent smoke over woods are kept in the overlay grid; settings are always
+/// written.
 #[tokio::test]
 async fn export_terrain_effects_and_metadata_match_asset_contract() {
     let (_dir, config, mut world) = support::isolated_world().await;
@@ -45,7 +45,8 @@ async fn export_terrain_effects_and_metadata_match_asset_contract() {
             [
                 BattleHex::new(Terrain::Grassland, 0),
                 BattleHex::new(Terrain::Road, 1),
-                BattleHex::new(Terrain::LightForest, 2),
+                BattleHex::new(Terrain::LightForest, 2)
+                    .with_overlay(Some(BattleDecorationKind::Smoke)),
                 BattleHex::new(Terrain::Fire, 3),
                 BattleHex::new(Terrain::Grassland, 4),
             ]
