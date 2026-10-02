@@ -92,6 +92,10 @@ mapgen *args:
 check-maps:
     cargo run --quiet --bin map-check -- game/maps
 
+# Open the Mappy map editor on a map directory (default game/maps).
+mappy dir="game/maps":
+    cargo run --profile mappy --features mappy --bin mappy -- {{dir}}
+
 update-lua-docs:
     cargo run --quiet --features lua-doc-updater --bin lua-doc-updater -- --write
 
