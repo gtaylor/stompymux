@@ -131,8 +131,10 @@ A section adjusts that with:
 
 | Key | Meaning |
 | --- | --- |
-| `omit` | Actuators the section lacks: `upper_actuator`, `lower_actuator`, `hand_actuator` (biped arms) or `foot_actuator` (legs). |
+| `omit` | Actuators the section lacks, in any combination: `shoulder`, `upper_actuator`, `lower_actuator`, and `hand_actuator` (biped arms) or `foot_actuator` (legs). The others keep their usual slots. |
 | `engine_at` | The side torso slot where the engine's slots begin. |
+| `engine_slots` | How many engine slots a torso holds when that differs from the engine type's count. Centre torso slots fill the three ahead of the gyro, then those after it. |
+| `brand` | Brand stamped on the section's fixed equipment instead of the construction `brand`. |
 | `explicit` | `true` when the section's layout is irregular: nothing is placed, and `slots` lists the fixed equipment too. |
 
 Listing a fixed item in a constructed section, or a slot that collides with

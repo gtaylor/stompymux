@@ -21,9 +21,8 @@ slots = [
 
 [sections.right_arm]
 armor = 22
-explicit = true
+omit = ["upper_actuator", "lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
     { at = "2-12", item = "IS.LB20-XAC" },
 ]
 

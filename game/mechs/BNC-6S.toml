@@ -37,9 +37,8 @@ slots = [
 [sections.right_torso]
 armor = 30
 rear = 9
-explicit = true
+engine_slots = 2
 slots = [
-    { at = "1-2", item = "Engine", brand = 3 },
     { at = "3-8", item = "IS.LB10-XAC", brand = 3 },
     { at = 9, item = "Ammo_IS.LB10-XAC", rounds = 10 },
     { at = 10, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
@@ -50,12 +49,7 @@ slots = [
 [sections.center_torso]
 armor = 38
 rear = 11
-explicit = true
-slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
-    { at = "4-7", item = "Gyro", brand = 3 },
-    { at = "8-12", item = "Engine", brand = 3 },
-]
+engine_slots = 8
 
 [sections.left_leg]
 armor = 28

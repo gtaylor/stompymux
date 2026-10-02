@@ -452,7 +452,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             .ok_or_else(|| failure(2, "btech.template.not_found", "template was not found"))?;
             let template = crate::btech::read_resolved_template(&root, &path)
                 .map_err(|_| failure(2, "btech.template.invalid", "template is malformed"))?;
-            if !parts_contract::unit_template_parts_registered(&template) {
+            if !parts_contract::unit_template_parts_known(&template) {
                 return Err(failure(
                     2,
                     "btech.template.invalid",
@@ -504,7 +504,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     "unable to restore unit template",
                 )
             })?;
-            if !parts_contract::unit_template_parts_registered(&template) {
+            if !parts_contract::unit_template_parts_known(&template) {
                 return Err(contract::operation_failure(
                     "template_restore_failed",
                     "unable to restore unit template",

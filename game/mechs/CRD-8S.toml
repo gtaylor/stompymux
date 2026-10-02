@@ -32,9 +32,8 @@ slots = [
 [sections.left_torso]
 armor = 19
 rear = 6
-explicit = true
+engine_slots = 1
 slots = [
-    { at = 1, item = "Engine" },
     { at = "2-12", item = "IS.HeavyGaussRifle" },
 ]
 
@@ -51,12 +50,7 @@ slots = [
 [sections.center_torso]
 armor = 25
 rear = 8
-explicit = true
-slots = [
-    { at = "1-3", item = "Engine" },
-    { at = "4-7", item = "Gyro" },
-    { at = "8-12", item = "Engine" },
-]
+engine_slots = 8
 
 [sections.left_leg]
 armor = 25

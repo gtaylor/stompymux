@@ -188,12 +188,13 @@ pub(super) fn normalize_raw_template_parts(template: &mut crate::RawTemplate) ->
     true
 }
 
-/// The C loader resolves every authored critical through the very-long part
-/// registry before construction (template_load part_match_next), rejecting the
-/// whole template when any name is unregistered.
-pub(super) fn unit_template_parts_registered(template: &crate::BattleUnitTemplate) -> bool {
-    let catalogue = registered_catalogue();
-    let registered = |critical: &crate::CriticalDefinition| {
+/// Whether every critical names a known part, rejecting the whole template when one does not.
+/// Templates name most parts without a manufacturer and keep the brand in its own field, so
+/// unbranded names count alongside the manufacturer-qualified registry.
+pub(super) fn unit_template_parts_known(template: &crate::BattleUnitTemplate) -> bool {
+    let mut catalogue = crate::btech::part_catalogue();
+    catalogue.extend(c_infantry_forms());
+    let known = |critical: &crate::CriticalDefinition| {
         catalogue.iter().any(|form| {
             form.very_long_name
                 .eq_ignore_ascii_case(&critical.equipment)
@@ -204,12 +205,12 @@ pub(super) fn unit_template_parts_registered(template: &crate::BattleUnitTemplat
             .sections
             .values()
             .flat_map(|layout| layout.criticals.values())
-            .all(registered),
+            .all(known),
         crate::BattleUnitTemplate::Vehicle(vehicle) => vehicle
             .sections
             .values()
             .flat_map(|layout| layout.criticals.values())
-            .all(registered),
+            .all(known),
     }
 }
 

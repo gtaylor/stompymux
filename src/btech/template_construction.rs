@@ -408,6 +408,7 @@ fn technology_names(codes: std::ops::RangeInclusive<i32>) -> impl Iterator<Item 
 /// Actuators a section may leave out of its standard installation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(super) enum Omission {
+    Shoulder,
     Upper,
     Lower,
     Hand,
@@ -415,11 +416,18 @@ pub(super) enum Omission {
 }
 
 impl Omission {
-    const ALL: [Self; 4] = [Self::Upper, Self::Lower, Self::Hand, Self::Foot];
+    const ALL: [Self; 5] = [
+        Self::Shoulder,
+        Self::Upper,
+        Self::Lower,
+        Self::Hand,
+        Self::Foot,
+    ];
 
     /// Document spelling.
     pub fn spelling(self) -> &'static str {
         match self {
+            Self::Shoulder => "shoulder",
             Self::Upper => "upper_actuator",
             Self::Lower => "lower_actuator",
             Self::Hand => "hand_actuator",
@@ -436,12 +444,14 @@ impl Omission {
     }
 }
 
-/// Where construction places a section's engine slots when they are not at its first slot.
+/// How one section departs from the standard placement of its fixed equipment.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub(super) struct SectionPlan<'a> {
     pub omit: &'a [Omission],
     /// Zero-based first engine slot in a side torso.
     pub engine_at: Option<u8>,
+    /// Engine slots the section holds when they differ from the engine type's count.
+    pub engine_slots: Option<u8>,
 }
 
 /// Fixed equipment construction places in one mech section, by zero-based slot.
@@ -454,7 +464,9 @@ pub(super) fn fixed_equipment(
     use BattleSection::*;
     let mut items = BTreeMap::new();
     let limb = |items: &mut BTreeMap<u8, &'static str>, last: &'static str, omit_last: Omission| {
-        items.insert(0, SHOULDER_OR_HIP);
+        if !plan.omit.contains(&Omission::Shoulder) {
+            items.insert(0, SHOULDER_OR_HIP);
+        }
         if !plan.omit.contains(&Omission::Upper) {
             items.insert(1, UPPER_ACTUATOR);
         }
@@ -467,10 +479,18 @@ pub(super) fn fixed_equipment(
     };
     let arm = chassis == BattleMechChassis::Biped && matches!(section, LeftArm | RightArm);
     let allowed: &[Omission] = match section {
-        LeftArm | RightArm if arm => &[Omission::Upper, Omission::Lower, Omission::Hand],
-        LeftArm | RightArm | LeftLeg | RightLeg => {
-            &[Omission::Upper, Omission::Lower, Omission::Foot]
-        }
+        LeftArm | RightArm if arm => &[
+            Omission::Shoulder,
+            Omission::Upper,
+            Omission::Lower,
+            Omission::Hand,
+        ],
+        LeftArm | RightArm | LeftLeg | RightLeg => &[
+            Omission::Shoulder,
+            Omission::Upper,
+            Omission::Lower,
+            Omission::Foot,
+        ],
         _ => &[],
     };
     for omission in plan.omit {
@@ -488,6 +508,11 @@ pub(super) fn fixed_equipment(
         (Engine::Xxl, true) => 4,
         _ => 0,
     };
+    ensure!(
+        plan.engine_slots.is_none() || matches!(section, LeftTorso | RightTorso | CenterTorso),
+        "engine_slots applies only to torsos"
+    );
+    let side_engine = plan.engine_slots.map_or(side_engine, usize::from);
     ensure!(
         plan.engine_at.is_none() || (matches!(section, LeftTorso | RightTorso) && side_engine > 0),
         "engine_at applies only to side torsos holding engine slots"
@@ -514,11 +539,20 @@ pub(super) fn fixed_equipment(
                 Gyro::Xl => 6,
                 Gyro::Compact => 2,
             };
-            items.extend((0..3).map(|slot| (slot, ENGINE)));
+            let standard = if construction.engine == Engine::Compact {
+                3
+            } else {
+                6
+            };
+            let engine = plan.engine_slots.unwrap_or(standard);
+            ensure!(
+                engine <= 12 - gyro,
+                "engine and gyro slots run past the section"
+            );
+            let front = engine.min(3);
+            items.extend((0..front).map(|slot| (slot, ENGINE)));
             items.extend((3..3 + gyro).map(|slot| (slot, GYRO)));
-            if construction.engine != Engine::Compact {
-                items.extend((3 + gyro..6 + gyro).map(|slot| (slot, ENGINE)));
-            }
+            items.extend((3 + gyro..engine + gyro).map(|slot| (slot, ENGINE)));
         }
         LeftTorso | RightTorso => {
             let first = plan.engine_at.unwrap_or(0);

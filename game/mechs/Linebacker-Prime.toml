@@ -14,9 +14,8 @@ armor = "ferro_fibrous"
 
 [sections.left_arm]
 armor = 20
-explicit = true
+omit = ["upper_actuator", "lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
     { at = "2-3", item = "CL.ERPPC" },
     { at = 4, item = "EndoSteel" },
     { at = 5, item = "FerroFibrous" },
@@ -24,9 +23,8 @@ slots = [
 
 [sections.right_arm]
 armor = 20
-explicit = true
+omit = ["upper_actuator", "lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
     { at = "2-3", item = "CL.ERPPC" },
     { at = 4, item = "EndoSteel" },
     { at = 5, item = "FerroFibrous" },

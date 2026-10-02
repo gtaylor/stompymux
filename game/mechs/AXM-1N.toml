@@ -32,9 +32,8 @@ slots = [
 [sections.left_torso]
 armor = 21
 rear = 6
-explicit = true
+engine_slots = 4
 slots = [
-    { at = "1-4", item = "Engine" },
     { at = "5-6", item = "Ammo_IS.AC/20", rounds = 5 },
     { at = 7, item = "Case" },
     { at = "8-12", item = "FerroFibrous" },
@@ -43,9 +42,8 @@ slots = [
 [sections.right_torso]
 armor = 21
 rear = 6
-explicit = true
+engine_slots = 2
 slots = [
-    { at = "1-2", item = "Engine" },
     { at = "3-12", item = "IS.AC/20" },
 ]
 

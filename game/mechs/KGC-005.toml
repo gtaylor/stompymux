@@ -16,17 +16,15 @@ brand = 3
 
 [sections.left_arm]
 armor = 34
-explicit = true
+omit = ["upper_actuator", "lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
     { at = "2-12", item = "IS.LB20-XAC", brand = 3 },
 ]
 
 [sections.right_arm]
 armor = 34
-explicit = true
+omit = ["upper_actuator", "lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip", brand = 3 },
     { at = "2-12", item = "IS.LB20-XAC", brand = 3 },
 ]
 

@@ -15,23 +15,17 @@ armor = "ferro_fibrous"
 
 [sections.left_arm]
 armor = 4
-explicit = true
+omit = ["lower_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
     { at = 3, item = "CL.ERLargeLaser" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = 12, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 4
-explicit = true
+omit = ["lower_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
-    { at = 2, item = "UpperActuator" },
     { at = 3, item = "CL.SmallPulseLaser" },
-    { at = 4, item = "HandOrFootActuator" },
     { at = 12, item = "FerroFibrous" },
 ]
 

@@ -30,18 +30,16 @@ slots = [
 [sections.left_torso]
 armor = 13
 rear = 4
-explicit = true
+engine_slots = 2
 slots = [
-    { at = "1-2", item = "Engine", brand = 3 },
     { at = "3-12", item = "IS.UltraAC/20", brand = 3 },
 ]
 
 [sections.right_torso]
 armor = 13
 rear = 4
-explicit = true
+engine_slots = 3
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
     { at = "4-7", item = "Ammo_IS.UltraAC/20", rounds = 5 },
     { at = "8-12", item = "FerroFibrous", brand = 3 },
 ]
@@ -49,11 +47,8 @@ slots = [
 [sections.center_torso]
 armor = 17
 rear = 5
-explicit = true
+engine_slots = 7
 slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
-    { at = "4-7", item = "Gyro", brand = 3 },
-    { at = "8-11", item = "Engine", brand = 3 },
     { at = 12, item = "EndoSteel", brand = 3 },
 ]
 

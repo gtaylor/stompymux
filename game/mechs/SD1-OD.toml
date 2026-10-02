@@ -14,9 +14,8 @@ heat_sinks = "double"
 
 [sections.left_arm]
 armor = 30
-explicit = true
+omit = ["upper_actuator", "lower_actuator", "hand_actuator"]
 slots = [
-    { at = 1, item = "ShoulderOrHip" },
     { at = "2-12", item = "IS.LB20-XAC" },
 ]
 
