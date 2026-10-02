@@ -59,12 +59,21 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
             ('=', Terrain::Wall),
             ('.', Terrain::Grassland),
         ] {
+            // ADDHEX caps a depth at 9 and any other height at 35.
+            let expected = BattleHex::new(
+                terrain,
+                if matches!(terrain, Terrain::Water | Terrain::Ice) {
+                    9
+                } else {
+                    30
+                },
+            );
             let before = serde_json::to_value(&lua.world().btech).unwrap();
             let call = format!(
                 "btech.map.set_hex({},{},0,11,{})",
                 actor.0,
                 map.0,
-                lua_table(&serde_json::to_value(BattleHex::new(terrain, 9)).unwrap())
+                lua_table(&serde_json::to_value(expected).unwrap())
             );
             assert!(
                 lua.eval_callback::<()>(&format!("{call}; error('abort edit')"))
@@ -96,7 +105,7 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
             );
             assert_eq!(
                 native.world().btech.maps()[&map].base_hex(0, 11).unwrap(),
-                BattleHex::new(terrain, 9)
+                expected
             );
             let after = serde_json::to_value(&native.world().btech).unwrap();
             let kind = if native.world().btech.vehicles().contains_key(&unit) {

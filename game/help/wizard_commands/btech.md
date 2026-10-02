@@ -481,7 +481,7 @@ roll back together if the action fails.
 
 `ADDHEX <x> <y> <terrain> <elevation>` changes one base tile on the wizard's
 current map. Use a terrain symbol from the table below; elevation is converted
-to a positive magnitude and capped at nine. Units retain their physical altitude
+to a positive magnitude and capped at 35, or 9 for the depth of water and ice. Units retain their physical altitude
 and current movement or flight state. Editing ice into water is a direct terrain
 edit; use `DELICE` to melt ice with normal occupant falls and flooding. Fire and
 smoke are not terrain: they lie over a tile without changing it, so use `ADDFIRE`

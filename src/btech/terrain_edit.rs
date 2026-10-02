@@ -146,7 +146,7 @@ fn terrain_argument(value: &str) -> Result<Terrain> {
 }
 
 /// Parse one coordinate, symbol and signed magnitude before authorizing an edit.
-/// The magnitude's absolute value, capped at nine, is the notation's digit.
+/// The magnitude's absolute value is the notation's height, capped by [`height_cap`].
 fn parse(arguments: &str) -> Result<(BattleHexCoordinate, Terrain, i32)> {
     let args: Vec<_> = arguments.split_whitespace().take(5).collect();
     ensure!(args.len() == 4, "Expected x y terrain elevation");
@@ -158,6 +158,15 @@ fn parse(arguments: &str) -> Result<(BattleHexCoordinate, Terrain, i32)> {
         terrain_argument(args[2])?,
         args[3].parse().context("Invalid elevation")?,
     ))
+}
+
+/// The largest height ADDHEX gives a terrain: water and ice depth, otherwise a ground height,
+/// structure height or bridge deck.
+fn height_cap(terrain: Terrain) -> u8 {
+    match terrain {
+        Terrain::Water | Terrain::Ice => super::hex::MAX_DEPTH,
+        _ => super::hex::MAX_HEIGHT,
+    }
 }
 
 /// Native operators edit the map containing their player object.
@@ -178,7 +187,10 @@ pub(crate) fn command(
             ctx.player,
             map,
             coordinate,
-            BattleHex::new(terrain, elevation.unsigned_abs().min(9) as u8),
+            BattleHex::new(
+                terrain,
+                elevation.unsigned_abs().min(u32::from(height_cap(terrain))) as u8,
+            ),
         )?;
         Ok(())
     })();
