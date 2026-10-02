@@ -60,13 +60,13 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
             assert_eq!(serde_json::to_value(&lua.world().btech).unwrap(), before);
             lua.drain_outbox();
             let report: mlua::Table = lua.eval_callback(&format!("return {call}")).unwrap();
-            assert_eq!(
+            // The report's tiles are the hex layers; the native comparison below checks values.
+            assert!(
                 report
                     .get::<mlua::Table>("after")
                     .unwrap()
-                    .get::<u8>("elevation")
-                    .unwrap(),
-                9
+                    .contains_key("ground")
+                    .unwrap()
             );
             let output = support::run_text(
                 &native,

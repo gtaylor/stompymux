@@ -1386,7 +1386,7 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
                 before.btech.vehicles()[&id].position()
             );
             assert_eq!(
-                world.btech.maps()[&map].hex(3, 2).unwrap().terrain(),
+                world.btech.maps()[&map].base_hex(3, 2).unwrap().terrain(),
                 if fracture {
                     Terrain::Water
                 } else {
