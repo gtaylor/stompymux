@@ -479,9 +479,12 @@ Lua provides `btech.map.add_ice(actor, map, percentage)` and
 and any surface-break reports. Terrain, dice, occupant effects and notifications
 roll back together if the action fails.
 
-`ADDHEX <x> <y> <terrain> <elevation>` changes one base tile on the wizard's
-current map. Use a terrain symbol from the table below; elevation is converted
-to a positive magnitude and capped at 35, or 9 for the depth of water and ice. Units retain their physical altitude
+`ADDHEX <x> <y> <terrain> <elevation> [level]` changes one base tile on the
+wizard's current map. Use a terrain symbol from the table below; elevation is
+converted to a positive magnitude and capped at 35, or 9 for the depth of water and
+ice. Water, ice, bridges, buildings and walls can take a ground `level` from 0 to
+35 to stand on: `ADDHEX 4 7 ~ 2 3` makes water two deep with its surface at level 3.
+Other terrain takes its level from the elevation. Units retain their physical altitude
 and current movement or flight state. Editing ice into water is a direct terrain
 edit; use `DELICE` to melt ice with normal occupant falls and flooding. Fire and
 smoke are not terrain: they lie over a tile without changing it, so use `ADDFIRE`

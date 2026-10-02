@@ -286,6 +286,13 @@ async fn edit_admission_overlays_and_extreme_elevations() {
         .is_err()
     );
     assert_eq!(scripts.world().btech, before);
+    // A fifth argument raises water onto higher ground; ground terrain cannot take one.
+    let output = support::run_text(&scripts, &config, actor, 1, "addhex 0 5 ~ 2 4");
+    assert!(output.contains("Hex set!"), "{output}");
+    let lake = scripts.world().btech.maps()[&map].base_hex(0, 5).unwrap();
+    assert_eq!((lake.water_line(), lake.water_depth()), (4, 2));
+    let output = support::run_text(&scripts, &config, actor, 1, "addhex 0 5 . 2 4");
+    assert!(output.contains("take a separate level"), "{output}");
     let output = support::run_text(&scripts, &config, actor, 1, "addhex 0 5 ~ -2147483648");
     assert!(output.contains("Hex set!"), "{output}");
     let world = scripts.world();
