@@ -38,10 +38,10 @@ impl Terrain {
 }
 
 impl BattleHex {
-    /// Whether a unit standing at `level` relative to this hex is in water.
-    /// High water always wets; other water columns only below the surface datum.
+    /// Whether a unit standing at `level` relative to this hex is in water: below the
+    /// surface datum of a water column.
     pub fn immerses(self, level: i32) -> bool {
-        self.terrain == Terrain::HighWater || (self.terrain.holds_water() && level < 0)
+        self.terrain.holds_water() && level < 0
     }
 }
 
@@ -76,21 +76,20 @@ mod tests {
     }
 
     #[test]
-    fn water_columns_include_ice_and_bridges_but_not_high_water() {
+    fn water_columns_include_ice_and_bridges() {
         assert!(Terrain::Water.holds_water());
         assert!(Terrain::Ice.holds_water());
         assert!(Terrain::Bridge.holds_water());
-        assert!(!Terrain::HighWater.holds_water());
         assert!(!Terrain::Grassland.holds_water());
     }
 
     #[test]
-    fn immersion_depends_on_level_except_for_high_water() {
+    fn immersion_depends_on_level() {
         let hex = |terrain| BattleHex {
             terrain,
             elevation: 2,
         };
-        assert!(hex(Terrain::HighWater).immerses(3));
+        assert!(!hex(Terrain::Water).immerses(3));
         assert!(hex(Terrain::Water).immerses(-1));
         assert!(!hex(Terrain::Water).immerses(0));
         assert!(hex(Terrain::Bridge).immerses(-2));

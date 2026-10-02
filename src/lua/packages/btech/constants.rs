@@ -1113,10 +1113,6 @@ pub(super) static TERRAIN_TYPES: StringCatalog = StringCatalog {
             value: "bridge",
         },
         StringEntry {
-            name: "HIGH_WATER",
-            value: "high_water",
-        },
-        StringEntry {
             name: "ROUGH",
             value: "rough",
         },

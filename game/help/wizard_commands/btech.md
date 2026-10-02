@@ -503,7 +503,6 @@ maps can be edited and saved without reloading their source assets.
 | `~` | Water | `water` | depth |
 | `-` | Ice | `ice` | depth of the water below |
 | `/` | Bridge | `bridge` | deck height |
-| `?` | High water | `high_water` | height |
 | `%` | Rough | `rough` | height |
 | `^` | Mountains | `mountains` | height |
 | `&` | Fire | `fire` | height |

@@ -272,7 +272,6 @@ fn terrain_canvas(
                 let base = map.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
                 let (top, bottom) = match hex.terrain {
                     Terrain::Grassland => (' ', '_'),
-                    Terrain::HighWater => ('~', '+'),
                     Terrain::Bridge => ('#', '+'),
                     Terrain::Fire | Terrain::Smoke if underlying => {
                         (hex.terrain.symbol(), base.terrain.symbol())

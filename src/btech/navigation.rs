@@ -140,7 +140,7 @@ fn terrain_name(terrain: super::Terrain) -> &'static str {
         Road => "Road",
         LightForest => "Light Forest",
         HeavyForest => "Heavy Forest",
-        Water | HighWater => "Water",
+        Water => "Water",
         Ice => "Ice",
         Bridge => "Bridge",
         Rough => "Rough",

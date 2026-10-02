@@ -198,7 +198,6 @@ mod tests {
             Terrain::Water,
             Terrain::Ice,
             Terrain::Bridge,
-            Terrain::HighWater,
             Terrain::Rough,
             Terrain::Mountains,
             Terrain::Fire,

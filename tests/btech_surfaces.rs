@@ -3559,74 +3559,6 @@ async fn landing_in_existing_ice_precedes_the_final_upward_breakout() {
 }
 
 #[tokio::test]
-async fn high_water_entry_uses_its_special_modifier_and_wet_fall_damage() {
-    for height in [0, 3, 9] {
-        for success in [false, true] {
-            let (_dir, config, mut world, _, units) =
-                fixture_field(Terrain::HighWater, height, 5).await;
-            let id = units[0];
-            prepare_reverse_step(&mut world, id, if success { 4 } else { 3 });
-            let before = world.clone();
-            persistence::save(&config.database(), &world).await.unwrap();
-            let mut loaded = persistence::load(&config.database()).await.unwrap();
-            let notices = advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
-            assert_eq!(
-                notices,
-                advance_battle_motion(&mut loaded, BattleMovementRules::STANDARD).unwrap()
-            );
-            assert_eq!(world.btech, loaded.btech);
-            let unit = &world.btech.constructed_units()[&id];
-            assert_eq!(unit.position().unwrap().y, 2);
-            assert_eq!(
-                battle_unit_elevation(&world, id).unwrap(),
-                Some(i32::from(height))
-            );
-            assert_eq!(
-                unit.posture(),
-                if success {
-                    BattlePosture::Standing
-                } else {
-                    BattlePosture::Prone
-                }
-            );
-            assert!(unit.flooded_sections().is_empty());
-            assert_eq!(unit.heat_rates(&world).dissipation, 10.0);
-            if success {
-                let mut expected = before.clone();
-                let check = roll_battle_piloting(&mut expected, id, -2, true).unwrap();
-                assert!(check.success);
-                assert_eq!(check.target, 4);
-                assert_eq!(
-                    serde_json::to_value(unit).unwrap()["dice"],
-                    serde_json::to_value(&expected.btech.constructed_units()[&id]).unwrap()["dice"]
-                );
-            } else {
-                let protection = |unit: &BattleUnit| {
-                    unit.sections()
-                        .values()
-                        .map(|section| {
-                            u32::from(section.armor)
-                                + u32::from(section.rear)
-                                + u32::from(section.internal)
-                        })
-                        .sum::<u32>()
-                };
-                assert_eq!(
-                    protection(&before.btech.constructed_units()[&id]) - protection(unit),
-                    2
-                );
-            }
-            world.validate(&config).unwrap();
-            persistence::save(&config.database(), &world).await.unwrap();
-            assert_eq!(
-                persistence::load(&config.database()).await.unwrap().btech,
-                world.btech
-            );
-        }
-    }
-}
-
-#[tokio::test]
 async fn wet_running_controls_match_native_lua_and_preserve_rejected_throttle() {
     for (terrain, depth, altitude, wet) in [
         (Terrain::Water, 1, None, true),
@@ -3635,8 +3567,6 @@ async fn wet_running_controls_match_native_lua_and_preserve_rejected_throttle() 
         (Terrain::Ice, 3, Some(-3), true),
         (Terrain::Bridge, 3, None, false),
         (Terrain::Bridge, 3, Some(-1), true),
-        (Terrain::HighWater, 0, None, true),
-        (Terrain::HighWater, 9, None, true),
     ] {
         let (_dir, config, mut world, _, units) = fixture_field(terrain, depth, 5).await;
         let id = units[0];
@@ -3682,7 +3612,7 @@ async fn wet_running_controls_match_native_lua_and_preserve_rejected_throttle() 
 
 #[tokio::test]
 async fn mapped_surface_jump_routes_land_at_height_and_replay() {
-    for terrain in [Terrain::HighWater, Terrain::Building, Terrain::Wall] {
+    for terrain in [Terrain::Building, Terrain::Wall] {
         for height in [0, 3, 9] {
             let (_dir, config, mut world, map, units) = fixture_field(terrain, height, 5).await;
             let id = units[0];

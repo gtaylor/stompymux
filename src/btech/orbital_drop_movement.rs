@@ -418,7 +418,7 @@ fn touchdown(
     if !input.combat_safe && !input.mech {
         let unit = &world.btech.vehicles()[&id];
         if !unit.is_destroyed()
-            && matches!(tile.terrain, Terrain::Water | Terrain::HighWater)
+            && tile.terrain == Terrain::Water
             && unit.elevation_level(tile) < 0
             && !unit.definition().has_special("Waterproof_Tech")
         {

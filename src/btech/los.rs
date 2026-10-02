@@ -117,10 +117,7 @@ fn terrain_los_with_endpoint(
             continue;
         }
         if sight_height < height + 2.0 {
-            if matches!(
-                ground.terrain,
-                Terrain::Water | Terrain::Ice | Terrain::HighWater
-            ) {
+            if matches!(ground.terrain, Terrain::Water | Terrain::Ice) {
                 if sight_height < 0.0
                     && (ground.terrain == Terrain::Ice
                         || (ground.terrain == Terrain::Water && !both_worlds))
@@ -539,7 +536,6 @@ mod tests {
         assert_eq!(report.water, 7);
         assert!(report.fire);
         assert!(!sight(&[(Water, 3), (Ice, 3), (Water, 3)]).blocked);
-        assert!(sight(&[(Water, 3), (HighWater, 0), (Water, 3)]).blocked);
         assert!(sight(&[(Water, 3), (Grassland, 0), (Water, 3)]).blocked);
         assert!(sight(&[(Water, 3), (Water, 1), (Water, 3)]).blocked);
         assert!(sight(&[(Water, 3), (Water, 3), (Grassland, 0)]).blocked);
