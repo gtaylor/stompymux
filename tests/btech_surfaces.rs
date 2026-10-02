@@ -5456,7 +5456,7 @@ async fn building_entrances_preserve_order_identity_and_unowned_data() {
     .await
     .unwrap();
     sqlx::query("UPDATE btech_map_objects SET data_char=87,data_short=23,data_int=91 WHERE map_dbref=? AND object_type=4 AND ordinal=2").bind(map.0).execute(&mut sql).await.unwrap();
-    sqlx::query("INSERT INTO btech_map_objects VALUES(?,1,0,0,0,-1,32,12,13)")
+    sqlx::query("INSERT INTO btech_map_objects VALUES(?,1,0,0,0,-1,0,12,13)")
         .bind(map.0)
         .execute(&mut sql)
         .await
@@ -5477,7 +5477,7 @@ async fn building_entrances_preserve_order_identity_and_unowned_data() {
         0,
         Some(BattleStaticDecoration {
             coordinate: BattleHexCoordinate { x: 0, y: 0 },
-            restored_terrain: Terrain::Grassland,
+            restored_terrain: None,
             object: ObjectId(-1),
             duration: 12,
             scalar: 13,
@@ -5633,7 +5633,7 @@ async fn minefields_persist_all_kinds_and_survive_woodland_clearing() {
         .execute(&mut sql)
         .await
         .unwrap();
-    sqlx::query("INSERT INTO btech_map_objects (map_dbref,object_type,ordinal,x,y,object_dbref,data_char,data_short,data_int) VALUES(?,1,0,0,0,-1,32,12,13)").bind(map.0).execute(&mut sql).await.unwrap();
+    sqlx::query("INSERT INTO btech_map_objects (map_dbref,object_type,ordinal,x,y,object_dbref,data_char,data_short,data_int) VALUES(?,1,0,0,0,-1,0,12,13)").bind(map.0).execute(&mut sql).await.unwrap();
     world = persistence::load(&config.database()).await.unwrap();
     set_minefield(
         &mut world,

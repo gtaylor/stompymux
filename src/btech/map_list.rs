@@ -86,9 +86,16 @@ fn object_fields(
         (slot, super::map_object_delete::restoration_kind(kind))
     {
         let record = map.static_decorations(stored_kind)[&ordinal];
+        // Fire and smoke records list the terrain they cover, as running fire and smoke do.
+        let terrain = match record.restored_terrain {
+            Some(terrain) => terrain,
+            None => map
+                .base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?
+                .terrain(),
+        };
         return Ok([
             record.object.0,
-            i64::from(u32::from(record.restored_terrain.symbol())),
+            i64::from(u32::from(terrain.symbol())),
             i64::from(record.duration),
             record.scalar,
         ]);

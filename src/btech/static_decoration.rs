@@ -26,17 +26,38 @@ impl BattleStaticDecorationKind {
     }
 }
 
-/// Restoration metadata without a scheduled event; saved visible terrain remains authoritative.
+/// A stored map-object record without a scheduled event.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BattleStaticDecoration {
     pub coordinate: BattleHexCoordinate,
-    pub restored_terrain: Terrain,
+    /// Terrain a generic decoration restores when it is deleted. Fire and smoke records have
+    /// none, since fire and smoke never change the terrain they cover.
+    pub restored_terrain: Option<Terrain>,
     /// Object reference retained by the map-object record, independent of terrain restoration.
     pub object: crate::ObjectId,
     /// Stored signed duration; imported restoration records do not schedule an event.
     pub duration: i16,
     /// Type-specific scalar retained for operator inspection.
     pub scalar: i64,
+}
+
+impl BattleStaticDecoration {
+    /// Check the record suits its kind: generic decorations restore real terrain, while fire
+    /// and smoke records restore nothing.
+    pub(crate) fn validate(self, kind: BattleStaticDecorationKind) -> anyhow::Result<()> {
+        match (kind, self.restored_terrain) {
+            (BattleStaticDecorationKind::Decoration, Some(terrain)) => anyhow::ensure!(
+                !matches!(terrain, Terrain::Fire | Terrain::Smoke),
+                "Decorations cannot restore fire or smoke"
+            ),
+            (BattleStaticDecorationKind::Decoration, None) => {
+                anyhow::bail!("Decorations need terrain to restore")
+            }
+            (_, Some(_)) => anyhow::bail!("Fire and smoke records do not restore terrain"),
+            (_, None) => {}
+        }
+        Ok(())
+    }
 }
 
 impl StoredBattleMap {
@@ -68,6 +89,7 @@ pub fn set_static_decoration(
     );
     let record = world.btech.maps().get(&map).context("Map not found")?;
     if let Some(decoration) = decoration {
+        decoration.validate(kind)?;
         record.base_hex(
             i64::from(decoration.coordinate.x),
             i64::from(decoration.coordinate.y),

@@ -38,7 +38,7 @@ async fn object_table_keeps_effect_creation_order_across_restart_and_rollback() 
             0,
             Some(BattleStaticDecoration {
                 coordinate: BattleHexCoordinate { x: 2, y: 2 },
-                restored_terrain: Terrain::Grassland,
+                restored_terrain: None,
                 object: ObjectId(1),
                 duration: 99,
                 scalar: 3,

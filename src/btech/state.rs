@@ -257,11 +257,16 @@ impl StoredBattleMap {
                 .all(|records| records.len() <= 1_000_000),
             "Too many generic decorations"
         );
-        for decoration in self
-            .static_decorations
-            .iter()
-            .flat_map(|records| records.values())
+        for (kind, decoration) in
+            super::BattleStaticDecorationKind::ALL
+                .into_iter()
+                .flat_map(|kind| {
+                    self.static_decorations(kind)
+                        .values()
+                        .map(move |d| (kind, d))
+                })
         {
+            decoration.validate(kind)?;
             ensure!(
                 decoration.coordinate.x >= 0
                     && decoration.coordinate.y >= 0

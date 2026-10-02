@@ -23,7 +23,8 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
     )
     .await
     .unwrap();
-    for (kind, ordinal, terrain) in [(0, 0, 34), (0, 1, 35), (1, 0, 45), (2, 0, 32)] {
+    // Only generic decorations restore terrain; fire and smoke records leave data_char empty.
+    for (kind, ordinal, terrain) in [(0, 0, 0), (0, 1, 0), (1, 0, 0), (2, 0, 32)] {
         sqlx::query("INSERT INTO btech_map_objects VALUES(?,?,?,1,1,1,?,123,456)")
             .bind(map.0)
             .bind(kind)
@@ -78,7 +79,7 @@ async fn imported_records_preserve_lookup_order_and_share_native_lua_removal() {
         "{listing}"
     );
     assert!(
-        listing.contains("1   1   FIRE  1     34   123    456"),
+        listing.contains("1   1   FIRE  1     32   123    456"),
         "{listing}"
     );
     let before = lua.world().btech.clone();
@@ -224,5 +225,36 @@ async fn replacing_imported_effects_preserves_underlying_terrain_and_clears_sour
     assert_eq!(
         persistence::load(&config.database()).await.unwrap().btech,
         saved.btech
+    );
+}
+
+/// Fire and smoke never change terrain, so a stored record that claims to restore some is
+/// rejected rather than loaded.
+#[tokio::test]
+async fn fire_records_with_terrain_to_restore_are_rejected() {
+    let (_dir, config, mut world) = support::isolated_world().await;
+    let map = world.create(&config, "Stored fire".into(), Kind::Room);
+    create_battle_map(
+        &mut world,
+        map,
+        "grid",
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+    )
+    .unwrap();
+    persistence::save(&config.database(), &world).await.unwrap();
+    let mut sql = sqlx::SqliteConnection::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new().filename(config.database()),
+    )
+    .await
+    .unwrap();
+    sqlx::query("INSERT INTO btech_map_objects VALUES(?,0,0,0,0,1,34,0,0)")
+        .bind(map.0)
+        .execute(&mut sql)
+        .await
+        .unwrap();
+    let error = persistence::load(&config.database()).await.unwrap_err();
+    assert!(
+        format!("{error:#}").contains("do not restore terrain"),
+        "{error:#}"
     );
 }

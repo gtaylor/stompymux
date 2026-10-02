@@ -162,7 +162,9 @@ fn remove_kind(
             // have terrain to restore.
             if stored_kind == super::BattleStaticDecorationKind::Decoration {
                 let record = &world.btech.maps()[&map];
-                let terrain = record.static_decorations(stored_kind)[&ordinal].restored_terrain;
+                let terrain = record.static_decorations(stored_kind)[&ordinal]
+                    .restored_terrain
+                    .context("Decoration has no terrain to restore")?;
                 let level = record
                     .base_hex(i64::from(position.x), i64::from(position.y))?
                     .level();

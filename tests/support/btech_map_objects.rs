@@ -45,7 +45,7 @@ pub async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId)
         0,
         Some(BattleStaticDecoration {
             coordinate: p,
-            restored_terrain: Terrain::Water,
+            restored_terrain: Some(Terrain::Water),
             object: ObjectId(0),
             duration: 0,
             scalar: 0,

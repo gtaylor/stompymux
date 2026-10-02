@@ -36,9 +36,19 @@ pub(super) async fn load(
                 && i64::from(coordinate.y) < map.height,
             "Invalid stored decoration coordinate"
         );
-        let restored_terrain = Terrain::from_symbol(char::from(u8::try_from(
-            row.try_get::<i64, _>("data_char")?,
-        )?))?;
+        let data_char = u8::try_from(row.try_get::<i64, _>("data_char")?)?;
+        let restored_terrain = match kind {
+            BattleStaticDecorationKind::Decoration => {
+                Some(Terrain::from_symbol(char::from(data_char))?)
+            }
+            _ => {
+                ensure!(
+                    data_char == 0,
+                    "Fire and smoke records do not restore terrain"
+                );
+                None
+            }
+        };
         Arc::make_mut(&mut map.static_decorations[kind.index()]).insert(
             u32::try_from(row.try_get::<i64, _>("ordinal")?)?,
             BattleStaticDecoration {
@@ -109,7 +119,11 @@ fn decoration_fields(decoration: BattleStaticDecoration) -> super::write::Fields
         ("data_int", Cell::Integer(decoration.scalar)),
         (
             "data_char",
-            Cell::Integer(i64::from(u32::from(decoration.restored_terrain.symbol()))),
+            Cell::Integer(
+                decoration
+                    .restored_terrain
+                    .map_or(0, |terrain| i64::from(u32::from(terrain.symbol()))),
+            ),
         ),
     ])
 }
