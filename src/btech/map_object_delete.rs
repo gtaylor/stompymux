@@ -162,12 +162,12 @@ fn remove_kind(
             let terrain = record.static_decorations(stored_kind)[&ordinal].restored_terrain;
             let elevation = record
                 .base_hex(i64::from(position.x), i64::from(position.y))?
-                .elevation;
+                .elevation();
             super::terrain_edit::replace_hex(
                 world,
                 map,
                 position,
-                super::BattleHex { terrain, elevation },
+                super::BattleHex::new(terrain, elevation),
             )?;
             super::set_static_decoration(world, map, stored_kind, ordinal, None)?;
             count += 1;

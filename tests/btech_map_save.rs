@@ -75,7 +75,7 @@ async fn authored_eternal_fire_survives_load_save_and_restart() {
         .unwrap();
     let decoded = read_battle_map(&root, "saved-fire.map").unwrap();
     assert_eq!(decoded.flags, 8);
-    assert_eq!(decoded.hex(0, 0).unwrap().terrain, Terrain::Fire);
+    assert_eq!(decoded.hex(0, 0).unwrap().terrain(), Terrain::Fire);
 }
 
 /// Native and Lua prepare identical bytes, but neither publishes an uncommitted action.
@@ -155,7 +155,7 @@ async fn server_map_save_waits_for_commit_and_reports_completion() {
         let response = client.until("Unable to save your changes.").await;
         assert!(!response.contains("Saving complete"));
         assert_eq!(std::fs::read_to_string(&path).unwrap(), "original");
-        assert_eq!(persistence::load(&config.database()).await.unwrap().btech.maps()[&map].base_hex(0,0).unwrap().terrain, Terrain::Fire);
+        assert_eq!(persistence::load(&config.database()).await.unwrap().btech.maps()[&map].base_hex(0,0).unwrap().terrain(), Terrain::Fire);
         sqlx::query("DROP TRIGGER deny_map_export").execute(&mut sql).await.unwrap();
         client.send("savemap server.map").await;
         client.until("Saving complete!").await;

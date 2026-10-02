@@ -205,11 +205,8 @@ async fn underwater_fire_does_not_bypass_waterline_visibility() {
     .await;
     let map = world.btech.units()[&target].map.unwrap();
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["maps"][map.0.to_string()]["terrain"][0] = serde_json::to_value(BattleHex {
-        terrain: Terrain::Grassland,
-        elevation: 0,
-    })
-    .unwrap();
+    encoded["maps"][map.0.to_string()]["terrain"][0] =
+        serde_json::to_value(BattleHex::new(Terrain::Grassland, 0)).unwrap();
     world.btech = serde_json::from_value(encoded).unwrap();
     refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     let before = world.btech.clone();

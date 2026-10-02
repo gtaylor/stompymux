@@ -34,7 +34,7 @@ async fn generic_decoration_records_survive_reload_and_clear_on_resize() {
     assert_eq!(definition.duration, 123);
     assert_eq!(definition.scalar, 456);
     assert_eq!(
-        world.btech.maps()[&map].hex(1, 1).unwrap().terrain,
+        world.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
         Terrain::Road
     );
     assert!(!map_fire_pending(&world));
@@ -108,7 +108,7 @@ async fn generic_decoration_records_survive_reload_and_clear_on_resize() {
         "{response}"
     );
     assert_eq!(
-        saved.btech.maps()[&map].hex(0, 1).unwrap().terrain,
+        saved.btech.maps()[&map].hex(0, 1).unwrap().terrain(),
         Terrain::Ice
     );
     persistence::save(&config.database(), &saved).await.unwrap();

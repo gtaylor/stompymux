@@ -20,11 +20,8 @@ fn configured(dir: &tempfile::TempDir, enabled: bool, glancing: bool) -> Config 
 fn prepare(world: &mut World, shooter: ObjectId, target: ObjectId, terrain: Terrain, roll: u8) {
     let map = world.btech.units()[&target].map.unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["terrain"][10] = serde_json::to_value(BattleHex {
-        terrain,
-        elevation: 0,
-    })
-    .unwrap();
+    state["maps"][map.0.to_string()]["terrain"][10] =
+        serde_json::to_value(BattleHex::new(terrain, 0)).unwrap();
     world.btech = serde_json::from_value(state).unwrap();
     let seed = (0..=255)
         .find(|&value| BattleDice::seeded([value; 32]).two_d6() == roll)
@@ -46,11 +43,8 @@ fn prepare_seeded(
 ) {
     let map = world.btech.units()[&target].map.unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["terrain"][10] = serde_json::to_value(BattleHex {
-        terrain,
-        elevation: 0,
-    })
-    .unwrap();
+    state["maps"][map.0.to_string()]["terrain"][10] =
+        serde_json::to_value(BattleHex::new(terrain, 0)).unwrap();
     world.btech = serde_json::from_value(state).unwrap();
     firing::edit(world, shooter, |state| {
         state["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap()
@@ -594,7 +588,7 @@ async fn woodland_clearing_uses_damage_before_absorption() {
         scripts.world().btech.maps()[&map]
             .base_hex(0, 10)
             .unwrap()
-            .terrain,
+            .terrain(),
         Terrain::LightForest
     );
 }

@@ -39,7 +39,7 @@ pub(super) fn target_in_water(world: &World, target: ObjectId) -> Result<bool> {
         .get(&position.map)
         .context("Map not found")?
         .base_hex(i64::from(position.x), i64::from(position.y))?;
-    if tile.terrain != Terrain::Water {
+    if tile.terrain() != Terrain::Water {
         return Ok(false);
     }
     let elevation = if let Some(vehicle) = world.btech.vehicles().get(&target) {

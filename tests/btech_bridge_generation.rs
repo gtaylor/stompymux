@@ -25,19 +25,19 @@ fn road_spans_require_two_water_ends_within_three_steps() {
                 let original = asset.clone();
                 asset.generate_bridges().unwrap();
                 assert_eq!(
-                    asset.hex(0, top).unwrap().terrain,
+                    asset.hex(0, top).unwrap().terrain(),
                     if top <= 3 && bottom <= 3 {
                         Terrain::Bridge
                     } else {
                         Terrain::Road
                     }
                 );
-                assert_eq!(asset.hex(0, top).unwrap().elevation, 2);
-                assert_eq!(original.hex(0, top).unwrap().terrain, Terrain::Road);
+                assert_eq!(asset.hex(0, top).unwrap().elevation(), 2);
+                assert_eq!(original.hex(0, top).unwrap().terrain(), Terrain::Road);
                 let mut disabled = original;
                 disabled.flags = 128;
                 assert_eq!(disabled.generate_bridges().unwrap(), 0);
-                assert_eq!(disabled.hex(0, top).unwrap().terrain, Terrain::Road);
+                assert_eq!(disabled.hex(0, top).unwrap().terrain(), Terrain::Road);
                 assert_eq!(asset.generate_bridges().unwrap(), 0);
             }
         }
@@ -46,7 +46,7 @@ fn road_spans_require_two_water_ends_within_three_steps() {
         let mut asset =
             BattleMapAsset::parse(&format!("1 5\n~0\n{obstruction}0\n#0\n#0\n~0\n")).unwrap();
         asset.generate_bridges().unwrap();
-        assert_eq!(asset.hex(0, 2).unwrap().terrain, Terrain::Road);
+        assert_eq!(asset.hex(0, 2).unwrap().terrain(), Terrain::Road);
     }
 }
 
@@ -61,7 +61,7 @@ fn diagonal_corridors_and_western_edge_use_asset_search_coordinates() {
         let mut asset = BattleMapAsset::parse(source).unwrap();
         let x = if asset.width == 3 { 1 } else { 2 };
         assert_eq!(asset.generate_bridges().unwrap(), 1);
-        assert_eq!(asset.hex(x, 1).unwrap().terrain, Terrain::Bridge);
+        assert_eq!(asset.hex(x, 1).unwrap().terrain(), Terrain::Bridge);
     }
 }
 
@@ -73,7 +73,7 @@ async fn map_activation_generates_bridges_and_persists_them() {
     let asset = BattleMapAsset::parse("1 3\n~0\n#2\n-0\n").unwrap();
     create_battle_map(&mut world, map, "span", asset.clone()).unwrap();
     assert_eq!(
-        world.btech.maps()[&map].base_hex(0, 1).unwrap().terrain,
+        world.btech.maps()[&map].base_hex(0, 1).unwrap().terrain(),
         Terrain::Bridge
     );
     persistence::save(&config.database(), &world).await.unwrap();
@@ -82,7 +82,7 @@ async fn map_activation_generates_bridges_and_persists_them() {
     disabled.flags = 128;
     reload_battle_map(&mut world, map, "disabled", disabled).unwrap();
     assert_eq!(
-        world.btech.maps()[&map].base_hex(0, 1).unwrap().terrain,
+        world.btech.maps()[&map].base_hex(0, 1).unwrap().terrain(),
         Terrain::Road
     );
     reload_battle_map(&mut world, map, "span", asset).unwrap();

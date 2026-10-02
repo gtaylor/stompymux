@@ -250,10 +250,7 @@ async fn self_destruct_cross_chassis_native_lua_and_restart() {
             assert!(vehicle.is_destroyed());
             assert_eq!(vehicle.crew_recovery().remaining, 30);
             assert_eq!(
-                vehicle.elevation_level(BattleHex {
-                    terrain: Terrain::Grassland,
-                    elevation: 0
-                }),
+                vehicle.elevation_level(BattleHex::new(Terrain::Grassland, 0)),
                 6
             );
             assert!(vehicle.sections()[&BattleVehicleSection::Front].internal > 0);
@@ -632,10 +629,7 @@ async fn self_destruct_ground_wreck_descends_after_restart() {
                     let unit = &loaded.btech.vehicles()[&id];
                     if unit.free_fall().is_none() {
                         assert_eq!(
-                            unit.elevation_level(BattleHex {
-                                terrain: Terrain::Grassland,
-                                elevation: 0
-                            }),
+                            unit.elevation_level(BattleHex::new(Terrain::Grassland, 0)),
                             0
                         );
                         break;

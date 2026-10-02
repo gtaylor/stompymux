@@ -155,7 +155,7 @@ fn resolve_hex_shot_inner(
         !weapon.is_torpedo()
             || record
                 .base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?
-                .terrain
+                .terrain()
                 == Terrain::Water,
         "Torpedoes can only strike targets in the water!"
     );

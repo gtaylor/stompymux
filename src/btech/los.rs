@@ -77,12 +77,12 @@ fn terrain_los_with_endpoint(
     let end_ground = f64::from(destination.standing_height());
     let start_height = airborne.0.unwrap_or(start_ground) + eyes.0;
     let end_height = airborne.1.unwrap_or(end_ground) + eyes.1;
-    let underwater = source.terrain.holds_water() && start_height < 0.0;
-    let target_underwater = destination.terrain.holds_water() && end_height < 0.0;
-    let both_worlds = source.terrain.holds_water() && start_ground == -1.0;
-    let target_both_worlds = destination.terrain.holds_water() && end_ground == -1.0;
+    let underwater = source.terrain().holds_water() && start_height < 0.0;
+    let target_underwater = destination.terrain().holds_water() && end_height < 0.0;
+    let both_worlds = source.terrain().holds_water() && start_ground == -1.0;
+    let target_both_worlds = destination.terrain().holds_water() && end_ground == -1.0;
     let mut report = BattleTerrainLos {
-        target_woods: visible_destination.terrain.woods_density(),
+        target_woods: visible_destination.terrain().woods_density(),
         ..BattleTerrainLos::default()
     };
     if start_height > 10.0 && end_height > 10.0 {
@@ -105,8 +105,8 @@ fn terrain_los_with_endpoint(
         let sight_height = start_height + (end_height - start_height) * index as f64 / steps as f64;
         let intervening = index < steps;
         if underwater {
-            if !ground.terrain.holds_water()
-                || (ground.terrain != Terrain::Bridge && height >= sight_height)
+            if !ground.terrain().holds_water()
+                || (ground.terrain() != Terrain::Bridge && height >= sight_height)
                 || (!target_both_worlds && sight_height > 0.0)
             {
                 report.blocked = true;
@@ -117,20 +117,20 @@ fn terrain_los_with_endpoint(
             continue;
         }
         if sight_height < height + 2.0 {
-            if matches!(ground.terrain, Terrain::Water | Terrain::Ice) {
+            if matches!(ground.terrain(), Terrain::Water | Terrain::Ice) {
                 if sight_height < 0.0
-                    && (ground.terrain == Terrain::Ice
-                        || (ground.terrain == Terrain::Water && !both_worlds))
+                    && (ground.terrain() == Terrain::Ice
+                        || (ground.terrain() == Terrain::Water && !both_worlds))
                 {
                     report.blocked = true;
                     return Ok(report);
                 }
-                if ground.terrain == Terrain::Water && sight_height < 0.0 {
+                if ground.terrain() == Terrain::Water && sight_height < 0.0 {
                     submerged += 1;
                 }
                 report.water = report.water.saturating_add(1).min(7);
             }
-            match tile.terrain {
+            match tile.terrain() {
                 terrain if terrain.is_woods() && intervening => {
                     report.woods = (report.woods + terrain.woods_density()).min(15);
                 }
@@ -140,7 +140,7 @@ fn terrain_los_with_endpoint(
             }
         }
         if height >= sight_height
-            && ground.terrain != Terrain::Bridge
+            && ground.terrain() != Terrain::Bridge
             && !(ice_surface && !intervening)
         {
             report.blocked = true;
@@ -151,7 +151,7 @@ fn terrain_los_with_endpoint(
         let preceding = base(cells[cells.len() - 2])?;
         report.partial_cover = (end_ground >= start_ground
             && f64::from(preceding.surface_height()) == end_ground + 1.0)
-            || (destination.terrain == Terrain::Water && end_ground == -1.0);
+            || (destination.terrain() == Terrain::Water && end_ground == -1.0);
     }
     report.fire |= submerged > 6;
     Ok(report)
@@ -309,7 +309,7 @@ pub(super) fn unit_terrain_geometry(
         (observer.height, target.height),
     )?;
     let tile = map.base_hex(i64::from(target.position.x), i64::from(target.position.y))?;
-    if target.level > i32::from(tile.elevation) + 2 {
+    if target.level > i32::from(tile.elevation()) + 2 {
         report.target_woods = 0;
     }
     Ok((report, range))
@@ -344,7 +344,7 @@ pub(super) fn unit_hex_los(
             distance,
         ));
     }
-    let target_eye = if tile.terrain == Terrain::Ice && altitude + unit.eye >= 0.0 {
+    let target_eye = if tile.terrain() == Terrain::Ice && altitude + unit.eye >= 0.0 {
         0.0
     } else {
         0.1
@@ -355,7 +355,7 @@ pub(super) fn unit_hex_los(
         target,
         (unit.eye, target_eye),
         (Some(altitude), Some(target_height)),
-        tile.terrain == Terrain::Ice && altitude + unit.eye >= 0.0,
+        tile.terrain() == Terrain::Ice && altitude + unit.eye >= 0.0,
     )?;
     Ok((report, distance))
 }
@@ -448,7 +448,7 @@ mod tests {
             terrain: Some(Arc::new(
                 tiles
                     .iter()
-                    .flat_map(|&(terrain, elevation)| [BattleHex { terrain, elevation }; 3])
+                    .flat_map(|&(terrain, elevation)| [BattleHex::new(terrain, elevation); 3])
                     .collect(),
             )),
         }

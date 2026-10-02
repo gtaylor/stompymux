@@ -110,11 +110,8 @@ async fn successful_water_landings_use_chassis_support_and_waterproofing() {
             prepare(&mut world, unit, -8, safe, 12);
             let map = world.objects[&unit].location.unwrap();
             let mut state = serde_json::to_value(&world.btech).unwrap();
-            state["maps"][map.0.to_string()]["terrain"][11] = serde_json::to_value(BattleHex {
-                terrain: Terrain::Water,
-                elevation: 3,
-            })
-            .unwrap();
+            state["maps"][map.0.to_string()]["terrain"][11] =
+                serde_json::to_value(BattleHex::new(Terrain::Water, 3)).unwrap();
             world.btech = serde_json::from_value(state).unwrap();
             let before = saved_unit(&world, unit);
             let notices = advance_battle_jumps(&mut world, BattleMovementRules::STANDARD).unwrap();

@@ -5288,16 +5288,10 @@ async fn range_reports_mask_dark_terrain_but_preserve_live_target_elevation() {
     for terrain in [Terrain::Water, Terrain::Ice, Terrain::Grassland] {
         for dark in [false, true] {
             let mut state = baseline.clone();
-            state["maps"][map.0.to_string()]["terrain"][7] = serde_json::to_value(BattleHex {
-                terrain,
-                elevation: 5,
-            })
-            .unwrap();
-            state["maps"][map.0.to_string()]["terrain"][10] = serde_json::to_value(BattleHex {
-                terrain: Terrain::Grassland,
-                elevation: 5,
-            })
-            .unwrap();
+            state["maps"][map.0.to_string()]["terrain"][7] =
+                serde_json::to_value(BattleHex::new(terrain, 5)).unwrap();
+            state["maps"][map.0.to_string()]["terrain"][10] =
+                serde_json::to_value(BattleHex::new(Terrain::Grassland, 5)).unwrap();
             state["maps"][map.0.to_string()]["flags"] =
                 serde_json::json!(if dark { 32 } else { 0 });
             shared.borrow_mut().btech = serde_json::from_value(state).unwrap();
@@ -5467,11 +5461,8 @@ async fn vector_reports_combine_signed_heights_bearings_and_all_coordinate_forms
     );
     let mut state = serde_json::to_value(&before).unwrap();
     state["maps"][map.0.to_string()]["flags"] = serde_json::json!(32);
-    state["maps"][map.0.to_string()]["terrain"][7] = serde_json::to_value(BattleHex {
-        terrain: Terrain::Ice,
-        elevation: 5,
-    })
-    .unwrap();
+    state["maps"][map.0.to_string()]["terrain"][7] =
+        serde_json::to_value(BattleHex::new(Terrain::Ice, 5)).unwrap();
     shared.borrow_mut().btech = serde_json::from_value(state).unwrap();
     let vector = battle_vector_report(&scripts.world(), source, ObjectId(1), "1 2").unwrap();
     assert_eq!(vector.vertical_bearing, -45);

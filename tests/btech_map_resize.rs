@@ -124,10 +124,7 @@ async fn reshape_persists_grid_and_removes_map_objects() {
     assert!(saved.btech.maps()[&map].landing_exclusions().is_empty());
     assert_eq!(
         saved.btech.maps()[&map].base_hex(1, 1).unwrap(),
-        BattleHex {
-            terrain: Terrain::Grassland,
-            elevation: 0
-        }
+        BattleHex::new(Terrain::Grassland, 0)
     );
     persistence::save(&config.database(), &saved).await.unwrap();
     assert_eq!(
@@ -204,7 +201,7 @@ async fn resize_clears_effects_and_building_routes() {
     for (x, terrain, elevation) in [(0, Terrain::Fire, 2), (1, Terrain::Smoke, 1)] {
         assert_eq!(
             field.base_hex(x, 0).unwrap(),
-            BattleHex { terrain, elevation }
+            BattleHex::new(terrain, elevation)
         );
         assert!(
             field

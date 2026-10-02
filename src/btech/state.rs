@@ -114,7 +114,7 @@ impl StoredBattleMap {
     pub fn hex(&self, x: i64, y: i64) -> Result<BattleHex> {
         let mut hex = self.stored_hex(x, y)?;
         if let Some(effect) = self.decorations.get(&((y * self.width + x) as u32)) {
-            hex.terrain = effect.kind.terrain();
+            hex = hex.with_terrain(effect.kind.terrain());
         }
         Ok(hex)
     }
@@ -122,7 +122,7 @@ impl StoredBattleMap {
     /// Inspect the underlying tile without a transient fire or smoke marker.
     pub fn base_hex(&self, x: i64, y: i64) -> Result<BattleHex> {
         let mut hex = self.stored_hex(x, y)?;
-        if matches!(hex.terrain, super::Terrain::Fire | super::Terrain::Smoke)
+        if matches!(hex.terrain(), super::Terrain::Fire | super::Terrain::Smoke)
             && let Some(record) = self
                 .static_decorations
                 .iter()
@@ -131,7 +131,7 @@ impl StoredBattleMap {
                     i64::from(record.coordinate.x) == x && i64::from(record.coordinate.y) == y
                 })
         {
-            hex.terrain = record.restored_terrain;
+            hex = hex.with_terrain(record.restored_terrain);
         }
         Ok(hex)
     }
@@ -306,7 +306,7 @@ impl StoredBattleMap {
             "Duplicate decoration creation order"
         );
         ensure!(
-            terrain.iter().all(|hex| hex.elevation <= 9),
+            terrain.iter().all(|hex| hex.elevation() <= 9),
             "Invalid map elevation"
         );
         ensure!(
@@ -652,7 +652,7 @@ impl BtechState {
                 let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
                 ensure!(
                     !vehicle.under_bridge()
-                        || (tile.terrain == super::Terrain::Bridge && tile.elevation >= 2),
+                        || (tile.terrain() == super::Terrain::Bridge && tile.elevation() >= 2),
                     "Vehicle under-bridge state requires a clear bridge span"
                 );
                 ensure!(

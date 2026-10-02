@@ -8,7 +8,7 @@ pub(super) fn surface(tile: BattleHex, elevation: i32) -> i16 {
     if i32::from(upper) <= elevation {
         return upper;
     }
-    if tile.terrain == Terrain::Bridge {
+    if tile.terrain() == Terrain::Bridge {
         return -1;
     }
     tile.surface_height()
@@ -55,16 +55,7 @@ mod tests {
             (Terrain::Bridge, 2, -1),
             (Terrain::Bridge, -2, -1),
         ] {
-            assert_eq!(
-                surface(
-                    BattleHex {
-                        terrain,
-                        elevation: 3
-                    },
-                    altitude
-                ),
-                expected
-            );
+            assert_eq!(surface(BattleHex::new(terrain, 3), altitude), expected);
         }
     }
 }

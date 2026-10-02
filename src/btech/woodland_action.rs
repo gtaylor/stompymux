@@ -67,7 +67,7 @@ pub fn resolve_woodland_attack(
     let mut candidate = world.clone();
     let dice = super::dice::unit_dice_mut(&mut candidate, shooter)?;
     let effect =
-        super::resolve_woodland_effect(tile.terrain, weapon, ammunition, damage, intent, dice);
+        super::resolve_woodland_effect(tile.terrain(), weapon, ammunition, damage, intent, dice);
     let verb = match effect {
         BattleWoodlandEffect::None => None,
         BattleWoodlandEffect::Clear { terrain } => {

@@ -97,10 +97,7 @@ async fn ice_fracture_drops_neighbors_before_trigger_and_replays_after_restart()
     assert!(report.falls.iter().all(|(_, fall)| fall.damage == 6));
     assert_eq!(
         world.btech.maps()[&map].hex(1, 1).unwrap(),
-        BattleHex {
-            terrain: Terrain::Water,
-            elevation: 3
-        }
+        BattleHex::new(Terrain::Water, 3)
     );
     for id in units {
         assert_eq!(
@@ -286,7 +283,7 @@ async fn jump_onto_ice_uses_surface_height_and_commits_seeded_landing_after_rest
             }
         );
         assert_eq!(
-            world.btech.maps()[&map].hex(1, 0).unwrap().terrain,
+            world.btech.maps()[&map].hex(1, 0).unwrap().terrain(),
             if fracture {
                 Terrain::Water
             } else {
@@ -324,7 +321,7 @@ async fn fall_onto_ice_reports_nested_fracture_and_uses_resulting_water_damage()
             assert_eq!(ice.falls.last().unwrap().1.damage, 6);
         }
         assert_eq!(
-            world.btech.maps()[&map].hex(1, 1).unwrap().terrain,
+            world.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
             if fracture {
                 Terrain::Water
             } else {
@@ -464,20 +461,8 @@ async fn bridge_collapse_selects_replacement_depth_and_preserves_other_altitudes
             break_battle_bridge(&mut restarted, map, coordinate, rules()).unwrap()
         );
         assert_eq!(world.btech, restarted.btech);
-        assert_eq!(
-            report.before,
-            BattleHex {
-                terrain: Terrain::Bridge,
-                elevation: height
-            }
-        );
-        assert_eq!(
-            report.after,
-            BattleHex {
-                terrain: Terrain::Water,
-                elevation: 1
-            }
-        );
+        assert_eq!(report.before, BattleHex::new(Terrain::Bridge, height));
+        assert_eq!(report.after, BattleHex::new(Terrain::Water, 1));
         assert_eq!(report.fall_levels, 2);
         assert_eq!(
             report.falls.iter().map(|(id, _)| *id).collect::<Vec<_>>(),
@@ -750,7 +735,10 @@ async fn ice_surface_contacts_and_fire_match_native_lua_after_restart() {
         );
         assert_eq!(native.world().btech, lua.world().btech);
         assert_eq!(
-            native.world().btech.maps()[&map].hex(1, 1).unwrap().terrain,
+            native.world().btech.maps()[&map]
+                .hex(1, 1)
+                .unwrap()
+                .terrain(),
             Terrain::Ice
         );
         native.world().validate(&config).unwrap();
@@ -847,7 +835,7 @@ async fn ice_standing_native_lua_and_restart_cover_success_failure_and_fracture(
         assert_eq!(native.world().btech, lua.world().btech);
         let mut expected = native.world().clone();
         assert_eq!(
-            expected.btech.maps()[&map].hex(1, 1).unwrap().terrain,
+            expected.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
             if fracture {
                 Terrain::Water
             } else {
@@ -1164,7 +1152,7 @@ async fn bridge_falls_choose_deck_or_lower_surface_at_the_two_level_boundary() {
             Some(final_height)
         );
         assert_eq!(
-            world.btech.maps()[&map].hex(1, 1).unwrap().terrain,
+            world.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
             Terrain::Bridge
         );
         world.validate(&config).unwrap();
@@ -3007,7 +2995,7 @@ async fn ground_ice_entry_fractures_neighbors_and_replays_without_repeated_check
                 );
                 assert_eq!(world.btech, loaded.btech);
                 assert_eq!(
-                    world.btech.maps()[&map].hex(1, 2).unwrap().terrain,
+                    world.btech.maps()[&map].hex(1, 2).unwrap().terrain(),
                     if fracture {
                         Terrain::Water
                     } else {
@@ -3096,7 +3084,7 @@ async fn submerged_ice_routes_use_bottom_depth_and_depth_one_surface_transition(
         );
         assert_eq!(world.btech, loaded.btech);
         assert_eq!(
-            world.btech.maps()[&map].hex(1, 2).unwrap().terrain,
+            world.btech.maps()[&map].hex(1, 2).unwrap().terrain(),
             new_terrain
         );
         assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(height));
@@ -3152,7 +3140,7 @@ async fn failed_under_ice_control_keeps_the_bottom_and_allows_standing() {
     );
     assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(-3));
     assert_eq!(
-        world.btech.maps()[&map].hex(1, 2).unwrap().terrain,
+        world.btech.maps()[&map].hex(1, 2).unwrap().terrain(),
         Terrain::Ice
     );
     let seed = (0..=255)
@@ -3315,7 +3303,7 @@ async fn descending_jump_breaks_previous_ice_before_finishing_horizontal_entry()
             .any(|notice| notice.text == "You break the ice!")
     );
     assert_eq!(
-        world.btech.maps()[&map].hex(1, 2).unwrap().terrain,
+        world.btech.maps()[&map].hex(1, 2).unwrap().terrain(),
         Terrain::Water
     );
     for unit in units {
@@ -3386,7 +3374,7 @@ async fn ascending_saved_flight_breaks_ice_without_falling_or_spending_its_dice(
     assert_eq!(observed.len(), 1);
     assert!(observed[0].text.ends_with("goes swimming!"));
     assert_eq!(
-        world.btech.maps()[&map].hex(1, 3).unwrap().terrain,
+        world.btech.maps()[&map].hex(1, 3).unwrap().terrain(),
         Terrain::Water
     );
     assert!(world.btech.constructed_units()[&id].flight().is_some());
@@ -3440,11 +3428,8 @@ async fn airborne_under_ice_fixture() -> (tempfile::TempDir, Config, World, Obje
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["maps"][map.0.to_string()]["gravity"] = serde_json::json!(100);
     state["maps"][map.0.to_string()]["movement_modifier"] = serde_json::json!(20);
-    state["maps"][map.0.to_string()]["terrain"][10] = serde_json::to_value(BattleHex {
-        terrain: Terrain::Ice,
-        elevation: 5,
-    })
-    .unwrap();
+    state["maps"][map.0.to_string()]["terrain"][10] =
+        serde_json::to_value(BattleHex::new(Terrain::Ice, 5)).unwrap();
     state["constructed"][units[1].0.to_string()]["position"]["y"] = serde_json::json!(3);
     state["constructed"][units[1].0.to_string()]["motion"]["point"] =
         serde_json::to_value(BattleHexCoordinate { x: 1, y: 3 }.center()).unwrap();
@@ -3507,7 +3492,7 @@ async fn landing_in_existing_ice_precedes_the_final_upward_breakout() {
             usize::from(!fracture)
         );
         assert_eq!(
-            world.btech.maps()[&map].hex(1, 3).unwrap().terrain,
+            world.btech.maps()[&map].hex(1, 3).unwrap().terrain(),
             Terrain::Water,
             "fracture={fracture}; before={:?}; after={:?}; notices={notices:?}",
             before.btech.maps()[&map].decoration(BattleHexCoordinate { x: 1, y: 3 }),
@@ -3794,7 +3779,10 @@ async fn live_fire_and_smoke_tiles_allow_ground_crossings_without_control_dice()
         assert_eq!(unit.position().unwrap().y, 2);
         assert_eq!(unit.motion().unwrap().speed, -21.5);
         assert_eq!(before["dice"], serde_json::to_value(unit).unwrap()["dice"]);
-        assert_eq!(world.btech.maps()[&map].hex(1, 2).unwrap().terrain, terrain);
+        assert_eq!(
+            world.btech.maps()[&map].hex(1, 2).unwrap().terrain(),
+            terrain
+        );
         world.validate(&config).unwrap();
     }
 }
@@ -4046,7 +4034,7 @@ async fn character_surface_actions_evacuate_and_roll_back_terrain() {
             && (message.source().starts_with("Modified Pilot Skill:")
                 || message.source() == "You make a piloting skill roll!")));
 
-        assert_eq!(report.after.terrain, Terrain::Water);
+        assert_eq!(report.after.terrain(), Terrain::Water);
         assert_eq!(
             scripts.world().objects[&ObjectId(2)].location,
             Some(afterlife)
@@ -4132,7 +4120,7 @@ async fn character_fall_fractures_ice_with_nested_evacuation() {
         scripts.world().btech.maps()[&map]
             .hex(1, 1)
             .unwrap()
-            .terrain,
+            .terrain(),
         Terrain::Water
     );
     assert_eq!(
@@ -4277,7 +4265,7 @@ async fn upward_character_breakout_preserves_breaker_and_rolls_back() {
             *who != ObjectId(2) && message.source().starts_with("Modified Pilot Skill:")
         }));
         assert_eq!(scripts.world().btech, replay.world().btech);
-        assert_eq!(report.after.terrain, Terrain::Water);
+        assert_eq!(report.after.terrain(), Terrain::Water);
         assert_eq!(
             scripts.world().objects[&ObjectId(2)].location,
             Some(afterlife)
@@ -4379,7 +4367,7 @@ async fn airborne_ice_action_evacuates_neighbors_and_replays() {
             scripts.world().btech.maps()[&map]
                 .hex(1, 3)
                 .unwrap()
-                .terrain,
+                .terrain(),
             Terrain::Water
         );
         if !fracture {
@@ -4539,7 +4527,7 @@ async fn character_interrupted_jump_finishes_water_entry_atomically() {
     assert_eq!(unit.posture(), BattlePosture::Prone);
     assert_eq!(battle_unit_elevation(&candidate, id).unwrap(), Some(-3));
     assert_eq!(
-        candidate.btech.maps()[&map].hex(1, 2).unwrap().terrain,
+        candidate.btech.maps()[&map].hex(1, 2).unwrap().terrain(),
         Terrain::Water
     );
     assert!(candidate.btech.constructed_units()[&units[1]].is_destroyed());
@@ -4675,13 +4663,7 @@ async fn woodland_clearing_on_occupied_map_is_durable_and_rejects_stale_results(
     let report =
         apply_woodland_clearing(&mut world, map, coordinate, before, Terrain::LightForest).unwrap();
     assert_eq!(report.before, before);
-    assert_eq!(
-        report.after,
-        BattleHex {
-            terrain: Terrain::LightForest,
-            elevation: 2
-        }
-    );
+    assert_eq!(report.after, BattleHex::new(Terrain::LightForest, 2));
     assert!(
         apply_woodland_clearing(&mut world, map, coordinate, before, Terrain::LightForest).is_err()
     );
@@ -4699,7 +4681,7 @@ async fn woodland_clearing_on_occupied_map_is_durable_and_rejects_stale_results(
     );
     let report =
         apply_woodland_clearing(&mut world, map, coordinate, report.after, Terrain::Rough).unwrap();
-    assert_eq!(report.after.elevation, 2);
+    assert_eq!(report.after.elevation(), 2);
     persistence::save(&config.database(), &world).await.unwrap();
     assert_eq!(
         persistence::load(&config.database()).await.unwrap().btech,
@@ -4742,13 +4724,10 @@ async fn map_decorations_preserve_base_terrain_checkpoints_and_saved_state() {
     set_map_decoration(&mut world, map, coordinate, Some(fire)).unwrap();
     assert_eq!(
         world.btech.maps()[&map].hex(1, 1).unwrap(),
-        BattleHex {
-            terrain: Terrain::Fire,
-            elevation: 2
-        }
+        BattleHex::new(Terrain::Fire, 2)
     );
     assert_eq!(
-        world.btech.maps()[&map].base_hex(1, 1).unwrap().terrain,
+        world.btech.maps()[&map].base_hex(1, 1).unwrap().terrain(),
         Terrain::HeavyForest
     );
     assert_eq!(
@@ -4756,7 +4735,7 @@ async fn map_decorations_preserve_base_terrain_checkpoints_and_saved_state() {
         Some(fire)
     );
     assert_eq!(
-        original.btech.maps()[&map].hex(1, 1).unwrap().terrain,
+        original.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
         Terrain::HeavyForest
     );
     for id in units {
@@ -4797,11 +4776,11 @@ async fn map_decorations_preserve_base_terrain_checkpoints_and_saved_state() {
     let smoke = BattleDecoration::new(BattleDecorationKind::Smoke, 90, None);
     set_map_decoration(&mut world, map, coordinate, Some(smoke)).unwrap();
     assert_eq!(
-        world.btech.maps()[&map].hex(1, 1).unwrap().terrain,
+        world.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
         Terrain::Smoke
     );
     assert_eq!(
-        world.btech.maps()[&map].base_hex(1, 1).unwrap().terrain,
+        world.btech.maps()[&map].base_hex(1, 1).unwrap().terrain(),
         Terrain::HeavyForest
     );
     persistence::save(&config.database(), &world).await.unwrap();
@@ -4853,17 +4832,14 @@ async fn smoke_expiration_restores_terrain_and_resumes_only_saved_seconds() {
     advance_map_smoke(&mut world);
     assert!(map_smoke_pending(&world));
     assert_eq!(
-        world.btech.maps()[&map].hex(1, 1).unwrap().terrain,
+        world.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
         Terrain::Smoke
     );
     advance_map_smoke(&mut world);
     assert!(!map_smoke_pending(&world));
     assert_eq!(
         world.btech.maps()[&map].hex(1, 1).unwrap(),
-        BattleHex {
-            terrain: Terrain::HeavyForest,
-            elevation: 2
-        }
+        BattleHex::new(Terrain::HeavyForest, 2)
     );
     assert_eq!(
         world.btech.maps()[&map]
@@ -4927,8 +4903,11 @@ async fn calm_fire_spreads_smoke_then_burns_out_with_saved_replay() {
     assert!(!map_fire_pending(&world));
     assert!(map_smoke_pending(&world));
     let burnt = world.btech.maps()[&map].hex(1, 1).unwrap();
-    assert!(matches!(burnt.terrain, Terrain::Grassland | Terrain::Rough));
-    assert_eq!(burnt.elevation, 2);
+    assert!(matches!(
+        burnt.terrain(),
+        Terrain::Grassland | Terrain::Rough
+    ));
+    assert_eq!(burnt.elevation(), 2);
     for x in 0..3 {
         let smoke = world.btech.maps()[&map]
             .decoration(BattleHexCoordinate { x, y: 0 })
@@ -4945,7 +4924,7 @@ async fn calm_fire_spreads_smoke_then_burns_out_with_saved_replay() {
         );
     }
     assert_eq!(
-        original.btech.maps()[&map].hex(1, 1).unwrap().terrain,
+        original.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
         Terrain::Fire
     );
     persistence::save(&config.database(), &world).await.unwrap();
@@ -4958,7 +4937,7 @@ async fn calm_fire_spreads_smoke_then_burns_out_with_saved_replay() {
     }
     assert!(!map_smoke_pending(&world));
     assert_eq!(
-        world.btech.maps()[&map].hex(1, 0).unwrap().terrain,
+        world.btech.maps()[&map].hex(1, 0).unwrap().terrain(),
         Terrain::HeavyForest
     );
 }
@@ -5037,7 +5016,7 @@ async fn smoke_over_water_preserves_altitude_cooling_los_range_and_flooding() {
     )
     .unwrap();
     assert_eq!(
-        world.btech.maps()[&map].hex(1, 1).unwrap().terrain,
+        world.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
         Terrain::Smoke
     );
     assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(-3));
@@ -5101,14 +5080,14 @@ async fn smoke_keeps_ice_surface_height_and_bridge_fracture_available() {
         } else {
             break_battle_bridge(&mut world, map, coordinate, rules()).unwrap()
         };
-        assert_eq!(report.before.terrain, terrain);
-        assert_eq!(report.after.terrain, Terrain::Water);
+        assert_eq!(report.before.terrain(), terrain);
+        assert_eq!(report.after.terrain(), Terrain::Water);
         assert_eq!(
             world.btech.maps()[&map].base_hex(1, 1).unwrap(),
             report.after
         );
         assert_eq!(
-            world.btech.maps()[&map].hex(1, 1).unwrap().terrain,
+            world.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
             Terrain::Smoke
         );
         persistence::save(&config.database(), &world).await.unwrap();
@@ -5227,7 +5206,7 @@ async fn woodland_impacts_commit_dice_terrain_and_notices_with_restart_replay() 
             Terrain::LightForest
         };
         assert_eq!(
-            world.btech.maps()[&map].hex(1, 0).unwrap().terrain,
+            world.btech.maps()[&map].hex(1, 0).unwrap().terrain(),
             expected
         );
         let text = match intent {
@@ -5242,7 +5221,7 @@ async fn woodland_impacts_commit_dice_terrain_and_notices_with_restart_replay() 
         expected_unit["dice"] = actual_unit["dice"].clone();
         assert_eq!(expected_unit, actual_unit);
         assert_eq!(
-            original.btech.maps()[&map].hex(1, 0).unwrap().terrain,
+            original.btech.maps()[&map].hex(1, 0).unwrap().terrain(),
             Terrain::HeavyForest
         );
         let before_invalid = world.btech.clone();
@@ -5607,7 +5586,7 @@ async fn minefields_persist_all_kinds_and_survive_woodland_clearing() {
     }
     world = cleared.unwrap();
     assert_eq!(
-        world.btech.maps()[&map].base_hex(1, 1).unwrap().terrain,
+        world.btech.maps()[&map].base_hex(1, 1).unwrap().terrain(),
         Terrain::LightForest
     );
     assert_eq!(
@@ -6089,11 +6068,11 @@ async fn inferno_water_extinction_and_fall_publish_saved_steam() {
             120
         );
         assert_eq!(
-            world.btech.maps()[&map].hex(1, 1).unwrap().terrain,
+            world.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
             Terrain::Smoke
         );
         assert_eq!(
-            world.btech.maps()[&map].base_hex(1, 1).unwrap().terrain,
+            world.btech.maps()[&map].base_hex(1, 1).unwrap().terrain(),
             Terrain::Water
         );
         assert!(advance_inferno_burns(&mut world).is_empty());
@@ -7041,7 +7020,7 @@ async fn artillery_world_smoke_and_mines() {
                     world.btech.maps()[&map]
                         .base_hex(i64::from(cell.position.x), i64::from(cell.position.y))
                         .unwrap()
-                        .terrain,
+                        .terrain(),
                     Terrain::Grassland
                 );
             }

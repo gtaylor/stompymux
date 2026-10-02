@@ -34,8 +34,8 @@ fn eligible(
                 .ok()
         })
         .filter(|tile| match change {
-            BattleIceChange::Grow => matches!(tile.terrain, Terrain::Water | Terrain::Bridge),
-            BattleIceChange::Melt => tile.terrain == Terrain::Ice,
+            BattleIceChange::Grow => matches!(tile.terrain(), Terrain::Water | Terrain::Bridge),
+            BattleIceChange::Melt => tile.terrain() == Terrain::Ice,
         })
         .count() as u8;
     Ok(match change {
@@ -97,7 +97,7 @@ pub fn change_map_ice_action(
                         BattleIceChange::Grow => Terrain::Water,
                         BattleIceChange::Melt => Terrain::Ice,
                     };
-                    if record.base_hex(x, y)?.terrain != expected {
+                    if record.base_hex(x, y)?.terrain() != expected {
                         continue;
                     }
                     let mut dice = live
@@ -119,10 +119,7 @@ pub fn change_map_ice_action(
                             &mut scripts.world_mut(),
                             map,
                             coordinate,
-                            super::BattleHex {
-                                terrain: Terrain::Ice,
-                                ..original.base_hex(x, y)?
-                            },
+                            (original.base_hex(x, y)?).with_terrain(Terrain::Ice),
                         )?;
                     }
                     BattleIceChange::Melt => {

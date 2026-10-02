@@ -252,7 +252,7 @@ async fn vehicle_shutdown_ice_cascade_keeps_each_pilots_feedback_private() {
         native.world().btech.maps()[&map]
             .base_hex(0, 0)
             .unwrap()
-            .terrain,
+            .terrain(),
         Terrain::Water
     );
     let output = native.drain_outbox();

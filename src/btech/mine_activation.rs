@@ -171,12 +171,12 @@ pub fn mine_activations(
         return Ok(Vec::new());
     }
     let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
-    let surface = if tile.terrain == Terrain::Ice {
+    let surface = if tile.terrain() == Terrain::Ice {
         0
-    } else if tile.terrain == Terrain::Water {
-        -i32::from(tile.elevation)
+    } else if tile.terrain() == Terrain::Water {
+        -i32::from(tile.elevation())
     } else {
-        i32::from(tile.elevation)
+        i32::from(tile.elevation())
     };
     let (elevation, mass) = if let Some(vehicle) = world.btech.vehicles().get(&id) {
         (vehicle.elevation_level(tile), vehicle.effective_mass()?)

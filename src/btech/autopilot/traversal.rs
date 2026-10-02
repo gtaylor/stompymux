@@ -136,7 +136,7 @@ fn assess_with_occupancy(
         };
     };
 
-    let Some(mut cost) = terrain_cost(to_tile.terrain, unit_kind) else {
+    let Some(mut cost) = terrain_cost(to_tile.terrain(), unit_kind) else {
         return TraversalAssessment::blocked(TraversalReason::ImpassableTerrain);
     };
     let (from_height, to_height) = support_heights(world, unit_id, unit_kind, from_tile, to_tile);
@@ -309,21 +309,21 @@ fn support_heights(
         }
     };
     let mut to_height = i32::from(to.standing_height());
-    if to.terrain == Terrain::Ice && from_height < 0 {
+    if to.terrain() == Terrain::Ice && from_height < 0 {
         to_height = i32::from(to.surface_height());
     }
-    if to.terrain == Terrain::Bridge && from_height < i32::from(to.standing_height()) - 2 {
+    if to.terrain() == Terrain::Bridge && from_height < i32::from(to.standing_height()) - 2 {
         to_height = -1;
     }
-    if kind == GroundUnitKind::Hover && matches!(to.terrain, Terrain::Water | Terrain::Ice) {
+    if kind == GroundUnitKind::Hover && matches!(to.terrain(), Terrain::Water | Terrain::Ice) {
         to_height = 0;
     }
     if kind == GroundUnitKind::Hover
-        && to.terrain == Terrain::Bridge
-        && to.elevation >= 2
+        && to.terrain() == Terrain::Bridge
+        && to.elevation() >= 2
         && from_height == 0
-        && (from.terrain == Terrain::Water
-            || from.terrain == Terrain::Ice
+        && (from.terrain() == Terrain::Water
+            || from.terrain() == Terrain::Ice
             || world.btech.vehicles()[&id].under_bridge())
     {
         to_height = 0;
@@ -337,15 +337,15 @@ fn transition_reason(
     to: BattleHex,
     to_height: i32,
 ) -> (TraversalReason, u32) {
-    if matches!(to.terrain, Terrain::Fire | Terrain::Smoke) {
+    if matches!(to.terrain(), Terrain::Fire | Terrain::Smoke) {
         return (TraversalReason::KnownHazard, 8);
     }
-    if to.terrain == Terrain::Ice {
+    if to.terrain() == Terrain::Ice {
         return (TraversalReason::IceRisk, 8);
     }
-    if to.terrain == Terrain::Bridge {
+    if to.terrain() == Terrain::Bridge {
         let under_bridge =
-            to_height < 0 || (kind == GroundUnitKind::Hover && from.terrain == Terrain::Bridge);
+            to_height < 0 || (kind == GroundUnitKind::Hover && from.terrain() == Terrain::Bridge);
         return (
             if under_bridge {
                 TraversalReason::BridgeRisk
@@ -355,10 +355,10 @@ fn transition_reason(
             if under_bridge { 8 } else { 1 },
         );
     }
-    if to.terrain == Terrain::Water {
+    if to.terrain() == Terrain::Water {
         return (TraversalReason::WaterRisk, 12);
     }
-    if matches!(from.terrain, Terrain::Ice | Terrain::Water)
+    if matches!(from.terrain(), Terrain::Ice | Terrain::Water)
         && matches!(kind, GroundUnitKind::Tracked | GroundUnitKind::Wheeled)
     {
         return (TraversalReason::WaterRisk, 4);
@@ -565,28 +565,16 @@ mod tests {
     fn transition_risks_are_explicit_and_do_not_query_mines() {
         let (reason, _) = transition_reason(
             GroundUnitKind::Tracked,
-            BattleHex {
-                terrain: Terrain::Grassland,
-                elevation: 0,
-            },
-            BattleHex {
-                terrain: Terrain::Water,
-                elevation: 1,
-            },
+            BattleHex::new(Terrain::Grassland, 0),
+            BattleHex::new(Terrain::Water, 1),
             -1,
         );
         assert_eq!(reason, TraversalReason::WaterRisk);
 
         let (reason, _) = transition_reason(
             GroundUnitKind::Hover,
-            BattleHex {
-                terrain: Terrain::Water,
-                elevation: 1,
-            },
-            BattleHex {
-                terrain: Terrain::Ice,
-                elevation: 1,
-            },
+            BattleHex::new(Terrain::Water, 1),
+            BattleHex::new(Terrain::Ice, 1),
             0,
         );
         assert_eq!(reason, TraversalReason::IceRisk);
@@ -676,18 +664,9 @@ mod tests {
 
     #[test]
     fn support_height_respects_ice_and_bridge_surfaces() {
-        let source = BattleHex {
-            terrain: Terrain::Water,
-            elevation: 2,
-        };
-        let ice = BattleHex {
-            terrain: Terrain::Ice,
-            elevation: 2,
-        };
-        let bridge = BattleHex {
-            terrain: Terrain::Bridge,
-            elevation: 4,
-        };
+        let source = BattleHex::new(Terrain::Water, 2);
+        let ice = BattleHex::new(Terrain::Ice, 2);
+        let bridge = BattleHex::new(Terrain::Bridge, 4);
         assert_eq!(ice.surface_height(), -2);
         assert_eq!(bridge.standing_height(), 4);
         // The pure map values establish the same surfaces used by the

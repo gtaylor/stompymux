@@ -101,10 +101,11 @@ pub fn predict_artillery_target(
                 }
             };
             let floodable = mech.is_some_and(|unit| {
-                tile.terrain == Terrain::Water
-                    && tile.elevation > 0
+                tile.terrain() == Terrain::Water
+                    && tile.elevation() > 0
                     && unit.sections().iter().any(|(section, state)| {
-                        let exposed = tile.elevation > 1 || unit.chassis().legs().contains(section);
+                        let exposed =
+                            tile.elevation() > 1 || unit.chassis().legs().contains(section);
                         exposed
                             && state.internal > 0
                             && (state.armor == 0
@@ -112,8 +113,8 @@ pub fn predict_artillery_target(
                                     && unit.definition().sections[section].rear > 0))
                     })
             });
-            stopped = (tile.terrain == Terrain::HeavyForest && vehicle.is_some())
-                || (tile.terrain == Terrain::Water
+            stopped = (tile.terrain() == Terrain::HeavyForest && vehicle.is_some())
+                || (tile.terrain() == Terrain::Water
                     && matches!(
                         movement,
                         Some(BattleVehicleMovement::Tracked | BattleVehicleMovement::Wheeled)

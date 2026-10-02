@@ -139,7 +139,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         Ok(shared.borrow().btech.maps()[&map]
             .hex(i64::from(point.x), i64::from(point.y))
             .map_err(mlua::Error::external)?
-            .elevation)
+            .elevation())
     })?;
     contract::bind(
         lua,
@@ -159,7 +159,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             &shared.borrow().btech.maps()[&map]
                 .hex(i64::from(point.x), i64::from(point.y))
                 .map_err(mlua::Error::external)?
-                .terrain,
+                .terrain(),
         )
     })?;
     contract::bind(
@@ -305,7 +305,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     .map_err(mlua::Error::external)?;
                 Ok(battle_map_hex_point(
                     hex,
-                    z.unwrap_or(f64::from(terrain.elevation)),
+                    z.unwrap_or(f64::from(terrain.elevation())),
                 ))
             } else {
                 let id = unit_id(lua, &shared, value, argument, "range endpoint")?;

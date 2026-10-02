@@ -693,11 +693,11 @@ fn alter_benchmark_terrain(harness: &mut HeartbeatHarness, map_id: crate::Object
         for y in (0..MAP_HEIGHT).step_by(3) {
             let index = usize::from(y) * usize::from(MAP_WIDTH) + 30;
             if let Some(hex) = terrain.get_mut(index) {
-                hex.terrain = if blocked {
+                *hex = hex.with_terrain(if blocked {
                     crate::Terrain::Wall
                 } else {
                     crate::Terrain::Grassland
-                };
+                });
             }
         }
         map.terrain = Some(std::sync::Arc::new(terrain));

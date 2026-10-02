@@ -71,7 +71,7 @@ async fn melting_matches_combat_fractures_native_lua_and_restart() {
             BattleFallRules::configured(&config),
         )
         .unwrap();
-        assert_eq!(fracture.after.terrain, Terrain::Water);
+        assert_eq!(fracture.after.terrain(), Terrain::Water);
         assert_eq!(
             native.world().btech.constructed_units(),
             ordinary.world().btech.constructed_units()
@@ -115,7 +115,7 @@ async fn freezing_water_preserves_submerged_mechs() {
             scripts.world().btech.maps()[&map]
                 .base_hex(0, 11)
                 .unwrap()
-                .terrain,
+                .terrain(),
             Terrain::Ice
         );
         let report =
@@ -256,14 +256,14 @@ async fn shoreline_passes_have_distinct_growth_and_melt_ordering() {
         native.world().btech.maps()[&map]
             .base_hex(1, 5)
             .unwrap()
-            .terrain,
+            .terrain(),
         Terrain::Water
     );
     assert!(circle.iter().any(|hex| {
         native.world().btech.maps()[&map]
             .base_hex(i64::from(hex.x), i64::from(hex.y))
             .unwrap()
-            .terrain
+            .terrain()
             == Terrain::Ice
     }));
     for hex in &circle {

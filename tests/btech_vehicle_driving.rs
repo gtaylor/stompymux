@@ -1362,11 +1362,8 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
         if waterproof {
             unit["definition"]["attributes"]["specials"] = "Waterproof_Tech".into();
         }
-        saved["maps"][map.0.to_string()]["terrain"][43] = serde_json::to_value(BattleHex {
-            terrain: Terrain::Ice,
-            elevation: depth,
-        })
-        .unwrap();
+        saved["maps"][map.0.to_string()]["terrain"][43] =
+            serde_json::to_value(BattleHex::new(Terrain::Ice, depth)).unwrap();
         saved["maps"][map.0.to_string()]["decorations"]["43"] =
             serde_json::json!({"kind":"smoke", "remaining":120, "object_duration":120, "order":-1});
         world.btech = serde_json::from_value(saved).unwrap();
@@ -1487,12 +1484,10 @@ async fn waterproof_vehicle_stays_below_ice_without_a_surface_fracture_roll() {
     let dice = unit["dice"].clone();
     for row in 0..3 {
         for x in 0..20 {
-            saved["maps"][map.0.to_string()]["terrain"][row * 20 + x] =
-                serde_json::to_value(BattleHex {
-                    terrain: if x < 3 { Terrain::Water } else { Terrain::Ice },
-                    elevation: 2,
-                })
-                .unwrap();
+            saved["maps"][map.0.to_string()]["terrain"][row * 20 + x] = serde_json::to_value(
+                BattleHex::new(if x < 3 { Terrain::Water } else { Terrain::Ice }, 2),
+            )
+            .unwrap();
         }
     }
     world.btech = serde_json::from_value(saved).unwrap();

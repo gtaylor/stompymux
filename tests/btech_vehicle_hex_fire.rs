@@ -162,7 +162,7 @@ async fn vehicle_surface_shots_use_shooter_dice_and_shared_fracture() {
         scripts.world().btech.maps()[&map]
             .base_hex(1, 0)
             .unwrap()
-            .terrain,
+            .terrain(),
         Terrain::Water
     );
     scripts.world().validate(&config).unwrap();

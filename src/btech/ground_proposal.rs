@@ -73,7 +73,7 @@ pub fn propose_mech_ground_motion(
         rules.fasa_turning,
         unit.chassis().turn_multiplier(),
     );
-    let divisor = current.terrain.ground_speed_divisor(false);
+    let divisor = current.terrain().ground_speed_divisor(false);
     let desired = motion.desired_speed;
     if unit.definition().has_triple_myomer() && motion.desired_speed >= maximum {
         motion.desired_speed = maximum;
@@ -137,7 +137,7 @@ pub fn propose_vehicle_ground_motion(
     if super::load::carries_load(world, id) {
         loaded.limit_load(
             maximum,
-            if maximum > 0.0 && matches!(current.terrain, Terrain::Road | Terrain::Bridge) {
+            if maximum > 0.0 && matches!(current.terrain(), Terrain::Road | Terrain::Bridge) {
                 maximum + 10.75
             } else {
                 maximum
@@ -150,7 +150,7 @@ pub fn propose_vehicle_ground_motion(
             Terrain::Grassland
         } else {
             map.hex(i64::from(coordinate.x), i64::from(coordinate.y))?
-                .terrain
+                .terrain()
         },
         super::BattleVehicleMotionRules {
             fasa_turning: rules.fasa_turning,

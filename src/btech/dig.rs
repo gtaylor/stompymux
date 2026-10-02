@@ -97,7 +97,7 @@ pub fn dig_unit(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<Batt
         world.btech.maps()[&position.map].hex(i64::from(position.x), i64::from(position.y))?;
     ensure!(
         !matches!(
-            tile.terrain,
+            tile.terrain(),
             Terrain::Road | Terrain::Bridge | Terrain::Building | Terrain::Wall | Terrain::Water
         ),
         "You cannot dig into this surface"

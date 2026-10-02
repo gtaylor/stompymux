@@ -51,7 +51,7 @@ impl StoredBattleMap {
     ) -> Result<BattleLandingSuitability> {
         let tile = self.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
         if !matches!(
-            tile.terrain,
+            tile.terrain(),
             Terrain::Grassland | Terrain::Road | Terrain::Sand
         ) {
             return Ok(BattleLandingSuitability::ImproperTerrain);
@@ -66,8 +66,8 @@ impl StoredBattleMap {
             }
             if self
                 .base_hex(i64::from(neighbor.x), i64::from(neighbor.y))?
-                .elevation
-                != tile.elevation
+                .elevation()
+                != tile.elevation()
             {
                 return Ok(BattleLandingSuitability::UnevenGround);
             }

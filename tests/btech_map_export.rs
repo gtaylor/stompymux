@@ -52,8 +52,8 @@ async fn export_terrain_effects_and_metadata_match_asset_contract() {
             }
         );
         let decoded = BattleMapAsset::parse(&export.source).unwrap();
-        assert_eq!(decoded.hex(0, 0).unwrap().terrain, Terrain::Grassland);
-        assert_eq!(decoded.hex(1, 0).unwrap().terrain, Terrain::Road);
+        assert_eq!(decoded.hex(0, 0).unwrap().terrain(), Terrain::Grassland);
+        assert_eq!(decoded.hex(1, 0).unwrap().terrain(), Terrain::Road);
         assert_eq!(decoded.flags, flags & !1);
         assert_eq!((decoded.gravity, decoded.temperature), (50, -40));
         persistence::save(&config.database(), &candidate)

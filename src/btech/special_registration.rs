@@ -118,10 +118,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                         gravity: 0,
                         temperature: 0,
                         hexes: Arc::new(vec![
-                            super::BattleHex {
-                                terrain: super::Terrain::Grassland,
-                                elevation: 0
-                            };
+                            super::BattleHex::new(super::Terrain::Grassland, 0);
                             21 * 11
                         ]),
                     },

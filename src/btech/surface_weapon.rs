@@ -30,17 +30,17 @@ pub(super) fn resolve(
         .map;
     let record = &world.btech.maps()[&map];
     let tile = record.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
-    let sides = match tile.terrain {
+    let sides = match tile.terrain() {
         Terrain::Ice => 15,
         Terrain::Bridge if !record.has_flag(super::BattleMapFlag::IndestructibleBridges) => {
-            10 * (1 + u16::from(tile.elevation))
+            10 * (1 + u16::from(tile.elevation()))
         }
         _ => return Ok(None),
     };
     let threshold = weapon.0.profile_for_ammunition(weapon.1).damage;
     let roll = super::dice::unit_dice_mut(world, shooter)?.die(sides)?;
     let broken = roll <= u16::from(threshold);
-    let text = match (tile.terrain, broken) {
+    let text = match (tile.terrain(), broken) {
         (Terrain::Ice, true) => Some("The ice breaks from the blast!".to_owned()),
         (Terrain::Bridge, true) => Some(format!(
             "The bridge at {},{} is blown apart!",
@@ -71,10 +71,10 @@ pub(super) fn resolve(
             world,
             map,
             coordinate,
-            tile.terrain,
+            tile.terrain(),
             rules,
         )?)
-    } else if tile.terrain == Terrain::Ice {
+    } else if tile.terrain() == Terrain::Ice {
         Some(break_ice(world, map, coordinate, None, rules)?)
     } else {
         Some(break_bridge(world, map, coordinate, rules)?)

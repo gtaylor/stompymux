@@ -21,7 +21,7 @@ impl BattleMapAsset {
             for y in 0..i32::from(self.height) {
                 if self
                     .hex(x, y)
-                    .is_none_or(|hex| hex.terrain != Terrain::Road)
+                    .is_none_or(|hex| hex.terrain() != Terrain::Road)
                 {
                     continue;
                 }
@@ -41,7 +41,7 @@ impl BattleMapAsset {
         if !spans.is_empty() {
             let tiles = Arc::make_mut(&mut self.hexes);
             for index in spans {
-                tiles[index].terrain = Terrain::Bridge;
+                tiles[index] = tiles[index].with_terrain(Terrain::Bridge);
             }
         }
         Ok(count)
@@ -55,7 +55,7 @@ impl BattleMapAsset {
             if x == 0 && direction.0 != 0 {
                 y -= 1;
             }
-            match self.hex(x, y).map(|hex| hex.terrain) {
+            match self.hex(x, y).map(|hex| hex.terrain()) {
                 Some(Terrain::Water | Terrain::Ice) => return true,
                 Some(Terrain::Road | Terrain::Bridge) => {}
                 _ => return false,

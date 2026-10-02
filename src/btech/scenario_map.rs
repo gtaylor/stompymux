@@ -131,7 +131,7 @@ pub(super) fn reassign_in_candidate(
             motion,
             position,
             unit.definition().movement == BattleVehicleMovement::Hover
-                && tile.terrain == Terrain::Bridge
+                && tile.terrain() == Terrain::Bridge
                 && height.is_some_and(|height| height < i32::from(tile.surface_height())),
         );
         unit.identity()

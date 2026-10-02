@@ -195,7 +195,9 @@ mod unit;
 
 pub use assets::{read_map, read_template, read_unit_template, read_vehicle_template};
 mod unit_template;
-pub use map::{BattleHex, BattleMapAsset, Terrain};
+pub use map::{BattleMapAsset, Terrain};
+mod hex;
+pub use hex::{BattleHex, Ground, Structure, Water, Woods};
 pub use state::{
     BtechState, StoredBattleMap, StoredBattleUnit, create_map, create_unit,
     register_empty_battle_unit, reload_map, set_map_visibility,

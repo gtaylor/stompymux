@@ -47,7 +47,7 @@ async fn native_lua_selectors_replay_and_rollback_all_owned_kinds() {
         }
         if args == "1 1" {
             assert_eq!(
-                saved.btech.maps()[&map].hex(1, 1).unwrap().terrain,
+                saved.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
                 Terrain::Water
             );
             assert!(!map_fire_pending(&saved));

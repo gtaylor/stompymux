@@ -207,16 +207,13 @@ fn break_surface(
     record.validate()?;
     let tile = record.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
     ensure!(
-        tile.terrain == expected,
+        tile.terrain() == expected,
         "Tile is not the requested breakable surface"
     );
     let bridge = expected == Terrain::Bridge;
     let surface_height = if bridge { 1 } else { 0 };
-    let fall_levels = if bridge { 2 } else { tile.elevation };
-    let replacement = BattleHex {
-        terrain: Terrain::Water,
-        elevation: if bridge { 1 } else { tile.elevation },
-    };
+    let fall_levels = if bridge { 2 } else { tile.elevation() };
+    let replacement = BattleHex::new(Terrain::Water, if bridge { 1 } else { tile.elevation() });
     let on_tile = |id| {
         super::scanner::scanner_unit(world, id)
             .and_then(|unit| unit.position)
@@ -450,7 +447,7 @@ fn check_ice_landing_inner(
             false,
         )
     };
-    if tile.terrain != Terrain::Ice || height < 0 || hover {
+    if tile.terrain() != Terrain::Ice || height < 0 || hover {
         return Ok(None);
     }
     if super::dice::unit_dice_mut(world, id)?.d6() != 1 {

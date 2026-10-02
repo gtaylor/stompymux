@@ -41,7 +41,7 @@ impl BattleHex {
     /// Whether a unit standing at `level` relative to this hex is in water: below the
     /// surface datum of a water column.
     pub fn immerses(self, level: i32) -> bool {
-        self.terrain.holds_water() && level < 0
+        self.terrain().holds_water() && level < 0
     }
 }
 
@@ -85,10 +85,7 @@ mod tests {
 
     #[test]
     fn immersion_depends_on_level() {
-        let hex = |terrain| BattleHex {
-            terrain,
-            elevation: 2,
-        };
+        let hex = |terrain| BattleHex::new(terrain, 2);
         assert!(!hex(Terrain::Water).immerses(3));
         assert!(hex(Terrain::Water).immerses(-1));
         assert!(!hex(Terrain::Water).immerses(0));

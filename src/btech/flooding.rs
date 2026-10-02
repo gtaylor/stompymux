@@ -101,7 +101,7 @@ fn flood_section_inner(
     } else {
         -elevation
     };
-    if !tile.terrain.holds_water() || elevation >= 0 || depth <= 0 {
+    if !tile.terrain().holds_water() || elevation >= 0 || depth <= 0 {
         return Ok(None);
     }
     let leg = unit.chassis().is_leg(section);

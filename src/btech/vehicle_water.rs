@@ -14,7 +14,7 @@ pub(super) fn requires_check(unit: &BattleVehicle, tile: BattleHex, height: i32)
     unit.definition().movement != BattleVehicleMovement::Hover
         && !unit.definition().has_special("Waterproof_Tech")
         && height < 0
-        && matches!(tile.terrain, Terrain::Water | Terrain::Bridge)
+        && matches!(tile.terrain(), Terrain::Water | Terrain::Bridge)
 }
 
 /// Apply the common water destruction consequence without fabricating material damage.

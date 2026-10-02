@@ -204,10 +204,7 @@ async fn map_registration_defaults_view_load_and_restart() {
             for x in 0..21 {
                 assert_eq!(
                     field.hex(x, y).unwrap(),
-                    BattleHex {
-                        terrain: Terrain::Grassland,
-                        elevation: 0
-                    }
+                    BattleHex::new(Terrain::Grassland, 0)
                 );
             }
         }
@@ -258,7 +255,7 @@ async fn map_registration_defaults_view_load_and_restart() {
         scripts.world().btech.maps()[&map]
             .hex(2, 1)
             .unwrap()
-            .terrain,
+            .terrain(),
         Terrain::Water
     );
     assert_eq!(scripts.world().objects[&map].location, Some(ObjectId(1)));

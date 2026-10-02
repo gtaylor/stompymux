@@ -99,7 +99,7 @@ fn object_fields(
             let effect = map.decorations[&slot];
             let terrain = map
                 .base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?
-                .terrain;
+                .terrain();
             [
                 0,
                 i64::from(u32::from(terrain.symbol())),

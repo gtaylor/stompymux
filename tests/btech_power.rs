@@ -290,7 +290,7 @@ async fn idle_map_smoke_ticks_retry_failed_saves_and_expire() {
             loop {
                 let loaded = persistence::load(&config.database()).await.unwrap();
                 if loaded.btech.maps()[&map].decoration(coordinate).unwrap().is_none() {
-                    assert_eq!(loaded.btech.maps()[&map].hex(0, 0).unwrap().terrain, Terrain::HeavyForest);
+                    assert_eq!(loaded.btech.maps()[&map].hex(0, 0).unwrap().terrain(), Terrain::HeavyForest);
                     break;
                 }
                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
@@ -329,7 +329,7 @@ async fn idle_map_fire_burnout_retries_random_state_save_failure() {
             loop {
                 let loaded = persistence::load(&config.database()).await.unwrap();
                 if loaded.btech.maps()[&map].decoration(coordinate).unwrap().is_none() {
-                    assert!(matches!(loaded.btech.maps()[&map].hex(0, 0).unwrap().terrain, Terrain::Rough | Terrain::Grassland));
+                    assert!(matches!(loaded.btech.maps()[&map].hex(0, 0).unwrap().terrain(), Terrain::Rough | Terrain::Grassland));
                     break;
                 }
                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;

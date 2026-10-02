@@ -41,11 +41,11 @@ async fn imported_records_preserve_lookup_order_and_share_native_lua_removal() {
     let (_dir, config, mut world, map) = fixture().await;
     let coordinate = BattleHexCoordinate { x: 1, y: 1 };
     assert_eq!(
-        world.btech.maps()[&map].hex(1, 1).unwrap().terrain,
+        world.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
         Terrain::Fire
     );
     assert_eq!(
-        world.btech.maps()[&map].base_hex(1, 1).unwrap().terrain,
+        world.btech.maps()[&map].base_hex(1, 1).unwrap().terrain(),
         Terrain::HeavyForest
     );
     assert!(!map_fire_pending(&world));
@@ -101,7 +101,10 @@ async fn imported_records_preserve_lookup_order_and_share_native_lua_removal() {
     assert!(report.contains("3 objects deleted!"), "{report}");
     assert_eq!(native.world().btech, lua.world().btech);
     assert_eq!(
-        native.world().btech.maps()[&map].hex(1, 1).unwrap().terrain,
+        native.world().btech.maps()[&map]
+            .hex(1, 1)
+            .unwrap()
+            .terrain(),
         Terrain::Road
     );
     assert_eq!(
@@ -117,7 +120,10 @@ async fn imported_records_preserve_lookup_order_and_share_native_lua_removal() {
         2
     );
     assert_eq!(
-        native.world().btech.maps()[&map].hex(1, 1).unwrap().terrain,
+        native.world().btech.maps()[&map]
+            .hex(1, 1)
+            .unwrap()
+            .terrain(),
         Terrain::Grassland
     );
     let saved = native.world().clone();
@@ -142,11 +148,11 @@ async fn replacing_imported_effects_preserves_underlying_terrain_and_clears_sour
         assert!(world.btech.maps()[&map].static_decorations(kind).is_empty());
     }
     assert_eq!(
-        world.btech.maps()[&map].hex(1, 1).unwrap().terrain,
+        world.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
         Terrain::Smoke
     );
     assert_eq!(
-        world.btech.maps()[&map].base_hex(1, 1).unwrap().terrain,
+        world.btech.maps()[&map].base_hex(1, 1).unwrap().terrain(),
         Terrain::HeavyForest
     );
     persistence::save(&config.database(), &world).await.unwrap();
@@ -155,7 +161,7 @@ async fn replacing_imported_effects_preserves_underlying_terrain_and_clears_sour
     advance_map_smoke(&mut restored);
     advance_map_smoke(&mut restored);
     assert_eq!(
-        restored.btech.maps()[&map].hex(1, 1).unwrap().terrain,
+        restored.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
         Terrain::HeavyForest
     );
     let (_dir, config, world, map) = fixture().await;
@@ -175,7 +181,7 @@ async fn replacing_imported_effects_preserves_underlying_terrain_and_clears_sour
         scripts.world().btech.maps()[&map]
             .hex(1, 1)
             .unwrap()
-            .terrain,
+            .terrain(),
         Terrain::HeavyForest
     );
     set_battle_map_hex_action(
@@ -193,7 +199,7 @@ async fn replacing_imported_effects_preserves_underlying_terrain_and_clears_sour
         scripts.world().btech.maps()[&map]
             .hex(1, 1)
             .unwrap()
-            .terrain,
+            .terrain(),
         Terrain::Fire
     );
     for kind in BattleStaticDecorationKind::ALL {

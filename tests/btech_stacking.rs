@@ -769,11 +769,8 @@ async fn jump_obstacle_falls_resolve_crowding_after_fall_damage() {
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["maps"][map.0.to_string()]["movement_modifier"] = 800.into();
     for index in 3..6 {
-        state["maps"][map.0.to_string()]["terrain"][index] = serde_json::to_value(BattleHex {
-            terrain: Terrain::Wall,
-            elevation: 9,
-        })
-        .unwrap();
+        state["maps"][map.0.to_string()]["terrain"][index] =
+            serde_json::to_value(BattleHex::new(Terrain::Wall, 9)).unwrap();
     }
     for unit in &ids {
         state["constructed"][unit.0.to_string()]["position"]["y"] = 0.into();

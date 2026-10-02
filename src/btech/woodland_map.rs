@@ -40,16 +40,13 @@ pub fn apply_woodland_clearing(
     );
     ensure!(
         matches!(
-            (before.terrain, replacement),
+            (before.terrain(), replacement),
             (Terrain::HeavyForest, Terrain::LightForest)
                 | (Terrain::LightForest, Terrain::Rough | Terrain::Grassland)
         ),
         "Invalid woodland reduction"
     );
-    let after = BattleHex {
-        terrain: replacement,
-        ..before
-    };
+    let after = before.with_terrain(replacement);
     world.attempt(|world| {
         world.btech.maps.get_mut(&map).unwrap().write_hex(
             i64::from(coordinate.x),

@@ -720,7 +720,7 @@ fn advance_jumps_inner(
         let previous_tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
         let previous_elevation = unit.elevation_level(previous_tile);
         let next_elevation = (step.to.elevation + 0.5).trunc() as i32;
-        if previous_tile.terrain == Terrain::Ice
+        if previous_tile.terrain() == Terrain::Ice
             && step.outcome == BattleJumpOutcome::Landing
             && (coordinate.x, coordinate.y) == (i32::from(position.x), i32::from(position.y))
         {
@@ -755,7 +755,7 @@ fn advance_jumps_inner(
             if previous_elevation < -1
                 && candidate.btech.maps()[&position.map]
                     .base_hex(i64::from(position.x), i64::from(position.y))?
-                    .terrain
+                    .terrain()
                     == Terrain::Ice
             {
                 let resolve = if character {
@@ -777,7 +777,7 @@ fn advance_jumps_inner(
             )?);
             continue;
         }
-        if previous_tile.terrain == Terrain::Ice
+        if previous_tile.terrain() == Terrain::Ice
             && ((previous_elevation < -1 && next_elevation >= -1)
                 || (previous_elevation >= -1 && next_elevation < -1))
         {
@@ -815,7 +815,7 @@ fn advance_jumps_inner(
                 notices.len(),
             );
             notices.extend(fracture.notices);
-            if downward && previous_tile.elevation > 0 {
+            if downward && previous_tile.elevation() > 0 {
                 let events = if character {
                     let segment = super::motion::finish_interrupted_jump_in_action(
                         &mut candidate,

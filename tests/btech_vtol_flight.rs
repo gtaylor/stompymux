@@ -250,10 +250,7 @@ fn touchdown_replays_on_supported_surfaces_and_preserves_command_fuel_and_dice()
         let mut unit = at_altitude(landing_aircraft(25.0, 10.0, -10.0), 6.0);
         let mut replay = restored(&unit);
         let before = serde_json::to_value(&unit).unwrap();
-        let hex = BattleHex {
-            terrain,
-            elevation: 5,
-        };
+        let hex = BattleHex::new(terrain, 5);
         let report = unit.land_vtol(hex, false).unwrap();
         assert_eq!(report, BattleVtolLanding::Touchdown { elevation: 5 });
         assert_eq!(replay.land_vtol(hex, false).unwrap(), report);
@@ -279,10 +276,7 @@ fn touchdown_replays_on_supported_surfaces_and_preserves_command_fuel_and_dice()
 
 #[test]
 fn landing_checks_speed_altitude_and_terrain_boundaries_atomically() {
-    let grass = BattleHex {
-        terrain: Terrain::Grassland,
-        elevation: 0,
-    };
+    let grass = BattleHex::new(Terrain::Grassland, 0);
     for (speed, desired, vertical, accepted) in [
         (0.0, 15.999, 0.0, true),
         (0.0, 16.0, 0.0, false),
@@ -323,16 +317,7 @@ fn landing_checks_speed_altitude_and_terrain_boundaries_atomically() {
         Terrain::Snow,
         Terrain::Wall,
     ] {
-        assert!(
-            unit.land_vtol(
-                BattleHex {
-                    terrain,
-                    elevation: 0
-                },
-                false
-            )
-            .is_err()
-        );
+        assert!(unit.land_vtol(BattleHex::new(terrain, 0), false).is_err());
         assert_eq!(unit, before);
     }
 }
@@ -365,15 +350,9 @@ fn landing_refusals_match_reference_output() {
     ] {
         let before = unit.clone();
         assert_eq!(
-            unit.land_vtol(
-                BattleHex {
-                    terrain,
-                    elevation: 0
-                },
-                false
-            )
-            .unwrap_err()
-            .to_string(),
+            unit.land_vtol(BattleHex::new(terrain, 0), false)
+                .unwrap_err()
+                .to_string(),
             expected
         );
         assert_eq!(unit, before);
@@ -382,10 +361,7 @@ fn landing_refusals_match_reference_output() {
 
 #[test]
 fn landing_cancels_launch_but_cannot_recover_lost_lift_or_empty_fuel() {
-    let hex = BattleHex {
-        terrain: Terrain::Grassland,
-        elevation: 0,
-    };
+    let hex = BattleHex::new(Terrain::Grassland, 0);
     let mut unit = aircraft();
     let before = unit.clone();
     unit.begin_vtol_takeoff(false, false, 4).unwrap();
@@ -450,10 +426,7 @@ fn public_takeoff_vertical_control_and_landing_form_a_replayable_sequence() {
     let mut replay = restored(&unit);
     unit.set_vtol_vertical_speed(-5.0, false).unwrap();
     replay.set_vtol_vertical_speed(-5.0, false).unwrap();
-    let hex = BattleHex {
-        terrain: Terrain::Road,
-        elevation: 1,
-    };
+    let hex = BattleHex::new(Terrain::Road, 1);
     assert_eq!(
         unit.land_vtol(hex, false).unwrap(),
         BattleVtolLanding::Touchdown { elevation: 1 }
@@ -548,7 +521,7 @@ fn flight_surface_contact_distinguishes_water_bridge_clearance_and_ground_impact
             .vtol_motion_step(100)
             .unwrap();
         assert_eq!(
-            step.surface_contact(BattleHex { terrain, elevation }),
+            step.surface_contact(BattleHex::new(terrain, elevation)),
             contact,
             "{altitude}/{terrain:?}"
         );
@@ -574,10 +547,7 @@ fn altitude_commits_reject_stale_or_altered_proposals_and_preserve_height_on_lif
     unit.commit_vtol_motion(step).unwrap();
     assert_eq!(unit.vtol_flight().unwrap().altitude, 12.75);
     assert_eq!(
-        unit.elevation_level(BattleHex {
-            terrain: Terrain::Grassland,
-            elevation: 0
-        }),
+        unit.elevation_level(BattleHex::new(Terrain::Grassland, 0)),
         12
     );
     assert_eq!(restored(&unit), unit);

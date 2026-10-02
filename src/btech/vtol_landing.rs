@@ -79,7 +79,7 @@ impl BattleVehicle {
 /// Both deliberate and emergency landings require a supported surface.
 pub(super) fn supported_surface(hex: BattleHex) -> bool {
     matches!(
-        hex.terrain,
+        hex.terrain(),
         Terrain::Grassland | Terrain::Road | Terrain::Building | Terrain::Sand
     )
 }

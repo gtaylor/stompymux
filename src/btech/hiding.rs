@@ -83,7 +83,7 @@ pub fn begin_battle_hiding(
     }
     let tile =
         world.btech.maps()[&position.map].base_hex(i64::from(position.x), i64::from(position.y))?;
-    let text = match tile.terrain {
+    let text = match tile.terrain() {
         Terrain::LightForest | Terrain::HeavyForest => "You start to hide amongst the trees...",
         Terrain::Mountains => "You start to hide behind some rocky outcroppings...",
         Terrain::Rough => "You find some boulders to try to hide behind...",

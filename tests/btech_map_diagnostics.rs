@@ -104,17 +104,11 @@ async fn native_and_lua_map_activation_share_substitutions_and_channels() {
                 assert_eq!((field.flags, field.gravity, field.temperature), expected);
                 assert_eq!(
                     field.hex(0, 0).unwrap(),
-                    BattleHex {
-                        terrain: Terrain::Grassland,
-                        elevation: 1
-                    }
+                    BattleHex::new(Terrain::Grassland, 1)
                 );
                 assert_eq!(
                     field.hex(1, 1).unwrap(),
-                    BattleHex {
-                        terrain: Terrain::Grassland,
-                        elevation: 4
-                    }
+                    BattleHex::new(Terrain::Grassland, 4)
                 );
                 let channel = &state.channels["MapErrors"];
                 assert_eq!(channel.messages, 2);

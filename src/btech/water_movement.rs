@@ -24,12 +24,12 @@ pub(super) fn enter_water(
     let position = unit.position().context("Water entry requires placement")?;
     let tile =
         world.btech.maps()[&position.map].base_hex(i64::from(position.x), i64::from(position.y))?;
-    let below_bridge = tile.terrain == Terrain::Bridge && unit.elevation_level(tile) < 0;
-    let below_ice = tile.terrain == Terrain::Ice && unit.elevation_level(tile) < 0;
-    if tile.terrain != Terrain::Water && !below_bridge && !below_ice {
+    let below_bridge = tile.terrain() == Terrain::Bridge && unit.elevation_level(tile) < 0;
+    let below_ice = tile.terrain() == Terrain::Ice && unit.elevation_level(tile) < 0;
+    if tile.terrain() != Terrain::Water && !below_bridge && !below_ice {
         return Ok(WaterEntryReport::default());
     }
-    let depth = if below_bridge { 1 } else { tile.elevation };
+    let depth = if below_bridge { 1 } else { tile.elevation() };
     let pilot = unit.pilot();
     let mut notices = Vec::new();
     let mut pilot_notices = Vec::new();

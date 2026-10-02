@@ -54,12 +54,12 @@ impl BattleRadarTarget {
     /// Water and bridge surfaces use negative depth; intact ice uses sea level above the sheet.
     pub(crate) fn above_tile(elevation: i32, tile: BattleHex, flying_type: bool) -> Self {
         let base = surface_datum(tile);
-        let upper = if tile.terrain == Terrain::Ice {
+        let upper = if tile.terrain() == Terrain::Ice {
             0
         } else {
             base
         };
-        let lower = if tile.terrain == Terrain::Bridge {
+        let lower = if tile.terrain() == Terrain::Bridge {
             -1
         } else {
             base
@@ -75,8 +75,8 @@ impl BattleRadarTarget {
 
 /// Terrain datum for radar's surface-clearance calculation.
 fn surface_datum(tile: BattleHex) -> i32 {
-    let magnitude = i32::from(tile.elevation);
-    if tile.terrain.holds_water() {
+    let magnitude = i32::from(tile.elevation());
+    if tile.terrain().holds_water() {
         return -magnitude;
     }
     magnitude
@@ -112,15 +112,8 @@ mod tests {
             (Terrain::Bridge, -5, -4),
         ] {
             assert_eq!(
-                BattleRadarTarget::above_tile(
-                    elevation,
-                    BattleHex {
-                        terrain,
-                        elevation: 4
-                    },
-                    false
-                )
-                .height_above_surface,
+                BattleRadarTarget::above_tile(elevation, BattleHex::new(terrain, 4), false)
+                    .height_above_surface,
                 expected
             );
         }

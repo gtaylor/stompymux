@@ -172,11 +172,11 @@ async fn vehicle_ground_classes_are_admitted_on_water_and_bridge_maps() {
     world.btech = serde_json::from_value(state).unwrap();
     world.validate(&config).unwrap();
     assert_eq!(
-        world.btech.maps()[&map].hex(0, 1).unwrap().terrain,
+        world.btech.maps()[&map].hex(0, 1).unwrap().terrain(),
         stompymux_rs::Terrain::Water
     );
     assert_eq!(
-        world.btech.maps()[&map].hex(1, 1).unwrap().terrain,
+        world.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
         stompymux_rs::Terrain::Bridge
     );
 

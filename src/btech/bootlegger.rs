@@ -82,7 +82,7 @@ pub fn bootlegger_modifier(world: &World, id: ObjectId, pilot: ObjectId) -> Resu
     let tile =
         world.btech.maps()[&position.map].hex(i64::from(position.x), i64::from(position.y))?;
     if matches!(
-        tile.terrain,
+        tile.terrain(),
         super::Terrain::Water | super::Terrain::Ice | super::Terrain::Bridge
     ) && super::unit_elevation(world, id)?.is_some_and(|height| height < 0)
     {

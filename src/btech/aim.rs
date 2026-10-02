@@ -783,7 +783,7 @@ pub(super) fn water_modifier(world: &World, shooter: ObjectId) -> Result<u8> {
         .context("Map not found")?
         .base_hex(i64::from(position.x), i64::from(position.y))?;
     Ok(u8::from(
-        tile.terrain == super::Terrain::Water
+        tile.terrain() == super::Terrain::Water
             && super::unit_elevation(world, shooter)?.is_some_and(|z| z < 0),
     ))
 }
@@ -885,10 +885,10 @@ pub(super) fn occupied_woods(world: &World, target: ObjectId) -> Result<i8> {
         .context("Map not found")?;
     let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
     let elevation = super::unit_elevation(world, target)?.context("Target is not placed")?;
-    if elevation > i32::from(tile.elevation) + 2 {
+    if elevation > i32::from(tile.elevation()) + 2 {
         return Ok(0);
     }
-    Ok(tile.terrain.woods_density() as i8)
+    Ok(tile.terrain().woods_density() as i8)
 }
 
 /// LBX gains two more points against rotorcraft; Stinger distinguishes flight from orbital orbital descents.

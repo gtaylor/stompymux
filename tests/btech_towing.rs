@@ -1634,7 +1634,7 @@ async fn pickup_through_ice_uses_shared_breakage_for_ground_and_airborne_carrier
         .unwrap();
         assert!(report.ice.is_some());
         assert_eq!(
-            world.btech.maps()[&map].base_hex(0, 0).unwrap().terrain,
+            world.btech.maps()[&map].base_hex(0, 0).unwrap().terrain(),
             Terrain::Water
         );
         assert_eq!(

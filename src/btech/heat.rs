@@ -151,14 +151,14 @@ impl BattleUnit {
         let tile = map
             .hex(i64::from(position.x), i64::from(position.y))
             .expect("validated placed unit terrain");
-        if tile.terrain == Terrain::Fire {
+        if tile.terrain() == Terrain::Fire {
             rates.production += 5.0;
         }
         let tile = map
             .base_hex(i64::from(position.x), i64::from(position.y))
             .expect("validated placed unit terrain");
         let elevation = self.elevation_level(tile);
-        if tile.terrain.holds_water() && elevation < 0 {
+        if tile.terrain().holds_water() && elevation < 0 {
             let bonus = if elevation == -1 && self.posture() != super::BattlePosture::Prone {
                 self.loadout()
                     .expect("validated unit loadout")

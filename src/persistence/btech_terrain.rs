@@ -51,10 +51,10 @@ pub(super) async fn load(
                 "Invalid terrain code for map #{}",
                 id.0
             );
-            let hex = BattleHex {
-                terrain: Terrain::from_symbol(symbol.chars().next().unwrap())?,
-                elevation: elevation as u8,
-            };
+            let hex = BattleHex::new(
+                Terrain::from_symbol(symbol.chars().next().unwrap())?,
+                elevation as u8,
+            );
             ensure!(
                 dictionary.insert(code, hex).is_none() && unique.insert(hex),
                 "Duplicate terrain dictionary entry for map #{}",
@@ -117,7 +117,7 @@ pub(super) async fn save(
         let elevation: u8 = entry.try_get("elevation")?;
         let terrain =
             Terrain::from_symbol(symbol.chars().next().context("Missing terrain symbol")?)?;
-        dictionary.insert(BattleHex { terrain, elevation }, code);
+        dictionary.insert(BattleHex::new(terrain, elevation), code);
         occupied.insert(code);
     }
     let mut additions = Vec::new();
@@ -158,8 +158,8 @@ pub(super) async fn save(
             ]),
             None,
             &Fields::from([
-                ("terrain", Cell::Text(hex.terrain.symbol().to_string())),
-                ("elevation", Cell::Integer(i64::from(hex.elevation))),
+                ("terrain", Cell::Text(hex.terrain().symbol().to_string())),
+                ("elevation", Cell::Integer(i64::from(hex.elevation()))),
             ]),
         )
         .await?;

@@ -1,4 +1,5 @@
 //! Bounded map-file decoding with explicit terrain, elevation and environmental metadata.
+use super::BattleHex;
 use anyhow::{Context, Result, bail, ensure};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -114,49 +115,6 @@ impl Terrain {
             Self::Wall => '=',
             Self::Sand => '}',
         }
-    }
-}
-
-/// A terrain tile; depth is stored as a magnitude for water and ice.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct BattleHex {
-    pub terrain: Terrain,
-    pub elevation: u8,
-}
-
-impl BattleHex {
-    /// Supported standing surface; intact ice is at water level while its depth stays in the asset.
-    pub fn standing_height(self) -> i16 {
-        if self.terrain == Terrain::Ice {
-            return 0;
-        }
-        self.surface_height()
-    }
-
-    /// Whether entering this hex at a rounded jump altitude hits an obstacle.
-    /// Water entry uses immersion; bridge spans permit passage below their underside.
-    /// This predicate does not authorize a route or move the unit.
-    pub fn blocks_jump_entry(self, altitude: i32) -> bool {
-        match self.terrain {
-            Terrain::Water => false,
-            Terrain::Bridge => altitude < 0 || altitude == i32::from(self.elevation) - 1,
-            _ => altitude < i32::from(self.surface_height()),
-        }
-    }
-
-    /// Bridge contact checked during vertical integration, before the hex transition.
-    /// Unlike entry checks, this stage only collides at positive altitude.
-    pub fn strikes_bridge_during_jump(self, altitude: i32) -> bool {
-        self.terrain == Terrain::Bridge && altitude > 0 && self.blocks_jump_entry(altitude)
-    }
-
-    /// Terrain-relative height used by ground movement.
-    pub fn surface_height(self) -> i16 {
-        let elevation = i16::from(self.elevation);
-        if matches!(self.terrain, Terrain::Water | Terrain::Ice) {
-            return -elevation;
-        }
-        elevation
     }
 }
 
@@ -305,10 +263,7 @@ impl BattleMapAsset {
                     Terrain::Grassland
                 });
                 ensure!(pair[1].is_ascii_digit(), "invalid elevation at {x},{y}");
-                hexes.push(BattleHex {
-                    terrain,
-                    elevation: pair[1] - b'0',
-                });
+                hexes.push(BattleHex::new(terrain, pair[1] - b'0'));
             }
         }
         let mut map = Self {
@@ -316,7 +271,7 @@ impl BattleMapAsset {
             height,
             // Authored fire is permanent unless explicit metadata overrides this default.
             flags: initial_flags
-                | if hexes.iter().any(|hex| hex.terrain == Terrain::Fire) {
+                | if hexes.iter().any(|hex| hex.terrain() == Terrain::Fire) {
                     super::BattleMapFlag::PermanentFire.bit() as i32
                 } else {
                     0
@@ -434,10 +389,7 @@ mod tests {
         assert_eq!((map.flags, map.gravity, map.temperature), (40, 100, 20));
         assert_eq!(
             map.hex(0, 0).unwrap(),
-            BattleHex {
-                terrain: Terrain::Grassland,
-                elevation: 3
-            }
+            BattleHex::new(Terrain::Grassland, 3)
         );
         assert_eq!(warnings.len(), 1);
         assert_eq!(
@@ -474,13 +426,7 @@ mod tests {
     fn sand_symbol_decodes_and_round_trips() {
         let (map, warnings) = BattleMapAsset::parse_diagnostics(b"2 1\n}1.0\n", 0).unwrap();
         assert!(warnings.is_empty());
-        assert_eq!(
-            map.hex(0, 0).unwrap(),
-            BattleHex {
-                terrain: Terrain::Sand,
-                elevation: 1
-            }
-        );
+        assert_eq!(map.hex(0, 0).unwrap(), BattleHex::new(Terrain::Sand, 1));
         assert_eq!(Terrain::Sand.symbol(), '}');
         assert_eq!(Terrain::from_symbol('}').unwrap(), Terrain::Sand);
     }
@@ -510,10 +456,7 @@ mod tests {
     #[test]
     fn bridge_jump_collision_distinguishes_entry_and_vertical_integration() {
         for deck in 0..=9 {
-            let bridge = BattleHex {
-                terrain: Terrain::Bridge,
-                elevation: deck,
-            };
+            let bridge = BattleHex::new(Terrain::Bridge, deck);
             for altitude in -3..=12 {
                 assert_eq!(
                     bridge.blocks_jump_entry(altitude),
@@ -525,10 +468,7 @@ mod tests {
                 );
             }
         }
-        let high_span = BattleHex {
-            terrain: Terrain::Bridge,
-            elevation: 9,
-        };
+        let high_span = BattleHex::new(Terrain::Bridge, 9);
         assert!(!high_span.blocks_jump_entry(4));
         assert!(high_span.blocks_jump_entry(8));
         assert!(!high_span.blocks_jump_entry(9));
@@ -537,18 +477,9 @@ mod tests {
     #[test]
     fn jump_entry_uses_ground_height_and_preserves_water_entry() {
         for altitude in -4..=4 {
-            let ground = BattleHex {
-                terrain: Terrain::Grassland,
-                elevation: 3,
-            };
-            let ice = BattleHex {
-                terrain: Terrain::Ice,
-                elevation: 3,
-            };
-            let water = BattleHex {
-                terrain: Terrain::Water,
-                elevation: 3,
-            };
+            let ground = BattleHex::new(Terrain::Grassland, 3);
+            let ice = BattleHex::new(Terrain::Ice, 3);
+            let water = BattleHex::new(Terrain::Water, 3);
             assert_eq!(ground.blocks_jump_entry(altitude), altitude < 3);
             assert_eq!(ice.blocks_jump_entry(altitude), altitude < -3);
             assert!(!water.blocks_jump_entry(altitude));
@@ -564,7 +495,7 @@ mod tests {
         assert_eq!((map.width, map.height), (3, 2));
         assert_eq!(map.hex(1, 0).unwrap().surface_height(), -2);
         assert_eq!(map.hex(1, 1).unwrap().surface_height(), -3);
-        assert_eq!(map.hex(2, 0).unwrap().terrain, Terrain::LightForest);
+        assert_eq!(map.hex(2, 0).unwrap().terrain(), Terrain::LightForest);
         assert_eq!((map.flags, map.gravity, map.temperature), (32, 75, -12));
         assert!(map.hex(-1, 0).is_none());
         assert!(map.hex(3, 0).is_none());
@@ -590,12 +521,12 @@ mod tests {
         ] {
             let map = BattleMapAsset::parse(source).unwrap();
             assert_eq!(map.hexes.len(), 1);
-            assert_eq!(map.hex(0, 0).unwrap().elevation, 3);
+            assert_eq!(map.hex(0, 0).unwrap().elevation(), 3);
         }
         let source = format!("1 2\n.3{}.7\n", "x".repeat(1999));
         let map = BattleMapAsset::parse(&source).unwrap();
-        assert_eq!(map.hex(0, 0).unwrap().elevation, 3);
-        assert_eq!(map.hex(0, 1).unwrap().elevation, 7);
+        assert_eq!(map.hex(0, 0).unwrap().elevation(), 3);
+        assert_eq!(map.hex(0, 1).unwrap().elevation(), 7);
         for ending in ["\n", "\r\n"] {
             let source = format!("1000 1\n{}{ending}", ".0".repeat(1000));
             assert_eq!(BattleMapAsset::parse(&source).unwrap().hexes.len(), 1000);

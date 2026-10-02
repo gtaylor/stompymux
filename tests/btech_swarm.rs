@@ -240,11 +240,8 @@ async fn swarm_woods_absorption_preserves_pre_cover_flight_accounting() {
             let next = candidate(&mut world, &config, target, &templates()[2], 0);
             let map = world.btech.units()[&target].map.unwrap();
             let mut encoded = serde_json::to_value(&world.btech).unwrap();
-            encoded["maps"][map.0.to_string()]["terrain"][0] = serde_json::to_value(BattleHex {
-                terrain: Terrain::HeavyForest,
-                elevation: 0,
-            })
-            .unwrap();
+            encoded["maps"][map.0.to_string()]["terrain"][0] =
+                serde_json::to_value(BattleHex::new(Terrain::HeavyForest, 0)).unwrap();
             world.btech = serde_json::from_value(encoded).unwrap();
             acquire(&mut world, shooter, target);
             set_battle_visibility(

@@ -2770,7 +2770,7 @@ async fn free_fall_surface_contact_and_engine_restart_keep_the_event_cadence() {
         field["gravity"] = 200.into();
         field["movement_modifier"] = 800.into();
         for tile in field["terrain"].as_array_mut().unwrap() {
-            *tile = serde_json::to_value(BattleHex { terrain, elevation }).unwrap();
+            *tile = serde_json::to_value(BattleHex::new(terrain, elevation)).unwrap();
         }
         world.btech = serde_json::from_value(state).unwrap();
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();

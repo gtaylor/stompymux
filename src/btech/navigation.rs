@@ -93,7 +93,7 @@ pub fn navigate(
                 position.y,
                 super::unit_elevation(world, observer)?.unwrap_or(0)
             ),
-            3 => format!("Terrain: {:>14}", terrain_name(tile.terrain)),
+            3 => format!("Terrain: {:>14}", terrain_name(tile.terrain())),
             6 => format!("Speed:           {:6.1}", unit.speed),
             7 => format!("Vertical Speed:  {:6.1}", vertical_speed),
             8 => format!("Heading:           {:4.0}", heading),

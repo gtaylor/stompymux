@@ -60,7 +60,7 @@ async fn dictionary_round_trip_is_per_map_and_preserves_unowned_columns() {
     assert!(map.terrain_ready());
     assert_eq!(map.hex(1, 0).unwrap().surface_height(), -2);
     assert_eq!(map.hex(1, 1).unwrap().surface_height(), -3);
-    assert_eq!(map.hex(2, 1).unwrap().terrain, Terrain::Mountains);
+    assert_eq!(map.hex(2, 1).unwrap().terrain(), Terrain::Mountains);
     assert_eq!(
         (
             map.width,
@@ -100,7 +100,7 @@ async fn dictionary_round_trip_is_per_map_and_preserves_unowned_columns() {
     )
     .unwrap();
     assert_eq!(
-        before.btech.maps()[&id].hex(2, 1).unwrap().terrain,
+        before.btech.maps()[&id].hex(2, 1).unwrap().terrain(),
         Terrain::Mountains
     );
     persistence::save(&config.database(), &loaded)
@@ -112,7 +112,7 @@ async fn dictionary_round_trip_is_per_map_and_preserves_unowned_columns() {
         .btech
         .maps()[&id]
         .clone();
-    assert_eq!(map.hex(2, 1).unwrap().terrain, Terrain::Rough);
+    assert_eq!(map.hex(2, 1).unwrap().terrain(), Terrain::Rough);
     assert_eq!(
         sqlx::query_scalar::<_, i64>(
             "SELECT code FROM btech_map_terrain_codes WHERE map_dbref=? AND terrain='~'"
@@ -223,7 +223,7 @@ async fn ambiguous_maps_require_explicit_reload_and_purge_removes_dictionaries()
         .unwrap();
     let mut world = persistence::load(&config.database()).await.unwrap();
     assert_eq!(
-        world.btech.maps()[&id].hex(1, 0).unwrap().terrain,
+        world.btech.maps()[&id].hex(1, 0).unwrap().terrain(),
         Terrain::Water
     );
     world
@@ -420,7 +420,7 @@ async fn server_rolls_back_schema_and_output_on_failed_creation_then_recovers() 
         assert!(!text.contains("terrain reloaded"));
         client.send(&format!("@btech inspect #{}",id.0)).await;
         client.until("temperature -12").await;
-        assert_eq!(persistence::load(&config.database()).await.unwrap().btech.maps()[&id].hex(2,1).unwrap().terrain,Terrain::Mountains);
+        assert_eq!(persistence::load(&config.database()).await.unwrap().btech.maps()[&id].hex(2,1).unwrap().terrain(),Terrain::Mountains);
         sqlx::query("DROP TRIGGER reject_reload").execute(&mut sql).await.unwrap();
         sqlx::query("CREATE TRIGGER reject_conditions BEFORE UPDATE OF light ON btech_maps BEGIN SELECT RAISE(ABORT,'condition failure'); END").execute(&mut sql).await.unwrap();
         client.send(&format!("@btech map-conditions #{}=night,10", id.0)).await;
@@ -789,11 +789,11 @@ async fn permanent_decorations_survive_idle_and_mixed_timer_service() {
             );
         }
         assert_eq!(
-            candidate.btech.maps()[&id].hex(0, 0).unwrap().terrain,
+            candidate.btech.maps()[&id].hex(0, 0).unwrap().terrain(),
             Terrain::Fire
         );
         assert_eq!(
-            candidate.btech.maps()[&id].hex(1, 0).unwrap().terrain,
+            candidate.btech.maps()[&id].hex(1, 0).unwrap().terrain(),
             Terrain::Smoke
         );
     }
@@ -823,11 +823,11 @@ async fn permanent_decorations_survive_idle_and_mixed_timer_service() {
     advance_map_smoke(&mut world);
     set_map_decoration(&mut world, id, smoke, None).unwrap();
     assert_eq!(
-        world.btech.maps()[&id].hex(0, 0).unwrap().terrain,
+        world.btech.maps()[&id].hex(0, 0).unwrap().terrain(),
         Terrain::Grassland
     );
     assert_eq!(
-        world.btech.maps()[&id].hex(1, 0).unwrap().terrain,
+        world.btech.maps()[&id].hex(1, 0).unwrap().terrain(),
         Terrain::Water
     );
     persistence::save(&config.database(), &world).await.unwrap();

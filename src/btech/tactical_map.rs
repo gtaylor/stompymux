@@ -270,29 +270,29 @@ fn terrain_canvas(
             } else {
                 let hex = map.hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
                 let base = map.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
-                let (top, bottom) = match hex.terrain {
+                let (top, bottom) = match hex.terrain() {
                     Terrain::Grassland => (' ', '_'),
                     Terrain::Bridge => ('#', '+'),
                     Terrain::Fire | Terrain::Smoke if underlying => {
-                        (hex.terrain.symbol(), base.terrain.symbol())
+                        (hex.terrain().symbol(), base.terrain().symbol())
                     }
                     terrain => (terrain.symbol(), terrain.symbol()),
                 };
                 let style = if ansi {
-                    super::map_style::terrain(hex.terrain, hex.elevation)
+                    super::map_style::terrain(hex.terrain(), hex.elevation())
                 } else {
                     ""
                 };
-                let elevation = match hex.elevation {
+                let elevation = match hex.elevation() {
                     0 => bottom,
-                    1..=9 => char::from(b'0' + hex.elevation),
+                    1..=9 => char::from(b'0' + hex.elevation()),
                     _ => '?',
                 };
                 let bottom_style = if ansi
                     && underlying
-                    && matches!(hex.terrain, Terrain::Fire | Terrain::Smoke)
+                    && matches!(hex.terrain(), Terrain::Fire | Terrain::Smoke)
                 {
-                    super::map_style::terrain(base.terrain, base.elevation)
+                    super::map_style::terrain(base.terrain(), base.elevation())
                 } else {
                     style
                 };
@@ -444,8 +444,8 @@ fn draw_cliffs(
                 i64::from(viewport.origin.x) + x as i64,
                 i64::from(viewport.origin.y) + y as i64,
             )?;
-            *elevation = i16::from(tile.elevation)
-                * if matches!(tile.terrain, Terrain::Water | Terrain::Ice) {
+            *elevation = i16::from(tile.elevation())
+                * if matches!(tile.terrain(), Terrain::Water | Terrain::Ice) {
                     -1
                 } else {
                     1

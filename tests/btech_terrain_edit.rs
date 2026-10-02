@@ -83,10 +83,7 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
             );
             assert_eq!(
                 native.world().btech.maps()[&map].base_hex(0, 11).unwrap(),
-                BattleHex {
-                    terrain,
-                    elevation: 9
-                }
+                BattleHex::new(terrain, 9)
             );
             let after = serde_json::to_value(&native.world().btech).unwrap();
             let kind = if native.world().btech.vehicles().contains_key(&unit) {
@@ -167,7 +164,7 @@ async fn ice_growth_commits_against_an_occupied_durable_map() {
         let loaded = persistence::load(&config.database()).await.unwrap();
         assert_eq!(loaded.btech, saved.btech);
         assert_eq!(
-            loaded.btech.maps()[&map].base_hex(0, 5).unwrap().terrain,
+            loaded.btech.maps()[&map].base_hex(0, 5).unwrap().terrain(),
             Terrain::Ice
         );
         change_battle_map_ice_action(&scripts, &config, actor, map, 100, BattleIceChange::Melt)
@@ -257,11 +254,11 @@ async fn edit_admission_overlays_and_extreme_elevations() {
         i32::MIN,
     )
     .unwrap();
-    assert_eq!(report.after.elevation, 9);
+    assert_eq!(report.after.elevation(), 9);
     let world = scripts.world();
     let map = &world.btech.maps()[&map];
-    assert_eq!(map.hex(0, 5).unwrap().terrain, Terrain::Smoke);
-    assert_eq!(map.base_hex(0, 5).unwrap().terrain, Terrain::Water);
+    assert_eq!(map.hex(0, 5).unwrap().terrain(), Terrain::Smoke);
+    assert_eq!(map.base_hex(0, 5).unwrap().terrain(), Terrain::Water);
     assert_eq!(map.decoration(coordinate).unwrap().unwrap().remaining, 30);
     world.validate(&config).unwrap();
 }

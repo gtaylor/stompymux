@@ -18,7 +18,7 @@ impl super::StoredBattleMap {
     /// The single write path for base terrain: checks bounds and elevation, then stores `hex`.
     /// Unit altitude, overlays and map objects stay with the caller; see [`replace_hex`].
     pub(crate) fn write_hex(&mut self, x: i64, y: i64, hex: BattleHex) -> Result<()> {
-        ensure!(hex.elevation <= 9, "Elevation exceeds map limits");
+        ensure!(hex.elevation() <= 9, "Elevation exceeds map limits");
         self.stored_hex(x, y)?;
         let index = (y * self.width + x) as usize;
         Arc::make_mut(
@@ -37,7 +37,7 @@ pub(super) fn replace_hex(
     coordinate: BattleHexCoordinate,
     after: BattleHex,
 ) -> Result<BattleMapHexChange> {
-    ensure!(after.elevation <= 9, "Elevation exceeds map limits");
+    ensure!(after.elevation() <= 9, "Elevation exceeds map limits");
     let before = world
         .btech
         .maps()
@@ -78,7 +78,7 @@ pub(super) fn replace_hex(
         {
             unit.ground_elevation = Some(unit.altitude(before));
         }
-        if after.terrain != Terrain::Bridge || after.elevation < 2 {
+        if after.terrain() != Terrain::Bridge || after.elevation() < 2 {
             unit.under_bridge = false;
         }
     }
@@ -118,10 +118,7 @@ pub fn set_map_hex_action(
             &mut scripts.world_mut(),
             map,
             coordinate,
-            BattleHex {
-                terrain,
-                elevation: elevation.unsigned_abs().min(9) as u8,
-            },
+            BattleHex::new(terrain, elevation.unsigned_abs().min(9) as u8),
         )?;
         super::notify_message(
             scripts,
@@ -239,24 +236,14 @@ mod tests {
             super::super::BattleMapAsset::parse("2 1\n.0.0\n").unwrap(),
         )
         .unwrap();
-        let rough = BattleHex {
-            terrain: Terrain::Rough,
-            elevation: 3,
-        };
+        let rough = BattleHex::new(Terrain::Rough, 3);
         map.write_hex(1, 0, rough).unwrap();
         assert_eq!(map.stored_hex(1, 0).unwrap(), rough);
         let before = map.clone();
         for (x, y, elevation) in [(2, 0, 0), (0, 1, 0), (-1, 0, 0), (0, 0, 10)] {
             assert!(
-                map.write_hex(
-                    x,
-                    y,
-                    BattleHex {
-                        terrain: Terrain::Road,
-                        elevation
-                    }
-                )
-                .is_err()
+                map.write_hex(x, y, BattleHex::new(Terrain::Road, elevation))
+                    .is_err()
             );
         }
         assert_eq!(map, before);

@@ -215,7 +215,7 @@ fn relocate_precise(
         .vehicles()
         .get(&id)
         .is_some_and(|unit| unit.definition().movement == BattleVehicleMovement::Hover);
-    let surface = if hover && matches!(tile.terrain, Terrain::Water | Terrain::Ice) {
+    let surface = if hover && matches!(tile.terrain(), Terrain::Water | Terrain::Ice) {
         0
     } else {
         tile.standing_height()
@@ -231,7 +231,7 @@ fn relocate_precise(
         unit.update_motion(
             motion,
             position,
-            hover && tile.terrain == Terrain::Bridge && height < f64::from(tile.surface_height()),
+            hover && tile.terrain() == Terrain::Bridge && height < f64::from(tile.surface_height()),
         );
         unit.ground_elevation = None;
         if let Some(drop) = &mut unit.orbital_drop {

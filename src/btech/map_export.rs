@@ -32,7 +32,7 @@ impl StoredBattleMap {
                 let base = self.base_hex(x, y)?;
                 let visible = self.hex(x, y)?;
                 let effect = self.decoration(coordinate)?;
-                let symbol = match visible.terrain {
+                let symbol = match visible.terrain() {
                     Terrain::Grassland => '.',
                     Terrain::Fire
                         if effect
@@ -44,7 +44,7 @@ impl StoredBattleMap {
                         stale_effects.push(coordinate);
                         '.'
                     }
-                    Terrain::Smoke => match base.terrain {
+                    Terrain::Smoke => match base.terrain() {
                         Terrain::Smoke => {
                             stale_effects.push(coordinate);
                             '.'
@@ -55,7 +55,7 @@ impl StoredBattleMap {
                     terrain => terrain.symbol(),
                 };
                 source.push(symbol);
-                source.push(char::from(b'0' + base.elevation));
+                source.push(char::from(b'0' + base.elevation()));
             }
             source.push('\n');
         }

@@ -20767,11 +20767,8 @@ async fn dfa_damage_miss_ice_settles_below_surface() {
     let index = usize::from(position.y) * world.btech.maps()[&position.map].width as usize
         + usize::from(position.x);
     let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][position.map.0.to_string()]["terrain"][index] = serde_json::to_value(BattleHex {
-        terrain: Terrain::Ice,
-        elevation: 1,
-    })
-    .unwrap();
+    state["maps"][position.map.0.to_string()]["terrain"][index] =
+        serde_json::to_value(BattleHex::new(Terrain::Ice, 1)).unwrap();
     world.btech = serde_json::from_value(state).unwrap();
     let seed = (0..=255)
         .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
@@ -31596,11 +31593,7 @@ async fn indirect_hex_visibility_uses_terrain_and_perception_rules() {
         let mut blocked = world.clone();
         let mut state = serde_json::to_value(&blocked.btech).unwrap();
         state["maps"][map.0.to_string()]["terrain"][3 * 200 + 5] =
-            serde_json::to_value(BattleHex {
-                terrain: Terrain::Wall,
-                elevation: 8,
-            })
-            .unwrap();
+            serde_json::to_value(BattleHex::new(Terrain::Wall, 8)).unwrap();
         blocked.btech = serde_json::from_value(state).unwrap();
         assert!(!battle_hex_visible(&blocked, id, point).unwrap());
         world.validate(&config).unwrap();
@@ -32196,11 +32189,11 @@ async fn direct_hex_shots_commit_launch_terrain_and_restart_replay() {
             before.btech.constructed_units()[&target]
         );
         assert_eq!(
-            before.btech.maps()[&map].hex(5, 3).unwrap().terrain,
+            before.btech.maps()[&map].hex(5, 3).unwrap().terrain(),
             Terrain::HeavyForest
         );
         assert_ne!(
-            world.btech.maps()[&map].hex(5, 3).unwrap().terrain,
+            world.btech.maps()[&map].hex(5, 3).unwrap().terrain(),
             Terrain::HeavyForest
         );
         persistence::save(&config.database(), &world).await.unwrap();
@@ -32679,7 +32672,7 @@ async fn hex_surface_weapon_probability_and_replay() {
                     non_structural.btech.maps()[&map]
                         .base_hex(5, 4)
                         .unwrap()
-                        .terrain,
+                        .terrain(),
                     terrain
                 );
             }
@@ -32712,7 +32705,7 @@ async fn hex_surface_weapon_probability_and_replay() {
             assert!(!missed.hit);
             assert!(missed.surfaces.is_empty());
             assert_eq!(
-                miss.btech.maps()[&map].base_hex(5, 4).unwrap().terrain,
+                miss.btech.maps()[&map].base_hex(5, 4).unwrap().terrain(),
                 terrain
             );
 
@@ -32732,7 +32725,7 @@ async fn hex_surface_weapon_probability_and_replay() {
             assert_eq!(impact.roll <= 5, breaks);
             assert_eq!(impact.fracture.is_some(), breaks);
             assert_eq!(
-                world.btech.maps()[&map].base_hex(5, 4).unwrap().terrain,
+                world.btech.maps()[&map].base_hex(5, 4).unwrap().terrain(),
                 if breaks { Terrain::Water } else { terrain }
             );
             if breaks {
@@ -32787,7 +32780,10 @@ async fn hex_surface_weapon_probability_and_replay() {
                 .unwrap();
                 assert!(report.surfaces.is_empty());
                 assert_eq!(
-                    protected.btech.maps()[&map].base_hex(5, 4).unwrap().terrain,
+                    protected.btech.maps()[&map]
+                        .base_hex(5, 4)
+                        .unwrap()
+                        .terrain(),
                     Terrain::Bridge
                 );
             }
@@ -32937,7 +32933,7 @@ async fn hex_surface_weapon_native_lua_character_rollback() {
         lua.world().btech.maps()[&map]
             .base_hex(5, 4)
             .unwrap()
-            .terrain,
+            .terrain(),
         Terrain::Water
     );
     let text = |messages: Vec<(ObjectId, stompymux_rs::text::Document)>| {
@@ -33641,7 +33637,7 @@ async fn inferno_ammunition_hex_hits_apply_one_zero_damage_terrain_exposure() {
             assert!(report.buildings.is_empty());
             assert!(report.surfaces.is_empty());
             assert_eq!(
-                world.btech.maps()[&map].base_hex(5, 4).unwrap().terrain,
+                world.btech.maps()[&map].base_hex(5, 4).unwrap().terrain(),
                 Terrain::HeavyForest
             );
             assert_eq!(
