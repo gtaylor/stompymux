@@ -240,7 +240,7 @@ mod tests {
         map.write_hex(1, 0, rough).unwrap();
         assert_eq!(map.stored_hex(1, 0).unwrap(), rough);
         let before = map.clone();
-        for (x, y, elevation) in [(2, 0, 0), (0, 1, 0), (-1, 0, 0), (0, 0, 10)] {
+        for (x, y, elevation) in [(2, 0, 0), (0, 1, 0), (-1, 0, 0), (0, 0, 36)] {
             assert!(
                 map.write_hex(x, y, BattleHex::new(Terrain::Road, elevation))
                     .is_err()
