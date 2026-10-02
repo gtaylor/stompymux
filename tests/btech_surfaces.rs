@@ -451,7 +451,7 @@ async fn early_ice_landing_native_lua_parity_and_callback_rollback_include_the_m
 }
 
 #[tokio::test]
-async fn bridge_collapse_selects_replacement_depth_and_preserves_other_altitudes() {
+async fn bridge_collapse_drops_deck_occupants_to_the_river_bed() {
     for height in [0, 1, 3, 9] {
         let (_dir, config, mut world, map, units) = fixture_surface(Terrain::Bridge, height).await;
         persistence::save(&config.database(), &world).await.unwrap();
@@ -465,28 +465,19 @@ async fn bridge_collapse_selects_replacement_depth_and_preserves_other_altitudes
         assert_eq!(world.btech, restarted.btech);
         assert_eq!(report.before, BattleHex::new(Terrain::Bridge, height));
         assert_eq!(report.after, BattleHex::new(Terrain::Water, 1));
-        assert_eq!(report.fall_levels, 2);
+        // Both units stand on the deck and fall past it into the depth-one water below.
+        assert_eq!(report.fall_levels, height + 1);
         assert_eq!(
             report.falls.iter().map(|(id, _)| *id).collect::<Vec<_>>(),
-            if height == 1 {
-                units.to_vec()
-            } else {
-                Vec::new()
-            }
+            units.to_vec()
         );
-        assert!(report.falls.iter().all(|(_, fall)| fall.damage == 4));
+        let damage = u32::from(height + 1) * (35 + 5) / 20;
+        assert!(report.falls.iter().all(|(_, fall)| fall.damage == damage));
         assert_eq!(world.btech.maps()[&map].hex(1, 1).unwrap(), report.after);
         assert_eq!(world.btech.maps()[&map].hex(0, 0).unwrap(), report.before);
         for id in units {
             let state = serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap();
-            assert_eq!(
-                state["ground_elevation"],
-                if height == 1 {
-                    serde_json::Value::Null
-                } else {
-                    serde_json::json!(f64::from(height))
-                }
-            );
+            assert_eq!(state["ground_elevation"], serde_json::Value::Null);
         }
 
         world.validate(&config).unwrap();
@@ -546,13 +537,12 @@ async fn bridge_collapse_rejects_incomplete_effects_and_rolls_back_failed_writes
 }
 
 #[tokio::test]
-async fn retained_bridge_altitude_drives_range_launch_and_placement_after_restart() {
-    let (_dir, config, mut world, map, units) = fixture_surface(Terrain::Bridge, 3).await;
-    let collapse =
-        break_battle_bridge(&mut world, map, BattleHexCoordinate { x: 1, y: 1 }, rules()).unwrap();
-    assert!(collapse.falls.is_empty());
-    let fall = resolve_battle_fall(&mut world, units[1], 1, rules()).unwrap();
-    assert_eq!(fall.damage, 2);
+async fn retained_altitude_over_water_drives_range_launch_and_placement_after_restart() {
+    let (_dir, config, mut world, map, units) = fixture_surface(Terrain::Water, 1).await;
+    // The first unit keeps an altitude of +3 over the water; its neighbor stands on the bed.
+    let mut state = serde_json::to_value(&world.btech).unwrap();
+    state["constructed"][units[0].0.to_string()]["ground_elevation"] = serde_json::json!(3.0);
+    world.btech = serde_json::from_value(state).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     // The retained unit is at +3; its fallen neighbor is at -1 in the same hex.
@@ -589,14 +579,6 @@ async fn retained_bridge_altitude_drives_range_launch_and_placement_after_restar
     );
     placed.validate(&config).unwrap();
 
-    let destination_break = break_battle_bridge(
-        &mut loaded,
-        map,
-        BattleHexCoordinate { x: 1, y: 0 },
-        rules(),
-    )
-    .unwrap();
-    assert!(destination_break.falls.is_empty());
     launch_battle_jump(&mut loaded, units[0], ObjectId(1), 0, 1.0).unwrap();
     assert_eq!(
         loaded.btech.constructed_units()[&units[0]]
@@ -883,7 +865,7 @@ async fn ice_standing_native_lua_and_restart_cover_success_failure_and_fracture(
 /// using the retained altitude before and after a restart.
 #[tokio::test]
 async fn optical_water_attenuation_uses_retained_altitude_after_restart() {
-    let (_dir, config, mut world, map, units) = fixture_field(Terrain::Bridge, 0, 7).await;
+    let (_dir, config, mut world, map, units) = fixture_field(Terrain::Water, 1, 7).await;
     for (pilot, id, y) in [(ObjectId(1), units[0], 0), (ObjectId(2), units[1], 6)] {
         stop_battle_unit(
             &mut world,
@@ -894,17 +876,13 @@ async fn optical_water_attenuation_uses_retained_altitude_after_restart() {
         .unwrap();
         place_battle_unit(&mut world, id, map, 1, y).unwrap();
     }
-    // A saved prone unit at elevation zero has its eyes above the waterline.
+    // A saved prone unit retained at elevation zero has its eyes above the waterline.
     let mut state = serde_json::to_value(&world.btech).unwrap();
     for id in units {
         state["constructed"][id.0.to_string()]["posture"] = serde_json::json!("prone");
+        state["constructed"][id.0.to_string()]["ground_elevation"] = serde_json::json!(0.0);
     }
     world.btech = serde_json::from_value(state).unwrap();
-    for y in 0..7 {
-        let report =
-            break_battle_bridge(&mut world, map, BattleHexCoordinate { x: 1, y }, rules()).unwrap();
-        assert!(report.falls.is_empty());
-    }
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     let check = |world: &World, perceived: bool| {
@@ -977,7 +955,8 @@ async fn bridge_deck_contacts_refresh_after_collapse_and_restart() {
         let collapse =
             break_battle_bridge(&mut world, map, BattleHexCoordinate { x: 1, y: 0 }, rules())
                 .unwrap();
-        assert_eq!(collapse.falls.len(), usize::from(height == 1));
+        // The target stood on the deck, so it falls into the water and drops out of sight.
+        assert_eq!(collapse.falls.len(), 1);
         persistence::save(&config.database(), &world).await.unwrap();
         let mut loaded = persistence::load(&config.database()).await.unwrap();
         let expected = refresh_battle_contacts(&mut world, &[observer]).unwrap();
@@ -986,18 +965,13 @@ async fn bridge_deck_contacts_refresh_after_collapse_and_restart() {
             expected
         );
         assert_eq!(world.btech, loaded.btech);
-        if height == 1 {
-            assert_eq!(expected.len(), 1);
-            assert!(!expected[0].acquired);
-            assert!(
-                visible_battle_contacts(&loaded, observer)
-                    .unwrap()
-                    .is_empty()
-            );
-        } else {
-            assert!(expected.is_empty());
-            assert_eq!(visible_battle_contacts(&loaded, observer).unwrap().len(), 1);
-        }
+        assert_eq!(expected.len(), 1);
+        assert!(!expected[0].acquired);
+        assert!(
+            visible_battle_contacts(&loaded, observer)
+                .unwrap()
+                .is_empty()
+        );
         loaded.validate(&config).unwrap();
         persistence::save(&config.database(), &loaded)
             .await
@@ -1063,10 +1037,11 @@ async fn elevation_inspection_tracks_surface_collapse_flight_and_unplaced_state(
             let report =
                 break_battle_bridge(&mut world, map, BattleHexCoordinate { x: 1, y: 1 }, rules())
                     .unwrap();
-            assert!(report.falls.is_empty());
+            // Both units stood on the deck and fall to the bed of the depth-one water.
+            assert_eq!(report.falls.len(), 2);
             persistence::save(&config.database(), &world).await.unwrap();
             world = persistence::load(&config.database()).await.unwrap();
-            assert_elevation_inspection(&config, &world, id, Some(3));
+            assert_elevation_inspection(&config, &world, id, Some(-1));
         }
         if terrain == Terrain::Grassland {
             launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
@@ -3843,11 +3818,8 @@ async fn fracture_observers_capture_breaker_and_occupants_before_submersion() {
                         serde_json::json!({"state":"off"});
                     world.btech = serde_json::from_value(state).unwrap();
                 }
-                let expected_falls = if terrain == Terrain::Bridge {
-                    depth == 1
-                } else {
-                    depth > 0
-                };
+                // Deck occupants always fall; ice occupants fall only into deeper water.
+                let expected_falls = terrain == Terrain::Bridge || depth > 0;
                 let mut expected = Vec::new();
                 let mut append = |id, text| {
                     expected.extend(

@@ -113,7 +113,7 @@ async fn shallow_ice_changes_terrain_without_falls_or_flooding() {
 }
 
 #[tokio::test]
-async fn bridge_collapse_preserves_unselected_heights_and_clears_under_span_state() {
+async fn bridge_collapse_drops_deck_vehicles_and_clears_under_span_state() {
     let (_dir, config, mut world, map, ids) = fixture(Terrain::Bridge, 3).await;
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     saved["vehicles"][ids[2].0.to_string()]["under_bridge"] = true.into();
@@ -125,9 +125,17 @@ async fn bridge_collapse_preserves_unselected_heights_and_clears_under_span_stat
         BattleMovementRules::STANDARD.fall,
     )
     .unwrap();
-    assert!(report.vehicle_falls.is_empty());
+    // The vehicle on the deck falls past it into the water; the hovercraft beneath stays put.
+    assert_eq!(
+        report
+            .vehicle_falls
+            .iter()
+            .map(|(id, _)| *id)
+            .collect::<Vec<_>>(),
+        [ids[1]]
+    );
     let tile = world.btech.maps()[&map].hex(0, 0).unwrap();
-    assert_eq!(world.btech.vehicles()[&ids[1]].elevation_level(tile), 3);
+    assert_eq!(world.btech.vehicles()[&ids[1]].elevation_level(tile), -1);
     assert_eq!(world.btech.vehicles()[&ids[2]].elevation_level(tile), 0);
     assert!(!world.btech.vehicles()[&ids[2]].under_bridge());
     world.validate(&config).unwrap();
