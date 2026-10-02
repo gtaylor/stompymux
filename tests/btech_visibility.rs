@@ -313,18 +313,14 @@ async fn clairvoyance_preserves_physical_los_and_unacquired_aim() {
 /// Every perception channel rejects invisible targets, even for a clairvoyant operator with working hardware.
 #[tokio::test]
 async fn invisibility_suppresses_all_perception_channels_without_acquisition() {
-    let source = include_str!("../game/mechs/JR7-D.toml")
-        .replace(
-            r#"{ at = "1-2", item = "JumpJet" },"#,
-            r#"{ at = "1-2", item = "JumpJet" },
+    let source = include_str!("../game/mechs/JR7-D.toml").replace(
+        r#"{ at = "1-2", item = "JumpJet" },"#,
+        r#"{ at = "1-2", item = "JumpJet" },
     { at = "3-4", item = "BeagleProbe" },
     { at = 5, item = "Light_BAP" },
     { at = "6-8", item = "BloodhoundProbe" },"#,
-        )
-        .replace(
-            r#"specials = ["FlipArms"]"#,
-            r#"specials = ["FlipArms", "AntiAircraft"]"#,
-        );
+    );
+    let source = support::templates::with_flags(&source, &["AntiAircraft"]);
     let (_dir, config, base, observer, target) =
         fixture(&source, include_str!("../game/mechs/JR7-D.toml"), false).await;
     let map = base.btech.units()[&observer].map.unwrap();

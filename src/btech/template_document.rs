@@ -112,16 +112,6 @@ const UNRENDERED: &[&str] = &[
     "administrative_movement_type",
 ];
 
-/// Whether a document states construction choices, or spells every flag and slot out.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum DocumentMode {
-    /// Construction choices drive flags, fixed equipment and internal structure.
-    Constructed,
-    /// Every flag, slot and internal structure value is written out; used to read
-    /// documents saved before construction choices existed.
-    Literal,
-}
-
 /// One section's protection and occupied slots.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -214,7 +204,6 @@ pub(super) struct ParsedTemplate {
 
 /// Unit facts the section decoder needs, read from the unit-level fields first.
 struct Unit {
-    mode: DocumentMode,
     class: Option<RawUnitClass>,
     chassis: Option<BattleMechChassis>,
     tons: i64,
@@ -224,18 +213,13 @@ struct Unit {
 impl Unit {
     /// Whether construction places fixed equipment: constructed biped and quad mechs.
     fn places_equipment(&self) -> bool {
-        self.mode == DocumentMode::Constructed && self.chassis.is_some()
+        self.chassis.is_some()
     }
 }
 
 impl ParsedTemplate {
     /// Decode a TOML document, recording `reference` as the unit's identity.
     pub fn parse(reference: &str, source: &str) -> Result<Self> {
-        Self::parse_mode(reference, source, DocumentMode::Constructed)
-    }
-
-    /// Decode a TOML document in the given mode.
-    pub fn parse_mode(reference: &str, source: &str, mode: DocumentMode) -> Result<Self> {
         ensure!(
             source.len() <= TEMPLATE_SIZE_LIMIT,
             "template exceeds size limit"
@@ -244,10 +228,6 @@ impl ParsedTemplate {
         let sections = document.remove("sections");
         let split_mounts = document.remove("split_mounts");
         let construction = document.remove("construction");
-        ensure!(
-            mode == DocumentMode::Constructed || construction.is_none(),
-            "literal documents have no construction table"
-        );
         let construction = construction
             .map(Construction::decode)
             .transpose()
@@ -278,7 +258,7 @@ impl ParsedTemplate {
                 .iter()
                 .find(|(name, _, _)| *name == key)
                 .with_context(|| format!("unsupported template field {key}"))?;
-            if let Some(value) = decode_field(&key, *kind, value, mode)? {
+            if let Some(value) = decode_field(&key, *kind, value)? {
                 ensure!(
                     fields.insert((*attribute).to_owned(), value).is_none(),
                     "give either {attribute} or its movement points, not both"
@@ -306,7 +286,6 @@ impl ParsedTemplate {
             _ => None,
         };
         let unit = Unit {
-            mode,
             class,
             chassis,
             tons: fields
@@ -374,7 +353,6 @@ impl ParsedTemplate {
         );
         let internal = match section.internals {
             Some(internal) => internal,
-            None if unit.mode == DocumentMode::Literal => 0,
             None => default_internal(unit, mech).with_context(|| {
                 format!("internals are required for {key} at {} tons", unit.tons)
             })?,
@@ -519,12 +497,7 @@ fn default_internal(unit: &Unit, mech: Option<BattleSection>) -> Option<u16> {
 }
 
 /// Convert one typed document value into its internal attribute spelling.
-fn decode_field(
-    key: &str,
-    kind: Kind,
-    value: toml::Value,
-    mode: DocumentMode,
-) -> Result<Option<String>> {
+fn decode_field(key: &str, kind: Kind, value: toml::Value) -> Result<Option<String>> {
     Ok(Some(match (kind, value) {
         (Kind::Integer, toml::Value::Integer(value)) => i32::try_from(value)
             .with_context(|| format!("{key} is out of range"))?
@@ -561,13 +534,13 @@ fn decode_field(
                     !flag.is_empty() && !flag.contains(char::is_whitespace),
                     "{key} entries must be single words"
                 );
-                let flag = match (mode, key) {
-                    (DocumentMode::Literal, _) => flag,
-                    (DocumentMode::Constructed, "specials") => canonical_special(&flag)?.to_owned(),
-                    (DocumentMode::Constructed, _) => canonical_infantry_special(&flag)?.to_owned(),
+                let flag = if key == "specials" {
+                    canonical_special(&flag)?
+                } else {
+                    canonical_infantry_special(&flag)?
                 };
-                if !flags.iter().any(|known| known.eq_ignore_ascii_case(&flag)) {
-                    flags.push(flag);
+                if !flags.iter().any(|known| known == flag) {
+                    flags.push(flag.to_owned());
                 }
             }
             if flags.is_empty() {
@@ -727,7 +700,6 @@ pub(super) fn render(
         construction.brand = fixed_brand(sections);
     }
     let unit = Unit {
-        mode: DocumentMode::Constructed,
         class,
         chassis,
         tons: attributes
@@ -834,7 +806,7 @@ fn fit_section(
     let biped_arm = chassis == BattleMechChassis::Biped
         && matches!(section, BattleSection::LeftArm | BattleSection::RightArm);
     let omissions: &[&[Omission]] = if biped_arm {
-        &[&[], &[HandActuator], &[LowerActuator, HandActuator]]
+        &[&[], &[Hand], &[Lower, Hand]]
     } else {
         &[&[]]
     };
@@ -1202,7 +1174,7 @@ armor = 9
         assert_eq!(arm.internal, 13);
         assert_eq!(arm.criticals[&0].equipment, "ShoulderOrHip");
         assert_eq!(arm.criticals[&2].equipment, "LowerActuator");
-        assert!(!arm.criticals.contains_key(&3));
+        assert_eq!(arm.criticals[&3].equipment, "IS.ERPPC");
         assert_eq!(arm.criticals[&4].modes, ["OnTC"]);
         assert_eq!(arm.criticals[&0].brand, Some(3));
         let torso = &parsed.sections["left_torso"];

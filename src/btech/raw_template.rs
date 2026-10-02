@@ -633,7 +633,7 @@ mod tests {
     fn sections_follow_class_anatomy_and_flags_merge_case_insensitively() {
         let template = RawTemplate::parse(
             "X",
-            "class = \"aerofighter\"\nmovement = \"fly\"\nspecials = [\"Clan\", \"ECM\", \"clan\"]\n[sections.left_wing]\narmor = 2\n",
+            "class = \"aerofighter\"\nmovement = \"fly\"\nspecials = [\"ECM\", \"ecm\"]\n[construction]\ntech_base = \"clan\"\n[sections.left_wing]\narmor = 2\n",
         )
         .unwrap();
         assert_eq!(template.class, RawUnitClass::AeroFighter);
@@ -648,7 +648,7 @@ mod tests {
     fn missing_heat_sinks_receive_only_the_non_ice_loader_default() {
         assert_eq!(RawTemplate::parse("X", "").unwrap().heat_sinks, 10);
         assert_eq!(
-            RawTemplate::parse("X", "specials = [\"ICEEngine_Tech\"]")
+            RawTemplate::parse("X", "[construction]\nengine = \"ice\"")
                 .unwrap()
                 .heat_sinks,
             0

@@ -17,11 +17,23 @@ fn rules() -> BattleAimRules {
     }
 }
 
-/// Insert one slot entry at the start of a section's existing `slots` array.
+/// Insert one slot entry at the start of a section's `slots` array, creating it when absent.
 fn add_slot(source: &str, section: &str, entry: &str) -> String {
-    let start = source.find(&format!("[sections.{section}]\n")).unwrap();
+    let header = format!("[sections.{section}]\n");
+    let start = source.find(&header).unwrap();
+    let end = source[start + 1..]
+        .find("\n[")
+        .map_or(source.len(), |next| start + 2 + next);
     let opening = "slots = [\n";
-    let offset = start + source[start..].find(opening).unwrap() + opening.len();
+    let Some(found) = source[start..end].find(opening) else {
+        let offset = start + header.len();
+        return format!(
+            "{}slots = [{entry}]\n{}",
+            &source[..offset],
+            &source[offset..]
+        );
+    };
+    let offset = start + found + opening.len();
     format!("{}    {entry},\n{}", &source[..offset], &source[offset..])
 }
 

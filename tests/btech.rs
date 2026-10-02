@@ -65,8 +65,14 @@ fn malformed_templates_do_not_become_partially_supported_units() {
         source.replace("walk_mp = 11", "max_speed = nan"),
         source.replace("movement = \"biped\"", "movement = \"quad\""),
         source.replace("class = \"mech\"", "class = \"Mech\""),
-        source.replace("at = \"1-3\"", "at = \"0-3\""),
-        source.replace("at = \"4-7\"", "at = \"3-7\""),
+        source.replace(
+            "at = \"1-2\", item = \"JumpJet\"",
+            "at = \"0-2\", item = \"JumpJet\"",
+        ),
+        source.replace(
+            "at = \"3-4\", item = \"IS.MediumLaser\"",
+            "at = \"2-3\", item = \"IS.MediumLaser\"",
+        ),
         source.replace("tons = 35", "tons = -1"),
         source.replace("name = \"Jenner\"", "name = \"Jenner"),
         format!("reference = \"JR7-D\"\n{source}"),

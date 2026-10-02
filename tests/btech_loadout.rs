@@ -741,14 +741,14 @@ async fn existing_double_sink_designs_construct() {
     world.validate(&config).unwrap();
 }
 
-/// Distributed armor is inferred from the unchanged asset and survives database/Lua inspection.
+/// Ferro-fibrous armor declared by construction keeps its distributed slots through restart and inspection.
 #[tokio::test]
 async fn ferro_fibrous_asset_mass_and_critical_candidates_survive_restart() {
     use stompymux_rs::*;
     let (_dir, config, mut world) = support::isolated_world().await;
     let template =
         BattleTemplate::parse("CRB-28", include_str!("../game/mechs/CRB-28.toml")).unwrap();
-    assert!(!template.attributes["specials"].contains("Ferro"));
+    assert!(template.attributes["specials"].contains("FerroFibrous_Tech"));
     let id = world.create(&config, "Ferro Crab".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_unit(&mut world, id, template).unwrap();
@@ -784,13 +784,16 @@ async fn ferro_fibrous_asset_mass_and_critical_candidates_survive_restart() {
     assert_eq!(armor, mass.armor);
 }
 
-/// XL technology comes from installed engine slots in existing assets, not an explicit flag.
+/// An XL engine declared by construction places its side torso slots and flag together.
 #[tokio::test]
 async fn existing_arctic_fox_xl_engine_constructs() {
     use stompymux_rs::*;
     let (_dir, config, mut world) = support::isolated_world().await;
     let template = BattleTemplate::parse("AF1", include_str!("../game/mechs/AF1.toml")).unwrap();
-    assert_eq!(template.attributes["specials"], "DoubleHS");
+    assert_eq!(
+        template.attributes["specials"],
+        "XLEngine_Tech EndoSteel_Tech DoubleHS"
+    );
     let id = world.create(&config, "Arctic Fox".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_unit(&mut world, id, template).unwrap();

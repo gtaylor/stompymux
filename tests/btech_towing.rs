@@ -336,12 +336,9 @@ async fn towing_load_shares_equipment_discounts_and_live_mass_across_chassis() {
                 "Carrier_Tech",
                 "SalvageTech Carrier_Tech",
             ] {
-                let added: String = equipment
-                    .split_whitespace()
-                    .map(|flag| format!("\"{flag}\", "))
-                    .collect();
-                let carrier = source.replacen("specials = [", &format!("specials = [{added}"), 1);
-                assert_eq!(carrier == source, equipment.is_empty());
+                let flags: Vec<_> = equipment.split_whitespace().collect();
+                let carrier = crate::support::templates::with_flags(source, &flags);
+                assert!(flags.iter().all(|flag| carrier.contains(flag)));
                 let (_dir, config, mut world, _, ids) = fixture(&[&carrier, target]).await;
                 let [a, b] = ids[..] else { unreachable!() };
                 set_battle_tow(&mut world, a, Some(b)).unwrap();

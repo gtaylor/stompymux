@@ -34,20 +34,19 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 
 /// Demolisher with radar, a two-slot Beagle probe in front slots 0-1 and a Bloodhound in slot 2.
 fn equipped() -> String {
-    include_str!("../game/mechs/Demolisher.toml")
-        .replace(
-            r#"specials = ["ICEEngine_Tech"]"#,
-            r#"specials = ["ICEEngine_Tech", "AntiAircraft"]"#,
-        )
-        .replace(
-            "[sections.front_side]\n",
-            r#"[sections.front_side]
+    support::templates::with_flags(
+        include_str!("../game/mechs/Demolisher.toml"),
+        &["AntiAircraft"],
+    )
+    .replace(
+        "[sections.front_side]\n",
+        r#"[sections.front_side]
 slots = [
     { at = "1-2", item = "BeagleProbe" },
     { at = 3, item = "BloodhoundProbe" },
 ]
 "#,
-        )
+    )
 }
 
 /// The installed probe summary for a vehicle.

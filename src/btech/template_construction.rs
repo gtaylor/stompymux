@@ -239,7 +239,7 @@ impl Construction {
         };
         let construction = Self {
             clan,
-            engine: Engine::from_flags("engine", flags)?,
+            engine: engine_from_flags(flags)?,
             gyro: Gyro::from_flags("gyro", flags)?,
             cockpit: Cockpit::from_flags("cockpit", flags)?,
             structure: Structure::from_flags("structure", flags)?,
@@ -326,6 +326,21 @@ impl Construction {
     }
 }
 
+/// The engine a unit's flags name. The loader derives the compact bit from centre torso
+/// geometry, so another engine flag beside it names the engine actually declared.
+fn engine_from_flags(flags: &[&str]) -> Result<Engine> {
+    let compact = Engine::Compact.flags();
+    let declared: Vec<&str> = flags
+        .iter()
+        .copied()
+        .filter(|flag| !compact.iter().any(|bit| bit.eq_ignore_ascii_case(flag)))
+        .collect();
+    match Engine::from_flags("engine", &declared)? {
+        Engine::Standard => Engine::from_flags("engine", flags),
+        engine => Ok(engine),
+    }
+}
+
 /// Decode an optional document choice, defaulting when absent.
 fn choice<T: Default>(
     value: Option<String>,
@@ -393,27 +408,22 @@ fn technology_names(codes: std::ops::RangeInclusive<i32>) -> impl Iterator<Item 
 /// Actuators a section may leave out of its standard installation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(super) enum Omission {
-    UpperActuator,
-    LowerActuator,
-    HandActuator,
-    FootActuator,
+    Upper,
+    Lower,
+    Hand,
+    Foot,
 }
 
 impl Omission {
-    const ALL: [Self; 4] = [
-        Self::UpperActuator,
-        Self::LowerActuator,
-        Self::HandActuator,
-        Self::FootActuator,
-    ];
+    const ALL: [Self; 4] = [Self::Upper, Self::Lower, Self::Hand, Self::Foot];
 
     /// Document spelling.
     pub fn spelling(self) -> &'static str {
         match self {
-            Self::UpperActuator => "upper_actuator",
-            Self::LowerActuator => "lower_actuator",
-            Self::HandActuator => "hand_actuator",
-            Self::FootActuator => "foot_actuator",
+            Self::Upper => "upper_actuator",
+            Self::Lower => "lower_actuator",
+            Self::Hand => "hand_actuator",
+            Self::Foot => "foot_actuator",
         }
     }
 
@@ -445,10 +455,10 @@ pub(super) fn fixed_equipment(
     let mut items = BTreeMap::new();
     let limb = |items: &mut BTreeMap<u8, &'static str>, last: &'static str, omit_last: Omission| {
         items.insert(0, SHOULDER_OR_HIP);
-        if !plan.omit.contains(&Omission::UpperActuator) {
+        if !plan.omit.contains(&Omission::Upper) {
             items.insert(1, UPPER_ACTUATOR);
         }
-        if !plan.omit.contains(&Omission::LowerActuator) {
+        if !plan.omit.contains(&Omission::Lower) {
             items.insert(2, LOWER_ACTUATOR);
         }
         if !plan.omit.contains(&omit_last) {
@@ -457,16 +467,10 @@ pub(super) fn fixed_equipment(
     };
     let arm = chassis == BattleMechChassis::Biped && matches!(section, LeftArm | RightArm);
     let allowed: &[Omission] = match section {
-        LeftArm | RightArm if arm => &[
-            Omission::UpperActuator,
-            Omission::LowerActuator,
-            Omission::HandActuator,
-        ],
-        LeftArm | RightArm | LeftLeg | RightLeg => &[
-            Omission::UpperActuator,
-            Omission::LowerActuator,
-            Omission::FootActuator,
-        ],
+        LeftArm | RightArm if arm => &[Omission::Upper, Omission::Lower, Omission::Hand],
+        LeftArm | RightArm | LeftLeg | RightLeg => {
+            &[Omission::Upper, Omission::Lower, Omission::Foot]
+        }
         _ => &[],
     };
     for omission in plan.omit {
@@ -489,10 +493,8 @@ pub(super) fn fixed_equipment(
         "engine_at applies only to side torsos holding engine slots"
     );
     match section {
-        LeftArm | RightArm if arm => limb(&mut items, HAND_OR_FOOT, Omission::HandActuator),
-        LeftArm | RightArm | LeftLeg | RightLeg => {
-            limb(&mut items, HAND_OR_FOOT, Omission::FootActuator)
-        }
+        LeftArm | RightArm if arm => limb(&mut items, HAND_OR_FOOT, Omission::Hand),
+        LeftArm | RightArm | LeftLeg | RightLeg => limb(&mut items, HAND_OR_FOOT, Omission::Foot),
         Head => {
             let layout: &[(u8, &str)] = match construction.cockpit {
                 Cockpit::Standard => &[
@@ -635,6 +637,13 @@ mod tests {
             }
         );
         assert!(Construction::from_flags(&["XLEngine_Tech", "XXL_Tech"]).is_err());
+        assert_eq!(
+            Construction::from_flags(&["ICEEngine_Tech", "CompactEngine_Tech"])
+                .unwrap()
+                .0
+                .engine,
+            Engine::Ice
+        );
     }
 
     #[test]
@@ -697,7 +706,7 @@ mod tests {
             &standard,
             LeftArm,
             SectionPlan {
-                omit: &[Omission::LowerActuator, Omission::HandActuator],
+                omit: &[Omission::Lower, Omission::Hand],
                 ..SectionPlan::default()
             },
         );
@@ -721,7 +730,7 @@ mod tests {
                 BattleMechChassis::Quad,
                 LeftArm,
                 SectionPlan {
-                    omit: &[Omission::HandActuator],
+                    omit: &[Omission::Hand],
                     ..SectionPlan::default()
                 }
             )

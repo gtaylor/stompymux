@@ -139,7 +139,7 @@ async fn armor_penetration_uses_one_entry_roll_and_applies_material_modifiers() 
         let text = if special.is_empty() {
             text.to_owned()
         } else {
-            support::templates::with_flags(&text, &[special])
+            support::templates::with_flags(text, &[special])
         };
         let (_dir, config, mut world, id) = fixture(&text).await;
         seed(&mut world, id, 21);
@@ -749,8 +749,7 @@ async fn hardened_armor_hampers_vehicle_driving() {
 #[test]
 fn hardened_armor_is_barred_from_hovercraft_and_vtols() {
     let tracked = include_str!("../game/mechs/Demolisher.toml");
-    let harden =
-        |source: &str| source.replacen("specials = [", "specials = [\"HardenedArmor_Tech\", ", 1);
+    let harden = |source: &str| support::templates::with_flags(source, &["HardenedArmor_Tech"]);
     assert!(BattleVehicleTemplate::parse("test", &harden(tracked)).is_ok());
     assert!(
         BattleVehicleTemplate::parse(
@@ -764,7 +763,7 @@ fn hardened_armor_is_barred_from_hovercraft_and_vtols() {
         include_str!("../game/mechs/Kestrel.toml").to_owned(),
     ] {
         let hardened = harden(&source);
-        assert!(hardened.contains("HardenedArmor_Tech"));
+        assert!(hardened.contains("armor = \"hardened\""));
         let error = BattleVehicleTemplate::parse("test", &hardened).unwrap_err();
         assert!(
             format!("{error:#}").contains("Hovercraft and VTOLs cannot mount hardened armor"),
