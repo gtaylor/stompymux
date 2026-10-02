@@ -33,9 +33,8 @@ slots = [
 [sections.left_torso]
 armor = 16
 rear = 5
-explicit = true
+brand = 3
 slots = [
-    { at = "1-2", item = "Engine", brand = 3 },
     { at = 3, item = "CL.LRM-10", brand = 5 },
     { at = 4, item = "Ammo_CL.LRM-10", rounds = 12 },
     { at = "10-12", item = "FerroFibrous", brand = 5 },
@@ -44,9 +43,8 @@ slots = [
 [sections.right_torso]
 armor = 16
 rear = 5
-explicit = true
+brand = 3
 slots = [
-    { at = "1-2", item = "Engine", brand = 3 },
     { at = 3, item = "CL.SRM-6", brand = 5 },
     { at = 4, item = "Ammo_CL.SRM-6", rounds = 15 },
     { at = "10-12", item = "EndoSteel", brand = 5 },

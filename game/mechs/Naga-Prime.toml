@@ -13,14 +13,14 @@ structure = "endo_steel"
 
 [sections.left_arm]
 armor = 14
-explicit = true
+omit = ["shoulder", "upper_actuator", "lower_actuator", "hand_actuator"]
 slots = [
     { at = "1-12", item = "CL.ArrowIVSystem" },
 ]
 
 [sections.right_arm]
 armor = 14
-explicit = true
+omit = ["shoulder", "upper_actuator", "lower_actuator", "hand_actuator"]
 slots = [
     { at = "1-12", item = "CL.ArrowIVSystem" },
 ]

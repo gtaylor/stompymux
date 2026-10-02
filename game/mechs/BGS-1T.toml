@@ -18,18 +18,16 @@ armor = 27
 [sections.left_torso]
 armor = 21
 rear = 6
-explicit = true
+engine_slots = 5
 slots = [
-    { at = "1-5", item = "Engine", brand = 3 },
     { at = "6-9", item = "IS.ERLargeLaser", brand = 3 },
 ]
 
 [sections.right_torso]
 armor = 21
 rear = 6
-explicit = true
+engine_slots = 1
 slots = [
-    { at = 1, item = "Engine", brand = 3 },
     { at = "2-12", item = "IS.LB20-XAC", brand = 3 },
 ]
 

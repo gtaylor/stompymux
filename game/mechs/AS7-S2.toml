@@ -30,9 +30,8 @@ slots = [
 [sections.left_torso]
 armor = 32
 rear = 10
-explicit = true
+engine_slots = 2
 slots = [
-    { at = "1-2", item = "Engine", brand = 3 },
     { at = "3-5", item = "IS.LRM-15", brand = 3 },
     { at = 6, item = "ArtemisIV", brand = 3 },
     { at = "7-8", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
@@ -51,12 +50,7 @@ slots = [
 [sections.center_torso]
 armor = 47
 rear = 14
-explicit = true
-slots = [
-    { at = "1-3", item = "Engine", brand = 3 },
-    { at = "4-7", item = "Gyro", brand = 3 },
-    { at = "8-12", item = "Engine", brand = 3 },
-]
+engine_slots = 8
 
 [sections.left_leg]
 armor = 41
