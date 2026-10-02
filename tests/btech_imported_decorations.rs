@@ -1,4 +1,5 @@
-//! Imported decoration records retain source identity, terrain restoration, and unscheduled lifetimes.
+//! Imported decoration records retain source identity and unscheduled lifetimes; fire and smoke
+//! records never change the terrain, and generic decorations restore theirs when deleted.
 use crate::support;
 use sqlx::Connection;
 use std::{cell::RefCell, rc::Rc};
@@ -12,7 +13,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
         &mut world,
         map,
         "grid",
-        BattleMapAsset::parse("2 2\n.1.1\n.1&1\n").unwrap(),
+        BattleMapAsset::from_cells("2 2\n.1.1\n.1&1\n").unwrap(),
     )
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
@@ -46,7 +47,7 @@ async fn imported_records_preserve_lookup_order_and_share_native_lua_removal() {
     );
     assert_eq!(
         world.btech.maps()[&map].base_hex(1, 1).unwrap().terrain(),
-        Terrain::HeavyForest
+        Terrain::Grassland
     );
     assert!(!map_fire_pending(&world));
     assert!(!map_smoke_pending(&world));
@@ -96,16 +97,16 @@ async fn imported_records_preserve_lookup_order_and_share_native_lua_removal() {
             map.0
         ))
         .unwrap();
-    assert_eq!(count, 3);
+    assert_eq!(count, 4);
     let report = support::run_text(&native, &config, ObjectId(1), 1, "delobj fire");
-    assert!(report.contains("3 objects deleted!"), "{report}");
+    assert!(report.contains("4 objects deleted!"), "{report}");
     assert_eq!(native.world().btech, lua.world().btech);
     assert_eq!(
         native.world().btech.maps()[&map]
             .hex(1, 1)
             .unwrap()
             .terrain(),
-        Terrain::Road
+        Terrain::Grassland
     );
     assert_eq!(
         delete_battle_map_objects_action(
@@ -153,7 +154,7 @@ async fn replacing_imported_effects_preserves_underlying_terrain_and_clears_sour
     );
     assert_eq!(
         world.btech.maps()[&map].base_hex(1, 1).unwrap().terrain(),
-        Terrain::HeavyForest
+        Terrain::Grassland
     );
     persistence::save(&config.database(), &world).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
@@ -162,45 +163,54 @@ async fn replacing_imported_effects_preserves_underlying_terrain_and_clears_sour
     advance_map_smoke(&mut restored);
     assert_eq!(
         restored.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
-        Terrain::HeavyForest
+        Terrain::Grassland
     );
     let (_dir, config, world, map) = fixture().await;
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-    // Writing the underlying terrain still changes a stored visible fire marker.
+    // Writing the terrain under permanent fire leaves the fire burning over it.
     set_battle_map_hex_action(
         &scripts,
         &config,
         ObjectId(1),
         map,
         BattleHexCoordinate { x: 1, y: 1 },
-        Terrain::HeavyForest,
-        1,
+        BattleHex::new(Terrain::HeavyForest, 1),
     )
     .unwrap();
-    assert_eq!(
-        scripts.world().btech.maps()[&map]
-            .hex(1, 1)
-            .unwrap()
-            .terrain(),
-        Terrain::HeavyForest
-    );
-    set_battle_map_hex_action(
-        &scripts,
-        &config,
-        ObjectId(1),
-        map,
-        BattleHexCoordinate { x: 1, y: 1 },
-        Terrain::Fire,
-        1,
-    )
-    .unwrap();
-    resize_battle_map_action(&scripts, &config, ObjectId(1), map, 2, 2).unwrap();
     assert_eq!(
         scripts.world().btech.maps()[&map]
             .hex(1, 1)
             .unwrap()
             .terrain(),
         Terrain::Fire
+    );
+    assert_eq!(
+        scripts.world().btech.maps()[&map]
+            .base_hex(1, 1)
+            .unwrap()
+            .terrain(),
+        Terrain::HeavyForest
+    );
+    // Fire is not terrain, so it cannot be written into the map.
+    assert!(
+        set_battle_map_hex_action(
+            &scripts,
+            &config,
+            ObjectId(1),
+            map,
+            BattleHexCoordinate { x: 1, y: 1 },
+            BattleHex::new(Terrain::Fire, 1),
+        )
+        .is_err()
+    );
+    // Resizing clears fire and smoke with the other map objects.
+    resize_battle_map_action(&scripts, &config, ObjectId(1), map, 2, 2).unwrap();
+    assert_eq!(
+        scripts.world().btech.maps()[&map]
+            .hex(1, 1)
+            .unwrap()
+            .terrain(),
+        Terrain::HeavyForest
     );
     for kind in BattleStaticDecorationKind::ALL {
         assert!(

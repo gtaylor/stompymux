@@ -10,7 +10,7 @@ async fn fixture(teams: &[i32]) -> (tempfile::TempDir, Config, World, Vec<Object
         &mut world,
         map,
         "crowding.map",
-        BattleMapAsset::parse("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();

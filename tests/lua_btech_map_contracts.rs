@@ -14,14 +14,14 @@ async fn terrain_zones_cargo_links_and_strict_errors_match_c_shapes() {
         &mut world,
         map,
         "map",
-        BattleMapAsset::parse("3 2\n.0~1^2\n@3#4+5\n").unwrap(),
+        BattleMapAsset::from_cells("3 2\n.0~1^2\n@3#4+5\n").unwrap(),
     )
     .unwrap();
     create_battle_map(
         &mut world,
         parent,
         "parent",
-        BattleMapAsset::parse("2 2\n.0.0\n.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
     set_battle_landing_exclusion(
@@ -38,8 +38,7 @@ async fn terrain_zones_cargo_links_and_strict_errors_match_c_shapes() {
     )
     .unwrap();
     let root = config.path(&config.database.map_database);
-    std::fs::create_dir_all(&root).unwrap();
-    std::fs::write(root.join("contract.map"), "2 2\n.0.0\n.0.0\n").unwrap();
+    support::write_map(&root, "contract.map", "2 2\n.0.0\n.0.0\n");
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     scripts
         .inspect_lua()
@@ -55,8 +54,9 @@ async fn terrain_zones_cargo_links_and_strict_errors_match_c_shapes() {
         .eval_callback::<()>(
             r#"
             local assertion=assert; local step=0; function assert(value,message) step=step+1; return assertion(value,message or ('step '..step)) end
-            assert(btech.map.elevation(map_id,{x=1,y=0})==1)
-            assert(btech.map.elevation(tostring(map_id)..'.9',{x=1,y=0})==1)
+            assert(btech.map.elevation(map_id,{x=2,y=0})==2)
+            assert(btech.map.elevation(tostring(map_id)..'.9',{x=2,y=0})==2)
+            assert(btech.map.elevation(map_id,{x=1,y=0})==0)
             for _,number in ipairs({0/0,1/0,-1/0,2147483648}) do
                 local numeric_ok,numeric_err=mux.error.pcall(btech.map.elevation,number,{x=0,y=0})
                 assert(not numeric_ok and numeric_err.code=='mux.object.invalid' and numeric_err.message=='bad argument #1 to \'?\' (object is invalid)' and numeric_err.detail.argument==1)
@@ -65,7 +65,7 @@ async fn terrain_zones_cargo_links_and_strict_errors_match_c_shapes() {
             assert(btech.map.range(map_id,{x=0,y=0},{x=1,y=0})==1.0198038816452026)
             assert(btech.map.range(map_id,{x=0,y=0,z=0},{x=0,y=0,z=5})==1.0)
             assert(btech.map.range(map_id,{x=0,y=0,z=2},{x=2,y=1,z=7})==2.2360680103302)
-            assert(btech.map.elevation(map_id,{x=1,y=0},'extra')==1)
+            assert(btech.map.elevation(map_id,{x=2,y=0},'extra')==2)
             local zones=btech.map.blast_zones(map_id)
             assert(#zones==1 and zones[1].x==1 and zones[1].y==0 and zones[1].radius==2)
             assert(btech.map.in_blast_zone(map_id,{x=0,y=0}))
@@ -139,12 +139,11 @@ async fn mixed_membership_range_lookup_los_and_exact_placement_are_canonical() {
     world.objects.get_mut(&second_pilot).unwrap().location = Some(mech);
     assign_battle_pilot(&mut world, mech, second_pilot).unwrap();
     let map_root = config.path(&config.database.map_database);
-    std::fs::create_dir_all(&map_root).unwrap();
-    std::fs::write(
-        map_root.join("occupied.map"),
-        format!("1 12\n{}", ".0\n".repeat(12)),
-    )
-    .unwrap();
+    support::write_map(
+        &map_root,
+        "occupied.map",
+        &format!("1 12\n{}", ".0\n".repeat(12)),
+    );
     let vehicle_label = world.btech.vehicles()[&vehicle].battlefield_id().unwrap();
     let mech_label = world.btech.constructed_units()[&mech]
         .battlefield_id()
@@ -196,8 +195,7 @@ async fn mixed_membership_range_lookup_los_and_exact_placement_are_canonical() {
         ObjectId(1),
         map,
         BattleHexCoordinate { x: 0, y: 10 },
-        Terrain::Mountains,
-        9,
+        BattleHex::new(Terrain::Mountains, 9),
     )
     .unwrap();
     scripts.drain_outbox();
@@ -271,7 +269,7 @@ async fn going_handles_and_checking_mode_preserve_object_and_mutation_boundaries
         &mut world,
         map,
         "map",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

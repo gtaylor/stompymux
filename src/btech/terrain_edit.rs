@@ -18,8 +18,12 @@ impl super::StoredBattleMap {
     /// The single write path for base terrain: checks bounds and elevation, then stores `hex`.
     /// Unit altitude, overlays and map objects stay with the caller; see [`replace_hex`].
     pub(crate) fn write_hex(&mut self, x: i64, y: i64, hex: BattleHex) -> Result<()> {
-        ensure!(hex.elevation() <= 9, "Elevation exceeds map limits");
-        self.stored_hex(x, y)?;
+        hex.validate()?;
+        ensure!(
+            hex.overlay().is_none(),
+            "Fire and smoke are not terrain; add them as fire or smoke instead"
+        );
+        self.base_hex(x, y)?;
         let index = (y * self.width + x) as usize;
         Arc::make_mut(
             self.terrain
@@ -37,7 +41,11 @@ pub(super) fn replace_hex(
     coordinate: BattleHexCoordinate,
     after: BattleHex,
 ) -> Result<BattleMapHexChange> {
-    ensure!(after.elevation() <= 9, "Elevation exceeds map limits");
+    after.validate()?;
+    ensure!(
+        after.overlay().is_none(),
+        "Fire and smoke are not terrain; add them as fire or smoke instead"
+    );
     let before = world
         .btech
         .maps()
@@ -50,8 +58,7 @@ pub(super) fn replace_hex(
         before,
         after,
     };
-    if world.btech.maps()[&map].stored_hex(i64::from(coordinate.x), i64::from(coordinate.y))?
-        == after
+    if world.btech.maps()[&map].base_hex(i64::from(coordinate.x), i64::from(coordinate.y))? == after
     {
         return Ok(report);
     }
@@ -90,17 +97,21 @@ pub(super) fn replace_hex(
     Ok(report)
 }
 
-/// Wizard terrain change with the reference's absolute, capped elevation magnitude.
+/// Wizard terrain change replacing one hex's layers.
 /// Editing changes terrain facts without moving units or applying a combat fracture.
+/// Fire and smoke are not terrain and are rejected; they are added as map decorations.
 pub fn set_map_hex_action(
     scripts: &Scripts,
     config: &Config,
     actor: ObjectId,
     map: ObjectId,
     coordinate: BattleHexCoordinate,
-    terrain: Terrain,
-    elevation: i32,
+    hex: BattleHex,
 ) -> Result<BattleMapHexChange> {
+    ensure!(
+        hex.overlay().is_none(),
+        "Fire and smoke are not terrain; use ADDFIRE or ADDSMOKE"
+    );
     scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(before, actor),
@@ -114,12 +125,7 @@ pub fn set_map_hex_action(
                     && !object.flags.contains(crate::Flag::Going)),
             "Map is unavailable"
         );
-        let report = replace_hex(
-            &mut scripts.world_mut(),
-            map,
-            coordinate,
-            BattleHex::new(terrain, elevation.unsigned_abs().min(9) as u8),
-        )?;
+        let report = replace_hex(&mut scripts.world_mut(), map, coordinate, hex)?;
         super::notify_message(
             scripts,
             super::BattleMessageTarget::Player(actor),
@@ -140,6 +146,7 @@ fn terrain_argument(value: &str) -> Result<Terrain> {
 }
 
 /// Parse one coordinate, symbol and signed magnitude before authorizing an edit.
+/// The magnitude's absolute value is the notation's height, capped by [`height_cap`].
 fn parse(arguments: &str) -> Result<(BattleHexCoordinate, Terrain, i32)> {
     let args: Vec<_> = arguments.split_whitespace().take(5).collect();
     ensure!(args.len() == 4, "Expected x y terrain elevation");
@@ -153,6 +160,15 @@ fn parse(arguments: &str) -> Result<(BattleHexCoordinate, Terrain, i32)> {
     ))
 }
 
+/// The largest height ADDHEX gives a terrain: water and ice depth, otherwise a ground height,
+/// structure height or bridge deck.
+fn height_cap(terrain: Terrain) -> u8 {
+    match terrain {
+        Terrain::Water | Terrain::Ice => super::hex::MAX_DEPTH,
+        _ => super::hex::MAX_HEIGHT,
+    }
+}
+
 /// Native operators edit the map containing their player object.
 pub(crate) fn command(
     ctx: &crate::CommandContext<'_>,
@@ -161,14 +177,20 @@ pub(crate) fn command(
     let result = (|| -> Result<()> {
         let (coordinate, terrain, elevation) = parse(&input.args)?;
         let map = super::special_dispatch::object(ctx)?;
+        ensure!(
+            !matches!(terrain, Terrain::Fire | Terrain::Smoke),
+            "Fire and smoke are not terrain; use ADDFIRE or ADDSMOKE"
+        );
         set_map_hex_action(
             ctx.scripts,
             ctx.config,
             ctx.player,
             map,
             coordinate,
-            terrain,
-            elevation,
+            BattleHex::new(
+                terrain,
+                elevation.unsigned_abs().min(u32::from(height_cap(terrain))) as u8,
+            ),
         )?;
         Ok(())
     })();
@@ -233,14 +255,14 @@ mod tests {
     fn write_hex_checks_bounds_and_elevation() {
         let mut map = super::super::state::map_from_asset(
             "write",
-            super::super::BattleMapAsset::parse("2 1\n.0.0\n").unwrap(),
+            super::super::BattleMapAsset::from_cells("2 1\n.0.0\n").unwrap(),
         )
         .unwrap();
         let rough = BattleHex::new(Terrain::Rough, 3);
         map.write_hex(1, 0, rough).unwrap();
-        assert_eq!(map.stored_hex(1, 0).unwrap(), rough);
+        assert_eq!(map.base_hex(1, 0).unwrap(), rough);
         let before = map.clone();
-        for (x, y, elevation) in [(2, 0, 0), (0, 1, 0), (-1, 0, 0), (0, 0, 10)] {
+        for (x, y, elevation) in [(2, 0, 0), (0, 1, 0), (-1, 0, 0), (0, 0, 36)] {
             assert!(
                 map.write_hex(x, y, BattleHex::new(Terrain::Road, elevation))
                     .is_err()

@@ -17,7 +17,7 @@ async fn field(
         &mut world,
         map,
         "water",
-        BattleMapAsset::parse("1 3\n~2\n~2\n~2\n").unwrap(),
+        BattleMapAsset::from_cells("1 3\n~2\n~2\n~2\n").unwrap(),
     )
     .unwrap();
     select_battle_target(&mut world, shooter, ObjectId(1), None).unwrap();

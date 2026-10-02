@@ -5,8 +5,8 @@ use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-/// Visible terrain marker owned by a map effect.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+/// Visible fire or smoke owned by a map effect, laid over a hex as its overlay.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum BattleDecorationKind {
     Fire,
@@ -99,7 +99,7 @@ pub fn set_map_decoration(
     })
 }
 
-/// Replace stored restoration records and overlays through the same terrain normalization path.
+/// Install an overlay, replacing any stored decoration records at its hex.
 pub(super) fn install_decoration(
     map: &mut StoredBattleMap,
     index: u32,
@@ -119,11 +119,10 @@ pub(super) fn install_decoration(
         x: (i64::from(index) % map.width) as i32,
         y: (i64::from(index) / map.width) as i32,
     };
-    let underlying = map.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
+    map.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
     for records in &mut map.static_decorations {
         Arc::make_mut(records).retain(|_, record| record.coordinate != coordinate);
     }
-    map.write_hex(i64::from(coordinate.x), i64::from(coordinate.y), underlying)?;
     Arc::make_mut(&mut map.decorations).insert(index, effect);
     Ok(())
 }

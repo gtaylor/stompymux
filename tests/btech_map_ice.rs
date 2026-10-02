@@ -9,7 +9,11 @@ fn tile(world: &mut World, map: ObjectId, x: usize, y: usize, terrain: &str, ele
     let mut state = serde_json::to_value(&world.btech).unwrap();
     let map = &mut state["maps"][map.0.to_string()];
     let width = map["width"].as_u64().unwrap() as usize;
-    map["terrain"][y * width + x] = serde_json::json!({"terrain":terrain,"elevation":elevation});
+    map["terrain"][y * width + x] = serde_json::to_value(stompymux_rs::BattleHex::new(
+        Terrain::from_name(terrain).unwrap(),
+        elevation,
+    ))
+    .unwrap();
     world.btech = serde_json::from_value(state).unwrap();
 }
 
@@ -67,7 +71,7 @@ async fn melting_matches_combat_fractures_native_lua_and_restart() {
             &config,
             map,
             BattleHexCoordinate { x: 0, y: 11 },
-            Terrain::Ice,
+            BattleSurface::Ice,
             BattleFallRules::configured(&config),
         )
         .unwrap();
@@ -232,7 +236,10 @@ async fn shoreline_passes_have_distinct_growth_and_melt_ordering() {
         serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
     state["maps"][map.0.to_string()]["width"] = 3.into();
     state["maps"][map.0.to_string()]["terrain"] = serde_json::json!(vec![
-        serde_json::json!({"terrain":"grassland","elevation":0});
+        serde_json::to_value(
+            stompymux_rs::BattleHex::new(stompymux_rs::Terrain::Grassland, 0)
+        )
+        .unwrap();
         36
     ]);
     world.btech = serde_json::from_value(state).unwrap();

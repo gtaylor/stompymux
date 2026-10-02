@@ -1,5 +1,5 @@
 //! Read-only Mech ground proposals share live movement arithmetic with trajectory prediction.
-use super::{BattleHexCoordinate, BattleMotion, BattleMovementRules, BattlePoint, Terrain};
+use super::{BattleHexCoordinate, BattleMotion, BattleMovementRules, BattlePoint};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
@@ -137,7 +137,7 @@ pub fn propose_vehicle_ground_motion(
     if super::load::carries_load(world, id) {
         loaded.limit_load(
             maximum,
-            if maximum > 0.0 && matches!(current.terrain(), Terrain::Road | Terrain::Bridge) {
+            if maximum > 0.0 && (current.is_road() || current.has_bridge()) {
                 maximum + 10.75
             } else {
                 maximum
@@ -147,10 +147,9 @@ pub fn propose_vehicle_ground_motion(
     let mut next = vehicle.definition().motion_at_maximum(
         loaded,
         if vehicle.definition().is_vtol() {
-            Terrain::Grassland
+            super::BattleHex::at_level(0)
         } else {
             map.hex(i64::from(coordinate.x), i64::from(coordinate.y))?
-                .terrain()
         },
         super::BattleVehicleMotionRules {
             fasa_turning: rules.fasa_turning,

@@ -86,7 +86,7 @@ async fn reshape_persists_grid_and_removes_map_objects() {
         &mut world,
         map,
         "grid",
-        BattleMapAsset::parse("1 4\n.0\n.0\n.0\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 4\n.0\n.0\n.0\n.0\n").unwrap(),
     )
     .unwrap();
     let actor = operator(&mut world, &config, map);
@@ -149,7 +149,7 @@ async fn reshape_persists_grid_and_removes_map_objects() {
     );
 }
 
-/// Resizing preserves visible fire/smoke tiles while removing timers and reciprocal building exits.
+/// Resizing keeps the terrain under fire and smoke while clearing them and reciprocal building exits.
 #[tokio::test]
 async fn resize_clears_effects_and_building_routes() {
     let (_dir, config, mut world) = support::isolated_world().await;
@@ -160,7 +160,7 @@ async fn resize_clears_effects_and_building_routes() {
             &mut world,
             id,
             "grid",
-            BattleMapAsset::parse("2 2\n`2#1\n.0.0\n").unwrap(),
+            BattleMapAsset::from_cells("2 2\n`2#1\n.0.0\n").unwrap(),
         )
         .unwrap();
     }
@@ -198,7 +198,7 @@ async fn resize_clears_effects_and_building_routes() {
     let field = &saved.btech.maps()[&map];
     assert!(field.building_entrances().is_empty());
     assert!(saved.btech.maps()[&interior].building_exits().is_empty());
-    for (x, terrain, elevation) in [(0, Terrain::Fire, 2), (1, Terrain::Smoke, 1)] {
+    for (x, terrain, elevation) in [(0, Terrain::LightForest, 2), (1, Terrain::Road, 1)] {
         assert_eq!(
             field.base_hex(x, 0).unwrap(),
             BattleHex::new(terrain, elevation)

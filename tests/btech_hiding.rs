@@ -36,7 +36,7 @@ async fn fixture(
         &mut world,
         map,
         "cover",
-        BattleMapAsset::parse(&format!("3 3\n{}", row.repeat(3))).unwrap(),
+        BattleMapAsset::from_cells(&format!("3 3\n{}", row.repeat(3))).unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Hiding unit".into(), Kind::Thing);

@@ -1,5 +1,5 @@
 //! Terrain line-of-sight reports at live unit eye heights, independent of sensor acquisition.
-use super::{BattleHexCoordinate, StoredBattleMap, Terrain};
+use super::{BattleHexCoordinate, StoredBattleMap};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -77,10 +77,12 @@ fn terrain_los_with_endpoint(
     let end_ground = f64::from(destination.standing_height());
     let start_height = airborne.0.unwrap_or(start_ground) + eyes.0;
     let end_height = airborne.1.unwrap_or(end_ground) + eyes.1;
-    let underwater = source.holds_water() && start_height < 0.0;
-    let target_underwater = destination.holds_water() && end_height < 0.0;
-    let both_worlds = source.holds_water() && start_ground == -1.0;
-    let target_both_worlds = destination.holds_water() && end_ground == -1.0;
+    // Water surfaces sit at each hex's level; "both worlds" is a unit one level below one.
+    let surface = |hex: super::BattleHex| f64::from(hex.level());
+    let underwater = source.holds_water() && start_height < surface(source);
+    let target_underwater = destination.holds_water() && end_height < surface(destination);
+    let both_worlds = source.holds_water() && start_ground == surface(source) - 1.0;
+    let target_both_worlds = destination.holds_water() && end_ground == surface(destination) - 1.0;
     let mut report = BattleTerrainLos {
         target_woods: visible_destination.woods_density(),
         ..BattleTerrainLos::default()
@@ -106,43 +108,39 @@ fn terrain_los_with_endpoint(
         let intervening = index < steps;
         if underwater {
             if !ground.holds_water()
-                || (ground.terrain() != Terrain::Bridge && height >= sight_height)
-                || (!target_both_worlds && sight_height > 0.0)
+                || (!ground.has_bridge() && height >= sight_height)
+                || (!target_both_worlds && sight_height > surface(ground))
             {
                 report.blocked = true;
                 return Ok(report);
             }
-            submerged += usize::from(sight_height <= 0.0);
+            submerged += usize::from(sight_height <= surface(ground));
             report.water = report.water.saturating_add(1).min(7);
             continue;
         }
         if sight_height < height + 2.0 {
-            if matches!(ground.terrain(), Terrain::Water | Terrain::Ice) {
-                if sight_height < 0.0
-                    && (ground.terrain() == Terrain::Ice
-                        || (ground.terrain() == Terrain::Water && !both_worlds))
+            if ground.is_water_surface() {
+                if sight_height < surface(ground)
+                    && (ground.is_ice() || (ground.is_open_water() && !both_worlds))
                 {
                     report.blocked = true;
                     return Ok(report);
                 }
-                if ground.terrain() == Terrain::Water && sight_height < 0.0 {
+                if ground.is_open_water() && sight_height < surface(ground) {
                     submerged += 1;
                 }
                 report.water = report.water.saturating_add(1).min(7);
             }
-            match tile.terrain() {
-                _ if tile.is_woods() && intervening => {
-                    report.woods = (report.woods + tile.woods_density()).min(15);
+            if intervening {
+                report.woods = (report.woods + tile.woods_density()).min(15);
+                match tile.overlay() {
+                    Some(super::BattleDecorationKind::Smoke) => report.smoke = true,
+                    Some(super::BattleDecorationKind::Fire) => report.fire = true,
+                    None => {}
                 }
-                Terrain::Smoke if intervening => report.smoke = true,
-                Terrain::Fire if intervening => report.fire = true,
-                _ => {}
             }
         }
-        if height >= sight_height
-            && ground.terrain() != Terrain::Bridge
-            && !(ice_surface && !intervening)
-        {
+        if height >= sight_height && !ground.has_bridge() && !(ice_surface && !intervening) {
             report.blocked = true;
             return Ok(report);
         }
@@ -151,7 +149,7 @@ fn terrain_los_with_endpoint(
         let preceding = base(cells[cells.len() - 2])?;
         report.partial_cover = (end_ground >= start_ground
             && f64::from(preceding.surface_height()) == end_ground + 1.0)
-            || (destination.terrain() == Terrain::Water && end_ground == -1.0);
+            || (destination.is_open_water() && end_ground == surface(destination) - 1.0);
     }
     report.fire |= submerged > 6;
     Ok(report)
@@ -165,13 +163,22 @@ pub(super) struct UnitSightPoint {
     /// Explicit altitude preserves flight precision and vehicle bridge/water position.
     pub height: Option<f64>,
     pub level: i32,
+    /// Height of the water surface in the unit's hex, if the hex holds water.
+    pub water_surface: Option<i32>,
 }
 
 impl UnitSightPoint {
     /// A low vehicle or prone unit becomes submerged one level before a standing Mech.
     pub fn below_waterline(&self) -> bool {
-        self.level < if self.eye > 1.0 { -1 } else { 0 }
+        let reach = if self.eye > 1.0 { 1 } else { 0 };
+        self.water_surface
+            .is_some_and(|surface| self.level < surface - reach)
     }
+}
+
+/// The water surface a unit in `tile` can be below.
+fn water_surface(tile: super::BattleHex) -> Option<i32> {
+    tile.holds_water().then(|| i32::from(tile.level()))
 }
 
 /// Sample either supported unit class without conflating terrain depth with its actual elevation.
@@ -197,6 +204,7 @@ pub(super) fn unit_sight_point(world: &World, id: ObjectId) -> Result<UnitSightP
             },
             height: Some(vehicle.altitude(tile)),
             level,
+            water_surface: water_surface(tile),
         });
     }
     let unit = world
@@ -221,6 +229,7 @@ pub(super) fn unit_sight_point(world: &World, id: ObjectId) -> Result<UnitSightP
         },
         height: unit.retained_altitude(),
         level: unit.elevation_level(tile),
+        water_surface: water_surface(tile),
     })
 }
 
@@ -344,18 +353,15 @@ pub(super) fn unit_hex_los(
             distance,
         ));
     }
-    let target_eye = if tile.terrain() == Terrain::Ice && altitude + unit.eye >= 0.0 {
-        0.0
-    } else {
-        0.1
-    };
+    let on_ice = tile.is_ice() && altitude + unit.eye >= f64::from(tile.level());
+    let target_eye = if on_ice { 0.0 } else { 0.1 };
     let report = terrain_los_with_endpoint(
         map,
         source,
         target,
         (unit.eye, target_eye),
         (Some(altitude), Some(target_height)),
-        tile.terrain() == Terrain::Ice && altitude + unit.eye >= 0.0,
+        on_ice,
     )?;
     Ok((report, distance))
 }
@@ -363,7 +369,7 @@ pub(super) fn unit_hex_los(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::BattleHex;
+    use crate::{BattleHex, Terrain};
     use std::sync::Arc;
 
     /// Empty-hex LOS has only an observer hardware exception, even on maps with a larger ceiling.
@@ -412,7 +418,7 @@ mod tests {
 
     /// A north/south lane avoids ambiguous hex-edge crossings in terrain rule fixtures.
     fn lane(tiles: &[(Terrain, u8)]) -> StoredBattleMap {
-        StoredBattleMap {
+        let mut map = StoredBattleMap {
             membership_extent: 0,
             building_parent: 0,
             cargo_transfer_point: None,
@@ -445,13 +451,16 @@ mod tests {
             fire_dice: None,
             decorations: Default::default(),
             static_decorations: Default::default(),
-            terrain: Some(Arc::new(
-                tiles
-                    .iter()
-                    .flat_map(|&(terrain, elevation)| [BattleHex::new(terrain, elevation); 3])
-                    .collect(),
-            )),
-        }
+            terrain: None,
+        };
+        map.establish_terrain(Arc::new(
+            tiles
+                .iter()
+                .flat_map(|&(terrain, elevation)| [BattleHex::new(terrain, elevation); 3])
+                .collect(),
+        ))
+        .unwrap();
+        map
     }
 
     fn sight(tiles: &[(Terrain, u8)]) -> BattleTerrainLos {

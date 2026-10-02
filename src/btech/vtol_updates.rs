@@ -131,7 +131,7 @@ pub(super) fn advance_all(
         }
         unit.motion = Some(unit.definition().control_at_maximum(
             motion,
-            Terrain::Grassland,
+            super::BattleHex::at_level(0),
             movement,
             maximum,
         )?);

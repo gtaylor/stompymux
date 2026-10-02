@@ -17,7 +17,7 @@ async fn vehicle_commands_and_lua_share_creation_placement_and_snapshot_state() 
         &mut world,
         map,
         "test",
-        BattleMapAsset::parse("2 1\n.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("2 1\n.0.0\n").unwrap(),
     )
     .unwrap();
     let first = world.create(&config, "First".into(), Kind::Thing);
@@ -151,7 +151,7 @@ async fn operator_inspection_reports_mech_ground_and_vtol_state_without_mutation
             &mut world,
             map,
             "inspection",
-            BattleMapAsset::parse("2 1\n.0.0\n").unwrap(),
+            BattleMapAsset::from_cells("2 1\n.0.0\n").unwrap(),
         )
         .unwrap();
         let id = world.create(&config, "Inspected unit".into(), Kind::Thing);

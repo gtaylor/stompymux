@@ -985,10 +985,6 @@ pub(super) static MAP_FLAGS: Catalog = Catalog {
             value: 4,
         },
         Entry {
-            name: "PERMANENT_FIRE",
-            value: 8,
-        },
-        Entry {
             name: "UNDERGROUND",
             value: 16,
         },
@@ -999,10 +995,6 @@ pub(super) static MAP_FLAGS: Catalog = Catalog {
         Entry {
             name: "INDESTRUCTIBLE_BRIDGES",
             value: 64,
-        },
-        Entry {
-            name: "NO_BRIDGE_GENERATION",
-            value: 128,
         },
         Entry {
             name: "NO_FRIENDLY_FIRE",
@@ -1080,7 +1072,72 @@ pub(super) static DETECTION_CHANNELS: StringCatalog = StringCatalog {
     ],
 };
 
-/// Terrain names accepted by `btech.map.set_hex` and reported by map tile queries.
+/// Ground names in the `ground` field of the hexes `btech.map.hex` returns and `set_hex` takes.
+pub(super) static GROUND_TYPES: StringCatalog = StringCatalog {
+    qualified_name: "btech.map.ground_types",
+    entries: &[
+        StringEntry {
+            name: "CLEAR",
+            value: "clear",
+        },
+        StringEntry {
+            name: "ROAD",
+            value: "road",
+        },
+        StringEntry {
+            name: "ROUGH",
+            value: "rough",
+        },
+        StringEntry {
+            name: "MOUNTAINS",
+            value: "mountains",
+        },
+        StringEntry {
+            name: "SNOW",
+            value: "snow",
+        },
+        StringEntry {
+            name: "SAND",
+            value: "sand",
+        },
+    ],
+};
+
+/// Woods densities in the `woods` field of a hex.
+pub(super) static WOODS_TYPES: StringCatalog = StringCatalog {
+    qualified_name: "btech.map.woods_types",
+    entries: &[
+        StringEntry {
+            name: "LIGHT",
+            value: "light",
+        },
+        StringEntry {
+            name: "HEAVY",
+            value: "heavy",
+        },
+    ],
+};
+
+/// Structure kinds in the `kind` field of a hex's `structure`.
+pub(super) static STRUCTURE_KINDS: StringCatalog = StringCatalog {
+    qualified_name: "btech.map.structure_kinds",
+    entries: &[
+        StringEntry {
+            name: "BUILDING",
+            value: "building",
+        },
+        StringEntry {
+            name: "WALL",
+            value: "wall",
+        },
+        StringEntry {
+            name: "BRIDGE",
+            value: "bridge",
+        },
+    ],
+};
+
+/// Terrain names reported by `btech.map.terrain`: the one feature a map shows for a hex.
 pub(super) static TERRAIN_TYPES: StringCatalog = StringCatalog {
     qualified_name: "btech.map.terrain_types",
     entries: &[
@@ -1469,6 +1526,9 @@ pub(super) fn install(lua: &Lua, package: &Table) -> mlua::Result<()> {
     map.raw_set("light_levels", namespace(lua, &LIGHT_LEVELS)?)?;
     map.raw_set("flags", namespace(lua, &MAP_FLAGS)?)?;
     map.raw_set("terrain_types", string_namespace(lua, &TERRAIN_TYPES)?)?;
+    map.raw_set("ground_types", string_namespace(lua, &GROUND_TYPES)?)?;
+    map.raw_set("woods_types", string_namespace(lua, &WOODS_TYPES)?)?;
+    map.raw_set("structure_kinds", string_namespace(lua, &STRUCTURE_KINDS)?)?;
     package.raw_set("map", map)?;
 
     let repair = table(lua, package, "repair")?;
@@ -1522,6 +1582,42 @@ mod tests {
         for (entry, terrain) in TERRAIN_TYPES.entries.iter().zip(crate::Terrain::ALL) {
             assert_eq!(entry.value, terrain.name());
             assert_eq!(entry.name, terrain.name().to_ascii_uppercase());
+        }
+    }
+
+    /// Hex layer constants spell each layer the way hexes are serialized.
+    #[test]
+    fn hex_layer_catalogs_match_serialized_names() {
+        use crate::{BattleGround, BattleStructure, BattleWoods};
+        let name = |value: serde_json::Value| value.as_str().unwrap().to_owned();
+        let grounds = [
+            BattleGround::Clear,
+            BattleGround::Road,
+            BattleGround::Rough,
+            BattleGround::Mountains,
+            BattleGround::Snow,
+            BattleGround::Sand,
+        ];
+        assert_eq!(GROUND_TYPES.entries.len(), grounds.len());
+        for (entry, ground) in GROUND_TYPES.entries.iter().zip(grounds) {
+            assert_eq!(entry.value, name(serde_json::to_value(ground).unwrap()));
+        }
+        for (entry, woods) in WOODS_TYPES
+            .entries
+            .iter()
+            .zip([BattleWoods::Light, BattleWoods::Heavy])
+        {
+            assert_eq!(entry.value, name(serde_json::to_value(woods).unwrap()));
+        }
+        for (entry, structure) in STRUCTURE_KINDS.entries.iter().zip([
+            BattleStructure::Building { height: 1 },
+            BattleStructure::Wall { height: 1 },
+            BattleStructure::Bridge { deck: 1 },
+        ]) {
+            assert_eq!(
+                entry.value,
+                name(serde_json::to_value(structure).unwrap()["kind"].clone())
+            );
         }
     }
 

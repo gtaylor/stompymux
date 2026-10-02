@@ -186,17 +186,18 @@ fn render_viewport(
             let glyph = match mode {
                 BattleLongRangeMode::Elevation
                 | BattleLongRangeMode::ColoredElevation
-                | BattleLongRangeMode::VisibleElevation => match hex.elevation() {
-                    0 if matches!(
-                        mode,
-                        BattleLongRangeMode::Elevation | BattleLongRangeMode::VisibleElevation
-                    ) =>
-                    {
-                        ' '
+                | BattleLongRangeMode::VisibleElevation => {
+                    match super::map_style::shown_height(hex) {
+                        0 if matches!(
+                            mode,
+                            BattleLongRangeMode::Elevation | BattleLongRangeMode::VisibleElevation
+                        ) =>
+                        {
+                            ' '
+                        }
+                        elevation => super::hex::height_glyph(elevation),
                     }
-                    0..=9 => char::from(b'0' + hex.elevation()),
-                    _ => '?',
-                },
+                }
                 _ => hex.terrain().symbol(),
             };
             let colored = mode == BattleLongRangeMode::ColoredElevation
@@ -208,7 +209,7 @@ fn render_viewport(
             cells.push(Cell {
                 glyph,
                 style: if colored {
-                    super::map_style::terrain(hex.terrain(), hex.elevation())
+                    super::map_style::terrain(hex)
                 } else {
                     ""
                 },

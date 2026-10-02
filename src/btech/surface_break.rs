@@ -1,7 +1,5 @@
 //! Atomic ice and bridge breakage: terrain changes before occupant immersion and falls.
-use super::{
-    BattleFallReport, BattleFallRules, BattleHex, BattleHexCoordinate, BattleNotice, Terrain,
-};
+use super::{BattleFallReport, BattleFallRules, BattleHex, BattleHexCoordinate, BattleNotice};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -23,9 +21,29 @@ pub struct BattleSurfaceBreak {
     pub notices: Vec<BattleNotice>,
 }
 
+/// A surface that can break and drop its occupants into the water below.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BattleSurface {
+    /// Frozen water with nothing built over it.
+    Ice,
+    /// A bridge deck spanning water.
+    Bridge,
+}
+
+impl BattleSurface {
+    /// The breakable surface of `hex`, if it has one.
+    pub fn of(hex: BattleHex) -> Option<Self> {
+        if hex.has_bridge() {
+            return Some(Self::Bridge);
+        }
+        hex.is_ice().then_some(Self::Ice)
+    }
+}
+
 /// Requested surface and whether the owning action can publish character casualties.
 struct SurfaceBreakPolicy {
-    terrain: Terrain,
+    surface: BattleSurface,
     character: bool,
 }
 
@@ -47,7 +65,7 @@ pub fn break_ice(
         None,
         rules,
         SurfaceBreakPolicy {
-            terrain: Terrain::Ice,
+            surface: BattleSurface::Ice,
             character: false,
         },
     )
@@ -69,14 +87,14 @@ pub(super) fn break_ice_in_action(
         None,
         rules,
         SurfaceBreakPolicy {
-            terrain: Terrain::Ice,
+            surface: BattleSurface::Ice,
             character: true,
         },
     )
 }
 
-/// Collapse a bridge into depth-one water. The replacement depth selects occupants
-/// at elevation one for a two-level fall; other occupants retain their altitude.
+/// Collapse a bridge into depth-one water. The replacement depth selects occupants one level
+/// above its surface for a two-level fall; other occupants retain their altitude.
 /// Weapon/environmental trigger probability and authority belong to the caller.
 pub fn break_bridge(
     world: &mut World,
@@ -92,7 +110,7 @@ pub fn break_bridge(
         None,
         rules,
         SurfaceBreakPolicy {
-            terrain: Terrain::Bridge,
+            surface: BattleSurface::Bridge,
             character: false,
         },
     )
@@ -173,7 +191,7 @@ fn break_ice_upward_inner(
         Some(id),
         rules,
         SurfaceBreakPolicy {
-            terrain: Terrain::Ice,
+            surface: BattleSurface::Ice,
             character,
         },
     )?;
@@ -195,7 +213,7 @@ fn break_surface(
     rules: BattleFallRules,
     policy: SurfaceBreakPolicy,
 ) -> Result<BattleSurfaceBreak> {
-    let expected = policy.terrain;
+    let expected = policy.surface;
     ensure!(
         world
             .objects
@@ -207,11 +225,11 @@ fn break_surface(
     record.validate()?;
     let tile = record.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
     ensure!(
-        tile.terrain() == expected,
+        BattleSurface::of(tile) == Some(expected),
         "Tile is not the requested breakable surface"
     );
-    let bridge = expected == Terrain::Bridge;
-    let surface_height = if bridge { 1 } else { 0 };
+    let bridge = expected == BattleSurface::Bridge;
+    let surface_height = i32::from(tile.water_line()) + if bridge { 1 } else { 0 };
     let fall_levels = if bridge { 2 } else { tile.water_depth() };
     let replacement = tile.with_surface_broken();
     let on_tile = |id| {
@@ -447,7 +465,7 @@ fn check_ice_landing_inner(
             false,
         )
     };
-    if tile.terrain() != Terrain::Ice || height < 0 || hover {
+    if !tile.is_ice() || height < i32::from(tile.water_line()) || hover {
         return Ok(None);
     }
     if super::dice::unit_dice_mut(world, id)?.d6() != 1 {
@@ -464,7 +482,7 @@ fn check_ice_landing_inner(
         None,
         rules,
         SurfaceBreakPolicy {
-            terrain: Terrain::Ice,
+            surface: BattleSurface::Ice,
             character,
         },
     )
@@ -476,13 +494,9 @@ pub(super) fn break_surface_in_action(
     world: &mut World,
     map: ObjectId,
     coordinate: BattleHexCoordinate,
-    terrain: Terrain,
+    surface: BattleSurface,
     rules: BattleFallRules,
 ) -> Result<BattleSurfaceBreak> {
-    ensure!(
-        matches!(terrain, Terrain::Ice | Terrain::Bridge),
-        "Expected ice or bridge terrain"
-    );
     break_surface(
         world,
         map,
@@ -491,7 +505,7 @@ pub(super) fn break_surface_in_action(
         None,
         rules,
         SurfaceBreakPolicy {
-            terrain,
+            surface,
             character: true,
         },
     )

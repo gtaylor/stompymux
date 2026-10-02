@@ -1,7 +1,7 @@
 //! Atomic woodland reductions on occupied maps, with terrain-only result data.
-use super::{BattleHex, BattleHexCoordinate, Terrain};
+use super::{BattleHex, BattleHexCoordinate, Ground, Terrain, Woods};
 use crate::{ObjectId, World};
-use anyhow::{Context, Result, ensure};
+use anyhow::{Context, Result, bail, ensure};
 use serde::Serialize;
 
 /// A committed woodland reduction; the enclosing attack owns notifications.
@@ -38,15 +38,14 @@ pub fn apply_woodland_clearing(
         before == expected,
         "Woodland changed before the clearing result was applied"
     );
-    ensure!(
-        matches!(
-            (before.terrain(), replacement),
-            (Terrain::HeavyForest, Terrain::LightForest)
-                | (Terrain::LightForest, Terrain::Rough | Terrain::Grassland)
-        ),
-        "Invalid woodland reduction"
-    );
-    let after = before.with_terrain(replacement);
+    ensure!(!before.is_burning(), "Invalid woodland reduction");
+    let base = before.with_overlay(None);
+    let after = match (base.woods(), replacement) {
+        (Some(Woods::Heavy), Terrain::LightForest) => base.with_woods(Some(Woods::Light)),
+        (Some(Woods::Light), Terrain::Grassland) => base.with_woods(None),
+        (Some(Woods::Light), Terrain::Rough) => base.with_woods(None).with_ground(Ground::Rough),
+        _ => bail!("Invalid woodland reduction"),
+    };
     world.attempt(|world| {
         world.btech.maps.get_mut(&map).unwrap().write_hex(
             i64::from(coordinate.x),

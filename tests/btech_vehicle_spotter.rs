@@ -37,7 +37,7 @@ async fn fixture_with_mml(
         &mut world,
         map,
         "test",
-        BattleMapAsset::parse("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -480,9 +480,11 @@ async fn empty_spotter_hexes_fire_through_blocked_firer_sightlines() {
             "constructed"
         };
         let mut saved = serde_json::to_value(&world.btech).unwrap();
-        saved["maps"][map.0.to_string()]["terrain"][4]["elevation"] = serde_json::json!(8);
-        saved["maps"][map.0.to_string()]["terrain"][1]["terrain"] =
-            serde_json::json!("heavy_forest");
+        crate::support::set_hex_elevation(&mut saved["maps"][map.0.to_string()]["terrain"][4], 8);
+        crate::support::set_hex_terrain(
+            &mut saved["maps"][map.0.to_string()]["terrain"][1],
+            stompymux_rs::Terrain::HeavyForest,
+        );
         saved[class][shooter.0.to_string()]["contacts"] = serde_json::json!({});
         saved[class][shooter.0.to_string()]["motion"]["heading"] = serde_json::json!(180.0);
         saved[class][shooter.0.to_string()]["dice"] =

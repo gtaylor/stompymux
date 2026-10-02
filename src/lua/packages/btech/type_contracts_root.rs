@@ -56,8 +56,12 @@
 
 // lua-types-begin btech 00007
 //|---@class BattleHex
-//|---@field terrain string Snake_case terrain name.
-//|---@field elevation integer Magnitude from 0 through 9; water and ice represent depth.
+//|---@field level integer Ground height in levels; any water surface sits at this height.
+//|---@field ground BattleGroundName What the ground is made of; see btech.map.ground_types.
+//|---@field woods? BattleWoodsName Forest covering the ground; see btech.map.woods_types.
+//|---@field water? {depth: integer, frozen: boolean} Standing water whose surface is at the ground level.
+//|---@field structure? {kind: "building"|"wall", height: integer}|{kind: "bridge", deck: integer} Built feature; heights are above the ground level. Kinds are in btech.map.structure_kinds.
+//|---@field overlay? "fire"|"smoke" Fire or smoke over the hex; base tiles never have one.
 // lua-types-end
 
 // lua-types-begin btech 00008
@@ -162,9 +166,18 @@
 
 // lua-types-begin btech 00023
 //|local btech_map = {}
-//|---Terrain names accepted by set_hex and reported by hex and terrain queries.
+//|---Terrain names reported by btech.map.terrain.
 //|---@type BattleTerrainTypes
 //|btech_map.terrain_types = {}
+//|---Ground names for a hex's ground field.
+//|---@type BattleGroundTypes
+//|btech_map.ground_types = {}
+//|---Woods densities for a hex's woods field.
+//|---@type BattleWoodsTypes
+//|btech_map.woods_types = {}
+//|---Structure kinds for the kind field of a hex's structure.
+//|---@type BattleStructureKinds
+//|btech_map.structure_kinds = {}
 // lua-types-end
 
 // lua-types-begin btech 00031
@@ -677,6 +690,23 @@
 //|---@field BUILDING "building"
 //|---@field WALL "wall"
 //|---@field SAND "sand"
+//|---@alias BattleGroundName "clear"|"road"|"rough"|"mountains"|"snow"|"sand"
+//|---@class BattleGroundTypes
+//|---@field CLEAR "clear"
+//|---@field ROAD "road"
+//|---@field ROUGH "rough"
+//|---@field MOUNTAINS "mountains"
+//|---@field SNOW "snow"
+//|---@field SAND "sand"
+//|---@alias BattleWoodsName "light"|"heavy"
+//|---@class BattleWoodsTypes
+//|---@field LIGHT "light"
+//|---@field HEAVY "heavy"
+//|---@alias BattleStructureKind "building"|"wall"|"bridge"
+//|---@class BattleStructureKinds
+//|---@field BUILDING "building"
+//|---@field WALL "wall"
+//|---@field BRIDGE "bridge"
 // lua-types-end
 
 // lua-types-begin btech 00145

@@ -82,7 +82,7 @@ async fn invalid_fields_and_callback_failure_restore_state_without_output() {
         &mut world,
         map,
         "test",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
@@ -157,12 +157,12 @@ async fn lua_map_flags_use_typed_constants_and_preserve_other_flags() {
         &mut world,
         map,
         "test",
-        BattleMapAsset::parse("1 1\n&0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n&0\n2: 100 20\n").unwrap(),
     )
     .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let flags = |scripts: &Scripts| scripts.world().btech.maps()[&map].flags;
-    assert_eq!(flags(&scripts), BattleMapFlag::PermanentFire.bit());
+    assert_eq!(flags(&scripts), BattleMapFlag::SpecialRules.bit());
     let enabled: (bool, bool, usize) = scripts
         .eval_callback(&format!(
             "btech.map.set_flag(1, {0}, btech.map.flags.DARK, true)
@@ -175,11 +175,11 @@ async fn lua_map_flags_use_typed_constants_and_preserve_other_flags() {
     assert_eq!(enabled, (true, false, 2));
     assert_eq!(
         flags(&scripts),
-        BattleMapFlag::PermanentFire.bit() | BattleMapFlag::Dark.bit()
+        BattleMapFlag::SpecialRules.bit() | BattleMapFlag::Dark.bit()
     );
     scripts
         .eval_callback::<()>(&format!(
-            "btech.map.set_flag(1, {map}, btech.map.flags.PERMANENT_FIRE, false)",
+            "btech.map.set_flag(1, {map}, btech.map.flags.SPECIAL_RULES, false)",
             map = map.0
         ))
         .unwrap();

@@ -27,7 +27,7 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
         &mut base,
         map,
         "formation",
-        BattleMapAsset::parse(
+        BattleMapAsset::from_cells(
             "7 4\n.0.0.0.0.0.0.0\n.0.0.0.0.0.0.0\n.0.0.0.0.0.0.0\n.0.0.0.0.0.0.0\n",
         )
         .unwrap(),

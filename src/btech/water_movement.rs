@@ -1,5 +1,5 @@
 //! Water hex-entry control checks and immersion effects inside a movement transaction.
-use super::{BattleFallRules, BattleNotice, BattlePosture, Terrain};
+use super::{BattleFallRules, BattleNotice, BattlePosture};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
 
@@ -24,9 +24,9 @@ pub(super) fn enter_water(
     let position = unit.position().context("Water entry requires placement")?;
     let tile =
         world.btech.maps()[&position.map].base_hex(i64::from(position.x), i64::from(position.y))?;
-    let below_bridge = tile.terrain() == Terrain::Bridge && unit.elevation_level(tile) < 0;
-    let below_ice = tile.terrain() == Terrain::Ice && unit.elevation_level(tile) < 0;
-    if tile.terrain() != Terrain::Water && !below_bridge && !below_ice {
+    let below_bridge = tile.has_bridge() && tile.immerses(unit.elevation_level(tile));
+    let below_ice = tile.is_ice() && tile.immerses(unit.elevation_level(tile));
+    if !tile.is_open_water() && !below_bridge && !below_ice {
         return Ok(WaterEntryReport::default());
     }
     let depth = tile.water_depth();

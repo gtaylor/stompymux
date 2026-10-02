@@ -34,7 +34,7 @@ async fn fixture(
             &mut world,
             map,
             "environment",
-            BattleMapAsset::parse(&format!("1 1\n{tile}\n2: 100 {temperature}\n")).unwrap(),
+            BattleMapAsset::from_cells(&format!("1 1\n{tile}\n2: 100 {temperature}\n")).unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -124,7 +124,7 @@ async fn cutoff_cockpit_transition_and_restart() {
             &mut restored,
             map,
             "startup",
-            BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut restored, id, map, 0, 0).unwrap();

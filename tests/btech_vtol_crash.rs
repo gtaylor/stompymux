@@ -50,7 +50,7 @@ async fn crashes_share_packets_water_reduction_and_saved_replay() {
             &mut base,
             map,
             "crash",
-            BattleMapAsset::parse(&format!("1 1\n{terrain}\n")).unwrap(),
+            BattleMapAsset::from_cells(&format!("1 1\n{terrain}\n")).unwrap(),
         )
         .unwrap();
         for falling in [false, true] {
@@ -106,7 +106,7 @@ async fn safe_crash_stops_descent_without_damage_and_invalid_crashes_are_atomic(
         &mut world,
         map,
         "safe",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Safe aircraft".into(), Kind::Thing);
@@ -154,7 +154,7 @@ async fn nested_mine_admission_failure_rolls_back_crash_damage_and_dice() {
         &mut world,
         map,
         "mined",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     set_minefield(
@@ -212,7 +212,7 @@ async fn descent_commits_crashes_at_shared_clock_boundaries_and_survives_reload(
             &mut world,
             map,
             "descent",
-            BattleMapAsset::parse(&format!("1 1\n{terrain}\n")).unwrap(),
+            BattleMapAsset::from_cells(&format!("1 1\n{terrain}\n")).unwrap(),
         )
         .unwrap();
         aircraft(&mut world, id, map, true);
@@ -291,7 +291,7 @@ async fn movement_dispatch_advances_falls_and_powered_flight_exactly_once() {
         &mut world,
         map,
         "dispatch",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let falling = world.create(&config, "Unpowered aircraft".into(), Kind::Thing);
@@ -350,7 +350,7 @@ async fn host_movement_uses_character_path_and_rolls_back_invalid_placement() {
         &mut world,
         map,
         "host",
-        BattleMapAsset::parse("1 1\n.3\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.3\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Host aircraft".into(), Kind::Thing);
@@ -409,7 +409,7 @@ async fn world_contacts_commit_clear_flight_landing_crash_and_water_with_replay(
             &mut world,
             map,
             "contact",
-            BattleMapAsset::parse(&format!("1 1\n{tile}\n")).unwrap(),
+            BattleMapAsset::from_cells(&format!("1 1\n{tile}\n")).unwrap(),
         )
         .unwrap();
         aircraft(&mut world, id, map, false);
@@ -502,7 +502,7 @@ async fn world_contact_failure_restores_precontact_height_position_and_dice() {
         &mut world,
         map,
         "contact",
-        BattleMapAsset::parse("1 1\n.1\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.1\n").unwrap(),
     )
     .unwrap();
     set_minefield(
@@ -547,7 +547,7 @@ async fn launch_flight_and_fuel_exhaustion_share_one_restartable_tick() {
         &mut base,
         map,
         "launch",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let id = base.create(&config, "Launching aircraft".into(), Kind::Thing);
@@ -627,7 +627,7 @@ async fn launch_rechecks_ceiling_and_unlinked_boundaries_stop_horizontal_flight(
         &mut world,
         map,
         "ceiling",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Ceiling aircraft".into(), Kind::Thing);
@@ -690,7 +690,7 @@ async fn shared_control_commands_apply_aircraft_velocity_and_rotor_limits() {
         &mut world,
         map,
         "controls",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Controlled aircraft".into(), Kind::Thing);
@@ -766,7 +766,7 @@ async fn shared_control_commands_apply_aircraft_velocity_and_rotor_limits() {
 async fn boundary_resolution_reuses_the_first_exit_and_preserves_saved_replay() {
     let (_dir, config, mut base) = support::isolated_world().await;
     let map = base.create(&config, "Boundary field".into(), Kind::Room);
-    let asset = BattleMapAsset::parse("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap();
+    let asset = BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap();
     create_battle_map(&mut base, map, "boundary", asset.clone()).unwrap();
     let id = base.create(&config, "Boundary aircraft".into(), Kind::Thing);
     for heading in [0.0, 45.0, 90.0, 135.0, 180.0, 225.0, 270.0, 315.0] {
@@ -846,7 +846,7 @@ async fn an_intermediate_ground_collision_takes_precedence_over_a_map_exit() {
         &mut world,
         map,
         "hill",
-        BattleMapAsset::parse("1 3\n.0\n^9\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 3\n.0\n^9\n.0\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Hill aircraft".into(), Kind::Thing);
@@ -902,7 +902,7 @@ async fn movement_dispatch_recovers_powered_aircraft_without_impact_or_dice() {
         &mut world,
         map,
         "recovery",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     aircraft(&mut world, id, map, true);
@@ -951,7 +951,7 @@ async fn destroyed_aircraft_descend_and_settle_with_replay_and_no_second_pilot_l
             &mut world,
             map,
             "wreck",
-            BattleMapAsset::parse(&format!("1 1\n{terrain}\n")).unwrap(),
+            BattleMapAsset::from_cells(&format!("1 1\n{terrain}\n")).unwrap(),
         )
         .unwrap();
         aircraft(&mut world, id, map, false);

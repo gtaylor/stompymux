@@ -285,7 +285,7 @@ async fn detached_pose_survives_former_map_purge() {
             &mut restored,
             new,
             "new",
-            BattleMapAsset::parse(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap(),
+            BattleMapAsset::from_cells(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap(),
         )
         .unwrap();
         let report = reassign_battle_map(&mut restored, unit, new, Some("XY")).unwrap();

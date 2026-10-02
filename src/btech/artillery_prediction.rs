@@ -1,7 +1,5 @@
 //! Bounded, read-only artillery interception prediction using the live chassis motion proposals.
-use super::{
-    BattleHexCoordinate, BattleMovementRules, BattlePoint, BattleVehicleMovement, Terrain,
-};
+use super::{BattleHexCoordinate, BattleMovementRules, BattlePoint, BattleVehicleMovement};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -95,13 +93,13 @@ pub fn predict_artillery_target(
             let elevation = |tile: super::BattleHex| {
                 let height = tile.surface_height();
                 if movement == Some(BattleVehicleMovement::Hover) {
-                    height.max(0)
+                    height.max(tile.water_line())
                 } else {
                     height
                 }
             };
             let floodable = mech.is_some_and(|unit| {
-                tile.terrain() == Terrain::Water
+                tile.is_open_water()
                     && tile.water_depth() > 0
                     && unit.sections().iter().any(|(section, state)| {
                         let exposed =
@@ -113,8 +111,8 @@ pub fn predict_artillery_target(
                                     && unit.definition().sections[section].rear > 0))
                     })
             });
-            stopped = (tile.terrain() == Terrain::HeavyForest && vehicle.is_some())
-                || (tile.terrain() == Terrain::Water
+            stopped = (tile.woods() == Some(super::Woods::Heavy) && vehicle.is_some())
+                || (tile.is_open_water()
                     && matches!(
                         movement,
                         Some(BattleVehicleMovement::Tracked | BattleVehicleMovement::Wheeled)

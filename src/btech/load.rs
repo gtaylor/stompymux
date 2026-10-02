@@ -247,7 +247,7 @@ pub(super) fn reconcile(world: &mut World, id: ObjectId, tsm_bonus: bool) -> Res
                 .get(&position.map)
                 .and_then(|map| map.hex(i64::from(position.x), i64::from(position.y)).ok())
         })
-        .is_some_and(|hex| matches!(hex.terrain(), super::Terrain::Road | super::Terrain::Bridge));
+        .is_some_and(|hex| hex.is_road() || hex.has_bridge());
     if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         if let Some(mut motion) = unit.motion() {
             motion.limit_load(

@@ -12,18 +12,16 @@ pub(crate) fn initialize_map_action(
     create: bool,
 ) -> Result<()> {
     scripts.atomic(|before| {
-        let (asset, warnings) = super::assets::read_map_diagnostics(
+        let asset = super::assets::read_map_with_flags(
             &config.path(&config.database.map_database),
             name,
-            i32::try_from(before.btech.maps().get(&id).map_or(0, |map| map.flags))
-                .context("Invalid map flags")?,
+            before.btech.maps().get(&id).map_or(0, |map| map.flags),
         )?;
         if create {
-            super::create_map(&mut scripts.world_mut(), id, name, asset)?;
+            super::create_map(&mut scripts.world_mut(), id, name, asset)
         } else {
-            super::reload_map(&mut scripts.world_mut(), id, name, asset)?;
+            super::reload_map(&mut scripts.world_mut(), id, name, asset)
         }
-        super::assets::publish_map_warnings(scripts, config, id, &warnings)
     })
 }
 
@@ -37,23 +35,16 @@ pub fn load_map_action(
     name: &str,
 ) -> Result<()> {
     let result = load_map_state_action(scripts, config, actor, id, name);
-    let Some(failure) = result
-        .as_ref()
-        .err()
-        .and_then(|error| error.downcast_ref::<super::map::MapFileFailure>())
-    else {
+    let Some(error) = result.as_ref().err().filter(|error| {
+        matches!(
+            error.downcast_ref::<super::map::MapFileFailure>(),
+            Some(super::map::MapFileFailure::Invalid)
+        )
+    }) else {
         return result;
     };
-    let text = match failure {
-        super::map::MapFileFailure::Unavailable => return result,
-        super::map::MapFileFailure::Dimensions => {
-            format!("Map #{}: Invalid height and or/width on {name}", id.0)
-        }
-        super::map::MapFileFailure::Rows => format!(
-            "Map #{}: Mapfile possibly corrupt and/or height/width flipped. Height != what was read in {name}",
-            id.0
-        ),
-    };
+    let reason = error.root_cause().to_string();
+    let text = format!("Map #{}: {name} is not a valid map file: {reason}", id.0);
     scripts.atomic(|_| {
         super::channels::publish(
             scripts,
@@ -90,19 +81,18 @@ fn load_map_state_action(
                 .contains(crate::Flag::Going)),
             "Map is unavailable"
         );
-        let (mut asset, warnings) = super::assets::read_map_diagnostics(
+        let asset = super::assets::read_map_with_flags(
             &config.path(&config.database.map_database),
             name,
-            i32::try_from(before.btech.maps().get(&id).map_or(0, |map| map.flags))
-                .context("Invalid map flags")?,
+            before.btech.maps().get(&id).map_or(0, |map| map.flags),
         )
         .map_err(
             |error| match error.downcast_ref::<super::map::MapFileFailure>() {
-                Some(failure) => anyhow::anyhow!(*failure),
+                // Report the failure itself, keeping the decoder's reason beneath it.
+                Some(failure) => anyhow::anyhow!(error.root_cause().to_string()).context(*failure),
                 None => error,
             },
         )?;
-        asset.generate_bridges()?;
         let units = super::map_slots::all_unit_order(before, id)?;
         let mut occupied = BTreeSet::new();
         for unit in units {
@@ -135,7 +125,6 @@ fn load_map_state_action(
             super::state::replace_map_asset(&mut world, id, name, asset)?;
             world.validate(config)?;
         }
-        super::assets::publish_map_warnings(scripts, config, id, &warnings)?;
         if actor != ObjectId(1) {
             super::notify_message(
                 scripts,

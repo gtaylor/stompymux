@@ -223,7 +223,7 @@ async fn run_case(
             options.controllers,
             seed,
         )?;
-        let base_terrain = BattleMapAsset::parse(&map_source(scenario, seed))?.hexes;
+        let base_terrain = BattleMapAsset::from_cells(&map_source(scenario, seed))?.hexes;
         // The harness runs the normal persistence commit.  Initializing its
         // isolated database makes rollback and save validation identical to a
         // server tick while keeping the benchmark self-contained.
@@ -434,7 +434,7 @@ fn fixture_world(
         &mut world,
         map_id,
         "autopilot-benchmark",
-        BattleMapAsset::parse(&map_source(scenario, seed))?,
+        BattleMapAsset::from_cells(&map_source(scenario, seed))?,
     )?;
     if let Some(map) = world.btech.maps.get_mut(&map_id) {
         map.fire_dice = Some(crate::BattleDice::seeded(seed_bytes(seed, 0)));
@@ -693,11 +693,8 @@ fn alter_benchmark_terrain(harness: &mut HeartbeatHarness, map_id: crate::Object
         for y in (0..MAP_HEIGHT).step_by(3) {
             let index = usize::from(y) * usize::from(MAP_WIDTH) + 30;
             if let Some(hex) = terrain.get_mut(index) {
-                *hex = hex.with_terrain(if blocked {
-                    crate::Terrain::Wall
-                } else {
-                    crate::Terrain::Grassland
-                });
+                *hex = hex
+                    .with_structure(blocked.then_some(crate::btech::Structure::Wall { height: 1 }));
             }
         }
         map.terrain = Some(std::sync::Arc::new(terrain));

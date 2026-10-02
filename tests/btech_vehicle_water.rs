@@ -20,7 +20,7 @@ async fn cross_surface(row: &str) {
         &mut world,
         map,
         "shore",
-        BattleMapAsset::parse(&format!("20 3\n{row}\n{row}\n{row}\n")).unwrap(),
+        BattleMapAsset::from_cells(&format!("20 3\n{row}\n{row}\n{row}\n")).unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Hovercraft".into(), Kind::Thing);

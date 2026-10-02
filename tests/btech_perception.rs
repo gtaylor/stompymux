@@ -73,7 +73,7 @@ async fn lane(rows: &[&str], observer: Observer<'_>) -> Lane {
         &mut world,
         map,
         "perception",
-        BattleMapAsset::parse(&format!("1 {}\n{}\n", rows.len(), rows.join("\n"))).unwrap(),
+        BattleMapAsset::from_cells(&format!("1 {}\n{}\n", rows.len(), rows.join("\n"))).unwrap(),
     )
     .unwrap();
     let observer_id = world.create(&config, "Observer".into(), Kind::Thing);

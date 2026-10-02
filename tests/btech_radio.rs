@@ -234,7 +234,7 @@ async fn relay_fixture() -> (tempfile::TempDir, Config, World, ObjectId, Vec<Obj
         &mut world,
         map,
         "radio.map",
-        BattleMapAsset::parse(&format!("3 300\n{}", ".0.0.0\n".repeat(300))).unwrap(),
+        BattleMapAsset::from_cells(&format!("3 300\n{}", ".0.0.0\n".repeat(300))).unwrap(),
     )
     .unwrap();
     let mut units = Vec::new();
@@ -640,7 +640,7 @@ async fn radio_communication_skill_is_captured_only_on_startup_completion() {
         &mut world,
         map,
         "skill.map",
-        BattleMapAsset::parse("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, unit, map, 1, 1).unwrap();

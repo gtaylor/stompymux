@@ -1,5 +1,5 @@
 //! Deliberate rotorcraft landing checks and material touchdown, separate from crash damage.
-use super::{BattleHex, BattleVehicle, BattleVtolFlight, BattleVtolFlightPhase, Terrain};
+use super::{BattleHex, BattleVehicle, BattleVtolFlight, BattleVtolFlightPhase, Structure};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
@@ -78,8 +78,5 @@ impl BattleVehicle {
 
 /// Both deliberate and emergency landings require a supported surface.
 pub(super) fn supported_surface(hex: BattleHex) -> bool {
-    matches!(
-        hex.terrain(),
-        Terrain::Grassland | Terrain::Road | Terrain::Building | Terrain::Sand
-    )
+    hex.is_open_ground() || matches!(hex.structure(), Some(Structure::Building { .. }))
 }

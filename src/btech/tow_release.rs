@@ -34,8 +34,8 @@ pub fn release_tow(world: &mut World, carrier: ObjectId) -> Result<Vec<BattleNot
         super::unit_elevation(world, target)?.context("Tow target height is unavailable")?;
     let altitude =
         super::unit_altitude(world, target)?.context("Tow target altitude is unavailable")?;
-    let surface = if tile.terrain() == Terrain::Ice {
-        0
+    let surface = if tile.is_ice() {
+        tile.water_line()
     } else {
         super::fall_profile::surface(tile, height)
     };

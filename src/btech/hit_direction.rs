@@ -71,7 +71,7 @@ mod tests {
                     &mut world,
                     map,
                     "direction",
-                    BattleMapAsset::parse("1 3\n.0\n.0\n.0\n").unwrap(),
+                    BattleMapAsset::from_cells("1 3\n.0\n.0\n.0\n").unwrap(),
                 )
                 .unwrap();
                 let shooter = world.create(&config, "Shooter".into(), Kind::Thing);

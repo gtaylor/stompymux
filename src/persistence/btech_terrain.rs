@@ -1,10 +1,19 @@
 //! Per-map versioned terrain dictionaries and atomic, selective grid writes.
+//!
+//! Each map keeps a dictionary from small integer codes to the distinct hexes it uses, stored as
+//! the JSON of their layers, and a grid of codes.
 use super::write::{Cell, Fields, purge_rows, row};
-use crate::{BattleHex, ObjectId, StoredBattleMap, Terrain};
+use crate::{BattleHex, ObjectId, StoredBattleMap};
 use anyhow::{Context, Result, ensure};
 use futures_util::TryStreamExt;
 use sqlx::{Row, SqliteConnection};
 use std::collections::{BTreeMap, BTreeSet};
+
+/// Current dictionary encoding: one JSON hex per code.
+const ENCODING_VERSION: i64 = 2;
+
+/// Largest code a map's dictionary may assign.
+const MAX_CODE: i64 = 65_535;
 
 /// Decode only maps marked as dictionary-backed; ambiguous maps retain their opaque rows.
 pub(super) async fn load(
@@ -22,7 +31,7 @@ pub(super) async fn load(
         let id = ObjectId(header.try_get("map_dbref")?);
         let version: i64 = header.try_get("encoding_version")?;
         ensure!(
-            version == 1,
+            version == ENCODING_VERSION,
             "Unsupported terrain encoding {version} for map #{}",
             id.0
         );
@@ -36,25 +45,19 @@ pub(super) async fn load(
         );
         let mut dictionary = BTreeMap::new();
         let mut unique = BTreeSet::new();
-        let entries = sqlx::query("SELECT code,terrain,elevation FROM btech_map_terrain_codes WHERE map_dbref=? LIMIT 257").bind(id.0).fetch_all(&mut *c).await?;
+        let entries = sqlx::query("SELECT code,hex FROM btech_map_terrain_codes WHERE map_dbref=?")
+            .bind(id.0)
+            .fetch_all(&mut *c)
+            .await?;
         ensure!(
-            !entries.is_empty() && entries.len() <= 256,
+            !entries.is_empty(),
             "Invalid terrain dictionary size for map #{}",
             id.0
         );
         for entry in entries {
             let code: i64 = entry.try_get("code")?;
-            let symbol: String = entry.try_get("terrain")?;
-            let elevation: i64 = entry.try_get("elevation")?;
-            ensure!(
-                (0..=255).contains(&code) && (0..=9).contains(&elevation) && symbol.len() == 1,
-                "Invalid terrain code for map #{}",
-                id.0
-            );
-            let hex = BattleHex::new(
-                Terrain::from_symbol(symbol.chars().next().unwrap())?,
-                elevation as u8,
-            );
+            let hex: BattleHex = serde_json::from_str(&entry.try_get::<String, _>("hex")?)
+                .with_context(|| format!("Invalid terrain code for map #{}", id.0))?;
             ensure!(
                 dictionary.insert(code, hex).is_none() && unique.insert(hex),
                 "Duplicate terrain dictionary entry for map #{}",
@@ -106,18 +109,14 @@ pub(super) async fn save(
     map.validate()?;
     let mut dictionary = BTreeMap::new();
     let mut occupied = BTreeSet::new();
-    for entry in
-        sqlx::query("SELECT code,terrain,elevation FROM btech_map_terrain_codes WHERE map_dbref=?")
-            .bind(id.0)
-            .fetch_all(&mut *c)
-            .await?
+    for entry in sqlx::query("SELECT code,hex FROM btech_map_terrain_codes WHERE map_dbref=?")
+        .bind(id.0)
+        .fetch_all(&mut *c)
+        .await?
     {
         let code: i64 = entry.try_get("code")?;
-        let symbol: String = entry.try_get("terrain")?;
-        let elevation: u8 = entry.try_get("elevation")?;
-        let terrain =
-            Terrain::from_symbol(symbol.chars().next().context("Missing terrain symbol")?)?;
-        dictionary.insert(BattleHex::new(terrain, elevation), code);
+        let hex: BattleHex = serde_json::from_str(&entry.try_get::<String, _>("hex")?)?;
+        dictionary.insert(hex, code);
         occupied.insert(code);
     }
     let mut additions = Vec::new();
@@ -125,7 +124,7 @@ pub(super) async fn save(
         if dictionary.contains_key(&hex) {
             continue;
         }
-        let code = (0..=255)
+        let code = (0..=MAX_CODE)
             .find(|code| !occupied.contains(code))
             .context("Too many terrain combinations")?;
         occupied.insert(code);
@@ -144,7 +143,7 @@ pub(super) async fn save(
         "btech_map_terrain",
         Fields::from([("map_dbref", Cell::Integer(id.0))]),
         old_header.as_ref(),
-        &Fields::from([("encoding_version", Cell::Integer(1))]),
+        &Fields::from([("encoding_version", Cell::Integer(ENCODING_VERSION))]),
     )
     .await?;
     // Keep existing assignments and unowned columns, including currently unused codes.
@@ -157,10 +156,7 @@ pub(super) async fn save(
                 ("code", Cell::Integer(code)),
             ]),
             None,
-            &Fields::from([
-                ("terrain", Cell::Text(hex.terrain().symbol().to_string())),
-                ("elevation", Cell::Integer(i64::from(hex.elevation()))),
-            ]),
+            &Fields::from([("hex", Cell::Text(serde_json::to_string(&hex)?))]),
         )
         .await?;
     }

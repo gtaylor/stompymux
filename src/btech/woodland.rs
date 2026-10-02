@@ -1,5 +1,5 @@
 //! Woodland attack outcomes, independent of map storage and command publication.
-use super::{BattleAmmunitionMode, BattleDice, BattleWeapon, Terrain};
+use super::{BattleAmmunitionMode, BattleDice, BattleHex, BattleWeapon, Terrain};
 use serde::{Deserialize, Serialize};
 
 /// Purpose of a terrain effect; incidental effects use the lower accidental ignition chance.
@@ -125,19 +125,20 @@ impl BattleWeapon {
     }
 }
 
-/// Resolve woodland checks using the caller's candidate dice stream.
+/// Resolve woodland checks against `hex` using the caller's candidate dice stream.
 /// This does not authorize fire, mutate a map, clear mines, or publish notifications.
-/// Non-wooded tiles still consume the applicable attack checks; successful clearing
-/// only draws its replacement-terrain die for light woods. Fire duration is inclusive 60–180.
+/// Only woods that are not already burning can be ignited or cleared; other hexes still
+/// consume the applicable attack checks. Successful clearing only draws its replacement die
+/// for light woods. Fire duration is inclusive 60–180.
 pub fn resolve_woodland_effect(
-    terrain: Terrain,
+    hex: BattleHex,
     weapon: BattleWeapon,
     ammunition: BattleAmmunitionMode,
     damage: u16,
     intent: BattleWoodlandIntent,
     dice: &mut BattleDice,
 ) -> BattleWoodlandEffect {
-    let woods = terrain.is_woods();
+    let woods = hex.is_woods() && !hex.is_burning();
     if intent != BattleWoodlandIntent::Ignite {
         let ignition_roll = dice.generic_roll();
         let clearing_roll = dice.generic_roll();
@@ -150,7 +151,7 @@ pub fn resolve_woodland_effect(
             if !woods || !weapon.can_clear_terrain() || u16::from(clearing_roll) > damage {
                 return BattleWoodlandEffect::None;
             }
-            let terrain = if terrain == Terrain::HeavyForest {
+            let terrain = if hex.woods() == Some(super::Woods::Heavy) {
                 Terrain::LightForest
             } else if dice.die(2).expect("nonzero die") == 1 {
                 Terrain::Rough
@@ -218,7 +219,7 @@ mod tests {
                         expected.die(2).unwrap();
                     }
                     resolve_woodland_effect(
-                        terrain,
+                        BattleHex::new(terrain, 0),
                         BattleWeapon::MediumLaser,
                         BattleAmmunitionMode::Normal,
                         100,
@@ -287,7 +288,7 @@ mod tests {
             let mut expected = original.clone();
             let roll = expected.two_d6();
             let result = resolve_woodland_effect(
-                Terrain::HeavyForest,
+                BattleHex::new(Terrain::HeavyForest, 0),
                 BattleWeapon::MediumLaser,
                 BattleAmmunitionMode::Normal,
                 5,
@@ -314,7 +315,7 @@ mod tests {
                 expected.two_d6();
                 assert_eq!(
                     resolve_woodland_effect(
-                        terrain,
+                        BattleHex::new(terrain, 0),
                         BattleWeapon::Flamer,
                         BattleAmmunitionMode::Normal,
                         100,
@@ -345,7 +346,7 @@ mod tests {
                 let mut dice = original.clone();
                 // Gauss can clear woods but cannot ignite them, even on the ignition branch.
                 let effect = resolve_woodland_effect(
-                    Terrain::HeavyForest,
+                    BattleHex::new(Terrain::HeavyForest, 0),
                     BattleWeapon::GaussRifle,
                     BattleAmmunitionMode::Normal,
                     15,
@@ -373,7 +374,7 @@ mod tests {
                 assert_eq!(
                     effect,
                     resolve_woodland_effect(
-                        Terrain::HeavyForest,
+                        BattleHex::new(Terrain::HeavyForest, 0),
                         BattleWeapon::GaussRifle,
                         BattleAmmunitionMode::Normal,
                         15,
@@ -383,7 +384,7 @@ mod tests {
                 );
                 assert_eq!(dice, replay);
                 let light = resolve_woodland_effect(
-                    Terrain::LightForest,
+                    BattleHex::new(Terrain::LightForest, 0),
                     BattleWeapon::GaussRifle,
                     BattleAmmunitionMode::Normal,
                     15,

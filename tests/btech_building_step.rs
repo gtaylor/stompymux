@@ -27,7 +27,7 @@ async fn ground_entry_reports_live_cf_once_and_replays_after_restart() {
                 &mut world,
                 interior,
                 "interior",
-                BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+                BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
             )
             .unwrap();
             set_building_state(
@@ -140,7 +140,7 @@ async fn aircraft_overflight_does_not_report_ground_buildings() {
         &mut world,
         interior,
         "inside",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     set_building_entrance(
@@ -187,7 +187,7 @@ async fn interrupted_ground_steps_report_only_accepted_surface_entries() {
                 &mut world,
                 interior,
                 "shelter",
-                BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+                BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
             )
             .unwrap();
             set_building_entrance(
@@ -205,7 +205,10 @@ async fn interrupted_ground_steps_report_only_accepted_surface_entries() {
             .unwrap();
             let mut saved = serde_json::to_value(&world.btech).unwrap();
             let high = if downhill { 11 } else { 10 };
-            saved["maps"][map.0.to_string()]["terrain"][high]["elevation"] = 3.into();
+            crate::support::set_hex_elevation(
+                &mut saved["maps"][map.0.to_string()]["terrain"][high],
+                3,
+            );
             world.btech = serde_json::from_value(saved).unwrap();
             firing::edit(&mut world, id, |state| state["auto_fall"] = true.into());
             set_battle_speed(&mut world, id, ObjectId(1), 10.0).unwrap();

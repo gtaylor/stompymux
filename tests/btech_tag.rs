@@ -207,7 +207,7 @@ async fn tag_range_visibility_and_syntax_fail_without_mutation() {
             &mut world,
             map,
             "lane",
-            BattleMapAsset::parse(&format!("1 20\n{}", ".0\n".repeat(20))).unwrap(),
+            BattleMapAsset::from_cells(&format!("1 20\n{}", ".0\n".repeat(20))).unwrap(),
         )
         .unwrap();
         relocate(&mut world, id, map, 17);

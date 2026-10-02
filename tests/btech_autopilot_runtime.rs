@@ -17,7 +17,7 @@ async fn ground_fixture() -> (tempfile::TempDir, Config, World, ObjectId, Object
         &mut world,
         map,
         "autopilot.lane",
-        BattleMapAsset::parse(&format!("1 8\n{}", ".0\n".repeat(8))).unwrap(),
+        BattleMapAsset::from_cells(&format!("1 8\n{}", ".0\n".repeat(8))).unwrap(),
     )
     .unwrap();
     let unit = world.create(&config, "Autopilot mech".into(), Kind::Thing);

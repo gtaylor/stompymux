@@ -150,7 +150,7 @@ async fn encounter_fixture() -> EncounterFixture {
         &mut world,
         map,
         "tactical.director",
-        BattleMapAsset::parse(&format!("6 8\n{}", ".0.0.0.0.0.0\n".repeat(8))).unwrap(),
+        BattleMapAsset::from_cells(&format!("6 8\n{}", ".0.0.0.0.0.0\n".repeat(8))).unwrap(),
     )
     .unwrap();
 

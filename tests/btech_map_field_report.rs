@@ -21,7 +21,7 @@ async fn report_values_order_filters_and_layouts_are_explicit() {
         &mut world,
         map,
         "[reset]海",
-        BattleMapAsset::parse("2 1\n.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("2 1\n.0.0\n").unwrap(),
     )
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
@@ -171,7 +171,7 @@ async fn inspection_authority_and_publication_failures_publish_no_partial_report
         &mut world,
         map,
         "test",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let before = world.btech.clone();

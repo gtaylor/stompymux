@@ -16,7 +16,7 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId) {
         &mut world,
         map,
         "emplacement",
-        BattleMapAsset::parse("2 2\n.0.0\n.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Unit".into(), Kind::Thing);

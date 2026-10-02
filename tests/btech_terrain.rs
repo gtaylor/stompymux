@@ -7,17 +7,16 @@ use stompymux_rs::{
     create_battle_map, dbck, persistence, reload_battle_map,
 };
 
-const SOURCE: &str = "3 2\n.0~2'1\n#0-3^9\n32: 75 -12\n";
-const RELOAD: &str = "3 2\n.0~2'1\n#0-3%4\n64: 80 15\n";
+const SOURCE: &str = "3 2\n.0~2`1\n#0-3^9\n32: 75 -12\n";
+const RELOAD: &str = "3 2\n.0~2`1\n#0-3%4\n64: 80 15\n";
 
 /// An isolated schema-8 game, two equal-size assets, and an unregistered map container.
 async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, SqliteConnection) {
     let (dir, config, mut world) = support::isolated_world().await;
     world.accounts.get_mut(&ObjectId(1)).unwrap().hash =
         Some(stompymux_rs::accounts::hash("secret", &config).unwrap());
-    std::fs::create_dir_all(dir.path().join("maps")).unwrap();
-    std::fs::write(dir.path().join("maps/asymmetric.map"), SOURCE).unwrap();
-    std::fs::write(dir.path().join("maps/reload.map"), RELOAD).unwrap();
+    support::write_map(&dir.path().join("maps"), "asymmetric.map", SOURCE);
+    support::write_map(&dir.path().join("maps"), "reload.map", RELOAD);
     let id = world.create(&config, "Terrain lab".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().location = Some(ObjectId(config.start()));
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
@@ -43,7 +42,7 @@ async fn create(config: &Config, world: &mut World, id: ObjectId) {
         world,
         id,
         "asymmetric.map",
-        BattleMapAsset::parse(SOURCE).unwrap(),
+        BattleMapAsset::from_cells(SOURCE).unwrap(),
     )
     .unwrap();
     persistence::save(&config.database(), world).await.unwrap();
@@ -81,11 +80,11 @@ async fn dictionary_round_trip_is_per_map_and_preserves_unowned_columns() {
         .fetch_one(&mut sql)
         .await
         .unwrap(),
-        1
+        2
     );
     sqlx::raw_sql("ALTER TABLE btech_map_hexes ADD COLUMN opaque BLOB DEFAULT x'00ff42'; ALTER TABLE btech_map_terrain_codes ADD COLUMN opaque TEXT DEFAULT 'dictionary extension'; ALTER TABLE btech_maps ADD COLUMN opaque TEXT DEFAULT 'map extension'; CREATE TRIGGER prohibit_hex_delete BEFORE DELETE ON btech_map_hexes BEGIN SELECT RAISE(ABORT,'grid rows must retain extension data'); END;").execute(&mut sql).await.unwrap();
     let code: i64 = sqlx::query_scalar(
-        "SELECT code FROM btech_map_terrain_codes WHERE map_dbref=? AND terrain='~'",
+        "SELECT code FROM btech_map_terrain_codes WHERE map_dbref=? AND json_extract(hex,'$.water.frozen')=0 AND json_extract(hex,'$.structure') IS NULL",
     )
     .bind(id.0)
     .fetch_one(&mut sql)
@@ -96,7 +95,7 @@ async fn dictionary_round_trip_is_per_map_and_preserves_unowned_columns() {
         &mut loaded,
         id,
         "reload.map",
-        BattleMapAsset::parse(RELOAD).unwrap(),
+        BattleMapAsset::from_cells(RELOAD).unwrap(),
     )
     .unwrap();
     assert_eq!(
@@ -115,7 +114,7 @@ async fn dictionary_round_trip_is_per_map_and_preserves_unowned_columns() {
     assert_eq!(map.hex(2, 1).unwrap().terrain(), Terrain::Rough);
     assert_eq!(
         sqlx::query_scalar::<_, i64>(
-            "SELECT code FROM btech_map_terrain_codes WHERE map_dbref=? AND terrain='~'"
+            "SELECT code FROM btech_map_terrain_codes WHERE map_dbref=? AND json_extract(hex,'$.water.frozen')=0 AND json_extract(hex,'$.structure') IS NULL"
         )
         .bind(id.0)
         .fetch_one(&mut sql)
@@ -162,7 +161,7 @@ async fn dictionary_round_trip_is_per_map_and_preserves_unowned_columns() {
         &mut loaded,
         second,
         "water.map",
-        BattleMapAsset::parse("1 1\n~9\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n~9\n").unwrap(),
     )
     .unwrap();
     persistence::save(&config.database(), &loaded)
@@ -264,7 +263,7 @@ async fn corrupt_dictionary_backed_maps_never_fall_back_to_guessed_or_asset_terr
     let (_dir, config, mut world, id, mut sql) = fixture().await;
     create(&config, &mut world, id).await;
     sqlx::raw_sql(
-        "PRAGMA ignore_check_constraints=ON; UPDATE btech_map_terrain SET encoding_version=2;",
+        "PRAGMA ignore_check_constraints=ON; UPDATE btech_map_terrain SET encoding_version=1;",
     )
     .execute(&mut sql)
     .await
@@ -276,7 +275,7 @@ async fn corrupt_dictionary_backed_maps_never_fall_back_to_guessed_or_asset_terr
             .to_string()
             .contains("Unsupported terrain encoding")
     );
-    sqlx::query("UPDATE btech_map_terrain SET encoding_version=1")
+    sqlx::query("UPDATE btech_map_terrain SET encoding_version=2")
         .execute(&mut sql)
         .await
         .unwrap();
@@ -361,11 +360,14 @@ async fn lua_map_operations_participate_in_callback_rollback_and_checking_guards
             .is_err()
     );
     assert_eq!(scripts.world().btech, before);
-    let (terrain,elevation,ready,has_tiles):(String,i64,bool,bool)=scripts.eval_callback(&format!("local m=btech.map.inspect({0}); local h=btech.map.hex({0},1,0); return h.terrain,h.elevation,m.terrain_ready,m.terrain~=nil",id.0)).unwrap();
-    assert_eq!(
-        (terrain.as_str(), elevation, ready, has_tiles),
-        ("water", 2, true, false)
-    );
+    let (level, depth, ready, has_tiles): (i64, i64, bool, bool) = scripts
+        .eval_callback(&format!(
+            "local m=btech.map.inspect({0}); local h=btech.map.hex({0},1,0); \
+             return h.level,h.water.depth,m.terrain_ready,m.terrain~=nil",
+            id.0
+        ))
+        .unwrap();
+    assert_eq!((level, depth, ready, has_tiles), (0, 2, true, false));
     let checking = scripts
         .from_sources_for_inspection(
             &config,
@@ -389,7 +391,7 @@ async fn lua_map_operations_participate_in_callback_rollback_and_checking_guards
             &mut world,
             id,
             "different.map",
-            BattleMapAsset::parse("1 1\n.0\n").unwrap()
+            BattleMapAsset::from_cells("1 1\n.0\n").unwrap()
         )
         .is_err()
     );
@@ -461,7 +463,7 @@ async fn reload_rejects_unowned_objects_and_preserves_deferred_rows() {
         &mut world,
         id,
         "reload.map",
-        BattleMapAsset::parse(RELOAD).unwrap(),
+        BattleMapAsset::from_cells(RELOAD).unwrap(),
     )
     .unwrap();
     let error = persistence::save(&config.database(), &world)
@@ -676,7 +678,7 @@ async fn wind_and_fire_randomness_survive_reload_and_reject_missing_streams() {
         &mut world,
         id,
         "reload.map",
-        BattleMapAsset::parse(RELOAD).unwrap(),
+        BattleMapAsset::from_cells(RELOAD).unwrap(),
     )
     .unwrap();
     assert_eq!(

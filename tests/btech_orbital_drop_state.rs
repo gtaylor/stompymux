@@ -105,7 +105,7 @@ async fn reassignment_preserves_drops_and_detached_update_retires_them() {
             &mut world,
             destination,
             "drop",
-            BattleMapAsset::parse("1 2\n.0\n.0\n").unwrap(),
+            BattleMapAsset::from_cells("1 2\n.0\n.0\n").unwrap(),
         )
         .unwrap();
         let report = reassign_battle_map(&mut world, unit, destination, None).unwrap();

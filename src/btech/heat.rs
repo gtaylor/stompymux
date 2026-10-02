@@ -1,5 +1,5 @@
 //! Conventional heat accounting at the committed one-second simulation boundary.
-use super::{BattleNotice, BattlePower, BattleSystem, BattleUnit, Terrain};
+use super::{BattleNotice, BattlePower, BattleSystem, BattleUnit};
 use crate::{Flag, World};
 use anyhow::{Context, Result, bail, ensure};
 use serde::{Deserialize, Serialize};
@@ -151,15 +151,16 @@ impl BattleUnit {
         let tile = map
             .hex(i64::from(position.x), i64::from(position.y))
             .expect("validated placed unit terrain");
-        if tile.terrain() == Terrain::Fire {
+        if tile.is_burning() {
             rates.production += 5.0;
         }
         let tile = map
             .base_hex(i64::from(position.x), i64::from(position.y))
             .expect("validated placed unit terrain");
         let elevation = self.elevation_level(tile);
-        if tile.holds_water() && elevation < 0 {
-            let bonus = if elevation == -1 && self.posture() != super::BattlePosture::Prone {
+        if tile.immerses(elevation) {
+            let wading = elevation == i32::from(tile.water_line()) - 1;
+            let bonus = if wading && self.posture() != super::BattlePosture::Prone {
                 self.loadout()
                     .expect("validated unit loadout")
                     .systems

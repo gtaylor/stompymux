@@ -16,7 +16,7 @@ async fn fixture(sources: &[&str]) -> (tempfile::TempDir, Config, World, ObjectI
         &mut world,
         map,
         "yard",
-        BattleMapAsset::parse("2 2\n.0.0\n.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
     let mut units = Vec::new();
@@ -1604,7 +1604,7 @@ async fn pickup_through_ice_uses_shared_breakage_for_ground_and_airborne_carrier
             &mut world,
             map,
             "ice",
-            BattleMapAsset::parse(&format!("1 1\n{}1\n", Terrain::Ice.symbol())).unwrap(),
+            BattleMapAsset::from_cells(&format!("1 1\n{}1\n", Terrain::Ice.symbol())).unwrap(),
         )
         .unwrap();
         for id in [carrier, target] {
@@ -1707,7 +1707,7 @@ async fn pickup_ice_failure_restores_the_previous_tow_and_all_material_state() {
         &mut world,
         map,
         "ice",
-        BattleMapAsset::parse(&format!("1 1\n{}1\n", Terrain::Ice.symbol())).unwrap(),
+        BattleMapAsset::from_cells(&format!("1 1\n{}1\n", Terrain::Ice.symbol())).unwrap(),
     )
     .unwrap();
     for id in ids {

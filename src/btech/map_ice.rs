@@ -1,5 +1,5 @@
 //! Operator ice growth and melting share map randomness and ordinary surface-break consequences.
-use super::{BattleFallRules, BattleHexCoordinate, BattleSurfaceBreak, StoredBattleMap, Terrain};
+use super::{BattleFallRules, BattleHexCoordinate, BattleSurfaceBreak, StoredBattleMap};
 use crate::{Config, ObjectId, Scripts};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -34,8 +34,8 @@ fn eligible(
                 .ok()
         })
         .filter(|tile| match change {
-            BattleIceChange::Grow => matches!(tile.terrain(), Terrain::Water | Terrain::Bridge),
-            BattleIceChange::Melt => tile.terrain() == Terrain::Ice,
+            BattleIceChange::Grow => tile.is_open_water() || tile.has_bridge(),
+            BattleIceChange::Melt => tile.is_ice(),
         })
         .count() as u8;
     Ok(match change {
@@ -93,11 +93,12 @@ pub fn change_map_ice_action(
                         BattleIceChange::Grow => original,
                         BattleIceChange::Melt => &*live,
                     };
-                    let expected = match change {
-                        BattleIceChange::Grow => Terrain::Water,
-                        BattleIceChange::Melt => Terrain::Ice,
+                    let tile = record.base_hex(x, y)?;
+                    let eligible_tile = match change {
+                        BattleIceChange::Grow => tile.is_open_water(),
+                        BattleIceChange::Melt => tile.is_ice(),
                     };
-                    if record.base_hex(x, y)?.terrain() != expected {
+                    if !eligible_tile {
                         continue;
                     }
                     let mut dice = live
@@ -119,7 +120,7 @@ pub fn change_map_ice_action(
                             &mut scripts.world_mut(),
                             map,
                             coordinate,
-                            original.base_hex(x, y)?.with_terrain(Terrain::Ice),
+                            original.base_hex(x, y)?.frozen(),
                         )?;
                     }
                     BattleIceChange::Melt => {
@@ -130,7 +131,7 @@ pub fn change_map_ice_action(
                                 config,
                                 map,
                                 coordinate,
-                                Terrain::Ice,
+                                super::BattleSurface::Ice,
                                 BattleFallRules::configured(config),
                             )?)
                     }

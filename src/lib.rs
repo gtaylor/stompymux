@@ -20,6 +20,10 @@ pub use btech::{
 };
 pub use btech::{BattleCommandClass, BattleSpecialCommand, BattleSpecialType};
 pub use btech::{BattleMinePlacement, add_mine_action as add_battle_mine_action};
+pub use btech::{
+    Ground as BattleGround, Structure as BattleStructure, Water as BattleWater,
+    Woods as BattleWoods,
+};
 
 pub use btech::{
     AmmunitionBin, BattleAimModifiers, BattleAimRules, BattleAmmunitionAdjustment,
@@ -46,13 +50,13 @@ pub use btech::{
     BattleShotReport, BattleShotRules, BattleSkillCategory, BattleStackingEntry,
     BattleStackingInput, BattleStackingRules, BattleStagger, BattleStaggerHit, BattleStaggerMode,
     BattleStaggerReport, BattleStaggerRules, BattleStandAttempt, BattleStandMode, BattleStandTimer,
-    BattleSurfaceBreak, BattleSystem, BattleTacticalImpact, BattleTargetLock, BattleTemplate,
-    BattleTemplateCheck, BattleTerrainLos, BattleTorso, BattleUnit, BattleUnitConfiguration,
-    BattleUnitSignature, BattleUnjam, BattleVehicleHit, BattleVehicleHitRules,
-    BattleVehicleMotiveHit, BattleWaterRanges, BattleWeapon, BattleWeaponDamage,
-    BattleWeaponDamageEffects, BattleWeaponDamageKind, BattleWeaponRange, BattleWeaponReadiness,
-    BattleWeaponUse, BtechState, CriticalDefinition, CriticalLocation, MapCheckIssue, RawMovement,
-    RawSectionCode, RawTemplate, RawUnitClass, SectionDefinition, StoredBattleMap,
+    BattleSurface, BattleSurfaceBreak, BattleSystem, BattleTacticalImpact, BattleTargetLock,
+    BattleTemplate, BattleTemplateCheck, BattleTerrainLos, BattleTorso, BattleUnit,
+    BattleUnitConfiguration, BattleUnitSignature, BattleUnjam, BattleVehicleHit,
+    BattleVehicleHitRules, BattleVehicleMotiveHit, BattleWaterRanges, BattleWeapon,
+    BattleWeaponDamage, BattleWeaponDamageEffects, BattleWeaponDamageKind, BattleWeaponRange,
+    BattleWeaponReadiness, BattleWeaponUse, BtechState, CriticalDefinition, CriticalLocation,
+    RawMovement, RawSectionCode, RawTemplate, RawUnitClass, SectionDefinition, StoredBattleMap,
     StoredBattleUnit, SystemCritical, Terrain, WeaponMount, WeaponProfile,
     advance_heat as advance_battle_heat, advance_jumps as advance_battle_jumps,
     advance_motion as advance_battle_motion, advance_overheat as advance_battle_overheat,
@@ -64,7 +68,7 @@ pub use btech::{
     aim_modifiers as battle_aim_modifiers, apply_damage_phase, assign_pilot as assign_battle_pilot,
     begin_stand as begin_battle_stand, begin_unjam as begin_battle_unjam,
     break_bridge as break_battle_bridge, break_ice as break_battle_ice,
-    check_character_consciousness, check_map_source, check_template as check_battle_template,
+    check_character_consciousness, check_template as check_battle_template,
     contact_observers as battle_contact_observers, create_map as create_battle_map,
     create_unit as create_battle_unit, destroy_unit_critical as destroy_battle_critical,
     displayed_contact as displayed_battle_contact, displayed_contacts as displayed_battle_contacts,
@@ -97,16 +101,15 @@ pub use btech::{
     set_speed as set_battle_speed, set_unit_signature as set_battle_unit_signature,
     spend_weapon as spend_battle_weapon, stand_target as battle_stand_target,
     start_unit as start_battle_unit, stop_unit as stop_battle_unit, stun_unit as stun_battle_unit,
-    tidy_map_source, toggle_armor_piercing as toggle_battle_armor_piercing,
-    toggle_artemis as toggle_battle_artemis, toggle_caseless as toggle_battle_caseless,
-    toggle_cluster as toggle_battle_cluster, toggle_electronics as toggle_battle_electronics,
-    toggle_explosive as toggle_battle_explosive, toggle_flamer_heat as toggle_battle_flamer_heat,
-    toggle_flechette as toggle_battle_flechette, toggle_gatling as toggle_battle_gatling,
-    toggle_hotload as toggle_battle_hotload, toggle_incendiary as toggle_battle_incendiary,
-    toggle_lbx as toggle_battle_lbx, toggle_narc as toggle_battle_narc,
-    toggle_precision as toggle_battle_precision, toggle_rapid as toggle_battle_rapid,
-    toggle_ultra as toggle_battle_ultra, unit_elevation as battle_unit_elevation,
-    unit_gunnery_target as battle_unit_gunnery_target,
+    toggle_armor_piercing as toggle_battle_armor_piercing, toggle_artemis as toggle_battle_artemis,
+    toggle_caseless as toggle_battle_caseless, toggle_cluster as toggle_battle_cluster,
+    toggle_electronics as toggle_battle_electronics, toggle_explosive as toggle_battle_explosive,
+    toggle_flamer_heat as toggle_battle_flamer_heat, toggle_flechette as toggle_battle_flechette,
+    toggle_gatling as toggle_battle_gatling, toggle_hotload as toggle_battle_hotload,
+    toggle_incendiary as toggle_battle_incendiary, toggle_lbx as toggle_battle_lbx,
+    toggle_narc as toggle_battle_narc, toggle_precision as toggle_battle_precision,
+    toggle_rapid as toggle_battle_rapid, toggle_ultra as toggle_battle_ultra,
+    unit_elevation as battle_unit_elevation, unit_gunnery_target as battle_unit_gunnery_target,
     unit_piloting_target as battle_unit_piloting_target, unit_range as battle_unit_range,
     unit_terrain_los as battle_unit_terrain_los, update_contact as update_battle_contact,
     visible_contact as visible_battle_contact, visible_contacts as visible_battle_contacts,
@@ -1065,7 +1068,6 @@ pub use btech::{
 
 pub use btech::{BattleMapHexChange, set_map_hex_action as set_battle_map_hex_action};
 
-pub use btech::BattleMapExport;
 pub use btech::BattleWoodsAbsorption;
 pub use btech::add_landing_exclusion_action as add_battle_landing_exclusion_action;
 pub use btech::clear_map_units_action as clear_battle_map_units_action;

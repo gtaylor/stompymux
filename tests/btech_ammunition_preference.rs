@@ -113,7 +113,7 @@ async fn preferred_sections_controls_feed_and_restart() {
             &mut world,
             map,
             "field",
-            BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -265,7 +265,7 @@ async fn laser_defense_rejects_preferred_ammunition() {
             &mut world,
             map,
             "field",
-            BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();

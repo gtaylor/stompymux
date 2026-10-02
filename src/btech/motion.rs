@@ -1,5 +1,5 @@
 //! Mech ground motion and independent jump facing; unsupported hazards stop before entry.
-use super::{BattleNotice, BattlePoint, BattlePower, Terrain};
+use super::{BattleNotice, BattlePoint, BattlePower};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -784,7 +784,7 @@ fn resolve_ground_segment(
     proposed = map.motion_destination(proposed)?;
     let mut destination = proposed.containing_hex().ok();
     let mut previous_height = current.surface_height();
-    let mut previous_terrain = current.terrain();
+    let mut previous_tile = current;
     let mut actual_height = unit.elevation_level(current) as i16;
     let mut ground_elevation = unit.ground_elevation;
     let mut elevation_cost = 0.0;
@@ -795,9 +795,10 @@ fn resolve_ground_segment(
     let blocked = if settle && motion.speed == 0.0 && !unit.hex_sync_pending {
         None
     } else if actual_height != current.standing_height()
-        && !(current.terrain() == Terrain::Bridge && actual_height == -1)
-        && !(current.terrain() == Terrain::Ice
-            && (actual_height == current.surface_height() || actual_height == -1))
+        && !(current.has_bridge() && actual_height == current.water_line() - 1)
+        && !(current.is_ice()
+            && (actual_height == current.surface_height()
+                || actual_height == current.water_line() - 1))
     {
         Some("Terrain transition unavailable; movement stopped.")
     } else {
@@ -818,44 +819,39 @@ fn resolve_ground_segment(
             if !enters_hex {
                 continue;
             }
-            let ice_check = settle && tile.terrain() == Terrain::Ice && actual_height == 0;
+            let ice_check = settle && tile.is_ice() && actual_height == tile.water_line();
             let next_height = if !settle {
                 actual_height
-            } else if tile.terrain() == Terrain::Ice && actual_height < 0 {
-                if actual_height == -1 && tile.water_depth() == 1 {
-                    0
+            } else if tile.is_ice() && actual_height < tile.water_line() {
+                if actual_height == tile.water_line() - 1 && tile.water_depth() == 1 {
+                    tile.water_line()
                 } else {
                     tile.surface_height()
                 }
-            } else if tile.terrain() == Terrain::Bridge
-                && actual_height < tile.standing_height() - 2
-            {
-                -1
+            } else if tile.has_bridge() && actual_height < tile.standing_height() - 2 {
+                tile.water_line() - 1
             } else {
                 tile.standing_height()
             };
             let next_elevation =
                 (next_height != tile.standing_height()).then_some(f64::from(next_height));
-            let last_surface = if previous_terrain == Terrain::Ice && next_height >= 0 {
-                0
-            } else {
-                previous_height
-            };
-            let collision_height = if tile.terrain() == Terrain::Ice && last_surface >= 0 {
-                0
+            let last_surface =
+                if previous_tile.is_ice() && next_height >= previous_tile.water_line() {
+                    previous_tile.water_line()
+                } else {
+                    previous_height
+                };
+            let collision_height = if tile.is_ice() && last_surface >= tile.water_line() {
+                tile.water_line()
             } else {
                 tile.surface_height()
             };
             let change = collision_height - last_surface;
             let checked_height =
                 change.abs() > 2 || (change != 0 && motion.speed < 0.0 && rules.roll_on_backwalk);
-            let enters_water = tile.terrain() == Terrain::Water
-                || (tile.terrain() == Terrain::Bridge && next_height < 0);
-            if checked_height
-                || enters_water
-                || tile.terrain() == Terrain::Ice
-                || map.mine_coverage(hex)?
-            {
+            let enters_water =
+                tile.is_open_water() || (tile.has_bridge() && next_height < tile.water_line());
+            if checked_height || enters_water || tile.is_ice() || map.mine_coverage(hex)? {
                 checked_steps.push(GroundStep {
                     hex,
                     change,
@@ -886,7 +882,7 @@ fn resolve_ground_segment(
                 previous_point = hex.center();
             }
             previous_height = tile.surface_height();
-            previous_terrain = tile.terrain();
+            previous_tile = tile;
         }
         obstruction
     };

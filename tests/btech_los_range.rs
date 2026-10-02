@@ -19,7 +19,7 @@ async fn fixture(
         &mut world,
         map,
         "lane",
-        BattleMapAsset::parse(&format!("1 201\n{}", ".0\n".repeat(201))).unwrap(),
+        BattleMapAsset::from_cells(&format!("1 201\n{}", ".0\n".repeat(201))).unwrap(),
     )
     .unwrap();
     let observer = world.create(&config, "Observer".into(), Kind::Thing);

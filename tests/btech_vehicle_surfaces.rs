@@ -13,7 +13,7 @@ async fn fixture(
         &mut world,
         map,
         "surface",
-        BattleMapAsset::parse(&format!("1 1\n{}{depth}\n", terrain.symbol())).unwrap(),
+        BattleMapAsset::from_cells(&format!("1 1\n{}{depth}\n", terrain.symbol())).unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();

@@ -17,7 +17,7 @@ async fn entry_delay_replays_and_rechecks_live_routes_for_every_chassis() {
                 &mut world,
                 map,
                 "entry",
-                BattleMapAsset::parse("2 2\n.0.0\n.0.0\n").unwrap(),
+                BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
             )
             .unwrap();
         }

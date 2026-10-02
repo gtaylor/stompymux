@@ -2,9 +2,6 @@
 
 use stompymux_test_support as support;
 
-#[path = "../btech_bridge_generation.rs"]
-mod btech_bridge_generation;
-
 #[path = "../btech_building_routes.rs"]
 mod btech_building_routes;
 

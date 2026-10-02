@@ -13,7 +13,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
             &mut world,
             id,
             name,
-            BattleMapAsset::parse(&format!(
+            BattleMapAsset::from_cells(&format!(
                 "5 5\n{}",
                 format!("{}\n", tile.repeat(5)).repeat(5)
             ))

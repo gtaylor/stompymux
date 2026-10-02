@@ -234,18 +234,15 @@ pub fn load_battle_map_trusted_action(
                     && !object.flags.contains(Flag::Going)),
             "Map is unavailable"
         );
-        let (mut asset, _) = super::assets::read_map_diagnostics(
+        let asset = super::assets::read_map_with_flags(
             &config.path(&config.database.map_database),
             name,
-            i32::try_from(
-                before
-                    .btech
-                    .maps()
-                    .get(&map)
-                    .map_or(0, |record| record.flags),
-            )?,
+            before
+                .btech
+                .maps()
+                .get(&map)
+                .map_or(0, |record| record.flags),
         )?;
-        asset.generate_bridges()?;
         {
             let mut world = scripts.world_mut();
             super::state::replace_map_asset(&mut world, map, name, asset)?;

@@ -27,8 +27,11 @@ async fn transferred_jumps_rebind_boundaries_and_replay_to_landing() {
                         &mut world,
                         destination,
                         "destination",
-                        BattleMapAsset::parse(&format!("1 {height}\n{}", ".0\n".repeat(height)))
-                            .unwrap(),
+                        BattleMapAsset::from_cells(&format!(
+                            "1 {height}\n{}",
+                            ".0\n".repeat(height)
+                        ))
+                        .unwrap(),
                     )
                     .unwrap();
                     set_battle_map_wrapping(&mut world, destination, destination_wrap).unwrap();
@@ -99,7 +102,7 @@ async fn rebound_jump_assignment_uses_host_rollback() {
         &mut world,
         map,
         "small",
-        BattleMapAsset::parse("1 2\n.0\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 2\n.0\n.0\n").unwrap(),
     )
     .unwrap();
     let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();

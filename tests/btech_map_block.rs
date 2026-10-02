@@ -144,7 +144,7 @@ async fn addblock_native_argument_boundaries_and_replies() {
         &mut world,
         map,
         "grid",
-        BattleMapAsset::parse("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
@@ -209,7 +209,7 @@ async fn addblock_radius_team_and_restart() {
                 &mut world,
                 map,
                 "grid",
-                BattleMapAsset::parse("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+                BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
             )
             .unwrap();
             world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
@@ -282,7 +282,7 @@ async fn addblock_validation_and_full_width_saved_radii() {
         &mut world,
         map,
         "grid",
-        BattleMapAsset::parse("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);

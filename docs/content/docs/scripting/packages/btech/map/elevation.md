@@ -5,7 +5,7 @@ linkTitle: "elevation"
 manualLinkTitle: "elevation"
 ---
 
-Read one tile elevation; water and ice report depth.
+Read one hex's ground height. Water depth, structure heights and bridge decks are in btech.map.hex.
 
 ## Signature
 

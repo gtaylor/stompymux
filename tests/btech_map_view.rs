@@ -26,7 +26,7 @@ async fn map_views_clip_both_parities_and_preserve_terrain_cells_and_preferences
             &mut world,
             map,
             "view",
-            BattleMapAsset::parse(&format!(
+            BattleMapAsset::from_cells(&format!(
                 "{width} {height}\n{}",
                 format!("{row}\n").repeat(height)
             ))
@@ -197,7 +197,7 @@ async fn view_rejection_callback_and_partial_publication_leave_no_effects() {
         &mut world,
         map,
         "view",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);

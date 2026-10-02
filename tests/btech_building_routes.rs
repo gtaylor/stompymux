@@ -64,7 +64,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
             &mut world,
             id,
             "routes",
-            BattleMapAsset::parse("3 2\n.0.0.0\n.0.0.0\n").unwrap(),
+            BattleMapAsset::from_cells("3 2\n.0.0.0\n.0.0.0\n").unwrap(),
         )
         .unwrap();
     }
@@ -215,7 +215,7 @@ async fn route_updates_preserve_authored_payloads_and_terrain_reload_keeps_route
         &mut world,
         interior,
         "new terrain",
-        BattleMapAsset::parse("3 2\n.1.0.0\n.0.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 2\n.1.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();

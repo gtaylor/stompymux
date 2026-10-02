@@ -299,7 +299,8 @@ async fn map_reassignment_preserves_scalar_and_core_destruction_clears_it() {
                 &mut world,
                 map,
                 "new",
-                BattleMapAsset::parse(&format!("1 {height}\n{}", ".0\n".repeat(height))).unwrap(),
+                BattleMapAsset::from_cells(&format!("1 {height}\n{}", ".0\n".repeat(height)))
+                    .unwrap(),
             )
             .unwrap();
             let moved = reassign_battle_map(&mut world, unit, map, None).unwrap();

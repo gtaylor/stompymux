@@ -254,11 +254,12 @@ pub(super) fn advance_in_candidate(
         let forest = contact == BattleVtolSurfaceContact::Forest;
         let old_tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
         // Hex rollback restores the previous terrain elevation, including the ice surface rule.
-        let rollback_height = if old_tile.terrain() == super::Terrain::Ice && altitude as i32 >= 0 {
-            0
-        } else {
-            old_tile.surface_height()
-        };
+        let rollback_height =
+            if old_tile.is_ice() && altitude as i32 >= i32::from(old_tile.water_line()) {
+                old_tile.water_line()
+            } else {
+                old_tile.surface_height()
+            };
         if !forest {
             candidate
                 .btech

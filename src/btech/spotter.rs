@@ -365,9 +365,9 @@ pub(super) fn check_indirect_water(
     shooter: ObjectId,
     target: ObjectId,
 ) -> Result<()> {
-    let elevation = |id| super::unit_elevation(world, id)?.context("Unit is not placed");
+    let submerged = |id| super::geometry::unit_submerged(world, id);
     ensure!(
-        elevation(target)? >= 0 || elevation(shooter)? < 0,
+        !submerged(target)? || submerged(shooter)?,
         "You can't fire into water with that weapon from here."
     );
     Ok(())

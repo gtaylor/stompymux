@@ -97,7 +97,7 @@ pub use arcs::{
     BattleContactArc, BattleFacing, BattleTorso, flip_arms, rotate_torso, weapon_bears_on,
 };
 mod surface_break;
-pub use surface_break::{BattleSurfaceBreak, break_bridge, break_ice};
+pub use surface_break::{BattleSurface, BattleSurfaceBreak, break_bridge, break_ice};
 mod balance;
 pub use balance::{BattleBalanceCause, BattleBalanceReport};
 mod character;
@@ -152,8 +152,6 @@ mod ground_proposal;
 mod loadout;
 mod loadout_context;
 mod map;
-mod map_lint;
-pub use map_lint::{MapCheckIssue, check_map_source, tidy_map_source};
 mod map_flags;
 mod terrain_rules;
 pub use map_flags::{BattleMapFlag, format_map_flags, parse_map_flags};
@@ -197,6 +195,7 @@ pub use assets::{read_map, read_template, read_unit_template, read_vehicle_templ
 mod unit_template;
 pub use map::{BattleMapAsset, Terrain};
 mod hex;
+mod map_file;
 pub use hex::{BattleHex, Ground, Structure, Water, Woods};
 pub use state::{
     BtechState, StoredBattleMap, StoredBattleUnit, create_map, create_unit,
@@ -1296,9 +1295,7 @@ mod map_objects;
 pub use map_load::load_map_action;
 pub(crate) mod map_save;
 pub use map_save::save_map_action;
-mod bridge_generation;
 mod map_export;
-pub use map_export::BattleMapExport;
 pub(crate) mod map_resize;
 pub use map_resize::resize_map_action;
 pub(crate) mod map_clear;

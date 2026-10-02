@@ -17,7 +17,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
         &mut world,
         map,
         "test.map",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Engine lab".into(), Kind::Thing);
@@ -272,7 +272,7 @@ async fn idle_map_smoke_ticks_retry_failed_saves_and_expire() {
     tokio::task::LocalSet::new().run_until(async {
         let (_dir, config, mut world) = support::isolated_world().await;
         let map = world.create(&config, "Smoke field".into(), Kind::Room);
-        create_battle_map(&mut world, map, "smoke.map", BattleMapAsset::parse("1 1\n\"2\n").unwrap()).unwrap();
+        create_battle_map(&mut world, map, "smoke.map", BattleMapAsset::from_cells("1 1\n\"2\n").unwrap()).unwrap();
         let coordinate = BattleHexCoordinate { x: 0, y: 0 };
         let smoke = BattleDecoration::new(BattleDecorationKind::Smoke, 2, None);
         set_map_decoration(&mut world, map, coordinate, Some(smoke)).unwrap();
@@ -309,7 +309,7 @@ async fn idle_map_fire_burnout_retries_random_state_save_failure() {
     tokio::task::LocalSet::new().run_until(async {
         let (_dir, config, mut world) = support::isolated_world().await;
         let map = world.create(&config, "Burnout field".into(), Kind::Room);
-        create_battle_map(&mut world, map, "fire.map", BattleMapAsset::parse("1 1\n\"2\n").unwrap()).unwrap();
+        create_battle_map(&mut world, map, "fire.map", BattleMapAsset::from_cells("1 1\n\"2\n").unwrap()).unwrap();
         let coordinate = BattleHexCoordinate { x: 0, y: 0 };
         set_map_decoration(&mut world, map, coordinate, Some(BattleDecoration::new(BattleDecorationKind::Fire, 60, None))).unwrap();
         // Resume the final burnout phase of an already spreading fire.
@@ -346,7 +346,7 @@ async fn idle_building_repair_retries_failed_world_save() {
     tokio::task::LocalSet::new().run_until(async {
         let (_dir, config, mut world) = support::isolated_world().await;
         let map = world.create(&config, "Repairing hangar".into(), Kind::Room);
-        create_battle_map(&mut world, map, "inside.map", BattleMapAsset::parse("1 1\n.0\n").unwrap()).unwrap();
+        create_battle_map(&mut world, map, "inside.map", BattleMapAsset::from_cells("1 1\n.0\n").unwrap()).unwrap();
         set_building_state(&mut world, map, BattleBuildingState { integrity: 9, maximum_integrity: 10, flags: 0, regeneration: 1 }).unwrap();
         // Resume one committed second before the final repair of an otherwise idle map.
         let mut encoded = serde_json::to_value(&world.btech).unwrap();

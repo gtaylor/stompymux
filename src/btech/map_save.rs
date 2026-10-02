@@ -1,4 +1,4 @@
-//! Map saving stages complete assets and stale-effect cleanup in the host transaction.
+//! Map saving encodes the selected map and stages the file write in the host transaction.
 use crate::{Config, ObjectId, Scripts};
 use anyhow::{Context, Result, ensure};
 
@@ -24,23 +24,14 @@ pub fn save_map_action(
                 .contains(crate::Flag::Going)),
             "Map is unavailable"
         );
-        let export = before
+        let source = before
             .btech
             .maps()
             .get(&id)
             .context("Map not found")?
             .export_asset()?;
-        let request = crate::runtime::MapAssetWrite::new(config, actor, name, export.source)?;
-        for coordinate in export.stale_effects {
-            let tile = before.btech.maps()[&id]
-                .base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
-            super::terrain_edit::replace_hex(
-                &mut scripts.world_mut(),
-                id,
-                coordinate,
-                tile.with_terrain(super::Terrain::Grassland),
-            )?;
-        }
+        let request =
+            crate::runtime::MapAssetWrite::new(config, actor, &format!("{name}.toml"), source)?;
         super::notify_message(
             scripts,
             super::BattleMessageTarget::Player(actor),

@@ -1,7 +1,7 @@
 //! Transactional conventional jumping on supported terrain routes, with committed landing and stabilization.
 use super::{
     BattleJumpFlight, BattleJumpOutcome, BattleJumpPath, BattleNotice, BattlePosture, BattlePower,
-    BattleUnit, Terrain,
+    BattleUnit,
 };
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -500,9 +500,12 @@ fn prepare_jump(world: &World, id: ObjectId, request: JumpRequest<'_>) -> Result
         (destination.x, destination.y) != (i32::from(position.x), i32::from(position.y)),
         "You're already in the target hex."
     );
-    let elevation =
-        unit.elevation_level(map.base_hex(i64::from(position.x), i64::from(position.y))?) as i16;
-    ensure!(elevation >= -1, "Cannot launch from below elevation -1");
+    let launch = map.base_hex(i64::from(position.x), i64::from(position.y))?;
+    let elevation = unit.elevation_level(launch) as i16;
+    ensure!(
+        elevation >= launch.water_line() - 1,
+        "Cannot launch from more than one level underwater"
+    );
     let resolved_destination = map.motion_hex(destination)?;
     let destination_elevation = map
         .base_hex(
@@ -720,7 +723,7 @@ fn advance_jumps_inner(
         let previous_tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
         let previous_elevation = unit.elevation_level(previous_tile);
         let next_elevation = (step.to.elevation + 0.5).trunc() as i32;
-        if previous_tile.terrain() == Terrain::Ice
+        if previous_tile.is_ice()
             && step.outcome == BattleJumpOutcome::Landing
             && (coordinate.x, coordinate.y) == (i32::from(position.x), i32::from(position.y))
         {
@@ -752,12 +755,9 @@ fn advance_jumps_inner(
             );
             notices.extend(landing.notices);
             experience_messages.extend(landing.experience_messages);
-            if previous_elevation < -1
-                && candidate.btech.maps()[&position.map]
-                    .base_hex(i64::from(position.x), i64::from(position.y))?
-                    .terrain()
-                    == Terrain::Ice
-            {
+            let landed = candidate.btech.maps()[&position.map]
+                .base_hex(i64::from(position.x), i64::from(position.y))?;
+            if landed.is_ice() && previous_elevation < i32::from(landed.water_line()) - 1 {
                 let resolve = if character {
                     super::surface_break::break_ice_upward_in_action
                 } else {
@@ -777,11 +777,12 @@ fn advance_jumps_inner(
             )?);
             continue;
         }
-        if previous_tile.terrain() == Terrain::Ice
-            && ((previous_elevation < -1 && next_elevation >= -1)
-                || (previous_elevation >= -1 && next_elevation < -1))
+        let ice_plane = i32::from(previous_tile.water_line()) - 1;
+        if previous_tile.is_ice()
+            && ((previous_elevation < ice_plane && next_elevation >= ice_plane)
+                || (previous_elevation >= ice_plane && next_elevation < ice_plane))
         {
-            let downward = next_elevation < -1;
+            let downward = next_elevation < ice_plane;
             let old_coordinate = super::BattleHexCoordinate {
                 x: i32::from(position.x),
                 y: i32::from(position.y),

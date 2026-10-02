@@ -6,19 +6,20 @@ use anyhow::{Context, Result, ensure};
 /// Resolve the upper support, lower bridge surface and chassis-specific touchdown level.
 fn surface(tile: BattleHex, elevation: i32, hover: bool) -> BattleDropSurface {
     let upper = i32::from(tile.standing_height());
-    let lower = if tile.terrain() == Terrain::Bridge {
-        -1
+    let water_line = i32::from(tile.water_line());
+    let lower = if tile.has_bridge() {
+        water_line - 1
     } else {
         i32::from(tile.surface_height())
     };
-    let landing = if tile.terrain() == Terrain::Bridge {
+    let landing = if tile.has_bridge() {
         if elevation < upper {
-            if hover { 0 } else { lower }
+            if hover { water_line } else { lower }
         } else {
             upper
         }
-    } else if hover || (tile.terrain() == Terrain::Ice && elevation >= 0) {
-        i32::from(tile.surface_height()).max(0)
+    } else if hover || (tile.is_ice() && elevation >= water_line) {
+        i32::from(tile.surface_height()).max(water_line)
     } else {
         i32::from(tile.surface_height())
     };
@@ -195,7 +196,7 @@ fn set_cursor(world: &mut World, id: ObjectId, drop: Option<BattleOrbitalDrop>) 
 fn landing_input(
     world: &mut World,
     id: ObjectId,
-    terrain: Terrain,
+    hex: BattleHex,
     extended: bool,
 ) -> Result<(BattleDropLandingInput, Option<ObjectId>)> {
     let (mech, pilot, power, prone, safe, damage, cockpit) =
@@ -262,7 +263,7 @@ fn landing_input(
         BattleDropLandingInput {
             base_target: target,
             roll,
-            terrain,
+            hex,
             running: power == BattlePower::Running,
             prone,
             incapacitated,
@@ -286,7 +287,7 @@ fn touchdown(
     character: bool,
     report: &mut super::movement_report::MovementReport,
 ) -> Result<()> {
-    let (input, pilot) = landing_input(world, id, tile.terrain(), rules.extended_piloting)?;
+    let (input, pilot) = landing_input(world, id, tile, rules.extended_piloting)?;
     let landing = drop.land(input)?;
     rules.toughness |=
         pilot.is_some_and(|pilot| super::skills::boolean_advantage(world, pilot, "Toughness"));
@@ -309,7 +310,7 @@ fn touchdown(
     } else {
         let unit = world.btech.vehicles.get_mut(&id).unwrap();
         unit.ground_elevation = Some(f64::from(level));
-        unit.under_bridge = tile.terrain() == Terrain::Bridge
+        unit.under_bridge = tile.has_bridge()
             && level < i32::from(tile.surface_height())
             && unit.definition().movement == BattleVehicleMovement::Hover;
     }
@@ -378,7 +379,7 @@ fn touchdown(
         } else {
             super::surface_break::check_ice_landing
         };
-        if tile.terrain() != Terrain::Bridge
+        if !tile.has_bridge()
             && let Some(fracture) = check_ice(world, id, rules)?
         {
             super::piloting::append_feedback(
@@ -418,8 +419,8 @@ fn touchdown(
     if !input.combat_safe && !input.mech {
         let unit = &world.btech.vehicles()[&id];
         if !unit.is_destroyed()
-            && tile.terrain() == Terrain::Water
-            && unit.elevation_level(tile) < 0
+            && tile.is_open_water()
+            && tile.immerses(unit.elevation_level(tile))
             && !unit.definition().has_special("Waterproof_Tech")
         {
             super::vehicle_water::flood(world, id, character)?;

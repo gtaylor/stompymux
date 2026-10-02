@@ -43,7 +43,7 @@ async fn fixture(
         &mut world,
         map,
         "visibility",
-        BattleMapAsset::parse(if blocked {
+        BattleMapAsset::from_cells(if blocked {
             "1 3\n.0\n.9\n.0\n"
         } else {
             "1 3\n.0\n.0\n.0\n"

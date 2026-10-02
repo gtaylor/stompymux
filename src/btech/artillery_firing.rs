@@ -328,13 +328,14 @@ pub(super) fn prepare(
     } else {
         BattleArtilleryObserver::Unassisted
     };
+    let water_line = i32::from(source_tile.water_line());
     let submerged = if vehicle {
-        world.btech.vehicles()[&shooter].elevation_level(source_tile) < -1
+        world.btech.vehicles()[&shooter].elevation_level(source_tile) < water_line - 1
     } else {
         let unit = &world.btech.constructed_units()[&shooter];
         let elevation = unit.elevation_level(source_tile);
-        elevation < -1
-            || (elevation < 0
+        elevation < water_line - 1
+            || (elevation < water_line
                 && (unit.posture() == BattlePosture::Prone
                     || unit
                         .chassis()

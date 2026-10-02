@@ -16,7 +16,7 @@ async fn fixture(
         &mut world,
         map,
         "ridge",
-        BattleMapAsset::parse("3 3\n.0.1.0\n.0.1.0\n.0.1.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 3\n.0.1.0\n.0.1.0\n.0.1.0\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Quad".into(), Kind::Thing);
@@ -226,10 +226,18 @@ async fn hull_down_cover_is_shared_between_attackers_by_sensors_and_sight() {
         let map = world.btech.constructed_units()[&id].position().unwrap().map;
         let mut saved = serde_json::to_value(&world.btech).unwrap();
         for index in 0..9 {
-            saved["maps"][map.0.to_string()]["terrain"][index]["terrain"] =
-                serde_json::json!(if index == 3 { "grassland" } else { "water" });
-            saved["maps"][map.0.to_string()]["terrain"][index]["elevation"] =
-                serde_json::json!(if index == 3 { 0 } else { 1 });
+            crate::support::set_hex_terrain(
+                &mut saved["maps"][map.0.to_string()]["terrain"][index],
+                if index == 3 {
+                    stompymux_rs::Terrain::Grassland
+                } else {
+                    stompymux_rs::Terrain::Water
+                },
+            );
+            crate::support::set_hex_elevation(
+                &mut saved["maps"][map.0.to_string()]["terrain"][index],
+                if index == 3 { 0 } else { 1 },
+            );
         }
         world.btech = serde_json::from_value(saved).unwrap();
         let terrain = battle_unit_terrain_los(&world, shooter, id).unwrap();
@@ -260,9 +268,14 @@ async fn hull_down_cover_is_shared_between_attackers_by_sensors_and_sight() {
         // Open ground removes the bonus, even though the unit remains lowered.
         let mut saved = serde_json::to_value(&world.btech).unwrap();
         for index in 0..9 {
-            saved["maps"][map.0.to_string()]["terrain"][index]["terrain"] =
-                serde_json::json!("grassland");
-            saved["maps"][map.0.to_string()]["terrain"][index]["elevation"] = serde_json::json!(0);
+            crate::support::set_hex_terrain(
+                &mut saved["maps"][map.0.to_string()]["terrain"][index],
+                stompymux_rs::Terrain::Grassland,
+            );
+            crate::support::set_hex_elevation(
+                &mut saved["maps"][map.0.to_string()]["terrain"][index],
+                0,
+            );
         }
         world.btech = serde_json::from_value(saved).unwrap();
         assert!(

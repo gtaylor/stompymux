@@ -68,7 +68,7 @@ async fn external_markers_survive_unregistration_and_reactivation() {
             &mut world,
             id,
             "map",
-            BattleMapAsset::parse("2 2\n.0.0\n.0.0\n").unwrap(),
+            BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
         )
         .unwrap();
     }
@@ -231,7 +231,7 @@ async fn retired_building_target_does_not_panic_or_reappear() {
         &mut world,
         interior,
         "interior",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let coordinate = BattleHexCoordinate { x: 0, y: 9 };

@@ -4,6 +4,21 @@ use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
+/// Write a serialized hex as a Lua table constructor.
+fn lua_table(value: &serde_json::Value) -> String {
+    match value {
+        serde_json::Value::Object(fields) => {
+            let fields: Vec<_> = fields
+                .iter()
+                .map(|(key, value)| format!("{key}={}", lua_table(value)))
+                .collect();
+            format!("{{{}}}", fields.join(","))
+        }
+        serde_json::Value::String(text) => format!("'{text}'"),
+        other => other.to_string(),
+    }
+}
+
 /// Keep the assigned pilot in its cockpit while a separate wizard edits its map.
 fn operator(world: &mut World, config: &Config, map: ObjectId) -> ObjectId {
     let id = world.create(config, "Terrain operator".into(), Kind::Player);
@@ -39,19 +54,26 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
             ('`', Terrain::LightForest),
             ('"', Terrain::HeavyForest),
             ('%', Terrain::Rough),
-            ('&', Terrain::Fire),
-            (':', Terrain::Smoke),
             ('+', Terrain::Snow),
             ('@', Terrain::Building),
             ('=', Terrain::Wall),
             ('.', Terrain::Grassland),
         ] {
+            // ADDHEX caps a depth at 9 and any other height at 35.
+            let expected = BattleHex::new(
+                terrain,
+                if matches!(terrain, Terrain::Water | Terrain::Ice) {
+                    9
+                } else {
+                    30
+                },
+            );
             let before = serde_json::to_value(&lua.world().btech).unwrap();
             let call = format!(
-                "btech.map.set_hex({},{},0,11,btech.map.terrain_types.{},-30)",
+                "btech.map.set_hex({},{},0,11,{})",
                 actor.0,
                 map.0,
-                terrain.name().to_ascii_uppercase()
+                lua_table(&serde_json::to_value(expected).unwrap())
             );
             assert!(
                 lua.eval_callback::<()>(&format!("{call}; error('abort edit')"))
@@ -60,13 +82,13 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
             assert_eq!(serde_json::to_value(&lua.world().btech).unwrap(), before);
             lua.drain_outbox();
             let report: mlua::Table = lua.eval_callback(&format!("return {call}")).unwrap();
-            assert_eq!(
+            // The report's tiles are the hex layers; the native comparison below checks values.
+            assert!(
                 report
                     .get::<mlua::Table>("after")
                     .unwrap()
-                    .get::<u8>("elevation")
-                    .unwrap(),
-                9
+                    .contains_key("ground")
+                    .unwrap()
             );
             let output = support::run_text(
                 &native,
@@ -83,7 +105,7 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
             );
             assert_eq!(
                 native.world().btech.maps()[&map].base_hex(0, 11).unwrap(),
-                BattleHex::new(terrain, 9)
+                expected
             );
             let after = serde_json::to_value(&native.world().btech).unwrap();
             let kind = if native.world().btech.vehicles().contains_key(&unit) {
@@ -103,12 +125,35 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
                 saved.btech
             );
         }
-        // Lua takes terrain names; operator symbols belong to ADDHEX.
+        // Fire and smoke are not terrain; ADDFIRE and ADDSMOKE place them instead.
+        for symbol in ['&', ':'] {
+            let before = native.world().btech.clone();
+            let output = support::run_text(
+                &native,
+                &config,
+                actor,
+                1,
+                &format!("addhex 0 11 {symbol} 1"),
+            );
+            assert!(
+                output.contains("Fire and smoke are not terrain"),
+                "{output}"
+            );
+            assert_eq!(native.world().btech, before);
+        }
+        // Lua takes a hex's layers; operator symbols belong to ADDHEX.
         let before = lua.world().btech.clone();
-        for terrain in ["'^'", "'Mountains'", "'bogus'"] {
+        for hex in [
+            "'^'",
+            "btech.map.terrain_types.MOUNTAINS",
+            "{level=1}",
+            "{level=1,ground='bogus'}",
+            "{level=36,ground=btech.map.ground_types.CLEAR}",
+            "{level=1,ground=btech.map.ground_types.CLEAR,overlay='fire'}",
+        ] {
             assert!(
                 lua.eval_callback::<()>(&format!(
-                    "btech.map.set_hex({},{},0,11,{terrain},1)",
+                    "btech.map.set_hex({},{},0,11,{hex})",
                     actor.0, map.0
                 ))
                 .is_err()
@@ -123,7 +168,7 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
                 &mut candidate,
                 map,
                 "replacement",
-                BattleMapAsset::parse(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap()
+                BattleMapAsset::from_cells(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap()
             )
             .is_err()
         );
@@ -147,8 +192,7 @@ async fn ice_growth_commits_against_an_occupied_durable_map() {
             actor,
             map,
             BattleHexCoordinate { x: 0, y: 5 },
-            Terrain::Water,
-            2,
+            BattleHex::new(Terrain::Water, 2),
         )
         .unwrap();
         let baseline = scripts.world().clone();
@@ -226,8 +270,7 @@ async fn edit_admission_overlays_and_extreme_elevations() {
             ObjectId(2),
             map,
             coordinate,
-            Terrain::Water,
-            2
+            BattleHex::new(Terrain::Water, 2)
         )
         .is_err()
     );
@@ -238,24 +281,21 @@ async fn edit_admission_overlays_and_extreme_elevations() {
             actor,
             unit,
             coordinate,
-            Terrain::Water,
-            2
+            BattleHex::new(Terrain::Water, 2)
         )
         .is_err()
     );
     assert_eq!(scripts.world().btech, before);
-    let report = set_battle_map_hex_action(
-        &scripts,
-        &config,
-        actor,
-        map,
-        coordinate,
-        Terrain::Water,
-        i32::MIN,
-    )
-    .unwrap();
-    assert_eq!(report.after.elevation(), 9);
+    let output = support::run_text(&scripts, &config, actor, 1, "addhex 0 5 ~ -2147483648");
+    assert!(output.contains("Hex set!"), "{output}");
     let world = scripts.world();
+    assert_eq!(
+        world.btech.maps()[&map]
+            .base_hex(0, 5)
+            .unwrap()
+            .water_depth(),
+        9
+    );
     let map = &world.btech.maps()[&map];
     assert_eq!(map.hex(0, 5).unwrap().terrain(), Terrain::Smoke);
     assert_eq!(map.base_hex(0, 5).unwrap().terrain(), Terrain::Water);
@@ -278,8 +318,10 @@ async fn bridge_edits_and_airborne_edits_preserve_physical_position() {
         let hover = world.btech.vehicles().contains_key(&unit);
         if hover {
             let mut state = serde_json::to_value(&world.btech).unwrap();
-            state["maps"][map.0.to_string()]["terrain"][11] =
-                serde_json::json!({"terrain":"bridge","elevation":4});
+            state["maps"][map.0.to_string()]["terrain"][11] = serde_json::to_value(
+                stompymux_rs::BattleHex::new(stompymux_rs::Terrain::Bridge, 4),
+            )
+            .unwrap();
             world.btech = serde_json::from_value(state).unwrap();
             firing::edit(&mut world, unit, |state| {
                 state["under_bridge"] = true.into();
@@ -303,8 +345,7 @@ async fn bridge_edits_and_airborne_edits_preserve_physical_position() {
             actor,
             map,
             BattleHexCoordinate { x: 0, y: 11 },
-            Terrain::Grassland,
-            9,
+            BattleHex::new(Terrain::Grassland, 9),
         )
         .unwrap();
         assert_eq!(
@@ -359,8 +400,7 @@ async fn failed_edit_publication_restores_state() {
         actor,
         map,
         BattleHexCoordinate { x: 0, y: 11 },
-        Terrain::Ice,
-        -4,
+        BattleHex::new(Terrain::Ice, 4),
     )
     .unwrap_err();
     assert!(error.to_string().contains("output limit"), "{error:#}");
@@ -423,7 +463,7 @@ async fn terrain_saves_preserve_persisted_landing_exclusions() {
             &mut reloaded,
             map,
             "replacement",
-            BattleMapAsset::parse(&format!("1 12\n{}", "#1\n".repeat(12))).unwrap(),
+            BattleMapAsset::from_cells(&format!("1 12\n{}", "#1\n".repeat(12))).unwrap(),
         )
         .unwrap();
         persistence::save(&config.database(), &reloaded)

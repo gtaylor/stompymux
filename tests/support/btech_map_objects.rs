@@ -11,7 +11,7 @@ pub async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId)
             &mut world,
             id,
             "grid",
-            BattleMapAsset::parse("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+            BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
         )
         .unwrap();
     }

@@ -1,73 +1,37 @@
-//! Map-file export separates terrain encoding from transactional cleanup and file publication.
-use super::{BattleDecorationKind, BattleHexCoordinate, StoredBattleMap, Terrain};
+//! Map-file export encodes a live map's terrain and permanent fire and smoke as a map file.
+use super::StoredBattleMap;
+use super::map_file::overlay_fits;
 use anyhow::Result;
-use serde::Serialize;
-use std::fmt::Write;
-
-/// Complete map-file bytes and stale underlying effects for the enclosing save action to clear.
-/// Encoding is read-only: callers apply cleanup and publish the file through their transaction.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleMapExport {
-    /// Complete text in the map asset format.
-    pub source: String,
-    /// Underlying stale fire or smoke to clear when the save action commits.
-    pub stale_effects: Vec<BattleHexCoordinate>,
-}
+use std::sync::Arc;
 
 impl StoredBattleMap {
-    /// Encode the reference map-file format without writing files or changing live terrain.
-    /// Temporary fire reloads as grass; smoke reveals its underlying tile. Object metadata is omitted.
-    pub fn export_asset(&self) -> Result<BattleMapExport> {
+    /// Encode this map as map-file text without writing files or changing the map.
+    /// Each hex saves its terrain. Permanent fire and smoke over clear ground save as `&` and
+    /// `:`; fire and smoke that will burn out or drift away, or that cover anything else, are
+    /// left out. Map objects are not saved.
+    pub fn export_asset(&self) -> Result<String> {
         self.validate()?;
-        let mut source =
-            String::with_capacity((self.width * self.height * 2 + self.height + 64) as usize);
-        writeln!(source, "{} {}", self.width, self.height)?;
-        let mut stale_effects = Vec::new();
+        let mut hexes = Vec::with_capacity((self.width * self.height) as usize);
         for y in 0..self.height {
             for x in 0..self.width {
-                let coordinate = BattleHexCoordinate {
-                    x: x as i32,
-                    y: y as i32,
-                };
                 let base = self.base_hex(x, y)?;
-                let visible = self.hex(x, y)?;
-                let effect = self.decoration(coordinate)?;
-                let symbol = match visible.terrain() {
-                    Terrain::Grassland => '.',
-                    Terrain::Fire
-                        if effect
-                            .is_some_and(|effect| effect.kind == BattleDecorationKind::Fire) =>
-                    {
-                        '>'
-                    }
-                    Terrain::Fire if !self.has_flag(super::BattleMapFlag::PermanentFire) => {
-                        stale_effects.push(coordinate);
-                        '.'
-                    }
-                    Terrain::Smoke => match base.terrain() {
-                        Terrain::Smoke => {
-                            stale_effects.push(coordinate);
-                            '.'
-                        }
-                        Terrain::Grassland => '.',
-                        terrain => terrain.symbol(),
-                    },
-                    terrain => terrain.symbol(),
-                };
-                source.push(symbol);
-                source.push(char::from(b'0' + base.elevation()));
+                let permanent = self
+                    .decorations
+                    .get(&((y * self.width + x) as u32))
+                    .filter(|effect| effect.remaining == 0)
+                    .map(|effect| base.with_overlay(Some(effect.kind)))
+                    .filter(|&hex| overlay_fits(hex));
+                hexes.push(permanent.unwrap_or(base));
             }
-            source.push('\n');
         }
-        // The optional line carries flags, gravity and temperature together, so write it
-        // whenever any of them differs from the values a map without the line loads with.
-        let flags = self.flags & super::BattleMapFlag::mask();
-        if flags != 0 || self.gravity != 100 || self.temperature != 20 {
-            writeln!(source, "{flags}: {} {}", self.gravity, self.temperature)?;
-        }
-        Ok(BattleMapExport {
-            source,
-            stale_effects,
-        })
+        let asset = super::BattleMapAsset {
+            width: u16::try_from(self.width)?,
+            height: u16::try_from(self.height)?,
+            flags: i32::try_from(self.flags & super::BattleMapFlag::mask())?,
+            gravity: u8::try_from(self.gravity)?,
+            temperature: i8::try_from(self.temperature)?,
+            hexes: Arc::new(hexes),
+        };
+        asset.to_file()
     }
 }

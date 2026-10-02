@@ -74,7 +74,8 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
         &mut world,
         map,
         "network.hunt",
-        BattleMapAsset::parse(&format!("7 26\n{}", (".0".repeat(7) + "\n").repeat(26))).unwrap(),
+        BattleMapAsset::from_cells(&format!("7 26\n{}", (".0".repeat(7) + "\n").repeat(26)))
+            .unwrap(),
     )
     .unwrap();
     set_battle_map_visibility(&mut world, map, BattleLight::Day, REACH).unwrap();

@@ -15,7 +15,7 @@ async fn map_restrictions_are_exact_read_only_and_durable() {
         &mut world,
         map,
         "restricted",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let actor = world.create(&config, "Map reader".into(), Kind::Player);

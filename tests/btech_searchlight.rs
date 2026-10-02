@@ -18,7 +18,7 @@ async fn fixture() -> (
         &mut world,
         map,
         "lamp.map",
-        BattleMapAsset::parse(&terrain).unwrap(),
+        BattleMapAsset::from_cells(&terrain).unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -465,7 +465,7 @@ async fn automatic_lamps_follow_map_light_changes_and_transfers() {
         &mut world,
         dark,
         "dark.map",
-        BattleMapAsset::parse(&terrain).unwrap(),
+        BattleMapAsset::from_cells(&terrain).unwrap(),
     )
     .unwrap();
     set_battle_map_visibility(&mut world, dark, BattleLight::Night, 30).unwrap();

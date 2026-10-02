@@ -55,7 +55,8 @@ async fn water_modifier_is_attacker_owned_and_shared_by_supported_chassis() {
                 &mut world,
                 map,
                 "water",
-                BattleMapAsset::parse(&format!("1 2\n{target_tile}\n{shooter_tile}\n")).unwrap(),
+                BattleMapAsset::from_cells(&format!("1 2\n{target_tile}\n{shooter_tile}\n"))
+                    .unwrap(),
             )
             .unwrap();
             select_battle_target(&mut world, shooter, ObjectId(1), None).unwrap();
@@ -121,7 +122,7 @@ async fn deep_water_ranges_are_shared_across_chassis_and_coordinate_aim() {
             &mut world,
             map,
             "water",
-            BattleMapAsset::parse(&format!("1 9\n{}", "~2\n".repeat(9))).unwrap(),
+            BattleMapAsset::from_cells(&format!("1 9\n{}", "~2\n".repeat(9))).unwrap(),
         )
         .unwrap();
         select_battle_target(&mut world, shooter, ObjectId(1), None).unwrap();
@@ -208,7 +209,7 @@ async fn shallow_water_aim_uses_mount_anatomy_and_posture() {
                 &mut world,
                 map,
                 "water",
-                BattleMapAsset::parse("1 4\n~1\n~1\n~1\n~1\n").unwrap(),
+                BattleMapAsset::from_cells("1 4\n~1\n~1\n~1\n~1\n").unwrap(),
             )
             .unwrap();
             select_battle_target(&mut world, shooter, ObjectId(1), None).unwrap();
@@ -261,7 +262,7 @@ async fn underwater_ppc_keeps_the_enclosing_zero_range_penalty() {
         &mut world,
         map,
         "water",
-        BattleMapAsset::parse("1 1\n~2\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n~2\n").unwrap(),
     )
     .unwrap();
     select_battle_target(&mut world, shooter, ObjectId(1), None).unwrap();

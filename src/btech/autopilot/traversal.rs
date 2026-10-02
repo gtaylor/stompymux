@@ -7,7 +7,7 @@
 //! segment through the ordinary movement transaction before committing it.
 
 use super::super::{
-    BattleHex, BattleHexCoordinate, BattlePosition, BattleUnit, BattleVehicleMovement, Terrain,
+    BattleHex, BattleHexCoordinate, BattlePosition, BattleUnit, BattleVehicleMovement, Structure,
 };
 use crate::{ObjectId, World};
 use std::collections::BTreeMap;
@@ -136,7 +136,7 @@ fn assess_with_occupancy(
         };
     };
 
-    let Some(mut cost) = terrain_cost(to_tile.terrain(), unit_kind) else {
+    let Some(mut cost) = terrain_cost(to_tile, unit_kind) else {
         return TraversalAssessment::blocked(TraversalReason::ImpassableTerrain);
     };
     let (from_height, to_height) = support_heights(world, unit_id, unit_kind, from_tile, to_tile);
@@ -285,13 +285,17 @@ fn in_bounds(width: i64, height: i64, x: u16, y: u16) -> bool {
 }
 
 /// Relative route cost of entering a tile, or `None` when the tile is impassable.
-fn terrain_cost(terrain: Terrain, kind: GroundUnitKind) -> Option<u32> {
-    Some(match terrain {
-        Terrain::Wall => return None,
-        Terrain::Fire | Terrain::Smoke => 2,
-        Terrain::Water | Terrain::Ice => 3,
+fn terrain_cost(hex: BattleHex, kind: GroundUnitKind) -> Option<u32> {
+    if matches!(hex.structure(), Some(Structure::Wall { .. })) {
+        return None;
+    }
+    Some(if hex.overlay().is_some() {
+        2
+    } else if hex.is_water_surface() {
+        3
+    } else {
         // Elsewhere a route prefers terrain in proportion to the speed it costs.
-        terrain => terrain.ground_speed_divisor(kind == GroundUnitKind::Wheeled) as u32,
+        hex.ground_speed_divisor(kind == GroundUnitKind::Wheeled) as u32
     })
 }
 
@@ -308,24 +312,23 @@ fn support_heights(
             world.btech.vehicles()[&id].elevation_level(from)
         }
     };
+    let to_water_line = i32::from(to.water_line());
     let mut to_height = i32::from(to.standing_height());
-    if to.terrain() == Terrain::Ice && from_height < 0 {
+    if to.is_ice() && from_height < to_water_line {
         to_height = i32::from(to.surface_height());
     }
-    if to.terrain() == Terrain::Bridge && from_height < i32::from(to.standing_height()) - 2 {
-        to_height = -1;
+    if to.has_bridge() && from_height < i32::from(to.standing_height()) - 2 {
+        to_height = to_water_line - 1;
     }
-    if kind == GroundUnitKind::Hover && matches!(to.terrain(), Terrain::Water | Terrain::Ice) {
-        to_height = 0;
+    if kind == GroundUnitKind::Hover && to.is_water_surface() {
+        to_height = to_water_line;
     }
     if kind == GroundUnitKind::Hover
         && to.deck_clearance().is_some_and(|deck| deck >= 2)
-        && from_height == 0
-        && (from.terrain() == Terrain::Water
-            || from.terrain() == Terrain::Ice
-            || world.btech.vehicles()[&id].under_bridge())
+        && from_height == i32::from(from.water_line())
+        && (from.is_open_water() || from.is_ice() || world.btech.vehicles()[&id].under_bridge())
     {
-        to_height = 0;
+        to_height = to_water_line;
     }
     (from_height, to_height)
 }
@@ -336,15 +339,15 @@ fn transition_reason(
     to: BattleHex,
     to_height: i32,
 ) -> (TraversalReason, u32) {
-    if matches!(to.terrain(), Terrain::Fire | Terrain::Smoke) {
+    if to.overlay().is_some() {
         return (TraversalReason::KnownHazard, 8);
     }
-    if to.terrain() == Terrain::Ice {
+    if to.is_ice() {
         return (TraversalReason::IceRisk, 8);
     }
-    if to.terrain() == Terrain::Bridge {
-        let under_bridge =
-            to_height < 0 || (kind == GroundUnitKind::Hover && from.terrain() == Terrain::Bridge);
+    if to.has_bridge() {
+        let under_bridge = to_height < i32::from(to.water_line())
+            || (kind == GroundUnitKind::Hover && from.has_bridge());
         return (
             if under_bridge {
                 TraversalReason::BridgeRisk
@@ -354,11 +357,10 @@ fn transition_reason(
             if under_bridge { 8 } else { 1 },
         );
     }
-    if to.terrain() == Terrain::Water {
+    if to.is_open_water() {
         return (TraversalReason::WaterRisk, 12);
     }
-    if matches!(from.terrain(), Terrain::Ice | Terrain::Water)
-        && matches!(kind, GroundUnitKind::Tracked | GroundUnitKind::Wheeled)
+    if from.is_water_surface() && matches!(kind, GroundUnitKind::Tracked | GroundUnitKind::Wheeled)
     {
         return (TraversalReason::WaterRisk, 4);
     }
@@ -517,6 +519,7 @@ fn team(world: &World, id: ObjectId) -> Option<i32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::btech::Terrain;
 
     #[test]
     fn terrain_costs_are_positive_and_walls_are_blocked() {
@@ -536,16 +539,22 @@ mod tests {
             Terrain::Building,
             Terrain::Sand,
         ] {
-            assert!(terrain_cost(terrain, GroundUnitKind::Mech).is_some_and(|cost| cost > 0));
+            assert!(
+                terrain_cost(BattleHex::new(terrain, 0), GroundUnitKind::Mech)
+                    .is_some_and(|cost| cost > 0)
+            );
         }
-        assert_eq!(terrain_cost(Terrain::Wall, GroundUnitKind::Mech), None);
+        assert_eq!(
+            terrain_cost(BattleHex::new(Terrain::Wall, 0), GroundUnitKind::Mech),
+            None
+        );
     }
 
     /// Wheeled routes avoid sand; other ground units price it like clear terrain.
     #[test]
     fn sand_costs_extra_only_for_wheeled_units() {
         assert_eq!(
-            terrain_cost(Terrain::Sand, GroundUnitKind::Wheeled),
+            terrain_cost(BattleHex::new(Terrain::Sand, 0), GroundUnitKind::Wheeled),
             Some(2)
         );
         for kind in [
@@ -554,8 +563,8 @@ mod tests {
             GroundUnitKind::Hover,
         ] {
             assert_eq!(
-                terrain_cost(Terrain::Sand, kind),
-                terrain_cost(Terrain::Grassland, kind)
+                terrain_cost(BattleHex::new(Terrain::Sand, 0), kind),
+                terrain_cost(BattleHex::new(Terrain::Grassland, 0), kind)
             );
         }
     }
@@ -589,7 +598,7 @@ mod tests {
             &mut world,
             map,
             "occupancy",
-            crate::BattleMapAsset::parse("1 5\n.0\n.0\n.0\n.0\n.0\n").unwrap(),
+            crate::BattleMapAsset::from_cells("1 5\n.0\n.0\n.0\n.0\n.0\n").unwrap(),
         )
         .unwrap();
         let observer = world.create(&config, "Observer".into(), Kind::Thing);

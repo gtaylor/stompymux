@@ -112,32 +112,44 @@ impl StoredBattleMap {
 
     /// Inspect a decoded tile, rejecting ambiguous maps and invalid coordinates.
     pub fn hex(&self, x: i64, y: i64) -> Result<BattleHex> {
-        let mut hex = self.stored_hex(x, y)?;
-        if let Some(effect) = self.decorations.get(&((y * self.width + x) as u32)) {
-            hex = hex.with_terrain(effect.kind.terrain());
-        }
-        Ok(hex)
+        let hex = self.base_hex(x, y)?;
+        let overlay = self
+            .decorations
+            .get(&((y * self.width + x) as u32))
+            .map(|effect| effect.kind);
+        Ok(hex.with_overlay(overlay))
     }
 
-    /// Inspect the underlying tile without a transient fire or smoke marker.
+    /// Install decoded terrain, turning any fire or smoke overlays it carries into permanent
+    /// decorations so the terrain grid holds only the ground beneath them.
+    pub(crate) fn establish_terrain(&mut self, hexes: Arc<Vec<BattleHex>>) -> Result<()> {
+        self.decorations = Default::default();
+        if hexes.iter().all(|hex| hex.overlay().is_none()) {
+            self.terrain = Some(hexes);
+            return Ok(());
+        }
+        let mut base = Vec::with_capacity(hexes.len());
+        for (index, hex) in hexes.iter().enumerate() {
+            base.push(hex.with_overlay(None));
+            let Some(kind) = hex.overlay() else {
+                continue;
+            };
+            let index = u32::try_from(index).context("Map is too large")?;
+            let order = self
+                .decorations
+                .values()
+                .filter(|effect| effect.kind == kind)
+                .count();
+            let mut effect = super::BattleDecoration::new(kind, 0, None);
+            effect.order = -1 - i64::try_from(order)?;
+            Arc::make_mut(&mut self.decorations).insert(index, effect);
+        }
+        self.terrain = Some(Arc::new(base));
+        Ok(())
+    }
+
+    /// Inspect the underlying tile without its fire or smoke overlay.
     pub fn base_hex(&self, x: i64, y: i64) -> Result<BattleHex> {
-        let mut hex = self.stored_hex(x, y)?;
-        if matches!(hex.terrain(), super::Terrain::Fire | super::Terrain::Smoke)
-            && let Some(record) = self
-                .static_decorations
-                .iter()
-                .flat_map(|records| records.values())
-                .find(|record| {
-                    i64::from(record.coordinate.x) == x && i64::from(record.coordinate.y) == y
-                })
-        {
-            hex = hex.with_terrain(record.restored_terrain);
-        }
-        Ok(hex)
-    }
-
-    /// Read the terrain dictionary without overlay or restoration lookup.
-    pub(crate) fn stored_hex(&self, x: i64, y: i64) -> Result<BattleHex> {
         let terrain = self
             .terrain
             .as_ref()
@@ -305,10 +317,13 @@ impl StoredBattleMap {
                 == self.decorations.len(),
             "Duplicate decoration creation order"
         );
-        ensure!(
-            terrain.iter().all(|hex| hex.elevation() <= 9),
-            "Invalid map elevation"
-        );
+        for hex in terrain.iter() {
+            hex.validate().context("Invalid map elevation")?;
+            ensure!(
+                hex.overlay().is_none(),
+                "Map terrain cannot hold fire or smoke"
+            );
+        }
         ensure!(
             (0..=255).contains(&self.gravity) && (-128..=127).contains(&self.temperature),
             "Invalid map environment"
@@ -1157,13 +1172,12 @@ fn map_target(world: &World, id: ObjectId) -> Result<()> {
 }
 
 /// Turn a parsed source into a checked persistent domain record.
-pub(super) fn map_from_asset(name: &str, mut asset: BattleMapAsset) -> Result<StoredBattleMap> {
+pub(super) fn map_from_asset(name: &str, asset: BattleMapAsset) -> Result<StoredBattleMap> {
     ensure!(
         !name.is_empty() && name.len() <= 1024 && !name.contains('\0'),
         "Invalid map asset name"
     );
-    asset.generate_bridges()?;
-    let map = StoredBattleMap {
+    let mut map = StoredBattleMap {
         membership_extent: 0,
         building_parent: 0,
         artillery_shots: Default::default(),
@@ -1194,10 +1208,11 @@ pub(super) fn map_from_asset(name: &str, mut asset: BattleMapAsset) -> Result<St
         wind_direction: 0,
         wind_speed: 0,
         fire_dice: Some(super::BattleDice::fresh()),
-        terrain: Some(asset.hexes),
+        terrain: None,
         decorations: Default::default(),
         static_decorations: Default::default(),
     };
+    map.establish_terrain(asset.hexes)?;
     map.validate()?;
     Ok(map)
 }

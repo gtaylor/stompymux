@@ -300,7 +300,7 @@ pub async fn run(
                         &mut world,
                         map,
                         "pursuit",
-                        crate::BattleMapAsset::parse(&terrain)?,
+                        crate::BattleMapAsset::from_cells(&terrain)?,
                     )?;
                     let dice = world.btech.maps()[&old_map].fire_dice.clone();
                     world.btech.maps.get_mut(&map).unwrap().fire_dice = dice;

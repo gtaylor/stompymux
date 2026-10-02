@@ -13,7 +13,7 @@ async fn falling_units_turn_without_translation_and_replay_shared_chassis_rates(
                 &mut world,
                 map,
                 "facing",
-                BattleMapAsset::parse("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+                BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
             )
             .unwrap();
             let id = world.create(&config, "Falling unit".into(), Kind::Thing);

@@ -24,28 +24,23 @@ Inspect the BattleTech foundation:
 @btech unit-place #44=#43,0,0
 @btech unit-remove #44=#2
 @btech unit-towable #44=on
-@btech mapfile test.map
+@btech mapfile test
 @btech inspect #42
 @btech range #44,#45
-@btech map-create #43=test.map
-@btech map-reload #43=test.map
+@btech map-create #43=test
+@btech map-reload #43=test
 ```
 
 `template` reads a biped BattleMech definition from the configured mech directory.
-`mapfile` reads source terrain and environmental settings from the configured map
-directory. `inspect` reports saved map or unit metadata for a database object.
+`mapfile` reads a map file's terrain and environmental settings from the
+configured map directory; `test` reads `test.toml`. `inspect` reports saved map or unit metadata for a database object.
 `status` reports the loaded identity counts and implementation status.
 
-Map assets containing `&` fire terrain automatically enable the `permanent_fire`
-map flag. An explicit `flags: gravity temperature` line overrides that
-default; retain bit 8 (`permanent_fire`) to preserve those fires when saving. Temporary-fire `>`
-and smoke `:` markers load as grassland.
-
-Unknown terrain characters also load as grassland, retaining their elevation.
-Map creation and loading report each substitution to the ordinary `MapErrors`
-channel, when that channel exists. Diagnostics participate in the load transaction;
-an aborted load leaves neither terrain changes nor channel messages. Malformed
-dimensions, rows and elevations are still rejected.
+Map files are TOML documents with a terrain grid, a level grid, depth and
+structure-height grids where needed, and an explicit list of bridges; see the
+"Map files" page of the documentation for the format. Any error in a map file
+rejects the whole file; `LOADMAP` also reports the reason to the `MapErrors`
+channel, when that channel exists.
 
 Inspection commands are read-only. All `@btech` operations require Wizard authority.
 No unit or map becomes active as a result of inspection.
@@ -486,13 +481,15 @@ roll back together if the action fails.
 
 `ADDHEX <x> <y> <terrain> <elevation>` changes one base tile on the wizard's
 current map. Use a terrain symbol from the table below; elevation is converted
-to a positive magnitude and capped at nine. Units retain their physical altitude
+to a positive magnitude and capped at 35, or 9 for the depth of water and ice. Units retain their physical altitude
 and current movement or flight state. Editing ice into water is a direct terrain
-edit; use `DELICE` to melt ice with normal occupant falls and flooding. Temporary
-fire/smoke overlays remain independent of the underlying tile. Lua offers
-`btech.map.set_hex(actor, map, x, y, terrain, elevation)`, taking a name from
-`btech.map.terrain_types`, and returns the previous and resulting tiles. Occupied
-maps can be edited and saved without reloading their source assets.
+edit; use `DELICE` to melt ice with normal occupant falls and flooding. Fire and
+smoke are not terrain: they lie over a tile without changing it, so use `ADDFIRE`
+and `ADDSMOKE` for them. Lua offers `btech.map.set_hex(actor, map, x, y, hex)`,
+which takes the hex's layers in the shape `btech.map.hex` returns (for example
+`{level = 2, ground = btech.map.ground_types.ROAD}`) and returns the previous and
+resulting tiles. Occupied maps can be edited and saved without reloading their
+source assets. `btech.map.terrain` reports the terrain name in the table below.
 
 | Symbol | Terrain | Lua name | Elevation digit means |
 | --- | --- | --- | --- |
@@ -505,15 +502,14 @@ maps can be edited and saved without reloading their source assets.
 | `/` | Bridge | `bridge` | deck height |
 | `%` | Rough | `rough` | height |
 | `^` | Mountains | `mountains` | height |
-| `&` | Fire | `fire` | height |
-| `:` | Smoke | `smoke` | height |
 | `+` | Snow | `snow` | height |
 | `@` | Building | `building` | height |
 | `=` | Wall | `wall` | height |
 | `}` | Sand | `sand` | height |
 
-In map files `.` is grassland, `'` is light forest, and `>` (temporary fire) and
-`:` load as grassland.
+Map files use the same symbols, except that bridges are listed separately and
+buildings, walls and water take their heights from their own grids. In a map file
+`&` and `:` draw permanent fire and smoke over clear ground.
 
 `@MAPEMIT <message>` broadcasts to the occupants of running units on the wizard's
 current map and privately confirms `Message sent!`. Unconscious crews do not receive
@@ -536,29 +532,28 @@ numbers in map-slot order. The actor must be a wizard.
 ## Resize a map
 
 `SETMAPSIZE <width> <height>` resizes your current map to dimensions from 1 through
-1000. It copies overlapping visible terrain and fills new cells with level grass.
-Map objects, temporary effect timers, wrapping and building return links are
-cleared. Units keep their coordinates; a resize that would leave a unit or active
+1000. It copies overlapping terrain and fills new cells with level grass.
+Map objects, fire and smoke, wrapping and building return links are cleared. Units keep their coordinates; a resize that would leave a unit or active
 map event outside the new bounds fails without changes. Clear or move units first
 when shrinking past them. Lua uses `btech.map.resize(actor, map, width, height)`.
 
 ## Save a map asset
 
-`SAVEMAP <name>` exports your current map to its configured map directory. Existing
-files are replaced atomically after the world transaction commits. Temporary fire
-reloads as grass; smoke exposes underlying terrain. Stale fire/smoke is cleaned
-from the live map. Map flags, gravity and temperature are saved whenever any of
-them differs from the defaults (no flags, gravity 100, 20°C). Relative subdirectories must already exist; destinations outside
+`SAVEMAP <name>` writes your current map to `<name>.toml` in its configured map
+directory. Existing files are replaced atomically after the world transaction
+commits. Permanent fire and smoke over clear ground are saved; fire and smoke that
+will burn out or drift away, or that cover anything else, are not, and those hexes
+save the terrain beneath them. Map flags, gravity and temperature are always saved. Relative subdirectories must already exist; destinations outside
 the map directory and symlinks are rejected. `Saving complete!` confirms the file
 replacement; a write failure preserves the previous file and reports an error.
-Stale-effect cleanup is already committed if the later file write fails.
 Lua `btech.map.save(actor, map, name)` returns true when queued. A failed callback
 or world save discards the queued write.
 
 ## Load a map asset
 
-`LOADMAP <name>` replaces your current map's terrain, dimensions and asset
-conditions, generates bridges, and removes map objects. GOD (#1) keeps units on
+`LOADMAP <name>` reads `<name>.toml` and replaces your current map's terrain,
+dimensions, bridges and conditions, and removes map objects. Fire and smoke drawn in
+the file start burning as permanent effects. GOD (#1) keeps units on
 the map; other wizards shut down and clear units after loading. Shutdown falls
 therefore use the newly loaded terrain and conditions. Units keep their physical
 altitude until movement resolves it. Other map settings, including cloud base,
@@ -591,8 +586,9 @@ budgets wrap positive at a spread and can therefore burn for a long time. Off-ma
 Lua uses `btech.map.add_fire(actor, map, x, y, duration)` and
 `btech.map.add_smoke(actor, map, x, y, duration)`.
 
-Saved fire and smoke records retain their restoration terrain without restarting
-spread or expiry timers. New effects at the same coordinate replace those records.
+Saved fire and smoke records are kept for `LIST OBJS` without restarting spread or
+expiry timers; they do not change the map. New effects at the same coordinate
+replace those records.
 `LIST OBJS` includes both stored restoration records and running effects.
 
 ## Delete map objects
@@ -664,11 +660,9 @@ names. Map `flags` are:
 | --- | --- |
 | `special_rules` | Environmental rules (gravity, temperature, vacuum) apply. |
 | `vacuum` | The map has no atmosphere. |
-| `permanent_fire` | Authored fire never burns out. |
 | `underground` | A ceiling blocks jumping and flight; artillery needs a spotter. |
 | `dark` | Units see only terrain in their line of sight. |
 | `indestructible_bridges` | Weapon fire cannot break bridges. |
-| `no_bridge_generation` | Loading does not turn roads over water into bridges. |
 | `no_friendly_fire` | Teammates cannot damage each other with non-coolant weapons. |
 | `no_physical_attacks` | Physical attacks are not allowed. |
 

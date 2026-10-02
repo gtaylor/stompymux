@@ -31,7 +31,7 @@ async fn fixture_with_ranges(
         &mut world,
         map,
         "scan.map",
-        BattleMapAsset::parse(&format!("3 60\n{}", ".0.0.0\n".repeat(60))).unwrap(),
+        BattleMapAsset::from_cells(&format!("3 60\n{}", ".0.0.0\n".repeat(60))).unwrap(),
     )
     .unwrap();
     let mut units = Vec::new();
@@ -404,7 +404,7 @@ fn scan_structure(world: &mut World, config: &Config, map: ObjectId) -> ObjectId
         world,
         interior,
         "hangar.map",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     set_building_state(
@@ -1572,7 +1572,7 @@ async fn long_range_elevation_rows_preserve_zero_space_and_water_depth() {
         &mut world,
         map,
         "elevation.map",
-        BattleMapAsset::parse("3 2\n.0#3~2\n.0.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 2\n.0#3~2\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -2089,7 +2089,7 @@ async fn tactical_clipping_preserves_global_hex_parity_and_elevation() {
         &mut world,
         map,
         "wide.map",
-        BattleMapAsset::parse("8 3\n.0.0.0#3~2.0.0.0\n.0.0.0.0.0.0.0.0\n.0.0.0.0.0.0.0.0\n")
+        BattleMapAsset::from_cells("8 3\n.0.0.0#3~2.0.0.0\n.0.0.0.0.0.0.0.0\n.0.0.0.0.0.0.0.0\n")
             .unwrap(),
     )
     .unwrap();
@@ -2156,7 +2156,7 @@ async fn tactical_cliffs_use_signed_depth_thresholds_and_share_native_lua_output
         &mut world,
         map,
         "cliffs.map",
-        BattleMapAsset::parse("3 3\n.0.3.0\n.0.0~2\n.0-3.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 3\n.0.3.0\n.0.0~2\n.0-3.0\n").unwrap(),
     )
     .unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -2446,13 +2446,13 @@ async fn landing_suitability_checks_full_hex_neighborhood_and_base_terrain() {
     let center = BattleHexCoordinate { x: 1, y: 1 };
     for (tiles, flags, expected) in [
         (
-            "~0~0~0\n~0#0~0\n~0~0~0\n",
+            "~0~0~0\n~0/0~0\n~0~0~0\n",
             0,
             BattleLandingSuitability::ImproperTerrain,
         ),
         (
             "~0~0~0\n~0#0~0\n~0~0~0\n",
-            128,
+            0,
             BattleLandingSuitability::Ready,
         ),
         (
@@ -2471,7 +2471,7 @@ async fn landing_suitability_checks_full_hex_neighborhood_and_base_terrain() {
             &mut world,
             map,
             "landing.map",
-            BattleMapAsset::parse(&format!("3 3\n{tiles}{flags}: 100 20\n")).unwrap(),
+            BattleMapAsset::from_cells(&format!("3 3\n{tiles}{flags}: 100 20\n")).unwrap(),
         )
         .unwrap();
         assert_eq!(
@@ -2752,7 +2752,7 @@ async fn navigation_keeps_even_center_on_single_hex_maps_with_off_map_surroundin
         &mut world,
         map,
         "one.map",
-        BattleMapAsset::parse("1 1\n#3\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n#3\n").unwrap(),
     )
     .unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -4084,7 +4084,7 @@ async fn probe_contacts_through_terrain_hide_identity_and_friendly_categories() 
         &mut world,
         map,
         "ridge.map",
-        BattleMapAsset::parse("3 5\n.0.0.0\n.0.0.0\n.9.9.9\n.0.0.0\n.0.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 5\n.0.0.0\n.0.0.0\n.9.9.9\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     let _ = stop_battle_unit(

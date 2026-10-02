@@ -22,8 +22,10 @@ async fn fixture_field(
     height: usize,
 ) -> (tempfile::TempDir, Config, World, ObjectId, [ObjectId; 2]) {
     let row = format!("{}{depth}", terrain.symbol()).repeat(3) + "\n";
-    fixture_asset(BattleMapAsset::parse(&format!("3 {height}\n{}", row.repeat(height))).unwrap())
-        .await
+    fixture_asset(
+        BattleMapAsset::from_cells(&format!("3 {height}\n{}", row.repeat(height))).unwrap(),
+    )
+    .await
 }
 
 /// Construct two running bipeds on an isolated, caller-defined terrain asset.
@@ -1341,7 +1343,7 @@ async fn bridge_jump_entry_underpass_and_interrupted_hex_update_replay_after_res
     for (deck, rate, outcome) in [(9, 100, "clear"), (6, 100, "entry"), (5, 160, "span")] {
         let source = format!("3 5\n.0.0.0\n.0.0.0\n/{deck}/{deck}/{deck}\n.0.0.0\n.0.0.0\n");
         let (_dir, config, mut world, map, units) =
-            fixture_asset(BattleMapAsset::parse(&source).unwrap()).await;
+            fixture_asset(BattleMapAsset::from_cells(&source).unwrap()).await;
         let id = units[0];
         let mut state = serde_json::to_value(&world.btech).unwrap();
         state["maps"][map.0.to_string()]["movement_modifier"] = serde_json::json!(rate);
@@ -1596,7 +1598,7 @@ async fn bridge_jump_vertical_collision_inside_the_starting_hex_uses_the_deck() 
 async fn lost_jump_thrust_beneath_bridge_preserves_altitude_for_the_fall() {
     let source = "3 3\n.0.0.0\n/9/9/9\n.0.0.0\n";
     let (_dir, config, mut world, _map, units) =
-        fixture_asset(BattleMapAsset::parse(source).unwrap()).await;
+        fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["constructed"][id.0.to_string()]["ground_elevation"] = serde_json::json!(-1);
@@ -1777,7 +1779,7 @@ async fn level_bridge_deck_motion_matches_native_lua_and_replays_both_directions
                 format!("/{deck}").repeat(3)
             );
             let (_dir, config, mut world, _map, units) =
-                fixture_asset(BattleMapAsset::parse(&source).unwrap()).await;
+                fixture_asset(BattleMapAsset::from_cells(&source).unwrap()).await;
             let id = units[0];
             let heading = if reverse { 0.0 } else { 180.0 };
             let speed = if reverse { -21.5 } else { 21.5 };
@@ -1906,7 +1908,7 @@ async fn forward_ground_steps_charge_each_height_change_and_replay_mid_slope() {
                 })
                 .collect();
             let (_dir, config, mut world, _map, units) =
-                fixture_asset(BattleMapAsset::parse(&format!("3 5\n{rows}")).unwrap()).await;
+                fixture_asset(BattleMapAsset::from_cells(&format!("3 5\n{rows}")).unwrap()).await;
             let id = units[0];
             let mut state = serde_json::to_value(&world.btech).unwrap();
             state["constructed"][id.0.to_string()]["motion"]["heading"] = serde_json::json!(180.0);
@@ -1982,7 +1984,7 @@ async fn forward_ground_steps_charge_each_height_change_and_replay_mid_slope() {
 async fn pending_hex_sync_completes_an_allowed_step_without_retaining_the_old_height() {
     let source = "3 4\n/5/5/5\n/5/5/5\n.4.4.4\n.4.4.4\n";
     let (_dir, config, mut world, _map, units) =
-        fixture_asset(BattleMapAsset::parse(source).unwrap()).await;
+        fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
     let mut state = serde_json::to_value(&world.btech).unwrap();
     let unit = &mut state["constructed"][id.0.to_string()];
@@ -2040,7 +2042,7 @@ async fn reverse_ground_steps_matrix(symbol: char) {
         let row = format!("{symbol}{destination}").repeat(3);
         let source = format!("3 4\n.3.3.3\n.3.3.3\n{row}\n{row}\n");
         let (_dir, config, base, _, units) =
-            fixture_asset(BattleMapAsset::parse(&source).unwrap()).await;
+            fixture_asset(BattleMapAsset::from_cells(&source).unwrap()).await;
         let id = units[0];
         let mut probed_fidelity = [false; 3];
         for (shape, (enabled, success)) in [(false, true), (true, true), (true, false)]
@@ -2175,7 +2177,7 @@ async fn reverse_ground_steps_apply_configured_checks_falls_and_restart_replay_e
 async fn failed_reverse_fall_restores_the_entire_movement_tick() {
     let source = "3 4\n.0.0.0\n.0.0.0\n.1.1.1\n.1.1.1\n";
     let (_dir, config, mut world, _, units) =
-        fixture_asset(BattleMapAsset::parse(source).unwrap()).await;
+        fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
     for id in units {
         prepare_reverse_step(&mut world, id, 2);
     }
@@ -2200,7 +2202,7 @@ async fn failed_reverse_fall_restores_the_entire_movement_tick() {
 async fn unpiloted_reverse_step_bypasses_control_dice_and_preserves_speed() {
     let source = "3 4\n.0.0.0\n.0.0.0\n.2.2.2\n.2.2.2\n";
     let (_dir, config, mut world, _, units) =
-        fixture_asset(BattleMapAsset::parse(source).unwrap()).await;
+        fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
     prepare_reverse_step(&mut world, id, 2);
     let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -2228,7 +2230,7 @@ async fn cliffs_apply_speed_checks_matrix(symbol: char, downhill: bool) {
     let old_row = format!(".{old}").repeat(3);
     let source = format!("3 4\n{old_row}\n{old_row}\n{row}\n{row}\n");
     let (_dir, config, base, _, units) =
-        fixture_asset(BattleMapAsset::parse(&source).unwrap()).await;
+        fixture_asset(BattleMapAsset::from_cells(&source).unwrap()).await;
     let id = units[0];
     let mut probed_fidelity = [false; 2];
     for skid in [false, true] {
@@ -2392,7 +2394,7 @@ async fn first_cliff_stops_unpiloted_fast_motion_without_consuming_dice() {
         let row = format!(".{new}").repeat(3);
         let source = format!("3 4\n{old_row}\n{old_row}\n{row}\n{row}\n");
         let (_dir, config, mut world, map, units) =
-            fixture_asset(BattleMapAsset::parse(&source).unwrap()).await;
+            fixture_asset(BattleMapAsset::from_cells(&source).unwrap()).await;
         let id = units[0];
         prepare_reverse_step(&mut world, id, 2);
         let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -2518,7 +2520,7 @@ async fn autofall_skips_only_the_piloted_downhill_avoidance_roll() {
             let row = format!(".{new}").repeat(3);
             let source = format!("3 4\n{old_row}\n{old_row}\n{row}\n{row}\n");
             let (_dir, config, mut world, _, units) =
-                fixture_asset(BattleMapAsset::parse(&source).unwrap()).await;
+                fixture_asset(BattleMapAsset::from_cells(&source).unwrap()).await;
             let id = units[0];
             prepare_reverse_step(&mut world, id, 12);
             set_battle_auto_fall(&mut world, id, ObjectId(1), true).unwrap();
@@ -2646,7 +2648,7 @@ async fn running_into_water_caps_throttle_and_adds_two_to_the_control_check() {
         let row = format!("~{depth}").repeat(3);
         let source = format!("3 4\n.0.0.0\n.0.0.0\n{row}\n{row}\n");
         let (_dir, config, mut world, _, units) =
-            fixture_asset(BattleMapAsset::parse(&source).unwrap()).await;
+            fixture_asset(BattleMapAsset::from_cells(&source).unwrap()).await;
         let id = units[0];
         prepare_reverse_step(&mut world, id, 6 + depth);
         let maximum = world.btech.constructed_units()[&id]
@@ -2691,7 +2693,7 @@ async fn running_into_water_caps_throttle_and_adds_two_to_the_control_check() {
 async fn entering_water_floods_a_breached_leg_and_keeps_the_fall_stopped() {
     let source = "3 4\n.0.0.0\n.0.0.0\n~1~1~1\n~1~1~1\n";
     let (_dir, config, mut world, _, units) =
-        fixture_asset(BattleMapAsset::parse(source).unwrap()).await;
+        fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
     let leg = BattleSection::LeftLeg;
     let armor = world.btech.constructed_units()[&id].sections()[&leg].armor;
@@ -2766,7 +2768,7 @@ async fn invalid_water_entry_restores_position_throttle_and_dice() {
 async fn leaving_shallow_water_restores_land_height_and_charges_the_upward_step() {
     let source = "3 4\n~1~1~1\n~1~1~1\n.0.0.0\n.0.0.0\n";
     let (_dir, config, mut world, _, units) =
-        fixture_asset(BattleMapAsset::parse(source).unwrap()).await;
+        fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
     prepare_reverse_step(&mut world, id, 12);
     let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -2809,7 +2811,7 @@ async fn bridge_ground_routes_select_lower_or_deck_surface_and_replay() {
             let row = format!("{}{new_deck}", terrain.symbol()).repeat(3);
             let source = format!("3 4\n{old_row}\n{old_row}\n{row}\n{row}\n");
             let (_dir, config, mut world, _, units) =
-                fixture_asset(BattleMapAsset::parse(&source).unwrap()).await;
+                fixture_asset(BattleMapAsset::from_cells(&source).unwrap()).await;
             let id = units[0];
             prepare_reverse_step(&mut world, id, 12);
             let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -2914,7 +2916,7 @@ async fn exiting_below_bridge_retains_mapped_cliff_checks_and_lower_rollback() {
     for success in [false, true] {
         let source = "3 4\n/3/3/3\n/3/3/3\n~1~1~1\n~1~1~1\n";
         let (_dir, config, mut world, _, units) =
-            fixture_asset(BattleMapAsset::parse(source).unwrap()).await;
+            fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
         let id = units[0];
         prepare_reverse_step(&mut world, id, if success { 6 } else { 5 });
         let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -3061,7 +3063,7 @@ async fn submerged_ice_routes_use_bottom_depth_and_depth_one_surface_transition(
         let row = format!("{}{new_depth}", new_terrain.symbol()).repeat(3);
         let source = format!("3 4\n{old_row}\n{old_row}\n{row}\n{row}\n");
         let (_dir, config, mut world, map, units) =
-            fixture_asset(BattleMapAsset::parse(&source).unwrap()).await;
+            fixture_asset(BattleMapAsset::from_cells(&source).unwrap()).await;
         let id = units[0];
         prepare_reverse_step(&mut world, id, 12);
         let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -3204,7 +3206,7 @@ async fn failed_neighbor_fall_during_ground_ice_fracture_restores_the_tick() {
 async fn descending_jump_breaks_previous_ice_before_finishing_horizontal_entry() {
     let source = "3 5\n.0.0.0\n.0.0.0\n-3-3-3\n~5~5~5\n~5~5~5\n";
     let (_dir, config, mut world, map, units) =
-        fixture_asset(BattleMapAsset::parse(source).unwrap()).await;
+        fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["maps"][map.0.to_string()]["movement_modifier"] = serde_json::json!(800);
@@ -3403,7 +3405,7 @@ async fn airborne_under_ice_fixture() -> (tempfile::TempDir, Config, World, Obje
 {
     let source = "3 5\n.0.0.0\n.0.0.0\n.0.0.0\n~5~5~5\n~5~5~5\n";
     let (_dir, config, mut world, map, units) =
-        fixture_asset(BattleMapAsset::parse(source).unwrap()).await;
+        fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
     launch_battle_jump(&mut world, id, ObjectId(1), 180, 2.0).unwrap();
     // A lower-capacity sample followed by restored gravity can cross the ice plane upward.
@@ -3668,7 +3670,7 @@ async fn structure_jump_controls_land_and_collide_with_saved_replay() {
             let row = format!("{symbol}{height}").repeat(3);
             let source = format!("3 5\n.0.0.0\n.0.0.0\n{row}\n.0.0.0\n.0.0.0\n");
             let (_dir, config, mut world, map, units) =
-                fixture_asset(BattleMapAsset::parse(&source).unwrap()).await;
+                fixture_asset(BattleMapAsset::from_cells(&source).unwrap()).await;
             let id = units[0];
             let mut state = serde_json::to_value(&world.btech).unwrap();
             state["maps"][map.0.to_string()]["movement_modifier"] = serde_json::json!(400);
@@ -3756,11 +3758,17 @@ async fn live_fire_and_smoke_tiles_allow_ground_crossings_without_control_dice()
         let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 5).await;
         let id = units[0];
         prepare_reverse_step(&mut world, id, 6);
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        // Asset loading normalizes overlays; represent the live tile explicitly.
-        state["maps"][map.0.to_string()]["terrain"][7]["terrain"] =
-            serde_json::to_value(terrain).unwrap();
-        world.btech = serde_json::from_value(state).unwrap();
+        let kind = match terrain {
+            Terrain::Fire => BattleDecorationKind::Fire,
+            _ => BattleDecorationKind::Smoke,
+        };
+        set_map_decoration(
+            &mut world,
+            map,
+            BattleHexCoordinate { x: 1, y: 2 },
+            Some(BattleDecoration::new(kind, 0, None)),
+        )
+        .unwrap();
         let before = serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut loaded = persistence::load(&config.database()).await.unwrap();
@@ -3992,16 +4000,29 @@ async fn character_surface_actions_evacuate_and_roll_back_terrain() {
         let afterlife = ObjectId(config.battletech.afterlife_dbref);
         scripts.world_mut().objects.remove(&afterlife);
         assert!(
-            break_battle_surface_action(&scripts, &config, map, coordinate, terrain, rules())
-                .is_err()
+            break_battle_surface_action(
+                &scripts,
+                &config,
+                map,
+                coordinate,
+                BattleSurface::of(BattleHex::new(terrain, 1)).unwrap(),
+                rules()
+            )
+            .is_err()
         );
         assert_eq!(scripts.world().btech, baseline.btech);
         assert_eq!(scripts.world().objects[&ObjectId(2)].location, Some(victim));
         assert!(scripts.drain_outbox().is_empty());
         *scripts.world_mut() = baseline;
-        let report =
-            break_battle_surface_action(&scripts, &config, map, coordinate, terrain, rules())
-                .unwrap();
+        let report = break_battle_surface_action(
+            &scripts,
+            &config,
+            map,
+            coordinate,
+            BattleSurface::of(BattleHex::new(terrain, 1)).unwrap(),
+            rules(),
+        )
+        .unwrap();
         assert_eq!(report.falls.len(), 2);
         let output = scripts.drain_outbox();
         let mut checked = 0;
@@ -4405,7 +4426,7 @@ async fn airborne_ice_action_evacuates_neighbors_and_replays() {
 async fn character_interrupted_jump_finishes_water_entry_atomically() {
     let source = "3 5\n.0.0.0\n.0.0.0\n-3-3-3\n~5~5~5\n~5~5~5\n";
     let (_dir, config, mut world, map, units) =
-        fixture_asset(BattleMapAsset::parse(source).unwrap()).await;
+        fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["maps"][map.0.to_string()]["movement_modifier"] = serde_json::json!(800);
@@ -4681,7 +4702,7 @@ async fn woodland_clearing_on_occupied_map_is_durable_and_rejects_stale_results(
     );
     let report =
         apply_woodland_clearing(&mut world, map, coordinate, report.after, Terrain::Rough).unwrap();
-    assert_eq!(report.after.elevation(), 2);
+    assert_eq!(report.after.level(), 2);
     persistence::save(&config.database(), &world).await.unwrap();
     assert_eq!(
         persistence::load(&config.database()).await.unwrap().btech,
@@ -4724,7 +4745,7 @@ async fn map_decorations_preserve_base_terrain_checkpoints_and_saved_state() {
     set_map_decoration(&mut world, map, coordinate, Some(fire)).unwrap();
     assert_eq!(
         world.btech.maps()[&map].hex(1, 1).unwrap(),
-        BattleHex::new(Terrain::Fire, 2)
+        BattleHex::new(Terrain::HeavyForest, 2).with_overlay(Some(BattleDecorationKind::Fire))
     );
     assert_eq!(
         world.btech.maps()[&map].base_hex(1, 1).unwrap().terrain(),
@@ -4907,7 +4928,7 @@ async fn calm_fire_spreads_smoke_then_burns_out_with_saved_replay() {
         burnt.terrain(),
         Terrain::Grassland | Terrain::Rough
     ));
-    assert_eq!(burnt.elevation(), 2);
+    assert_eq!(burnt.level(), 2);
     for x in 0..3 {
         let smoke = world.btech.maps()[&map]
             .decoration(BattleHexCoordinate { x, y: 0 })
@@ -5102,7 +5123,7 @@ async fn smoke_keeps_ice_surface_height_and_bridge_fracture_available() {
 async fn entering_smoke_covered_water_keeps_movement_and_immersion_checks() {
     let source = "3 4\n.0.0.0\n.0.0.0\n~1~1~1\n~1~1~1\n";
     let (_dir, config, mut world, map, units) =
-        fixture_asset(BattleMapAsset::parse(source).unwrap()).await;
+        fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
     let leg = BattleSection::LeftLeg;
     let armor = world.btech.constructed_units()[&id].sections()[&leg].armor;
@@ -5345,7 +5366,7 @@ async fn building_integrity_configuration_persistence_and_rejection() {
         &mut world,
         map,
         "interior.map",
-        BattleMapAsset::parse("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     assert_eq!(
@@ -5373,7 +5394,7 @@ async fn building_entrances_preserve_order_identity_and_unowned_data() {
         &mut world,
         interior,
         "inside.map",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let point = BattleHexCoordinate { x: 1, y: 1 };
@@ -6663,7 +6684,7 @@ async fn command_mines_match_frequency_map_and_order_with_saved_replay() {
         &mut world,
         other,
         "other-mine.map",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let mine = BattleMinefield {

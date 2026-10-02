@@ -570,7 +570,7 @@ async fn locust_machine_guns_and_case_insensitive_arm_flipping_survive_restart()
         &mut world,
         map,
         "locust.map",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Locust".into(), Kind::Thing);

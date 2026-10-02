@@ -11,7 +11,7 @@ async fn generic_decoration_records_survive_reload_and_clear_on_resize() {
         &mut world,
         map,
         "grid",
-        BattleMapAsset::parse("2 2\n#1#1\n#1#1\n").unwrap(),
+        BattleMapAsset::from_cells("2 2\n#1#1\n#1#1\n").unwrap(),
     )
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
@@ -88,7 +88,7 @@ async fn generic_decoration_records_survive_reload_and_clear_on_resize() {
         &mut world,
         map,
         "ice",
-        BattleMapAsset::parse("2 2\n-3-3\n-3-3\n").unwrap(),
+        BattleMapAsset::from_cells("2 2\n-3-3\n-3-3\n").unwrap(),
     )
     .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();

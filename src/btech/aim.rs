@@ -783,8 +783,9 @@ pub(super) fn water_modifier(world: &World, shooter: ObjectId) -> Result<u8> {
         .context("Map not found")?
         .base_hex(i64::from(position.x), i64::from(position.y))?;
     Ok(u8::from(
-        tile.terrain() == super::Terrain::Water
-            && super::unit_elevation(world, shooter)?.is_some_and(|z| z < 0),
+        tile.is_open_water()
+            && super::unit_elevation(world, shooter)?
+                .is_some_and(|z| z < i32::from(tile.water_line())),
     ))
 }
 

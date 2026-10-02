@@ -83,13 +83,9 @@ docsite:
 docsite-serve:
     npm --prefix docs run serve
 
-# Fail when any map in game/maps would not load, or loads with silently ignored data.
+# Fail when any map file in game/maps would not load.
 check-maps:
     cargo run --quiet --bin map-check -- game/maps
-
-# Remove mechanical junk from map files without changing how any of them load.
-tidy-maps:
-    cargo run --quiet --bin map-check -- --fix game/maps
 
 update-lua-docs:
     cargo run --quiet --features lua-doc-updater --bin lua-doc-updater -- --write

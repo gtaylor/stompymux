@@ -48,7 +48,7 @@ async fn recovery_preserves_dice_and_timer_across_injury_restart_and_cockpit_rel
         &mut world,
         map,
         "recovery.map",
-        stompymux_rs::BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        stompymux_rs::BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let unit = world.create(&config, "Cockpit".into(), stompymux_rs::Kind::Thing);

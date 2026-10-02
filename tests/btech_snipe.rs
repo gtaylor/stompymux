@@ -155,8 +155,7 @@ async fn prediction_handles_vehicle_targets_and_blocking_terrain() {
             ObjectId(1),
             map,
             BattleHexCoordinate { x: 0, y: 9 },
-            Terrain::Mountains,
-            9,
+            BattleHex::new(Terrain::Mountains, 9),
         )
         .unwrap();
         let world = scripts.world();
@@ -189,7 +188,7 @@ async fn distant_prediction_matches_live_motion_until_shell_catches_up() {
         &mut world,
         map,
         "long",
-        BattleMapAsset::parse(&format!("1 100\n{}", ".0\n".repeat(100))).unwrap(),
+        BattleMapAsset::from_cells(&format!("1 100\n{}", ".0\n".repeat(100))).unwrap(),
     )
     .unwrap();
     for id in [shooter, target] {

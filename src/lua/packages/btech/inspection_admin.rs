@@ -86,9 +86,9 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         native.set(name, error::wrap(lua, action, "btech.operation.failed")?)?;
     }
     let set_hex = lua.create_function(
-        |lua, (actor, id, x, y, name, elevation): (i64, i64, i32, i32, String, i32)| {
+        |lua, (actor, id, x, y, hex): (i64, i64, i32, i32, mlua::Value)| {
             crate::lua::transactions::require(lua)?;
-            let terrain = crate::Terrain::from_name(&name).map_err(mlua::Error::external)?;
+            let hex: crate::BattleHex = lua.from_value(hex)?;
             let scripts = crate::Scripts::services(lua)?;
             crate::lua::transactions::run(lua, &scripts.world, || {
                 let report = crate::set_battle_map_hex_action(
@@ -97,8 +97,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     ObjectId(actor),
                     ObjectId(id),
                     crate::BattleHexCoordinate { x, y },
-                    terrain,
-                    elevation,
+                    hex,
                 )
                 .map_err(mlua::Error::external)?;
                 detached(lua, &report)

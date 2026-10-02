@@ -44,7 +44,7 @@ async fn fixture(
         &mut world,
         map,
         "visibility",
-        BattleMapAsset::parse(if blocked {
+        BattleMapAsset::from_cells(if blocked {
             "1 5\n.0\n.9\n.0\n.0\n.0\n"
         } else {
             "1 5\n.0\n.0\n.0\n.0\n.0\n"
@@ -611,7 +611,7 @@ async fn swarm_cumulative_range_stops_before_spending_another_attack_roll() {
         &mut world,
         map,
         "long-flight",
-        BattleMapAsset::parse(&format!("1 32\n{}", ".0\n".repeat(32))).unwrap(),
+        BattleMapAsset::from_cells(&format!("1 32\n{}", ".0\n".repeat(32))).unwrap(),
     )
     .unwrap();
     for (id, y) in [(shooter, 20), (target, 0)] {

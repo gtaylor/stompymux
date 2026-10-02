@@ -23,7 +23,7 @@ async fn fixture_movement(
         &mut world,
         map,
         "fire",
-        BattleMapAsset::parse("1 2\n.0\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 2\n.0\n.0\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Burning vehicle".into(), Kind::Thing);

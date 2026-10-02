@@ -72,7 +72,7 @@ pub(super) fn submerged(world: &World, shooter: ObjectId, index: usize) -> Resul
             .weapons
             .get(index)
             .context("Weapon index out of bounds")?;
-        let elevation = unit.elevation_level(tile);
+        let elevation = unit.elevation_level(tile) - i32::from(tile.water_line());
         let fallen = unit.rotor_destroyed()
             && unit
                 .vtol_flight()
@@ -87,7 +87,7 @@ pub(super) fn submerged(world: &World, shooter: ObjectId, index: usize) -> Resul
         .weapons
         .get(index)
         .context("Weapon index out of bounds")?;
-    let elevation = unit.elevation_level(tile);
+    let elevation = unit.elevation_level(tile) - i32::from(tile.water_line());
     Ok(elevation < -1
         || (elevation < 0
             && (unit.posture() == BattlePosture::Prone

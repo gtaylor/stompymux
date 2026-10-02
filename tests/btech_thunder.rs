@@ -69,7 +69,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
         &mut world,
         map,
         "thunder",
-        BattleMapAsset::parse(&format!("3 12\n{rows}\n")).unwrap(),
+        BattleMapAsset::from_cells(&format!("3 12\n{rows}\n")).unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Launcher".into(), Kind::Thing);
@@ -307,7 +307,7 @@ async fn active_mines_catch_hovercraft_over_water() {
         &mut world,
         map,
         "ford",
-        BattleMapAsset::parse("3 3\n.0.0.0\n.0~1.0\n.0.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0~1.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Hover".into(), Kind::Thing);

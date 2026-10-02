@@ -89,7 +89,7 @@ async fn prepending_preserves_auxiliary_columns_and_order_survives_removal() {
         &mut world,
         map,
         "mine",
-        BattleMapAsset::parse("2 2\n.0.0\n.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
     let mine = BattleMinefield {
@@ -174,7 +174,7 @@ async fn rejected_or_aborted_placement_does_not_change_order_or_publish_output()
         &mut world,
         map,
         "mine",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
@@ -244,7 +244,7 @@ async fn artillery_mines_precede_existing_records_without_replacing_them() {
         &mut world,
         map,
         "mine",
-        BattleMapAsset::parse("2 2\n.0.0\n.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
     let coordinate = BattleHexCoordinate { x: 0, y: 0 };

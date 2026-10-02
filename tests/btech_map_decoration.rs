@@ -12,7 +12,7 @@ async fn operator_decoration_reference_argument_replies() {
         &mut world,
         map,
         "plain",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
@@ -86,7 +86,7 @@ async fn operator_decoration_duration_and_restart() {
                 &mut world,
                 map,
                 "plain",
-                BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+                BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
             )
             .unwrap();
             world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
@@ -204,7 +204,7 @@ async fn operator_decoration_replacement_and_admission() {
         &mut world,
         map,
         "plain",
-        BattleMapAsset::parse("1 1\n~2\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n~2\n").unwrap(),
     )
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
@@ -246,7 +246,7 @@ async fn operator_decoration_replacement_and_admission() {
         saved.btech.maps()[&map].hex(0, 0).unwrap().terrain(),
         Terrain::Water
     );
-    assert_eq!(saved.btech.maps()[&map].hex(0, 0).unwrap().elevation(), 2);
+    assert_eq!(saved.btech.maps()[&map].hex(0, 0).unwrap().water_depth(), 2);
     assert!(!map_fire_pending(&saved));
 }
 
@@ -262,7 +262,7 @@ async fn changing_wind_preserves_pending_deadlines_and_restart() {
             &mut world,
             map,
             "plain",
-            BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
         set_map_wind(&mut world, map, 0, initial_speed).unwrap();
@@ -333,7 +333,7 @@ async fn extreme_negative_fire_budgets_use_the_current_wind_interval() {
             &mut world,
             map,
             "plain",
-            BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

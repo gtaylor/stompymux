@@ -1,5 +1,5 @@
 //! Shared orbital-drop descent, cocoon interception and landing arithmetic; world adapters own effects.
-use super::Terrain;
+use super::BattleHex;
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 
@@ -239,10 +239,12 @@ impl BattleOrbitalDrop {
             BattleDropProtection::Breached => 10,
             _ => 0,
         };
-        target += match input.terrain {
-            Terrain::Grassland | Terrain::Road | Terrain::Sand => 0,
-            Terrain::Water => 2,
-            _ => 3,
+        target += if input.hex.is_open_ground() {
+            0
+        } else if input.hex.is_open_water() {
+            2
+        } else {
+            3
         };
         if input.absent_character_pilot {
             target += 99;
@@ -289,7 +291,8 @@ impl BattleOrbitalDrop {
 pub struct BattleDropLandingInput {
     pub base_target: i16,
     pub roll: Option<u8>,
-    pub terrain: Terrain,
+    /// The hex the unit lands in.
+    pub hex: BattleHex,
     pub running: bool,
     pub prone: bool,
     /// Unconsciousness or blindness; the host resolves these from shared condition services.

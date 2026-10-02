@@ -1,0 +1,9 @@
+gravity = 100
+temperature = 20
+
+terrain = '''
+.
+'''
+level = '''
+0
+'''

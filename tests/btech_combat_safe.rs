@@ -43,7 +43,7 @@ async fn fixture(
         &mut world,
         map,
         "visibility",
-        BattleMapAsset::parse(if blocked {
+        BattleMapAsset::from_cells(if blocked {
             "1 5\n.0\n.9\n.0\n.0\n.0\n"
         } else {
             "1 5\n.0\n.0\n.0\n.0\n.0\n"
@@ -474,7 +474,7 @@ async fn immunity_blocks_flooding_until_the_unit_flag_is_removed() {
             &mut world,
             map,
             "water",
-            BattleMapAsset::parse("1 1\n~2\n").unwrap(),
+            BattleMapAsset::from_cells("1 1\n~2\n").unwrap(),
         )
         .unwrap();
         edit(&mut world, id, |unit| {

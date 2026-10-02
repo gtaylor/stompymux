@@ -234,8 +234,7 @@ async fn map_registration_defaults_view_load_and_restart() {
         viewed
     );
     let directory = config.path(&config.database.map_database);
-    std::fs::create_dir_all(&directory).unwrap();
-    std::fs::write(directory.join("registration.map"), "3 2\n~2~2~2\n~2~2~2\n").unwrap();
+    support::write_map(&directory, "registration.map", "3 2\n~2~2~2\n~2~2~2\n");
     let output = support::run_text(
         &scripts,
         &config,

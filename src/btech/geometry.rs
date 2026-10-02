@@ -390,6 +390,22 @@ pub fn unit_elevation(world: &World, id: ObjectId) -> Result<Option<i32>> {
     Ok(Some(unit.elevation_level(tile)))
 }
 
+/// Whether a placed unit is below the water surface of its hex.
+pub(super) fn unit_submerged(world: &World, id: ObjectId) -> Result<bool> {
+    let position = super::scanner::scanner_unit(world, id)
+        .context("Unit construction state is unavailable")?
+        .position
+        .context("Unit is not placed")?;
+    let tile = world
+        .btech
+        .maps()
+        .get(&position.map)
+        .context("Map not found")?
+        .base_hex(i64::from(position.x), i64::from(position.y))?;
+    let elevation = unit_elevation(world, id)?.context("Unit is not placed")?;
+    Ok(tile.immerses(elevation))
+}
+
 impl super::BattleUnit {
     /// Continuous altitude for geometry and external transport; terrain effects retain their integer resolver.
     pub(super) fn altitude(&self, tile: super::BattleHex) -> f64 {

@@ -442,7 +442,7 @@ fn tow_fixture(
         world,
         map,
         "yard",
-        BattleMapAsset::parse("2 2\n.0.0\n.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
     for id in [attacker, target] {

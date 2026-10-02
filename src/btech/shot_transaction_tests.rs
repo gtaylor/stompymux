@@ -11,7 +11,7 @@ fn fixture(source: &str, recipient: &str, seed: u8) -> (Config, World, ObjectId,
         &mut world,
         map,
         "shot-lane",
-        BattleMapAsset::parse(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap(),
+        BattleMapAsset::from_cells(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap(),
     )
     .unwrap();
     let shooter = world.create(&config, "Shooter".into(), Kind::Thing);
@@ -284,7 +284,7 @@ fn validation_reuse_matches_full_checks_after_mutations_and_scope_exit() {
             8 => {
                 let map = changed.btech.maps.get_mut(&map).unwrap();
                 let tile = &mut Arc::make_mut(map.terrain.as_mut().unwrap())[0];
-                *tile = tile.with_elevation(10);
+                *tile = tile.with_level(36);
             }
             9 => changed.btech.maps.get_mut(&map).unwrap().temperature = 128,
             _ => {

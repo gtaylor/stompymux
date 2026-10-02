@@ -1,5 +1,5 @@
 //! Shared camouflage preparation, cached observer checks and cover loss for supported units.
-use super::{BattleNotice, BattlePower, Terrain};
+use super::{BattleNotice, BattlePower, Ground};
 use crate::{CommandAction, CommandContext, CommandInput, CommandReport, Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
@@ -83,10 +83,10 @@ pub fn begin_battle_hiding(
     }
     let tile =
         world.btech.maps()[&position.map].base_hex(i64::from(position.x), i64::from(position.y))?;
-    let text = match tile.terrain() {
-        Terrain::LightForest | Terrain::HeavyForest => "You start to hide amongst the trees...",
-        Terrain::Mountains => "You start to hide behind some rocky outcroppings...",
-        Terrain::Rough => "You find some boulders to try to hide behind...",
+    let text = match (tile.is_woods(), tile.is_bare(), tile.ground()) {
+        (true, _, _) => "You start to hide amongst the trees...",
+        (false, true, Ground::Mountains) => "You start to hide behind some rocky outcroppings...",
+        (false, true, Ground::Rough) => "You find some boulders to try to hide behind...",
         _ => anyhow::bail!(
             "You begin to hide in this terrain...\n... then realize that just isn't going to work!"
         ),

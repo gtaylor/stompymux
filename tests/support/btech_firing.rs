@@ -84,7 +84,7 @@ pub fn supply_fixture_on(
         &mut world,
         map,
         "sight",
-        BattleMapAsset::parse(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap(),
+        BattleMapAsset::from_cells(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap(),
     )
     .unwrap();
     let mut template = BattleUnitTemplate::parse("shooter", source).unwrap();

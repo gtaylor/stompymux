@@ -1,10 +1,20 @@
-//! Shared map palette expressed as trusted document styles for capability-aware client rendering.
-use super::Terrain;
+//! Shared map palette and height digits for the tactical and long-range displays.
+use super::{BattleHex, Terrain};
 
-/// Terrain colors shared by tactical and long-range displays; grassland keeps the default style.
-pub(super) fn terrain(terrain: Terrain, elevation: u8) -> &'static str {
-    match terrain {
-        Terrain::Water if elevation < 2 => "[fg=blue bold]",
+/// The height digit maps print for a hex: the depth of open water or ice, otherwise the height
+/// of its top surface, so a building or bridge shows its roof or deck.
+pub(super) fn shown_height(hex: BattleHex) -> u8 {
+    if hex.is_water_surface() {
+        return hex.water_depth();
+    }
+    u8::try_from(hex.top_height()).unwrap_or(u8::MAX)
+}
+
+/// Colors shared by tactical and long-range displays; grassland keeps the default style.
+/// Shallow water is brighter than deep water.
+pub(super) fn terrain(hex: BattleHex) -> &'static str {
+    match hex.terrain() {
+        Terrain::Water if hex.water_depth() < 2 => "[fg=blue bold]",
         Terrain::Water => "[fg=blue]",
         Terrain::Building | Terrain::Ice | Terrain::Wall | Terrain::Snow => "[fg=white bold]",
         Terrain::Road | Terrain::Smoke => "[fg=black bold]",

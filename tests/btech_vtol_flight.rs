@@ -576,7 +576,7 @@ fn altitude_commits_reject_stale_or_altered_proposals_and_preserve_height_on_lif
 #[test]
 fn forest_entry_checks_canopy_only_when_crossing_hexes() {
     for terrain in ['`', '"'] {
-        let map = BattleMapAsset::parse(&format!("1 3\n.0\n{terrain}0\n.0\n")).unwrap();
+        let map = BattleMapAsset::from_cells(&format!("1 3\n.0\n{terrain}0\n.0\n")).unwrap();
         for (altitude, obstructed) in [(0.0, true), (1.99, true), (2.0, false)] {
             let mut saved =
                 serde_json::to_value(at_altitude(landing_aircraft(129.0, 129.0, 0.0), altitude))
@@ -606,7 +606,7 @@ fn forest_entry_checks_canopy_only_when_crossing_hexes() {
                 assert_eq!(unit, before);
             }
         }
-        let forest = BattleMapAsset::parse(&format!("1 1\n{terrain}0\n")).unwrap();
+        let forest = BattleMapAsset::from_cells(&format!("1 1\n{terrain}0\n")).unwrap();
         let mut hover = landing_aircraft(0.0, 0.0, 0.0);
         assert!(matches!(
             hover.advance_vtol_clear_path(&forest, 100).unwrap(),
@@ -618,7 +618,7 @@ fn forest_entry_checks_canopy_only_when_crossing_hexes() {
 #[test]
 fn flight_path_cannot_skip_intermediate_hills_and_map_edges_are_atomic() {
     // Northbound from row 2 to row 0: both endpoint surfaces are clear, row 1 is raised.
-    let map = BattleMapAsset::parse("1 3\n.0\n^9\n.0\n").unwrap();
+    let map = BattleMapAsset::from_cells("1 3\n.0\n^9\n.0\n").unwrap();
     let mut saved =
         serde_json::to_value(at_altitude(landing_aircraft(129.0, 129.0, 0.0), 5.0)).unwrap();
     saved["position"]["y"] = 2.into();
@@ -636,7 +636,7 @@ fn flight_path_cannot_skip_intermediate_hills_and_map_edges_are_atomic() {
         }
     ));
     assert_eq!(unit, before);
-    let clear = BattleMapAsset::parse("1 3\n.0\n.0\n.0\n").unwrap();
+    let clear = BattleMapAsset::from_cells("1 3\n.0\n.0\n.0\n").unwrap();
     let mut replay = restored(&unit);
     let result = unit.advance_vtol_clear_path(&clear, 1000).unwrap();
     assert!(matches!(result, BattleVtolPath::Advanced { .. }));
@@ -657,7 +657,7 @@ fn flight_path_cannot_skip_intermediate_hills_and_map_edges_are_atomic() {
 
 #[test]
 fn vertical_path_detects_bridge_bands_and_water_without_committing_hazardous_motion() {
-    let bridge = BattleMapAsset::parse("1 1\n/5\n").unwrap();
+    let bridge = BattleMapAsset::from_cells("1 1\n/5\n").unwrap();
     // A high material descent rate exercises a complete bridge-band crossing in one event.
     let mut unit = at_altitude(landing_aircraft(0.0, 0.0, -387.0), 6.0);
     let before = unit.clone();
@@ -671,7 +671,7 @@ fn vertical_path_detects_bridge_bands_and_water_without_committing_hazardous_mot
         under.advance_vtol_clear_path(&bridge, 100).unwrap(),
         BattleVtolPath::Advanced { .. }
     ));
-    let water = BattleMapAsset::parse("1 1\n~5\n").unwrap();
+    let water = BattleMapAsset::from_cells("1 1\n~5\n").unwrap();
     let mut unit = at_altitude(landing_aircraft(0.0, 0.0, -129.0), -0.5);
     let before = unit.clone();
     assert!(matches!(
@@ -686,7 +686,7 @@ fn vertical_path_detects_bridge_bands_and_water_without_committing_hazardous_mot
 
 #[test]
 fn surface_resolution_shares_landing_and_flooding_and_defers_crashes_atomically() {
-    let ground = BattleMapAsset::parse("1 1\n.1\n").unwrap();
+    let ground = BattleMapAsset::from_cells("1 1\n.1\n").unwrap();
     let mut unit = at_altitude(landing_aircraft(0.0, 0.0, -5.0), 1.01);
     let mut replay = restored(&unit);
     let result = unit.advance_vtol_environment(&ground, 100, false).unwrap();
@@ -717,7 +717,7 @@ fn surface_resolution_shares_landing_and_flooding_and_defers_crashes_atomically(
         BattleVtolEnvironment::CrashRequired { levels: 13, .. }
     ));
     assert_eq!(crash, before);
-    let water = BattleMapAsset::parse("1 1\n~5\n").unwrap();
+    let water = BattleMapAsset::from_cells("1 1\n~5\n").unwrap();
     let mut unit = at_altitude(landing_aircraft(0.0, 0.0, -129.0), -0.5);
     let before = unit.clone();
     assert!(matches!(
@@ -748,7 +748,7 @@ fn horizontal_flight_entry_distinguishes_bridge_clearance_ice_and_water() {
         ("-3", 0.0, None),
         ("~3", -1.0, Some(BattleVtolSurfaceContact::Water)),
     ] {
-        let map = BattleMapAsset::parse(&format!("1 3\n.0\n{tile}\n/6\n")).unwrap();
+        let map = BattleMapAsset::from_cells(&format!("1 3\n.0\n{tile}\n/6\n")).unwrap();
         let mut saved =
             serde_json::to_value(at_altitude(landing_aircraft(129.0, 129.0, 0.0), altitude))
                 .unwrap();
@@ -775,7 +775,7 @@ fn horizontal_flight_entry_distinguishes_bridge_clearance_ice_and_water() {
 /// Even a slow horizontal hill entry needs the host's piloting decision before mutation.
 #[test]
 fn slow_hill_entry_defers_landing_and_keeps_continuous_and_hex_positions_consistent() {
-    let map = BattleMapAsset::parse("1 2\n.2\n.0\n").unwrap();
+    let map = BattleMapAsset::from_cells("1 2\n.2\n.0\n").unwrap();
     let mut saved =
         serde_json::to_value(at_altitude(landing_aircraft(10.0, 10.0, 0.0), 1.0)).unwrap();
     saved["position"]["y"] = 1.into();

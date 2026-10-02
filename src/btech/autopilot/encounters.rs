@@ -401,7 +401,7 @@ pub(super) fn fixture_with_target(
         &mut world,
         map,
         "encounter",
-        BattleMapAsset::parse(&terrain)?,
+        BattleMapAsset::from_cells(&terrain)?,
     )?;
     world.btech.maps.get_mut(&map).unwrap().fire_dice = Some(crate::BattleDice::seeded([seed; 32]));
     let shooter = world.create(config, "shooter".into(), Kind::Thing);
