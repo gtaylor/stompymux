@@ -59,8 +59,11 @@ tokio = { version = "1.53.1", features = ["test-util"] }
 [lints.clippy]
 too_many_arguments = "allow"
 
+# Debug info is off by default to cut compile, link, and disk costs. Opt back
+# in for a debugger session with `CARGO_PROFILE_DEV_DEBUG=true` (or
+# `CARGO_PROFILE_TEST_DEBUG=true` for test binaries).
 [profile.dev]
-debug = "line-tables-only"
+debug = false
 
 # `cargo test` compiles the whole library twice (unit-test binary plus the
 # rlib the suites link) and sixteen suite binaries. Light optimization keeps
@@ -70,12 +73,9 @@ debug = "line-tables-only"
 # codegen time for a few percent of test run time.
 [profile.test]
 opt-level = 1
-debug = "line-tables-only"
+debug = false
 incremental = true
 lto = "off"
-
-[profile.test.package."*"]
-debug = 0
 
 # Consolidated integration suites; scenario files stay in tests/ for fixture paths.
 [[test]]
