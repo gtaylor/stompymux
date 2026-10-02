@@ -45,14 +45,27 @@ pub fn set_hex(tile: &mut serde_json::Value, terrain: stompymux_rs::Terrain, ele
     *tile = serde_json::to_value(stompymux_rs::BattleHex::new(terrain, elevation)).unwrap();
 }
 
-/// Change one serialized hex's terrain, keeping its elevation digit.
-pub fn set_hex_terrain(tile: &mut serde_json::Value, terrain: stompymux_rs::Terrain) {
-    edit_hex(tile, |hex| hex.with_terrain(terrain));
+/// The digit the compact notation of [`stompymux_rs::BattleHex::new`] gives `hex`: water
+/// depth, structure top or bridge deck, or ground height.
+pub fn notation_digit(hex: stompymux_rs::BattleHex) -> u8 {
+    if hex.is_water_surface() {
+        return hex.water_depth();
+    }
+    u8::try_from(hex.top_height()).unwrap()
 }
 
-/// Change one serialized hex's elevation digit, keeping its terrain.
+/// Rebuild one serialized hex from the compact notation with a new terrain, keeping its digit.
+pub fn set_hex_terrain(tile: &mut serde_json::Value, terrain: stompymux_rs::Terrain) {
+    edit_hex(tile, |hex| {
+        stompymux_rs::BattleHex::new(terrain, notation_digit(hex))
+    });
+}
+
+/// Rebuild one serialized hex from the compact notation with a new digit, keeping its terrain.
 pub fn set_hex_elevation(tile: &mut serde_json::Value, elevation: u8) {
-    edit_hex(tile, |hex| hex.with_elevation(elevation));
+    edit_hex(tile, |hex| {
+        stompymux_rs::BattleHex::new(hex.terrain(), elevation)
+    });
 }
 
 /// Make a later neighboring-wood ignition fail after preceding mine effects have run.

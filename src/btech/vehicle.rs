@@ -1204,11 +1204,11 @@ impl BattleVehicle {
 
     /// Support height at a destination, independent of retained altitude on the current hex.
     pub(super) fn terrain_elevation(&self, tile: super::BattleHex, under_bridge: bool) -> i32 {
-        if under_bridge && tile.terrain() == super::Terrain::Bridge {
+        if under_bridge && tile.has_bridge() {
             return 0;
         }
         if self.definition.movement == super::BattleVehicleMovement::Hover
-            && matches!(tile.terrain(), super::Terrain::Water | super::Terrain::Ice)
+            && tile.is_water_surface()
         {
             return 0;
         }

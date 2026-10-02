@@ -163,9 +163,10 @@ fn remove_kind(
             if stored_kind == super::BattleStaticDecorationKind::Decoration {
                 let record = &world.btech.maps()[&map];
                 let terrain = record.static_decorations(stored_kind)[&ordinal].restored_terrain;
-                let restored = record
+                let level = record
                     .base_hex(i64::from(position.x), i64::from(position.y))?
-                    .with_terrain(terrain);
+                    .level();
+                let restored = super::BattleHex::new(terrain, level);
                 super::terrain_edit::replace_hex(world, map, position, restored)?;
             }
             super::set_static_decoration(world, map, stored_kind, ordinal, None)?;

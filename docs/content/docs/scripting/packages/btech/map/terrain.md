@@ -5,7 +5,7 @@ linkTitle: "terrain"
 manualLinkTitle: "terrain"
 ---
 
-Read one decoded terrain kind.
+Read the one terrain feature a map shows for a hex: fire or smoke, then a structure, water, woods or the ground.
 
 ## Signature
 

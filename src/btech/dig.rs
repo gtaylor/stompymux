@@ -96,10 +96,7 @@ pub fn dig_unit(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<Batt
     let tile =
         world.btech.maps()[&position.map].hex(i64::from(position.x), i64::from(position.y))?;
     ensure!(
-        !matches!(
-            tile.terrain(),
-            Terrain::Road | Terrain::Bridge | Terrain::Building | Terrain::Wall | Terrain::Water
-        ),
+        !(tile.is_road() || tile.structure().is_some() || tile.is_open_water()),
         "You cannot dig into this surface"
     );
     let unit = world.btech.vehicles.get_mut(&id).unwrap();

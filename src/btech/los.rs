@@ -1,5 +1,5 @@
 //! Terrain line-of-sight reports at live unit eye heights, independent of sensor acquisition.
-use super::{BattleHexCoordinate, StoredBattleMap, Terrain};
+use super::{BattleHexCoordinate, StoredBattleMap};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -106,7 +106,7 @@ fn terrain_los_with_endpoint(
         let intervening = index < steps;
         if underwater {
             if !ground.holds_water()
-                || (ground.terrain() != Terrain::Bridge && height >= sight_height)
+                || (!ground.has_bridge() && height >= sight_height)
                 || (!target_both_worlds && sight_height > 0.0)
             {
                 report.blocked = true;
@@ -117,15 +117,14 @@ fn terrain_los_with_endpoint(
             continue;
         }
         if sight_height < height + 2.0 {
-            if matches!(ground.terrain(), Terrain::Water | Terrain::Ice) {
+            if ground.is_water_surface() {
                 if sight_height < 0.0
-                    && (ground.terrain() == Terrain::Ice
-                        || (ground.terrain() == Terrain::Water && !both_worlds))
+                    && (ground.is_ice() || (ground.is_open_water() && !both_worlds))
                 {
                     report.blocked = true;
                     return Ok(report);
                 }
-                if ground.terrain() == Terrain::Water && sight_height < 0.0 {
+                if ground.is_open_water() && sight_height < 0.0 {
                     submerged += 1;
                 }
                 report.water = report.water.saturating_add(1).min(7);
@@ -139,10 +138,7 @@ fn terrain_los_with_endpoint(
                 }
             }
         }
-        if height >= sight_height
-            && ground.terrain() != Terrain::Bridge
-            && !(ice_surface && !intervening)
-        {
+        if height >= sight_height && !ground.has_bridge() && !(ice_surface && !intervening) {
             report.blocked = true;
             return Ok(report);
         }
@@ -151,7 +147,7 @@ fn terrain_los_with_endpoint(
         let preceding = base(cells[cells.len() - 2])?;
         report.partial_cover = (end_ground >= start_ground
             && f64::from(preceding.surface_height()) == end_ground + 1.0)
-            || (destination.terrain() == Terrain::Water && end_ground == -1.0);
+            || (destination.is_open_water() && end_ground == -1.0);
     }
     report.fire |= submerged > 6;
     Ok(report)
@@ -344,7 +340,7 @@ pub(super) fn unit_hex_los(
             distance,
         ));
     }
-    let target_eye = if tile.terrain() == Terrain::Ice && altitude + unit.eye >= 0.0 {
+    let target_eye = if tile.is_ice() && altitude + unit.eye >= 0.0 {
         0.0
     } else {
         0.1
@@ -355,7 +351,7 @@ pub(super) fn unit_hex_los(
         target,
         (unit.eye, target_eye),
         (Some(altitude), Some(target_height)),
-        tile.terrain() == Terrain::Ice && altitude + unit.eye >= 0.0,
+        tile.is_ice() && altitude + unit.eye >= 0.0,
     )?;
     Ok((report, distance))
 }
@@ -363,7 +359,7 @@ pub(super) fn unit_hex_los(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::BattleHex;
+    use crate::{BattleHex, Terrain};
     use std::sync::Arc;
 
     /// Empty-hex LOS has only an observer hardware exception, even on maps with a larger ceiling.

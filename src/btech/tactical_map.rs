@@ -279,11 +279,11 @@ fn terrain_canvas(
                     terrain => (terrain.symbol(), terrain.symbol()),
                 };
                 let style = if ansi {
-                    super::map_style::terrain(hex.terrain(), hex.elevation())
+                    super::map_style::terrain(hex)
                 } else {
                     ""
                 };
-                let elevation = match hex.elevation() {
+                let elevation = match super::map_style::shown_height(hex) {
                     0 => bottom,
                     elevation => super::hex::height_glyph(elevation),
                 };
@@ -291,7 +291,7 @@ fn terrain_canvas(
                     && underlying
                     && matches!(hex.terrain(), Terrain::Fire | Terrain::Smoke)
                 {
-                    super::map_style::terrain(base.terrain(), base.elevation())
+                    super::map_style::terrain(base)
                 } else {
                     style
                 };

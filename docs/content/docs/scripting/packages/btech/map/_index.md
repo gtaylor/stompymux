@@ -65,5 +65,8 @@ no_list: true
 ## Constants
 
 - [`btech.map.flags`](flags/)
+- [`btech.map.ground_types`](ground_types/)
 - [`btech.map.light_levels`](light_levels/)
+- [`btech.map.structure_kinds`](structure_kinds/)
 - [`btech.map.terrain_types`](terrain_types/)
+- [`btech.map.woods_types`](woods_types/)

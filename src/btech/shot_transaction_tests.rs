@@ -284,7 +284,7 @@ fn validation_reuse_matches_full_checks_after_mutations_and_scope_exit() {
             8 => {
                 let map = changed.btech.maps.get_mut(&map).unwrap();
                 let tile = &mut Arc::make_mut(map.terrain.as_mut().unwrap())[0];
-                *tile = tile.with_elevation(10);
+                *tile = tile.with_level(36);
             }
             9 => changed.btech.maps.get_mut(&map).unwrap().temperature = 128,
             _ => {

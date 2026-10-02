@@ -1,7 +1,5 @@
 //! Autonomous fire spreading, smoke creation and woodland burnout on candidate map state.
-use super::{
-    BattleDecoration, BattleDecorationKind, BattleHexCoordinate, StoredBattleMap, Terrain,
-};
+use super::{BattleDecoration, BattleDecorationKind, BattleHexCoordinate, StoredBattleMap};
 use crate::World;
 use anyhow::Result;
 use std::{collections::BTreeSet, sync::Arc};
@@ -78,12 +76,12 @@ fn advance_fire(map: &mut StoredBattleMap) -> Result<()> {
             let (x, y) = (i64::from(index) % map.width, i64::from(index) / map.width);
             let tile = map.base_hex(x, y)?;
             if tile.is_woods() {
-                let terrain = if map.fire_dice.as_mut().unwrap().d6() < 3 {
-                    Terrain::Grassland
+                let ground = if map.fire_dice.as_mut().unwrap().d6() < 3 {
+                    super::Ground::Clear
                 } else {
-                    Terrain::Rough
+                    super::Ground::Rough
                 };
-                map.write_hex(x, y, tile.with_terrain(terrain))?;
+                map.write_hex(x, y, tile.with_woods(None).with_ground(ground))?;
             }
             continue;
         }
@@ -107,9 +105,9 @@ fn spread(map: &mut StoredBattleMap, index: u32, replaced: &mut BTreeSet<u32>) -
     for index in targets.iter().flatten().copied() {
         if map.decorations.contains_key(&index)
             || matches!(
-                map.hex(i64::from(index) % map.width, i64::from(index) / map.width)?
-                    .terrain(),
-                Terrain::Building | Terrain::Wall | Terrain::Fire | Terrain::Smoke
+                map.base_hex(i64::from(index) % map.width, i64::from(index) / map.width)?
+                    .structure(),
+                Some(super::Structure::Building { .. } | super::Structure::Wall { .. })
             )
         {
             continue;

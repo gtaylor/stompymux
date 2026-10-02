@@ -20,6 +20,10 @@ pub use btech::{
 };
 pub use btech::{BattleCommandClass, BattleSpecialCommand, BattleSpecialType};
 pub use btech::{BattleMinePlacement, add_mine_action as add_battle_mine_action};
+pub use btech::{
+    Ground as BattleGround, Structure as BattleStructure, Water as BattleWater,
+    Woods as BattleWoods,
+};
 
 pub use btech::{
     AmmunitionBin, BattleAimModifiers, BattleAimRules, BattleAmmunitionAdjustment,

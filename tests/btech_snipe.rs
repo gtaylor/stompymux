@@ -155,8 +155,7 @@ async fn prediction_handles_vehicle_targets_and_blocking_terrain() {
             ObjectId(1),
             map,
             BattleHexCoordinate { x: 0, y: 9 },
-            Terrain::Mountains,
-            9,
+            BattleHex::new(Terrain::Mountains, 9),
         )
         .unwrap();
         let world = scripts.world();

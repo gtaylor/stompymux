@@ -5,7 +5,7 @@ linkTitle: "range"
 manualLinkTitle: "range"
 ---
 
-Measure the spatial range between two units or positions on one map.
+Measure the spatial range between two units or positions on one map. A position without z stands on the hex's surface.
 
 ## Signature
 

@@ -53,7 +53,7 @@ impl BattleVtolMotionStep {
             let entered = last.is_some_and(|previous| previous != hex);
             last = Some(hex);
             let entry_altitude = initial + change * from;
-            let blocks_elevation = if tile.terrain() == super::Terrain::Ice {
+            let blocks_elevation = if tile.is_ice() {
                 (entry_altitude as i32) < 0
             } else {
                 tile.blocks_jump_entry(entry_altitude as i32)

@@ -880,10 +880,10 @@ fn attack_profile_inner(
     };
     let target_movement =
         super::aim::ground_physical_target_modifier(world, victim, rules.extended_movement);
-    // Smoke painted into the target's tile obscures it like heavy woods.
-    let terrain = match target_tile.terrain() {
-        Terrain::Smoke => 2,
-        terrain => terrain.woods_density(),
+    // Smoke over the target's tile obscures it like heavy woods.
+    let terrain = match target_tile.overlay() {
+        Some(super::BattleDecorationKind::Smoke) => 2,
+        _ => target_tile.woods_density(),
     };
     let tons = source.definition().tons;
     let mut damage = match attack {

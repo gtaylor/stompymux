@@ -4,8 +4,9 @@
 //! Each layer answers one question, so a hex can hold woods on a hill, ice over deep water or a
 //! bridge deck above a river without one value standing in for another. Fire and smoke never
 //! replace what they burn or cover: they are an overlay the map applies from its decorations.
-//! [`BattleHex::terrain`] and [`BattleHex::elevation`] still give the single-symbol view used by
-//! classification rules while those move onto the layers.
+//! Rules ask the layers. [`BattleHex::terrain`] names the one feature a map shows for a hex,
+//! and [`BattleHex::new`] reads the compact symbol-and-digit notation used by `ADDHEX` and
+//! [`BattleMapAsset::from_cells`](super::BattleMapAsset::from_cells).
 use super::{BattleDecorationKind, Terrain};
 use serde::{Deserialize, Serialize};
 
@@ -82,9 +83,10 @@ pub struct BattleHex {
 }
 
 impl BattleHex {
-    /// Build the hex a terrain symbol and elevation digit describe. The digit is the ground
-    /// height, except for water and ice (depth), bridges (deck height) and buildings and walls
-    /// (their height). Bridges span water one level deep; fire and smoke overlay clear ground.
+    /// Build the hex the compact notation describes: a terrain symbol and one digit. The digit
+    /// is the ground height, except for water and ice (depth), bridges (deck height) and
+    /// buildings and walls (their height). Bridges span water one level deep; fire and smoke
+    /// overlay clear ground. Rules build and change hexes through their layers instead.
     pub const fn new(terrain: Terrain, elevation: u8) -> Self {
         let mut hex = Self {
             level: 0,
@@ -151,12 +153,34 @@ impl BattleHex {
         Self { overlay, ..self }
     }
 
-    /// This hex with `structure` built on it, replacing any structure it had.
-    pub const fn with_structure(self, structure: Structure) -> Self {
-        Self {
-            structure: Some(structure),
-            ..self
-        }
+    /// Clear ground at `level`, with nothing on it.
+    pub const fn at_level(level: u8) -> Self {
+        Self::from_layers(level, Ground::Clear, None, None, None)
+    }
+
+    /// This hex with its ground height changed.
+    pub const fn with_level(self, level: u8) -> Self {
+        Self { level, ..self }
+    }
+
+    /// This hex with its ground made of `ground`.
+    pub const fn with_ground(self, ground: Ground) -> Self {
+        Self { ground, ..self }
+    }
+
+    /// This hex with its woods replaced or cleared.
+    pub const fn with_woods(self, woods: Option<Woods>) -> Self {
+        Self { woods, ..self }
+    }
+
+    /// This hex with its water replaced or drained.
+    pub const fn with_water(self, water: Option<Water>) -> Self {
+        Self { water, ..self }
+    }
+
+    /// This hex with its structure replaced or removed.
+    pub const fn with_structure(self, structure: Option<Structure>) -> Self {
+        Self { structure, ..self }
     }
 
     /// Check every height and depth is within the battlefield's limits.
@@ -203,8 +227,8 @@ impl BattleHex {
         self.overlay
     }
 
-    /// The single terrain symbol that best describes this hex: overlay, then structure, then
-    /// water, then woods, then ground.
+    /// The one feature a map shows for this hex: overlay, then structure, then water, then
+    /// woods, then ground. Rules ask the layers instead.
     pub const fn terrain(self) -> Terrain {
         match self.overlay {
             Some(BattleDecorationKind::Fire) => return Terrain::Fire,
@@ -230,34 +254,6 @@ impl BattleHex {
         }
     }
 
-    /// The elevation digit paired with [`terrain`](Self::terrain): water depth, bridge deck,
-    /// structure top, or ground height.
-    pub const fn elevation(self) -> u8 {
-        match (self.structure, self.water) {
-            (Some(Structure::Building { height } | Structure::Wall { height }), _) => {
-                self.level + height
-            }
-            (Some(Structure::Bridge { deck }), _) => self.level + deck,
-            (None, Some(Water { depth, .. })) => depth,
-            (None, None) => self.level,
-        }
-    }
-
-    /// This hex with its elevation digit replaced, keeping its terrain.
-    pub const fn with_elevation(self, elevation: u8) -> Self {
-        Self::new(self.terrain(), elevation)
-    }
-
-    /// This hex with its terrain replaced, keeping its elevation digit. Fire and smoke are
-    /// laid over the hex's own layers instead of replacing them.
-    pub const fn with_terrain(self, terrain: Terrain) -> Self {
-        match terrain {
-            Terrain::Fire => self.with_overlay(Some(BattleDecorationKind::Fire)),
-            Terrain::Smoke => self.with_overlay(Some(BattleDecorationKind::Smoke)),
-            _ => Self::new(terrain, self.elevation()),
-        }
-    }
-
     /// Depth of the standing water in this hex, or zero when there is none.
     pub const fn water_depth(self) -> u8 {
         match self.water {
@@ -272,6 +268,29 @@ impl BattleHex {
             (self.water, self.structure),
             (Some(Water { frozen: false, .. }), None)
         )
+    }
+
+    /// Whether fire is burning over this hex.
+    pub const fn is_burning(self) -> bool {
+        matches!(self.overlay, Some(BattleDecorationKind::Fire))
+    }
+
+    /// Whether this hex is road with nothing else on it.
+    pub const fn is_road(self) -> bool {
+        matches!(self.ground, Ground::Road)
+            && self.woods.is_none()
+            && self.water.is_none()
+            && self.structure.is_none()
+    }
+
+    /// Whether a bridge spans this hex.
+    pub const fn has_bridge(self) -> bool {
+        matches!(self.structure, Some(Structure::Bridge { .. }))
+    }
+
+    /// Whether this hex's surface is water or ice with nothing built over it.
+    pub const fn is_water_surface(self) -> bool {
+        self.water.is_some() && self.structure.is_none()
     }
 
     /// Whether this hex is frozen water with no structure over it.
@@ -310,6 +329,17 @@ impl BattleHex {
     /// Height of the bottom of the hex: the ground, or the bed beneath any water.
     pub fn bottom_height(self) -> i16 {
         i16::from(self.level) - i16::from(self.water_depth())
+    }
+
+    /// This hex with its water frozen over.
+    pub const fn frozen(self) -> Self {
+        match self.water {
+            Some(water) => self.with_water(Some(Water {
+                frozen: true,
+                ..water
+            })),
+            None => self,
+        }
     }
 
     /// This hex after its ice cracks or its bridge collapses: the same water, now open.
@@ -374,13 +404,22 @@ impl BattleHex {
 mod tests {
     use super::*;
 
-    /// Every terrain and elevation digit survives the layered representation unchanged.
+    /// The layer the notation's digit sets: water depth, structure top or bridge deck, or
+    /// ground height.
+    fn digit(hex: BattleHex) -> u8 {
+        if hex.is_water_surface() {
+            return hex.water_depth();
+        }
+        hex.top_height() as u8
+    }
+
+    /// Every terrain and digit of the compact notation survives the layers unchanged.
     #[test]
-    fn single_symbol_view_round_trips_through_layers() {
+    fn notation_round_trips_through_layers() {
         for terrain in Terrain::ALL {
             for elevation in 0..=9 {
                 let hex = BattleHex::new(terrain, elevation);
-                assert_eq!((hex.terrain(), hex.elevation()), (terrain, elevation));
+                assert_eq!((hex.terrain(), digit(hex)), (terrain, elevation));
                 let saved = serde_json::to_value(hex).unwrap();
                 assert_eq!(serde_json::from_value::<BattleHex>(saved).unwrap(), hex);
             }
@@ -466,7 +505,7 @@ mod tests {
             Some(Structure::Building { height: 7 }),
         );
         assert_eq!(tower.surface_height(), 15);
-        assert_eq!(tower.elevation(), 15);
+        assert_eq!(tower.top_height(), 15);
         assert!(tower.blocks_jump_entry(14));
         assert!(!tower.blocks_jump_entry(15));
         tower.validate().unwrap();
@@ -491,12 +530,12 @@ mod tests {
     #[test]
     fn overlays_keep_the_layers_they_cover() {
         let woods = BattleHex::new(Terrain::HeavyForest, 3);
-        let burning = woods.with_terrain(Terrain::Fire);
-        assert_eq!(burning.overlay(), Some(BattleDecorationKind::Fire));
-        assert_eq!((burning.terrain(), burning.elevation()), (Terrain::Fire, 3));
+        let burning = woods.with_overlay(Some(BattleDecorationKind::Fire));
+        assert_eq!((burning.terrain(), burning.level()), (Terrain::Fire, 3));
         assert_eq!(burning.woods(), Some(Woods::Heavy));
         assert_eq!(burning.with_overlay(None), woods);
-        let smoky = BattleHex::new(Terrain::Building, 4).with_terrain(Terrain::Smoke);
+        let smoky =
+            BattleHex::new(Terrain::Building, 4).with_overlay(Some(BattleDecorationKind::Smoke));
         assert_eq!(smoky.structure(), Some(Structure::Building { height: 4 }));
         assert_eq!(smoky.surface_height(), 4);
         assert_eq!(

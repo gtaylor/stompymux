@@ -74,7 +74,7 @@ pub(super) fn resolve(
             tile.terrain(),
             rules,
         )?)
-    } else if tile.terrain() == Terrain::Ice {
+    } else if tile.is_ice() {
         Some(break_ice(world, map, coordinate, None, rules)?)
     } else {
         Some(break_bridge(world, map, coordinate, rules)?)

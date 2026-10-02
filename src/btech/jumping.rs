@@ -1,7 +1,7 @@
 //! Transactional conventional jumping on supported terrain routes, with committed landing and stabilization.
 use super::{
     BattleJumpFlight, BattleJumpOutcome, BattleJumpPath, BattleNotice, BattlePosture, BattlePower,
-    BattleUnit, Terrain,
+    BattleUnit,
 };
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -720,7 +720,7 @@ fn advance_jumps_inner(
         let previous_tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
         let previous_elevation = unit.elevation_level(previous_tile);
         let next_elevation = (step.to.elevation + 0.5).trunc() as i32;
-        if previous_tile.terrain() == Terrain::Ice
+        if previous_tile.is_ice()
             && step.outcome == BattleJumpOutcome::Landing
             && (coordinate.x, coordinate.y) == (i32::from(position.x), i32::from(position.y))
         {
@@ -755,8 +755,7 @@ fn advance_jumps_inner(
             if previous_elevation < -1
                 && candidate.btech.maps()[&position.map]
                     .base_hex(i64::from(position.x), i64::from(position.y))?
-                    .terrain()
-                    == Terrain::Ice
+                    .is_ice()
             {
                 let resolve = if character {
                     super::surface_break::break_ice_upward_in_action
@@ -777,7 +776,7 @@ fn advance_jumps_inner(
             )?);
             continue;
         }
-        if previous_tile.terrain() == Terrain::Ice
+        if previous_tile.is_ice()
             && ((previous_elevation < -1 && next_elevation >= -1)
                 || (previous_elevation >= -1 && next_elevation < -1))
         {

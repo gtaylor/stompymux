@@ -43,10 +43,10 @@
 
 ---@class BattleHex
 ---@field level integer Ground height in levels; any water surface sits at this height.
----@field ground "clear"|"road"|"rough"|"mountains"|"snow"|"sand" What the ground is made of.
----@field woods? "light"|"heavy" Forest covering the ground.
+---@field ground BattleGroundName What the ground is made of; see btech.map.ground_types.
+---@field woods? BattleWoodsName Forest covering the ground; see btech.map.woods_types.
 ---@field water? {depth: integer, frozen: boolean} Standing water whose surface is at the ground level.
----@field structure? {kind: "building"|"wall", height: integer}|{kind: "bridge", deck: integer} Built feature; heights are above the ground level.
+---@field structure? {kind: "building"|"wall", height: integer}|{kind: "bridge", deck: integer} Built feature; heights are above the ground level. Kinds are in btech.map.structure_kinds.
 ---@field overlay? "fire"|"smoke" Fire or smoke over the hex; base tiles never have one.
 
 ---@class StoredBattleMap
@@ -134,9 +134,18 @@ function btech_template.loadout(name) end
 ---@field reveal_hint boolean|nil Defaults to false; disclose coordinates in location failures only when true.
 
 local btech_map = {}
----Terrain names accepted by set_hex and reported by hex and terrain queries.
+---Terrain names reported by btech.map.terrain.
 ---@type BattleTerrainTypes
 btech_map.terrain_types = {}
+---Ground names for a hex's ground field.
+---@type BattleGroundTypes
+btech_map.ground_types = {}
+---Woods densities for a hex's woods field.
+---@type BattleWoodsTypes
+btech_map.woods_types = {}
+---Structure kinds for the kind field of a hex's structure.
+---@type BattleStructureKinds
+btech_map.structure_kinds = {}
 
 ---Read the detached saved cargo location, or nil when the map has no location restriction.
 ---@param map integer
@@ -1007,15 +1016,14 @@ function btech_map.add_block(actor, dbref, x, y, radius, team) end
 ---@field before BattleHex
 ---@field after BattleHex
 
----Wizard live base-terrain edit. Retains unit altitude and overlays; does not cause combat falls.
+---Wizard live base-terrain edit replacing one hex's layers, in the shape btech.map.hex returns. Retains unit altitude and fire and smoke; does not cause combat falls. A hex with an overlay is rejected; use add_fire and add_smoke.
 ---@param actor integer
 ---@param dbref integer
 ---@param x integer
 ---@param y integer
----@param terrain BattleTerrainName Name from btech.map.terrain_types; fire and smoke are rejected, use add_fire and add_smoke.
----@param elevation integer Absolute magnitude capped at nine.
+---@param hex BattleHex
 ---@return BattleMapHexChange
-function btech_map.set_hex(actor, dbref, x, y, terrain, elevation) end
+function btech_map.set_hex(actor, dbref, x, y, hex) end
 
 ---@class BattleMapIceReport
 ---@field map integer
@@ -1075,7 +1083,7 @@ function btech_map.cargo_transfer_point(map) end
 ---@param point BattleCargoTransferPoint|nil
 function btech_map.set_cargo_transfer_point(map, point) end
 
----Read one tile elevation; water and ice report depth.
+---Read one hex's ground height. Water depth, structure heights and bridge decks are in btech.map.hex.
 ---@param map DbRef|Object
 ---@param hex BattleHexCoordinate
 ---@return integer elevation
@@ -1098,8 +1106,25 @@ function btech_map.elevation(map, hex) end
 ---@field BUILDING "building"
 ---@field WALL "wall"
 ---@field SAND "sand"
+---@alias BattleGroundName "clear"|"road"|"rough"|"mountains"|"snow"|"sand"
+---@class BattleGroundTypes
+---@field CLEAR "clear"
+---@field ROAD "road"
+---@field ROUGH "rough"
+---@field MOUNTAINS "mountains"
+---@field SNOW "snow"
+---@field SAND "sand"
+---@alias BattleWoodsName "light"|"heavy"
+---@class BattleWoodsTypes
+---@field LIGHT "light"
+---@field HEAVY "heavy"
+---@alias BattleStructureKind "building"|"wall"|"bridge"
+---@class BattleStructureKinds
+---@field BUILDING "building"
+---@field WALL "wall"
+---@field BRIDGE "bridge"
 
----Read one decoded terrain kind.
+---Read the one terrain feature a map shows for a hex: fire or smoke, then a structure, water, woods or the ground.
 ---@param map DbRef|Object
 ---@param hex BattleHexCoordinate
 ---@return BattleTerrainName terrain
@@ -1127,7 +1152,7 @@ function btech_map.line_of_sight(observer, target) end
 ---@param position BattlePlacement
 function btech_map.place_unit(unit, map, position) end
 
----Measure the spatial range between two units or positions on one map.
+---Measure the spatial range between two units or positions on one map. A position without z stands on the hex's surface.
 ---@param map DbRef|Object
 ---@param from DbRef|Object|BattlePlacement
 ---@param to DbRef|Object|BattlePlacement

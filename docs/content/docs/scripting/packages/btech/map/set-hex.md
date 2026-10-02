@@ -5,12 +5,12 @@ linkTitle: "set_hex"
 manualLinkTitle: "set_hex"
 ---
 
-Wizard live base-terrain edit. Retains unit altitude and overlays; does not cause combat falls.
+Wizard live base-terrain edit replacing one hex's layers, in the shape btech.map.hex returns. Retains unit altitude and fire and smoke; does not cause combat falls. A hex with an overlay is rejected; use add_fire and add_smoke.
 
 ## Signature
 
 ```lua
-btech.map.set_hex(actor, dbref, x, y, terrain, elevation)
+btech.map.set_hex(actor, dbref, x, y, hex)
 ```
 
 ## Parameters
@@ -21,8 +21,7 @@ btech.map.set_hex(actor, dbref, x, y, terrain, elevation)
 | `dbref` | `integer` |  |
 | `x` | `integer` |  |
 | `y` | `integer` |  |
-| `terrain` | `BattleTerrainName` | Name from btech.map.terrain_types; fire and smoke are rejected, use add_fire and add_smoke. |
-| `elevation` | `integer` | Absolute magnitude capped at nine. |
+| `hex` | `BattleHex` |  |
 
 ## Returns
 

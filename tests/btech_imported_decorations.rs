@@ -174,8 +174,7 @@ async fn replacing_imported_effects_preserves_underlying_terrain_and_clears_sour
         ObjectId(1),
         map,
         BattleHexCoordinate { x: 1, y: 1 },
-        Terrain::HeavyForest,
-        1,
+        BattleHex::new(Terrain::HeavyForest, 1),
     )
     .unwrap();
     assert_eq!(
@@ -200,8 +199,7 @@ async fn replacing_imported_effects_preserves_underlying_terrain_and_clears_sour
             ObjectId(1),
             map,
             BattleHexCoordinate { x: 1, y: 1 },
-            Terrain::Fire,
-            1,
+            BattleHex::new(Terrain::Fire, 1),
         )
         .is_err()
     );

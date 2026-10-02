@@ -137,7 +137,7 @@ pub fn propose_vehicle_ground_motion(
     if super::load::carries_load(world, id) {
         loaded.limit_load(
             maximum,
-            if maximum > 0.0 && matches!(current.terrain(), Terrain::Road | Terrain::Bridge) {
+            if maximum > 0.0 && (current.is_road() || current.has_bridge()) {
                 maximum + 10.75
             } else {
                 maximum

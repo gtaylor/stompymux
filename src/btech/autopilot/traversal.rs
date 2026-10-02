@@ -309,21 +309,19 @@ fn support_heights(
         }
     };
     let mut to_height = i32::from(to.standing_height());
-    if to.terrain() == Terrain::Ice && from_height < 0 {
+    if to.is_ice() && from_height < 0 {
         to_height = i32::from(to.surface_height());
     }
-    if to.terrain() == Terrain::Bridge && from_height < i32::from(to.standing_height()) - 2 {
+    if to.has_bridge() && from_height < i32::from(to.standing_height()) - 2 {
         to_height = -1;
     }
-    if kind == GroundUnitKind::Hover && matches!(to.terrain(), Terrain::Water | Terrain::Ice) {
+    if kind == GroundUnitKind::Hover && to.is_water_surface() {
         to_height = 0;
     }
     if kind == GroundUnitKind::Hover
         && to.deck_clearance().is_some_and(|deck| deck >= 2)
         && from_height == 0
-        && (from.terrain() == Terrain::Water
-            || from.terrain() == Terrain::Ice
-            || world.btech.vehicles()[&id].under_bridge())
+        && (from.is_open_water() || from.is_ice() || world.btech.vehicles()[&id].under_bridge())
     {
         to_height = 0;
     }
@@ -336,15 +334,14 @@ fn transition_reason(
     to: BattleHex,
     to_height: i32,
 ) -> (TraversalReason, u32) {
-    if matches!(to.terrain(), Terrain::Fire | Terrain::Smoke) {
+    if to.overlay().is_some() {
         return (TraversalReason::KnownHazard, 8);
     }
-    if to.terrain() == Terrain::Ice {
+    if to.is_ice() {
         return (TraversalReason::IceRisk, 8);
     }
-    if to.terrain() == Terrain::Bridge {
-        let under_bridge =
-            to_height < 0 || (kind == GroundUnitKind::Hover && from.terrain() == Terrain::Bridge);
+    if to.has_bridge() {
+        let under_bridge = to_height < 0 || (kind == GroundUnitKind::Hover && from.has_bridge());
         return (
             if under_bridge {
                 TraversalReason::BridgeRisk
@@ -354,11 +351,10 @@ fn transition_reason(
             if under_bridge { 8 } else { 1 },
         );
     }
-    if to.terrain() == Terrain::Water {
+    if to.is_open_water() {
         return (TraversalReason::WaterRisk, 12);
     }
-    if matches!(from.terrain(), Terrain::Ice | Terrain::Water)
-        && matches!(kind, GroundUnitKind::Tracked | GroundUnitKind::Wheeled)
+    if from.is_water_surface() && matches!(kind, GroundUnitKind::Tracked | GroundUnitKind::Wheeled)
     {
         return (TraversalReason::WaterRisk, 4);
     }

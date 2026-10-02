@@ -270,15 +270,14 @@
 // lua-types-end
 
 // lua-types-begin btech 00130
-//|---Wizard live base-terrain edit. Retains unit altitude and overlays; does not cause combat falls.
+//|---Wizard live base-terrain edit replacing one hex's layers, in the shape btech.map.hex returns. Retains unit altitude and fire and smoke; does not cause combat falls. A hex with an overlay is rejected; use add_fire and add_smoke.
 //|---@param actor integer
 //|---@param dbref integer
 //|---@param x integer
 //|---@param y integer
-//|---@param terrain BattleTerrainName Name from btech.map.terrain_types; fire and smoke are rejected, use add_fire and add_smoke.
-//|---@param elevation integer Absolute magnitude capped at nine.
+//|---@param hex BattleHex
 //|---@return BattleMapHexChange
-//|function btech_map.set_hex(actor, dbref, x, y, terrain, elevation) end
+//|function btech_map.set_hex(actor, dbref, x, y, hex) end
 // lua-types-end
 
 // lua-types-begin btech 00132
@@ -338,7 +337,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00141
-//|---Read one tile elevation; water and ice report depth.
+//|---Read one hex's ground height. Water depth, structure heights and bridge decks are in btech.map.hex.
 //|---@param map DbRef|Object
 //|---@param hex BattleHexCoordinate
 //|---@return integer elevation
@@ -346,7 +345,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00143
-//|---Read one decoded terrain kind.
+//|---Read the one terrain feature a map shows for a hex: fire or smoke, then a structure, water, woods or the ground.
 //|---@param map DbRef|Object
 //|---@param hex BattleHexCoordinate
 //|---@return BattleTerrainName terrain
@@ -378,7 +377,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00149
-//|---Measure the spatial range between two units or positions on one map.
+//|---Measure the spatial range between two units or positions on one map. A position without z stands on the hex's surface.
 //|---@param map DbRef|Object
 //|---@param from DbRef|Object|BattlePlacement
 //|---@param to DbRef|Object|BattlePlacement

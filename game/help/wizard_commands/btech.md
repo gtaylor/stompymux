@@ -485,10 +485,11 @@ to a positive magnitude and capped at nine. Units retain their physical altitude
 and current movement or flight state. Editing ice into water is a direct terrain
 edit; use `DELICE` to melt ice with normal occupant falls and flooding. Fire and
 smoke are not terrain: they lie over a tile without changing it, so use `ADDFIRE`
-and `ADDSMOKE` for them. Lua offers
-`btech.map.set_hex(actor, map, x, y, terrain, elevation)`, taking a name from
-`btech.map.terrain_types`, and returns the previous and resulting tiles. Occupied
-maps can be edited and saved without reloading their source assets.
+and `ADDSMOKE` for them. Lua offers `btech.map.set_hex(actor, map, x, y, hex)`,
+which takes the hex's layers in the shape `btech.map.hex` returns (for example
+`{level = 2, ground = btech.map.ground_types.ROAD}`) and returns the previous and
+resulting tiles. Occupied maps can be edited and saved without reloading their
+source assets. `btech.map.terrain` reports the terrain name in the table below.
 
 | Symbol | Terrain | Lua name | Elevation digit means |
 | --- | --- | --- | --- |

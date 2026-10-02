@@ -155,8 +155,7 @@ fn resolve_hex_shot_inner(
         !weapon.is_torpedo()
             || record
                 .base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?
-                .terrain()
-                == Terrain::Water,
+                .is_open_water(),
         "Torpedoes can only strike targets in the water!"
     );
     let aim = super::hex_aim::modifiers_for_source(

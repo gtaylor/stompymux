@@ -53,7 +53,7 @@ pub(super) fn pickup(
         super::unit_elevation(world, carrier)?.context("Carrier height unavailable")?;
     let target_height =
         super::unit_elevation(world, target)?.context("Target height unavailable")?;
-    let through_ice = tile.terrain() == Terrain::Ice && source_height >= 0 && target_height < 0;
+    let through_ice = tile.is_ice() && source_height >= 0 && target_height < 0;
     let hover = world
         .btech
         .vehicles()

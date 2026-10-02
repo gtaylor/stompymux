@@ -1,5 +1,5 @@
 //! Conventional heat accounting at the committed one-second simulation boundary.
-use super::{BattleNotice, BattlePower, BattleSystem, BattleUnit, Terrain};
+use super::{BattleNotice, BattlePower, BattleSystem, BattleUnit};
 use crate::{Flag, World};
 use anyhow::{Context, Result, bail, ensure};
 use serde::{Deserialize, Serialize};
@@ -151,7 +151,7 @@ impl BattleUnit {
         let tile = map
             .hex(i64::from(position.x), i64::from(position.y))
             .expect("validated placed unit terrain");
-        if tile.terrain() == Terrain::Fire {
+        if tile.is_burning() {
             rates.production += 5.0;
         }
         let tile = map

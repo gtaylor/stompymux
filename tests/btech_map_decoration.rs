@@ -246,7 +246,7 @@ async fn operator_decoration_replacement_and_admission() {
         saved.btech.maps()[&map].hex(0, 0).unwrap().terrain(),
         Terrain::Water
     );
-    assert_eq!(saved.btech.maps()[&map].hex(0, 0).unwrap().elevation(), 2);
+    assert_eq!(saved.btech.maps()[&map].hex(0, 0).unwrap().water_depth(), 2);
     assert!(!map_fire_pending(&saved));
 }
 

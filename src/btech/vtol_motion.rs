@@ -1,5 +1,5 @@
 //! Rotorcraft movement proposals share horizontal geometry and expose altitude consequences.
-use super::{BattleHex, BattleMotion, BattleVehicle, BattleVtolFlightPhase, Terrain};
+use super::{BattleHex, BattleMotion, BattleVehicle, BattleVtolFlightPhase};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 
@@ -43,11 +43,11 @@ impl BattleVtolMotionStep {
     /// Check the destination surface; horizontal path traversal remains the host's responsibility.
     pub fn surface_contact(self, hex: BattleHex) -> BattleVtolSurfaceContact {
         let altitude = self.elevation();
-        if hex.terrain() == Terrain::Water && altitude < 0 {
+        if hex.is_open_water() && altitude < 0 {
             return BattleVtolSurfaceContact::Water;
         }
         let surface = i32::from(hex.surface_height());
-        if altitude >= surface || (hex.terrain() == Terrain::Bridge && altitude != surface - 1) {
+        if altitude >= surface || (hex.has_bridge() && altitude != surface - 1) {
             return BattleVtolSurfaceContact::Clear;
         }
         BattleVtolSurfaceContact::Ground {

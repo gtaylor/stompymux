@@ -4689,7 +4689,7 @@ async fn woodland_clearing_on_occupied_map_is_durable_and_rejects_stale_results(
     );
     let report =
         apply_woodland_clearing(&mut world, map, coordinate, report.after, Terrain::Rough).unwrap();
-    assert_eq!(report.after.elevation(), 2);
+    assert_eq!(report.after.level(), 2);
     persistence::save(&config.database(), &world).await.unwrap();
     assert_eq!(
         persistence::load(&config.database()).await.unwrap().btech,
@@ -4915,7 +4915,7 @@ async fn calm_fire_spreads_smoke_then_burns_out_with_saved_replay() {
         burnt.terrain(),
         Terrain::Grassland | Terrain::Rough
     ));
-    assert_eq!(burnt.elevation(), 2);
+    assert_eq!(burnt.level(), 2);
     for x in 0..3 {
         let smoke = world.btech.maps()[&map]
             .decoration(BattleHexCoordinate { x, y: 0 })

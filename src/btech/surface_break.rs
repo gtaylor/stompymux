@@ -447,7 +447,7 @@ fn check_ice_landing_inner(
             false,
         )
     };
-    if tile.terrain() != Terrain::Ice || height < 0 || hover {
+    if !tile.is_ice() || height < 0 || hover {
         return Ok(None);
     }
     if super::dice::unit_dice_mut(world, id)?.d6() != 1 {

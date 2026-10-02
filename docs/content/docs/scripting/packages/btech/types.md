@@ -51,10 +51,10 @@ Alias: `"LeftArm"|"RightArm"|"LeftTorso"|"RightTorso"|"CenterTorso"|"LeftLeg"|"R
 ## BattleHex
 
 - `level`: `integer` — Ground height in levels; any water surface sits at this height.
-- `ground`: `"clear"|"road"|"rough"|"mountains"|"snow"|"sand"` — What the ground is made of.
-- `woods`: `"light"|"heavy"` — Forest covering the ground.
+- `ground`: `BattleGroundName` — What the ground is made of; see btech.map.ground_types.
+- `woods`: `BattleWoodsName` — Forest covering the ground; see btech.map.woods_types.
 - `water`: `{depth: integer, frozen: boolean}` — Standing water whose surface is at the ground level.
-- `structure`: `{kind: "building"|"wall", height: integer}|{kind: "bridge", deck: integer}` — Built feature; heights are above the ground level.
+- `structure`: `{kind: "building"|"wall", height: integer}|{kind: "bridge", deck: integer}` — Built feature; heights are above the ground level. Kinds are in btech.map.structure_kinds.
 - `overlay`: `"fire"|"smoke"` — Fire or smoke over the hex; base tiles never have one.
 
 ## StoredBattleMap
@@ -611,6 +611,38 @@ Alias: `"grassland"|"road"|"light_forest"|"heavy_forest"|"water"|"ice"|"bridge"|
 - `BUILDING`: `"building"`
 - `WALL`: `"wall"`
 - `SAND`: `"sand"`
+
+## BattleGroundName
+
+Alias: `"clear"|"road"|"rough"|"mountains"|"snow"|"sand"`
+
+## BattleGroundTypes
+
+- `CLEAR`: `"clear"`
+- `ROAD`: `"road"`
+- `ROUGH`: `"rough"`
+- `MOUNTAINS`: `"mountains"`
+- `SNOW`: `"snow"`
+- `SAND`: `"sand"`
+
+## BattleWoodsName
+
+Alias: `"light"|"heavy"`
+
+## BattleWoodsTypes
+
+- `LIGHT`: `"light"`
+- `HEAVY`: `"heavy"`
+
+## BattleStructureKind
+
+Alias: `"building"|"wall"|"bridge"`
+
+## BattleStructureKinds
+
+- `BUILDING`: `"building"`
+- `WALL`: `"wall"`
+- `BRIDGE`: `"bridge"`
 
 ## BattleLineOfSight
 

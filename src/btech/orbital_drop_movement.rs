@@ -6,18 +6,18 @@ use anyhow::{Context, Result, ensure};
 /// Resolve the upper support, lower bridge surface and chassis-specific touchdown level.
 fn surface(tile: BattleHex, elevation: i32, hover: bool) -> BattleDropSurface {
     let upper = i32::from(tile.standing_height());
-    let lower = if tile.terrain() == Terrain::Bridge {
+    let lower = if tile.has_bridge() {
         -1
     } else {
         i32::from(tile.surface_height())
     };
-    let landing = if tile.terrain() == Terrain::Bridge {
+    let landing = if tile.has_bridge() {
         if elevation < upper {
             if hover { 0 } else { lower }
         } else {
             upper
         }
-    } else if hover || (tile.terrain() == Terrain::Ice && elevation >= 0) {
+    } else if hover || (tile.is_ice() && elevation >= 0) {
         i32::from(tile.surface_height()).max(0)
     } else {
         i32::from(tile.surface_height())
@@ -309,7 +309,7 @@ fn touchdown(
     } else {
         let unit = world.btech.vehicles.get_mut(&id).unwrap();
         unit.ground_elevation = Some(f64::from(level));
-        unit.under_bridge = tile.terrain() == Terrain::Bridge
+        unit.under_bridge = tile.has_bridge()
             && level < i32::from(tile.surface_height())
             && unit.definition().movement == BattleVehicleMovement::Hover;
     }
@@ -378,7 +378,7 @@ fn touchdown(
         } else {
             super::surface_break::check_ice_landing
         };
-        if tile.terrain() != Terrain::Bridge
+        if !tile.has_bridge()
             && let Some(fracture) = check_ice(world, id, rules)?
         {
             super::piloting::append_feedback(
@@ -418,7 +418,7 @@ fn touchdown(
     if !input.combat_safe && !input.mech {
         let unit = &world.btech.vehicles()[&id];
         if !unit.is_destroyed()
-            && tile.terrain() == Terrain::Water
+            && tile.is_open_water()
             && unit.elevation_level(tile) < 0
             && !unit.definition().has_special("Waterproof_Tech")
         {

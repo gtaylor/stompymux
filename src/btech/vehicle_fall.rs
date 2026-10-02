@@ -116,8 +116,7 @@ pub(super) fn resolve_material_signed_with_tonnage(
                 .base_hex(i64::from(position.x), i64::from(position.y))
         })
         .transpose()?;
-    let below_ice =
-        tile.is_some_and(|tile| tile.terrain() == Terrain::Ice && unit.elevation_level(tile) < 0);
+    let below_ice = tile.is_some_and(|tile| tile.is_ice() && unit.elevation_level(tile) < 0);
     let tons = tonnage.unwrap_or(u32::from(unit.definition().tons));
     let gravity = position.and_then(|position| {
         let map = &world.btech.maps()[&position.map];

@@ -1,7 +1,5 @@
 //! Live ground-vehicle controls and traced travel with explicit boundaries for unresolved hazards.
-use super::{
-    BattleMotion, BattleMovementRules, BattleNotice, BattlePower, BattleVehicleMovement, Terrain,
-};
+use super::{BattleMotion, BattleMovementRules, BattleNotice, BattlePower, BattleVehicleMovement};
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
@@ -218,14 +216,13 @@ pub(super) fn advance(
             let next_under = vehicle.definition().movement == BattleVehicleMovement::Hover
                 && previous_height == 0
                 && tile.deck_clearance().is_some_and(|deck| deck >= 2)
-                && (under_bridge
-                    || matches!(previous_tile.terrain(), Terrain::Water | Terrain::Ice));
-            let height = if tile.terrain() == Terrain::Ice && previous_height < 0 {
+                && (under_bridge || previous_tile.is_water_surface());
+            let height = if tile.is_ice() && previous_height < 0 {
                 i32::from(tile.surface_height())
             } else {
                 vehicle.terrain_elevation(tile, next_under)
             };
-            let ice_check = tile.terrain() == Terrain::Ice && previous_height == 0;
+            let ice_check = tile.is_ice() && previous_height == 0;
             let change = height - previous_height;
             let water_check = super::vehicle_water::requires_check(vehicle, tile, height);
             entries.push(VehicleStep {
@@ -431,7 +428,7 @@ pub(super) fn advance(
                     let unit = &world.btech.vehicles()[&id];
                     if cliff
                         && change < 0
-                        && tile.terrain() == Terrain::Water
+                        && tile.is_open_water()
                         && unit.definition().movement != BattleVehicleMovement::Hover
                         && !unit.definition().has_special("Waterproof_Tech")
                     {
@@ -521,8 +518,7 @@ pub(super) fn advance(
             // Mines can ignite terrain; inspect the current overlay before its fire check.
             let burning = world.btech.maps()[&position.map]
                 .hex(i64::from(hex.x), i64::from(hex.y))?
-                .terrain()
-                == Terrain::Fire;
+                .is_burning();
             if burning && rules.fall.vehicle_impact.advanced_fire {
                 let before = world.clone();
                 let mut criticals = rules.fall.vehicle_impact.criticals;

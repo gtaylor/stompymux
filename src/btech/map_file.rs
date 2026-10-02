@@ -320,7 +320,7 @@ impl BattleMapAsset {
                     hex.water().is_some() && hex.structure().is_none(),
                     "bridge hex {x},{y} must be water or ice without another structure"
                 );
-                *hex = hex.with_structure(Structure::Bridge { deck: bridge.deck });
+                *hex = hex.with_structure(Some(Structure::Bridge { deck: bridge.deck }));
             }
         }
         let flags = match file.flags {

@@ -97,19 +97,19 @@ pub(super) fn replace_hex(
     Ok(report)
 }
 
-/// Wizard terrain change with the reference's absolute, capped elevation magnitude.
+/// Wizard terrain change replacing one hex's layers.
 /// Editing changes terrain facts without moving units or applying a combat fracture.
+/// Fire and smoke are not terrain and are rejected; they are added as map decorations.
 pub fn set_map_hex_action(
     scripts: &Scripts,
     config: &Config,
     actor: ObjectId,
     map: ObjectId,
     coordinate: BattleHexCoordinate,
-    terrain: Terrain,
-    elevation: i32,
+    hex: BattleHex,
 ) -> Result<BattleMapHexChange> {
     ensure!(
-        !matches!(terrain, Terrain::Fire | Terrain::Smoke),
+        hex.overlay().is_none(),
         "Fire and smoke are not terrain; use ADDFIRE or ADDSMOKE"
     );
     scripts.atomic(|before| {
@@ -125,12 +125,7 @@ pub fn set_map_hex_action(
                     && !object.flags.contains(crate::Flag::Going)),
             "Map is unavailable"
         );
-        let report = replace_hex(
-            &mut scripts.world_mut(),
-            map,
-            coordinate,
-            BattleHex::new(terrain, elevation.unsigned_abs().min(9) as u8),
-        )?;
+        let report = replace_hex(&mut scripts.world_mut(), map, coordinate, hex)?;
         super::notify_message(
             scripts,
             super::BattleMessageTarget::Player(actor),
@@ -151,6 +146,7 @@ fn terrain_argument(value: &str) -> Result<Terrain> {
 }
 
 /// Parse one coordinate, symbol and signed magnitude before authorizing an edit.
+/// The magnitude's absolute value, capped at nine, is the notation's digit.
 fn parse(arguments: &str) -> Result<(BattleHexCoordinate, Terrain, i32)> {
     let args: Vec<_> = arguments.split_whitespace().take(5).collect();
     ensure!(args.len() == 4, "Expected x y terrain elevation");
@@ -172,14 +168,17 @@ pub(crate) fn command(
     let result = (|| -> Result<()> {
         let (coordinate, terrain, elevation) = parse(&input.args)?;
         let map = super::special_dispatch::object(ctx)?;
+        ensure!(
+            !matches!(terrain, Terrain::Fire | Terrain::Smoke),
+            "Fire and smoke are not terrain; use ADDFIRE or ADDSMOKE"
+        );
         set_map_hex_action(
             ctx.scripts,
             ctx.config,
             ctx.player,
             map,
             coordinate,
-            terrain,
-            elevation,
+            BattleHex::new(terrain, elevation.unsigned_abs().min(9) as u8),
         )?;
         Ok(())
     })();

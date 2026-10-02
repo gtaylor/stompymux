@@ -1,5 +1,5 @@
 //! Chassis-independent fall damage, hit direction and heading change.
-use super::{BattleHex, BattleHitArc, Terrain};
+use super::{BattleHex, BattleHitArc};
 use anyhow::{Context, Result, ensure};
 
 /// Select the supporting surface for descent, including ice and passage below a bridge.
@@ -8,7 +8,7 @@ pub(super) fn surface(tile: BattleHex, elevation: i32) -> i16 {
     if i32::from(upper) <= elevation {
         return upper;
     }
-    if tile.terrain() == Terrain::Bridge {
+    if tile.has_bridge() {
         return -1;
     }
     tile.surface_height()
@@ -39,6 +39,7 @@ pub(super) fn direction(roll: u8) -> Result<(BattleHitArc, u16)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::btech::Terrain;
 
     #[test]
     fn descent_surface_preserves_decks_ice_and_submerged_passage() {
