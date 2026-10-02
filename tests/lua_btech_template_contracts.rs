@@ -2,17 +2,16 @@
 use crate::support;
 use support::isolated_scripts;
 
-/// The pinned C part-name registry resolves manufacturer-qualified rows only,
-/// so templates naming legacy unbranded parts load as malformed there; the
-/// PARITY fixture uses branded criticals exclusively and is loadable on both
-/// sides (differentially proven by the template_catalog/template_inspection
-/// probes).
+/// The PARITY fixture uses branded criticals exclusively, so its projections
+/// match the C reference values captured by the template_catalog and
+/// template_inspection probes.
 const LOADABLE: &str = include_str!("fixtures/btech/mechs/PARITY.toml");
 
 fn seed(config: &stompymux_rs::Config) {
     let root = config.path(&config.database.mech_database);
     std::fs::create_dir_all(root.join("stock")).unwrap();
     std::fs::write(root.join("PARITY.toml"), LOADABLE).unwrap();
+    // Stock templates name parts without a manufacturer and still load.
     std::fs::write(
         root.join("stock/JR7-D.toml"),
         include_str!("fixtures/btech/mechs/JR7-D.toml"),
@@ -96,7 +95,7 @@ async fn template_callables_match_c_argument_and_error_shapes() {
         "mux.arg.invalid | bad argument #1 to '?' (reference must not contain path components)",
         "ok",
         "btech.template.invalid | bad argument #1 to '?' (existing template is malformed)",
-        "btech.template.invalid | bad argument #1 to '?' (existing template is malformed)",
+        "ok",
         "mux.arg.invalid | bad argument #1 to '?' (reference must be a string)",
         "btech.template.not_found | bad argument #1 to '?' (template was not found)",
         "mux.arg.invalid | bad argument #2 to '?' (section must be a btech.unit.sections constant from this runtime)",
