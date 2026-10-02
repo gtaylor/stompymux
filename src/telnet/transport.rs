@@ -45,7 +45,7 @@ impl Stats {
     pub fn consumed(&self, n: u64) {
         let _ = self
             .input_pending
-            .fetch_update(Relaxed, Relaxed, |v| Some(v.saturating_sub(n)));
+            .try_update(Relaxed, Relaxed, |v| Some(v.saturating_sub(n)));
     }
 }
 /// One persistent zlib stream; compressed data is never converted back to plaintext midconnection.
