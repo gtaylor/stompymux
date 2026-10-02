@@ -57,8 +57,10 @@ async fn vehicles_cross_decks_and_hover_under_spans_without_changing_water_heigh
             let mut encoded = serde_json::to_value(&world.btech).unwrap();
             for row in 0..3 {
                 for column in [2, 8] {
-                    encoded["maps"][map.0.to_string()]["terrain"][row * 12 + column]["terrain"] =
-                        serde_json::to_value(Terrain::Ice).unwrap();
+                    crate::support::set_hex_terrain(
+                        &mut encoded["maps"][map.0.to_string()]["terrain"][row * 12 + column],
+                        Terrain::Ice,
+                    );
                 }
             }
             world.btech = serde_json::from_value(encoded).unwrap();
@@ -107,7 +109,10 @@ async fn low_spans_stop_hovercraft_and_inconsistent_saved_underpass_state_is_rej
     let (_dir, config, mut world, id, map) = fixture(true).await;
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     for row in 0..3 {
-        encoded["maps"][map.0.to_string()]["terrain"][row * 12 + 5]["elevation"] = 1.into();
+        crate::support::set_hex_elevation(
+            &mut encoded["maps"][map.0.to_string()]["terrain"][row * 12 + 5],
+            1,
+        );
     }
     world.btech = serde_json::from_value(encoded).unwrap();
     let mut stopped = false;
@@ -162,7 +167,10 @@ async fn low_spans_resolve_control_or_impact_before_restoring_hovercraft_positio
             value["pilot"] = serde_json::Value::Null;
         }
         for row in 0..3 {
-            saved["maps"][map.0.to_string()]["terrain"][row * 12 + 5]["elevation"] = 1.into();
+            crate::support::set_hex_elevation(
+                &mut saved["maps"][map.0.to_string()]["terrain"][row * 12 + 5],
+                1,
+            );
         }
         world.btech = serde_json::from_value(saved).unwrap();
         let rules = BattleMovementRules {

@@ -57,17 +57,17 @@ CREATE TABLE btech_vehicle_timers (
 
 -- btech_terrain.rs.
 -- Per-map encoding version and code dictionary. Maps without a header remain ambiguous.
+-- Each code names one distinct hex, stored as the JSON of its layers.
 CREATE TABLE btech_map_terrain (
     map_dbref INTEGER PRIMARY KEY REFERENCES btech_maps(dbref) ON DELETE CASCADE,
-    encoding_version INTEGER NOT NULL CHECK (encoding_version = 1)
+    encoding_version INTEGER NOT NULL CHECK (encoding_version = 2)
 );
 CREATE TABLE btech_map_terrain_codes (
     map_dbref INTEGER NOT NULL REFERENCES btech_map_terrain(map_dbref) ON DELETE CASCADE,
-    code INTEGER NOT NULL CHECK (code BETWEEN 0 AND 255),
-    terrain TEXT NOT NULL CHECK (length(terrain) = 1),
-    elevation INTEGER NOT NULL CHECK (elevation BETWEEN 0 AND 9),
+    code INTEGER NOT NULL CHECK (code BETWEEN 0 AND 65535),
+    hex TEXT NOT NULL CHECK (json_valid(hex)),
     PRIMARY KEY (map_dbref, code),
-    UNIQUE (map_dbref, terrain, elevation)
+    UNIQUE (map_dbref, hex)
 ) WITHOUT ROWID;
 
 -- btech_object_order.rs: explicit traversal order of a map's mines and landing exclusions.

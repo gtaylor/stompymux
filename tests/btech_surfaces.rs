@@ -3758,8 +3758,10 @@ async fn live_fire_and_smoke_tiles_allow_ground_crossings_without_control_dice()
         prepare_reverse_step(&mut world, id, 6);
         let mut state = serde_json::to_value(&world.btech).unwrap();
         // Asset loading normalizes overlays; represent the live tile explicitly.
-        state["maps"][map.0.to_string()]["terrain"][7]["terrain"] =
-            serde_json::to_value(terrain).unwrap();
+        crate::support::set_hex_terrain(
+            &mut state["maps"][map.0.to_string()]["terrain"][7],
+            terrain,
+        );
         world.btech = serde_json::from_value(state).unwrap();
         let before = serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();

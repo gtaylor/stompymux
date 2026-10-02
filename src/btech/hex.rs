@@ -2,10 +2,10 @@
 //!
 //! Each layer answers one question, so a hex can hold woods on a hill, ice over deep water or a
 //! bridge deck above a river without one value standing in for another. [`BattleHex::terrain`]
-//! and [`BattleHex::elevation`] still give the single-symbol view used by map files, persistence
-//! and most rules while those move onto the layers.
+//! and [`BattleHex::elevation`] still give the single-symbol view used by map files and
+//! classification rules while those move onto the layers.
 use super::Terrain;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 
 /// What the ground itself is made of, beneath any woods, water or structure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -42,7 +42,7 @@ pub struct Water {
 
 /// A built feature standing on the ground or spanning it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case", tag = "kind")]
 pub enum Structure {
     /// A building `height` levels tall.
     Building { height: u8 },
@@ -53,12 +53,17 @@ pub enum Structure {
 }
 
 /// A battlefield hex. Build one with [`BattleHex::new`] from its single-terrain description.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Saved and scripted as its layers; absent woods, water and structure are omitted.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct BattleHex {
     level: u8,
     ground: Ground,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     woods: Option<Woods>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     water: Option<Water>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     structure: Option<Structure>,
 }
 
@@ -288,43 +293,6 @@ impl BattleHex {
     }
 }
 
-impl PartialOrd for BattleHex {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for BattleHex {
-    /// Order by the single-symbol view, which is how saved terrain dictionaries are keyed.
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        (self.terrain(), self.elevation()).cmp(&(other.terrain(), other.elevation()))
-    }
-}
-
-/// The saved and scripted shape of a hex: its single-symbol view.
-#[derive(Serialize, Deserialize)]
-struct HexRecord {
-    terrain: Terrain,
-    elevation: u8,
-}
-
-impl Serialize for BattleHex {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        HexRecord {
-            terrain: self.terrain(),
-            elevation: self.elevation(),
-        }
-        .serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for BattleHex {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let record = HexRecord::deserialize(deserializer)?;
-        Ok(Self::new(record.terrain, record.elevation))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -337,10 +305,6 @@ mod tests {
                 let hex = BattleHex::new(terrain, elevation);
                 assert_eq!((hex.terrain(), hex.elevation()), (terrain, elevation));
                 let saved = serde_json::to_value(hex).unwrap();
-                assert_eq!(
-                    saved,
-                    serde_json::json!({"terrain": terrain, "elevation": elevation})
-                );
                 assert_eq!(serde_json::from_value::<BattleHex>(saved).unwrap(), hex);
             }
         }
@@ -414,23 +378,31 @@ mod tests {
         assert_eq!(building.level(), 0);
     }
 
+    /// Hexes are saved as their layers, leaving out the ones that are absent.
     #[test]
-    fn ordering_follows_the_single_symbol_view() {
-        let mut hexes = [
-            BattleHex::new(Terrain::Water, 2),
-            BattleHex::new(Terrain::Grassland, 9),
-            BattleHex::new(Terrain::Road, 0),
-            BattleHex::new(Terrain::Grassland, 1),
-        ];
-        hexes.sort();
+    fn saved_shape_names_each_layer() {
         assert_eq!(
-            hexes.map(|hex| (hex.terrain(), hex.elevation())),
-            [
-                (Terrain::Grassland, 1),
-                (Terrain::Grassland, 9),
-                (Terrain::Road, 0),
-                (Terrain::Water, 2),
-            ]
+            serde_json::to_value(BattleHex::new(Terrain::Grassland, 2)).unwrap(),
+            serde_json::json!({"level": 2, "ground": "clear"})
+        );
+        assert_eq!(
+            serde_json::to_value(BattleHex::new(Terrain::HeavyForest, 1)).unwrap(),
+            serde_json::json!({"level": 1, "ground": "clear", "woods": "heavy"})
+        );
+        assert_eq!(
+            serde_json::to_value(BattleHex::new(Terrain::Bridge, 3)).unwrap(),
+            serde_json::json!({
+                "level": 0,
+                "ground": "clear",
+                "water": {"depth": 1, "frozen": false},
+                "structure": {"kind": "bridge", "deck": 3}
+            })
+        );
+        assert!(
+            serde_json::from_value::<BattleHex>(
+                serde_json::json!({"terrain": "road", "elevation": 1})
+            )
+            .is_err()
         );
     }
 }

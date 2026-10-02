@@ -278,8 +278,10 @@ async fn bridge_edits_and_airborne_edits_preserve_physical_position() {
         let hover = world.btech.vehicles().contains_key(&unit);
         if hover {
             let mut state = serde_json::to_value(&world.btech).unwrap();
-            state["maps"][map.0.to_string()]["terrain"][11] =
-                serde_json::json!({"terrain":"bridge","elevation":4});
+            state["maps"][map.0.to_string()]["terrain"][11] = serde_json::to_value(
+                stompymux_rs::BattleHex::new(stompymux_rs::Terrain::Bridge, 4),
+            )
+            .unwrap();
             world.btech = serde_json::from_value(state).unwrap();
             firing::edit(&mut world, unit, |state| {
                 state["under_bridge"] = true.into();

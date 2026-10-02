@@ -19312,8 +19312,10 @@ fn prepare_test_club(world: &mut stompymux_rs::World, id: ObjectId) {
     let position = world.btech.constructed_units()[&id].position().unwrap();
     let index = usize::from(position.y) * world.btech.maps()[&position.map].width as usize
         + usize::from(position.x);
-    state["maps"][position.map.0.to_string()]["terrain"][index]["terrain"] =
-        serde_json::to_value(Terrain::LightForest).unwrap();
+    crate::support::set_hex_terrain(
+        &mut state["maps"][position.map.0.to_string()]["terrain"][index],
+        Terrain::LightForest,
+    );
     world.btech = serde_json::from_value(state).unwrap();
 }
 
@@ -19366,8 +19368,10 @@ async fn club_carry_lifecycle_and_guards() {
     let index = usize::from(position.y) * outside.btech.maps()[&position.map].width as usize
         + usize::from(position.x);
     let mut state = serde_json::to_value(&outside.btech).unwrap();
-    state["maps"][position.map.0.to_string()]["terrain"][index]["terrain"] =
-        serde_json::to_value(Terrain::Grassland).unwrap();
+    crate::support::set_hex_terrain(
+        &mut state["maps"][position.map.0.to_string()]["terrain"][index],
+        Terrain::Grassland,
+    );
     outside.btech = serde_json::from_value(state).unwrap();
     assert!(battle_club_profile(&outside, id, ObjectId(1), target, kick_rules()).is_ok());
     grab_battle_club(&mut outside, id, ObjectId(1), Some("-")).unwrap();
@@ -30450,7 +30454,8 @@ async fn active_probe_contacts_behind_walls_lock_but_refuse_direct_fire() {
         place_battle_unit(&mut world, target, map, 5, 2).unwrap();
         let mut state = serde_json::to_value(&world.btech).unwrap();
         state["maps"][map.0.to_string()]["terrain"][3 * 12 + 5] =
-            serde_json::json!({"terrain":"wall","elevation":5});
+            serde_json::to_value(stompymux_rs::BattleHex::new(stompymux_rs::Terrain::Wall, 5))
+                .unwrap();
         world.btech = serde_json::from_value(state).unwrap();
         assert!(battle_unit_terrain_los(&world, id, target).unwrap().blocked);
         shot_skill(&mut world, 30);
@@ -30571,7 +30576,11 @@ async fn airborne_target_woods_share_height_boundary_across_channels() {
             for clearance in [2, 3] {
                 let mut state = serde_json::to_value(&world.btech).unwrap();
                 state["maps"][map.0.to_string()]["terrain"][4 * 200 + 5] =
-                    serde_json::json!({"terrain":"heavy_forest","elevation":ground});
+                    serde_json::to_value(stompymux_rs::BattleHex::new(
+                        stompymux_rs::Terrain::HeavyForest,
+                        u8::try_from(ground).unwrap(),
+                    ))
+                    .unwrap();
                 state["constructed"][target.0.to_string()]["free_fall"] =
                     serde_json::to_value(BattleFreeFall::new(ground + clearance)).unwrap();
                 world.btech = serde_json::from_value(state).unwrap();
@@ -30726,8 +30735,10 @@ async fn tag_loss_geometry_damage_shutdown_and_validation() {
                 let map = world.btech.constructed_units()[&id].position().unwrap().map;
                 place_battle_unit(&mut world, target, map, 5, 2).unwrap();
                 let mut state = serde_json::to_value(&world.btech).unwrap();
-                state["maps"][map.0.to_string()]["terrain"][3 * 12 + 5] =
-                    serde_json::json!({"terrain":"wall","elevation":5});
+                state["maps"][map.0.to_string()]["terrain"][3 * 12 + 5] = serde_json::to_value(
+                    stompymux_rs::BattleHex::new(stompymux_rs::Terrain::Wall, 5),
+                )
+                .unwrap();
                 world.btech = serde_json::from_value(state).unwrap();
             }
         }
@@ -32116,8 +32127,10 @@ async fn direct_hex_shots_commit_launch_terrain_and_restart_replay() {
             .unwrap();
         let mut encoded = serde_json::to_value(&world.btech).unwrap();
         let width = world.btech.maps()[&map].width as usize;
-        encoded["maps"][map.0.to_string()]["terrain"][3 * width + 5]["terrain"] =
-            "heavy_forest".into();
+        crate::support::set_hex_terrain(
+            &mut encoded["maps"][map.0.to_string()]["terrain"][3 * width + 5],
+            stompymux_rs::Terrain::HeavyForest,
+        );
         world.btech = serde_json::from_value(encoded).unwrap();
         shot_skill(&mut world, if hit { 20 } else { 0 });
         select_battle_hex_target(&mut world, shooter, ObjectId(1), coordinate, mode).unwrap();
@@ -32350,8 +32363,10 @@ async fn hex_fire_native_lua_routing_and_character_rollback() {
                 .unwrap();
             let mut encoded = serde_json::to_value(&world.btech).unwrap();
             let width = world.btech.maps()[&map].width as usize;
-            encoded["maps"][map.0.to_string()]["terrain"][3 * width + 5]["terrain"] =
-                "heavy_forest".into();
+            crate::support::set_hex_terrain(
+                &mut encoded["maps"][map.0.to_string()]["terrain"][3 * width + 5],
+                stompymux_rs::Terrain::HeavyForest,
+            );
             world.btech = serde_json::from_value(encoded).unwrap();
             shot_skill(&mut world, 20);
             shot_seed(&mut world, shooter, 0);
@@ -32618,7 +32633,7 @@ async fn hex_surface_weapon_probability_and_replay() {
             let mut encoded = serde_json::to_value(&world.btech).unwrap();
             let width = world.btech.maps()[&map].width as usize;
             encoded["maps"][map.0.to_string()]["terrain"][4 * width + 5] =
-                serde_json::json!({"terrain": terrain, "elevation": 1});
+                serde_json::to_value(stompymux_rs::BattleHex::new(terrain, 1)).unwrap();
             world.btech = serde_json::from_value(encoded).unwrap();
             place_battle_unit(&mut world, target, map, 5, 4).unwrap();
             shot_skill(&mut world, 20);
@@ -32810,7 +32825,7 @@ async fn hex_surface_weapon_native_lua_character_rollback() {
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     let width = world.btech.maps()[&map].width as usize;
     encoded["maps"][map.0.to_string()]["terrain"][4 * width + 5] =
-        serde_json::json!({"terrain": "ice", "elevation": 1});
+        serde_json::to_value(stompymux_rs::BattleHex::new(stompymux_rs::Terrain::Ice, 1)).unwrap();
     world.btech = serde_json::from_value(encoded).unwrap();
     place_battle_unit(&mut world, target, map, 5, 4).unwrap();
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
@@ -33606,7 +33621,7 @@ async fn inferno_ammunition_hex_hits_apply_one_zero_damage_terrain_exposure() {
     let width = base.btech.maps()[&map].width as usize;
     let mut encoded = serde_json::to_value(&base.btech).unwrap();
     encoded["maps"][map.0.to_string()]["terrain"][4 * width + 5] =
-        serde_json::json!({"terrain":Terrain::HeavyForest,"elevation":0});
+        serde_json::to_value(stompymux_rs::BattleHex::new(Terrain::HeavyForest, 0)).unwrap();
     base.btech = serde_json::from_value(encoded).unwrap();
     for mode in [
         BattleHexTargetMode::Ignite,

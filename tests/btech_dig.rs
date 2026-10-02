@@ -437,8 +437,10 @@ async fn digging_checks_the_current_surface_before_starting() {
         let (_dir, _, mut world, id, _) = fixture(VEHICLE, MECH).await;
         let map = world.btech.vehicles()[&id].position().unwrap().map;
         let mut saved = serde_json::to_value(&world.btech).unwrap();
-        saved["maps"][map.0.to_string()]["terrain"][4]["terrain"] =
-            serde_json::to_value(terrain).unwrap();
+        crate::support::set_hex_terrain(
+            &mut saved["maps"][map.0.to_string()]["terrain"][4],
+            terrain,
+        );
         world.btech = serde_json::from_value(saved).unwrap();
         let before = world.btech.clone();
         let result = dig_battle_unit(&mut world, id, ObjectId(1));

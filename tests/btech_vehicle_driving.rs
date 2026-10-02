@@ -146,8 +146,10 @@ async fn vehicle_authored_terrain_shares_elevation_hazards_and_replay() {
                 set_battle_speed(&mut world, id, ObjectId(1), 64.5).unwrap();
                 let mut saved = serde_json::to_value(&world.btech).unwrap();
                 for cell in (0..3).flat_map(|y| (3..9).map(move |x| y * 20 + x)) {
-                    saved["maps"][map.0.to_string()]["terrain"][cell]["elevation"] =
-                        serde_json::json!(height);
+                    crate::support::set_hex_elevation(
+                        &mut saved["maps"][map.0.to_string()]["terrain"][cell],
+                        height,
+                    );
                 }
                 // Ordinary grass hills are the independent comparison for the same height profile.
                 world.btech = serde_json::from_value(saved.clone()).unwrap();
@@ -155,8 +157,10 @@ async fn vehicle_authored_terrain_shares_elevation_hazards_and_replay() {
                 for cell in (0..3)
                     .flat_map(|y| ((if height == 0 { 2 } else { 3 })..9).map(move |x| y * 20 + x))
                 {
-                    saved["maps"][map.0.to_string()]["terrain"][cell]["terrain"] =
-                        serde_json::to_value(terrain).unwrap();
+                    crate::support::set_hex_terrain(
+                        &mut saved["maps"][map.0.to_string()]["terrain"][cell],
+                        terrain,
+                    );
                 }
                 saved["maps"][map.0.to_string()]["decorations"]["23"] = serde_json::json!({"kind":"smoke", "remaining":120, "object_duration":120, "order":-1});
                 world.btech = serde_json::from_value(saved).unwrap();
@@ -1086,8 +1090,7 @@ async fn vehicle_water_entry_replays_avoidance_flooding_and_exemptions() {
         for row in 0..3 {
             for x in 3..20 {
                 let tile = &mut saved["maps"][map.0.to_string()]["terrain"][row * 20 + x];
-                tile["terrain"] = serde_json::to_value(Terrain::Water).unwrap();
-                tile["elevation"] = depth.into();
+                crate::support::set_hex(tile, Terrain::Water, depth);
             }
         }
         saved["maps"][map.0.to_string()]["decorations"]["23"] =
@@ -1239,8 +1242,7 @@ async fn vehicle_obstacles_share_checks_falls_configuration_and_replay() {
         for row in 0..3 {
             for x in 3..20 {
                 let tile = &mut saved["maps"][map.0.to_string()]["terrain"][row * 20 + x];
-                tile["terrain"] = serde_json::to_value(terrain).unwrap();
-                tile["elevation"] = 1.into();
+                crate::support::set_hex(tile, terrain, 1);
             }
         }
         saved["maps"][map.0.to_string()]["decorations"]["23"] =
@@ -1384,13 +1386,12 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
                 before.btech.vehicles()[&id].position()
             );
             assert_eq!(
-                serde_json::to_value(&world.btech.maps()[&map]).unwrap()["terrain"][43]["terrain"],
-                serde_json::to_value(if fracture {
+                world.btech.maps()[&map].hex(3, 2).unwrap().terrain(),
+                if fracture {
                     Terrain::Water
                 } else {
                     Terrain::Ice
-                })
-                .unwrap()
+                }
             );
             assert_eq!(
                 notices
@@ -1662,8 +1663,7 @@ async fn character_movement_collisions_publish_falls_and_rollback_casualties() {
                         ("water_cliff", true) => (Terrain::Water, 1),
                         _ => (Terrain::Grassland, 0),
                     };
-                    tile["terrain"] = serde_json::to_value(terrain).unwrap();
-                    tile["elevation"] = elevation.into();
+                    crate::support::set_hex(tile, terrain, elevation);
                 }
             }
             world.btech = serde_json::from_value(saved).unwrap();
@@ -1825,8 +1825,7 @@ async fn character_water_entry_preserves_occupants_and_replays_flooding() {
             for row in 0..3 {
                 for x in 3..20 {
                     let tile = &mut saved["maps"][map.0.to_string()]["terrain"][row * 20 + x];
-                    tile["terrain"] = serde_json::to_value(Terrain::Water).unwrap();
-                    tile["elevation"] = 1.into();
+                    crate::support::set_hex(tile, Terrain::Water, 1);
                 }
             }
             world.btech = serde_json::from_value(saved).unwrap();
