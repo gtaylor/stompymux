@@ -114,7 +114,7 @@ mod tests {
         }
     }
 
-    /// Layer-based answers match the terrain-based ones for every single-symbol hex.
+    /// Hex answers match the terrain answers for every hex the compact notation describes.
     #[test]
     fn hex_rules_match_terrain_rules() {
         for terrain in Terrain::ALL {

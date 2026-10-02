@@ -33,7 +33,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
 }
 
 /// The fixture map as saved: the permanent fire stays and the burning road saves as road.
-fn cleared() -> String {
+fn expected_file() -> String {
     BattleMapAsset::from_cells("2 1\n&2#1\n")
         .unwrap()
         .to_file()
@@ -127,7 +127,7 @@ async fn map_save_staging_callbacks_and_paths() {
     let saved = native.world().clone();
     persistence::save(&config.database(), &saved).await.unwrap();
     request.publish(&config).unwrap();
-    assert_eq!(std::fs::read_to_string(&path).unwrap(), cleared());
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), expected_file());
     for name in ["", "../escape", "/tmp/escape", "missing/asset", "bad\0name"] {
         assert!(MapAssetWrite::new(&config, ObjectId(1), name, "data".into()).is_err());
     }
@@ -169,7 +169,7 @@ async fn server_map_save_reports_completion() {
             client.until("Save field").await;
             client.send("savemap server.map").await;
             client.until("Saving complete!").await;
-            assert_eq!(std::fs::read_to_string(&path).unwrap(), cleared());
+            assert_eq!(std::fs::read_to_string(&path).unwrap(), expected_file());
             shutdown.send(ShutdownRequest::Sigterm).unwrap();
             task.await.unwrap().unwrap();
         })

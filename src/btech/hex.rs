@@ -426,7 +426,7 @@ mod tests {
         }
     }
 
-    /// The layer-based height rules give exactly the single-symbol answers they replaced.
+    /// Heights follow what the compact notation describes for every terrain and digit.
     #[test]
     fn heights_match_the_single_symbol_rules() {
         for terrain in Terrain::ALL {
