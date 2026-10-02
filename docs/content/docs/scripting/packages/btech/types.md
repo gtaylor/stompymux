@@ -588,7 +588,7 @@ Alias: `{mode: "offset", offset: integer}|{mode: "exact", x: integer, y: integer
 
 ## BattleTerrainName
 
-Alias: `"grassland"|"road"|"light_forest"|"heavy_forest"|"water"|"ice"|"bridge"|"high_water"|"rough"|"mountains"|"fire"|"smoke"|"snow"|"building"|"wall"|"sand"`
+Alias: `"grassland"|"road"|"light_forest"|"heavy_forest"|"water"|"ice"|"bridge"|"rough"|"mountains"|"fire"|"smoke"|"snow"|"building"|"wall"|"sand"`
 
 ## BattleTerrainTypes
 
@@ -599,7 +599,6 @@ Alias: `"grassland"|"road"|"light_forest"|"heavy_forest"|"water"|"ice"|"bridge"|
 - `WATER`: `"water"`
 - `ICE`: `"ice"`
 - `BRIDGE`: `"bridge"`
-- `HIGH_WATER`: `"high_water"`
 - `ROUGH`: `"rough"`
 - `MOUNTAINS`: `"mountains"`
 - `FIRE`: `"fire"`

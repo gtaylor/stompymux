@@ -241,7 +241,7 @@ impl BattleOrbitalDrop {
         };
         target += match input.terrain {
             Terrain::Grassland | Terrain::Road | Terrain::Sand => 0,
-            Terrain::Water | Terrain::HighWater => 2,
+            Terrain::Water => 2,
             _ => 3,
         };
         if input.absent_character_pilot {

@@ -4,7 +4,6 @@ use super::Terrain;
 /// Terrain colors shared by tactical and long-range displays; grassland keeps the default style.
 pub(super) fn terrain(terrain: Terrain, elevation: u8) -> &'static str {
     match terrain {
-        Terrain::HighWater => "[fg=blue]",
         Terrain::Water if elevation < 2 => "[fg=blue bold]",
         Terrain::Water => "[fg=blue]",
         Terrain::Building | Terrain::Ice | Terrain::Wall | Terrain::Snow => "[fg=white bold]",

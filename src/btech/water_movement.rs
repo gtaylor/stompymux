@@ -26,8 +26,7 @@ pub(super) fn enter_water(
         world.btech.maps()[&position.map].base_hex(i64::from(position.x), i64::from(position.y))?;
     let below_bridge = tile.terrain == Terrain::Bridge && unit.elevation_level(tile) < 0;
     let below_ice = tile.terrain == Terrain::Ice && unit.elevation_level(tile) < 0;
-    let high_water = tile.terrain == Terrain::HighWater;
-    if tile.terrain != Terrain::Water && !below_bridge && !below_ice && !high_water {
+    if tile.terrain != Terrain::Water && !below_bridge && !below_ice {
         return Ok(WaterEntryReport::default());
     }
     let depth = if below_bridge { 1 } else { tile.elevation };
@@ -35,7 +34,7 @@ pub(super) fn enter_water(
     let mut notices = Vec::new();
     let mut pilot_notices = Vec::new();
     let mut experience_messages = Vec::new();
-    if check && (depth > 0 || high_water) {
+    if check && depth > 0 {
         let walking = unit.movement_maximum_speed() * 2.0 / 3.0;
         let unit = world.btech.constructed.get_mut(&id).unwrap();
         let motion = unit
@@ -53,13 +52,8 @@ pub(super) fn enter_water(
             })
             .to_owned(),
         });
-        let modifier = if high_water {
-            -2
-        } else if depth > 3 {
-            1
-        } else {
-            i16::from(depth) - 2
-        } + if running { 2 } else { 0 };
+        let modifier =
+            if depth > 3 { 1 } else { i16::from(depth) - 2 } + if running { 2 } else { 0 };
         let mut control = super::roll_piloting(world, id, modifier, rules.extended_piloting)?;
         super::piloting::capture_feedback(id, pilot, &control, &mut notices, &mut pilot_notices);
         if falls.is_some() {

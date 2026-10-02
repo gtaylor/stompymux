@@ -16,7 +16,6 @@ The numbers below are native identifiers; pass the typed constants to Lua APIs.
 | `btech.map.terrain_types.WATER` | `"water"` |  |
 | `btech.map.terrain_types.ICE` | `"ice"` |  |
 | `btech.map.terrain_types.BRIDGE` | `"bridge"` |  |
-| `btech.map.terrain_types.HIGH_WATER` | `"high_water"` |  |
 | `btech.map.terrain_types.ROUGH` | `"rough"` |  |
 | `btech.map.terrain_types.MOUNTAINS` | `"mountains"` |  |
 | `btech.map.terrain_types.FIRE` | `"fire"` |  |

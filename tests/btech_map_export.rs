@@ -81,7 +81,7 @@ async fn export_base_smoke_and_all_canonical_tiles() {
         &mut world,
         map,
         "export",
-        BattleMapAsset::parse("15 1\n.0#1`2\"3~4-5/6?7%8^9&0.1+2@3=4\n8: 100 20\n").unwrap(),
+        BattleMapAsset::parse("15 1\n.0#1`2\"3~4-5/6}7%8^9&0.1+2@3=4\n8: 100 20\n").unwrap(),
     )
     .unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -97,7 +97,7 @@ async fn export_base_smoke_and_all_canonical_tiles() {
     let export = world.btech.maps()[&map].export_asset().unwrap();
     assert_eq!(
         export.source,
-        "15 1\n.0#1`2\"3~4-5/6?7%8^9&0.1+2@3=4\n8: 100 20\n"
+        "15 1\n.0#1`2\"3~4-5/6}7%8^9&0.1+2@3=4\n8: 100 20\n"
     );
     assert_eq!(
         export.stale_effects,

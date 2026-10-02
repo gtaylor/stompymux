@@ -314,7 +314,6 @@ fn landing_checks_speed_altitude_and_terrain_boundaries_atomically() {
         Terrain::Water,
         Terrain::Ice,
         Terrain::Bridge,
-        Terrain::HighWater,
         Terrain::LightForest,
         Terrain::HeavyForest,
         Terrain::Rough,
@@ -530,7 +529,6 @@ fn flight_surface_contact_distinguishes_water_bridge_clearance_and_ground_impact
         ),
         (-0.99, Terrain::Water, 5, BattleVtolSurfaceContact::Clear),
         (-1.0, Terrain::Water, 5, BattleVtolSurfaceContact::Water),
-        (-1.0, Terrain::HighWater, 5, BattleVtolSurfaceContact::Water),
         (5.0, Terrain::Bridge, 5, BattleVtolSurfaceContact::Clear),
         (
             4.0,

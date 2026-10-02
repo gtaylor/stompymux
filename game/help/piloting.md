@@ -74,7 +74,7 @@ without rolling while the pilot is unconscious; an already prone Mech retains
 its automatic-success exception.
 
 Use `jump <bearing> <range>` to engage jump jets toward a hex center. Grassland, roads,
-forests, rough ground, mountains, snow, sand, smoke, fire, water, high water, ice, bridges,
+forests, rough ground, mountains, snow, sand, smoke, fire, water, ice, bridges,
 buildings and walls are supported,
 including changes in elevation. Jump progress survives restart
 and pauses while the server is offline or unable to save. Jet damage and gravity

@@ -35,7 +35,6 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
             ('~', Terrain::Water),
             ('-', Terrain::Ice),
             ('/', Terrain::Bridge),
-            ('?', Terrain::HighWater),
             ('#', Terrain::Road),
             ('`', Terrain::LightForest),
             ('"', Terrain::HeavyForest),

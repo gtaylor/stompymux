@@ -290,9 +290,6 @@ fn terrain_cost(terrain: Terrain, kind: GroundUnitKind) -> Option<u32> {
         Terrain::Wall => return None,
         Terrain::Fire | Terrain::Smoke => 2,
         Terrain::Water | Terrain::Ice => 3,
-        // High water remains mechanically enterable, but receives a large
-        // penalty so a route chooses it only when ordinary ground is absent.
-        Terrain::HighWater => 5,
         // Elsewhere a route prefers terrain in proportion to the speed it costs.
         terrain => terrain.ground_speed_divisor(kind == GroundUnitKind::Wheeled) as u32,
     })
@@ -358,7 +355,7 @@ fn transition_reason(
             if under_bridge { 8 } else { 1 },
         );
     }
-    if matches!(to.terrain, Terrain::Water | Terrain::HighWater) {
+    if to.terrain == Terrain::Water {
         return (TraversalReason::WaterRisk, 12);
     }
     if matches!(from.terrain, Terrain::Ice | Terrain::Water)
@@ -532,7 +529,6 @@ mod tests {
             Terrain::Water,
             Terrain::Ice,
             Terrain::Bridge,
-            Terrain::HighWater,
             Terrain::Rough,
             Terrain::Mountains,
             Terrain::Fire,

@@ -228,12 +228,7 @@ fn landing_margins_chassis_multipliers_and_experience_match_reference_rules() {
         (result.target, result.margin, result.fall_levels),
         (Some(17), -30, 60)
     );
-    for (terrain, levels) in [
-        (Terrain::Water, 8),
-        (Terrain::HighWater, 8),
-        (Terrain::Ice, 12),
-        (Terrain::Road, 0),
-    ] {
+    for (terrain, levels) in [(Terrain::Water, 8), (Terrain::Ice, 12), (Terrain::Road, 0)] {
         let mut input = landing(5, 5);
         input.terrain = terrain;
         assert_eq!(touchdown(armored, input).fall_levels, levels);

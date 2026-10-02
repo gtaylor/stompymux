@@ -155,8 +155,8 @@ async fn prediction_handles_vehicle_targets_and_blocking_terrain() {
             ObjectId(1),
             map,
             BattleHexCoordinate { x: 0, y: 9 },
-            Terrain::HighWater,
-            1,
+            Terrain::Mountains,
+            9,
         )
         .unwrap();
         let world = scripts.world();
@@ -164,8 +164,16 @@ async fn prediction_handles_vehicle_targets_and_blocking_terrain() {
         let prediction =
             predict_battle_artillery_target(&world, shooter, target, BattleMovementRules::STANDARD)
                 .unwrap();
-        assert!(prediction.stopped);
-        assert_eq!(prediction.coordinate.y, if stationary { 10 } else { 9 });
+        // A sheer cliff stops every ground target; aircraft fly over it.
+        let vtol = world
+            .btech
+            .vehicles()
+            .get(&target)
+            .is_some_and(|v| v.definition().movement == BattleVehicleMovement::Vtol);
+        assert_eq!(prediction.stopped, !vtol);
+        if !vtol {
+            assert_eq!(prediction.coordinate.y, if stationary { 10 } else { 9 });
+        }
         assert_eq!(world.btech, before);
     }
 }

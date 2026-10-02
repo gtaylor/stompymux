@@ -136,7 +136,7 @@ async fn vehicle_authored_terrain_shares_elevation_hazards_and_replay() {
         BattleVehicleMovement::Wheeled,
         BattleVehicleMovement::Hover,
     ] {
-        for terrain in [Terrain::Building, Terrain::Wall, Terrain::HighWater] {
+        for terrain in [Terrain::Building, Terrain::Wall] {
             for height in [0, 1, 3] {
                 let (_dir, config, mut world, id, map) = fixture_movement(movement).await;
                 set_battle_heading(&mut world, id, ObjectId(1), 90.0).unwrap();
@@ -169,11 +169,8 @@ async fn vehicle_authored_terrain_shares_elevation_hazards_and_replay() {
                     let expected =
                         advance_battle_motion(&mut ordinary, BattleMovementRules::STANDARD)
                             .unwrap();
-                    // High-water falls retain their water damage reduction even when entry rolls back.
-                    if terrain != Terrain::HighWater || height <= 1 {
-                        assert_eq!(notices, expected);
-                        assert_eq!(world.btech.vehicles()[&id], ordinary.btech.vehicles()[&id]);
-                    }
+                    assert_eq!(notices, expected);
+                    assert_eq!(world.btech.vehicles()[&id], ordinary.btech.vehicles()[&id]);
                     entered |= world.btech.vehicles()[&id].position().unwrap().x >= 3;
                     hazard |= notices.iter().any(|notice| {
                         notice.text.contains("steep") || notice.text.contains("cliff")

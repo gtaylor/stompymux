@@ -848,7 +848,7 @@ fn resolve_ground_segment(
             let change = collision_height - last_surface;
             let checked_height =
                 change.abs() > 2 || (change != 0 && motion.speed < 0.0 && rules.roll_on_backwalk);
-            let enters_water = matches!(tile.terrain, Terrain::Water | Terrain::HighWater)
+            let enters_water = tile.terrain == Terrain::Water
                 || (tile.terrain == Terrain::Bridge && next_height < 0);
             if checked_height
                 || enters_water

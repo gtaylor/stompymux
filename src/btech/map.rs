@@ -14,7 +14,6 @@ pub enum Terrain {
     Water,
     Ice,
     Bridge,
-    HighWater,
     Rough,
     Mountains,
     Fire,
@@ -27,7 +26,7 @@ pub enum Terrain {
 
 impl Terrain {
     /// Every terrain, in symbol-table order.
-    pub const ALL: [Self; 16] = [
+    pub const ALL: [Self; 15] = [
         Self::Grassland,
         Self::Road,
         Self::LightForest,
@@ -35,7 +34,6 @@ impl Terrain {
         Self::Water,
         Self::Ice,
         Self::Bridge,
-        Self::HighWater,
         Self::Rough,
         Self::Mountains,
         Self::Fire,
@@ -56,7 +54,6 @@ impl Terrain {
             Self::Water => "water",
             Self::Ice => "ice",
             Self::Bridge => "bridge",
-            Self::HighWater => "high_water",
             Self::Rough => "rough",
             Self::Mountains => "mountains",
             Self::Fire => "fire",
@@ -86,7 +83,6 @@ impl Terrain {
             '~' => Self::Water,
             '-' => Self::Ice,
             '/' => Self::Bridge,
-            '?' => Self::HighWater,
             '%' => Self::Rough,
             '^' => Self::Mountains,
             '&' => Self::Fire,
@@ -109,7 +105,6 @@ impl Terrain {
             Self::Water => '~',
             Self::Ice => '-',
             Self::Bridge => '/',
-            Self::HighWater => '?',
             Self::Rough => '%',
             Self::Mountains => '^',
             Self::Fire => '&',

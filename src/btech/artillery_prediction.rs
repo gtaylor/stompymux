@@ -112,8 +112,7 @@ pub fn predict_artillery_target(
                                     && unit.definition().sections[section].rear > 0))
                     })
             });
-            stopped = tile.terrain == Terrain::HighWater
-                || (tile.terrain == Terrain::HeavyForest && vehicle.is_some())
+            stopped = (tile.terrain == Terrain::HeavyForest && vehicle.is_some())
                 || (tile.terrain == Terrain::Water
                     && matches!(
                         movement,
