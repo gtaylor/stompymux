@@ -19,7 +19,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse(template).unwrap(),
+        BattleVehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -34,12 +34,19 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 
 /// Demolisher with radar, a two-slot Beagle probe in front slots 0-1 and a Bloodhound in slot 2.
 fn equipped() -> String {
-    include_str!("../game/mechs/Demolisher")
-        .replace("ICEEngine_Tech", "ICEEngine_Tech AntiAircraft")
-        .replace(
-            "Front_Side\n",
-            "Front_Side\n CRIT_1-2 { BeagleProbe - - }\n CRIT_3 { BloodhoundProbe - - }\n",
-        )
+    support::templates::with_flags(
+        include_str!("../game/mechs/Demolisher.toml"),
+        &["AntiAircraft"],
+    )
+    .replace(
+        "[sections.front_side]\n",
+        r#"[sections.front_side]
+slots = [
+    { at = "1-2", item = "BeagleProbe" },
+    { at = 3, item = "BloodhoundProbe" },
+]
+"#,
+    )
 }
 
 /// The installed probe summary for a vehicle.
@@ -50,7 +57,7 @@ fn probe(world: &World, id: ObjectId) -> Option<BattleProbeProfile> {
 /// The `sensor` command and Lua share one read-only report and reject mode arguments.
 #[tokio::test]
 async fn vehicle_sensor_command_and_lua_share_the_perception_report() {
-    let (_dir, config, world, id) = fixture(include_str!("../game/mechs/Demolisher")).await;
+    let (_dir, config, world, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     let scripts = Scripts::new(
         &config,
         std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
@@ -121,8 +128,8 @@ async fn stationary_vehicles_extend_sensor_and_probe_reach() {
         (equipped(), 15, 8, 180),
         (
             equipped()
-                .replace("{ Track }", "{ None }")
-                .replace("{ 53.75 }", "{ 0 }"),
+                .replace("movement = \"track\"", "movement = \"none\"")
+                .replace("walk_mp = 5", "walk_mp = 0"),
             21,
             11,
             180,

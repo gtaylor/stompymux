@@ -1,0 +1,46 @@
+name = "Ishtar"
+class = "vehicle"
+movement = "wheel"
+tons = 65
+walk_mp = 5
+specials = ["ArtemisIV", "CL_AMS"]
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
+
+[sections.left_side]
+armor = 30
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 30
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 32
+slots = [
+    { at = "1-2", item = "CL.ERMediumLaser" },
+    { at = 3, item = "CL.Anti-MissileSystem" },
+    { at = 4, item = "Ammo_CL.Anti-MissileSystem", rounds = 24 },
+    { at = 5, item = "CL.LRM-15" },
+    { at = 6, item = "ArtemisIV" },
+    { at = "7-8", item = "Ammo_CL.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
+]
+
+[sections.aft_side]
+armor = 24
+
+[sections.turret]
+armor = 28
+slots = [
+    { at = 1, item = "CL.LB10-XAC" },
+    { at = 2, item = "Ammo_CL.LB10-XAC", rounds = 10 },
+    { at = 3, item = "Ammo_CL.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = 4, item = "CL.UltraAC/10" },
+    { at = "5-6", item = "Ammo_CL.UltraAC/10", rounds = 10 },
+]

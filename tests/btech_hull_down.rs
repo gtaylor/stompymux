@@ -1,9 +1,9 @@
 //! Quad hull-down timing, action rollback, movement admission and shared perception cover.
 use crate::support;
 use stompymux_rs::*;
-const QUAD: &str = include_str!("../game/mechs/SCP-1N");
-const MECH: &str = include_str!("fixtures/btech/mechs/JR7-D");
-const VEHICLE: &str = include_str!("../game/mechs/Demolisher");
+const QUAD: &str = include_str!("../game/mechs/SCP-1N.toml");
+const MECH: &str = include_str!("fixtures/btech/mechs/JR7-D.toml");
+const VEHICLE: &str = include_str!("../game/mechs/Demolisher.toml");
 
 /// A quad pilot and a separate observer looking across a one-level ridge.
 async fn fixture(
@@ -22,7 +22,7 @@ async fn fixture(
     let id = world.create(&config, "Quad".into(), Kind::Thing);
     let shooter = world.create(&config, "Observer".into(), Kind::Thing);
     for (id, source, x) in [(id, source, 2), (shooter, observer, 0)] {
-        BattleUnitTemplate::parse(source)
+        BattleUnitTemplate::parse("test", source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();
@@ -281,7 +281,7 @@ async fn hull_down_cover_is_shared_between_attackers_by_sensors_and_sight() {
 #[tokio::test]
 async fn pickup_clears_completed_quad_cover() {
     let (_dir, config, mut world, id, carrier) =
-        fixture(QUAD, include_str!("fixtures/btech/mechs/AS7-D")).await;
+        fixture(QUAD, include_str!("fixtures/btech/mechs/AS7-D.toml")).await;
     lower(&mut world, id);
     stop_battle_unit(
         &mut world,

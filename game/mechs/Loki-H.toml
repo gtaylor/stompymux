@@ -1,0 +1,62 @@
+name = "Loki"
+class = "mech"
+movement = "biped"
+tons = 65
+walk_mp = 8
+heat_sinks = 26
+specials = ["SearchLight"]
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+
+[sections.left_arm]
+armor = 11
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-5", item = "CL.HeavyLargeLaser" },
+]
+
+[sections.right_arm]
+armor = 11
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "CL.ERPPC" },
+]
+
+[sections.left_torso]
+armor = 14
+rear = 7
+slots = [
+    { at = "3-6", item = "CL.HeavySmallLaser" },
+    { at = 7, item = "BeagleProbe" },
+    { at = "8-9", item = "CL.LRM-15" },
+    { at = "10-11", item = "Ammo_CL.LRM-15", rounds = 8 },
+]
+
+[sections.right_torso]
+armor = 14
+rear = 7
+slots = [
+    { at = "3-5", item = "CL.UltraAC/5" },
+    { at = "6-7", item = "Ammo_CL.UltraAC/5", rounds = 20 },
+]
+
+[sections.center_torso]
+armor = 17
+rear = 8
+
+[sections.left_leg]
+armor = 15
+slots = [
+    { at = 5, item = "CL.A-Pod" },
+]
+
+[sections.right_leg]
+armor = 15
+slots = [
+    { at = 5, item = "CL.A-Pod" },
+]
+
+[sections.head]
+armor = 9

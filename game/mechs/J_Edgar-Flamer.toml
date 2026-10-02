@@ -1,0 +1,24 @@
+name = "J Edgar"
+class = "vehicle"
+movement = "hover"
+tons = 25
+walk_mp = 17
+
+[sections.left_side]
+armor = 19
+
+[sections.right_side]
+armor = 19
+
+[sections.front_side]
+armor = 30
+
+[sections.aft_side]
+armor = 12
+
+[sections.turret]
+armor = 24
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+    { at = "2-4", item = "IS.Flamer" },
+]

@@ -1,4 +1,5 @@
 //! Class-neutral BattleTech template state used by administrative and inspection contracts.
+use super::template_document::ParsedTemplate;
 use super::{
     BattleSection, BattleTemplate, BattleVehicleMovement, BattleVehicleSection,
     BattleVehicleTemplate, CriticalDefinition, SectionDefinition,
@@ -348,82 +349,59 @@ impl RawTemplate {
         }
     }
 
-    /// Decode bounded template syntax into class-neutral native state.
-    pub fn parse(source: &str) -> Result<Self> {
-        ensure_source_bound(source)?;
-        let mut class = RawUnitClass::Mech;
-        let mut movement = RawMovement::Biped;
-        let mut layouts = vec![SectionDefinition::default(); 8];
-        let mut active = None;
-        let mut attributes = BTreeMap::new();
-        let mut pending = String::new();
-        let mut pending_line = 0;
-        for (index, line) in source.lines().enumerate() {
-            let line = line.trim();
-            if pending.is_empty() && (line.is_empty() || line.starts_with('#')) {
-                continue;
-            }
-            if pending.is_empty() {
-                pending_line = index + 1;
-            }
-            if !pending.is_empty() {
-                pending.push(' ');
-            }
-            pending.push_str(line);
-            if pending.contains('{') && !pending.contains('}') {
-                continue;
-            }
-            apply_record(
-                &pending,
-                &mut class,
-                &mut movement,
-                &mut active,
-                &mut layouts,
-                &mut attributes,
-            )
-            .with_context(|| format!("template line {pending_line}"))?;
-            pending.clear();
-        }
-        if !pending.is_empty() {
-            bail!("unclosed template field on line {pending_line}");
-        }
-        let sections = RawSectionCode::for_unit(class, movement)
+    /// Decode a TOML template document whose file stem is `reference` into class-neutral native state.
+    pub fn parse(reference: &str, source: &str) -> Result<Self> {
+        Self::from_parsed(ParsedTemplate::parse(reference, source)?)
+    }
+
+    /// Place decoded sections by class anatomy, narrowing values to native storage.
+    pub(super) fn from_parsed(parsed: ParsedTemplate) -> Result<Self> {
+        let ParsedTemplate { fields, sections } = parsed;
+        let class = fields
+            .get("type")
+            .map(|value| RawUnitClass::parse(value))
+            .transpose()?
+            .unwrap_or(RawUnitClass::Mech);
+        let movement = fields
+            .get("move_type")
+            .map(|value| RawMovement::parse(value))
+            .transpose()?
+            .unwrap_or(RawMovement::Biped);
+        let mut layouts: BTreeMap<_, _> = RawSectionCode::for_unit(class, movement)
             .iter()
-            .copied()
-            .enumerate()
-            .map(|(index, section)| (section, layouts[index].clone()))
+            .map(|section| (*section, SectionDefinition::default()))
             .collect();
-        let specials = attributes.get("specials").map(String::as_str).unwrap_or("");
-        let authored_sinks = parse_i32_field(&attributes, "heat_sinks")?.clamp(-128, 127);
-        let heat_sinks = if authored_sinks == 0
-            && !specials
-                .split_ascii_whitespace()
-                .any(|flag| flag.eq_ignore_ascii_case("ICEEngine_Tech"))
-        {
-            10
-        } else {
-            authored_sinks
-        };
+        for (heading, mut layout) in sections {
+            let section = RawSectionCode::parse_template_heading(class, movement, &heading)?;
+            layout.armor = layout.armor.min(255);
+            layout.internal = layout.internal.min(255);
+            layout.rear = layout.rear.min(255);
+            layouts.insert(section, layout);
+        }
+        let heat_sinks = loaded_heat_sinks(&fields)?;
         Ok(Self {
-            name: attributes.get("name").cloned().unwrap_or_default(),
-            reference: attributes.get("reference").cloned().unwrap_or_default(),
+            name: fields.get("name").cloned().unwrap_or_default(),
+            reference: fields.get("reference").cloned().unwrap_or_default(),
             class,
             movement,
-            tons: parse_i32_field(&attributes, "tons")?,
-            max_speed: parse_f32_field(&attributes, "max_speed")?,
-            jump_speed: parse_f32_field(&attributes, "jump_speed")?,
+            tons: parse_i32_field(&fields, "tons")?,
+            max_speed: parse_f32_field(&fields, "max_speed")?,
+            jump_speed: parse_f32_field(&fields, "jump_speed")?,
             heat_sinks,
-            sections,
-            attributes,
+            sections: layouts,
+            attributes: fields,
         })
     }
 }
 
-fn ensure_source_bound(source: &str) -> Result<()> {
-    if source.len() > 1_048_576 {
-        bail!("template exceeds size limit");
-    }
-    Ok(())
+/// Authored sinks narrowed to native storage; non-ICE units without any receive the loader default.
+fn loaded_heat_sinks(fields: &BTreeMap<String, String>) -> Result<i32> {
+    let specials = fields.get("specials").map(String::as_str).unwrap_or("");
+    let authored = parse_i32_field(fields, "heat_sinks")?.clamp(-128, 127);
+    let ice = specials
+        .split_ascii_whitespace()
+        .any(|flag| flag.eq_ignore_ascii_case("ICEEngine_Tech"));
+    Ok(if authored == 0 && !ice { 10 } else { authored })
 }
 
 fn parse_i32_field(fields: &BTreeMap<String, String>, name: &str) -> Result<i32> {
@@ -444,189 +422,6 @@ fn parse_f32_field(fields: &BTreeMap<String, String>, name: &str) -> Result<f64>
         bail!("invalid {name}");
     }
     Ok(f64::from(value))
-}
-
-fn apply_record(
-    record: &str,
-    class: &mut RawUnitClass,
-    movement: &mut RawMovement,
-    active: &mut Option<usize>,
-    layouts: &mut [SectionDefinition],
-    attributes: &mut BTreeMap<String, String>,
-) -> Result<()> {
-    let Some((name, rest)) = record.split_once('{') else {
-        let section = RawSectionCode::parse_template_heading(*class, *movement, record)?;
-        *active = RawSectionCode::for_unit(*class, *movement)
-            .iter()
-            .position(|candidate| *candidate == section);
-        return Ok(());
-    };
-    let (value, tail) = rest.split_once('}').context("unclosed template field")?;
-    if value.contains('{') || !tail.trim().is_empty() {
-        bail!("invalid template field delimiters");
-    }
-    let name = name.trim().to_ascii_lowercase();
-    let value = value.trim();
-    if name.starts_with("crit_") {
-        let section = active.context("critical outside a section")?;
-        let (first, last) = raw_critical_range(&name)?;
-        let definition = parse_raw_equipment(value)?;
-        for slot in first..=last {
-            layouts[section].criticals.insert(slot, definition.clone());
-        }
-        return Ok(());
-    }
-    if matches!(name.as_str(), "armor" | "internals" | "rear" | "config") {
-        let section = active.context("section field outside a section")?;
-        match name.as_str() {
-            "armor" => layouts[section].armor = u16::from(parse_clamped_u8(value, "armor")?),
-            "internals" => {
-                layouts[section].internal = u16::from(parse_clamped_u8(value, "internals")?)
-            }
-            "rear" => layouts[section].rear = u16::from(parse_clamped_u8(value, "rear")?),
-            "config" => layouts[section].configuration = Some(value.to_owned()),
-            _ => unreachable!(),
-        }
-        return Ok(());
-    }
-    const COMMANDS: &[&str] = &[
-        "reference",
-        "type",
-        "move_type",
-        "tons",
-        "tac_range",
-        "lrs_range",
-        "radio_range",
-        "scan_range",
-        "heat_sinks",
-        "max_speed",
-        "specials",
-        "computer",
-        "name",
-        "jump_speed",
-        "radio",
-        "si",
-        "fuel",
-        "comment",
-        "radiotype",
-        "cargo_space",
-        "max_suits",
-        "infantryspecials",
-        "max_ton",
-        "hsengoverride",
-        "unit_era",
-        "unit_tro",
-    ];
-    if !COMMANDS.contains(&name.as_str()) {
-        bail!("unsupported template field {name}");
-    }
-    match name.as_str() {
-        "type" => *class = RawUnitClass::parse(value)?,
-        "move_type" => *movement = RawMovement::parse(value)?,
-        "tons" | "tac_range" | "lrs_range" | "radio_range" | "scan_range" | "heat_sinks"
-        | "computer" | "radio" | "si" | "fuel" | "radiotype" | "cargo_space" | "max_suits"
-        | "max_ton" | "hsengoverride" => {
-            value
-                .parse::<i32>()
-                .with_context(|| format!("invalid {name}"))?;
-        }
-        "max_speed" | "jump_speed" => {
-            let parsed: f32 = value.parse().with_context(|| format!("invalid {name}"))?;
-            if !parsed.is_finite() {
-                bail!("invalid {name}");
-            }
-        }
-        _ => {}
-    }
-    if matches!(name.as_str(), "specials" | "infantryspecials") {
-        let combined = attributes.entry(name).or_default();
-        append_unique_flags(combined, value);
-    } else if name != "comment" {
-        attributes.insert(name, value.to_owned());
-    }
-    Ok(())
-}
-
-fn append_unique_flags(combined: &mut String, value: &str) {
-    for flag in value.split_ascii_whitespace().filter(|flag| *flag != "-") {
-        if combined
-            .split_ascii_whitespace()
-            .any(|existing| existing.eq_ignore_ascii_case(flag))
-        {
-            continue;
-        }
-        if !combined.is_empty() {
-            combined.push(' ');
-        }
-        combined.push_str(flag);
-    }
-}
-
-fn parse_clamped_u8(value: &str, label: &str) -> Result<u8> {
-    let value: i32 = value.parse().with_context(|| format!("invalid {label}"))?;
-    Ok(value.clamp(0, 255) as u8)
-}
-
-fn raw_critical_range(name: &str) -> Result<(u8, u8)> {
-    let range = name
-        .strip_prefix("crit_")
-        .context("invalid critical heading")?;
-    let (first, last) = range.split_once('-').unwrap_or((range, range));
-    let first: i32 = first.parse().context("invalid first critical position")?;
-    let last: i32 = last.parse().context("invalid last critical position")?;
-    if first <= 0 || first > last || last > 12 {
-        bail!("critical positions must be between 1 and 12 in ascending order");
-    }
-    Ok(((first - 1) as u8, (last - 1) as u8))
-}
-
-fn parse_raw_equipment(value: &str) -> Result<CriticalDefinition> {
-    let words: Vec<_> = value.split_whitespace().collect();
-    if words.len() < 3
-        && words
-            .first()
-            .is_some_and(|name| super::BattleSystem::parse(name).is_ok())
-    {
-        return Ok(CriticalDefinition {
-            equipment: words[0].to_owned(),
-            data: words.get(1).unwrap_or(&"-").to_string(),
-            modes: Vec::new(),
-            brand: None,
-        });
-    }
-    if words.len() < 3 {
-        bail!("expected equipment, data, modes, and optional brand");
-    }
-    let ammunition = super::equipment::strip_name_prefix(words[0], "Ammo_").is_some();
-    if !ammunition && words.len() > 4 {
-        bail!("expected equipment, data, modes, and optional brand");
-    }
-    let mut end = words.len();
-    let mut brand = None;
-    if words.len() > 3 {
-        let last = words[end - 1];
-        let numeric = last.strip_prefix(['+', '-']).unwrap_or(last);
-        if ammunition && last == "-" {
-            end -= 1;
-        } else if !ammunition
-            || (!numeric.is_empty() && numeric.bytes().all(|c| c.is_ascii_digit()))
-        {
-            let parsed: i32 = last.parse().context("invalid equipment brand")?;
-            brand = Some(parsed.clamp(0, 255) as u8);
-            end -= 1;
-        }
-    }
-    Ok(CriticalDefinition {
-        equipment: words[0].to_owned(),
-        data: words[1].to_owned(),
-        modes: words[2..end]
-            .iter()
-            .filter(|word| **word != "-")
-            .flat_map(|word| word.split('|'))
-            .map(str::to_owned)
-            .collect(),
-        brand,
-    })
 }
 
 impl From<&BattleTemplate> for RawTemplate {
@@ -797,10 +592,12 @@ mod tests {
     #[test]
     fn parses_noncombat_classes_without_a_runtime_constructor() {
         let template = RawTemplate::parse(
-            "Type { AeroFighter }\nMove_Type { Fly }\nTons { 90 }\nNose\nArmor { 67 }\nInternals { 9 }\n",
+            "AERO",
+            "class = \"aerofighter\"\nmovement = \"fly\"\ntons = 90\n[sections.nose]\narmor = 67\ninternals = 9\n",
         )
         .unwrap();
         assert_eq!(template.class, RawUnitClass::AeroFighter);
+        assert_eq!(template.reference, "AERO");
         assert_eq!(template.sections.len(), 4);
         assert_eq!(template.sections[&RawSectionCode::Nose].armor, 67);
         assert_eq!(template.sections[&RawSectionCode::AftSide].armor, 0);
@@ -820,34 +617,38 @@ mod tests {
     #[test]
     fn source_integers_follow_native_signed_and_narrow_storage() {
         let template = RawTemplate::parse(
-            "Tons { -2147483648 }\nHeat_Sinks { 999 }\nHead\nArmor { -1 }\nInternals { 256 }\nRear { 2147483647 }\n",
+            "X",
+            "tons = -2147483648\nheat_sinks = 999\n[sections.head]\narmor = 300\ninternals = 256\nrear = 65535\n",
         )
         .unwrap();
         assert_eq!(template.tons, i32::MIN);
         assert_eq!(template.heat_sinks, 127);
         let head = &template.sections[&RawSectionCode::Head];
-        assert_eq!((head.armor, head.internal, head.rear), (0, 255, 255));
-        assert!(RawTemplate::parse("Tons { 2147483648 }").is_err());
-        assert!(RawTemplate::parse("Head\nArmor { --1 }").is_err());
+        assert_eq!((head.armor, head.internal, head.rear), (255, 255, 255));
+        assert!(RawTemplate::parse("X", "tons = 2147483648").is_err());
+        assert!(RawTemplate::parse("X", "[sections.head]\narmor = -1").is_err());
     }
 
     #[test]
-    fn ordered_records_revisit_sections_accumulate_flags_and_remap_indices() {
+    fn sections_follow_class_anatomy_and_flags_merge_case_insensitively() {
         let template = RawTemplate::parse(
-            "Left_Arm\nArmor { 1 }\nLeft_Arm\nArmor { 2 }\nSpecials { Clan }\nSpecials { ECM Clan }\nType { AeroFighter }\nMove_Type { Fly }\n",
+            "X",
+            "class = \"aerofighter\"\nmovement = \"fly\"\nspecials = [\"ECM\", \"ecm\"]\n[construction]\ntech_base = \"clan\"\n[sections.left_wing]\narmor = 2\n",
         )
         .unwrap();
         assert_eq!(template.class, RawUnitClass::AeroFighter);
-        assert_eq!(template.sections[&RawSectionCode::Nose].armor, 2);
+        assert_eq!(template.sections[&RawSectionCode::LeftWing].armor, 2);
         assert_eq!(template.attributes["specials"], "Clan ECM");
-        assert!(RawTemplate::parse("Unknown_Field { 1 }").is_err());
+        assert!(RawTemplate::parse("X", "[sections.left_arm]\n[sections.LEFT_ARM]").is_err());
+        assert!(RawTemplate::parse("X", "class = \"aerofighter\"\n[sections.left_arm]").is_err());
+        assert!(RawTemplate::parse("X", "unknown_field = 1").is_err());
     }
 
     #[test]
     fn missing_heat_sinks_receive_only_the_non_ice_loader_default() {
-        assert_eq!(RawTemplate::parse("").unwrap().heat_sinks, 10);
+        assert_eq!(RawTemplate::parse("X", "").unwrap().heat_sinks, 10);
         assert_eq!(
-            RawTemplate::parse("Specials { ICEEngine_Tech }")
+            RawTemplate::parse("X", "[construction]\nengine = \"ice\"")
                 .unwrap()
                 .heat_sinks,
             0

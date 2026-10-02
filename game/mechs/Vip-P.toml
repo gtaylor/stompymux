@@ -1,0 +1,71 @@
+name = "Viper"
+class = "mech"
+movement = "biped"
+tons = 75
+walk_mp = 8
+jump_mp = 5
+heat_sinks = 26
+computer = 4
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+
+[sections.left_arm]
+armor = 22
+slots = [
+    { at = "5-7", item = "FerroFibrous" },
+    { at = "8-10", item = "EndoSteel" },
+    { at = 11, item = "CL.MachineGun" },
+    { at = 12, item = "Ammo_CL.MachineGun", rounds = 200 },
+]
+
+[sections.right_arm]
+armor = 22
+slots = [
+    { at = "5-7", item = "FerroFibrous" },
+    { at = "8-10", item = "EndoSteel" },
+]
+
+[sections.left_torso]
+armor = 22
+rear = 10
+slots = [
+    { at = "3-4", item = "CL.LargePulseLaser", modes = ["OnTC"] },
+    { at = 5, item = "CL.MediumPulseLaser", modes = ["OnTC"] },
+    { at = "6-7", item = "CL.SmallPulseLaser", modes = ["OnTC"] },
+]
+
+[sections.right_torso]
+armor = 22
+rear = 10
+slots = [
+    { at = "3-4", item = "CL.LargePulseLaser", modes = ["OnTC"] },
+    { at = 5, item = "CL.MediumPulseLaser", modes = ["OnTC"] },
+    { at = "6-7", item = "CL.SmallPulseLaser", modes = ["OnTC"] },
+    { at = "8-12", item = "TargetingComputer" },
+]
+
+[sections.center_torso]
+armor = 30
+rear = 12
+slots = [
+    { at = 11, item = "EndoSteel" },
+    { at = 12, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 26
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 26
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9

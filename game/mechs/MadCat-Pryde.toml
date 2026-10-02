@@ -1,0 +1,80 @@
+name = "MadCat"
+class = "mech"
+movement = "biped"
+tons = 75
+walk_mp = 8
+jump_mp = 4
+heat_sinks = 32
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 24
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "HeatSink" },
+    { at = 6, item = "CL.ERLargeLaser" },
+    { at = 7, item = "CL.ERMediumLaser" },
+    { at = 8, item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 24
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "CL.ERLargeLaser" },
+    { at = 5, item = "CL.ERMediumLaser" },
+    { at = 6, item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 25
+rear = 7
+slots = [
+    { at = "3-4", item = "JumpJet" },
+    { at = "5-8", item = "CL.LRM-20" },
+    { at = 9, item = "Ammo_CL.LRM-20", rounds = 6 },
+    { at = 10, item = "EndoSteel" },
+    { at = "11-12", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 25
+rear = 7
+slots = [
+    { at = "3-4", item = "JumpJet" },
+    { at = "5-8", item = "CL.LRM-20" },
+    { at = 9, item = "Ammo_CL.LRM-20", rounds = 6 },
+    { at = 10, item = "EndoSteel" },
+    { at = "11-12", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 36
+rear = 9
+slots = [
+    { at = 11, item = "CL.ERSmallLaser" },
+    { at = 12, item = "EndoSteel" },
+]
+
+[sections.left_leg]
+armor = 32
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 32
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

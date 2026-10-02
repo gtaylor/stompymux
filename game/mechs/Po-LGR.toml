@@ -1,0 +1,41 @@
+name = "Po"
+class = "vehicle"
+movement = "track"
+tons = 60
+walk_mp = 6
+tac_range = 30
+lrs_range = 60
+scan_range = 30
+cargo_space = 0
+max_suits = 0
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 30
+slots = [
+    { at = 1, item = "IS.MachineGun", brand = 3 },
+]
+
+[sections.right_side]
+armor = 30
+slots = [
+    { at = 1, item = "IS.MachineGun", brand = 3 },
+]
+
+[sections.front_side]
+armor = 36
+
+[sections.aft_side]
+armor = 24
+
+[sections.turret]
+armor = 24
+slots = [
+    { at = 1, item = "IS.MachineGun", brand = 3 },
+    { at = 2, item = "IS.LightGaussRifle", brand = 3 },
+    { at = "3-5", item = "Ammo_IS.LightGaussRifle", rounds = 16 },
+    { at = 6, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload", "Halfton"] },
+    { at = 12, item = "Case", brand = 3 },
+]

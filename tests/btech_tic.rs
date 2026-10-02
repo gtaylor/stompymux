@@ -6,22 +6,27 @@ use stompymux_rs::*;
 #[tokio::test]
 async fn tic_membership_native_lua_and_persistence() {
     for source in [
-        include_str!("../game/mechs/JR7-D"),
-        include_str!("../game/mechs/Demolisher"),
-        include_str!("../game/mechs/Kestrel"),
+        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/mechs/Kestrel.toml"),
     ] {
         let (_dir, config, mut world) = support::isolated_world().await;
         let id = world.create(&config, "TIC unit".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        if source.contains("Rotor") || source.contains("Turret") {
+        if source.contains("[sections.rotor]") || source.contains("[sections.turret]") {
             create_battle_vehicle(
                 &mut world,
                 id,
-                BattleVehicleTemplate::parse(source).unwrap(),
+                BattleVehicleTemplate::parse("test", source).unwrap(),
             )
             .unwrap();
         } else {
-            create_battle_unit(&mut world, id, BattleTemplate::parse(source).unwrap()).unwrap();
+            create_battle_unit(
+                &mut world,
+                id,
+                BattleTemplate::parse("test", source).unwrap(),
+            )
+            .unwrap();
         }
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
@@ -114,17 +119,17 @@ async fn tic_membership_native_lua_and_persistence() {
 /// Groups behave like ordered ordinary shots across chassis, including rejection and callback abort.
 #[tokio::test]
 async fn tic_firing_reuses_shots_and_rolls_back_callbacks() {
-    let tracked = include_str!("../game/mechs/Demolisher");
-    let wheeled = tracked.replace("{ Track }", "{ Wheel }");
-    let hover = tracked.replace("{ Track }", "{ Hover }");
+    let tracked = include_str!("../game/mechs/Demolisher.toml");
+    let wheeled = tracked.replace("movement = \"track\"", "movement = \"wheel\"");
+    let hover = tracked.replace("movement = \"track\"", "movement = \"hover\"");
     let stationary = tracked
-        .replace("{ Track }", "{ None }")
-        .replace("{ 53.75 }", "{ 0 }");
+        .replace("movement = \"track\"", "movement = \"none\"")
+        .replace("walk_mp = 5", "walk_mp = 0");
     for (source, vehicle) in [
-        (include_str!("../game/mechs/JR7-D"), false),
-        (include_str!("../game/mechs/GOL-1H"), false),
-        (include_str!("../game/mechs/Demolisher"), true),
-        (include_str!("../game/mechs/Kestrel"), true),
+        (include_str!("../game/mechs/JR7-D.toml"), false),
+        (include_str!("../game/mechs/GOL-1H.toml"), false),
+        (include_str!("../game/mechs/Demolisher.toml"), true),
+        (include_str!("../game/mechs/Kestrel.toml"), true),
         (wheeled.as_str(), true),
         (hover.as_str(), true),
         (stationary.as_str(), true),
@@ -147,17 +152,21 @@ async fn tic_firing_reuses_shots_and_rolls_back_callbacks() {
             create_battle_vehicle(
                 &mut world,
                 shooter,
-                BattleVehicleTemplate::parse(source).unwrap(),
+                BattleVehicleTemplate::parse("test", source).unwrap(),
             )
             .unwrap();
         } else {
-            create_battle_unit(&mut world, shooter, BattleTemplate::parse(source).unwrap())
-                .unwrap();
+            create_battle_unit(
+                &mut world,
+                shooter,
+                BattleTemplate::parse("test", source).unwrap(),
+            )
+            .unwrap();
         }
         create_battle_unit(
             &mut world,
             target,
-            BattleTemplate::parse(include_str!("../game/mechs/JR7-D")).unwrap(),
+            BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, shooter, map, 0, 1).unwrap();

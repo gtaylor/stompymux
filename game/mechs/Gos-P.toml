@@ -1,0 +1,76 @@
+name = "Goshawk"
+class = "mech"
+movement = "biped"
+tons = 55
+walk_mp = 9
+jump_mp = 6
+heat_sinks = 22
+computer = 4
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 18
+slots = [
+    { at = "5-7", item = "CL.MachineGun" },
+    { at = 8, item = "Ammo_CL.MachineGun", rounds = 200 },
+]
+
+[sections.right_arm]
+armor = 18
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "CL.LargePulseLaser", modes = ["OnTC"] },
+    { at = "6-7", item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 20
+rear = 5
+slots = [
+    { at = 3, item = "CL.StreakSRM-2" },
+    { at = 4, item = "Ammo_CL.StreakSRM-2", rounds = 50 },
+    { at = 5, item = "JumpJet" },
+    { at = 6, item = "CL.MediumPulseLaser", modes = ["OnTC"] },
+    { at = "7-12", item = "EndoSteel" },
+]
+
+[sections.right_torso]
+armor = 20
+rear = 5
+slots = [
+    { at = "3-4", item = "CL.MediumPulseLaser", modes = ["OnTC"] },
+    { at = "5-7", item = "TargetingComputer" },
+    { at = 8, item = "CL.StreakSRM-2" },
+    { at = 9, item = "JumpJet" },
+    { at = "10-12", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 30
+rear = 5
+slots = [
+    { at = "11-12", item = "FerroFibrous" },
+]
+
+[sections.left_leg]
+armor = 26
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 26
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "EndoSteel" },
+]

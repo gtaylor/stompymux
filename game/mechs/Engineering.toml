@@ -1,0 +1,22 @@
+name = "Engineering"
+class = "vehicle"
+movement = "track"
+tons = 40
+walk_mp = 9
+computer = 4
+specials = ["CargoTech"]
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 8
+
+[sections.right_side]
+armor = 8
+
+[sections.front_side]
+armor = 8
+
+[sections.aft_side]
+armor = 8

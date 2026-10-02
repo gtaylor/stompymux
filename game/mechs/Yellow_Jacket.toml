@@ -1,0 +1,25 @@
+name = "Yellow Jacket"
+class = "vtol"
+movement = "vtol"
+tons = 30
+walk_mp = 9
+specials = ["SearchLight"]
+
+[sections.left_side]
+armor = 13
+
+[sections.right_side]
+armor = 13
+
+[sections.front_side]
+armor = 20
+slots = [
+    { at = 1, item = "IS.GaussRifle" },
+    { at = "2-3", item = "Ammo_IS.GaussRifle", rounds = 8 },
+]
+
+[sections.aft_side]
+armor = 8
+
+[sections.rotor]
+armor = 2

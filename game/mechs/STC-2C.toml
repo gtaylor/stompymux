@@ -1,0 +1,53 @@
+name = "Striker"
+class = "mech"
+movement = "biped"
+tons = 80
+walk_mp = 6
+heat_sinks = 15
+
+[sections.left_arm]
+armor = 22
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-7", item = "IS.AC/5" },
+]
+
+[sections.right_arm]
+armor = 22
+omit = ["hand_actuator"]
+
+[sections.left_torso]
+armor = 25
+rear = 8
+slots = [
+    { at = "1-2", item = "HeatSink" },
+    { at = "3-4", item = "IS.LargeLaser" },
+    { at = 5, item = "Ammo_IS.AC/5", rounds = 20 },
+]
+
+[sections.right_torso]
+armor = 25
+rear = 8
+slots = [
+    { at = 1, item = "HeatSink" },
+    { at = "2-4", item = "IS.PPC" },
+]
+
+[sections.center_torso]
+armor = 35
+rear = 10
+slots = [
+    { at = "11-12", item = "IS.MediumLaser" },
+]
+
+[sections.left_leg]
+armor = 26
+
+[sections.right_leg]
+armor = 26
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "IS.MediumLaser" },
+]

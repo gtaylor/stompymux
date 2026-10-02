@@ -7,7 +7,8 @@ use stompymux_rs::*;
 async fn fixture(flags: &[&str]) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {
     fixture_template(
         flags,
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Marksman")).unwrap(),
+        BattleVehicleTemplate::parse("Marksman", include_str!("../game/mechs/Marksman.toml"))
+            .unwrap(),
     )
     .await
 }
@@ -227,14 +228,19 @@ async fn vehicle_artillery_correction_uses_mixed_observers_and_replays_aim() {
                 create_battle_vehicle(
                     &mut world,
                     observer,
-                    BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap(),
+                    BattleVehicleTemplate::parse(
+                        "Demolisher",
+                        include_str!("../game/mechs/Demolisher.toml"),
+                    )
+                    .unwrap(),
                 )
                 .unwrap();
             } else {
                 create_battle_unit(
                     &mut world,
                     observer,
-                    BattleTemplate::parse(include_str!("../game/mechs/AS7-D")).unwrap(),
+                    BattleTemplate::parse("AS7-D", include_str!("../game/mechs/AS7-D.toml"))
+                        .unwrap(),
                 )
                 .unwrap();
             }
@@ -338,14 +344,18 @@ async fn vehicle_artillery_explicit_mixed_spotters_share_targets_and_correction_
             create_battle_vehicle(
                 &mut world,
                 observer,
-                BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap(),
+                BattleVehicleTemplate::parse(
+                    "Demolisher",
+                    include_str!("../game/mechs/Demolisher.toml"),
+                )
+                .unwrap(),
             )
             .unwrap();
         } else {
             create_battle_unit(
                 &mut world,
                 observer,
-                BattleTemplate::parse(include_str!("../game/mechs/AS7-D")).unwrap(),
+                BattleTemplate::parse("AS7-D", include_str!("../game/mechs/AS7-D.toml")).unwrap(),
             )
             .unwrap();
         }

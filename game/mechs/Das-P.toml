@@ -1,0 +1,78 @@
+name = "Dasher"
+class = "mech"
+movement = "biped"
+tons = 20
+walk_mp = 15
+heat_sinks = 20
+computer = 4
+specials = ["Masc"]
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 3
+slots = [
+    { at = "5-6", item = "CL.ERMediumLaser" },
+    { at = 7, item = "FerroFibrous" },
+    { at = 8, item = "EndoSteel" },
+]
+
+[sections.right_arm]
+armor = 3
+slots = [
+    { at = 5, item = "CL.SRM-6" },
+    { at = 6, item = "Ammo_CL.SRM-6", rounds = 15 },
+    { at = 7, item = "FerroFibrous" },
+    { at = 8, item = "EndoSteel" },
+]
+
+[sections.left_torso]
+armor = 4
+rear = 2
+slots = [
+    { at = "3-4", item = "HeatSink" },
+    { at = "5-6", item = "FerroFibrous" },
+    { at = 7, item = "EndoSteel" },
+]
+
+[sections.right_torso]
+armor = 4
+rear = 2
+engine_at = 3
+slots = [
+    { at = 1, item = "CL.SRM-4" },
+    { at = 2, item = "Ammo_CL.SRM-4", rounds = 25 },
+    { at = "5-6", item = "HeatSink" },
+    { at = "7-8", item = "FerroFibrous" },
+    { at = 9, item = "EndoSteel" },
+]
+
+[sections.center_torso]
+armor = 5
+rear = 2
+slots = [
+    { at = 11, item = "Masc" },
+    { at = 12, item = "EndoSteel" },
+]
+
+[sections.left_leg]
+armor = 4
+slots = [
+    { at = 5, item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 4
+slots = [
+    { at = 5, item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 5
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

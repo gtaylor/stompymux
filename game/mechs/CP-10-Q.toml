@@ -1,0 +1,55 @@
+name = "Cyclops"
+class = "mech"
+movement = "biped"
+tons = 90
+walk_mp = 6
+heat_sinks = 14
+computer = 4
+radio = 5
+radio_type = 126
+
+[sections.left_arm]
+armor = 29
+slots = [
+    { at = 5, item = "IS.MediumLaser", brand = 4 },
+]
+
+[sections.right_arm]
+armor = 29
+slots = [
+    { at = 5, item = "IS.MediumLaser", brand = 4 },
+]
+
+[sections.left_torso]
+armor = 29
+rear = 8
+slots = [
+    { at = "1-2", item = "IS.LRM-10" },
+    { at = "3-4", item = "Ammo_IS.LRM-10", rounds = 12 },
+]
+
+[sections.right_torso]
+armor = 29
+rear = 8
+slots = [
+    { at = "1-2", item = "IS.LRM-10" },
+    { at = "3-4", item = "Ammo_IS.LRM-10", rounds = 12 },
+    { at = 5, item = "IS.MediumLaser", brand = 4 },
+]
+
+[sections.center_torso]
+armor = 46
+rear = 11
+slots = [
+    { at = 11, item = "IS.SRM-4", brand = 4 },
+    { at = 12, item = "Ammo_IS.SRM-4", rounds = 25 },
+]
+
+[sections.left_leg]
+armor = 37
+
+[sections.right_leg]
+armor = 37
+
+[sections.head]
+armor = 9

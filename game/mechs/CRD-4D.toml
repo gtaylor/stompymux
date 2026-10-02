@@ -1,0 +1,64 @@
+name = "Crusader"
+class = "mech"
+movement = "biped"
+tons = 65
+walk_mp = 6
+heat_sinks = 13
+computer = 4
+radio = 4
+
+[construction]
+brand = 3
+
+[sections.left_arm]
+armor = 20
+slots = [
+    { at = "5-7", item = "IS.LRM-15", brand = 3 },
+    { at = 8, item = "IS.MediumPulseLaser", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 20
+slots = [
+    { at = "5-7", item = "IS.LRM-15", brand = 3 },
+    { at = 8, item = "IS.MediumPulseLaser", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 24
+rear = 6
+slots = [
+    { at = 1, item = "Ammo_IS.LRM-15", rounds = 8 },
+]
+
+[sections.right_torso]
+armor = 24
+rear = 6
+slots = [
+    { at = 1, item = "Ammo_IS.LRM-15", rounds = 8 },
+]
+
+[sections.center_torso]
+armor = 33
+rear = 8
+slots = [
+    { at = 11, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+    { at = 12, item = "HeatSink", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 21
+slots = [
+    { at = 5, item = "IS.StreakSRM-2", brand = 3 },
+    { at = 6, item = "HeatSink", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 21
+slots = [
+    { at = 5, item = "IS.StreakSRM-2", brand = 3 },
+    { at = 6, item = "HeatSink", brand = 3 },
+]
+
+[sections.head]
+armor = 9

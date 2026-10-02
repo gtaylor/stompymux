@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse(template).unwrap(),
+        BattleVehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -64,12 +64,17 @@ async fn vehicle_bursts_span_bins_and_persist_single_shot_supply_fallback() {
             6,
         ),
     ] {
-        let template = include_str!("../game/mechs/Demolisher")
+        let template = include_str!("../game/mechs/Demolisher.toml")
             .replace("IS.AC/20", weapon)
-            .replace(&format!("{weapon} - -"), &format!("{weapon} - {flag}"))
             .replace(
-                "Left_Side\n",
-                &format!("Left_Side\n CRIT_1 {{ Ammo_{weapon} 2 - }}\n"),
+                &format!("item = \"{weapon}\" }}"),
+                &format!("item = \"{weapon}\", modes = [\"{flag}\"] }}"),
+            )
+            .replace(
+                "[sections.left_side]\n",
+                &format!(
+                    "[sections.left_side]\nslots = [{{ at = 1, item = \"Ammo_{weapon}\", rounds = 2 }}]\n"
+                ),
             );
         let (_dir, config, base, id) = fixture(&template).await;
         for enough in [true, false] {
@@ -143,9 +148,12 @@ async fn vehicle_bursts_span_bins_and_persist_single_shot_supply_fallback() {
 
 #[tokio::test]
 async fn vehicle_gatling_caps_damage_by_supply_and_replays_its_single_roll() {
-    let template = include_str!("../game/mechs/Demolisher")
+    let template = include_str!("../game/mechs/Demolisher.toml")
         .replace("IS.AC/20", "IS.MachineGun")
-        .replace("IS.MachineGun - -", "IS.MachineGun - Gattling");
+        .replace(
+            "item = \"IS.MachineGun\" }",
+            "item = \"IS.MachineGun\", modes = [\"Gattling\"] }",
+        );
     let (_dir, config, base, id) = fixture(&template).await;
     for rounds in [0u16, 1, 2, 3, 5, 6, 17, 18, 30] {
         let mut world = base.clone();
@@ -184,8 +192,10 @@ async fn vehicle_gatling_caps_damage_by_supply_and_replays_its_single_roll() {
 
 #[tokio::test]
 async fn vehicle_feed_skips_lost_and_incompatible_bins_and_heat_cycles_need_no_ammo() {
-    let template = include_str!("../game/mechs/Demolisher")
-        .replace("Ammo_IS.AC/20 5 -", "Ammo_IS.AC/20 1 Precision");
+    let template = include_str!("../game/mechs/Demolisher.toml").replace(
+        "item = \"Ammo_IS.AC/20\", rounds = 5 }",
+        "item = \"Ammo_IS.AC/20\", rounds = 1, modes = [\"Precision\"] }",
+    );
     let (_dir, _config, mut world, id) = fixture(&template).await;
     assert!(
         world.btech.vehicles()[&id]
@@ -211,8 +221,10 @@ async fn vehicle_feed_skips_lost_and_incompatible_bins_and_heat_cycles_need_no_a
         draws.iter().map(|draw| draw.bin_index).collect::<Vec<_>>(),
         [1, 2, 3]
     );
-    let template =
-        include_str!("../game/mechs/Demolisher").replace("IS.AC/20 - -", "IS.Flamer - Heat");
+    let template = include_str!("../game/mechs/Demolisher.toml").replace(
+        "item = \"IS.AC/20\" }",
+        "item = \"IS.Flamer\", modes = [\"Heat\"] }",
+    );
     let (_dir, _config, mut world, id) = fixture(&template).await;
     let before = world.btech.vehicles()[&id].ammunition().to_vec();
     let cycle = reserve_battle_vehicle_weapon(&mut world, id, ObjectId(1), 0, true).unwrap();

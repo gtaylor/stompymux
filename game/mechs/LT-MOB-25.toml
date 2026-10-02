@@ -1,0 +1,31 @@
+name = "Long Tom"
+class = "vehicle"
+movement = "track"
+tons = 95
+walk_mp = 3
+heat_sinks = 0
+computer = 2
+radio = 2
+
+[sections.left_side]
+armor = 64
+slots = [
+    { at = "1-2", item = "IS.MachineGun" },
+]
+
+[sections.right_side]
+armor = 64
+slots = [
+    { at = "1-2", item = "IS.MachineGun" },
+]
+
+[sections.front_side]
+armor = 64
+slots = [
+    { at = 1, item = "IS.LongTom" },
+    { at = "2-6", item = "Ammo_IS.LongTom", rounds = 5 },
+    { at = 7, item = "Ammo_IS.MachineGun", rounds = 200 },
+]
+
+[sections.aft_side]
+armor = 64

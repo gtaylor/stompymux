@@ -1,0 +1,35 @@
+name = "Patton"
+class = "vehicle"
+movement = "track"
+tons = 65
+walk_mp = 6
+computer = 3
+cargo_space = 0
+max_suits = 0
+
+[sections.left_side]
+armor = 46
+
+[sections.right_side]
+armor = 46
+
+[sections.front_side]
+armor = 52
+slots = [
+    { at = "1-2", item = "IS.MachineGun", brand = 0 },
+    { at = 3, item = "Ammo_IS.MachineGun", rounds = 200 },
+]
+
+[sections.aft_side]
+armor = 38
+slots = [
+    { at = 1, item = "FerroFibrous", brand = 0 },
+]
+
+[sections.turret]
+armor = 51
+slots = [
+    { at = 1, item = "IS.UltraAC/10", brand = 0 },
+    { at = "2-3", item = "IS.MediumLaser", brand = 0 },
+    { at = "4-6", item = "Ammo_IS.UltraAC/10", rounds = 10 },
+]

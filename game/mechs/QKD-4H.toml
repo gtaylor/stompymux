@@ -1,0 +1,55 @@
+name = "Quickdraw"
+class = "mech"
+movement = "biped"
+tons = 60
+walk_mp = 8
+jump_mp = 5
+heat_sinks = 13
+
+[sections.left_arm]
+armor = 11
+slots = [
+    { at = 5, item = "IS.MediumLaser" },
+]
+
+[sections.right_arm]
+armor = 11
+slots = [
+    { at = 5, item = "IS.MediumLaser" },
+]
+
+[sections.left_torso]
+armor = 14
+rear = 7
+slots = [
+    { at = "1-2", item = "IS.LRM-10" },
+    { at = "3-4", item = "JumpJet" },
+    { at = 5, item = "HeatSink" },
+    { at = 6, item = "Ammo_IS.LRM-10", rounds = 12 },
+]
+
+[sections.right_torso]
+armor = 14
+rear = 7
+slots = [
+    { at = "1-2", item = "IS.MediumLaser" },
+    { at = 3, item = "Ammo_IS.SRM-4", rounds = 25 },
+    { at = "4-5", item = "JumpJet" },
+]
+
+[sections.center_torso]
+armor = 17
+rear = 8
+slots = [
+    { at = 11, item = "IS.SRM-4", modes = ["RearMount"] },
+    { at = 12, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 15
+
+[sections.right_leg]
+armor = 15
+
+[sections.head]
+armor = 9

@@ -1,0 +1,31 @@
+name = "Badger"
+class = "vehicle"
+movement = "track"
+tons = 30
+walk_mp = 9
+cargo_space = 400
+max_suits = 0
+max_ton = 4
+specials = ["CargoTech"]
+
+[sections.left_side]
+armor = 18
+
+[sections.right_side]
+armor = 18
+
+[sections.front_side]
+armor = 20
+slots = [
+    { at = 1, item = "IS.LRM-5" },
+    { at = 2, item = "Ammo_IS.LRM-5", rounds = 24 },
+]
+
+[sections.aft_side]
+armor = 16
+
+[sections.turret]
+armor = 8
+slots = [
+    { at = 1, item = "IS.LRM-5" },
+]

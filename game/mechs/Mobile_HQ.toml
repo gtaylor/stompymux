@@ -1,0 +1,26 @@
+name = "Mobile_HQ"
+class = "vehicle"
+movement = "wheel"
+tons = 25
+walk_mp = 9
+computer = 3
+radio = 5
+radio_type = 126
+
+[sections.left_side]
+armor = 19
+
+[sections.right_side]
+armor = 19
+
+[sections.front_side]
+armor = 16
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]
+
+[sections.aft_side]
+armor = 16
+
+[sections.turret]
+armor = 10

@@ -1,0 +1,44 @@
+name = "Zero"
+class = "aerofighter"
+movement = "fly"
+tons = 35
+walk_mp = 9
+computer = 3
+fuel = 750
+
+[sections.nose]
+armor = 40
+internals = 10
+slots = [
+    { at = 1, item = "IS.LargeLaser" },
+    { at = 2, item = "IS.MediumLaser" },
+    { at = 3, item = "IS.LRM-10" },
+    { at = 4, item = "Ammo_IS.LRM-10", rounds = 12 },
+]
+
+[sections.left_wing]
+armor = 20
+internals = 10
+
+[sections.right_wing]
+armor = 20
+internals = 10
+
+[sections.cockpit]
+armor = 25
+internals = 10
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "Sensors" },
+    { at = 5, item = "LifeSupport" },
+]
+
+[sections.engine]
+armor = 35
+internals = 10
+
+[sections.fuselage]
+armor = 30
+internals = 10

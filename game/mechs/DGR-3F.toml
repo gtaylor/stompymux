@@ -1,0 +1,73 @@
+name = "Dragonfire"
+class = "mech"
+movement = "biped"
+tons = 75
+walk_mp = 6
+heat_sinks = 20
+computer = 4
+radio = 4
+
+[construction]
+engine = "xl"
+structure = "endo_steel"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 24
+slots = [
+    { at = "5-11", item = "IS.GaussRifle", brand = 3 },
+    { at = 12, item = "EndoSteel", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 24
+slots = [
+    { at = "5-10", item = "IS.LB10-XAC", brand = 3 },
+    { at = "11-12", item = "EndoSteel", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 26
+rear = 6
+slots = [
+    { at = 4, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = "5-6", item = "Ecm", brand = 3 },
+    { at = "7-8", item = "Ammo_IS.GaussRifle", rounds = 8 },
+    { at = "9-12", item = "EndoSteel", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 26
+rear = 6
+slots = [
+    { at = 4, item = "Ammo_IS.LB10-XAC", rounds = 10 },
+    { at = 5, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = "6-10", item = "EndoSteel", brand = 3 },
+    { at = 11, item = "Case", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 38
+rear = 8
+slots = [
+    { at = "11-12", item = "IS.LargeLaser", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 32
+slots = [
+    { at = 5, item = "EndoSteel", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 32
+slots = [
+    { at = 5, item = "EndoSteel", brand = 3 },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "IS.MediumPulseLaser", brand = 3 },
+]

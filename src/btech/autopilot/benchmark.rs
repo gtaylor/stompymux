@@ -442,15 +442,21 @@ fn fixture_world(
 
     let count = controller_count.min(DEFAULT_CONTROLLERS);
     let templates = [
-        include_str!("../../../game/mechs/JR7-D"),
-        include_str!("../../../game/mechs/Demolisher"),
-        include_str!("../../../game/mechs/Flatbed_Truck"),
-        include_str!("../../../game/mechs/Fulcrum"),
+        ("JR7-D", include_str!("../../../game/mechs/JR7-D.toml")),
+        (
+            "Demolisher",
+            include_str!("../../../game/mechs/Demolisher.toml"),
+        ),
+        (
+            "Flatbed_Truck",
+            include_str!("../../../game/mechs/Flatbed_Truck.toml"),
+        ),
+        ("Fulcrum", include_str!("../../../game/mechs/Fulcrum.toml")),
     ];
     for index in 0..count {
         let unit_id = world.create(config, format!("autopilot-benchmark-{index}"), Kind::Thing);
-        BattleUnitTemplate::parse(templates[index / CHASSIS_PER_KIND])?
-            .create(&mut world, unit_id)?;
+        let (reference, source) = templates[index / CHASSIS_PER_KIND];
+        BattleUnitTemplate::parse(reference, source)?.create(&mut world, unit_id)?;
         let stream_seed = seed_bytes(seed, index as u64 + 1);
         if let Some(unit) = world.btech.constructed.get_mut(&unit_id) {
             unit.dice = crate::BattleDice::seeded(stream_seed);

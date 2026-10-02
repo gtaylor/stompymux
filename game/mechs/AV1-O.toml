@@ -1,0 +1,67 @@
+name = "Avatar"
+class = "mech"
+movement = "biped"
+tons = 70
+walk_mp = 6
+heat_sinks = 20
+computer = 4
+radio = 4
+
+[construction]
+engine = "xl"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 16
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "IS.MediumPulseLaser", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 16
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-8", item = "IS.LB10-XAC", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 22
+rear = 8
+slots = [
+    { at = "4-5", item = "IS.LRM-10", brand = 3 },
+    { at = 6, item = "ArtemisIV", brand = 3 },
+    { at = 7, item = "IS.MachineGun", brand = 3 },
+    { at = "8-10", item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
+    { at = 11, item = "Case", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 22
+rear = 8
+slots = [
+    { at = 4, item = "IS.MachineGun", brand = 3 },
+    { at = "5-6", item = "IS.LRM-10", brand = 3 },
+    { at = 7, item = "ArtemisIV", brand = 3 },
+    { at = 8, item = "Ammo_IS.LB10-XAC", rounds = 10 },
+    { at = 9, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = 10, item = "Ammo_IS.MachineGun", rounds = 200 },
+    { at = 11, item = "Case", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 30
+rear = 9
+slots = [
+    { at = "11-12", item = "IS.MediumLaser", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 26
+
+[sections.right_leg]
+armor = 26
+
+[sections.head]
+armor = 9

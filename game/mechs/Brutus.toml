@@ -1,0 +1,32 @@
+name = "Brutus"
+class = "vehicle"
+movement = "track"
+tons = 75
+walk_mp = 5
+heat_sinks = 16
+
+[sections.left_side]
+armor = 27
+
+[sections.right_side]
+armor = 27
+
+[sections.front_side]
+armor = 34
+slots = [
+    { at = 1, item = "IS.SRM-2", brand = 3 },
+    { at = "2-3", item = "IS.SRM-6", brand = 3 },
+    { at = 4, item = "Ammo_IS.SRM-2", rounds = 50 },
+    { at = 5, item = "Ammo_IS.SRM-6", rounds = 15 },
+]
+
+[sections.aft_side]
+armor = 21
+
+[sections.turret]
+armor = 27
+slots = [
+    { at = "1-2", item = "IS.LargeLaser", brand = 3 },
+    { at = 3, item = "IS.LRM-20", brand = 3 },
+    { at = "4-6", item = "Ammo_IS.LRM-20", rounds = 6 },
+]

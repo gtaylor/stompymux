@@ -18,7 +18,8 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap(),
+        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+            .unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -455,7 +456,7 @@ async fn automatic_turret_tracks_moving_units_and_hexes() {
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, target, map, 1, 0).unwrap();
@@ -500,16 +501,16 @@ async fn automatic_turret_tracks_moving_units_and_hexes() {
 /// Tracking uses vehicle anatomy rather than propulsion type; rotorcraft without a turret reject it.
 #[tokio::test]
 async fn automatic_tracking_is_shared_by_ground_and_rotorcraft() {
-    let ground = include_str!("../game/mechs/Demolisher");
-    let vtol = include_str!("../game/mechs/Kestrel");
+    let ground = include_str!("../game/mechs/Demolisher.toml");
+    let vtol = include_str!("../game/mechs/Kestrel.toml");
     for source in [
         ground.into(),
-        ground.replace("{ Track }", "{ Wheel }"),
-        ground.replace("{ Track }", "{ Hover }"),
+        ground.replace("movement = \"track\"", "movement = \"wheel\""),
+        ground.replace("movement = \"track\"", "movement = \"hover\""),
         ground
-            .replace("{ Track }", "{ None }")
-            .replace("53.75", "0.0"),
-        format!("{vtol}\nTurret\n Armor {{ 1 }}\n Internals {{ 1 }}\n"),
+            .replace("movement = \"track\"", "movement = \"none\"")
+            .replace("walk_mp = 5", "walk_mp = 0"),
+        format!("{vtol}\n[sections.turret]\narmor = 1\ninternals = 1\n"),
         vtol.into(),
     ] {
         let (_dir, config, mut world) = support::isolated_world().await;
@@ -526,7 +527,7 @@ async fn automatic_tracking_is_shared_by_ground_and_rotorcraft() {
         create_battle_vehicle(
             &mut world,
             id,
-            BattleVehicleTemplate::parse(&source).unwrap(),
+            BattleVehicleTemplate::parse("test", &source).unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();

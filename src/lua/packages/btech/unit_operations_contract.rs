@@ -549,23 +549,26 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             let source = {
                 let world = shared.borrow();
                 if let Some(unit) = world.btech.constructed_units().get(&id) {
-                    crate::btech::unit_template_source(unit.definition(), &reference)
+                    unit.definition().to_document()
                 } else {
-                    crate::btech::vehicle_template_source(
-                        world.btech.vehicles()[&id].definition(),
-                        &reference,
-                    )
+                    world.btech.vehicles()[&id].definition().to_document()
                 }
             };
-            crate::btech::write_template(
-                &mut shared.borrow_mut().btech.template_registry,
-                &root,
-                &reference,
-                &source,
-            )
-            .map_err(|_| {
-                contract::operation_failure("template_save_failed", "unable to save unit template")
-            })?;
+            source
+                .and_then(|source| {
+                    crate::btech::write_template(
+                        &mut shared.borrow_mut().btech.template_registry,
+                        &root,
+                        &reference,
+                        &source,
+                    )
+                })
+                .map_err(|_| {
+                    contract::operation_failure(
+                        "template_save_failed",
+                        "unable to save unit template",
+                    )
+                })?;
             Ok(MultiValue::new())
         })?,
     )?;

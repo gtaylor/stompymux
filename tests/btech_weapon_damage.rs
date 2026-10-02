@@ -7,7 +7,8 @@ async fn fixture(weapon: BattleWeapon) -> (tempfile::TempDir, Config, World, Obj
     let (dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Weapon damage".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    let mut template = BattleTemplate::parse(include_str!("../game/mechs/JR7-D")).unwrap();
+    let mut template =
+        BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap();
     let section = template
         .sections
         .get_mut(&BattleSection::LeftTorso)

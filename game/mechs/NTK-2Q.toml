@@ -1,0 +1,57 @@
+name = "Night Hawk"
+class = "mech"
+movement = "biped"
+tons = 35
+walk_mp = 9
+heat_sinks = 24
+computer = 4
+radio = 4
+
+[construction]
+engine = "xl"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 10
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = 3, item = "IS.MediumPulseLaser", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 10
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.ERLargeLaser", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 13
+rear = 3
+slots = [
+    { at = "4-9", item = "HeatSink", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 13
+rear = 3
+slots = [
+    { at = "4-9", item = "HeatSink", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 17
+rear = 4
+slots = [
+    { at = "11-12", item = "IS.LargeLaser", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 15
+
+[sections.right_leg]
+armor = 15
+
+[sections.head]
+armor = 9

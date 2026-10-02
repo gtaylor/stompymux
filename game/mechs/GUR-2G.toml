@@ -1,0 +1,63 @@
+name = "Gurkha"
+class = "mech"
+movement = "biped"
+tons = 35
+walk_mp = 11
+heat_sinks = 20
+computer = 4
+radio = 4
+
+[construction]
+engine = "xl"
+structure = "endo_steel"
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 12
+slots = [
+    { at = "5-8", item = "IS.ERSmallLaser" },
+]
+
+[sections.right_arm]
+armor = 12
+slots = [
+    { at = "5-7", item = "Sword" },
+]
+
+[sections.left_torso]
+armor = 11
+rear = 5
+slots = [
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-11", item = "EndoSteel" },
+]
+
+[sections.right_torso]
+armor = 11
+rear = 5
+slots = [
+    { at = "4-6", item = "IS.ERPPC" },
+    { at = "7-11", item = "EndoSteel" },
+]
+
+[sections.center_torso]
+armor = 15
+rear = 7
+slots = [
+    { at = "11-12", item = "C3i" },
+]
+
+[sections.left_leg]
+armor = 16
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 16
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 9

@@ -1,0 +1,44 @@
+name = "Scorpion"
+class = "mech"
+movement = "quad"
+tons = 55
+walk_mp = 9
+computer = 4
+radio = 4
+
+[construction]
+brand = 3
+
+[sections.front_left_leg]
+armor = 10
+
+[sections.front_right_leg]
+armor = 10
+
+[sections.left_torso]
+armor = 11
+rear = 5
+slots = [
+    { at = 1, item = "Ammo_IS.SRM-6", rounds = 15 },
+]
+
+[sections.right_torso]
+armor = 11
+rear = 5
+slots = [
+    { at = "1-3", item = "IS.ERPPC", brand = 3 },
+    { at = "4-5", item = "IS.SRM-6", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 24
+rear = 8
+
+[sections.rear_left_leg]
+armor = 10
+
+[sections.rear_right_leg]
+armor = 10
+
+[sections.head]
+armor = 8

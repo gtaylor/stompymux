@@ -1,0 +1,45 @@
+name = "Cicada"
+class = "mech"
+movement = "biped"
+tons = 40
+walk_mp = 12
+computer = 4
+radio = 4
+
+[sections.left_arm]
+armor = 4
+omit = ["lower_actuator", "hand_actuator"]
+
+[sections.right_arm]
+armor = 4
+omit = ["lower_actuator", "hand_actuator"]
+
+[sections.left_torso]
+armor = 6
+rear = 3
+slots = [
+    { at = 1, item = "IS.MediumLaser", brand = 4 },
+]
+
+[sections.right_torso]
+armor = 6
+rear = 3
+slots = [
+    { at = 1, item = "IS.MediumLaser", brand = 4 },
+]
+
+[sections.center_torso]
+armor = 11
+rear = 6
+slots = [
+    { at = 11, item = "IS.SmallLaser", brand = 4 },
+]
+
+[sections.left_leg]
+armor = 6
+
+[sections.right_leg]
+armor = 6
+
+[sections.head]
+armor = 9

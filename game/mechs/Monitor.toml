@@ -1,0 +1,42 @@
+name = "Monitor"
+class = "naval"
+movement = "hull"
+tons = 75
+walk_mp = 5
+computer = 3
+
+[sections.left_side]
+armor = 22
+internals = 8
+slots = [
+    { at = 1, item = "IS.SRM-2" },
+]
+
+[sections.right_side]
+armor = 22
+internals = 8
+slots = [
+    { at = 1, item = "IS.SRM-2" },
+]
+
+[sections.front_side]
+armor = 22
+internals = 8
+rear = 6
+
+[sections.aft_side]
+armor = 22
+internals = 8
+rear = 6
+slots = [
+    { at = 1, item = "IS.SRM-2" },
+    { at = 2, item = "Ammo_IS.SRM-2", rounds = 50 },
+]
+
+[sections.turret]
+armor = 40
+internals = 8
+slots = [
+    { at = "1-2", item = "IS.AC/20" },
+    { at = "3-5", item = "Ammo_IS.AC/20", rounds = 5 },
+]

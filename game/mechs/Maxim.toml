@@ -1,0 +1,46 @@
+name = "Maxim"
+class = "vehicle"
+movement = "hover"
+tons = 50
+walk_mp = 12
+cargo_space = 800
+max_suits = 0
+max_ton = 1
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 20
+slots = [
+    { at = 1, item = "IS.SRM-2" },
+]
+
+[sections.right_side]
+armor = 20
+slots = [
+    { at = 1, item = "IS.SRM-2" },
+]
+
+[sections.front_side]
+armor = 20
+slots = [
+    { at = "1-2", item = "IS.LRM-5" },
+    { at = 3, item = "Ammo_IS.LRM-5", rounds = 24 },
+]
+
+[sections.aft_side]
+armor = 12
+slots = [
+    { at = 4, item = "IS.LRM-5" },
+    { at = 5, item = "Ammo_IS.SRM-2", rounds = 50 },
+]
+
+[sections.turret]
+armor = 16
+slots = [
+    { at = 1, item = "IS.SRM-6" },
+    { at = "2-4", item = "IS.MachineGun" },
+    { at = 5, item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = 6, item = "Ammo_IS.MachineGun", rounds = 200 },
+]

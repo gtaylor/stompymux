@@ -1,0 +1,67 @@
+name = "Daishi"
+class = "mech"
+movement = "biped"
+tons = 100
+walk_mp = 5
+heat_sinks = 44
+computer = 4
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+
+[sections.left_arm]
+armor = 34
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "CL.ERLargeLaser" },
+    { at = "7-8", item = "CL.MediumPulseLaser" },
+    { at = "9-11", item = "CL.UltraAC/5" },
+    { at = 12, item = "Ammo_CL.UltraAC/5", rounds = 20 },
+]
+
+[sections.right_arm]
+armor = 34
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "CL.ERLargeLaser" },
+    { at = "7-8", item = "CL.MediumPulseLaser" },
+    { at = "9-11", item = "CL.UltraAC/5" },
+    { at = 12, item = "Ammo_CL.UltraAC/5", rounds = 20 },
+]
+
+[sections.left_torso]
+armor = 32
+rear = 10
+engine_at = 3
+slots = [
+    { at = 1, item = "CL.LRM-10" },
+    { at = 2, item = "Ammo_CL.LRM-10", rounds = 12 },
+    { at = "5-12", item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 32
+rear = 10
+slots = [
+    { at = "3-10", item = "HeatSink" },
+]
+
+[sections.center_torso]
+armor = 47
+rear = 14
+slots = [
+    { at = "11-12", item = "HeatSink" },
+]
+
+[sections.left_leg]
+armor = 41
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 41
+
+[sections.head]
+armor = 9

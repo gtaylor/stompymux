@@ -8,7 +8,8 @@ fn stinger_templates_and_capacity() {
         .filter(|weapon| weapon.supports_semiguided())
     {
         let mut definition =
-            BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                .unwrap();
         let mut part = definition.sections[&BattleSection::LeftArm].criticals[&2].clone();
         part.equipment = weapon.name().into();
         part.modes = vec!["Stinger".into()];
@@ -149,7 +150,8 @@ fn stinger_reach_extends_only_maximum_range() {
 #[test]
 fn radio_tower_resolves_original_stinger_bins_and_launchers() {
     let definition =
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/RadioTower")).unwrap();
+        BattleVehicleTemplate::parse("RadioTower", include_str!("../game/mechs/RadioTower.toml"))
+            .unwrap();
     let mass = definition.mass().unwrap();
     assert_eq!(mass.engine, 0);
     let loadout = BattleVehicleLoadout::resolve(&definition).unwrap();

@@ -1,0 +1,28 @@
+name = "AC2_Carrier"
+class = "vehicle"
+movement = "track"
+tons = 60
+walk_mp = 5
+tac_range = 30
+lrs_range = 60
+scan_range = 30
+
+[sections.left_side]
+armor = 22
+
+[sections.right_side]
+armor = 22
+
+[sections.front_side]
+armor = 22
+slots = [
+    { at = "1-5", item = "IS.LB2-XAC" },
+    { at = "6-7", item = "Ammo_IS.LB2-XAC", rounds = 45 },
+    { at = "8-9", item = "Ammo_IS.LB2-XAC", rounds = 45, modes = ["LBX/Cluster"] },
+]
+
+[sections.aft_side]
+armor = 22
+slots = [
+    { at = 1, item = "C3Slave" },
+]

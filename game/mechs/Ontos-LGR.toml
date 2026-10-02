@@ -1,0 +1,34 @@
+name = "Ontos"
+class = "vehicle"
+movement = "track"
+tons = 95
+walk_mp = 5
+tac_range = 30
+lrs_range = 60
+scan_range = 30
+
+[sections.left_side]
+armor = 32
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 32
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 40
+
+[sections.aft_side]
+armor = 30
+
+[sections.turret]
+armor = 36
+slots = [
+    { at = "1-3", item = "IS.LightGaussRifle" },
+    { at = "4-5", item = "IS.ERMediumLaser" },
+    { at = "6-9", item = "Ammo_IS.LightGaussRifle", rounds = 16 },
+]

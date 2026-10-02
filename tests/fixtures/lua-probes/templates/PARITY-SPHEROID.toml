@@ -1,0 +1,32 @@
+name = "Parity Spheroid"
+class = "spheroid_dropship"
+movement = "fly"
+tons = 6000
+walk_mp = 2
+
+[sections.front_right_side]
+armor = 21
+internals = 11
+slots = [
+    { at = 1, item = "Agra.IS.PPC", brand = 5 },
+]
+
+[sections.front_left_side]
+armor = 22
+internals = 12
+
+[sections.rear_left_side]
+armor = 23
+internals = 13
+
+[sections.rear_right_side]
+armor = 24
+internals = 14
+
+[sections.aft]
+armor = 25
+internals = 15
+
+[sections.nose]
+armor = 26
+internals = 16

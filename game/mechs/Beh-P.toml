@@ -1,0 +1,66 @@
+name = "Behemoth"
+class = "mech"
+movement = "biped"
+tons = 100
+walk_mp = 5
+jump_mp = 3
+heat_sinks = 20
+computer = 4
+
+[construction]
+tech_base = "clan"
+
+[sections.left_arm]
+armor = 32
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "CL.LargePulseLaser" },
+]
+
+[sections.right_arm]
+armor = 32
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "CL.LargePulseLaser" },
+]
+
+[sections.left_torso]
+armor = 27
+rear = 14
+slots = [
+    { at = "1-6", item = "CL.GaussRifle" },
+    { at = "7-8", item = "Ammo_CL.GaussRifle", rounds = 8 },
+]
+
+[sections.right_torso]
+armor = 27
+rear = 14
+slots = [
+    { at = "1-6", item = "CL.GaussRifle" },
+    { at = "7-8", item = "Ammo_CL.GaussRifle", rounds = 8 },
+]
+
+[sections.center_torso]
+armor = 46
+rear = 15
+slots = [
+    { at = 11, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 36
+slots = [
+    { at = 5, item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 36
+slots = [
+    { at = 5, item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "CL.SmallPulseLaser" },
+]

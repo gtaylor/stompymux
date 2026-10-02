@@ -1,0 +1,56 @@
+name = "Enforcer"
+class = "mech"
+movement = "biped"
+tons = 50
+walk_mp = 6
+jump_mp = 4
+heat_sinks = 12
+
+[sections.left_arm]
+armor = 14
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "IS.LargeLaser" },
+]
+
+[sections.right_arm]
+armor = 14
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-10", item = "IS.AC/10", brand = 5 },
+]
+
+[sections.left_torso]
+armor = 17
+rear = 3
+slots = [
+    { at = 1, item = "IS.SmallLaser" },
+    { at = "2-3", item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 17
+rear = 3
+slots = [
+    { at = 1, item = "Ammo_IS.AC/10", rounds = 10 },
+    { at = "2-3", item = "HeatSink" },
+]
+
+[sections.center_torso]
+armor = 23
+rear = 4
+
+[sections.left_leg]
+armor = 20
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 20
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9

@@ -1,0 +1,77 @@
+name = "Marauder II"
+class = "mech"
+movement = "biped"
+tons = 100
+walk_mp = 5
+jump_mp = 3
+heat_sinks = 29
+computer = 4
+radio = 4
+specials = ["SearchLight"]
+
+[construction]
+engine = "xl"
+brand = 3
+
+[sections.left_arm]
+armor = 34
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-6", item = "HeatSink", brand = 3 },
+    { at = "7-9", item = "IS.ERPPC", brand = 3 },
+    { at = 10, item = "IS.MediumLaser", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 34
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-6", item = "HeatSink", brand = 3 },
+    { at = "7-9", item = "IS.ERPPC", brand = 3 },
+    { at = 10, item = "IS.MediumLaser", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 31
+rear = 11
+slots = [
+    { at = "4-9", item = "HeatSink", brand = 3 },
+    { at = "10-11", item = "Ammo_IS.LB10-XAC", rounds = 10 },
+    { at = 12, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+]
+
+[sections.right_torso]
+armor = 31
+rear = 11
+slots = [
+    { at = "4-5", item = "HeatSink", brand = 3 },
+    { at = "6-11", item = "IS.LB10-XAC", brand = 3 },
+    { at = 12, item = "Case", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 45
+rear = 16
+slots = [
+    { at = 11, item = "JumpJet", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 41
+slots = [
+    { at = 5, item = "HeatSink", brand = 3 },
+    { at = 6, item = "JumpJet", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 41
+slots = [
+    { at = 5, item = "HeatSink", brand = 3 },
+    { at = 6, item = "JumpJet", brand = 3 },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "HeatSink", brand = 3 },
+]

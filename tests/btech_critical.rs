@@ -8,13 +8,13 @@ use stompymux_rs::{
 
 /// Independent scenario unit with a conventional supported loadout.
 fn unit(source: &str) -> BattleUnit {
-    BattleUnit::from_template(BattleTemplate::parse(source).unwrap()).unwrap()
+    BattleUnit::from_template(BattleTemplate::parse("test", source).unwrap()).unwrap()
 }
-const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D");
+const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D.toml");
 
 #[test]
 fn multi_slot_weapon_fails_once_but_remaining_slots_can_absorb_more_criticals() {
-    let mut atlas = unit(include_str!("fixtures/btech/mechs/AS7-D"));
+    let mut atlas = unit(include_str!("fixtures/btech/mechs/AS7-D.toml"));
     let loadout = atlas.loadout().unwrap();
     let (index, weapon) = loadout
         .weapons
@@ -88,7 +88,12 @@ async fn engine_and_cockpit_losses_destroy_units_and_slot_state_survives_restart
     let object = world.objects.get_mut(&id).unwrap();
     object.location = Some(ObjectId(config.start()));
     object.home = Some(ObjectId(config.home()));
-    create_battle_unit(&mut world, id, BattleTemplate::parse(JENNER).unwrap()).unwrap();
+    create_battle_unit(
+        &mut world,
+        id,
+        BattleTemplate::parse("JR7-D", JENNER).unwrap(),
+    )
+    .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     for slot in 0..3 {
         destroy_battle_critical(

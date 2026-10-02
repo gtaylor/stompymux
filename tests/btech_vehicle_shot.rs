@@ -22,7 +22,8 @@ async fn fixture(
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if index < 2 {
             let mut definition =
-                BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                    .unwrap();
             definition
                 .attributes
                 .insert("specials".into(), "FlipArms Searchlight".into());
@@ -31,7 +32,7 @@ async fn fixture(
             create_battle_vehicle(
                 &mut world,
                 id,
-                BattleVehicleTemplate::parse(vehicle).unwrap(),
+                BattleVehicleTemplate::parse("test", vehicle).unwrap(),
             )
             .unwrap();
         }
@@ -95,7 +96,7 @@ fn shot_rules() -> BattleShotRules {
 async fn engagement() -> (tempfile::TempDir, Config, World, ObjectId, [ObjectId; 4]) {
     let (dir, config, mut world, map, ids) = fixture(
         ".0\n.0\n.0\n.0\n.0\n",
-        include_str!("../game/mechs/Demolisher"),
+        include_str!("../game/mechs/Demolisher.toml"),
     )
     .await;
     for id in ids {
@@ -316,7 +317,7 @@ async fn vehicle_friendly_fire_preferences_native_lua_and_map_policy_survive_res
 async fn vehicle_shot_checks_reject_submerged_weapons_and_depleted_ammunition() {
     let (_dir, _config, mut world, _map, [target, _, shooter, _]) = fixture(
         "~2\n~2\n~2\n~2\n~2\n",
-        include_str!("../game/mechs/Demolisher"),
+        include_str!("../game/mechs/Demolisher.toml"),
     )
     .await;
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);

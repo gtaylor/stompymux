@@ -1,0 +1,24 @@
+name = "Savannah_Master"
+class = "vehicle"
+movement = "hover"
+tons = 5
+max_speed = 216.0
+computer = 4
+
+[construction]
+engine = "compact"
+
+[sections.left_side]
+armor = 6
+
+[sections.right_side]
+armor = 6
+
+[sections.front_side]
+armor = 10
+slots = [
+    { at = 1, item = "IS.MediumLaser", brand = 3 },
+]
+
+[sections.aft_side]
+armor = 2

@@ -26,11 +26,14 @@ async fn fixture(quad: bool, tile: &str) -> (tempfile::TempDir, Config, World, O
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse(if quad {
-            include_str!("../game/mechs/SCP-1N")
-        } else {
-            include_str!("../game/mechs/JR7-D")
-        })
+        BattleTemplate::parse(
+            "test",
+            if quad {
+                include_str!("../game/mechs/SCP-1N.toml")
+            } else {
+                include_str!("../game/mechs/JR7-D.toml")
+            },
+        )
         .unwrap(),
     )
     .unwrap();
@@ -386,23 +389,29 @@ async fn prone_flooded_cockpit_evacuates_contents() {
 #[tokio::test]
 async fn prone_rejects_vehicle_chassis() {
     let (_dir, config, base, _, _) = fixture(false, ".0").await;
-    for movement in ["Track", "Wheel", "Hover", "None", "VTOL"] {
+    for movement in ["track", "wheel", "hover", "none", "vtol"] {
         let mut world = base.clone();
         let id = world.create(&config, "Vehicle".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        let text = if movement == "VTOL" {
-            include_str!("../game/mechs/Kestrel").to_owned()
+        let text = if movement == "vtol" {
+            include_str!("../game/mechs/Kestrel.toml").to_owned()
         } else {
-            include_str!("../game/mechs/Demolisher")
-                .replace("{ Track }", &format!("{{ {movement} }}"))
+            include_str!("../game/mechs/Demolisher.toml").replace(
+                "movement = \"track\"",
+                &format!("movement = \"{movement}\""),
+            )
         };
-        let text = if movement == "None" {
-            text.replace("{ 53.75 }", "{ 0 }")
+        let text = if movement == "none" {
+            text.replace("walk_mp = 5", "walk_mp = 0")
         } else {
             text
         };
-        create_battle_vehicle(&mut world, id, BattleVehicleTemplate::parse(&text).unwrap())
-            .unwrap();
+        create_battle_vehicle(
+            &mut world,
+            id,
+            BattleVehicleTemplate::parse("test", &text).unwrap(),
+        )
+        .unwrap();
         let before = world.btech.clone();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         assert!(

@@ -1,0 +1,73 @@
+name = "Archer"
+class = "mech"
+movement = "biped"
+tons = 70
+walk_mp = 6
+heat_sinks = 20
+computer = 3
+radio = 5
+radio_type = 126
+radio_range = 210
+tac_range = 46
+lrs_range = 85
+scan_range = 28
+cargo_space = 0
+max_suits = 0
+
+[construction]
+engine = "xl"
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 22
+slots = [
+    { at = 5, item = "IS.StreakSRM-2" },
+    { at = 6, item = "IS.MediumPulseLaser" },
+]
+
+[sections.right_arm]
+armor = 22
+slots = [
+    { at = 5, item = "IS.StreakSRM-2" },
+    { at = 6, item = "IS.MediumPulseLaser" },
+]
+
+[sections.left_torso]
+armor = 24
+rear = 6
+slots = [
+    { at = 4, item = "IS.LRM-15", modes = ["Narc/Smoke"] },
+    { at = "5-6", item = "IS.LRM-15" },
+    { at = "7-8", item = "IS.NarcBeacon" },
+    { at = 9, item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Narc/Smoke"] },
+    { at = 10, item = "Ammo_IS.NarcBeacon", rounds = 6 },
+    { at = 11, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+    { at = 12, item = "Case" },
+]
+
+[sections.right_torso]
+armor = 24
+rear = 6
+slots = [
+    { at = 4, item = "IS.LRM-15", modes = ["Narc/Smoke"] },
+    { at = "5-6", item = "IS.LRM-15" },
+    { at = "7-9", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Narc/Smoke"] },
+    { at = 10, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+    { at = 11, item = "Case" },
+]
+
+[sections.center_torso]
+armor = 33
+rear = 10
+slots = [
+    { at = "11-12", item = "IS.MediumPulseLaser", modes = ["RearMount"] },
+]
+
+[sections.left_leg]
+armor = 26
+
+[sections.right_leg]
+armor = 26
+
+[sections.head]
+armor = 9

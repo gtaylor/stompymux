@@ -1,0 +1,49 @@
+name = "Sholagar"
+class = "aerofighter"
+movement = "fly"
+tons = 35
+walk_mp = 15
+heat_sinks = 10
+computer = 3
+fuel = 750
+
+[sections.nose]
+armor = 20
+internals = 10
+slots = [
+    { at = 1, item = "IS.SRM-4" },
+    { at = 2, item = "Ammo_IS.SRM-4", rounds = 25 },
+]
+
+[sections.left_wing]
+armor = 17
+internals = 10
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]
+
+[sections.right_wing]
+armor = 17
+internals = 10
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]
+
+[sections.cockpit]
+armor = 14
+internals = 10
+slots = [
+    { at = 1, item = "LifeSupport", brand = 3 },
+    { at = 2, item = "Sensors", brand = 0 },
+    { at = 3, item = "Cockpit", brand = 0 },
+    { at = 4, item = "Sensors", brand = 0 },
+    { at = 5, item = "LifeSupport", brand = 0 },
+]
+
+[sections.engine]
+armor = 14
+internals = 10
+
+[sections.fuselage]
+armor = 24
+internals = 10

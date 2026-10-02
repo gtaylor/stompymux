@@ -28,7 +28,7 @@ async fn fixture() -> (
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     seed(&mut world, id, 0);
@@ -403,11 +403,11 @@ async fn case_ii_vents_ammunition_explosion_through_local_armor() {
     let object = baseline.objects.get_mut(&id).unwrap();
     object.location = Some(ObjectId(config.start()));
     object.home = Some(ObjectId(config.home()));
-    let source = include_str!("fixtures/btech/mechs/JR7-D").replace(
-        "    CRIT_2-3\t\t  { JumpJet - - }\nCenter_Torso",
-        "    CRIT_2-3\t\t  { JumpJet - - }\n    CRIT_4\t\t  { CASE-II - - }\nCenter_Torso",
+    let source = include_str!("fixtures/btech/mechs/JR7-D.toml").replace(
+        "    { at = \"2-3\", item = \"JumpJet\" },\n]\n\n[sections.center_torso]",
+        "    { at = \"2-3\", item = \"JumpJet\" },\n    { at = 4, item = \"CASE-II\" },\n]\n\n[sections.center_torso]",
     );
-    let template = BattleTemplate::parse(&source).unwrap();
+    let template = BattleTemplate::parse("JR7-D", &source).unwrap();
     assert!(
         template.sections[&Section::RightTorso]
             .criticals
@@ -486,11 +486,18 @@ async fn technology_fixture(
     let object = world.objects.get_mut(&id).unwrap();
     object.location = Some(ObjectId(config.start()));
     object.home = Some(ObjectId(config.home()));
-    let source = include_str!("fixtures/btech/mechs/JR7-D").replace(
-        "Specials\t { FlipArms }",
-        &format!("Specials\t {{ FlipArms {specials} }}"),
-    );
-    create_battle_unit(&mut world, id, BattleTemplate::parse(&source).unwrap()).unwrap();
+    let source = include_str!("fixtures/btech/mechs/JR7-D.toml");
+    let source = if specials.is_empty() {
+        source.to_owned()
+    } else {
+        support::templates::with_flags(source, &[specials])
+    };
+    create_battle_unit(
+        &mut world,
+        id,
+        BattleTemplate::parse("JR7-D", &source).unwrap(),
+    )
+    .unwrap();
     seed(&mut world, id, 0);
     (dir, config, world, id)
 }
@@ -569,19 +576,23 @@ async fn technology_flags_change_mech_mass() {
 /// with laser heat sinks; the abbreviation behaves the same and removing the flag stops the glow.
 #[tokio::test]
 async fn laser_heat_sinks_glow_while_running() {
-    let original = include_str!("../game/mechs/NightGyr-A");
-    assert!(original.contains("LaserHS_Tech"));
+    let original = include_str!("../game/mechs/NightGyr-A.toml");
+    assert!(original.contains("heat_sinks = \"laser\"\n"));
     for (source, glows) in [
         (original.to_string(), true),
-        (original.replace("LaserHS_Tech", "LHS"), true),
-        (original.replace(" LaserHS_Tech", ""), false),
+        (original.replace("heat_sinks = \"laser\"\n", ""), false),
     ] {
         let (_dir, config, mut world) = support::isolated_world().await;
         let id = world.create(&config, "Glowing Nightgyr".into(), Kind::Thing);
         let object = world.objects.get_mut(&id).unwrap();
         object.location = Some(ObjectId(config.start()));
         object.home = Some(ObjectId(config.home()));
-        create_battle_unit(&mut world, id, BattleTemplate::parse(&source).unwrap()).unwrap();
+        create_battle_unit(
+            &mut world,
+            id,
+            BattleTemplate::parse("NightGyr-A", &source).unwrap(),
+        )
+        .unwrap();
         assert!(
             world.btech.constructed_units()[&id]
                 .definition()

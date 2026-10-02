@@ -1,0 +1,30 @@
+name = "Hawk Moth"
+class = "vtol"
+movement = "vtol"
+tons = 25
+walk_mp = 12
+
+[sections.left_side]
+armor = 6
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 6
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 9
+slots = [
+    { at = 1, item = "IS.LightGaussRifle" },
+    { at = "2-3", item = "Ammo_IS.LightGaussRifle", rounds = 16 },
+]
+
+[sections.aft_side]
+armor = 4
+
+[sections.rotor]
+armor = 2

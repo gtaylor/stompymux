@@ -1,0 +1,70 @@
+name = "Men Shen"
+class = "mech"
+movement = "biped"
+tons = 55
+walk_mp = 9
+heat_sinks = 20
+computer = 4
+radio = 4
+specials = ["Masc", "BeagleProbe"]
+
+[construction]
+engine = "xl"
+structure = "endo_steel"
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 17
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-5", item = "IS.ERMediumLaser" },
+    { at = "6-10", item = "EndoSteel" },
+]
+
+[sections.right_arm]
+armor = 17
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-7", item = "EndoSteel" },
+]
+
+[sections.left_torso]
+armor = 20
+rear = 6
+slots = [
+    { at = "4-6", item = "Masc" },
+]
+
+[sections.right_torso]
+armor = 20
+rear = 6
+slots = [
+    { at = "4-9", item = "IS.LB10-XAC" },
+    { at = 10, item = "Ammo_IS.LB10-XAC", rounds = 10 },
+    { at = 11, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+]
+
+[sections.center_torso]
+armor = 26
+rear = 7
+slots = [
+    { at = "11-12", item = "BeagleProbe" },
+]
+
+[sections.left_leg]
+armor = 24
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 24
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "TAG" },
+]

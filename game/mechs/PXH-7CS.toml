@@ -1,0 +1,69 @@
+name = "PhoenixHawk"
+class = "mech"
+movement = "biped"
+tons = 45
+walk_mp = 9
+jump_mp = 5
+heat_sinks = 20
+computer = 4
+radio = 4
+
+[construction]
+engine = "xl"
+structure = "endo_steel"
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 13
+slots = [
+    { at = "5-6", item = "IS.ERMediumLaser" },
+    { at = "7-12", item = "EndoSteel" },
+]
+
+[sections.right_arm]
+armor = 13
+slots = [
+    { at = "5-6", item = "IS.ERLargeLaser" },
+]
+
+[sections.left_torso]
+armor = 16
+rear = 5
+slots = [
+    { at = "4-5", item = "JumpJet" },
+    { at = "6-8", item = "IS.iNarcBeacon" },
+    { at = "9-10", item = "Ammo_IS.iNarcBeacon", rounds = 4 },
+    { at = 11, item = "Ammo_IS.iNarcBeacon", rounds = 4, modes = ["iNarc_Explosive"] },
+    { at = 12, item = "EndoSteel" },
+]
+
+[sections.right_torso]
+armor = 16
+rear = 5
+slots = [
+    { at = "4-5", item = "JumpJet" },
+    { at = "6-7", item = "C3i" },
+    { at = "8-10", item = "EndoSteel" },
+]
+
+[sections.center_torso]
+armor = 19
+rear = 6
+slots = [
+    { at = 11, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 21
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 21
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 9

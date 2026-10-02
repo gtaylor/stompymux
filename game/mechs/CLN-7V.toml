@@ -1,0 +1,58 @@
+name = "Chameleon"
+class = "mech"
+movement = "biped"
+tons = 50
+walk_mp = 9
+jump_mp = 6
+
+[sections.left_arm]
+armor = 12
+slots = [
+    { at = 5, item = "IS.MediumLaser" },
+]
+
+[sections.right_arm]
+armor = 12
+slots = [
+    { at = "5-6", item = "IS.LargeLaser" },
+    { at = 7, item = "IS.MediumLaser" },
+]
+
+[sections.left_torso]
+armor = 12
+rear = 4
+slots = [
+    { at = 1, item = "IS.SmallLaser" },
+    { at = 2, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = 12, item = "JumpJet" },
+]
+
+[sections.right_torso]
+armor = 12
+rear = 4
+slots = [
+    { at = "1-2", item = "IS.SmallLaser" },
+    { at = 12, item = "JumpJet" },
+]
+
+[sections.center_torso]
+armor = 18
+rear = 5
+slots = [
+    { at = "11-12", item = "IS.MachineGun" },
+]
+
+[sections.left_leg]
+armor = 12
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 12
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9

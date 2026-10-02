@@ -1,0 +1,72 @@
+name = "Wyvern"
+class = "mech"
+movement = "biped"
+tons = 45
+walk_mp = 6
+jump_mp = 4
+heat_sinks = 12
+computer = 4
+radio = 4
+
+[construction]
+structure = "endo_steel"
+
+[sections.left_arm]
+armor = 14
+
+[sections.right_arm]
+armor = 14
+slots = [
+    { at = "5-6", item = "IS.LargeLaser" },
+    { at = "7-8", item = "IS.SmallLaser" },
+]
+
+[sections.left_torso]
+armor = 16
+rear = 6
+slots = [
+    { at = 1, item = "Ammo_IS.LRM-10", rounds = 12 },
+    { at = 2, item = "Case" },
+    { at = 3, item = "JumpJet" },
+    { at = "4-10", item = "EndoSteel" },
+    { at = "11-12", item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 16
+rear = 6
+slots = [
+    { at = "1-2", item = "IS.SRM-6" },
+    { at = 3, item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = 4, item = "Case" },
+    { at = 5, item = "JumpJet" },
+    { at = "6-10", item = "EndoSteel" },
+    { at = "11-12", item = "HeatSink" },
+]
+
+[sections.center_torso]
+armor = 20
+rear = 7
+slots = [
+    { at = "11-12", item = "IS.LRM-10" },
+]
+
+[sections.left_leg]
+armor = 22
+slots = [
+    { at = 5, item = "EndoSteel" },
+    { at = 6, item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 22
+slots = [
+    { at = 5, item = "EndoSteel" },
+    { at = 6, item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "HeatSink" },
+]

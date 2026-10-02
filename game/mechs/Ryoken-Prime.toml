@@ -1,0 +1,72 @@
+name = "Ryoken"
+class = "mech"
+movement = "biped"
+tons = 55
+walk_mp = 9
+heat_sinks = 44
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 18
+slots = [
+    { at = "5-10", item = "HeatSink" },
+    { at = 11, item = "CL.ERLargeLaser" },
+    { at = 12, item = "CL.ERMediumLaser" },
+]
+
+[sections.right_arm]
+armor = 18
+slots = [
+    { at = "5-10", item = "HeatSink" },
+    { at = 11, item = "CL.ERLargeLaser" },
+    { at = 12, item = "CL.ERMediumLaser" },
+]
+
+[sections.left_torso]
+armor = 17
+rear = 9
+slots = [
+    { at = "3-8", item = "HeatSink" },
+    { at = 9, item = "EndoSteel" },
+    { at = "10-12", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 17
+rear = 9
+slots = [
+    { at = "3-8", item = "HeatSink" },
+    { at = 9, item = "EndoSteel" },
+    { at = "10-12", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 25
+rear = 10
+slots = [
+    { at = 11, item = "EndoSteel" },
+    { at = 12, item = "FerroFibrous" },
+]
+
+[sections.left_leg]
+armor = 25
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 25
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "CL.ERMediumLaser" },
+]

@@ -65,7 +65,7 @@ The gameplay modules are organized around focused rules and state transitions:
 | Area | Examples in `src/btech/` |
 | --- | --- |
 | Maps and assets | `map.rs`, `assets.rs`, `state.rs`, terrain and map lifecycle modules |
-| Units and equipment | `unit.rs`, `vehicle.rs`, `template.rs`, `loadout.rs`, `equipment.rs` |
+| Units and equipment | `unit.rs`, `vehicle.rs`, `template.rs`, `template_document.rs`, `loadout.rs`, `equipment.rs` |
 | Movement and time | `motion.rs`, `jump.rs`, `power.rs`, `heat.rs`, `simulation_pending.rs` |
 | Combat | `shot.rs`, `damage.rs`, `critical.rs`, `artillery.rs`, weapon and ammunition modules |
 | Perception | `perception/` (sensor band, sight, probes, radar, acquisition), `contacts.rs`, `scanner.rs`, LOS and electronics modules |
@@ -157,7 +157,8 @@ standing still is not written each tick; its remaining writes are real changes
 such as the dice rolled by turn-boundary checks. Moving units still write their
 motion every tick.
 
-Map and template assets are decoded by BattleTech asset modules; their game
+Map and template assets are decoded by BattleTech asset modules (unit templates
+are TOML documents; see [Unit templates](../unit-templates/)); their game
 files remain separate from the SQLite snapshot. Map writes are staged with
 other transaction effects and published after a successful world commit.
 

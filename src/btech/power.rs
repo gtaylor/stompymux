@@ -583,7 +583,7 @@ mod tests {
         let config = config();
         let mut world = World::default();
         let unit = world.create(&config, "Autopilot health mech".into(), Kind::Thing);
-        BattleUnitTemplate::parse(include_str!("../../game/mechs/JR7-D"))
+        BattleUnitTemplate::parse("JR7-D", include_str!("../../game/mechs/JR7-D.toml"))
             .unwrap()
             .create(&mut world, unit)
             .unwrap();
@@ -603,10 +603,13 @@ mod tests {
         let config = config();
         let mut world = World::default();
         let unit = world.create(&config, "Autopilot health vehicle".into(), Kind::Thing);
-        BattleUnitTemplate::parse(include_str!("../../game/mechs/Demolisher"))
-            .unwrap()
-            .create(&mut world, unit)
-            .unwrap();
+        BattleUnitTemplate::parse(
+            "Demolisher",
+            include_str!("../../game/mechs/Demolisher.toml"),
+        )
+        .unwrap()
+        .create(&mut world, unit)
+        .unwrap();
         attach(&mut world, unit);
 
         assert!(autopilot_controlled_vehicle(&world, unit).is_ok());

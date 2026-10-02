@@ -1,5 +1,5 @@
 //! Shared ground-vehicle and VTOL asset anatomy, independent of live simulation admission.
-use super::{SectionDefinition, template::ParsedTemplate};
+use super::{SectionDefinition, template_document::ParsedTemplate};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -189,9 +189,13 @@ impl BattleVehicleTemplate {
         Ok(())
     }
 
-    /// Decode bounded syntax and vehicle anatomy without admitting unsupported equipment to live play.
-    pub fn parse(source: &str) -> Result<Self> {
-        let parsed = ParsedTemplate::parse(source)?;
+    /// Decode a TOML vehicle document whose file stem is `reference`, without admitting unsupported equipment to live play.
+    pub fn parse(reference: &str, source: &str) -> Result<Self> {
+        Self::from_parsed(ParsedTemplate::parse(reference, source)?)
+    }
+
+    /// Validate decoded fields and sections as a ground vehicle or VTOL.
+    pub(super) fn from_parsed(parsed: ParsedTemplate) -> Result<Self> {
         let kind = parsed.required("type")?;
         ensure!(
             kind.eq_ignore_ascii_case("Vehicle") || kind.eq_ignore_ascii_case("VTOL"),

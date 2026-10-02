@@ -15,13 +15,13 @@ pub enum BattleGyro {
 impl BattleGyro {
     /// Resolve the explicit construction family; ambiguous technology is rejected at construction.
     pub(super) fn from_definition(definition: &BattleTemplate) -> Self {
-        if definition.has_special("XLGYRO") {
+        if definition.has_special("XLGYRO") || definition.has_special("XLGyro_Tech") {
             return Self::Xl;
         }
-        if definition.has_special("HDGYRO") {
+        if definition.has_special("HDGYRO") || definition.has_special("HDGyro_Tech") {
             return Self::Hardened;
         }
-        if definition.has_special("CGYRO") {
+        if definition.has_special("CGYRO") || definition.has_special("CompactGyro_Tech") {
             return Self::Compact;
         }
         Self::Standard

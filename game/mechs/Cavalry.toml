@@ -1,0 +1,29 @@
+name = "Cavalry"
+class = "vtol"
+movement = "vtol"
+tons = 25
+walk_mp = 15
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 13
+
+[sections.right_side]
+armor = 13
+
+[sections.front_side]
+armor = 20
+slots = [
+    { at = 1, item = "IS.SRM-6" },
+    { at = "2-4", item = "IS.SRM-2" },
+    { at = 5, item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = 6, item = "Ammo_IS.SRM-2", rounds = 50 },
+]
+
+[sections.aft_side]
+armor = 8
+
+[sections.rotor]
+armor = 2

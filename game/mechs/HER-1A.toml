@@ -1,0 +1,43 @@
+name = "Hermes"
+class = "mech"
+movement = "biped"
+tons = 30
+walk_mp = 14
+radio = 5
+
+[sections.left_arm]
+armor = 5
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.Flamer" },
+]
+
+[sections.right_arm]
+armor = 5
+slots = [
+    { at = 5, item = "IS.MediumLaser" },
+]
+
+[sections.left_torso]
+armor = 6
+rear = 2
+
+[sections.right_torso]
+armor = 6
+rear = 2
+
+[sections.center_torso]
+armor = 7
+rear = 4
+slots = [
+    { at = 11, item = "IS.MediumLaser" },
+]
+
+[sections.left_leg]
+armor = 6
+
+[sections.right_leg]
+armor = 6
+
+[sections.head]
+armor = 7

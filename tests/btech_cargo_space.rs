@@ -5,21 +5,21 @@ use stompymux_rs::*;
 
 /// All admitted movement classes use the same cargo-space definition.
 fn templates() -> Vec<String> {
-    let ground = include_str!("../game/mechs/Demolisher");
+    let ground = include_str!("../game/mechs/Demolisher.toml");
     vec![
-        include_str!("../game/mechs/JR7-D").into(),
-        include_str!("../game/mechs/GOL-1H").into(),
+        include_str!("../game/mechs/JR7-D.toml").into(),
+        include_str!("../game/mechs/GOL-1H.toml").into(),
         ground.into(),
         ground.replace("Tracked", "Wheeled"),
         ground.replace("Tracked", "Hover"),
         ground.replace("Tracked", "None"),
-        include_str!("../game/mechs/Kestrel").into(),
+        include_str!("../game/mechs/Kestrel.toml").into(),
     ]
 }
 
 /// Preserve other construction technologies while changing only cargo installation facts.
 fn configured(source: &str, space: &str, flags: &str) -> BattleUnitTemplate {
-    let mut template = BattleUnitTemplate::parse(source).unwrap();
+    let mut template = BattleUnitTemplate::parse("test", source).unwrap();
     let attributes = match &mut template {
         BattleUnitTemplate::Mech(template) => &mut template.attributes,
         BattleUnitTemplate::Vehicle(template) => &mut template.attributes,

@@ -1,0 +1,73 @@
+name = "Thunder"
+class = "mech"
+movement = "biped"
+tons = 70
+walk_mp = 8
+heat_sinks = 22
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+
+[construction]
+engine = "xl"
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 22
+slots = [
+    { at = "9-12", item = "StealthArmor" },
+]
+
+[sections.right_arm]
+armor = 22
+explicit = true
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = "2-12", item = "IS.LB20-XAC" },
+]
+
+[sections.left_torso]
+armor = 23
+rear = 7
+slots = [
+    { at = "4-5", item = "IS.StreakSRM-6" },
+    { at = 6, item = "IS.ERMediumLaser" },
+    { at = 7, item = "Ammo_IS.StreakSRM-6", rounds = 15 },
+    { at = "10-11", item = "StealthArmor" },
+    { at = 12, item = "Case" },
+]
+
+[sections.right_torso]
+armor = 23
+rear = 7
+slots = [
+    { at = 4, item = "IS.ERMediumLaser" },
+    { at = "5-6", item = "Ecm" },
+    { at = 7, item = "Ammo_IS.LB20-XAC", rounds = 5 },
+    { at = 8, item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
+    { at = "10-11", item = "StealthArmor" },
+    { at = 12, item = "Case" },
+]
+
+[sections.center_torso]
+armor = 34
+rear = 9
+slots = [
+    { at = 12, item = "IS.ERSmallLaser" },
+]
+
+[sections.left_leg]
+armor = 30
+slots = [
+    { at = "5-6", item = "StealthArmor" },
+]
+
+[sections.right_leg]
+armor = 30
+slots = [
+    { at = "5-6", item = "StealthArmor" },
+]
+
+[sections.head]
+armor = 9

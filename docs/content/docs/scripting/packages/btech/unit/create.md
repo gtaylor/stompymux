@@ -18,7 +18,7 @@ btech.unit.create(dbref, name)
 | Name | Type | Description |
 | --- | --- | --- |
 | `dbref` | `integer` |  |
-| `name` | `string` | Relative name under database.mech_database. |
+| `name` | `string` | Template reference: the file stem of a `.toml` document anywhere under database.mech_database. |
 
 ## Returns
 

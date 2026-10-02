@@ -1,0 +1,63 @@
+name = "Marauder"
+class = "mech"
+movement = "biped"
+tons = 75
+walk_mp = 6
+heat_sinks = 32
+computer = 4
+radio = 4
+specials = ["ECM", "SearchLight"]
+
+[construction]
+engine = "xl"
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 24
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-9", item = "HeatSink" },
+    { at = "10-11", item = "IS.ERLargeLaser", modes = ["OnTC"] },
+    { at = 12, item = "IS.ERMediumLaser", modes = ["OnTC"] },
+]
+
+[sections.right_arm]
+armor = 24
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-9", item = "HeatSink" },
+    { at = "10-11", item = "IS.ERLargeLaser", modes = ["OnTC"] },
+    { at = 12, item = "IS.ERMediumLaser", modes = ["OnTC"] },
+]
+
+[sections.left_torso]
+armor = 23
+rear = 8
+slots = [
+    { at = "4-9", item = "TargetingComputer" },
+    { at = "10-11", item = "Ammo_IS.RotaryAC/5", rounds = 20 },
+    { at = 12, item = "Case" },
+]
+
+[sections.right_torso]
+armor = 23
+rear = 8
+slots = [
+    { at = "4-9", item = "IS.RotaryAC/5", modes = ["OnTC"] },
+]
+
+[sections.center_torso]
+armor = 33
+rear = 12
+slots = [
+    { at = "11-12", item = "Ecm" },
+]
+
+[sections.left_leg]
+armor = 30
+
+[sections.right_leg]
+armor = 30
+
+[sections.head]
+armor = 9

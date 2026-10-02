@@ -1,0 +1,43 @@
+name = "Guardian"
+class = "aerofighter"
+movement = "fly"
+tons = 20
+walk_mp = 11
+heat_sinks = 0
+computer = 5
+fuel = 2000
+
+[sections.nose]
+armor = 3
+internals = 7
+slots = [
+    { at = 1, item = "IS.SRM-6", brand = 5 },
+    { at = 2, item = "Ammo_IS.SRM-6", rounds = 15 },
+]
+
+[sections.left_wing]
+armor = 2
+internals = 7
+
+[sections.right_wing]
+armor = 2
+internals = 7
+
+[sections.cockpit]
+armor = 3
+internals = 7
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "Sensors" },
+    { at = 5, item = "LifeSupport" },
+]
+
+[sections.engine]
+armor = 3
+internals = 7
+
+[sections.fuselage]
+armor = 3
+internals = 7

@@ -1,0 +1,24 @@
+name = "Mantis"
+class = "vtol"
+movement = "vtol"
+tons = 15
+walk_mp = 17
+cargo_space = 0
+
+[sections.left_side]
+armor = 8
+
+[sections.right_side]
+armor = 8
+
+[sections.front_side]
+armor = 14
+slots = [
+    { at = "1-5", item = "IS.ERSmallLaser", brand = 3 },
+]
+
+[sections.aft_side]
+armor = 8
+
+[sections.rotor]
+armor = 2

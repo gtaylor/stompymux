@@ -4,23 +4,23 @@ use stompymux_rs::*;
 
 /// Representative supported chassis with stationary movement explicitly authored.
 fn templates() -> Vec<String> {
-    let tracked = include_str!("../game/mechs/Demolisher");
+    let tracked = include_str!("../game/mechs/Demolisher.toml");
     vec![
-        include_str!("../game/mechs/JR7-D").into(),
-        include_str!("../game/mechs/GOL-1H").into(),
+        include_str!("../game/mechs/JR7-D.toml").into(),
+        include_str!("../game/mechs/GOL-1H.toml").into(),
         tracked.into(),
-        tracked.replace("{ Track }", "{ Wheel }"),
-        tracked.replace("{ Track }", "{ Hover }"),
+        tracked.replace("movement = \"track\"", "movement = \"wheel\""),
+        tracked.replace("movement = \"track\"", "movement = \"hover\""),
         tracked
-            .replace("{ Track }", "{ None }")
-            .replace("{ 53.75 }", "{ 0 }"),
-        include_str!("../game/mechs/Kestrel").into(),
+            .replace("movement = \"track\"", "movement = \"none\"")
+            .replace("walk_mp = 5", "walk_mp = 0"),
+        include_str!("../game/mechs/Kestrel.toml").into(),
     ]
 }
 
 /// Add probes to unoccupied slots without changing the unit's weapons or required equipment.
 fn equipment(source: &str) -> BattleUnitTemplate {
-    let mut template = BattleUnitTemplate::parse(source).unwrap();
+    let mut template = BattleUnitTemplate::parse("test", source).unwrap();
     let (attributes, section, parts) = match &mut template {
         BattleUnitTemplate::Mech(definition) => {
             let section = definition
@@ -117,7 +117,7 @@ async fn fixture(
     let mut ids = Vec::new();
     for (index, template) in [
         equipment(source),
-        BattleUnitTemplate::parse(target).unwrap(),
+        BattleUnitTemplate::parse("test", target).unwrap(),
     ]
     .into_iter()
     .enumerate()
@@ -328,8 +328,13 @@ async fn stationary_probe_extension_and_shared_radar_ceiling() {
 async fn probe_contacts_cross_obstacles_and_reconcile_after_equipment_loss() {
     use std::{cell::RefCell, rc::Rc};
     for source in templates() {
-        let (_dir, config, world, observer, target) =
-            fixture(&source, include_str!("../game/mechs/Demolisher"), 3, true).await;
+        let (_dir, config, world, observer, target) = fixture(
+            &source,
+            include_str!("../game/mechs/Demolisher.toml"),
+            3,
+            true,
+        )
+        .await;
         let terrain = battle_unit_terrain_los(&world, observer, target).unwrap();
         assert!(terrain.blocked);
         let cover = if terrain.partial_cover { 3 } else { 0 };
@@ -434,7 +439,7 @@ async fn probe_contacts_cross_obstacles_and_reconcile_after_equipment_loss() {
 /// A launch countdown keeps the target on the sensor band; radar tracks it only after liftoff.
 #[tokio::test]
 async fn radar_tracks_launching_vtols_only_after_liftoff() {
-    let source = include_str!("../game/mechs/Kestrel");
+    let source = include_str!("../game/mechs/Kestrel.toml");
     let (_dir, config, mut base, observer, target) = fixture(source, source, 3, false).await;
     edit(&mut base, observer, |state| {
         state["contacts"] = serde_json::json!({target.0.to_string():{"identified":true}});
@@ -606,7 +611,7 @@ async fn gatling_attack_order_replays_across_chassis() {
     for source in templates() {
         for supply in [2, 200] {
             let (_dir, config, mut world, shooter, target) =
-                fixture(&source, include_str!("../game/mechs/JR7-D"), 1, false).await;
+                fixture(&source, include_str!("../game/mechs/JR7-D.toml"), 1, false).await;
             let index = install_gatling(&mut world, shooter, supply);
             edit(&mut world, shooter, |state| {
                 state["dice"] = serde_json::to_value(BattleDice::seeded([17; 32])).unwrap();

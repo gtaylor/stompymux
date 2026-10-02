@@ -1,0 +1,74 @@
+name = "Archer"
+class = "mech"
+movement = "biped"
+tons = 70
+walk_mp = 6
+heat_sinks = 24
+computer = 4
+radio = 4
+specials = ["ArtemisIV"]
+
+[construction]
+structure = "endo_steel"
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 22
+slots = [
+    { at = 5, item = "IS.ERMediumLaser" },
+    { at = "6-12", item = "EndoSteel" },
+]
+
+[sections.right_arm]
+armor = 22
+slots = [
+    { at = 5, item = "IS.ERMediumLaser" },
+]
+
+[sections.left_torso]
+armor = 24
+rear = 6
+slots = [
+    { at = "1-3", item = "HeatSink" },
+    { at = "4-6", item = "IS.LRM-15" },
+    { at = "7-8", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
+    { at = "9-10", item = "EndoSteel" },
+    { at = 11, item = "Case" },
+    { at = 12, item = "ArtemisIV" },
+]
+
+[sections.right_torso]
+armor = 24
+rear = 6
+slots = [
+    { at = "1-3", item = "IS.LRM-15" },
+    { at = "4-5", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
+    { at = 6, item = "EndoSteel" },
+    { at = 11, item = "Case" },
+    { at = 12, item = "ArtemisIV" },
+]
+
+[sections.center_torso]
+armor = 33
+rear = 10
+slots = [
+    { at = "11-12", item = "IS.ERLargeLaser" },
+]
+
+[sections.left_leg]
+armor = 30
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 30
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "IS.ERMediumLaser" },
+]

@@ -1,0 +1,17 @@
+name = "Swift_Wind"
+class = "vehicle"
+movement = "wheel"
+tons = 8
+walk_mp = 15
+
+[sections.left_side]
+armor = 1
+
+[sections.right_side]
+armor = 1
+
+[sections.front_side]
+armor = 4
+
+[sections.aft_side]
+armor = 2

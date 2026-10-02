@@ -1,0 +1,53 @@
+name = "Kraken"
+class = "mech"
+movement = "biped"
+tons = 100
+walk_mp = 5
+heat_sinks = 20
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+
+[sections.left_arm]
+armor = 34
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-12", item = "CL.UltraAC/2" },
+]
+
+[sections.right_arm]
+armor = 34
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-12", item = "CL.UltraAC/2" },
+]
+
+[sections.left_torso]
+armor = 32
+rear = 10
+slots = [
+    { at = "3-4", item = "Ammo_CL.UltraAC/2", rounds = 45 },
+]
+
+[sections.right_torso]
+armor = 32
+rear = 10
+slots = [
+    { at = "3-4", item = "Ammo_CL.UltraAC/2", rounds = 45 },
+    { at = "5-8", item = "CL.MachineGun" },
+    { at = 9, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Hotload"] },
+]
+
+[sections.center_torso]
+armor = 46
+rear = 13
+
+[sections.left_leg]
+armor = 42
+
+[sections.right_leg]
+armor = 42
+
+[sections.head]
+armor = 9

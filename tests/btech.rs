@@ -60,22 +60,35 @@ fn supplied_templates_and_maps_decode_without_asset_conversion() {
 
 #[test]
 fn malformed_templates_do_not_become_partially_supported_units() {
-    let source = include_str!("fixtures/btech/mechs/JR7-D");
-    for source in [
-        source.replace("118.25", "NaN"),
-        source.replace("Biped", "Quad"),
-        source.replace("CRIT_1-3", "CRIT_0-3"),
-        source.replace("CRIT_4-7", "CRIT_3-7"),
-        source.replace("Tons             { 35 }", "Tons { -1 }"),
-        source.replace("Reference        { JR7-D }", "Reference {"),
+    let source = include_str!("fixtures/btech/mechs/JR7-D.toml");
+    for malformed in [
+        source.replace("walk_mp = 11", "max_speed = nan"),
+        source.replace("movement = \"biped\"", "movement = \"quad\""),
+        source.replace("class = \"mech\"", "class = \"Mech\""),
+        source.replace(
+            "at = \"1-2\", item = \"JumpJet\"",
+            "at = \"0-2\", item = \"JumpJet\"",
+        ),
+        source.replace(
+            "at = \"3-4\", item = \"IS.MediumLaser\"",
+            "at = \"2-3\", item = \"IS.MediumLaser\"",
+        ),
+        source.replace("tons = 35", "tons = -1"),
+        source.replace("name = \"Jenner\"", "name = \"Jenner"),
+        format!("reference = \"JR7-D\"\n{source}"),
+        format!("{source}\n[sections.head]\narmor = 1\n"),
     ] {
+        assert_ne!(malformed, source);
         assert!(
-            BattleTemplate::parse(&source).is_err(),
-            "unexpectedly parsed {source}"
+            BattleTemplate::parse("JR7-D", &malformed).is_err(),
+            "unexpectedly parsed {malformed}"
         );
     }
-    let multiline = source.replace("Name             { Jenner }", "Name {\nJenner\n}");
-    assert_eq!(BattleTemplate::parse(&multiline).unwrap().name, "Jenner");
+    let multiline = source.replace("name = \"Jenner\"", "name = \"\"\"\nJenner\"\"\"");
+    assert_eq!(
+        BattleTemplate::parse("JR7-D", &multiline).unwrap().name,
+        "Jenner"
+    );
     // Optional metadata is ignored as a whole when its field count is invalid.
     let map = BattleMapAsset::parse("1 1\n.0\n42: 88 19 extra\n").unwrap();
     assert_eq!((map.flags, map.gravity, map.temperature), (0, 100, 20));

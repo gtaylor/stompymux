@@ -1,0 +1,22 @@
+name = "Flatbed Truck"
+class = "vehicle"
+movement = "wheel"
+tons = 10
+walk_mp = 8
+computer = 3
+specials = ["CargoTech"]
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 2
+
+[sections.right_side]
+armor = 2
+
+[sections.front_side]
+armor = 2
+
+[sections.aft_side]
+armor = 2

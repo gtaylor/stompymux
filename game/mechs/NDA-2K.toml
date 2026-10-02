@@ -1,0 +1,77 @@
+name = "No-Daichi"
+class = "mech"
+movement = "biped"
+tons = 70
+walk_mp = 8
+heat_sinks = 22
+computer = 4
+radio = 4
+specials = ["ECM"]
+
+[construction]
+engine = "xl"
+structure = "endo_steel"
+heat_sinks = "double"
+myomer = "triple_strength"
+
+[sections.left_arm]
+armor = 21
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.ERLargeLaser" },
+    { at = "5-6", item = "IS.MediumPulseLaser" },
+    { at = "7-12", item = "EndoSteel" },
+]
+
+[sections.right_arm]
+armor = 21
+slots = [
+    { at = "5-9", item = "Sword" },
+    { at = "10-12", item = "EndoSteel" },
+]
+
+[sections.left_torso]
+armor = 22
+rear = 8
+slots = [
+    { at = "4-5", item = "IS.MRM-10" },
+    { at = "6-7", item = "Ammo_IS.MRM-10", rounds = 24 },
+    { at = "8-9", item = "IS.MediumPulseLaser" },
+    { at = "10-12", item = "TripleStrengthMyomer" },
+]
+
+[sections.right_torso]
+armor = 22
+rear = 8
+slots = [
+    { at = "4-5", item = "IS.MRM-10" },
+    { at = "6-7", item = "Ammo_IS.MRM-10", rounds = 24 },
+    { at = 8, item = "IS.MediumPulseLaser" },
+    { at = "9-11", item = "TripleStrengthMyomer" },
+    { at = 12, item = "EndoSteel" },
+]
+
+[sections.center_torso]
+armor = 29
+rear = 10
+slots = [
+    { at = "11-12", item = "Ecm" },
+]
+
+[sections.left_leg]
+armor = 29
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 29
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "IS.SmallLaser" },
+]

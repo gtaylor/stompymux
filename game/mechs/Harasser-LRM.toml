@@ -1,0 +1,29 @@
+name = "Harasser"
+class = "vehicle"
+movement = "hover"
+tons = 25
+walk_mp = 15
+computer = 3
+specials = ["SearchLight"]
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 6
+
+[sections.right_side]
+armor = 6
+
+[sections.front_side]
+armor = 7
+
+[sections.aft_side]
+armor = 7
+
+[sections.turret]
+armor = 6
+slots = [
+    { at = 1, item = "IS.LRM-10" },
+    { at = "2-4", item = "Ammo_IS.LRM-10", rounds = 12 },
+]

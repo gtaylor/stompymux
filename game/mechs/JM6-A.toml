@@ -1,0 +1,52 @@
+name = "JagerMech"
+class = "mech"
+movement = "biped"
+tons = 65
+walk_mp = 6
+specials = ["AntiAircraft"]
+
+[sections.left_arm]
+armor = 11
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-5", item = "IS.LRM-15" },
+    { at = 6, item = "IS.AC/2" },
+]
+
+[sections.right_arm]
+armor = 11
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-5", item = "IS.LRM-15" },
+    { at = 6, item = "IS.AC/2" },
+]
+
+[sections.left_torso]
+armor = 17
+rear = 3
+slots = [
+    { at = 1, item = "Ammo_IS.LRM-15", rounds = 8 },
+    { at = 2, item = "Ammo_IS.AC/2", rounds = 45 },
+    { at = 3, item = "IS.MediumLaser", brand = 4 },
+]
+
+[sections.right_torso]
+armor = 17
+rear = 3
+slots = [
+    { at = 1, item = "Ammo_IS.LRM-15", rounds = 8 },
+    { at = 2, item = "IS.MediumLaser", brand = 4 },
+]
+
+[sections.center_torso]
+armor = 20
+rear = 5
+
+[sections.left_leg]
+armor = 16
+
+[sections.right_leg]
+armor = 16
+
+[sections.head]
+armor = 9

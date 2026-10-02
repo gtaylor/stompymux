@@ -1,0 +1,32 @@
+name = "Parity Aerodyne"
+class = "aerodyne_dropship"
+movement = "fly"
+tons = 5000
+max_speed = 32.5
+
+[sections.right_wing]
+armor = 41
+internals = 21
+slots = [
+    { at = 1, item = "Agra.IS.PPC", brand = 5 },
+]
+
+[sections.left_wing]
+armor = 42
+internals = 22
+
+[sections.left_rear_wing]
+armor = 43
+internals = 23
+
+[sections.right_rear_wing]
+armor = 44
+internals = 24
+
+[sections.aft]
+armor = 45
+internals = 25
+
+[sections.nose]
+armor = 46
+internals = 26

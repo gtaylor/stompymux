@@ -1,0 +1,65 @@
+name = "Arctic Wolf"
+class = "mech"
+movement = "biped"
+tons = 40
+walk_mp = 11
+heat_sinks = 20
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+
+[sections.left_arm]
+armor = 8
+slots = [
+    { at = "5-6", item = "CL.StreakSRM-6" },
+    { at = 7, item = "EndoSteel" },
+]
+
+[sections.right_arm]
+armor = 8
+slots = [
+    { at = "5-6", item = "CL.StreakSRM-6" },
+    { at = 7, item = "EndoSteel" },
+]
+
+[sections.left_torso]
+armor = 14
+rear = 3
+slots = [
+    { at = "3-4", item = "CL.StreakSRM-6" },
+    { at = "5-7", item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+]
+
+[sections.right_torso]
+armor = 14
+rear = 3
+slots = [
+    { at = "3-4", item = "CL.StreakSRM-6" },
+]
+
+[sections.center_torso]
+armor = 13
+rear = 4
+slots = [
+    { at = "11-12", item = "CL.StreakSRM-6" },
+]
+
+[sections.left_leg]
+armor = 10
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 10
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "EndoSteel" },
+]

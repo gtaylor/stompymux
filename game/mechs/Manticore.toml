@@ -1,0 +1,31 @@
+name = "Manticore"
+class = "vehicle"
+movement = "track"
+tons = 60
+walk_mp = 6
+heat_sinks = 13
+
+[sections.left_side]
+armor = 33
+
+[sections.right_side]
+armor = 33
+
+[sections.front_side]
+armor = 42
+slots = [
+    { at = 1, item = "IS.MediumLaser", brand = 3 },
+]
+
+[sections.aft_side]
+armor = 26
+
+[sections.turret]
+armor = 42
+slots = [
+    { at = 1, item = "IS.PPC", brand = 3 },
+    { at = 2, item = "IS.SRM-6", brand = 3 },
+    { at = 3, item = "IS.LRM-10", brand = 3 },
+    { at = 4, item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = 5, item = "Ammo_IS.LRM-10", rounds = 12 },
+]

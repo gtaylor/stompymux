@@ -1,0 +1,75 @@
+name = "Hatchetman"
+class = "mech"
+movement = "biped"
+tons = 45
+walk_mp = 6
+jump_mp = 4
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+specials = ["AntiAircraft"]
+
+[construction]
+engine = "xl"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 14
+slots = [
+    { at = 5, item = "IS.MediumPulseLaser" },
+    { at = "6-8", item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 14
+slots = [
+    { at = 5, item = "IS.MediumPulseLaser" },
+    { at = "6-8", item = "Axe" },
+    { at = "9-11", item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 16
+rear = 6
+slots = [
+    { at = 4, item = "HeatSink" },
+    { at = 5, item = "IS.MediumPulseLaser" },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 16
+rear = 6
+slots = [
+    { at = 4, item = "HeatSink" },
+    { at = 5, item = "IS.LB10-XAC", modes = ["LBX/Cluster"] },
+    { at = "6-10", item = "IS.LB10-XAC" },
+    { at = 11, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = 12, item = "Case" },
+]
+
+[sections.center_torso]
+armor = 21
+rear = 6
+slots = [
+    { at = 11, item = "FerroFibrous" },
+]
+
+[sections.left_leg]
+armor = 22
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 22
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "HeatSink" },
+]

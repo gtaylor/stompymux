@@ -1,0 +1,76 @@
+name = "Cauldron Born"
+class = "mech"
+movement = "biped"
+tons = 65
+walk_mp = 8
+heat_sinks = 28
+computer = 4
+specials = ["BeagleProbe"]
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 15
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "FerroFibrous" },
+    { at = "5-6", item = "CL.ERPPC" },
+    { at = "7-8", item = "CL.LargePulseLaser" },
+]
+
+[sections.right_arm]
+armor = 15
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "FerroFibrous" },
+    { at = "5-6", item = "CL.ERPPC" },
+    { at = "7-8", item = "CL.LargePulseLaser" },
+]
+
+[sections.left_torso]
+armor = 24
+rear = 6
+slots = [
+    { at = 3, item = "FerroFibrous" },
+    { at = "4-5", item = "HeatSink" },
+    { at = 6, item = "CL.MediumPulseLaser" },
+]
+
+[sections.right_torso]
+armor = 24
+rear = 6
+slots = [
+    { at = "3-4", item = "EndoSteel" },
+    { at = 5, item = "CL.MediumPulseLaser" },
+    { at = 6, item = "BeagleProbe" },
+]
+
+[sections.center_torso]
+armor = 32
+rear = 10
+slots = [
+    { at = 11, item = "EndoSteel" },
+    { at = 12, item = "FerroFibrous" },
+]
+
+[sections.left_leg]
+armor = 16
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 16
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

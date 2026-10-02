@@ -1,0 +1,28 @@
+name = "Warrior"
+class = "vtol"
+movement = "vtol"
+tons = 21
+walk_mp = 15
+computer = 4
+specials = ["SearchLight"]
+
+[sections.left_side]
+armor = 5
+
+[sections.right_side]
+armor = 5
+
+[sections.front_side]
+armor = 6
+slots = [
+    { at = 1, item = "IS.AC/5" },
+    { at = "2-3", item = "Ammo_IS.AC/5", rounds = 20 },
+    { at = 4, item = "IS.MachineGun" },
+    { at = 5, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
+]
+
+[sections.aft_side]
+armor = 6
+
+[sections.rotor]
+armor = 2

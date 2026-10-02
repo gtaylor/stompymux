@@ -1,0 +1,69 @@
+name = "Battlemaster"
+class = "mech"
+movement = "biped"
+tons = 85
+walk_mp = 6
+heat_sinks = 22
+computer = 4
+radio = 4
+specials = ["SearchLight"]
+
+[construction]
+engine = "xl"
+brand = 3
+
+[sections.left_arm]
+armor = 23
+
+[sections.right_arm]
+armor = 23
+slots = [
+    { at = "5-9", item = "IS.LRM-20", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 26
+rear = 8
+slots = [
+    { at = "4-5", item = "IS.MediumPulseLaser", brand = 3 },
+    { at = 6, item = "IS.MediumPulseLaser", modes = ["RearMount"], brand = 3 },
+    { at = "7-8", item = "IS.SRM-6", brand = 3 },
+    { at = "9-10", item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = 11, item = "Case", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 26
+rear = 8
+slots = [
+    { at = "4-5", item = "HeatSink", brand = 3 },
+    { at = "6-7", item = "IS.MediumPulseLaser", brand = 3 },
+    { at = 8, item = "IS.MediumPulseLaser", modes = ["RearMount"], brand = 3 },
+    { at = "9-10", item = "Ammo_IS.LRM-20", rounds = 6 },
+    { at = 11, item = "Case", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 36
+rear = 10
+slots = [
+    { at = "11-12", item = "HeatSink", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 25
+slots = [
+    { at = "5-6", item = "HeatSink", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 25
+slots = [
+    { at = "5-6", item = "HeatSink", brand = 3 },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "HeatSink", brand = 3 },
+]

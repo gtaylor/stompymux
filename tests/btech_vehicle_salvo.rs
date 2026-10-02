@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse(template).unwrap(),
+        BattleVehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -90,10 +90,10 @@ fn request(weapon: BattleWeapon) -> BattleVehicleSalvoRequest {
 
 #[tokio::test]
 async fn vehicle_salvos_share_packet_rules_and_order_every_impact() {
-    let template = include_str!("../game/mechs/Demolisher")
-        .replace("{ 30 }", "{ 200 }")
-        .replace("{ 40 }", "{ 200 }")
-        .replace("{ 20 }", "{ 200 }");
+    let template = include_str!("../game/mechs/Demolisher.toml")
+        .replace("armor = 30\n", "armor = 200\n")
+        .replace("armor = 40\n", "armor = 200\n")
+        .replace("armor = 20\n", "armor = 200\n");
     let (_dir, config, base, id) = fixture(&template).await;
     let seed = matching_seed(|dice| dice.two_d6() == 12);
     for (weapon, mode, ammunition, expected) in [
@@ -187,7 +187,7 @@ async fn vehicle_salvos_share_packet_rules_and_order_every_impact() {
 
 #[tokio::test]
 async fn vehicle_salvos_apply_interception_glancing_and_streak_confusion() {
-    let (_dir, _config, base, id) = fixture(include_str!("../game/mechs/Demolisher")).await;
+    let (_dir, _config, base, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     for intercepted in [6, 20] {
         let mut world = base.clone();
         let seed = matching_seed(|dice| dice.two_d6() == 12);
@@ -270,7 +270,7 @@ async fn vehicle_salvos_apply_interception_glancing_and_streak_confusion() {
 
 #[tokio::test]
 async fn vehicle_salvos_finish_after_hull_loss_and_reject_invalid_effects_atomically() {
-    let (_dir, config, mut base, id) = fixture(include_str!("../game/mechs/Demolisher")).await;
+    let (_dir, config, mut base, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     let mut saved = serde_json::to_value(&base.btech).unwrap();
     saved["vehicles"][id.0.to_string()]["sections"]["front"]["armor"] = serde_json::json!(0);
     saved["vehicles"][id.0.to_string()]["sections"]["front"]["internal"] = serde_json::json!(1);

@@ -1,0 +1,33 @@
+name = "Thor"
+class = "vehicle"
+movement = "wheel"
+tons = 55
+walk_mp = 8
+computer = 3
+
+[construction]
+armor = "ferro_fibrous"
+
+[sections.left_side]
+armor = 25
+
+[sections.right_side]
+armor = 25
+
+[sections.front_side]
+armor = 30
+config = "Case"
+slots = [
+    { at = 1, item = "IS.Thumper" },
+    { at = "2-3", item = "Ammo_IS.Thumper", rounds = 20 },
+    { at = 4, item = "Case" },
+]
+
+[sections.aft_side]
+armor = 24
+
+[sections.turret]
+armor = 30
+slots = [
+    { at = "1-2", item = "IS.MediumLaser" },
+]

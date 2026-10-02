@@ -1,0 +1,69 @@
+name = "Peregrine"
+class = "mech"
+movement = "biped"
+tons = 35
+walk_mp = 9
+jump_mp = 6
+heat_sinks = 20
+
+[construction]
+tech_base = "clan"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 9
+slots = [
+    { at = 5, item = "EndoSteel" },
+    { at = "6-7", item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 9
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+    { at = 7, item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 10
+rear = 4
+slots = [
+    { at = "1-2", item = "HeatSink" },
+    { at = 3, item = "JumpJet" },
+    { at = "4-6", item = "CL.LRM-5" },
+    { at = "7-8", item = "Ammo_CL.LRM-5", rounds = 24 },
+    { at = "9-10", item = "EndoSteel" },
+    { at = "11-12", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 10
+rear = 4
+slots = [
+    { at = "1-2", item = "HeatSink" },
+    { at = 3, item = "JumpJet" },
+    { at = "4-6", item = "CL.LRM-5" },
+    { at = "7-8", item = "Ammo_CL.LRM-5", rounds = 24 },
+    { at = "9-10", item = "EndoSteel" },
+    { at = "11-12", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 13
+rear = 6
+
+[sections.left_leg]
+armor = 11
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 11
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9

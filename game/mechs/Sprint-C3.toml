@@ -1,0 +1,32 @@
+name = "Sprint"
+class = "vtol"
+movement = "vtol"
+tons = 10
+walk_mp = 20
+
+[sections.left_side]
+armor = 3
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 3
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 7
+slots = [
+    { at = 1, item = "BeagleProbe" },
+]
+
+[sections.aft_side]
+armor = 3
+slots = [
+    { at = 1, item = "C3Slave" },
+]
+
+[sections.rotor]
+armor = 2

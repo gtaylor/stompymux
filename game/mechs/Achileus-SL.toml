@@ -1,0 +1,40 @@
+name = "Achileus"
+class = "battlesuit"
+movement = "biped"
+tons = 1
+max_speed = 32.5
+jump_speed = 32.5
+max_suits = 4
+infantry_specials = ["Swarm_Attack_Tech", "Mount_Friends_Tech", "AntiLeg_Attack_Tech", "FWL_Achileus_Stealth_Tech"]
+
+[sections.suit_1]
+armor = 6
+internals = 1
+slots = [
+    { at = 1, item = "IS.SmallLaser" },
+    { at = 2, item = "AchileusStealthUnit" },
+]
+
+[sections.suit_2]
+armor = 6
+internals = 1
+slots = [
+    { at = 1, item = "IS.SmallLaser" },
+    { at = 2, item = "AchileusStealthUnit" },
+]
+
+[sections.suit_3]
+armor = 6
+internals = 1
+slots = [
+    { at = 1, item = "IS.SmallLaser" },
+    { at = 2, item = "AchileusStealthUnit" },
+]
+
+[sections.suit_4]
+armor = 6
+internals = 1
+slots = [
+    { at = 1, item = "IS.SmallLaser" },
+    { at = 2, item = "AchileusStealthUnit" },
+]

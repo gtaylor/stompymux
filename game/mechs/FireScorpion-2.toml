@@ -1,0 +1,70 @@
+name = "Fire Scorpion"
+class = "mech"
+movement = "quad"
+tons = 65
+walk_mp = 6
+heat_sinks = 10
+
+[construction]
+tech_base = "clan"
+structure = "endo_steel"
+
+[sections.front_left_leg]
+armor = 29
+slots = [
+    { at = 5, item = "CL.A-Pod" },
+    { at = 6, item = "EndoSteel" },
+]
+
+[sections.front_right_leg]
+armor = 29
+slots = [
+    { at = 5, item = "CL.A-Pod" },
+    { at = 6, item = "EndoSteel" },
+]
+
+[sections.left_torso]
+armor = 22
+rear = 7
+slots = [
+    { at = "1-8", item = "CL.UltraAC/20" },
+    { at = "9-12", item = "Ammo_CL.UltraAC/20", rounds = 5 },
+]
+
+[sections.right_torso]
+armor = 22
+rear = 7
+slots = [
+    { at = "1-2", item = "CL.LRM-10" },
+    { at = 3, item = "BeagleProbe" },
+    { at = "4-7", item = "CL.MachineGun" },
+    { at = "8-9", item = "Ammo_CL.LRM-10", rounds = 12 },
+    { at = 10, item = "Ammo_CL.MachineGun", rounds = 200 },
+]
+
+[sections.center_torso]
+armor = 31
+rear = 10
+slots = [
+    { at = "11-12", item = "EndoSteel" },
+]
+
+[sections.rear_left_leg]
+armor = 29
+slots = [
+    { at = 5, item = "CL.A-Pod" },
+    { at = 6, item = "EndoSteel" },
+]
+
+[sections.rear_right_leg]
+armor = 29
+slots = [
+    { at = 5, item = "CL.A-Pod" },
+    { at = 6, item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "EndoSteel" },
+]

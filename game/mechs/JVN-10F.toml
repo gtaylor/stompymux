@@ -1,0 +1,54 @@
+name = "Javelin"
+class = "mech"
+movement = "biped"
+tons = 30
+walk_mp = 9
+jump_mp = 6
+heat_sinks = 12
+
+[sections.left_arm]
+armor = 9
+
+[sections.right_arm]
+armor = 9
+
+[sections.left_torso]
+armor = 9
+rear = 4
+slots = [
+    { at = "1-2", item = "IS.MediumLaser" },
+    { at = "3-4", item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 9
+rear = 4
+slots = [
+    { at = "1-2", item = "IS.MediumLaser" },
+    { at = "3-4", item = "HeatSink" },
+]
+
+[sections.center_torso]
+armor = 15
+rear = 4
+slots = [
+    { at = "11-12", item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 13
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 13
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 7
+slots = [
+    { at = 4, item = "HeatSink" },
+]

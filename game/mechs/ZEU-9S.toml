@@ -1,0 +1,64 @@
+name = "Zeus"
+class = "mech"
+movement = "biped"
+tons = 80
+walk_mp = 6
+heat_sinks = 34
+computer = 4
+radio = 4
+
+[construction]
+armor = "ferro_fibrous"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 22
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-6", item = "IS.ERPPC", brand = 3 },
+    { at = "7-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 22
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-6", item = "IS.LRM-15", brand = 3 },
+    { at = "7-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 25
+rear = 6
+slots = [
+    { at = "1-9", item = "HeatSink", brand = 3 },
+    { at = "10-11", item = "IS.ERLargeLaser", brand = 3 },
+    { at = 12, item = "IS.MediumPulseLaser", modes = ["RearMount"], brand = 3 },
+]
+
+[sections.right_torso]
+armor = 25
+rear = 6
+slots = [
+    { at = "1-6", item = "HeatSink", brand = 3 },
+    { at = 7, item = "Ammo_IS.LRM-15", rounds = 8 },
+    { at = 8, item = "Case", brand = 3 },
+    { at = "9-10", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 26
+rear = 8
+slots = [
+    { at = 11, item = "IS.MediumPulseLaser", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 24
+
+[sections.right_leg]
+armor = 24
+
+[sections.head]
+armor = 9

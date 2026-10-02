@@ -1,0 +1,28 @@
+name = "Kestrel"
+class = "vtol"
+movement = "vtol"
+tons = 25
+walk_mp = 18
+specials = ["CargoTech"]
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 5
+
+[sections.right_side]
+armor = 5
+
+[sections.front_side]
+armor = 8
+slots = [
+    { at = "1-2", item = "IS.MachineGun" },
+    { at = 3, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
+]
+
+[sections.aft_side]
+armor = 4
+
+[sections.rotor]
+armor = 2

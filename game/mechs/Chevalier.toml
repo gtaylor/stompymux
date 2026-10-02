@@ -1,0 +1,28 @@
+name = "Chevalier"
+class = "vehicle"
+movement = "wheel"
+tons = 35
+walk_mp = 9
+heat_sinks = 12
+
+[sections.left_side]
+armor = 20
+
+[sections.right_side]
+armor = 20
+
+[sections.front_side]
+armor = 26
+slots = [
+    { at = "1-2", item = "IS.StreakSRM-2" },
+    { at = 3, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+]
+
+[sections.aft_side]
+armor = 16
+
+[sections.turret]
+armor = 21
+slots = [
+    { at = 1, item = "IS.ERLargeLaser" },
+]

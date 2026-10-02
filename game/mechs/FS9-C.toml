@@ -1,0 +1,73 @@
+name = "Firestarter"
+class = "mech"
+movement = "biped"
+tons = 35
+walk_mp = 9
+jump_mp = 6
+heat_sinks = 20
+computer = 4
+radio = 4
+
+[construction]
+armor = "ferro_fibrous"
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 8
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.Flamer" },
+    { at = 5, item = "IS.MediumLaser" },
+    { at = "6-8", item = "HeatSink" },
+    { at = "9-10", item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 8
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.Flamer" },
+    { at = 5, item = "IS.MediumLaser" },
+    { at = "6-8", item = "HeatSink" },
+    { at = "9-10", item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 11
+rear = 5
+slots = [
+    { at = "1-3", item = "JumpJet" },
+    { at = "4-5", item = "IS.RL-10", modes = ["OneShot"] },
+    { at = "6-8", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 11
+rear = 5
+slots = [
+    { at = "1-3", item = "JumpJet" },
+    { at = "4-7", item = "IS.RL-15", modes = ["OneShot"] },
+    { at = "8-10", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 15
+rear = 6
+slots = [
+    { at = "11-12", item = "IS.RL-10", modes = ["OneShot"] },
+]
+
+[sections.left_leg]
+armor = 10
+slots = [
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.right_leg]
+armor = 10
+slots = [
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.head]
+armor = 9

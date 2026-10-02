@@ -1,0 +1,43 @@
+name = "Ares"
+class = "vehicle"
+movement = "track"
+tons = 40
+walk_mp = 8
+heat_sinks = 12
+specials = ["ArtemisIV"]
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
+
+[sections.left_side]
+armor = 17
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 17
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 19
+slots = [
+    { at = 1, item = "CL.LRM-10" },
+    { at = 2, item = "ArtemisIV" },
+    { at = 3, item = "CL.LRM-15" },
+    { at = 4, item = "ArtemisIV" },
+    { at = 5, item = "Ammo_CL.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
+    { at = 6, item = "Ammo_CL.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
+]
+
+[sections.aft_side]
+armor = 9
+
+[sections.turret]
+armor = 14
+slots = [
+    { at = 1, item = "CL.ERLargeLaser" },
+]

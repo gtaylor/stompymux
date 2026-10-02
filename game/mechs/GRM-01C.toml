@@ -1,0 +1,71 @@
+name = "Garm"
+class = "mech"
+movement = "biped"
+tons = 35
+walk_mp = 8
+jump_mp = 5
+heat_sinks = 10
+computer = 4
+radio = 4
+
+[construction]
+structure = "endo_steel"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 9
+slots = [
+    { at = "5-12", item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 9
+slots = [
+    { at = "5-12", item = "EndoSteel" },
+]
+
+[sections.left_torso]
+armor = 9
+rear = 3
+slots = [
+    { at = 1, item = "HeatSink" },
+    { at = 2, item = "IS.ERMediumLaser" },
+    { at = "3-4", item = "Ammo_IS.RotaryAC/5", rounds = 20 },
+    { at = 5, item = "Case" },
+    { at = "6-11", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 9
+rear = 3
+slots = [
+    { at = 1, item = "HeatSink" },
+    { at = "2-7", item = "IS.RotaryAC/5" },
+    { at = "8-12", item = "EndoSteel" },
+]
+
+[sections.center_torso]
+armor = 11
+rear = 4
+slots = [
+    { at = 11, item = "HeatSink" },
+    { at = 12, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 12
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 12
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 8
+slots = [
+    { at = 4, item = "EndoSteel" },
+]

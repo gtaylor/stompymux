@@ -1,0 +1,68 @@
+name = "Stinger"
+class = "mech"
+movement = "biped"
+tons = 20
+walk_mp = 9
+jump_mp = 6
+computer = 4
+radio = 4
+specials = ["SearchLight"]
+
+[construction]
+structure = "endo_steel"
+brand = 3
+
+[sections.left_arm]
+armor = 4
+slots = [
+    { at = 5, item = "IS.Flamer", brand = 3 },
+    { at = 6, item = "EndoSteel", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 4
+slots = [
+    { at = 5, item = "IS.MediumLaser", brand = 3 },
+    { at = 6, item = "IS.Anti-MissileSystem", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 8
+rear = 2
+slots = [
+    { at = 1, item = "HeatSink", brand = 3 },
+    { at = "2-4", item = "JumpJet", brand = 3 },
+    { at = "7-12", item = "EndoSteel", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 8
+rear = 2
+slots = [
+    { at = 1, item = "HeatSink", brand = 3 },
+    { at = "2-4", item = "JumpJet", brand = 3 },
+    { at = 5, item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
+    { at = "6-12", item = "EndoSteel", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 8
+rear = 4
+slots = [
+    { at = "11-12", item = "EndoSteel", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 5
+slots = [
+    { at = "5-6", item = "HeatSink", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 5
+slots = [
+    { at = "5-6", item = "HeatSink", brand = 3 },
+]
+
+[sections.head]
+armor = 6

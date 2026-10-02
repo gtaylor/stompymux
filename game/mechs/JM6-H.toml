@@ -1,0 +1,65 @@
+name = "Jagermech"
+class = "mech"
+movement = "biped"
+tons = 65
+walk_mp = 6
+heat_sinks = 20
+computer = 4
+radio = 4
+
+[construction]
+armor = "ferro_fibrous"
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 16
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-6", item = "IS.LB2-XAC" },
+    { at = "7-8", item = "IS.LargeLaser" },
+    { at = "9-12", item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 16
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-6", item = "IS.LB2-XAC" },
+    { at = "7-8", item = "IS.LargeLaser" },
+]
+
+[sections.left_torso]
+armor = 24
+rear = 5
+slots = [
+    { at = "1-6", item = "IS.RL-15", modes = ["OneShot"] },
+    { at = 7, item = "Ammo_IS.LB2-XAC", rounds = 45 },
+    { at = "8-12", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 24
+rear = 5
+slots = [
+    { at = "1-6", item = "IS.RL-15", modes = ["OneShot"] },
+    { at = 7, item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 29
+rear = 7
+
+[sections.left_leg]
+armor = 22
+slots = [
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.right_leg]
+armor = 22
+slots = [
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.head]
+armor = 9

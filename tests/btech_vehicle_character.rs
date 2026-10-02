@@ -5,7 +5,7 @@ use stompymux_rs::*;
 
 /// A running tactical chassis with an in-character non-wizard pilot and mixed occupants.
 async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
-    fixture_with_template(include_str!("../game/mechs/Demolisher")).await
+    fixture_with_template(include_str!("../game/mechs/Demolisher.toml")).await
 }
 
 /// Supply a weapon layout while retaining the same character and occupant setup.
@@ -34,7 +34,7 @@ async fn fixture_on_surface(
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse(template).unwrap(),
+        BattleVehicleTemplate::parse("Demolisher", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -266,9 +266,9 @@ async fn crew_critical_uses_shared_health_and_evacuates_fatal_injury_atomically(
 
 #[tokio::test]
 async fn gauss_critical_injures_character_after_surviving_internal_damage() {
-    let template = include_str!("../game/mechs/Demolisher").replace(
-        "Front_Side\n",
-        "Front_Side\n    CRIT_1 { IS.MagshotGaussRifle - - }\n",
+    let template = include_str!("../game/mechs/Demolisher.toml").replace(
+        "[sections.front_side]\n",
+        "[sections.front_side]\nslots = [{ at = 1, item = \"IS.MagshotGaussRifle\" }]\n",
     );
     let (_dir, config, mut world, id, _) = fixture_with_template(&template).await;
     let seed = (0..=255)
@@ -422,9 +422,9 @@ async fn instant_crew_death_preserves_health_and_evacuates_with_or_without_a_pil
 
 #[tokio::test]
 async fn nested_crew_death_finishes_weapon_damage_before_single_evacuation() {
-    let template = include_str!("../game/mechs/Demolisher").replace(
-        "Front_Side\n",
-        "Front_Side\n    CRIT_1 { IS.MagshotGaussRifle - - }\n",
+    let template = include_str!("../game/mechs/Demolisher.toml").replace(
+        "[sections.front_side]\n",
+        "[sections.front_side]\nslots = [{ at = 1, item = \"IS.MagshotGaussRifle\" }]\n",
     );
     let (_dir, config, mut world, id, passenger) = fixture_with_template(&template).await;
     let seed = (0u32..100_000)
@@ -508,10 +508,12 @@ async fn nested_crew_death_finishes_weapon_damage_before_single_evacuation() {
 async fn ground_explosions_evacuate_crew_and_restore_failed_actions() {
     for (case, fuel) in [(false, false), (true, false), (true, true)] {
         let template = if case {
-            include_str!("../game/mechs/Demolisher")
-                .replace("Aft_Side\n", "Aft_Side\n CRIT_1 { CASE - - }\n")
+            include_str!("../game/mechs/Demolisher.toml").replace(
+                "[sections.aft_side]\n",
+                "[sections.aft_side]\nslots = [{ at = 1, item = \"CASE\" }]\n",
+            )
         } else {
-            include_str!("../game/mechs/Demolisher").to_owned()
+            include_str!("../game/mechs/Demolisher.toml").to_owned()
         };
         let (_dir, config, mut world, id, passenger) = fixture_with_template(&template).await;
         let seed = (0..=255)
@@ -1072,7 +1074,7 @@ async fn character_surface_fractures_publish_vehicle_injuries_atomically() {
         for initial in [0, 9] {
             let tile = format!("{}1", terrain.symbol());
             let (_dir, config, mut world, id, passenger) =
-                fixture_on_surface(include_str!("../game/mechs/Demolisher"), &tile).await;
+                fixture_on_surface(include_str!("../game/mechs/Demolisher.toml"), &tile).await;
             if initial > 0 {
                 injure_battle_character_pilot(&mut world, id, initial, false).unwrap();
             }
@@ -1177,16 +1179,22 @@ async fn transport_loss_shares_nested_chassis_destruction_and_transactional_dise
                         create_battle_vehicle(
                             &mut world,
                             id,
-                            BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher"))
-                                .unwrap(),
+                            BattleVehicleTemplate::parse(
+                                "Demolisher",
+                                include_str!("../game/mechs/Demolisher.toml"),
+                            )
+                            .unwrap(),
                         )
                         .unwrap();
                     } else {
                         create_battle_unit(
                             &mut world,
                             id,
-                            BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D"))
-                                .unwrap(),
+                            BattleTemplate::parse(
+                                "JR7-D",
+                                include_str!("fixtures/btech/mechs/JR7-D.toml"),
+                            )
+                            .unwrap(),
                         )
                         .unwrap();
                     }

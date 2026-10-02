@@ -1,0 +1,48 @@
+name = "Talon"
+class = "mech"
+movement = "biped"
+tons = 35
+walk_mp = 12
+heat_sinks = 22
+computer = 4
+radio = 4
+
+[construction]
+engine = "xl"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 12
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.MediumLaser", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 12
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-5", item = "IS.ERPPC", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 12
+rear = 4
+
+[sections.right_torso]
+armor = 12
+rear = 4
+
+[sections.center_torso]
+armor = 17
+rear = 5
+
+[sections.left_leg]
+armor = 16
+
+[sections.right_leg]
+armor = 16
+
+[sections.head]
+armor = 9

@@ -97,28 +97,28 @@ async fn restored_landing_scalar_matrix(template: &str, weight_modifier: i32) {
 
 #[tokio::test]
 async fn restored_landing_scalar_uses_weight_class_and_preserves_replay_jr7d() {
-    restored_landing_scalar_matrix(include_str!("../game/mechs/JR7-D"), 1).await;
+    restored_landing_scalar_matrix(include_str!("../game/mechs/JR7-D.toml"), 1).await;
 }
 
 #[tokio::test]
 async fn restored_landing_scalar_uses_weight_class_and_preserves_replay_spider() {
-    restored_landing_scalar_matrix(include_str!("../game/mechs/StalkingSpider-1"), 0).await;
+    restored_landing_scalar_matrix(include_str!("../game/mechs/StalkingSpider-1.toml"), 0).await;
 }
 
 #[tokio::test]
 async fn restored_landing_scalar_uses_weight_class_and_preserves_replay_tdr() {
-    restored_landing_scalar_matrix(include_str!("../game/mechs/TDR-5SE"), -1).await;
+    restored_landing_scalar_matrix(include_str!("../game/mechs/TDR-5SE.toml"), -1).await;
 }
 
 #[tokio::test]
 async fn restored_landing_scalar_uses_weight_class_and_preserves_replay_vtr() {
-    restored_landing_scalar_matrix(include_str!("../game/mechs/VTR-9B"), -2).await;
+    restored_landing_scalar_matrix(include_str!("../game/mechs/VTR-9B.toml"), -2).await;
 }
 
 /// Failure stops before the gyro check; success continues to that independent check.
 #[tokio::test]
 async fn stagger_landing_roll_precedes_damaged_gyro_roll() {
-    let template = include_str!("../game/mechs/JR7-D");
+    let template = include_str!("../game/mechs/JR7-D.toml");
     let (_dir, _config, base, unit, _, _) =
         firing::fixture_with_target(template, None, template).await;
     for stagger_passes in [false, true] {
@@ -226,7 +226,7 @@ async fn landing_scalar_reset_matrix(template: &str, mode: BattleStaggerMode) {
 #[tokio::test]
 async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_jr7d_traditional() {
     landing_scalar_reset_matrix(
-        include_str!("../game/mechs/JR7-D"),
+        include_str!("../game/mechs/JR7-D.toml"),
         BattleStaggerMode::Traditional,
     )
     .await;
@@ -235,7 +235,7 @@ async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_jr7d
 #[tokio::test]
 async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_jr7d_retain() {
     landing_scalar_reset_matrix(
-        include_str!("../game/mechs/JR7-D"),
+        include_str!("../game/mechs/JR7-D.toml"),
         BattleStaggerMode::Retain,
     )
     .await;
@@ -244,7 +244,7 @@ async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_jr7d
 #[tokio::test]
 async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_jr7d_consume() {
     landing_scalar_reset_matrix(
-        include_str!("../game/mechs/JR7-D"),
+        include_str!("../game/mechs/JR7-D.toml"),
         BattleStaggerMode::Consume,
     )
     .await;
@@ -253,7 +253,7 @@ async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_jr7d
 #[tokio::test]
 async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_spider_traditional() {
     landing_scalar_reset_matrix(
-        include_str!("../game/mechs/StalkingSpider-1"),
+        include_str!("../game/mechs/StalkingSpider-1.toml"),
         BattleStaggerMode::Traditional,
     )
     .await;
@@ -262,7 +262,7 @@ async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_spid
 #[tokio::test]
 async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_spider_retain() {
     landing_scalar_reset_matrix(
-        include_str!("../game/mechs/StalkingSpider-1"),
+        include_str!("../game/mechs/StalkingSpider-1.toml"),
         BattleStaggerMode::Retain,
     )
     .await;
@@ -271,7 +271,7 @@ async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_spid
 #[tokio::test]
 async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_spider_consume() {
     landing_scalar_reset_matrix(
-        include_str!("../game/mechs/StalkingSpider-1"),
+        include_str!("../game/mechs/StalkingSpider-1.toml"),
         BattleStaggerMode::Consume,
     )
     .await;
@@ -281,8 +281,8 @@ async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_spid
 #[tokio::test]
 async fn map_reassignment_preserves_scalar_and_core_destruction_clears_it() {
     for template in [
-        include_str!("../game/mechs/JR7-D"),
-        include_str!("../game/mechs/StalkingSpider-1"),
+        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/StalkingSpider-1.toml"),
     ] {
         let (_dir, config, base, unit, _, _) =
             firing::fixture_with_target(template, None, template).await;

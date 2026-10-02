@@ -1,0 +1,67 @@
+name = "Excalibur"
+class = "mech"
+movement = "fly"
+tons = 16000
+max_speed = 53.0
+heat_sinks = 124
+tac_range = 50
+lrs_range = 100
+scan_range = 50
+fuel = 7200
+
+[sections.left_arm]
+armor = 120
+internals = 127
+slots = [
+    { at = 1, item = "IS.ERPPC" },
+    { at = "2-3", item = "IS.LRM-10" },
+    { at = "4-5", item = "ArtemisIV" },
+    { at = "6-7", item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
+    { at = "8-9", item = "IS.MediumPulseLaser" },
+]
+
+[sections.right_arm]
+armor = 120
+internals = 127
+slots = [
+    { at = 1, item = "IS.ERPPC" },
+    { at = "2-3", item = "IS.LRM-10" },
+    { at = "4-5", item = "ArtemisIV" },
+    { at = "6-7", item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
+    { at = "8-9", item = "IS.MediumPulseLaser" },
+]
+
+[sections.left_torso]
+armor = 120
+internals = 127
+slots = [
+    { at = 1, item = "IS.ERLargeLaser" },
+    { at = "2-3", item = "IS.MediumPulseLaser" },
+]
+
+[sections.right_torso]
+armor = 120
+internals = 127
+slots = [
+    { at = 1, item = "IS.ERLargeLaser" },
+    { at = "2-3", item = "IS.MediumPulseLaser" },
+]
+
+[sections.center_torso]
+armor = 90
+internals = 127
+slots = [
+    { at = 1, item = "IS.ERLargeLaser" },
+    { at = "2-3", item = "IS.MediumPulseLaser" },
+]
+
+[sections.left_leg]
+armor = 127
+internals = 127
+slots = [
+    { at = 1, item = "IS.AC/5" },
+    { at = 2, item = "Ammo_IS.AC/5", rounds = 20 },
+    { at = 3, item = "IS.LRM-10" },
+    { at = 4, item = "ArtemisIV" },
+    { at = "5-6", item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
+]

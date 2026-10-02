@@ -1,0 +1,50 @@
+name = "Thug"
+class = "mech"
+movement = "biped"
+tons = 80
+walk_mp = 6
+heat_sinks = 19
+
+[sections.left_arm]
+armor = 25
+slots = [
+    { at = "5-7", item = "IS.PPC" },
+    { at = 8, item = "HeatSink" },
+]
+
+[sections.right_arm]
+armor = 25
+slots = [
+    { at = "5-7", item = "IS.PPC" },
+    { at = 8, item = "HeatSink" },
+]
+
+[sections.left_torso]
+armor = 24
+rear = 8
+slots = [
+    { at = 1, item = "IS.SRM-4" },
+    { at = "2-4", item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 24
+rear = 8
+slots = [
+    { at = 1, item = "IS.SRM-4" },
+    { at = 2, item = "Ammo_IS.SRM-4", rounds = 25 },
+    { at = "3-4", item = "HeatSink" },
+]
+
+[sections.center_torso]
+armor = 33
+rear = 10
+
+[sections.left_leg]
+armor = 33
+
+[sections.right_leg]
+armor = 33
+
+[sections.head]
+armor = 9

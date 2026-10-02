@@ -1,0 +1,69 @@
+name = "ManO'War"
+class = "mech"
+movement = "biped"
+tons = 80
+walk_mp = 8
+heat_sinks = 32
+computer = 4
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 23
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "CL.SRM-6" },
+    { at = 5, item = "FerroFibrous" },
+    { at = "7-10", item = "CL.LB5-XAC" },
+]
+
+[sections.right_arm]
+armor = 23
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "CL.SRM-6" },
+    { at = 5, item = "FerroFibrous" },
+    { at = "7-10", item = "CL.LB5-XAC" },
+]
+
+[sections.left_torso]
+armor = 24
+rear = 10
+engine_at = 3
+slots = [
+    { at = 1, item = "Ammo_CL.SRM-6", rounds = 15 },
+    { at = 2, item = "Ammo_CL.LB5-XAC", rounds = 20, modes = ["LBX/Cluster"] },
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 24
+rear = 10
+engine_at = 3
+slots = [
+    { at = 1, item = "Ammo_CL.SRM-6", rounds = 15 },
+    { at = 2, item = "Ammo_CL.LB5-XAC", rounds = 20 },
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 30
+rear = 10
+slots = [
+    { at = 11, item = "CL.ERSmallLaser" },
+]
+
+[sections.left_leg]
+armor = 24
+
+[sections.right_leg]
+armor = 24
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

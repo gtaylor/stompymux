@@ -22,7 +22,8 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Kestrel")).unwrap(),
+        BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
+            .unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -920,8 +921,8 @@ async fn native_and_lua_asset_loading_admit_flying_and_stationary_aircraft() {
     let mut ids = Vec::new();
     for name in ["Kestrel", "ObservationVTOL"] {
         std::fs::copy(
-            format!("game/mechs/{name}"),
-            dir.path().join("mechs").join(name),
+            format!("game/mechs/{name}.toml"),
+            dir.path().join("mechs").join(format!("{name}.toml")),
         )
         .unwrap();
         let native = world.create(&config, format!("Native {name}"), Kind::Thing);

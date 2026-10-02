@@ -1,4 +1,4 @@
-//! Size-bounded reads of named assets confined to their configured asset directory.
+//! Size-bounded reads of named map and template assets confined to their configured directory.
 use super::{BattleMapAsset, BattleTemplate};
 use anyhow::{Context, Result, ensure};
 use std::{
@@ -32,11 +32,6 @@ fn read_bytes(root: &Path, name: &str, limit: usize) -> Result<Vec<u8>> {
     file.take(limit as u64 + 1).read_to_end(&mut bytes)?;
     ensure!(bytes.len() <= limit, "asset exceeds size limit");
     Ok(bytes)
-}
-
-/// Text templates retain UTF-8 validation over the same bounded, confined reader.
-fn read(root: &Path, name: &str, limit: usize) -> Result<String> {
-    String::from_utf8(read_bytes(root, name, limit)?).context("asset is not UTF-8")
 }
 
 /// Decode a map from a configured map directory.
@@ -78,18 +73,21 @@ pub(super) fn publish_map_warnings(
 
 /// Decode a biped template from a configured mech directory.
 pub fn read_template(root: &Path, name: &str) -> Result<BattleTemplate> {
-    BattleTemplate::parse(&read(root, name, 1_048_576)?).with_context(|| format!("template {name}"))
+    let (reference, source) = super::template_contract_assets::read_template_document(root, name)?;
+    BattleTemplate::parse(&reference, &source).with_context(|| format!("template {name}"))
 }
 
 /// Decode a ground-vehicle definition from the configured game asset directory.
 pub fn read_vehicle_template(root: &Path, name: &str) -> Result<super::BattleVehicleTemplate> {
-    super::BattleVehicleTemplate::parse(&read(root, name, 1_048_576)?)
+    let (reference, source) = super::template_contract_assets::read_template_document(root, name)?;
+    super::BattleVehicleTemplate::parse(&reference, &source)
         .with_context(|| format!("vehicle template {name}"))
 }
 
 /// Read an explicitly typed construction asset from the configured unit directory.
 pub fn read_unit_template(root: &Path, name: &str) -> Result<super::BattleUnitTemplate> {
-    super::BattleUnitTemplate::parse(&read(root, name, 1_048_576)?)
+    let (reference, source) = super::template_contract_assets::read_template_document(root, name)?;
+    super::BattleUnitTemplate::parse(&reference, &source)
         .with_context(|| format!("unit template {name}"))
 }
 
@@ -101,14 +99,14 @@ mod tests {
     fn confines_assets_and_bounds_reads() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(dir.path().join("asset"), "four").unwrap();
-        assert!(read(dir.path(), "asset", 3).is_err());
-        assert_eq!(read(dir.path(), "asset", 4).unwrap(), "four");
-        assert!(read(dir.path(), "../asset", 10).is_err());
-        assert!(read(dir.path(), "/etc/passwd", 10).is_err());
+        assert!(read_bytes(dir.path(), "asset", 3).is_err());
+        assert_eq!(read_bytes(dir.path(), "asset", 4).unwrap(), b"four");
+        assert!(read_bytes(dir.path(), "../asset", 10).is_err());
+        assert!(read_bytes(dir.path(), "/etc/passwd", 10).is_err());
         let outside = tempfile::tempdir().unwrap();
         std::fs::write(outside.path().join("asset"), "outside").unwrap();
         std::os::unix::fs::symlink(outside.path().join("asset"), dir.path().join("escape"))
             .unwrap();
-        assert!(read(dir.path(), "escape", 10).is_err());
+        assert!(read_bytes(dir.path(), "escape", 10).is_err());
     }
 }

@@ -1,0 +1,64 @@
+name = "Blood Asp"
+class = "mech"
+movement = "biped"
+tons = 90
+walk_mp = 6
+heat_sinks = 28
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+
+[sections.left_arm]
+armor = 28
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-6", item = "CL.UltraAC/10" },
+    { at = "7-9", item = "EndoSteel" },
+]
+
+[sections.right_arm]
+armor = 28
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "CL.ERLargeLaser" },
+    { at = 5, item = "EndoSteel" },
+]
+
+[sections.left_torso]
+armor = 24
+rear = 11
+slots = [
+    { at = "3-6", item = "CL.UltraAC/10" },
+    { at = "7-10", item = "Ammo_CL.UltraAC/10", rounds = 10 },
+    { at = 11, item = "EndoSteel" },
+]
+
+[sections.right_torso]
+armor = 24
+rear = 11
+slots = [
+    { at = "3-11", item = "CL.LB20-XAC" },
+    { at = 12, item = "EndoSteel" },
+]
+
+[sections.center_torso]
+armor = 40
+rear = 13
+slots = [
+    { at = 11, item = "Ammo_CL.LB20-XAC", rounds = 5 },
+    { at = 12, item = "Ammo_CL.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
+]
+
+[sections.left_leg]
+armor = 34
+
+[sections.right_leg]
+armor = 34
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "EndoSteel" },
+]

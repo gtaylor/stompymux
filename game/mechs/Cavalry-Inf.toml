@@ -1,0 +1,39 @@
+name = "Cavalry"
+class = "vtol"
+movement = "vtol"
+tons = 25
+walk_mp = 15
+tac_range = 30
+lrs_range = 60
+scan_range = 30
+cargo_space = 2048
+max_suits = 0
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 20
+slots = [
+    { at = "6-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_side]
+armor = 20
+slots = [
+    { at = "6-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.front_side]
+armor = 26
+slots = [
+    { at = "1-3", item = "IS.MediumLaser", brand = 3 },
+    { at = "4-6", item = "IS.MachineGun", brand = 3 },
+    { at = 7, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
+]
+
+[sections.aft_side]
+armor = 13
+
+[sections.rotor]
+armor = 2

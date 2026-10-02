@@ -1,0 +1,66 @@
+name = "Penetrator"
+class = "mech"
+movement = "biped"
+tons = 75
+walk_mp = 6
+jump_mp = 4
+heat_sinks = 34
+computer = 4
+radio = 4
+
+[construction]
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 20
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "IS.ERLargeLaser", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 20
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "IS.ERLargeLaser", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 23
+rear = 6
+slots = [
+    { at = "1-2", item = "IS.MediumPulseLaser", brand = 3 },
+    { at = "3-8", item = "HeatSink", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 23
+rear = 6
+slots = [
+    { at = "1-2", item = "IS.MediumPulseLaser", brand = 3 },
+    { at = "3-11", item = "HeatSink", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 29
+rear = 8
+slots = [
+    { at = 11, item = "IS.Anti-MissileSystem", brand = 3 },
+    { at = 12, item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
+]
+
+[sections.left_leg]
+armor = 24
+slots = [
+    { at = "5-6", item = "JumpJet", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 24
+slots = [
+    { at = "5-6", item = "JumpJet", brand = 3 },
+]
+
+[sections.head]
+armor = 9

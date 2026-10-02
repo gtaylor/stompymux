@@ -151,7 +151,8 @@ mod tests {
 
     #[test]
     fn exact_inputs_contract_mode_eviction_and_failures_match_the_parser() {
-        let template = BattleTemplate::parse(include_str!("../../game/mechs/JR7-D")).unwrap();
+        let template =
+            BattleTemplate::parse("JR7-D", include_str!("../../game/mechs/JR7-D.toml")).unwrap();
         let scope = Scope::with_limits(1, 0);
         let expected = BattleLoadout::resolve(&template).unwrap();
         assert_eq!(mech(&template, false).unwrap(), expected);

@@ -1,0 +1,34 @@
+name = "Jeep"
+class = "vehicle"
+movement = "wheel"
+tons = 5
+max_speed = 121.0
+computer = 3
+radio_range = 80
+tac_range = 18
+lrs_range = 31
+scan_range = 12
+cargo_space = 0
+max_suits = 0
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 6
+
+[sections.right_side]
+armor = 6
+
+[sections.front_side]
+armor = 6
+
+[sections.aft_side]
+armor = 4
+
+[sections.turret]
+armor = 2
+slots = [
+    { at = 1, item = "IS.MachineGun" },
+    { at = 3, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload", "Halfton"] },
+]

@@ -1,0 +1,61 @@
+name = "Merlin"
+class = "mech"
+movement = "biped"
+tons = 60
+walk_mp = 6
+jump_mp = 4
+heat_sinks = 19
+
+[sections.left_arm]
+armor = 16
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.MediumLaser" },
+]
+
+[sections.right_arm]
+armor = 16
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.MediumLaser" },
+]
+
+[sections.left_torso]
+armor = 18
+rear = 8
+slots = [
+    { at = "1-4", item = "HeatSink" },
+    { at = 5, item = "IS.Flamer" },
+    { at = 6, item = "Ammo_IS.LRM-5", rounds = 24 },
+]
+
+[sections.right_torso]
+armor = 18
+rear = 8
+slots = [
+    { at = "1-4", item = "HeatSink" },
+    { at = "5-7", item = "IS.PPC" },
+    { at = 8, item = "IS.LRM-5" },
+]
+
+[sections.center_torso]
+armor = 26
+rear = 11
+slots = [
+    { at = "11-12", item = "HeatSink" },
+]
+
+[sections.left_leg]
+armor = 19
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 19
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9

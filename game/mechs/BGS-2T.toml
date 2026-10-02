@@ -1,0 +1,54 @@
+name = "Barghest"
+class = "mech"
+movement = "quad"
+tons = 70
+walk_mp = 8
+heat_sinks = 22
+cargo_space = 0
+
+[construction]
+heat_sinks = "double"
+brand = 3
+
+[sections.front_left_leg]
+armor = 27
+
+[sections.front_right_leg]
+armor = 27
+
+[sections.left_torso]
+armor = 21
+rear = 6
+explicit = true
+slots = [
+    { at = "1-4", item = "Engine", brand = 3 },
+    { at = "5-7", item = "IS.ERPPC", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 21
+rear = 6
+explicit = true
+slots = [
+    { at = "1-2", item = "Engine", brand = 3 },
+    { at = "3-12", item = "IS.UltraAC/20", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 30
+rear = 9
+
+[sections.rear_left_leg]
+armor = 26
+slots = [
+    { at = "5-6", item = "Ammo_IS.UltraAC/20", rounds = 5 },
+]
+
+[sections.rear_right_leg]
+armor = 26
+slots = [
+    { at = "5-6", item = "Ammo_IS.UltraAC/20", rounds = 5 },
+]
+
+[sections.head]
+armor = 9

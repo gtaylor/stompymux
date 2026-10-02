@@ -39,9 +39,12 @@ async fn map_broadcast_audience_native_lua_and_restart() {
             "pilot_recovery",
             "empty_recovery",
         ] {
-            let (_dir, config, mut world, unit, target, _) =
-                firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D"))
-                    .await;
+            let (_dir, config, mut world, unit, target, _) = firing::fixture_with_target(
+                &source,
+                None,
+                include_str!("../game/mechs/AS7-D.toml"),
+            )
+            .await;
             let map = world.btech.units()[&unit].map.unwrap();
             let actor = listeners(&mut world, &config, map, target);
             if mode == "empty_recovery" {
@@ -153,7 +156,7 @@ async fn map_emit_authority_empty_maps_and_all_occupants() {
     let (_dir, config, mut world, unit, target, _) = firing::fixture_with_target(
         &firing::templates()[0],
         None,
-        include_str!("../game/mechs/AS7-D"),
+        include_str!("../game/mechs/AS7-D.toml"),
     )
     .await;
     let map = world.btech.units()[&unit].map.unwrap();
@@ -230,7 +233,7 @@ async fn failed_map_confirmation_rolls_back_every_recipient() {
     let (dir, config, mut world, unit, target, _) = firing::fixture_with_target(
         &firing::templates()[0],
         None,
-        include_str!("../game/mechs/AS7-D"),
+        include_str!("../game/mechs/AS7-D.toml"),
     )
     .await;
     let map = world.btech.units()[&unit].map.unwrap();

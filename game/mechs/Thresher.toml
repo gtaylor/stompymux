@@ -1,0 +1,77 @@
+name = "Thresher"
+class = "mech"
+movement = "biped"
+tons = 60
+walk_mp = 8
+jump_mp = 5
+heat_sinks = 26
+computer = 4
+radio = 5
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+
+[sections.left_arm]
+armor = 14
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "EndoSteel" },
+    { at = 5, item = "CL.MediumPulseLaser" },
+    { at = 6, item = "CL.SRM-6" },
+    { at = 7, item = "Ammo_CL.SRM-6", rounds = 15 },
+]
+
+[sections.right_arm]
+armor = 14
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "EndoSteel" },
+    { at = 5, item = "CL.MediumPulseLaser" },
+    { at = 6, item = "CL.SRM-6" },
+    { at = 7, item = "Ammo_CL.SRM-6", rounds = 15 },
+]
+
+[sections.left_torso]
+armor = 17
+rear = 5
+slots = [
+    { at = "3-4", item = "EndoSteel" },
+    { at = 5, item = "CL.ERMediumLaser" },
+    { at = "6-7", item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 17
+rear = 5
+slots = [
+    { at = "3-4", item = "EndoSteel" },
+    { at = "5-8", item = "CL.UltraAC/10" },
+    { at = "9-10", item = "Ammo_CL.UltraAC/10", rounds = 10 },
+]
+
+[sections.center_torso]
+armor = 22
+rear = 7
+slots = [
+    { at = 11, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 21
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 21
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "EndoSteel" },
+]

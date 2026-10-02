@@ -1,0 +1,85 @@
+name = "Fortress"
+class = "spheroid_dropship"
+movement = "fly"
+tons = 6000
+walk_mp = 5
+heat_sinks = 127
+tac_range = 50
+lrs_range = 100
+scan_range = 50
+
+[sections.front_right_side]
+armor = 127
+internals = 97
+slots = [
+    { at = 1, item = "IS.PPC" },
+    { at = "2-3", item = "IS.LRM-20" },
+    { at = "4-5", item = "IS.LargeLaser" },
+    { at = "6-9", item = "IS.MediumLaser" },
+    { at = "10-12", item = "Ammo_IS.LRM-20", rounds = 6 },
+]
+
+[sections.front_left_side]
+armor = 127
+internals = 97
+slots = [
+    { at = 1, item = "IS.PPC" },
+    { at = "2-3", item = "IS.LRM-20" },
+    { at = "4-5", item = "IS.LargeLaser" },
+    { at = "6-9", item = "IS.MediumLaser" },
+    { at = "10-12", item = "Ammo_IS.LRM-20", rounds = 6 },
+]
+
+[sections.rear_left_side]
+armor = 127
+internals = 97
+slots = [
+    { at = 1, item = "IS.PPC" },
+    { at = 2, item = "IS.AC/20" },
+    { at = 3, item = "IS.AC/5" },
+    { at = "4-5", item = "IS.LRM-10" },
+    { at = "6-7", item = "IS.SRM-6" },
+    { at = "8-9", item = "IS.MediumLaser" },
+    { at = "10-11", item = "Ammo_IS.AC/20", rounds = 5 },
+    { at = 12, item = "Ammo_IS.SRM-6", rounds = 15 },
+]
+
+[sections.rear_right_side]
+armor = 127
+internals = 97
+slots = [
+    { at = 1, item = "IS.PPC" },
+    { at = 2, item = "IS.AC/20" },
+    { at = 3, item = "IS.AC/5" },
+    { at = "4-5", item = "IS.LRM-10" },
+    { at = "6-7", item = "IS.SRM-6" },
+    { at = "8-9", item = "IS.MediumLaser" },
+    { at = "10-11", item = "Ammo_IS.AC/20", rounds = 5 },
+    { at = 12, item = "Ammo_IS.SRM-6", rounds = 15 },
+]
+
+[sections.aft]
+armor = 80
+internals = 80
+slots = [
+    { at = 1, item = "IS.AC/5" },
+    { at = "2-3", item = "IS.LargeLaser" },
+    { at = "4-5", item = "IS.MediumLaser" },
+    { at = 6, item = "Ammo_IS.AC/5", rounds = 20 },
+    { at = 7, item = "Ammo_IS.AC/20", rounds = 5 },
+    { at = 8, item = "Ammo_IS.AC/5", rounds = 20 },
+    { at = "9-12", item = "Ammo_IS.LRM-10", rounds = 12 },
+]
+
+[sections.nose]
+armor = 127
+internals = 97
+slots = [
+    { at = "1-2", item = "IS.PPC" },
+    { at = "3-4", item = "IS.AC/5" },
+    { at = 5, item = "IS.LongTom" },
+    { at = "6-7", item = "IS.LargeLaser" },
+    { at = "8-9", item = "IS.MediumLaser" },
+    { at = "10-11", item = "Ammo_IS.AC/5", rounds = 20 },
+    { at = 12, item = "Ammo_IS.LongTom", rounds = 5 },
+]

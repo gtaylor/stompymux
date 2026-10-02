@@ -1,0 +1,61 @@
+name = "Rifleman"
+class = "mech"
+movement = "biped"
+tons = 60
+walk_mp = 6
+heat_sinks = 24
+computer = 4
+radio = 4
+specials = ["SearchLight", "AntiAircraft"]
+
+[construction]
+engine = "xl"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 15
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.LargeLaser", brand = 3 },
+    { at = "5-9", item = "IS.UltraAC/5", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 15
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.LargeLaser", brand = 3 },
+    { at = "5-9", item = "IS.UltraAC/5", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 15
+rear = 8
+slots = [
+    { at = "4-9", item = "HeatSink", brand = 3 },
+    { at = 10, item = "IS.MediumLaser", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 15
+rear = 8
+slots = [
+    { at = "4-6", item = "HeatSink", brand = 3 },
+    { at = 7, item = "IS.MediumLaser", brand = 3 },
+    { at = 8, item = "Ammo_IS.UltraAC/5", rounds = 20 },
+    { at = 9, item = "Case", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 22
+rear = 8
+
+[sections.left_leg]
+armor = 12
+
+[sections.right_leg]
+armor = 12
+
+[sections.head]
+armor = 6

@@ -1,0 +1,92 @@
+name = "Fortress"
+class = "spheroid_dropship"
+movement = "fly"
+tons = 6000
+walk_mp = 5
+heat_sinks = 127
+tac_range = 50
+lrs_range = 100
+scan_range = 50
+
+[construction]
+heat_sinks = "double"
+
+[sections.front_right_side]
+armor = 127
+internals = 97
+slots = [
+    { at = 1, item = "IS.ERPPC" },
+    { at = 2, item = "IS.LRM-20" },
+    { at = 3, item = "ArtemisIV" },
+    { at = 4, item = "IS.LRM-20" },
+    { at = 5, item = "ArtemisIV" },
+    { at = "6-7", item = "IS.ERLargeLaser" },
+    { at = "8-10", item = "IS.MediumPulseLaser" },
+    { at = "11-12", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
+]
+
+[sections.front_left_side]
+armor = 127
+internals = 97
+slots = [
+    { at = 1, item = "IS.ERPPC" },
+    { at = 2, item = "IS.LRM-20" },
+    { at = 3, item = "ArtemisIV" },
+    { at = 4, item = "IS.LRM-20" },
+    { at = 5, item = "ArtemisIV" },
+    { at = "6-7", item = "IS.ERLargeLaser" },
+    { at = "8-10", item = "IS.MediumPulseLaser" },
+    { at = "11-12", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
+]
+
+[sections.rear_left_side]
+armor = 127
+internals = 97
+slots = [
+    { at = 1, item = "IS.ERPPC" },
+    { at = 2, item = "IS.AC/20" },
+    { at = "3-6", item = "ArtemisIV" },
+    { at = 7, item = "IS.AC/5" },
+    { at = "8-9", item = "IS.LRM-10" },
+    { at = "10-11", item = "IS.SRM-6" },
+    { at = 12, item = "IS.MediumLaser" },
+]
+
+[sections.rear_right_side]
+armor = 127
+internals = 97
+slots = [
+    { at = 1, item = "IS.ERPPC" },
+    { at = 2, item = "IS.AC/20" },
+    { at = "3-6", item = "ArtemisIV" },
+    { at = 7, item = "IS.AC/5" },
+    { at = "8-9", item = "IS.LRM-10" },
+    { at = "10-11", item = "IS.SRM-6" },
+    { at = 12, item = "IS.MediumLaser" },
+]
+
+[sections.aft]
+armor = 80
+internals = 80
+slots = [
+    { at = 1, item = "IS.AC/5" },
+    { at = "2-3", item = "IS.ERLargeLaser" },
+    { at = "4-5", item = "IS.MediumPulseLaser" },
+    { at = 6, item = "Ammo_IS.AC/5", rounds = 20 },
+    { at = "7-8", item = "Ammo_IS.AC/20", rounds = 5 },
+    { at = "9-10", item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
+    { at = "11-12", item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Artemis/Mine"] },
+]
+
+[sections.nose]
+armor = 127
+internals = 97
+slots = [
+    { at = "1-2", item = "IS.ERPPC" },
+    { at = "3-4", item = "IS.GaussRifle" },
+    { at = 5, item = "IS.LongTom" },
+    { at = "6-7", item = "IS.ERLargeLaser" },
+    { at = "8-9", item = "IS.MediumPulseLaser" },
+    { at = "10-11", item = "Ammo_IS.GaussRifle", rounds = 8 },
+    { at = 12, item = "Ammo_IS.LongTom", rounds = 5 },
+]

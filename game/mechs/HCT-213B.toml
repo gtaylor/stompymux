@@ -1,0 +1,51 @@
+name = "Hellcat II"
+class = "aerofighter"
+movement = "fly"
+tons = 45
+walk_mp = 11
+heat_sinks = 15
+computer = 3
+fuel = 750
+
+[sections.nose]
+armor = 50
+internals = 10
+slots = [
+    { at = 1, item = "BeagleProbe" },
+]
+
+[sections.left_wing]
+armor = 38
+internals = 10
+slots = [
+    { at = 1, item = "IS.LargeLaser" },
+]
+
+[sections.right_wing]
+armor = 38
+internals = 10
+slots = [
+    { at = 1, item = "IS.LargeLaser" },
+]
+
+[sections.cockpit]
+armor = 15
+internals = 10
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "Sensors" },
+    { at = 5, item = "LifeSupport" },
+]
+
+[sections.engine]
+armor = 32
+internals = 10
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]
+
+[sections.fuselage]
+armor = 52
+internals = 10

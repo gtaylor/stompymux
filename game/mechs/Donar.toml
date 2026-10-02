@@ -1,0 +1,36 @@
+name = "Donar"
+class = "vtol"
+movement = "vtol"
+tons = 21
+walk_mp = 14
+heat_sinks = 12
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
+
+[sections.left_side]
+armor = 14
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 14
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 16
+slots = [
+    { at = 1, item = "CL.ERLargeLaser" },
+    { at = "2-3", item = "CL.StreakSRM-2" },
+    { at = 4, item = "Ammo_CL.StreakSRM-2", rounds = 50 },
+]
+
+[sections.aft_side]
+armor = 12
+
+[sections.rotor]
+armor = 2

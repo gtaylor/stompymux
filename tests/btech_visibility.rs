@@ -5,17 +5,17 @@ use stompymux_rs::*;
 
 /// Representative construction for every supported movement class.
 fn templates() -> Vec<String> {
-    let tracked = include_str!("../game/mechs/Demolisher");
+    let tracked = include_str!("../game/mechs/Demolisher.toml");
     vec![
-        include_str!("../game/mechs/JR7-D").into(),
-        include_str!("../game/mechs/GOL-1H").into(),
+        include_str!("../game/mechs/JR7-D.toml").into(),
+        include_str!("../game/mechs/GOL-1H.toml").into(),
         tracked.into(),
-        tracked.replace("{ Track }", "{ Wheel }"),
-        tracked.replace("{ Track }", "{ Hover }"),
+        tracked.replace("movement = \"track\"", "movement = \"wheel\""),
+        tracked.replace("movement = \"track\"", "movement = \"hover\""),
         tracked
-            .replace("{ Track }", "{ None }")
-            .replace("{ 53.75 }", "{ 0 }"),
-        include_str!("../game/mechs/Kestrel").into(),
+            .replace("movement = \"track\"", "movement = \"none\"")
+            .replace("walk_mp = 5", "walk_mp = 0"),
+        include_str!("../game/mechs/Kestrel.toml").into(),
     ]
 }
 
@@ -55,7 +55,7 @@ async fn fixture(
     for (index, source) in [observer, target].into_iter().enumerate() {
         let id = world.create(&config, format!("Unit {index}"), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse(source)
+        BattleUnitTemplate::parse("test", source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();
@@ -245,7 +245,7 @@ async fn visibility_sensor_loss_and_clairvoyant_contacts_cross_all_chassis() {
 async fn clairvoyance_preserves_physical_los_and_unacquired_aim() {
     for source in templates() {
         let (_dir, config, mut world, observer, target) =
-            fixture(&source, include_str!("../game/mechs/JR7-D"), true).await;
+            fixture(&source, include_str!("../game/mechs/JR7-D.toml"), true).await;
         let hex = BattleHexCoordinate { x: 0, y: 0 };
         assert!(
             battle_unit_terrain_los(&world, observer, target)
@@ -313,9 +313,16 @@ async fn clairvoyance_preserves_physical_los_and_unacquired_aim() {
 /// Every perception channel rejects invisible targets, even for a clairvoyant operator with working hardware.
 #[tokio::test]
 async fn invisibility_suppresses_all_perception_channels_without_acquisition() {
-    let source = include_str!("../game/mechs/JR7-D").replace("Left_Torso\n", "Left_Torso\n    CRIT_3-4 { BeagleProbe - - }\n    CRIT_5 { Light_BAP - - }\n    CRIT_6-8 { BloodhoundProbe - - }\n") + "\nSpecials { AntiAircraft }\n";
+    let source = include_str!("../game/mechs/JR7-D.toml").replace(
+        r#"{ at = "1-2", item = "JumpJet" },"#,
+        r#"{ at = "1-2", item = "JumpJet" },
+    { at = "3-4", item = "BeagleProbe" },
+    { at = 5, item = "Light_BAP" },
+    { at = "6-8", item = "BloodhoundProbe" },"#,
+    );
+    let source = support::templates::with_flags(&source, &["AntiAircraft"]);
     let (_dir, config, base, observer, target) =
-        fixture(&source, include_str!("../game/mechs/JR7-D"), false).await;
+        fixture(&source, include_str!("../game/mechs/JR7-D.toml"), false).await;
     let map = base.btech.units()[&observer].map.unwrap();
     for channel in BattleDetectionChannel::ALL {
         let mut world = base.clone();

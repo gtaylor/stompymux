@@ -22,7 +22,12 @@ async fn fixture(
     let (dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Heat regulator".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    create_battle_unit(&mut world, id, BattleTemplate::parse(source).unwrap()).unwrap();
+    create_battle_unit(
+        &mut world,
+        id,
+        BattleTemplate::parse("test", source).unwrap(),
+    )
+    .unwrap();
     if let Some((tile, temperature)) = tile {
         let map = world.create(&config, "Environment".into(), Kind::Room);
         create_battle_map(
@@ -43,9 +48,9 @@ async fn fixture(
 #[tokio::test]
 async fn cutoff_cockpit_transition_and_restart() {
     for source in [
-        include_str!("../game/mechs/JR7-D"),
-        include_str!("../game/mechs/GOL-1H"),
-        include_str!("../game/mechs/Daishi-H"),
+        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/GOL-1H.toml"),
+        include_str!("../game/mechs/Daishi-H.toml"),
     ] {
         let (_dir, config, world, id) = fixture(source, None).await;
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -202,7 +207,7 @@ async fn cutoff_environment_samples_and_damaged_capacity() {
         (".0", -41, 0, 16.0, 6, 6.0, 6.0),
     ] {
         let (_dir, config, mut world, id) = fixture(
-            include_str!("../game/mechs/JR7-D"),
+            include_str!("../game/mechs/JR7-D.toml"),
             Some((tile, temperature)),
         )
         .await;
@@ -224,7 +229,8 @@ async fn cutoff_environment_samples_and_damaged_capacity() {
         assert_eq!(unit.heat().excess, (stored - sampled_cooling).max(0.0));
         assert_eq!(unit.heat_rates(&world).dissipation, inspected_cooling);
     }
-    let (_dir, config, mut world, id) = fixture(include_str!("../game/mechs/JR7-D"), None).await;
+    let (_dir, config, mut world, id) =
+        fixture(include_str!("../game/mechs/JR7-D.toml"), None).await;
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     saved["constructed"][id.0.to_string()]["heat_cutoff"] =
         serde_json::json!({"enabled":true,"disabled":10,"remaining":null});
@@ -258,7 +264,7 @@ async fn idle_cutoff_transition_runs_on_server_heartbeat() {
     tokio::task::LocalSet::new()
         .run_until(async {
             let (dir, _config, mut world, id) =
-                fixture(include_str!("../game/mechs/JR7-D"), None).await;
+                fixture(include_str!("../game/mechs/JR7-D.toml"), None).await;
             toggle_battle_heat_cutoff(&mut world, id, ObjectId(1), true).unwrap();
             let path = dir.path().join("stompymux.toml");
             let mut settings: toml::Value =

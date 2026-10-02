@@ -5,9 +5,9 @@ use stompymux_rs::*;
 #[tokio::test]
 async fn linked_map_movement_replays_for_mechs_ground_vehicles_and_aircraft() {
     for source in [
-        include_str!("fixtures/btech/mechs/JR7-D"),
-        include_str!("../game/mechs/Demolisher"),
-        include_str!("../game/mechs/Kestrel"),
+        include_str!("fixtures/btech/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/mechs/Kestrel.toml"),
     ] {
         for heading in [90, 270] {
             let (_dir, config, mut world) = support::isolated_world().await;
@@ -21,7 +21,7 @@ async fn linked_map_movement_replays_for_mechs_ground_vehicles_and_aircraft() {
             .unwrap();
             set_battle_map_wrapping(&mut world, map, true).unwrap();
             let id = world.create(&config, "Traveler".into(), Kind::Thing);
-            BattleUnitTemplate::parse(source)
+            BattleUnitTemplate::parse("test", source)
                 .unwrap()
                 .create(&mut world, id)
                 .unwrap();
@@ -128,7 +128,8 @@ async fn aircraft_rolls_back_when_the_opposite_edge_is_too_high() {
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Kestrel")).unwrap(),
+        BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
+            .unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 2, 0).unwrap();
@@ -355,7 +356,8 @@ async fn wrapped_jump_paths_keep_distance_and_replay_through_all_four_edges() {
         create_battle_unit(
             &mut world,
             id,
-            BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                .unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, id, map, x, y).unwrap();

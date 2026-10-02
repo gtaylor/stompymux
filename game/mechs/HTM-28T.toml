@@ -1,0 +1,72 @@
+name = "Hatamoto-Chi"
+class = "mech"
+movement = "biped"
+tons = 80
+walk_mp = 5
+jump_mp = 3
+heat_sinks = 34
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+
+[construction]
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 26
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-8", item = "HeatSink", brand = 3 },
+    { at = "9-11", item = "IS.ERPPC", brand = 3 },
+    { at = 12, item = "IS.ERMediumLaser", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 26
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-8", item = "HeatSink", brand = 3 },
+    { at = "9-11", item = "IS.ERPPC", brand = 3 },
+    { at = 12, item = "IS.ERMediumLaser", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 25
+rear = 9
+slots = [
+    { at = "1-6", item = "HeatSink", brand = 3 },
+    { at = 7, item = "JumpJet", brand = 3 },
+    { at = "8-9", item = "IS.StreakSRM-6", brand = 3 },
+    { at = 10, item = "Ammo_IS.StreakSRM-6", rounds = 15 },
+    { at = 11, item = "Case", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 25
+rear = 9
+slots = [
+    { at = "1-6", item = "HeatSink", brand = 3 },
+    { at = 7, item = "JumpJet", brand = 3 },
+    { at = "8-9", item = "IS.StreakSRM-6", brand = 3 },
+    { at = 10, item = "Ammo_IS.StreakSRM-6", rounds = 15 },
+    { at = 11, item = "Case", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 34
+rear = 16
+slots = [
+    { at = 11, item = "JumpJet", brand = 3 },
+    { at = 12, item = "C3Slave", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 34
+
+[sections.right_leg]
+armor = 34
+
+[sections.head]
+armor = 9

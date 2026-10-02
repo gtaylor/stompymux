@@ -17,7 +17,7 @@ fn fixture(source: &str, recipient: &str, seed: u8) -> (Config, World, ObjectId,
     let shooter = world.create(&config, "Shooter".into(), Kind::Thing);
     let target = world.create(&config, "Recipient".into(), Kind::Thing);
     for (id, template, y, team) in [(shooter, source, 8, 1), (target, recipient, 5, 2)] {
-        BattleUnitTemplate::parse(template)
+        BattleUnitTemplate::parse("unit", template)
             .unwrap()
             .create(&mut world, id)
             .unwrap();
@@ -133,16 +133,16 @@ fn fire(
 
 #[test]
 fn shot_transactions_match_reference_across_chassis_and_rejections() {
-    let mech = include_str!("../../game/mechs/JR7-D");
-    let tracked = include_str!("../../game/mechs/Demolisher");
+    let mech = include_str!("../../game/mechs/JR7-D.toml");
+    let tracked = include_str!("../../game/mechs/Demolisher.toml");
     let mut accepted = 0;
     let mut rejected = 0;
     let mut hits = 0;
     for source in [
         mech.to_owned(),
         tracked.to_owned(),
-        tracked.replace("{ Track }", "{ Wheel }"),
-        tracked.replace("{ Track }", "{ Hover }"),
+        tracked.replace("movement = \"track\"", "movement = \"wheel\""),
+        tracked.replace("movement = \"track\"", "movement = \"hover\""),
     ] {
         for recipient in [mech, tracked] {
             for seed in [3, 17, 42, 88] {
@@ -194,12 +194,12 @@ fn shot_transactions_match_reference_across_chassis_and_rejections() {
 #[test]
 fn shot_transactions_discard_expenditure_damage_and_validation_failures() {
     for source in [
-        include_str!("../../game/mechs/JR7-D"),
-        include_str!("../../game/mechs/Demolisher"),
+        include_str!("../../game/mechs/JR7-D.toml"),
+        include_str!("../../game/mechs/Demolisher.toml"),
     ] {
         for recipient in [
-            include_str!("../../game/mechs/JR7-D"),
-            include_str!("../../game/mechs/Demolisher"),
+            include_str!("../../game/mechs/JR7-D.toml"),
+            include_str!("../../game/mechs/Demolisher.toml"),
         ] {
             let (config, initial, shooter, target) = fixture(source, recipient, 42);
             for point in [
@@ -238,8 +238,8 @@ fn shot_transactions_discard_expenditure_damage_and_validation_failures() {
 fn validation_reuse_matches_full_checks_after_mutations_and_scope_exit() {
     use crate::btech::validation_context::{Scope, retained};
     let (_, initial, shooter, target) = fixture(
-        include_str!("../../game/mechs/JR7-D"),
-        include_str!("../../game/mechs/JR7-D"),
+        include_str!("../../game/mechs/JR7-D.toml"),
+        include_str!("../../game/mechs/JR7-D.toml"),
         42,
     );
     let scope = Scope::begin(&initial.btech);
@@ -319,19 +319,25 @@ fn validation_reuse_matches_full_checks_after_mutations_and_scope_exit() {
 
 #[test]
 fn special_shot_effects_match_reference_validation() {
-    let mech = include_str!("../../game/mechs/JR7-D");
-    let vehicle = include_str!("../../game/mechs/Demolisher");
+    let mech = include_str!("../../game/mechs/JR7-D.toml");
+    let vehicle = include_str!("../../game/mechs/Demolisher.toml");
     let cases = [
         (
-            mech.replace("Ammo_IS.SRM-4 25 -", "Ammo_IS.SRM-4 25 Inferno"),
+            mech.replace(
+                "item = \"Ammo_IS.SRM-4\", rounds = 25 }",
+                "item = \"Ammo_IS.SRM-4\", rounds = 25, modes = [\"Inferno\"] }",
+            ),
             crate::BattleWeapon::Srm4,
         ),
         (
-            vehicle.replace("IS.AC/20 - -", "IS.Flamer - Heat"),
+            vehicle.replace(
+                "item = \"IS.AC/20\" }",
+                "item = \"IS.Flamer\", modes = [\"Heat\"] }",
+            ),
             crate::BattleWeapon::Flamer,
         ),
         (
-            include_str!("../../game/mechs/AS7-S2").to_owned(),
+            include_str!("../../game/mechs/AS7-S2.toml").to_owned(),
             crate::BattleWeapon::HeavyGaussRifle,
         ),
     ];
@@ -392,8 +398,8 @@ fn special_shot_effects_match_reference_validation() {
 fn validation_projection_requires_exact_equipment_and_roster_membership() {
     use crate::btech::validation_context::{Scope, cached_loadout, retained, unit};
     let (_, world, shooter, _) = fixture(
-        include_str!("../../game/mechs/JR7-D"),
-        include_str!("../../game/mechs/JR7-D"),
+        include_str!("../../game/mechs/JR7-D.toml"),
+        include_str!("../../game/mechs/JR7-D.toml"),
         3,
     );
     let _scope = Scope::begin(&world.btech);
@@ -425,8 +431,8 @@ fn validation_projection_requires_exact_equipment_and_roster_membership() {
 fn contact_position_index_handles_missing_unplaced_sparse_and_duplicate_records() {
     use crate::btech::validation_contacts::Positions;
     let (_, mut world, shooter, target) = fixture(
-        include_str!("../../game/mechs/JR7-D"),
-        include_str!("../../game/mechs/Demolisher"),
+        include_str!("../../game/mechs/JR7-D.toml"),
+        include_str!("../../game/mechs/Demolisher.toml"),
         3,
     );
     let positions = Positions::prepare(&world.btech).unwrap();
@@ -469,11 +475,11 @@ fn contact_position_index_handles_missing_unplaced_sparse_and_duplicate_records(
 
 #[test]
 fn missile_defenses_match_reference_for_both_chassis() {
-    let mech = include_str!("../../game/mechs/JR7-D");
-    let vehicle = include_str!("../../game/mechs/Goblin-58");
+    let mech = include_str!("../../game/mechs/JR7-D.toml");
+    let vehicle = include_str!("../../game/mechs/Goblin-58.toml");
     let mut defenses = 0;
     for source in [mech, vehicle] {
-        for recipient in [include_str!("../../game/mechs/Daishi-A"), vehicle] {
+        for recipient in [include_str!("../../game/mechs/Daishi-A.toml"), vehicle] {
             let (config, mut initial, shooter, target) = fixture(source, recipient, 3);
             // Guarantee an admitted missile hit so every pairing exercises defense expenditure.
             let dice = (0u8..=255)

@@ -42,7 +42,8 @@ fn clan_missile_tables_groups_and_mounts() {
             }
         }
         let mut template =
-            BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                .unwrap();
         let arm = template.sections.get_mut(&BattleSection::LeftArm).unwrap();
         let mut part = arm.criticals[&2].clone();
         part.equipment = weapon.name().into();

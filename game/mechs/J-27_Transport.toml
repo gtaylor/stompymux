@@ -1,0 +1,26 @@
+name = "Long Tom"
+class = "vehicle"
+movement = "track"
+tons = 10
+walk_mp = 8
+heat_sinks = 0
+radio = 2
+radio_range = 100
+lrs_range = 20
+cargo_space = 0
+max_suits = 0
+
+[sections.left_side]
+armor = 1
+
+[sections.right_side]
+armor = 1
+
+[sections.front_side]
+armor = 2
+
+[sections.aft_side]
+armor = 2
+
+[sections.turret]
+armor = 2

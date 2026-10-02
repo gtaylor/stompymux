@@ -1,0 +1,38 @@
+name = "Von Luckner"
+class = "vehicle"
+movement = "track"
+tons = 75
+walk_mp = 5
+heat_sinks = 10
+
+[sections.left_side]
+armor = 30
+
+[sections.right_side]
+armor = 30
+
+[sections.front_side]
+armor = 41
+slots = [
+    { at = 1, item = "IS.Flamer" },
+]
+
+[sections.aft_side]
+armor = 30
+slots = [
+    { at = 4, item = "IS.LRM-10" },
+    { at = 5, item = "Ammo_IS.LRM-10", rounds = 12 },
+]
+
+[sections.turret]
+armor = 45
+slots = [
+    { at = 1, item = "IS.AC/20" },
+    { at = "2-3", item = "IS.SRM-6" },
+    { at = 4, item = "IS.SRM-4" },
+    { at = 5, item = "IS.MachineGun" },
+    { at = "6-8", item = "Ammo_IS.AC/20", rounds = 5 },
+    { at = 9, item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = 10, item = "Ammo_IS.SRM-4", rounds = 25 },
+    { at = 11, item = "Ammo_IS.MachineGun", rounds = 100 },
+]

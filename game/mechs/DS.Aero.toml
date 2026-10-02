@@ -1,0 +1,32 @@
+name = "Aerodyne Tester"
+class = "aerodyne_dropship"
+movement = "fly"
+tons = 10000
+walk_mp = 8
+computer = 4
+fuel = 7500
+
+[sections.right_wing]
+armor = 55
+internals = 10
+slots = [
+    { at = 1, item = "IS.LargeLaser" },
+]
+
+[sections.left_wing]
+armor = 55
+internals = 10
+slots = [
+    { at = 1, item = "IS.LargeLaser" },
+]
+
+[sections.aft]
+armor = 55
+internals = 10
+
+[sections.nose]
+armor = 75
+internals = 10
+slots = [
+    { at = "1-2", item = "IS.PPC" },
+]

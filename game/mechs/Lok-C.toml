@@ -1,0 +1,61 @@
+name = "Loki"
+class = "mech"
+movement = "biped"
+tons = 65
+walk_mp = 8
+heat_sinks = 34
+computer = 4
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+
+[sections.left_arm]
+armor = 11
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-6", item = "CL.LB2-XAC" },
+    { at = 7, item = "CL.ERLargeLaser" },
+    { at = 8, item = "Ammo_CL.LB2-XAC", rounds = 45 },
+]
+
+[sections.right_arm]
+armor = 11
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-6", item = "CL.LB2-XAC" },
+    { at = 7, item = "CL.ERLargeLaser" },
+    { at = 8, item = "Ammo_CL.LB2-XAC", rounds = 45, modes = ["LBX/Cluster"] },
+]
+
+[sections.left_torso]
+armor = 14
+rear = 7
+slots = [
+    { at = "3-6", item = "HeatSink" },
+    { at = "7-8", item = "CL.ERMediumLaser" },
+]
+
+[sections.right_torso]
+armor = 14
+rear = 7
+slots = [
+    { at = "3-6", item = "HeatSink" },
+    { at = "7-8", item = "CL.ERMediumLaser" },
+]
+
+[sections.center_torso]
+armor = 17
+rear = 8
+
+[sections.left_leg]
+armor = 15
+
+[sections.right_leg]
+armor = 15
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "CL.ERSmallLaser" },
+]

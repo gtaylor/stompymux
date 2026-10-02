@@ -1,0 +1,81 @@
+name = "Linebacker"
+class = "mech"
+movement = "biped"
+tons = 65
+walk_mp = 9
+heat_sinks = 28
+computer = 4
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 20
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "EndoSteel" },
+    { at = 5, item = "FerroFibrous" },
+    { at = "6-9", item = "CL.StreakSRM-6" },
+    { at = "10-11", item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+]
+
+[sections.right_arm]
+armor = 20
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "EndoSteel" },
+    { at = 5, item = "FerroFibrous" },
+    { at = "6-9", item = "CL.StreakSRM-6" },
+    { at = 10, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+]
+
+[sections.left_torso]
+armor = 22
+rear = 8
+engine_at = 3
+slots = [
+    { at = 1, item = "EndoSteel" },
+    { at = 2, item = "FerroFibrous" },
+    { at = 5, item = "CL.ERMediumLaser" },
+    { at = 6, item = "CL.ERSmallLaser", modes = ["RearMount"] },
+]
+
+[sections.right_torso]
+armor = 22
+rear = 8
+engine_at = 3
+slots = [
+    { at = 1, item = "EndoSteel" },
+    { at = 2, item = "FerroFibrous" },
+    { at = 5, item = "CL.ERMediumLaser" },
+]
+
+[sections.center_torso]
+armor = 23
+rear = 10
+slots = [
+    { at = 11, item = "EndoSteel" },
+]
+
+[sections.left_leg]
+armor = 25
+slots = [
+    { at = 5, item = "EndoSteel" },
+    { at = 6, item = "FerroFibrous" },
+]
+
+[sections.right_leg]
+armor = 25
+slots = [
+    { at = 5, item = "EndoSteel" },
+    { at = 6, item = "FerroFibrous" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

@@ -1,0 +1,53 @@
+name = "Owens"
+class = "mech"
+movement = "biped"
+tons = 35
+walk_mp = 12
+computer = 4
+radio = 4
+
+[construction]
+engine = "xl"
+brand = 3
+
+[sections.left_arm]
+armor = 10
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.LargeLaser", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 10
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.MediumLaser", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 12
+rear = 4
+slots = [
+    { at = "4-5", item = "BeagleProbe", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 12
+rear = 4
+slots = [
+    { at = 4, item = "TAG", brand = 3 },
+    { at = 5, item = "C3Slave", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 16
+rear = 5
+
+[sections.left_leg]
+armor = 15
+
+[sections.right_leg]
+armor = 15
+
+[sections.head]
+armor = 9

@@ -1,0 +1,27 @@
+name = "Demolisher"
+class = "vehicle"
+movement = "track"
+tons = 80
+walk_mp = 5
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 30
+
+[sections.right_side]
+armor = 30
+
+[sections.front_side]
+armor = 40
+
+[sections.aft_side]
+armor = 20
+
+[sections.turret]
+armor = 40
+slots = [
+    { at = "1-2", item = "IS.AC/20" },
+    { at = "3-6", item = "Ammo_IS.AC/20", rounds = 5 },
+]

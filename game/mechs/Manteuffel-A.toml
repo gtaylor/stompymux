@@ -1,0 +1,40 @@
+name = "Manteuffel"
+class = "vehicle"
+movement = "track"
+tons = 70
+walk_mp = 8
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+
+[construction]
+engine = "xl"
+
+[sections.left_side]
+armor = 40
+
+[sections.right_side]
+armor = 40
+
+[sections.front_side]
+armor = 56
+slots = [
+    { at = "1-2", item = "IS.MediumLaser", brand = 3 },
+    { at = 3, item = "IS.ERSmallLaser", brand = 3 },
+]
+
+[sections.aft_side]
+armor = 25
+slots = [
+    { at = "1-5", item = "Ammo_IS.UltraAC/20", rounds = 5 },
+    { at = 6, item = "FerroFibrous", brand = 0 },
+    { at = 11, item = "C3Slave", brand = 3 },
+    { at = 12, item = "Case", brand = 3 },
+]
+
+[sections.turret]
+armor = 45
+slots = [
+    { at = 1, item = "IS.UltraAC/20", brand = 3 },
+]

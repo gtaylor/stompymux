@@ -1,0 +1,34 @@
+name = "SturmFeur"
+class = "vehicle"
+movement = "track"
+tons = 85
+walk_mp = 5
+tac_range = 30
+lrs_range = 60
+scan_range = 30
+cargo_space = 0
+max_suits = 0
+
+[sections.left_side]
+armor = 66
+
+[sections.right_side]
+armor = 66
+
+[sections.front_side]
+armor = 66
+slots = [
+    { at = 1, item = "IS.HeavyGaussRifle", brand = 3 },
+    { at = "2-7", item = "Ammo_IS.HeavyGaussRifle", rounds = 4 },
+]
+
+[sections.aft_side]
+armor = 48
+
+[sections.turret]
+armor = 66
+slots = [
+    { at = 1, item = "IS.LRM-10", brand = 3 },
+    { at = 2, item = "IS.ERMediumLaser", brand = 3 },
+    { at = "3-4", item = "Ammo_IS.LRM-10", rounds = 12 },
+]

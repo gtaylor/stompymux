@@ -1,0 +1,59 @@
+name = "Sulla"
+class = "aerofighter"
+movement = "fly"
+tons = 45
+walk_mp = 14
+heat_sinks = 26
+fuel = 750
+specials = ["ArtemisIV"]
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
+
+[sections.nose]
+armor = 30
+internals = 9
+
+[sections.left_wing]
+armor = 31
+internals = 9
+slots = [
+    { at = 1, item = "CL.LRM-20" },
+    { at = 2, item = "ArtemisIV" },
+    { at = 3, item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_wing]
+armor = 31
+internals = 9
+slots = [
+    { at = 1, item = "CL.LRM-20" },
+    { at = 2, item = "ArtemisIV" },
+    { at = 3, item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.cockpit]
+armor = 16
+internals = 9
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "Sensors" },
+    { at = 5, item = "LifeSupport" },
+]
+
+[sections.engine]
+armor = 25
+internals = 9
+slots = [
+    { at = 1, item = "CL.MachineGun" },
+    { at = 2, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Hotload"] },
+]
+
+[sections.fuselage]
+armor = 40
+internals = 9

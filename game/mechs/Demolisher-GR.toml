@@ -1,0 +1,34 @@
+name = "Demolisher"
+class = "vehicle"
+movement = "track"
+tons = 80
+walk_mp = 5
+tac_range = 30
+lrs_range = 60
+scan_range = 30
+
+[sections.left_side]
+armor = 36
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 36
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 50
+
+[sections.aft_side]
+armor = 30
+
+[sections.turret]
+armor = 45
+slots = [
+    { at = "1-2", item = "IS.GaussRifle" },
+    { at = "3-4", item = "IS.MediumLaser" },
+    { at = "5-8", item = "Ammo_IS.GaussRifle", rounds = 8 },
+]

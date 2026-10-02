@@ -4,7 +4,8 @@ use stompymux_rs::*;
 /// Place and power a material aircraft without admitting it to the ground simulation.
 fn aircraft() -> BattleVehicle {
     let unit = BattleVehicle::new(
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Kestrel")).unwrap(),
+        BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
+            .unwrap(),
     )
     .unwrap();
     let mut saved = serde_json::to_value(unit).unwrap();
@@ -113,11 +114,12 @@ fn takeoff_guards_are_atomic_and_rechecked_before_liftoff() {
         assert_eq!(unit, before);
     }
     for source in [
-        include_str!("../game/mechs/Demolisher"),
-        include_str!("../game/mechs/ObservationVTOL"),
-        include_str!("../game/mechs/Kestrel"),
+        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/mechs/ObservationVTOL.toml"),
+        include_str!("../game/mechs/Kestrel.toml"),
     ] {
-        let mut unit = BattleVehicle::new(BattleVehicleTemplate::parse(source).unwrap()).unwrap();
+        let mut unit =
+            BattleVehicle::new(BattleVehicleTemplate::parse("test", source).unwrap()).unwrap();
         let before = unit.clone();
         assert!(unit.begin_vtol_takeoff(false, false, 0).is_err());
         assert_eq!(unit, before);
@@ -218,7 +220,8 @@ fn saved_flight_rejects_invalid_timers_and_surface_motion() {
         assert!(serde_json::from_value::<BattleVehicle>(saved).is_err());
     }
     let ground = BattleVehicle::new(
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap(),
+        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+            .unwrap(),
     )
     .unwrap();
     let mut saved = serde_json::to_value(ground).unwrap();

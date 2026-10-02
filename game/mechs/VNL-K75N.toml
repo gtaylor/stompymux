@@ -1,0 +1,44 @@
+name = "Von Luckner"
+class = "vehicle"
+movement = "track"
+tons = 75
+walk_mp = 5
+tac_range = 30
+lrs_range = 60
+scan_range = 30
+cargo_space = 0
+max_suits = 0
+
+[sections.left_side]
+armor = 30
+slots = [
+    { at = "6-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_side]
+armor = 30
+slots = [
+    { at = "6-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.front_side]
+armor = 43
+slots = [
+    { at = "1-2", item = "IS.MachineGun", brand = 3 },
+    { at = 3, item = "IS.MRM-20", brand = 3 },
+    { at = 4, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload", "Halfton"] },
+    { at = "5-6", item = "Ammo_IS.MRM-20", rounds = 12 },
+]
+
+[sections.aft_side]
+armor = 30
+
+[sections.turret]
+armor = 46
+slots = [
+    { at = 1, item = "IS.UltraAC/20", brand = 3 },
+    { at = 2, item = "IS.SRM-6", brand = 3 },
+    { at = "3-4", item = "IS.MediumLaser", brand = 3 },
+    { at = "5-9", item = "Ammo_IS.UltraAC/20", rounds = 5 },
+    { at = 10, item = "Ammo_IS.SRM-6", rounds = 15 },
+]

@@ -1,0 +1,60 @@
+name = "Mule"
+class = "spheroid_dropship"
+movement = "fly"
+tons = 11200
+max_speed = 64.0
+heat_sinks = 58
+tac_range = 50
+lrs_range = 100
+scan_range = 50
+
+[sections.front_right_side]
+armor = 55
+internals = 112
+slots = [
+    { at = 1, item = "IS.SRM-6" },
+    { at = "2-3", item = "IS.MediumLaser" },
+]
+
+[sections.front_left_side]
+armor = 55
+internals = 112
+slots = [
+    { at = 1, item = "IS.SRM-6" },
+    { at = "2-3", item = "IS.MediumLaser" },
+]
+
+[sections.rear_left_side]
+armor = 45
+internals = 112
+slots = [
+    { at = 1, item = "IS.LargeLaser" },
+    { at = 2, item = "IS.MediumLaser" },
+]
+
+[sections.rear_right_side]
+armor = 45
+internals = 112
+slots = [
+    { at = 1, item = "IS.LargeLaser" },
+    { at = 2, item = "IS.MediumLaser" },
+]
+
+[sections.aft]
+armor = 35
+internals = 112
+slots = [
+    { at = 1, item = "IS.LargeLaser" },
+    { at = 2, item = "IS.MediumLaser" },
+    { at = "6-7", item = "Ammo_IS.AC/5", rounds = 20 },
+]
+
+[sections.nose]
+armor = 45
+internals = 112
+slots = [
+    { at = 1, item = "IS.AC/5" },
+    { at = 2, item = "IS.MediumLaser" },
+    { at = "3-4", item = "IS.SmallLaser" },
+    { at = "5-7", item = "Ammo_IS.SRM-6", rounds = 15 },
+]

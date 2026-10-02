@@ -1,0 +1,41 @@
+name = "Huitzilopochtli"
+class = "vehicle"
+movement = "track"
+tons = 85
+walk_mp = 3
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 18
+slots = [
+    { at = 1, item = "CL.MachineGun" },
+]
+
+[sections.right_side]
+armor = 18
+slots = [
+    { at = 1, item = "CL.MachineGun" },
+]
+
+[sections.front_side]
+armor = 20
+slots = [
+    { at = "1-2", item = "CL.UltraAC/5" },
+    { at = "3-4", item = "Ammo_CL.UltraAC/5", rounds = 20 },
+    { at = 5, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = "6-7", item = "CL.ArrowIVSystem" },
+    { at = "8-11", item = "Ammo_CL.ArrowIVSystem", rounds = 5 },
+    { at = 12, item = "Ecm" },
+]
+
+[sections.aft_side]
+armor = 16
+
+[sections.turret]
+armor = 16
+slots = [
+    { at = "1-2", item = "CL.MediumPulseLaser" },
+    { at = 3, item = "CL.ERSmallLaser" },
+]

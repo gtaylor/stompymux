@@ -1,0 +1,70 @@
+name = "Komodo"
+class = "mech"
+movement = "biped"
+tons = 45
+walk_mp = 8
+jump_mp = 5
+heat_sinks = 28
+computer = 4
+radio = 4
+
+[construction]
+engine = "xl"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 14
+slots = [
+    { at = 5, item = "IS.Anti-MissileSystem", brand = 3 },
+    { at = "6-10", item = "IS.MediumLaser", brand = 3 },
+    { at = 11, item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
+]
+
+[sections.right_arm]
+armor = 14
+slots = [
+    { at = 5, item = "IS.Anti-MissileSystem", brand = 3 },
+    { at = "6-10", item = "IS.MediumLaser", brand = 3 },
+    { at = 11, item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
+]
+
+[sections.left_torso]
+armor = 12
+rear = 4
+slots = [
+    { at = "4-12", item = "HeatSink", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 12
+rear = 4
+slots = [
+    { at = "4-9", item = "HeatSink", brand = 3 },
+    { at = "10-11", item = "Ecm", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 13
+rear = 6
+slots = [
+    { at = 11, item = "JumpJet", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 16
+slots = [
+    { at = "5-6", item = "JumpJet", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 16
+slots = [
+    { at = "5-6", item = "JumpJet", brand = 3 },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "TAG", brand = 3 },
+]

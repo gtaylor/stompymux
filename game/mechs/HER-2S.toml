@@ -1,0 +1,47 @@
+name = "Hermes II"
+class = "mech"
+movement = "biped"
+tons = 40
+walk_mp = 9
+radio = 5
+
+[sections.left_arm]
+armor = 11
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.Flamer", brand = 5 },
+]
+
+[sections.right_arm]
+armor = 11
+slots = [
+    { at = 5, item = "IS.MediumLaser", brand = 1 },
+]
+
+[sections.left_torso]
+armor = 14
+rear = 5
+slots = [
+    { at = 1, item = "Ammo_IS.AC/5", rounds = 20 },
+    { at = 2, item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 14
+rear = 5
+slots = [
+    { at = "1-4", item = "IS.AC/5" },
+]
+
+[sections.center_torso]
+armor = 17
+rear = 6
+
+[sections.left_leg]
+armor = 14
+
+[sections.right_leg]
+armor = 14
+
+[sections.head]
+armor = 9

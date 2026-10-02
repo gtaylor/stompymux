@@ -1,0 +1,61 @@
+name = "Battle Cobra"
+class = "mech"
+movement = "biped"
+tons = 40
+walk_mp = 9
+heat_sinks = 20
+
+[construction]
+tech_base = "clan"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 11
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "CL.LargePulseLaser" },
+    { at = 6, item = "CL.SmallPulseLaser" },
+]
+
+[sections.right_arm]
+armor = 11
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "CL.LargePulseLaser" },
+    { at = 6, item = "CL.SmallPulseLaser" },
+]
+
+[sections.left_torso]
+armor = 14
+rear = 5
+slots = [
+    { at = "1-3", item = "FerroFibrous" },
+    { at = "4-6", item = "EndoSteel" },
+]
+
+[sections.right_torso]
+armor = 14
+rear = 5
+slots = [
+    { at = "1-3", item = "FerroFibrous" },
+    { at = "4-6", item = "EndoSteel" },
+    { at = "7-8", item = "HeatSink" },
+]
+
+[sections.center_torso]
+armor = 17
+rear = 5
+slots = [
+    { at = 11, item = "FerroFibrous" },
+    { at = 12, item = "EndoSteel" },
+]
+
+[sections.left_leg]
+armor = 17
+
+[sections.right_leg]
+armor = 17
+
+[sections.head]
+armor = 9

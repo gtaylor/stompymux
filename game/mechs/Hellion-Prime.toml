@@ -1,0 +1,67 @@
+name = "Hellion"
+class = "mech"
+movement = "biped"
+tons = 30
+walk_mp = 11
+heat_sinks = 20
+specials = ["Masc"]
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 10
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+    { at = "7-8", item = "FerroFibrous" },
+    { at = 9, item = "Cl.ERMediumLaser" },
+]
+
+[sections.right_arm]
+armor = 10
+slots = [
+    { at = "5-9", item = "FerroFibrous" },
+    { at = "10-11", item = "Cl.ERMediumLaser" },
+]
+
+[sections.left_torso]
+armor = 10
+rear = 4
+slots = [
+    { at = "3-5", item = "EndoSteel" },
+    { at = "6-7", item = "Cl.StreakSRM-2" },
+    { at = 8, item = "Ammo_CL.StreakSRM-2", rounds = 50 },
+]
+
+[sections.right_torso]
+armor = 10
+rear = 4
+slots = [
+    { at = "3-4", item = "EndoSteel" },
+    { at = 5, item = "Masc" },
+    { at = 6, item = "Cl.LRM-10" },
+    { at = 7, item = "Cl.StreakSRM-2" },
+    { at = 8, item = "Ammo_CL.LRM-10", rounds = 12 },
+]
+
+[sections.center_torso]
+armor = 15
+rear = 5
+
+[sections.left_leg]
+armor = 14
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 14
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.head]
+armor = 9

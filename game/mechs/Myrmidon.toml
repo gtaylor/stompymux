@@ -1,0 +1,25 @@
+name = "Myrmidon"
+class = "vehicle"
+movement = "track"
+tons = 40
+walk_mp = 8
+
+[sections.left_side]
+armor = 25
+
+[sections.right_side]
+armor = 25
+
+[sections.front_side]
+armor = 35
+
+[sections.aft_side]
+armor = 24
+
+[sections.turret]
+armor = 35
+slots = [
+    { at = 1, item = "IS.PPC", brand = 3 },
+    { at = 2, item = "IS.SRM-6", brand = 3 },
+    { at = 3, item = "Ammo_IS.SRM-6", rounds = 15 },
+]

@@ -1,0 +1,52 @@
+name = "Snow Fox"
+class = "mech"
+movement = "quad"
+tons = 20
+walk_mp = 12
+heat_sinks = 10
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
+
+[sections.front_left_leg]
+armor = 8
+
+[sections.front_right_leg]
+armor = 8
+
+[sections.left_torso]
+armor = 8
+rear = 2
+slots = [
+    { at = 3, item = "CL.ERSmallLaser" },
+    { at = "4-6", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 8
+rear = 2
+slots = [
+    { at = 3, item = "CL.ERSmallLaser" },
+    { at = "4-6", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 9
+rear = 3
+slots = [
+    { at = 11, item = "Masc" },
+    { at = 12, item = "FerroFibrous" },
+]
+
+[sections.rear_left_leg]
+armor = 8
+
+[sections.rear_right_leg]
+armor = 8
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "CL.ERMediumLaser" },
+]

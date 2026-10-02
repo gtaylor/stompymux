@@ -1,0 +1,62 @@
+name = "Whitworth"
+class = "mech"
+movement = "biped"
+tons = 40
+walk_mp = 6
+jump_mp = 4
+computer = 4
+radio = 4
+specials = ["AntiAircraft"]
+
+[construction]
+brand = 3
+
+[sections.left_arm]
+armor = 12
+omit = ["hand_actuator"]
+
+[sections.right_arm]
+armor = 12
+omit = ["hand_actuator"]
+
+[sections.left_torso]
+armor = 12
+rear = 6
+slots = [
+    { at = "1-2", item = "HeatSink", brand = 3 },
+    { at = "3-4", item = "IS.LRM-10", brand = 3 },
+    { at = 5, item = "ArtemisIV", brand = 3 },
+    { at = 6, item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
+]
+
+[sections.right_torso]
+armor = 12
+rear = 6
+slots = [
+    { at = "1-2", item = "HeatSink", brand = 3 },
+    { at = "3-4", item = "IS.LRM-10", brand = 3 },
+    { at = 5, item = "ArtemisIV", brand = 3 },
+    { at = 6, item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
+]
+
+[sections.center_torso]
+armor = 16
+rear = 7
+
+[sections.left_leg]
+armor = 18
+slots = [
+    { at = "5-6", item = "JumpJet", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 18
+slots = [
+    { at = "5-6", item = "JumpJet", brand = 3 },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "IS.MediumLaser", brand = 3 },
+]

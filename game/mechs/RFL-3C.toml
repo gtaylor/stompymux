@@ -1,0 +1,51 @@
+name = "Rifleman"
+class = "mech"
+movement = "biped"
+tons = 60
+walk_mp = 6
+computer = 5
+radio = 4
+specials = ["AntiAircraft", "SearchLight"]
+
+[sections.left_arm]
+armor = 15
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-9", item = "IS.AC/10" },
+]
+
+[sections.right_arm]
+armor = 15
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-9", item = "IS.AC/10" },
+]
+
+[sections.left_torso]
+armor = 15
+rear = 4
+slots = [
+    { at = 1, item = "IS.MediumLaser", brand = 4 },
+    { at = 2, item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 15
+rear = 4
+slots = [
+    { at = 1, item = "IS.MediumLaser", brand = 4 },
+    { at = "2-3", item = "Ammo_IS.AC/10", rounds = 10 },
+]
+
+[sections.center_torso]
+armor = 22
+rear = 7
+
+[sections.left_leg]
+armor = 15
+
+[sections.right_leg]
+armor = 15
+
+[sections.head]
+armor = 9

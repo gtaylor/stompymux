@@ -1,0 +1,73 @@
+name = "Locust"
+class = "mech"
+movement = "biped"
+tons = 25
+walk_mp = 12
+heat_sinks = 20
+computer = 4
+
+[construction]
+tech_base = "clan"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 8
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "CL.StreakSRM-2" },
+    { at = 5, item = "Ammo_CL.StreakSRM-2", rounds = 50 },
+]
+
+[sections.right_arm]
+armor = 8
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "CL.StreakSRM-2" },
+]
+
+[sections.left_torso]
+armor = 8
+rear = 2
+slots = [
+    { at = "1-2", item = "HeatSink" },
+    { at = "9-10", item = "FerroFibrous" },
+    { at = "11-12", item = "EndoSteel" },
+]
+
+[sections.right_torso]
+armor = 8
+rear = 2
+slots = [
+    { at = "1-2", item = "HeatSink" },
+    { at = "9-10", item = "FerroFibrous" },
+    { at = "11-12", item = "EndoSteel" },
+]
+
+[sections.center_torso]
+armor = 10
+rear = 3
+slots = [
+    { at = 11, item = "CL.ERMediumLaser" },
+    { at = 12, item = "EndoSteel" },
+]
+
+[sections.left_leg]
+armor = 10
+slots = [
+    { at = 5, item = "FerroFibrous" },
+    { at = 6, item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 10
+slots = [
+    { at = 5, item = "FerroFibrous" },
+    { at = 6, item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 8
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

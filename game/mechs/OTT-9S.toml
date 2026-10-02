@@ -1,0 +1,81 @@
+name = "Ostscout"
+class = "mech"
+movement = "biped"
+tons = 35
+walk_mp = 12
+jump_mp = 8
+heat_sinks = 10
+computer = 4
+radio = 4
+specials = ["BeagleProbe", "ECM"]
+
+[construction]
+engine = "light"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 6
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.ERMediumLaser" },
+    { at = "5-7", item = "EndoSteel" },
+    { at = "8-12", item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 6
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.ERMediumLaser" },
+    { at = "5-7", item = "EndoSteel" },
+    { at = "8-12", item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 9
+rear = 2
+slots = [
+    { at = "3-6", item = "JumpJet" },
+    { at = "7-8", item = "Ecm" },
+    { at = "9-10", item = "EndoSteel" },
+    { at = "11-12", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 9
+rear = 2
+slots = [
+    { at = "3-6", item = "JumpJet" },
+    { at = "7-8", item = "BeagleProbe" },
+    { at = "9-10", item = "EndoSteel" },
+    { at = "11-12", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 11
+rear = 4
+slots = [
+    { at = 11, item = "TAG" },
+    { at = 12, item = "EndoSteel" },
+]
+
+[sections.left_leg]
+armor = 8
+slots = [
+    { at = 5, item = "IS.A-Pod" },
+    { at = 6, item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 8
+slots = [
+    { at = 5, item = "EndoSteel" },
+    { at = 6, item = "IS.A-Pod" },
+]
+
+[sections.head]
+armor = 7
+slots = [
+    { at = 4, item = "EndoSteel" },
+]

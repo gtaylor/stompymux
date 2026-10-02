@@ -22,7 +22,7 @@ async fn ground_fixture() -> (tempfile::TempDir, Config, World, ObjectId, Object
     .unwrap();
     let unit = world.create(&config, "Autopilot mech".into(), Kind::Thing);
     world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
-    BattleUnitTemplate::parse(include_str!("../game/mechs/JR7-D"))
+    BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
         .unwrap()
         .create(&mut world, unit)
         .unwrap();
@@ -197,9 +197,9 @@ async fn controller_intent_revision_and_queue_survive_persistence_restart() {
 #[tokio::test]
 async fn explicit_attack_uses_filtered_sensor_observation() {
     let (_directory, config, mut world, shooter, target, _weapon) = firing::fixture_with_target(
-        include_str!("../game/mechs/JR7-D"),
+        include_str!("../game/mechs/JR7-D.toml"),
         None,
-        include_str!("../game/mechs/JR7-D"),
+        include_str!("../game/mechs/JR7-D.toml"),
     )
     .await;
     // Give the explicit target an opposing durable sensor signature so the order

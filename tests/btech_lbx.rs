@@ -3,7 +3,8 @@ use stompymux_rs::*;
 
 /// Build a catalog-valid torso mount with one bin of each ammunition type.
 fn definition(weapon: BattleWeapon, cluster: bool) -> BattleTemplate {
-    let mut template = BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+    let mut template =
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let mut part = template.sections[&BattleSection::LeftArm].criticals[&2].clone();
     part.equipment = weapon.name().into();
     if cluster {
@@ -212,7 +213,7 @@ fn lbx_catalog_cluster_distribution_and_template_modes() {
 #[test]
 fn existing_lbx_urbanmech_constructs() {
     let unit = BattleUnit::from_template(
-        BattleTemplate::parse(include_str!("../game/mechs/UM-R63")).unwrap(),
+        BattleTemplate::parse("UM-R63", include_str!("../game/mechs/UM-R63.toml")).unwrap(),
     )
     .unwrap();
     assert!(

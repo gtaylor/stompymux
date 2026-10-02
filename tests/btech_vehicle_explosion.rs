@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse(template).unwrap(),
+        BattleVehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -57,10 +57,12 @@ async fn ground_powerplant_explosions_ignore_case_and_persist() {
     use BattleVehicleCriticalTable as T;
     for case in [false, true] {
         let text = if case {
-            include_str!("../game/mechs/Demolisher")
-                .replace("Aft_Side\n", "Aft_Side\n    CRIT_1 { CASE - - }\n")
+            include_str!("../game/mechs/Demolisher.toml").replace(
+                "[sections.aft_side]\n",
+                "[sections.aft_side]\nslots = [{ at = 1, item = \"CASE\" }]\n",
+            )
         } else {
-            include_str!("../game/mechs/Demolisher").into()
+            include_str!("../game/mechs/Demolisher.toml").into()
         };
         let (_dir, config, mut world, id) = fixture(&text).await;
         let value = (0..=255)
@@ -106,8 +108,10 @@ async fn ground_powerplant_explosions_ignore_case_and_persist() {
 
 #[tokio::test]
 async fn fuel_explosions_ignore_case_and_do_not_damage_nearby_units() {
-    let text = include_str!("../game/mechs/Demolisher")
-        .replace("Aft_Side\n", "Aft_Side\n    CRIT_1 { CASE - - }\n");
+    let text = include_str!("../game/mechs/Demolisher.toml").replace(
+        "[sections.aft_side]\n",
+        "[sections.aft_side]\nslots = [{ at = 1, item = \"CASE\" }]\n",
+    );
     let (_dir, config, mut world, id) = fixture(&text).await;
     let map = world.btech.vehicles()[&id].position().unwrap().map;
     let neighbor = world.create(&config, "Neighbor".into(), Kind::Thing);
@@ -115,7 +119,8 @@ async fn fuel_explosions_ignore_case_and_do_not_damage_nearby_units() {
     create_battle_vehicle(
         &mut world,
         neighbor,
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap(),
+        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+            .unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, neighbor, map, 0, 0).unwrap();
@@ -147,13 +152,17 @@ async fn fuel_explosions_ignore_case_and_do_not_damage_nearby_units() {
 #[tokio::test]
 async fn case_requires_installed_equipment_and_character_explosions_record_crew_loss() {
     for extra in ["", "Clan"] {
-        let text = include_str!("../game/mechs/Demolisher")
-            .replace("ICEEngine_Tech", &format!("ICEEngine_Tech {extra}"))
-            .replace("Aft_Side\n", "Aft_Side\n    Config { CASE }\n");
+        let text =
+            support::templates::with_flags(include_str!("../game/mechs/Demolisher.toml"), &[extra])
+                .replace(
+                    "[sections.aft_side]\n",
+                    "[sections.aft_side]\nconfig = \"CASE\"\n",
+                );
         let (_dir, _config, world, id) = fixture(&text).await;
         assert!(!world.btech.vehicles()[&id].has_powerplant_containment());
     }
-    let (_dir, _config, mut world, id) = fixture(include_str!("../game/mechs/Demolisher")).await;
+    let (_dir, _config, mut world, id) =
+        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     let value = (0..=255)
         .find(|value| {
             let mut dice = BattleDice::seeded([*value; 32]);
@@ -186,7 +195,8 @@ async fn case_requires_installed_equipment_and_character_explosions_record_crew_
 
 #[tokio::test]
 async fn carried_battlesuits_require_casualty_handling_before_explosion_commit() {
-    let (_dir, config, mut world, id) = fixture(include_str!("../game/mechs/Demolisher")).await;
+    let (_dir, config, mut world, id) =
+        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     let child = world.create(&config, "Carried squad".into(), Kind::Thing);
     let object = world.objects.get_mut(&child).unwrap();
     object.home = Some(ObjectId(config.home()));

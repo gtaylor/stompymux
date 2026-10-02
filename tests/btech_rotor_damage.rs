@@ -4,8 +4,11 @@ use stompymux_rs::*;
 
 /// A rotorcraft whose equipment uses the ordinary vehicle loadout and material model.
 fn aircraft() -> BattleVehicle {
-    BattleVehicle::new(BattleVehicleTemplate::parse(include_str!("../game/mechs/Kestrel")).unwrap())
-        .unwrap()
+    BattleVehicle::new(
+        BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
+            .unwrap(),
+    )
+    .unwrap()
 }
 
 #[test]
@@ -89,7 +92,8 @@ fn direct_rotor_section_loss_uses_shared_damage_and_ground_models_reject_rotor_s
     let error = serde_json::from_value::<BattleVehicle>(corrupt).unwrap_err();
     assert!(error.to_string().contains("Rotorless aircraft"), "{error}");
     let ground = BattleVehicle::new(
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap(),
+        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+            .unwrap(),
     )
     .unwrap();
     let mut changed = ground.clone();

@@ -1,0 +1,60 @@
+name = "Visigoth"
+class = "aerofighter"
+movement = "fly"
+tons = 60
+walk_mp = 11
+heat_sinks = 32
+fuel = 750
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
+
+[sections.nose]
+armor = 50
+internals = 7
+slots = [
+    { at = 1, item = "CL.LargePulseLaser" },
+    { at = 2, item = "CL.MediumPulseLaser" },
+]
+
+[sections.left_wing]
+armor = 36
+internals = 7
+slots = [
+    { at = 1, item = "CL.LargePulseLaser" },
+    { at = 2, item = "CL.MediumPulseLaser" },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_wing]
+armor = 36
+internals = 7
+slots = [
+    { at = 1, item = "CL.LargePulseLaser" },
+    { at = 2, item = "CL.MediumPulseLaser" },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.cockpit]
+armor = 16
+internals = 7
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "Sensors" },
+    { at = 5, item = "LifeSupport" },
+]
+
+[sections.engine]
+armor = 32
+internals = 7
+slots = [
+    { at = 1, item = "CL.SRM-4" },
+    { at = 2, item = "Ammo_CL.SRM-4", rounds = 25 },
+]
+
+[sections.fuselage]
+armor = 42
+internals = 7

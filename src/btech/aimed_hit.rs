@@ -154,7 +154,7 @@ mod tests {
         } else {
             BattlePower::Off
         };
-        match BattleUnitTemplate::parse(source).unwrap() {
+        match BattleUnitTemplate::parse("target", source).unwrap() {
             BattleUnitTemplate::Mech(template) => {
                 let mut unit = BattleUnit::from_template(template).unwrap();
                 unit.power = power;
@@ -172,8 +172,8 @@ mod tests {
     #[test]
     fn immobile_aim_preserves_numeric_anatomy_and_cover() {
         for source in [
-            include_str!("../../game/mechs/JR7-D"),
-            include_str!("../../game/mechs/GOL-1H"),
+            include_str!("../../game/mechs/JR7-D.toml"),
+            include_str!("../../game/mechs/GOL-1H.toml"),
         ] {
             let mut world = World::default();
             target(&mut world, source, false);
@@ -227,8 +227,8 @@ mod tests {
             }
         }
         for source in [
-            include_str!("../../game/mechs/Demolisher"),
-            include_str!("../../game/mechs/Kestrel"),
+            include_str!("../../game/mechs/Demolisher.toml"),
+            include_str!("../../game/mechs/Kestrel.toml"),
         ] {
             let mut world = World::default();
             target(&mut world, source, false);
@@ -272,7 +272,11 @@ mod tests {
                     (BattleSection::CenterTorso, BattleHitArc::Rear, false),
                 ] {
                     let mut world = World::default();
-                    target(&mut world, include_str!("../../game/mechs/JR7-D"), running);
+                    target(
+                        &mut world,
+                        include_str!("../../game/mechs/JR7-D.toml"),
+                        running,
+                    );
                     let mut dice = BattleDice::seeded([byte; 32]);
                     world.btech.constructed.get_mut(&ObjectId(42)).unwrap().dice = dice.clone();
                     let success = dice.d6() >= 3

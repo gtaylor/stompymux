@@ -1,0 +1,48 @@
+name = "Ostroc"
+class = "mech"
+movement = "biped"
+tons = 60
+walk_mp = 8
+heat_sinks = 15
+
+[sections.left_arm]
+armor = 8
+omit = ["hand_actuator"]
+
+[sections.right_arm]
+armor = 8
+omit = ["hand_actuator"]
+
+[sections.left_torso]
+armor = 22
+rear = 4
+slots = [
+    { at = "1-2", item = "IS.LargeLaser" },
+    { at = 3, item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 22
+rear = 4
+slots = [
+    { at = "1-4", item = "IS.LargeLaser" },
+]
+
+[sections.center_torso]
+armor = 22
+rear = 6
+
+[sections.left_leg]
+armor = 20
+slots = [
+    { at = 5, item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 20
+slots = [
+    { at = 5, item = "HeatSink" },
+]
+
+[sections.head]
+armor = 8

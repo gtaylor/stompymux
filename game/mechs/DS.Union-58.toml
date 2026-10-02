@@ -1,0 +1,82 @@
+name = "Union"
+class = "spheroid_dropship"
+movement = "fly"
+tons = 3500
+walk_mp = 5
+heat_sinks = 127
+tac_range = 50
+lrs_range = 100
+scan_range = 50
+
+[construction]
+heat_sinks = "double"
+
+[sections.front_right_side]
+armor = 120
+internals = 60
+slots = [
+    { at = 1, item = "IS.ERPPC" },
+    { at = 2, item = "IS.GaussRifle" },
+    { at = 3, item = "IS.LRM-20" },
+    { at = 4, item = "ArtemisIV" },
+    { at = 5, item = "IS.LRM-20" },
+    { at = 6, item = "ArtemisIV" },
+    { at = 7, item = "IS.ERLargeLaser" },
+    { at = "8-9", item = "IS.MediumLaser" },
+    { at = "10-12", item = "Ammo_IS.GaussRifle", rounds = 8 },
+]
+
+[sections.front_left_side]
+armor = 120
+internals = 60
+slots = [
+    { at = 1, item = "IS.ERPPC" },
+    { at = 2, item = "IS.GaussRifle" },
+    { at = 3, item = "IS.LRM-20" },
+    { at = 4, item = "ArtemisIV" },
+    { at = 5, item = "IS.LRM-20" },
+    { at = 6, item = "ArtemisIV" },
+    { at = 7, item = "IS.ERLargeLaser" },
+    { at = "8-9", item = "IS.MediumLaser" },
+    { at = "10-12", item = "Ammo_IS.GaussRifle", rounds = 8 },
+]
+
+[sections.rear_left_side]
+armor = 110
+internals = 35
+slots = [
+    { at = 1, item = "IS.ERLargeLaser" },
+    { at = "2-3", item = "IS.MediumLaser" },
+    { at = "7-12", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
+]
+
+[sections.rear_right_side]
+armor = 110
+internals = 35
+slots = [
+    { at = 1, item = "IS.ERLargeLaser" },
+    { at = "2-3", item = "IS.MediumLaser" },
+    { at = "7-12", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
+]
+
+[sections.aft]
+armor = 60
+internals = 35
+slots = [
+    { at = 1, item = "IS.ERLargeLaser" },
+    { at = "2-3", item = "IS.MediumLaser" },
+]
+
+[sections.nose]
+armor = 120
+internals = 60
+slots = [
+    { at = 1, item = "IS.ERPPC" },
+    { at = 2, item = "IS.GaussRifle" },
+    { at = 3, item = "IS.LRM-20" },
+    { at = 4, item = "ArtemisIV" },
+    { at = 5, item = "IS.LRM-20" },
+    { at = 6, item = "ArtemisIV" },
+    { at = "7-8", item = "IS.MediumLaser" },
+    { at = "10-12", item = "Ammo_IS.GaussRifle", rounds = 8 },
+]

@@ -1,0 +1,57 @@
+name = "Seeker"
+class = "spheroid_dropship"
+movement = "fly"
+tons = 3700
+walk_mp = 8
+heat_sinks = 88
+tac_range = 50
+lrs_range = 100
+scan_range = 50
+
+[sections.front_right_side]
+armor = 80
+internals = 73
+slots = [
+    { at = 1, item = "IS.PPC" },
+]
+
+[sections.front_left_side]
+armor = 80
+internals = 73
+slots = [
+    { at = 1, item = "IS.PPC" },
+    { at = 2, item = "DSMechDoor" },
+]
+
+[sections.rear_left_side]
+armor = 80
+internals = 73
+slots = [
+    { at = 1, item = "IS.LRM-10" },
+    { at = 2, item = "Ammo_IS.LRM-10", rounds = 12 },
+    { at = 3, item = "IS.LargeLaser" },
+    { at = "4-5", item = "IS.MediumLaser" },
+]
+
+[sections.rear_right_side]
+armor = 80
+internals = 73
+slots = [
+    { at = 1, item = "IS.LRM-10" },
+    { at = 2, item = "Ammo_IS.LRM-10", rounds = 12 },
+    { at = 3, item = "IS.LargeLaser" },
+    { at = "4-5", item = "IS.MediumLaser" },
+]
+
+[sections.aft]
+armor = 70
+internals = 37
+slots = [
+    { at = 1, item = "IS.LargeLaser" },
+    { at = "2-3", item = "IS.MediumLaser" },
+    { at = 6, item = "Ammo_IS.LRM-10", rounds = 12 },
+]
+
+[sections.nose]
+armor = 100
+internals = 37

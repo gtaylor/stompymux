@@ -1,0 +1,61 @@
+name = "Sunder"
+class = "mech"
+movement = "biped"
+tons = 90
+walk_mp = 6
+jump_mp = 3
+heat_sinks = 30
+computer = 4
+radio = 4
+
+[construction]
+engine = "xl"
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 30
+explicit = true
+slots = [
+    { at = 1, item = "ShoulderOrHip" },
+    { at = "2-12", item = "IS.LB20-XAC" },
+]
+
+[sections.right_arm]
+armor = 30
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-5", item = "HeatSink" },
+    { at = "6-11", item = "IS.PPC" },
+]
+
+[sections.left_torso]
+armor = 28
+rear = 10
+slots = [
+    { at = 4, item = "JumpJet" },
+    { at = 6, item = "Ammo_IS.LB20-XAC", rounds = 5 },
+    { at = 7, item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
+]
+
+[sections.right_torso]
+armor = 28
+rear = 10
+slots = [
+    { at = 4, item = "JumpJet" },
+]
+
+[sections.center_torso]
+armor = 41
+rear = 12
+slots = [
+    { at = 11, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 33
+
+[sections.right_leg]
+armor = 33
+
+[sections.head]
+armor = 9

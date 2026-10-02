@@ -1,0 +1,72 @@
+name = "Atlas"
+class = "mech"
+movement = "biped"
+tons = 100
+walk_mp = 5
+heat_sinks = 21
+computer = 4
+radio = 4
+
+[construction]
+engine = "xl"
+brand = 3
+
+[sections.left_arm]
+armor = 34
+slots = [
+    { at = "5-6", item = "HeatSink", brand = 3 },
+    { at = "7-8", item = "IS.ERLargeLaser", brand = 3 },
+    { at = 9, item = "IS.Anti-MissileSystem", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 34
+slots = [
+    { at = "5-6", item = "HeatSink", brand = 3 },
+    { at = "7-8", item = "IS.ERLargeLaser", brand = 3 },
+    { at = "9-10", item = "Ammo_IS.GaussRifle", rounds = 8 },
+]
+
+[sections.left_torso]
+armor = 32
+rear = 10
+slots = [
+    { at = "4-8", item = "IS.LRM-20", brand = 3 },
+    { at = "9-10", item = "Ammo_IS.LRM-20", rounds = 6 },
+    { at = 11, item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
+    { at = 12, item = "Case", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 32
+rear = 10
+slots = [
+    { at = "4-10", item = "IS.GaussRifle", brand = 3 },
+    { at = 11, item = "Case", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 47
+rear = 14
+slots = [
+    { at = 11, item = "HeatSink", brand = 3 },
+    { at = 12, item = "IS.MediumPulseLaser", modes = ["RearMount"], brand = 3 },
+]
+
+[sections.left_leg]
+armor = 41
+slots = [
+    { at = "5-6", item = "HeatSink", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 41
+slots = [
+    { at = "5-6", item = "HeatSink", brand = 3 },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "C3Slave", brand = 3 },
+]

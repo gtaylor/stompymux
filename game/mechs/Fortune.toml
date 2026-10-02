@@ -1,0 +1,30 @@
+name = "Fortune"
+class = "vehicle"
+movement = "wheel"
+tons = 80
+walk_mp = 5
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+
+[sections.left_side]
+armor = 45
+
+[sections.right_side]
+armor = 45
+
+[sections.front_side]
+armor = 50
+
+[sections.aft_side]
+armor = 35
+slots = [
+    { at = "1-8", item = "Ammo_IS.LB20-XAC", rounds = 5 },
+]
+
+[sections.turret]
+armor = 49
+slots = [
+    { at = "1-2", item = "IS.LB20-XAC", brand = 3 },
+]

@@ -1,0 +1,55 @@
+name = "Thunderbolt"
+class = "mech"
+movement = "biped"
+tons = 65
+walk_mp = 6
+heat_sinks = 21
+
+[sections.left_arm]
+armor = 20
+
+[sections.right_arm]
+armor = 20
+slots = [
+    { at = "5-7", item = "IS.PPC" },
+]
+
+[sections.left_torso]
+armor = 24
+rear = 6
+slots = [
+    { at = "1-2", item = "IS.SRM-6" },
+    { at = "3-5", item = "IS.MediumLaser" },
+    { at = 6, item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 24
+rear = 6
+slots = [
+    { at = 1, item = "IS.Flamer" },
+    { at = "2-6", item = "HeatSink" },
+]
+
+[sections.center_torso]
+armor = 30
+rear = 11
+slots = [
+    { at = 11, item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = 12, item = "HeatSink" },
+]
+
+[sections.left_leg]
+armor = 29
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 29
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.head]
+armor = 9

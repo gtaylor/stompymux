@@ -1,0 +1,55 @@
+name = "Ironsides"
+class = "aerofighter"
+movement = "fly"
+tons = 65
+walk_mp = 9
+heat_sinks = 20
+computer = 3
+fuel = 750
+
+[construction]
+heat_sinks = "double"
+
+[sections.nose]
+armor = 40
+internals = 10
+slots = [
+    { at = 1, item = "IS.SRM-6" },
+    { at = "2-3", item = "IS.PPC" },
+    { at = 4, item = "Ammo_IS.SRM-6", rounds = 15 },
+]
+
+[sections.left_wing]
+armor = 25
+internals = 10
+slots = [
+    { at = "1-2", item = "IS.SRM-6" },
+    { at = 3, item = "IS.MediumLaser" },
+]
+
+[sections.right_wing]
+armor = 25
+internals = 10
+slots = [
+    { at = "1-2", item = "IS.SRM-6" },
+    { at = 3, item = "IS.MediumLaser" },
+]
+
+[sections.cockpit]
+armor = 15
+internals = 10
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "Sensors" },
+    { at = 5, item = "LifeSupport" },
+]
+
+[sections.engine]
+armor = 40
+internals = 10
+
+[sections.fuselage]
+armor = 41
+internals = 10

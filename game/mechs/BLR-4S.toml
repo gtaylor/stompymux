@@ -1,0 +1,76 @@
+name = "Battlemaster"
+class = "mech"
+movement = "biped"
+tons = 85
+walk_mp = 6
+heat_sinks = 26
+computer = 4
+radio = 4
+specials = ["ArtemisIV", "SearchLight"]
+
+[construction]
+engine = "light"
+armor = "ferro_fibrous"
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 26
+slots = [
+    { at = "5-6", item = "IS.SmallPulseLaser" },
+    { at = "7-9", item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 26
+slots = [
+    { at = "5-11", item = "IS.GaussRifle" },
+    { at = 12, item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 28
+rear = 8
+slots = [
+    { at = "3-4", item = "IS.ERMediumLaser" },
+    { at = 5, item = "IS.MediumLaser" },
+    { at = "6-7", item = "IS.SRM-6" },
+    { at = "8-9", item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Artemis/Mine"] },
+    { at = 10, item = "FerroFibrous" },
+    { at = 11, item = "ArtemisIV" },
+    { at = 12, item = "Case" },
+]
+
+[sections.right_torso]
+armor = 28
+rear = 8
+slots = [
+    { at = "3-4", item = "IS.ERMediumLaser" },
+    { at = 5, item = "IS.MediumLaser" },
+    { at = "6-8", item = "Ammo_IS.GaussRifle", rounds = 8 },
+    { at = "9-10", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 41
+rear = 11
+slots = [
+    { at = "11-12", item = "FerroFibrous" },
+]
+
+[sections.left_leg]
+armor = 28
+slots = [
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.right_leg]
+armor = 28
+slots = [
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

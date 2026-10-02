@@ -1,0 +1,60 @@
+name = "Whitworth"
+class = "mech"
+movement = "biped"
+tons = 40
+walk_mp = 6
+jump_mp = 4
+heat_sinks = 14
+computer = 4
+radio = 4
+
+[sections.left_arm]
+armor = 12
+slots = [
+    { at = 5, item = "IS.MediumLaser" },
+]
+
+[sections.right_arm]
+armor = 12
+slots = [
+    { at = 5, item = "IS.MediumLaser" },
+]
+
+[sections.left_torso]
+armor = 12
+rear = 6
+slots = [
+    { at = "1-4", item = "HeatSink" },
+    { at = "5-6", item = "IS.SRM-6" },
+    { at = 7, item = "Ammo_IS.SRM-6", rounds = 15 },
+]
+
+[sections.right_torso]
+armor = 12
+rear = 6
+slots = [
+    { at = "1-4", item = "HeatSink" },
+    { at = "5-12", item = "IS.RL-10", modes = ["OneShot"] },
+]
+
+[sections.center_torso]
+armor = 16
+rear = 7
+
+[sections.left_leg]
+armor = 18
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 18
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "IS.MediumLaser" },
+]

@@ -3,11 +3,13 @@ use stompymux_rs::*;
 
 /// Material-only running aircraft with configurable powerplant and fuel capacity.
 fn aircraft(combustion: bool, fuel: u32, speed: f64, seed: u8) -> BattleVehicle {
-    let source = format!(
-        "{}\nFuel {{ {fuel} }}\n",
-        include_str!("../game/mechs/Kestrel")
+    let source = include_str!("../game/mechs/Kestrel.toml").replacen(
+        "tons = 25\n",
+        &format!("tons = 25\nfuel = {fuel}\n"),
+        1,
     );
-    let mut template = BattleVehicleTemplate::parse(&source).unwrap();
+    assert!(source.contains(&format!("\nfuel = {fuel}\n")));
+    let mut template = BattleVehicleTemplate::parse("Kestrel", &source).unwrap();
     if !combustion {
         template
             .attributes
@@ -110,7 +112,8 @@ fn low_speed_fuel_checks_and_exemptions_replay_the_same_saved_dice() {
 #[test]
 fn fuel_defaults_and_invalid_snapshots_are_checked_against_the_chassis() {
     let aircraft = BattleVehicle::new(
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Kestrel")).unwrap(),
+        BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
+            .unwrap(),
     )
     .unwrap();
     assert_eq!(aircraft.vtol_fuel().unwrap().capacity(), 4000);
@@ -123,7 +126,8 @@ fn fuel_defaults_and_invalid_snapshots_are_checked_against_the_chassis() {
     saved["vtol_fuel"]["capacity"] = 4001.into();
     assert!(serde_json::from_value::<BattleVehicle>(saved).is_err());
     let ground = BattleVehicle::new(
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap(),
+        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+            .unwrap(),
     )
     .unwrap();
     assert!(ground.vtol_fuel().is_none());
@@ -154,7 +158,8 @@ fn overspeed_fuel_cost_depends_on_altitude_and_shutdown_does_not_draw_dice() {
         );
     }
     let mut unit = BattleVehicle::new(
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Kestrel")).unwrap(),
+        BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
+            .unwrap(),
     )
     .unwrap();
     let before = unit.clone();

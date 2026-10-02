@@ -8,7 +8,7 @@ async fn fixture(
     mode: BattleHexTargetMode,
     terrain: &str,
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {
-    fixture_with_template(mode, terrain, include_str!("../game/mechs/Demolisher")).await
+    fixture_with_template(mode, terrain, include_str!("../game/mechs/Demolisher.toml")).await
 }
 
 /// Supply a weapon variant while retaining the same coordinate setup.
@@ -31,7 +31,7 @@ async fn fixture_with_template(
     create_battle_vehicle(
         &mut world,
         shooter,
-        BattleVehicleTemplate::parse(template).unwrap(),
+        BattleVehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, shooter, map, 1, 1).unwrap();
@@ -170,9 +170,9 @@ async fn vehicle_surface_shots_use_shooter_dice_and_shared_fracture() {
 
 #[tokio::test]
 async fn vehicle_coordinate_misload_is_tagged_and_rolls_back_with_terrain_action() {
-    let template = include_str!("../game/mechs/Demolisher")
+    let template = include_str!("../game/mechs/Demolisher.toml")
         .replace("IS.AC/20", "IS.AC/2")
-        .replace("IS.AC/2 - -", "IS.AC/2 - RapidFire");
+        .replace("\"IS.AC/2\" }", "\"IS.AC/2\", modes = [\"RapidFire\"] }");
     let (_dir, config, mut world, shooter, _map, index) =
         fixture_with_template(BattleHexTargetMode::Hex, "heavy_forest", &template).await;
     let seed = (0..=255)
@@ -247,8 +247,8 @@ fn character_crew(world: &mut World, shooter: ObjectId) {
 #[tokio::test]
 async fn character_vehicle_terrain_fire_shares_commands_replay_and_rollback() {
     for template in [
-        include_str!("../game/mechs/Demolisher"),
-        include_str!("../game/mechs/Kestrel"),
+        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/mechs/Kestrel.toml"),
     ] {
         for mode in [
             BattleHexTargetMode::UnitAtHex,
@@ -318,9 +318,9 @@ async fn character_vehicle_terrain_fire_shares_commands_replay_and_rollback() {
 
 #[tokio::test]
 async fn character_coordinate_misload_publishes_injuries_and_rolls_back_failed_evacuation() {
-    let template = include_str!("../game/mechs/Demolisher")
+    let template = include_str!("../game/mechs/Demolisher.toml")
         .replace("IS.AC/20", "IS.AC/2")
-        .replace("IS.AC/2 - -", "IS.AC/2 - RapidFire");
+        .replace("\"IS.AC/2\" }", "\"IS.AC/2\", modes = [\"RapidFire\"] }");
     for fatal in [false, true] {
         let (dir, _config, mut world, shooter, _, index) =
             fixture_with_template(BattleHexTargetMode::Hex, "heavy_forest", &template).await;

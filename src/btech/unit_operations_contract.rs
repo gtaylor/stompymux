@@ -3,7 +3,7 @@
 use super::{
     BattleAmmunitionMode, BattleFireMode, BattleSection, BattleTemplate, BattleUnit,
     BattleUnitTemplate, BattleVehicle, BattleVehicleSection, BattleVehicleTemplate,
-    CriticalDefinition,
+    CriticalDefinition, SectionDefinition,
 };
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -809,179 +809,109 @@ pub(crate) fn install_vehicle_special(
     )
 }
 
-pub(crate) fn unit_template_source(template: &BattleTemplate, reference: &str) -> String {
-    let mut output = String::new();
-    for (key, value) in &template.attributes {
-        if matches!(
-            key.to_ascii_lowercase().as_str(),
-            "reference"
-                | "type"
-                | "move_type"
-                | "tons"
-                | "administrative_unit_type"
-                | "administrative_movement_type"
-                | "administrative_tonnage"
-        ) {
-            continue;
-        }
-        output.push_str(&format!("{key} {{ {value} }}\n"));
+impl BattleTemplate {
+    /// Render this mech as a TOML template document, folding in administrative edits.
+    pub fn to_document(&self) -> Result<String> {
+        unit_template_source(self)
     }
-    let chassis = template.chassis().expect("validated template");
-    let unit_type = template
-        .attributes
-        .get("administrative_unit_type")
-        .cloned()
-        .or_else(|| attribute(&template.attributes, "Type"))
-        .unwrap_or_else(|| "Mech".into());
-    let movement = template
-        .attributes
-        .get("administrative_movement_type")
-        .cloned()
-        .or_else(|| attribute(&template.attributes, "Move_Type"))
-        .unwrap_or_else(|| match chassis {
-            super::BattleMechChassis::Biped => "Biped".into(),
-            super::BattleMechChassis::Quad => "Quad".into(),
-        });
-    let tons = template
-        .attributes
-        .get("administrative_tonnage")
-        .cloned()
-        .or_else(|| attribute(&template.attributes, "Tons"))
-        .unwrap_or_else(|| template.tons.to_string());
-    output.push_str(&format!(
-        "Type {{ {unit_type} }}\nMove_Type {{ {movement} }}\nTons {{ {tons} }}\n"
-    ));
-    output.push_str(&format!("Reference {{ {reference} }}\n"));
-    for section in BattleSection::ALL {
-        let layout = &template.sections[&section];
-        output.push_str(chassis.section_name(section));
-        output.push('\n');
-        output.push_str(&format!(
-            "  Armor {{ {} }}\n  Internals {{ {} }}\n",
-            layout.armor, layout.internal
-        ));
-        if layout.rear > 0 {
-            output.push_str(&format!("  Rear {{ {} }}\n", layout.rear));
-        }
-        if let Some(config) = &layout.configuration {
-            output.push_str(&format!("  Config {{ {config} }}\n"));
-        }
-        for (slot, part) in &layout.criticals {
-            let modes = if part.modes.is_empty() {
-                "-".into()
-            } else {
-                part.modes.join("|")
-            };
-            let brand = part
-                .brand
-                .map_or(String::new(), |brand| format!(" {brand}"));
-            output.push_str(&format!(
-                "  CRIT_{} {{ {} {} {}{} }}\n",
-                slot + 1,
-                saved_equipment_name(&part.equipment),
-                part.data,
-                modes,
-                brand
-            ));
-        }
-    }
-    output
 }
 
-pub(crate) fn vehicle_template_source(template: &BattleVehicleTemplate, reference: &str) -> String {
-    let mut output = String::new();
-    for (key, value) in &template.attributes {
-        if matches!(
-            key.to_ascii_lowercase().as_str(),
-            "reference"
-                | "type"
-                | "move_type"
-                | "tons"
-                | "administrative_unit_type"
-                | "administrative_movement_type"
-                | "administrative_tonnage"
-        ) {
-            continue;
-        }
-        output.push_str(&format!("{key} {{ {value} }}\n"));
+impl BattleVehicleTemplate {
+    /// Render this vehicle as a TOML template document, folding in administrative edits.
+    pub fn to_document(&self) -> Result<String> {
+        vehicle_template_source(self)
     }
-    let unit_type = template
-        .attributes
-        .get("administrative_unit_type")
-        .cloned()
-        .or_else(|| attribute(&template.attributes, "Type"))
-        .unwrap_or_else(|| {
-            if template.is_vtol() {
-                "VTOL".into()
-            } else {
-                "Vehicle".into()
-            }
-        });
-    let movement = template
-        .attributes
-        .get("administrative_movement_type")
-        .cloned()
-        .or_else(|| attribute(&template.attributes, "Move_Type"))
-        .unwrap_or_else(|| {
-            if template.is_vtol() {
-                "VTOL".into()
-            } else {
-                "Track".into()
-            }
-        });
-    let tons = template
-        .attributes
-        .get("administrative_tonnage")
-        .cloned()
-        .or_else(|| attribute(&template.attributes, "Tons"))
-        .unwrap_or_else(|| template.tons.to_string());
-    output.push_str(&format!(
-        "Type {{ {unit_type} }}\nMove_Type {{ {movement} }}\nTons {{ {tons} }}\n"
-    ));
-    output.push_str(&format!("Reference {{ {reference} }}\n"));
-    for (section, layout) in &template.sections {
-        output.push_str(section.name());
-        output.push('\n');
-        output.push_str(&format!(
-            "  Armor {{ {} }}\n  Internals {{ {} }}\n",
-            layout.armor, layout.internal
-        ));
-        if layout.rear > 0 {
-            output.push_str(&format!("  Rear {{ {} }}\n", layout.rear));
-        }
-        if let Some(config) = &layout.configuration {
-            output.push_str(&format!("  Config {{ {config} }}\n"));
-        }
-        for (slot, part) in &layout.criticals {
-            let modes = if part.modes.is_empty() {
-                "-".into()
-            } else {
-                part.modes.join("|")
-            };
-            let brand = part
-                .brand
-                .map_or(String::new(), |brand| format!(" {brand}"));
-            output.push_str(&format!(
-                "  CRIT_{} {{ {} {} {}{} }}\n",
-                slot + 1,
-                saved_equipment_name(&part.equipment),
-                part.data,
-                modes,
-                brand
-            ));
-        }
-    }
-    output
 }
 
-fn attribute(
-    attributes: &std::collections::BTreeMap<String, String>,
-    name: &str,
-) -> Option<String> {
-    attributes
+/// Render a constructed mech as a TOML template document.
+fn unit_template_source(template: &BattleTemplate) -> Result<String> {
+    let chassis = template.chassis()?;
+    let default_movement = match chassis {
+        super::BattleMechChassis::Biped => "Biped",
+        super::BattleMechChassis::Quad => "Quad",
+    };
+    let attributes = saved_attributes(
+        &template.attributes,
+        "Mech",
+        default_movement,
+        template.tons,
+    );
+    let layouts: Vec<_> = BattleSection::ALL
+        .into_iter()
+        .map(|section| (section, saved_layout(&template.sections[&section])))
+        .collect();
+    let sections: Vec<_> = layouts
         .iter()
-        .find(|(key, _)| key.eq_ignore_ascii_case(name))
-        .map(|(_, value)| value.clone())
+        .map(
+            |(section, layout)| super::template_document::RenderSection {
+                heading: chassis.section_name(*section).to_ascii_lowercase(),
+                mech: Some(*section),
+                layout,
+            },
+        )
+        .collect();
+    super::template_document::render(&attributes, &sections)
+}
+
+/// Render a constructed vehicle as a TOML template document.
+fn vehicle_template_source(template: &BattleVehicleTemplate) -> Result<String> {
+    let (class, movement) = if template.is_vtol() {
+        ("VTOL", "VTOL")
+    } else {
+        ("Vehicle", "Track")
+    };
+    let attributes = saved_attributes(&template.attributes, class, movement, template.tons);
+    let layouts: Vec<_> = template
+        .sections
+        .iter()
+        .map(|(section, layout)| (*section, saved_layout(layout)))
+        .collect();
+    let sections: Vec<_> = layouts
+        .iter()
+        .map(
+            |(section, layout)| super::template_document::RenderSection {
+                heading: section.name().to_ascii_lowercase(),
+                mech: None,
+                layout,
+            },
+        )
+        .collect();
+    super::template_document::render(&attributes, &sections)
+}
+
+/// Fold administrative class, movement and tonnage edits over the authored identity.
+fn saved_attributes(
+    attributes: &std::collections::BTreeMap<String, String>,
+    class: &str,
+    movement: &str,
+    tons: u16,
+) -> std::collections::BTreeMap<String, String> {
+    let mut saved = attributes.clone();
+    for (field, administrative, default) in [
+        ("type", "administrative_unit_type", class.to_owned()),
+        (
+            "move_type",
+            "administrative_movement_type",
+            movement.to_owned(),
+        ),
+        ("tons", "administrative_tonnage", tons.to_string()),
+    ] {
+        let value = saved
+            .remove(administrative)
+            .or_else(|| saved.get(field).cloned())
+            .unwrap_or(default);
+        saved.insert(field.into(), value);
+    }
+    saved
+}
+
+/// Copy a section with every critical written under its saved equipment spelling.
+fn saved_layout(layout: &SectionDefinition) -> SectionDefinition {
+    let mut saved = layout.clone();
+    for critical in saved.criticals.values_mut() {
+        critical.equipment = saved_equipment_name(&critical.equipment).to_owned();
+    }
+    saved
 }
 
 /// Serialize critical equipment without its manufacturer qualifier.

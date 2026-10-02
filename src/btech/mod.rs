@@ -189,6 +189,8 @@ mod stun;
 pub use salvo::{BattleSalvoGroup, BattleSalvoReport, resolve_salvo, resolve_tactical_salvo};
 pub use stun::{advance_stun, stun_unit};
 mod template;
+mod template_construction;
+mod template_document;
 mod unit;
 
 pub use assets::{read_map, read_template, read_unit_template, read_vehicle_template};
@@ -816,8 +818,7 @@ pub(crate) use unit_operations_contract::{
     configure_vehicle_ammunition, install_unit_special, install_unit_weapon_named,
     install_vehicle_special, install_vehicle_weapon_named, load_unit_template,
     reset_unit_criticals, restock_unit_ammunition, restock_vehicle_ammunition,
-    set_unit_weapon_modes, unit_piloting_check_action, unit_template_source,
-    vehicle_template_source,
+    set_unit_weapon_modes, unit_piloting_check_action,
 };
 mod admin_contract;
 pub use admin_contract::{

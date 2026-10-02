@@ -1,0 +1,71 @@
+name = "Sirocco"
+class = "mech"
+movement = "quad"
+tons = 95
+walk_mp = 5
+heat_sinks = 26
+computer = 5
+radio = 5
+
+[construction]
+heat_sinks = "double"
+brand = 5
+
+[sections.front_left_leg]
+armor = 40
+slots = [
+    { at = 5, item = "IS.ERMediumLaser", brand = 5 },
+    { at = 6, item = "IS.A-Pod", brand = 5 },
+]
+
+[sections.front_right_leg]
+armor = 40
+slots = [
+    { at = 5, item = "IS.ERMediumLaser", brand = 5 },
+    { at = 6, item = "IS.A-Pod", brand = 5 },
+]
+
+[sections.left_torso]
+armor = 25
+rear = 15
+slots = [
+    { at = "1-3", item = "HeatSink", brand = 5 },
+    { at = 4, item = "IS.ERMediumLaser", brand = 5 },
+    { at = 5, item = "IS.ERMediumLaser", modes = ["RearMount"], brand = 5 },
+    { at = "6-12", item = "IS.UltraAC/10", brand = 5 },
+]
+
+[sections.right_torso]
+armor = 25
+rear = 15
+slots = [
+    { at = "1-3", item = "HeatSink", brand = 5 },
+    { at = 4, item = "IS.ERMediumLaser", brand = 5 },
+    { at = 5, item = "IS.ERMediumLaser", modes = ["RearMount"], brand = 5 },
+    { at = "6-12", item = "IS.UltraAC/10", brand = 5 },
+]
+
+[sections.center_torso]
+armor = 40
+rear = 20
+slots = [
+    { at = "11-12", item = "Ecm", brand = 5 },
+]
+
+[sections.rear_left_leg]
+armor = 40
+slots = [
+    { at = "5-6", item = "Ammo_IS.UltraAC/10", rounds = 10 },
+]
+
+[sections.rear_right_leg]
+armor = 40
+slots = [
+    { at = "5-6", item = "Ammo_IS.UltraAC/10", rounds = 10 },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "IS.MediumPulseLaser", brand = 5 },
+]

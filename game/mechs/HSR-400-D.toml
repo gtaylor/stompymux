@@ -1,0 +1,58 @@
+name = "Hussar"
+class = "mech"
+movement = "biped"
+tons = 30
+walk_mp = 12
+computer = 4
+radio = 4
+
+[construction]
+engine = "xl"
+armor = "ferro_fibrous"
+brand = 3
+
+[sections.left_arm]
+armor = 2
+slots = [
+    { at = "5-7", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 2
+slots = [
+    { at = "5-7", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 8
+rear = 1
+slots = [
+    { at = "4-9", item = "IS.LB10-XAC", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 8
+rear = 1
+slots = [
+    { at = "4-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 11
+rear = 2
+slots = [
+    { at = 11, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = 12, item = "FerroFibrous", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 5
+slots = [
+    { at = 5, item = "HeatSink", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 5
+
+[sections.head]
+armor = 9

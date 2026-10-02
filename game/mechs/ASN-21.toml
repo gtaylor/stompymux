@@ -1,0 +1,50 @@
+name = "Assassin"
+class = "mech"
+movement = "biped"
+tons = 40
+walk_mp = 11
+jump_mp = 7
+
+[sections.left_arm]
+armor = 6
+
+[sections.right_arm]
+armor = 6
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.MediumLaser" },
+]
+
+[sections.left_torso]
+armor = 10
+rear = 2
+slots = [
+    { at = 1, item = "IS.SRM-2" },
+    { at = 2, item = "Ammo_IS.SRM-2", rounds = 50 },
+    { at = "3-5", item = "JumpJet" },
+]
+
+[sections.right_torso]
+armor = 10
+rear = 2
+slots = [
+    { at = 1, item = "IS.LRM-5" },
+    { at = 2, item = "Ammo_IS.LRM-5", rounds = 24 },
+    { at = "3-5", item = "JumpJet" },
+]
+
+[sections.center_torso]
+armor = 12
+rear = 4
+slots = [
+    { at = 12, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 6
+
+[sections.right_leg]
+armor = 6
+
+[sections.head]
+armor = 8

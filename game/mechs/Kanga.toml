@@ -1,0 +1,34 @@
+name = "Kanga"
+class = "vehicle"
+movement = "hover"
+tons = 50
+walk_mp = 12
+jump_mp = 6
+
+[sections.left_side]
+armor = 12
+slots = [
+    { at = "1-3", item = "JumpJet" },
+]
+
+[sections.right_side]
+armor = 12
+slots = [
+    { at = "1-3", item = "JumpJet" },
+]
+
+[sections.front_side]
+armor = 20
+slots = [
+    { at = 1, item = "IS.AC/5" },
+    { at = 2, item = "IS.LRM-10" },
+    { at = 3, item = "IS.SRM-4" },
+    { at = 4, item = "IS.MachineGun" },
+    { at = 5, item = "Ammo_IS.AC/5", rounds = 20 },
+    { at = 6, item = "Ammo_IS.LRM-10", rounds = 12 },
+    { at = 7, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = 8, item = "Ammo_IS.SRM-4", rounds = 25 },
+]
+
+[sections.aft_side]
+armor = 12

@@ -1,0 +1,63 @@
+name = "Hunchback"
+class = "mech"
+movement = "biped"
+tons = 50
+walk_mp = 6
+heat_sinks = 10
+computer = 4
+radio = 4
+
+[construction]
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 14
+slots = [
+    { at = 5, item = "IS.MediumLaser" },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 14
+slots = [
+    { at = 5, item = "IS.MediumLaser" },
+    { at = "6-8", item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 20
+rear = 4
+slots = [
+    { at = "1-2", item = "Ammo_IS.AC/20", rounds = 5 },
+    { at = "3-11", item = "IS.RL-20", modes = ["OneShot"] },
+    { at = 12, item = "Case" },
+]
+
+[sections.right_torso]
+armor = 20
+rear = 4
+slots = [
+    { at = "1-10", item = "IS.AC/20" },
+    { at = "11-12", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 24
+rear = 5
+
+[sections.left_leg]
+armor = 19
+slots = [
+    { at = 5, item = "HeatSink" },
+    { at = 6, item = "FerroFibrous" },
+]
+
+[sections.right_leg]
+armor = 19
+slots = [
+    { at = 5, item = "HeatSink" },
+    { at = 6, item = "FerroFibrous" },
+]
+
+[sections.head]
+armor = 9

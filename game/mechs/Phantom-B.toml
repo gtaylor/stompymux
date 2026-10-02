@@ -1,0 +1,78 @@
+name = "Phantom"
+class = "mech"
+movement = "biped"
+tons = 40
+walk_mp = 14
+heat_sinks = 22
+computer = 4
+specials = ["BeagleProbe"]
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 12
+slots = [
+    { at = 5, item = "FerroFibrous" },
+    { at = 6, item = "EndoSteel" },
+    { at = 7, item = "CL.SRM-4" },
+    { at = 8, item = "Ammo_CL.SRM-4", rounds = 25 },
+]
+
+[sections.right_arm]
+armor = 12
+slots = [
+    { at = 5, item = "FerroFibrous" },
+    { at = 6, item = "EndoSteel" },
+    { at = 7, item = "CL.SRM-4" },
+    { at = 8, item = "Ammo_CL.SRM-4", rounds = 25 },
+]
+
+[sections.left_torso]
+armor = 11
+rear = 7
+engine_at = 3
+slots = [
+    { at = 1, item = "FerroFibrous" },
+    { at = 2, item = "EndoSteel" },
+    { at = 5, item = "BeagleProbe" },
+]
+
+[sections.right_torso]
+armor = 11
+rear = 7
+engine_at = 2
+slots = [
+    { at = 1, item = "FerroFibrous" },
+    { at = 4, item = "CL.ERSmallLaser", modes = ["RearMount"] },
+]
+
+[sections.center_torso]
+armor = 12
+rear = 8
+slots = [
+    { at = 11, item = "EndoSteel" },
+    { at = 12, item = "CL.ERMediumLaser" },
+]
+
+[sections.left_leg]
+armor = 13
+slots = [
+    { at = 5, item = "FerroFibrous" },
+    { at = 6, item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 13
+slots = [
+    { at = 5, item = "FerroFibrous" },
+    { at = 6, item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

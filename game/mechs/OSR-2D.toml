@@ -1,0 +1,53 @@
+name = "Ostroc"
+class = "mech"
+movement = "biped"
+tons = 60
+walk_mp = 8
+heat_sinks = 30
+computer = 4
+radio = 4
+
+[construction]
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 8
+
+[sections.right_arm]
+armor = 8
+
+[sections.left_torso]
+armor = 22
+rear = 4
+slots = [
+    { at = "1-2", item = "IS.ERLargeLaser", brand = 3 },
+    { at = 3, item = "IS.MediumLaser", brand = 3 },
+    { at = "4-9", item = "HeatSink", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 22
+rear = 4
+slots = [
+    { at = 1, item = "IS.SRM-4", brand = 3 },
+    { at = "2-3", item = "IS.ERLargeLaser", brand = 3 },
+    { at = 4, item = "IS.MediumLaser", brand = 3 },
+    { at = "5-7", item = "HeatSink", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 22
+rear = 6
+slots = [
+    { at = 11, item = "Ammo_IS.SRM-4", rounds = 25 },
+]
+
+[sections.left_leg]
+armor = 20
+
+[sections.right_leg]
+armor = 20
+
+[sections.head]
+armor = 8

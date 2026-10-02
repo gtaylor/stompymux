@@ -605,7 +605,7 @@ mod pursuit_estimate_tests {
         let (world, id, target, _) = super::super::encounters::fixture(
             &config,
             base,
-            include_str!("../../../game/mechs/JR7-D"),
+            include_str!("../../../game/mechs/JR7-D.toml"),
             "approach",
             1,
         )

@@ -18,7 +18,8 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap(),
+        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+            .unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -34,7 +35,8 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
 #[test]
 fn vehicle_mount_arcs_partition_hull_and_keep_turret_narrow() {
     let target = BattleVehicle::new(
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap(),
+        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+            .unwrap(),
     )
     .unwrap();
     let mut mount = target.loadout().unwrap().weapons[0].clone();

@@ -1,0 +1,28 @@
+name = "Sprint"
+class = "vtol"
+movement = "vtol"
+tons = 10
+walk_mp = 20
+cargo_space = 0
+specials = ["CargoTech"]
+
+[sections.left_side]
+armor = 3
+slots = [
+    { at = "6-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_side]
+armor = 3
+slots = [
+    { at = "6-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.front_side]
+armor = 7
+
+[sections.aft_side]
+armor = 3
+
+[sections.rotor]
+armor = 2

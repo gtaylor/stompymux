@@ -335,7 +335,8 @@ async fn mech_native_lua_replacement_and_hull_lifecycle_agree() {
 /// Restoring gyro slots retires corrections based on losses that no longer exist.
 #[tokio::test]
 async fn hardened_gyro_replacement_rebuilds_damage_without_stale_loss_baselines() {
-    let source = include_str!("../game/mechs/JR7-D").replace("FlipArms", "HDGYRO");
+    let source =
+        support::templates::with_flags(include_str!("../game/mechs/JR7-D.toml"), &["HDGyro_Tech"]);
     let (_dir, config, world, id, _, _) = firing::fixture_with_target(&source, None, &source).await;
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     set_battle_unit_field_action(
@@ -387,11 +388,7 @@ async fn hardened_gyro_replacement_rebuilds_damage_without_stale_loss_baselines(
 #[tokio::test]
 async fn gyro_reconstruction_preserves_secondary_protection_and_future_hit_behavior() {
     for source in firing::templates().into_iter().take(2) {
-        let source = if source.contains("FlipArms") {
-            source.replace("FlipArms", "HDGYRO")
-        } else {
-            format!("Specials {{ HDGYRO }}\n{source}")
-        };
+        let source = support::templates::with_flags(&source, &["HDGyro_Tech"]);
         for protection_used in [false, true] {
             let (_dir, config, world, id, _, _) =
                 firing::fixture_with_target(&source, None, &source).await;

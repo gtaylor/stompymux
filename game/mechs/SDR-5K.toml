@@ -1,0 +1,52 @@
+name = "Spider"
+class = "mech"
+movement = "biped"
+tons = 30
+walk_mp = 12
+jump_mp = 6
+
+[sections.left_arm]
+armor = 5
+slots = [
+    { at = 5, item = "IS.MachineGun" },
+]
+
+[sections.right_arm]
+armor = 5
+slots = [
+    { at = 5, item = "IS.MachineGun" },
+]
+
+[sections.left_torso]
+armor = 6
+rear = 2
+slots = [
+    { at = "1-3", item = "JumpJet" },
+]
+
+[sections.right_torso]
+armor = 6
+rear = 2
+slots = [
+    { at = "1-3", item = "JumpJet" },
+]
+
+[sections.center_torso]
+armor = 8
+rear = 4
+slots = [
+    { at = 11, item = "IS.MediumLaser", brand = 5 },
+    { at = 12, item = "Ammo_IS.MachineGun", rounds = 200 },
+]
+
+[sections.left_leg]
+armor = 6
+
+[sections.right_leg]
+armor = 6
+
+[sections.head]
+armor = 6
+slots = [
+    { at = 4, item = "HeatSink" },
+]

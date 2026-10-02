@@ -1,0 +1,89 @@
+name = "Nobori-nin"
+class = "mech"
+movement = "biped"
+tons = 50
+walk_mp = 8
+jump_mp = 5
+heat_sinks = 20
+computer = 4
+specials = ["CL_AMS", "ArtemisIV", "BeagleProbe"]
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 16
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "FerroFibrous" },
+    { at = "5-6", item = "EndoSteel" },
+    { at = "7-8", item = "CL.ERMediumLaser" },
+    { at = "9-10", item = "CL.StreakSRM-6" },
+    { at = 11, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+]
+
+[sections.right_arm]
+armor = 16
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "EndoSteel" },
+    { at = "5-6", item = "CL.ERMediumLaser" },
+    { at = "7-8", item = "CL.UltraAC/2" },
+    { at = 9, item = "Ammo_CL.UltraAC/2", rounds = 45 },
+]
+
+[sections.left_torso]
+armor = 18
+rear = 6
+slots = [
+    { at = 3, item = "EndoSteel" },
+    { at = "4-6", item = "FerroFibrous" },
+    { at = 7, item = "JumpJet" },
+    { at = 8, item = "CL.Flamer" },
+    { at = 9, item = "CL.Anti-MissileSystem" },
+    { at = 10, item = "Ammo_CL.Anti-MissileSystem", rounds = 24 },
+]
+
+[sections.right_torso]
+armor = 18
+rear = 6
+slots = [
+    { at = 3, item = "EndoSteel" },
+    { at = "4-5", item = "FerroFibrous" },
+    { at = 6, item = "JumpJet" },
+    { at = 7, item = "BeagleProbe" },
+    { at = 8, item = "CL.LRM-10" },
+    { at = 9, item = "ArtemisIV" },
+    { at = 10, item = "Ammo_CL.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
+]
+
+[sections.center_torso]
+armor = 25
+rear = 7
+slots = [
+    { at = 11, item = "JumpJet" },
+    { at = 12, item = "EndoSteel" },
+]
+
+[sections.left_leg]
+armor = 24
+slots = [
+    { at = 5, item = "JumpJet" },
+    { at = 6, item = "CL.A-Pod" },
+]
+
+[sections.right_leg]
+armor = 24
+slots = [
+    { at = 5, item = "JumpJet" },
+    { at = 6, item = "CL.A-Pod" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

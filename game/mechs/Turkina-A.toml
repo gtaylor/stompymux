@@ -1,0 +1,67 @@
+name = "Turkina"
+class = "mech"
+movement = "biped"
+tons = 95
+walk_mp = 5
+jump_mp = 3
+heat_sinks = 30
+computer = 5
+radio = 5
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+
+[sections.left_arm]
+armor = 32
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-8", item = "CL.GaussRifle" },
+    { at = "9-10", item = "Ammo_CL.GaussRifle", rounds = 8 },
+    { at = 11, item = "Ammo_CL.LRM-20", rounds = 6 },
+]
+
+[sections.right_arm]
+armor = 32
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-8", item = "CL.GaussRifle" },
+    { at = "9-10", item = "Ammo_CL.GaussRifle", rounds = 8 },
+    { at = 11, item = "Ammo_CL.LRM-20", rounds = 6 },
+]
+
+[sections.left_torso]
+armor = 30
+rear = 10
+slots = [
+    { at = "3-6", item = "HeatSink" },
+    { at = 7, item = "JumpJet" },
+    { at = "8-11", item = "CL.LRM-20" },
+    { at = 12, item = "Ammo_CL.LRM-20", rounds = 6 },
+]
+
+[sections.right_torso]
+armor = 30
+rear = 10
+slots = [
+    { at = "3-6", item = "HeatSink" },
+    { at = 7, item = "JumpJet" },
+    { at = "8-11", item = "CL.LRM-20" },
+    { at = 12, item = "Ammo_CL.LRM-20", rounds = 6 },
+]
+
+[sections.center_torso]
+armor = 45
+rear = 10
+slots = [
+    { at = 11, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 40
+
+[sections.right_leg]
+armor = 40
+
+[sections.head]
+armor = 9

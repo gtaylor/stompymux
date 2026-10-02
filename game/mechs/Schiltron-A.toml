@@ -1,0 +1,43 @@
+name = "Schiltron"
+class = "vehicle"
+movement = "wheel"
+tons = 80
+walk_mp = 5
+
+[construction]
+engine = "xl"
+
+[sections.left_side]
+armor = 34
+slots = [
+    { at = "6-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_side]
+armor = 34
+slots = [
+    { at = "6-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.front_side]
+armor = 46
+slots = [
+    { at = "1-2", item = "IS.MRM-40", brand = 3 },
+    { at = "3-8", item = "Ammo_IS.MRM-40", rounds = 6 },
+]
+
+[sections.aft_side]
+armor = 25
+slots = [
+    { at = 1, item = "C3Master", brand = 3 },
+    { at = 2, item = "Ecm", brand = 3 },
+]
+
+[sections.turret]
+armor = 40
+slots = [
+    { at = "1-2", item = "IS.MediumLaser", brand = 3 },
+    { at = "3-6", item = "IS.SmallLaser", brand = 3 },
+    { at = "7-8", item = "IS.MRM-10", brand = 0 },
+    { at = "9-10", item = "Ammo_IS.MRM-10", rounds = 24 },
+]

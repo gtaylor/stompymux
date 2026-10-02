@@ -1,0 +1,52 @@
+name = "Rifleman"
+class = "mech"
+movement = "biped"
+tons = 60
+walk_mp = 6
+computer = 4
+
+[construction]
+tech_base = "clan"
+
+[sections.left_arm]
+armor = 15
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-6", item = "CL.LB5-XAC" },
+    { at = "7-8", item = "CL.LargePulseLaser" },
+]
+
+[sections.right_arm]
+armor = 15
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-6", item = "CL.LB5-XAC" },
+    { at = "7-8", item = "CL.LargePulseLaser" },
+]
+
+[sections.left_torso]
+armor = 15
+rear = 2
+slots = [
+    { at = "1-2", item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 15
+rear = 2
+slots = [
+    { at = 1, item = "Ammo_CL.LB5-XAC", rounds = 20 },
+]
+
+[sections.center_torso]
+armor = 20
+rear = 4
+
+[sections.left_leg]
+armor = 12
+
+[sections.right_leg]
+armor = 12
+
+[sections.head]
+armor = 6

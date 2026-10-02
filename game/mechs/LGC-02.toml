@@ -1,0 +1,79 @@
+name = "Legacy"
+class = "mech"
+movement = "biped"
+tons = 80
+walk_mp = 5
+jump_mp = 3
+heat_sinks = 20
+computer = 4
+radio = 4
+
+[construction]
+structure = "endo_steel"
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 26
+slots = [
+    { at = "5-7", item = "HeatSink" },
+    { at = 8, item = "IS.ERSmallLaser" },
+    { at = "9-12", item = "EndoSteel" },
+]
+
+[sections.right_arm]
+armor = 26
+slots = [
+    { at = "5-6", item = "IS.ERMediumLaser" },
+    { at = "7-12", item = "EndoSteel" },
+]
+
+[sections.left_torso]
+armor = 27
+rear = 7
+slots = [
+    { at = "1-5", item = "IS.LRM-20" },
+    { at = "6-8", item = "Ammo_IS.LRM-20", rounds = 6 },
+    { at = 9, item = "IS.MediumPulseLaser" },
+    { at = "10-11", item = "C3i" },
+    { at = 12, item = "Case" },
+]
+
+[sections.right_torso]
+armor = 27
+rear = 7
+slots = [
+    { at = "1-5", item = "IS.LRM-20" },
+    { at = "6-8", item = "Ammo_IS.LRM-20", rounds = 6 },
+    { at = 9, item = "IS.StreakSRM-4" },
+    { at = 10, item = "Ammo_IS.StreakSRM-4", rounds = 25 },
+    { at = 11, item = "IS.MediumPulseLaser" },
+    { at = 12, item = "Case" },
+]
+
+[sections.center_torso]
+armor = 40
+rear = 10
+slots = [
+    { at = 11, item = "JumpJet" },
+    { at = 12, item = "EndoSteel" },
+]
+
+[sections.left_leg]
+armor = 34
+slots = [
+    { at = 5, item = "JumpJet" },
+    { at = 6, item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 34
+slots = [
+    { at = 5, item = "JumpJet" },
+    { at = 6, item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "EndoSteel" },
+]

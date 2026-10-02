@@ -28,7 +28,7 @@ async fn rotorcraft_modifiers_match_preview_and_firing_for_every_shooter() {
             let (_dir, config, mut base, shooter, target, index) = firing::fixture_with_supply(
                 &source,
                 Some(weapon),
-                include_str!("../game/mechs/Kestrel"),
+                include_str!("../game/mechs/Kestrel.toml"),
                 false,
                 Some(flag),
             )
@@ -91,7 +91,7 @@ async fn stinger_orbital_bonus_survives_opening_protection_and_restart() {
         let (_dir, config, mut world, shooter, target, index) = firing::fixture_with_supply(
             &source,
             Some(BattleWeapon::Lrm5),
-            include_str!("../game/mechs/JR7-D"),
+            include_str!("../game/mechs/JR7-D.toml"),
             false,
             Some("Stinger"),
         )
@@ -130,7 +130,7 @@ async fn stinger_fire_admits_orbitally_dropped_ground_vehicles() {
         let (_dir, config, mut world, shooter, target, index) = firing::fixture_with_supply(
             &source,
             Some(BattleWeapon::Lrm5),
-            include_str!("../game/mechs/Demolisher"),
+            include_str!("../game/mechs/Demolisher.toml"),
             false,
             Some("Stinger"),
         )

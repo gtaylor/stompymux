@@ -1,0 +1,47 @@
+name = "Crossbow"
+class = "mech"
+movement = "biped"
+tons = 65
+walk_mp = 8
+heat_sinks = 20
+computer = 4
+
+[construction]
+tech_base = "clan"
+
+[sections.left_arm]
+armor = 18
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-7", item = "CL.StreakSRM-6" },
+    { at = "8-9", item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+]
+
+[sections.right_arm]
+armor = 18
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-7", item = "CL.StreakSRM-6" },
+    { at = "8-9", item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+]
+
+[sections.left_torso]
+armor = 19
+rear = 9
+
+[sections.right_torso]
+armor = 19
+rear = 9
+
+[sections.center_torso]
+armor = 26
+rear = 13
+
+[sections.left_leg]
+armor = 26
+
+[sections.right_leg]
+armor = 26
+
+[sections.head]
+armor = 9

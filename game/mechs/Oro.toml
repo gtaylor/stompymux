@@ -1,0 +1,41 @@
+name = "Oro"
+class = "vehicle"
+movement = "track"
+tons = 50
+walk_mp = 6
+heat_sinks = 15
+specials = ["AntiAircraft"]
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
+
+[sections.left_side]
+armor = 21
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 21
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 24
+slots = [
+    { at = 1, item = "CL.ERMediumLaser" },
+]
+
+[sections.aft_side]
+armor = 18
+
+[sections.turret]
+armor = 22
+slots = [
+    { at = 1, item = "CL.LargePulseLaser" },
+    { at = 2, item = "CL.LB20-XAC" },
+    { at = 3, item = "Ammo_CL.LB20-XAC", rounds = 5 },
+    { at = 4, item = "Ammo_CL.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
+]

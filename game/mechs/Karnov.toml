@@ -1,0 +1,26 @@
+name = "Karnov UR"
+class = "vtol"
+movement = "vtol"
+tons = 30
+walk_mp = 17
+cargo_space = 600
+max_suits = 0
+max_ton = 1
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 5
+
+[sections.right_side]
+armor = 5
+
+[sections.front_side]
+armor = 6
+
+[sections.aft_side]
+armor = 6
+
+[sections.rotor]
+armor = 2

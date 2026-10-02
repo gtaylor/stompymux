@@ -1,0 +1,59 @@
+name = "Loki"
+class = "mech"
+movement = "biped"
+tons = 65
+walk_mp = 8
+heat_sinks = 26
+computer = 4
+specials = ["ArtemisIV"]
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+
+[sections.left_arm]
+armor = 11
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-7", item = "CL.LB5-XAC" },
+    { at = 8, item = "Ammo_CL.LB5-XAC", rounds = 20 },
+]
+
+[sections.right_arm]
+armor = 11
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-9", item = "CL.GaussRifle" },
+    { at = 10, item = "Ammo_CL.GaussRifle", rounds = 8 },
+]
+
+[sections.left_torso]
+armor = 14
+rear = 7
+engine_at = 7
+slots = [
+    { at = 1, item = "CL.ERSmallLaser" },
+]
+
+[sections.right_torso]
+armor = 14
+rear = 7
+engine_at = 7
+slots = [
+    { at = "1-2", item = "CL.SRM-6" },
+    { at = "3-4", item = "Ammo_CL.SRM-6", rounds = 15, modes = ["Artemis/Mine"] },
+    { at = "5-6", item = "ArtemisIV" },
+]
+
+[sections.center_torso]
+armor = 17
+rear = 8
+
+[sections.left_leg]
+armor = 15
+
+[sections.right_leg]
+armor = 15
+
+[sections.head]
+armor = 9

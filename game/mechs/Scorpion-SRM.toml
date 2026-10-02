@@ -1,0 +1,32 @@
+name = "Scorpion"
+class = "vehicle"
+movement = "track"
+tons = 25
+walk_mp = 6
+computer = 3
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 11
+
+[sections.right_side]
+armor = 11
+
+[sections.front_side]
+armor = 22
+slots = [
+    { at = 1, item = "IS.MachineGun" },
+    { at = 2, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
+]
+
+[sections.aft_side]
+armor = 10
+
+[sections.turret]
+armor = 10
+slots = [
+    { at = "1-3", item = "IS.SRM-4" },
+    { at = "4-6", item = "Ammo_IS.SRM-4", rounds = 25 },
+]

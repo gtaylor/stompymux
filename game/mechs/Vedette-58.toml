@@ -1,0 +1,36 @@
+name = "Vedette"
+class = "vehicle"
+movement = "track"
+tons = 50
+walk_mp = 8
+specials = ["SearchLight"]
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 21
+slots = [
+    { at = "6-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_side]
+armor = 21
+slots = [
+    { at = "6-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.front_side]
+armor = 25
+slots = [
+    { at = 1, item = "Ammo_IS.UltraAC/5", rounds = 20 },
+]
+
+[sections.aft_side]
+armor = 24
+
+[sections.turret]
+armor = 25
+slots = [
+    { at = 1, item = "IS.UltraAC/5", brand = 3 },
+]

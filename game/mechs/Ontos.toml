@@ -1,0 +1,30 @@
+name = "Ontos"
+class = "vehicle"
+movement = "track"
+tons = 95
+walk_mp = 5
+heat_sinks = 24
+specials = ["SearchLight"]
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 25
+
+[sections.right_side]
+armor = 25
+
+[sections.front_side]
+armor = 30
+
+[sections.aft_side]
+armor = 26
+
+[sections.turret]
+armor = 30
+slots = [
+    { at = "1-8", item = "IS.MediumLaser", brand = 3 },
+    { at = "9-10", item = "IS.LRM-5", brand = 3 },
+    { at = 11, item = "Ammo_IS.LRM-5", rounds = 24 },
+]

@@ -1,0 +1,34 @@
+name = "Partisan"
+class = "vehicle"
+movement = "track"
+tons = 80
+walk_mp = 5
+specials = ["AntiAircraft"]
+
+[sections.left_side]
+armor = 26
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 26
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 35
+
+[sections.aft_side]
+armor = 21
+slots = [
+    { at = "1-2", item = "C3Master" },
+]
+
+[sections.turret]
+armor = 35
+slots = [
+    { at = "1-2", item = "IS.LB10-XAC" },
+    { at = "3-9", item = "Ammo_IS.LB10-XAC", rounds = 10 },
+]

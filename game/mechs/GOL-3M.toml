@@ -1,0 +1,69 @@
+name = "Goliath"
+class = "mech"
+movement = "quad"
+tons = 80
+walk_mp = 6
+heat_sinks = 17
+computer = 4
+radio = 4
+
+[construction]
+engine = "xl"
+brand = 3
+
+[sections.front_left_leg]
+armor = 26
+slots = [
+    { at = 5, item = "HeatSink", brand = 3 },
+]
+
+[sections.front_right_leg]
+armor = 26
+slots = [
+    { at = 5, item = "HeatSink", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 21
+rear = 13
+slots = [
+    { at = "4-5", item = "IS.LRM-10", brand = 3 },
+    { at = 6, item = "IS.MachineGun", brand = 3 },
+    { at = "7-8", item = "Ammo_IS.LRM-10", rounds = 12 },
+    { at = "9-10", item = "Ammo_IS.MachineGun", rounds = 200 },
+    { at = 11, item = "Case", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 21
+rear = 13
+slots = [
+    { at = "4-10", item = "IS.GaussRifle", brand = 3 },
+    { at = "11-12", item = "IS.LRM-10", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 30
+rear = 19
+slots = [
+    { at = 11, item = "IS.MachineGun", brand = 3 },
+    { at = 12, item = "Ammo_IS.GaussRifle", rounds = 8 },
+]
+
+[sections.rear_left_leg]
+armor = 31
+slots = [
+    { at = 5, item = "HeatSink", brand = 3 },
+]
+
+[sections.rear_right_leg]
+armor = 31
+slots = [
+    { at = 5, item = "HeatSink", brand = 3 },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "HeatSink", brand = 3 },
+]

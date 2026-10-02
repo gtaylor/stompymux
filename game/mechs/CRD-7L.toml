@@ -1,0 +1,79 @@
+name = "Crusader"
+class = "mech"
+movement = "biped"
+tons = 65
+walk_mp = 5
+jump_mp = 3
+heat_sinks = 22
+computer = 4
+radio = 4
+specials = ["ECM"]
+
+[construction]
+armor = "stealth"
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 19
+slots = [
+    { at = "5-7", item = "HeatSink" },
+    { at = "8-10", item = "IS.LRM-15" },
+    { at = "11-12", item = "StealthArmor" },
+]
+
+[sections.right_arm]
+armor = 19
+slots = [
+    { at = "5-7", item = "HeatSink" },
+    { at = "8-10", item = "IS.LRM-15" },
+    { at = "11-12", item = "StealthArmor" },
+]
+
+[sections.left_torso]
+armor = 22
+rear = 7
+slots = [
+    { at = 1, item = "JumpJet" },
+    { at = 2, item = "IS.StreakSRM-4" },
+    { at = "3-8", item = "HeatSink" },
+    { at = "9-10", item = "Ecm" },
+    { at = "11-12", item = "StealthArmor" },
+]
+
+[sections.right_torso]
+armor = 22
+rear = 7
+slots = [
+    { at = 1, item = "JumpJet" },
+    { at = 2, item = "IS.StreakSRM-4" },
+    { at = 3, item = "Ammo_IS.StreakSRM-4", rounds = 25 },
+    { at = "4-7", item = "Ammo_IS.LRM-15", rounds = 8 },
+    { at = 10, item = "Case" },
+    { at = "11-12", item = "StealthArmor" },
+]
+
+[sections.center_torso]
+armor = 28
+rear = 9
+slots = [
+    { at = 11, item = "JumpJet" },
+    { at = 12, item = "IS.ERMediumLaser" },
+]
+
+[sections.left_leg]
+armor = 29
+slots = [
+    { at = "5-6", item = "StealthArmor" },
+]
+
+[sections.right_leg]
+armor = 29
+slots = [
+    { at = "5-6", item = "StealthArmor" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "IS.ERMediumLaser" },
+]

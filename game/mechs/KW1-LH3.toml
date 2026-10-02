@@ -1,0 +1,58 @@
+name = "Lineholder"
+class = "mech"
+movement = "biped"
+tons = 55
+walk_mp = 8
+heat_sinks = 14
+computer = 4
+radio = 4
+
+[construction]
+brand = 3
+
+[sections.left_arm]
+armor = 18
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "IS.ERLargeLaser", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 18
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "IS.LRM-5", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 18
+rear = 5
+slots = [
+    { at = 1, item = "HeatSink", brand = 3 },
+    { at = 2, item = "IS.MediumPulseLaser", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 18
+rear = 5
+slots = [
+    { at = 1, item = "HeatSink", brand = 3 },
+    { at = 2, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = 3, item = "Ammo_IS.LRM-5", rounds = 24 },
+]
+
+[sections.center_torso]
+armor = 25
+rear = 6
+slots = [
+    { at = 11, item = "HeatSink", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 19
+
+[sections.right_leg]
+armor = 19
+
+[sections.head]
+armor = 9

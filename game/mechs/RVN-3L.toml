@@ -1,0 +1,74 @@
+name = "Raven"
+class = "mech"
+movement = "biped"
+tons = 35
+walk_mp = 9
+heat_sinks = 11
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+
+[construction]
+engine = "xl"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 8
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.NarcBeacon" },
+    { at = "5-11", item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 8
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.MediumLaser" },
+    { at = "5-11", item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 11
+rear = 3
+slots = [
+    { at = 4, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Narc/Smoke"] },
+    { at = 5, item = "Case" },
+    { at = "6-7", item = "Ecm" },
+    { at = "8-9", item = "Ammo_IS.NarcBeacon", rounds = 6 },
+]
+
+[sections.right_torso]
+armor = 11
+rear = 3
+slots = [
+    { at = 4, item = "IS.SRM-6", modes = ["Narc/Smoke"] },
+    { at = 5, item = "IS.SRM-6" },
+    { at = 6, item = "TAG" },
+]
+
+[sections.center_torso]
+armor = 11
+rear = 4
+slots = [
+    { at = "11-12", item = "BeagleProbe" },
+]
+
+[sections.left_leg]
+armor = 8
+slots = [
+    { at = 5, item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 8
+slots = [
+    { at = 5, item = "HeatSink" },
+]
+
+[sections.head]
+armor = 6
+slots = [
+    { at = 4, item = "HeatSink" },
+]

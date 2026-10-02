@@ -1,0 +1,68 @@
+name = "Warhammer"
+class = "mech"
+movement = "biped"
+tons = 70
+walk_mp = 6
+heat_sinks = 18
+specials = ["SearchLight"]
+
+[sections.left_arm]
+armor = 20
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-6", item = "IS.PPC" },
+    { at = 7, item = "HeatSink" },
+]
+
+[sections.right_arm]
+armor = 20
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-6", item = "IS.PPC" },
+    { at = 7, item = "HeatSink" },
+]
+
+[sections.left_torso]
+armor = 17
+rear = 8
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+    { at = 2, item = "IS.SmallLaser", brand = 4 },
+    { at = 3, item = "IS.MachineGun", brand = 2 },
+]
+
+[sections.right_torso]
+armor = 17
+rear = 8
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+    { at = 2, item = "IS.SmallLaser", brand = 4 },
+    { at = "3-4", item = "IS.SRM-6", brand = 4 },
+    { at = 5, item = "IS.MachineGun", brand = 2 },
+    { at = 6, item = "Ammo_IS.SRM-6", rounds = 15 },
+]
+
+[sections.center_torso]
+armor = 22
+rear = 9
+slots = [
+    { at = 11, item = "Ammo_IS.MachineGun", rounds = 200 },
+]
+
+[sections.left_leg]
+armor = 15
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 15
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "HeatSink" },
+]

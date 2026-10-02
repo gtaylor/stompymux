@@ -7,7 +7,8 @@ use stompymux_rs::{
 /// Normalize armor to percentages while preserving valid vehicle anatomy and equipment.
 fn vehicle(armor: u16) -> BattleVehicle {
     let vehicle = BattleVehicle::new(
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap(),
+        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+            .unwrap(),
     )
     .unwrap();
     let mut state = serde_json::to_value(vehicle).unwrap();
@@ -25,7 +26,11 @@ fn standard_vehicle_locations_cover_every_arc_roll_and_turret_state() {
     lost.damage_phase(S::Turret, 100, stompymux_rs::BattleDamagePhase::Internal)
         .unwrap();
     let turretless = BattleVehicle::new(
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Flatbed_Truck")).unwrap(),
+        BattleVehicleTemplate::parse(
+            "Flatbed_Truck",
+            include_str!("../game/mechs/Flatbed_Truck.toml"),
+        )
+        .unwrap(),
     )
     .unwrap();
     for (arc, hull, row) in [

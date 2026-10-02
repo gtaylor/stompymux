@@ -1,0 +1,67 @@
+name = "Avatar"
+class = "mech"
+movement = "biped"
+tons = 70
+walk_mp = 6
+heat_sinks = 24
+computer = 4
+radio = 4
+cargo_space = 0
+
+[construction]
+engine = "xl"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 16
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "IS.ERMediumLaser", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 16
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-7", item = "IS.LightGaussRifle", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 22
+rear = 8
+slots = [
+    { at = "7-9", item = "IS.MRM-20", brand = 3 },
+    { at = 10, item = "Ammo_IS.MRM-20", rounds = 12 },
+    { at = 11, item = "Case", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 22
+rear = 8
+slots = [
+    { at = "4-6", item = "HeatSink", brand = 3 },
+    { at = "7-9", item = "IS.MRM-20", brand = 3 },
+    { at = 10, item = "Ammo_IS.LightGaussRifle", rounds = 16 },
+    { at = 11, item = "Ammo_IS.MRM-20", rounds = 12 },
+    { at = 12, item = "Case", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 30
+rear = 9
+slots = [
+    { at = "11-12", item = "IS.MediumLaser", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 26
+
+[sections.right_leg]
+armor = 26
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "C3Slave", brand = 3 },
+]

@@ -1,0 +1,35 @@
+name = "Saladin"
+class = "vehicle"
+movement = "hover"
+tons = 35
+walk_mp = 12
+tac_range = 30
+lrs_range = 60
+scan_range = 30
+specials = ["SearchLight"]
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 8
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 8
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 15
+slots = [
+    { at = 1, item = "IS.LB20-XAC" },
+    { at = 2, item = "Ammo_IS.LB20-XAC", rounds = 5 },
+    { at = "3-4", item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
+]
+
+[sections.aft_side]
+armor = 5

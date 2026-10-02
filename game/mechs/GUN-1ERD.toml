@@ -1,0 +1,72 @@
+name = "Gunslinger"
+class = "mech"
+movement = "biped"
+tons = 85
+walk_mp = 5
+jump_mp = 2
+heat_sinks = 20
+computer = 4
+radio = 4
+
+[construction]
+engine = "xl"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 25
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-10", item = "IS.GaussRifle", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 25
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-10", item = "IS.GaussRifle", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 25
+rear = 11
+slots = [
+    { at = "4-5", item = "IS.MediumLaser", brand = 3 },
+    { at = "6-7", item = "Ammo_IS.GaussRifle", rounds = 8 },
+]
+
+[sections.right_torso]
+armor = 25
+rear = 11
+slots = [
+    { at = "4-5", item = "IS.MediumLaser", brand = 3 },
+    { at = "6-7", item = "Ecm", brand = 3 },
+    { at = "8-10", item = "Ammo_IS.GaussRifle", rounds = 8 },
+]
+
+[sections.center_torso]
+armor = 34
+rear = 19
+slots = [
+    { at = "11-12", item = "BeagleProbe", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 32
+slots = [
+    { at = 5, item = "JumpJet", brand = 3 },
+    { at = 6, item = "IS.MediumPulseLaser", modes = ["RearMount"], brand = 3 },
+]
+
+[sections.right_leg]
+armor = 32
+slots = [
+    { at = 5, item = "JumpJet", brand = 3 },
+    { at = 6, item = "IS.MediumPulseLaser", modes = ["RearMount"], brand = 3 },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "IS.SmallLaser", brand = 3 },
+]

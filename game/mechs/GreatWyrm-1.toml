@@ -1,0 +1,54 @@
+name = "Great Wyrm"
+class = "mech"
+movement = "biped"
+tons = 45
+walk_mp = 8
+heat_sinks = 20
+
+[construction]
+tech_base = "clan"
+
+[sections.left_arm]
+armor = 10
+
+[sections.right_arm]
+armor = 10
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-6", item = "CL.UltraAC/2" },
+]
+
+[sections.left_torso]
+armor = 12
+rear = 4
+slots = [
+    { at = 1, item = "CL.ERMediumLaser" },
+    { at = 2, item = "CL.ERSmallLaser" },
+]
+
+[sections.right_torso]
+armor = 12
+rear = 4
+slots = [
+    { at = "1-2", item = "HeatSink" },
+    { at = 3, item = "CL.ERMediumLaser" },
+    { at = 4, item = "CL.ERSmallLaser" },
+    { at = 5, item = "Ammo_CL.LRM-10", rounds = 12 },
+    { at = 6, item = "Ammo_CL.UltraAC/2", rounds = 45 },
+]
+
+[sections.center_torso]
+armor = 16
+rear = 5
+slots = [
+    { at = 11, item = "CL.LRM-10" },
+]
+
+[sections.left_leg]
+armor = 16
+
+[sections.right_leg]
+armor = 16
+
+[sections.head]
+armor = 7

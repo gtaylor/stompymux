@@ -1,0 +1,58 @@
+name = "Wolverine"
+class = "mech"
+movement = "biped"
+tons = 55
+walk_mp = 8
+jump_mp = 5
+heat_sinks = 12
+radio = 4
+
+[sections.left_arm]
+armor = 16
+
+[sections.right_arm]
+armor = 16
+slots = [
+    { at = "5-8", item = "IS.AC/5" },
+    { at = 9, item = "Ammo_IS.AC/5", rounds = 20 },
+]
+
+[sections.left_torso]
+armor = 20
+rear = 6
+slots = [
+    { at = "1-2", item = "IS.SRM-6" },
+    { at = 3, item = "Ammo_IS.SRM-6", rounds = 15 },
+]
+
+[sections.right_torso]
+armor = 20
+rear = 6
+slots = [
+    { at = 1, item = "HeatSink" },
+]
+
+[sections.center_torso]
+armor = 20
+rear = 8
+slots = [
+    { at = 11, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 16
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 16
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 8
+slots = [
+    { at = 4, item = "IS.MediumLaser", brand = 4 },
+]

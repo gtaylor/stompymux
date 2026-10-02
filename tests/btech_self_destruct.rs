@@ -52,30 +52,35 @@ async fn fixture_on(chassis: &str, tile: &str) -> (tempfile::TempDir, Config, Wo
         "biped" | "quad" => create_battle_unit(
             &mut world,
             id,
-            BattleTemplate::parse(if chassis == "biped" {
-                include_str!("../game/mechs/JR7-D")
-            } else {
-                include_str!("../game/mechs/GOL-1H")
-            })
+            BattleTemplate::parse(
+                "test",
+                if chassis == "biped" {
+                    include_str!("../game/mechs/JR7-D.toml")
+                } else {
+                    include_str!("../game/mechs/GOL-1H.toml")
+                },
+            )
             .unwrap(),
         )
         .unwrap(),
         _ => {
             let text = match chassis {
-                "vtol" => include_str!("../game/mechs/Kestrel").to_owned(),
-                "wheel" => {
-                    include_str!("../game/mechs/Demolisher").replace("{ Track }", "{ Wheel }")
-                }
-                "hover" => {
-                    include_str!("../game/mechs/Demolisher").replace("{ Track }", "{ Hover }")
-                }
-                "stationary" => include_str!("../game/mechs/Demolisher")
-                    .replace("{ Track }", "{ None }")
-                    .replace("{ 53.75 }", "{ 0 }"),
-                _ => include_str!("../game/mechs/Demolisher").to_owned(),
+                "vtol" => include_str!("../game/mechs/Kestrel.toml").to_owned(),
+                "wheel" => include_str!("../game/mechs/Demolisher.toml")
+                    .replace("movement = \"track\"", "movement = \"wheel\""),
+                "hover" => include_str!("../game/mechs/Demolisher.toml")
+                    .replace("movement = \"track\"", "movement = \"hover\""),
+                "stationary" => include_str!("../game/mechs/Demolisher.toml")
+                    .replace("movement = \"track\"", "movement = \"none\"")
+                    .replace("walk_mp = 5", "walk_mp = 0"),
+                _ => include_str!("../game/mechs/Demolisher.toml").to_owned(),
             };
-            create_battle_vehicle(&mut world, id, BattleVehicleTemplate::parse(&text).unwrap())
-                .unwrap();
+            create_battle_vehicle(
+                &mut world,
+                id,
+                BattleVehicleTemplate::parse("test", &text).unwrap(),
+            )
+            .unwrap();
         }
     }
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -419,7 +424,7 @@ async fn self_destruct_order_and_failed_tick_replay() {
     create_battle_unit(
         &mut world,
         second,
-        BattleTemplate::parse(include_str!("../game/mechs/Daishi-H")).unwrap(),
+        BattleTemplate::parse("Daishi-H", include_str!("../game/mechs/Daishi-H.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, second, map, 0, 0).unwrap();

@@ -8,8 +8,8 @@ async fn vehicle_commands_and_lua_share_creation_placement_and_snapshot_state() 
     let (dir, config, mut world) = support::isolated_world().await;
     std::fs::create_dir_all(dir.path().join("mechs")).unwrap();
     std::fs::write(
-        dir.path().join("mechs/Demolisher"),
-        include_str!("../game/mechs/Demolisher"),
+        dir.path().join("mechs/Demolisher.toml"),
+        include_str!("../game/mechs/Demolisher.toml"),
     )
     .unwrap();
     let map = world.create(&config, "Battlefield".into(), Kind::Room);
@@ -84,7 +84,7 @@ async fn vehicle_commands_and_lua_share_creation_placement_and_snapshot_state() 
     persistence::save(&config.database(), &candidate)
         .await
         .unwrap();
-    std::fs::remove_file(dir.path().join("mechs/Demolisher")).unwrap();
+    std::fs::remove_file(dir.path().join("mechs/Demolisher.toml")).unwrap();
     let loaded = persistence::load(&config.database()).await.unwrap();
     assert_eq!(loaded.btech, candidate.btech);
     scripts
@@ -103,20 +103,32 @@ async fn vehicle_commands_and_lua_share_creation_placement_and_snapshot_state() 
 
 #[test]
 fn construction_dispatch_uses_declared_class_and_confines_assets() {
-    let mech = include_str!("fixtures/btech/mechs/JR7-D");
-    let vehicle = include_str!("../game/mechs/Demolisher");
+    let mech = include_str!("fixtures/btech/mechs/JR7-D.toml");
+    let vehicle = include_str!("../game/mechs/Demolisher.toml");
     assert!(matches!(
-        BattleUnitTemplate::parse(mech).unwrap(),
+        BattleUnitTemplate::parse("JR7-D", mech).unwrap(),
         BattleUnitTemplate::Mech(_)
     ));
     assert!(matches!(
-        BattleUnitTemplate::parse(vehicle).unwrap(),
+        BattleUnitTemplate::parse("Demolisher", vehicle).unwrap(),
         BattleUnitTemplate::Vehicle(_)
     ));
-    assert!(BattleUnitTemplate::parse(&vehicle.replace("Vehicle", "VTOL")).is_err());
-    assert!(BattleUnitTemplate::parse(&vehicle.replace("Vehicle", "Mech")).is_err());
+    assert!(
+        BattleUnitTemplate::parse(
+            "test",
+            &vehicle.replace("class = \"vehicle\"", "class = \"vtol\"")
+        )
+        .is_err()
+    );
+    assert!(
+        BattleUnitTemplate::parse(
+            "test",
+            &vehicle.replace("class = \"vehicle\"", "class = \"mech\"")
+        )
+        .is_err()
+    );
     let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("vehicle"), vehicle).unwrap();
+    std::fs::write(dir.path().join("vehicle.toml"), vehicle).unwrap();
     assert!(matches!(
         read_battle_unit_template(dir.path(), "vehicle").unwrap(),
         BattleUnitTemplate::Vehicle(_)
@@ -129,9 +141,9 @@ fn construction_dispatch_uses_declared_class_and_confines_assets() {
 #[tokio::test]
 async fn operator_inspection_reports_mech_ground_and_vtol_state_without_mutation() {
     for (asset, vehicle) in [
-        (include_str!("../game/mechs/JR7-D"), false),
-        (include_str!("../game/mechs/Demolisher"), true),
-        (include_str!("../game/mechs/Kestrel"), true),
+        (include_str!("../game/mechs/JR7-D.toml"), false),
+        (include_str!("../game/mechs/Demolisher.toml"), true),
+        (include_str!("../game/mechs/Kestrel.toml"), true),
     ] {
         let (_dir, config, mut world) = support::isolated_world().await;
         let map = world.create(&config, "Inspection field".into(), Kind::Room);
@@ -145,10 +157,19 @@ async fn operator_inspection_reports_mech_ground_and_vtol_state_without_mutation
         let id = world.create(&config, "Inspected unit".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if vehicle {
-            create_battle_vehicle(&mut world, id, BattleVehicleTemplate::parse(asset).unwrap())
-                .unwrap();
+            create_battle_vehicle(
+                &mut world,
+                id,
+                BattleVehicleTemplate::parse("test", asset).unwrap(),
+            )
+            .unwrap();
         } else {
-            create_battle_unit(&mut world, id, BattleTemplate::parse(asset).unwrap()).unwrap();
+            create_battle_unit(
+                &mut world,
+                id,
+                BattleTemplate::parse("test", asset).unwrap(),
+            )
+            .unwrap();
         }
         place_battle_unit(&mut world, id, map, 1, 0).unwrap();
         world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(id);

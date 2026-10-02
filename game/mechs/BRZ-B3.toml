@@ -1,0 +1,74 @@
+name = "Berserker"
+class = "mech"
+movement = "biped"
+tons = 100
+walk_mp = 6
+heat_sinks = 32
+computer = 4
+radio = 4
+
+[construction]
+engine = "xl"
+structure = "endo_steel"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 34
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-6", item = "IS.ERPPC", brand = 3 },
+    { at = "7-10", item = "Ammo_IS.LRM-10", rounds = 12 },
+    { at = "11-12", item = "EndoSteel", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 34
+slots = [
+    { at = "5-11", item = "Axe", brand = 3 },
+    { at = 12, item = "EndoSteel", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 31
+rear = 10
+slots = [
+    { at = "4-8", item = "Masc", brand = 3 },
+    { at = "9-10", item = "IS.LRM-10", brand = 3 },
+    { at = "11-12", item = "EndoSteel", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 31
+rear = 10
+slots = [
+    { at = "4-5", item = "IS.LRM-10", brand = 3 },
+    { at = "6-7", item = "Ecm", brand = 3 },
+    { at = "8-12", item = "EndoSteel", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 46
+rear = 15
+slots = [
+    { at = 11, item = "IS.Anti-MissileSystem", brand = 3 },
+    { at = 12, item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
+]
+
+[sections.left_leg]
+armor = 38
+slots = [
+    { at = "5-6", item = "EndoSteel", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 38
+slots = [
+    { at = "5-6", item = "EndoSteel", brand = 3 },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "IS.Flamer", brand = 3 },
+]

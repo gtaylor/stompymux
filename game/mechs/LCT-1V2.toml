@@ -1,0 +1,58 @@
+name = "Locust"
+class = "mech"
+movement = "biped"
+tons = 20
+walk_mp = 12
+heat_sinks = 10
+computer = 4
+radio = 4
+
+[sections.left_arm]
+armor = 4
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.RL-10", modes = ["OneShot"] },
+]
+
+[sections.right_arm]
+armor = 4
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.RL-10", modes = ["OneShot"] },
+]
+
+[sections.left_torso]
+armor = 8
+rear = 2
+slots = [
+    { at = 1, item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 8
+rear = 2
+slots = [
+    { at = 1, item = "HeatSink" },
+]
+
+[sections.center_torso]
+armor = 10
+rear = 2
+slots = [
+    { at = 11, item = "IS.MediumLaser" },
+]
+
+[sections.left_leg]
+armor = 8
+slots = [
+    { at = 5, item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 8
+slots = [
+    { at = 5, item = "HeatSink" },
+]
+
+[sections.head]
+armor = 8

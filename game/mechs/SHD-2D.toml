@@ -1,0 +1,61 @@
+name = "Shadow Hawk"
+class = "mech"
+movement = "biped"
+tons = 55
+walk_mp = 8
+jump_mp = 3
+heat_sinks = 14
+specials = ["SearchLight"]
+
+[sections.left_arm]
+armor = 5
+slots = [
+    { at = 5, item = "IS.MediumLaser" },
+]
+
+[sections.right_arm]
+armor = 5
+slots = [
+    { at = 5, item = "IS.MediumLaser" },
+]
+
+[sections.left_torso]
+armor = 9
+rear = 5
+slots = [
+    { at = "1-4", item = "IS.AC/5", brand = 5 },
+    { at = 5, item = "Ammo_IS.AC/5", rounds = 20 },
+    { at = 6, item = "Ammo_IS.SRM-2", rounds = 50 },
+    { at = 7, item = "JumpJet" },
+]
+
+[sections.right_torso]
+armor = 9
+rear = 5
+slots = [
+    { at = 1, item = "IS.LRM-5", brand = 4 },
+    { at = 2, item = "Ammo_IS.LRM-5", rounds = 24 },
+    { at = 3, item = "Ammo_IS.SRM-2", rounds = 50 },
+    { at = 4, item = "JumpJet" },
+    { at = "5-7", item = "HeatSink" },
+]
+
+[sections.center_torso]
+armor = 12
+rear = 6
+slots = [
+    { at = 11, item = "IS.SRM-2", brand = 4 },
+    { at = 12, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 5
+
+[sections.right_leg]
+armor = 5
+
+[sections.head]
+armor = 6
+slots = [
+    { at = 4, item = "IS.SRM-2" },
+]

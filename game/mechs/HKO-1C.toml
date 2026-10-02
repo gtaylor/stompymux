@@ -1,0 +1,60 @@
+name = "Ha Otoko"
+class = "mech"
+movement = "biped"
+tons = 65
+walk_mp = 6
+heat_sinks = 20
+radio_type = 24
+radio_range = 120
+tac_range = 30
+lrs_range = 60
+scan_range = 30
+cargo_space = 0
+
+[construction]
+engine = "xl"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 14
+slots = [
+    { at = "5-6", item = "IS.LRM-10", brand = 3 },
+    { at = 7, item = "Ammo_IS.LRM-10", rounds = 12 },
+]
+
+[sections.right_arm]
+armor = 14
+slots = [
+    { at = "5-6", item = "IS.LRM-10", brand = 3 },
+    { at = 7, item = "Ammo_IS.LRM-10", rounds = 12 },
+]
+
+[sections.left_torso]
+armor = 20
+rear = 5
+slots = [
+    { at = "4-8", item = "IS.LRM-20", brand = 3 },
+    { at = "9-10", item = "Ammo_IS.LRM-20", rounds = 6 },
+]
+
+[sections.right_torso]
+armor = 20
+rear = 5
+slots = [
+    { at = "4-8", item = "IS.LRM-20", brand = 3 },
+    { at = "9-10", item = "Ammo_IS.LRM-20", rounds = 6 },
+]
+
+[sections.center_torso]
+armor = 23
+rear = 6
+
+[sections.left_leg]
+armor = 18
+
+[sections.right_leg]
+armor = 18
+
+[sections.head]
+armor = 9

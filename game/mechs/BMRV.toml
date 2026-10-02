@@ -1,0 +1,21 @@
+name = "Mech Recovery Vehicle"
+class = "vehicle"
+movement = "wheel"
+tons = 50
+walk_mp = 9
+specials = ["SalvageTech"]
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 2
+
+[sections.right_side]
+armor = 2
+
+[sections.front_side]
+armor = 2
+
+[sections.aft_side]
+armor = 2

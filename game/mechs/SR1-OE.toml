@@ -1,0 +1,67 @@
+name = "Strider"
+class = "mech"
+movement = "biped"
+tons = 40
+walk_mp = 9
+computer = 4
+radio = 4
+
+[construction]
+structure = "endo_steel"
+
+[sections.left_arm]
+armor = 12
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.StreakSRM-6" },
+]
+
+[sections.right_arm]
+armor = 12
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.StreakSRM-6" },
+]
+
+[sections.left_torso]
+armor = 14
+rear = 5
+config = "Case"
+slots = [
+    { at = 1, item = "Ammo_IS.StreakSRM-6", rounds = 15 },
+    { at = "2-7", item = "EndoSteel" },
+    { at = 8, item = "Case" },
+]
+
+[sections.right_torso]
+armor = 14
+rear = 5
+config = "Case"
+slots = [
+    { at = 1, item = "Ammo_IS.StreakSRM-6", rounds = 15 },
+    { at = "2-7", item = "EndoSteel" },
+    { at = 8, item = "Case" },
+]
+
+[sections.center_torso]
+armor = 15
+rear = 6
+
+[sections.left_leg]
+armor = 14
+slots = [
+    { at = 5, item = "HeatSink" },
+    { at = 6, item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 14
+slots = [
+    { at = 5, item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "IS.MediumLaser" },
+]

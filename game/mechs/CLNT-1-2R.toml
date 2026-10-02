@@ -1,0 +1,47 @@
+name = "Clint"
+class = "mech"
+movement = "biped"
+tons = 40
+walk_mp = 9
+computer = 5
+radio = 4
+
+[sections.left_arm]
+armor = 6
+
+[sections.right_arm]
+armor = 6
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-10", item = "IS.AC/10", brand = 4 },
+]
+
+[sections.left_torso]
+armor = 6
+rear = 4
+slots = [
+    { at = 1, item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 6
+rear = 4
+slots = [
+    { at = 1, item = "Ammo_IS.AC/10", rounds = 10 },
+]
+
+[sections.center_torso]
+armor = 11
+rear = 4
+slots = [
+    { at = 11, item = "IS.MediumLaser" },
+]
+
+[sections.left_leg]
+armor = 8
+
+[sections.right_leg]
+armor = 8
+
+[sections.head]
+armor = 9

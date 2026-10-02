@@ -1,0 +1,62 @@
+name = "Charger"
+class = "mech"
+movement = "biped"
+tons = 80
+walk_mp = 8
+heat_sinks = 10
+computer = 4
+radio = 4
+
+[construction]
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 15
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.RL-10", modes = ["OneShot"] },
+]
+
+[sections.right_arm]
+armor = 15
+slots = [
+    { at = 5, item = "IS.MediumLaser" },
+]
+
+[sections.left_torso]
+armor = 20
+rear = 5
+slots = [
+    { at = "1-2", item = "IS.RL-10", modes = ["OneShot"] },
+    { at = "3-6", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 20
+rear = 5
+slots = [
+    { at = "1-2", item = "IS.RL-10", modes = ["OneShot"] },
+    { at = "3-6", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 25
+rear = 6
+slots = [
+    { at = "11-12", item = "FerroFibrous" },
+]
+
+[sections.left_leg]
+armor = 20
+slots = [
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.right_leg]
+armor = 20
+slots = [
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.head]
+armor = 9

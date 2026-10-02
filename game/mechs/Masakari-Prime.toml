@@ -1,0 +1,68 @@
+name = "Masakari"
+class = "mech"
+movement = "biped"
+tons = 85
+walk_mp = 6
+heat_sinks = 40
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 28
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-6", item = "CL.ERPPC", modes = ["OnTC"] },
+    { at = 7, item = "CL.LRM-10" },
+    { at = 8, item = "Ammo_CL.LRM-10", rounds = 12 },
+    { at = 9, item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 28
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-6", item = "CL.ERPPC", modes = ["OnTC"] },
+    { at = 7, item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 26
+rear = 10
+slots = [
+    { at = "3-10", item = "HeatSink" },
+    { at = "11-12", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 26
+rear = 10
+slots = [
+    { at = "3-4", item = "HeatSink" },
+    { at = "5-9", item = "TargetingComputer" },
+    { at = "10-11", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 34
+rear = 10
+
+[sections.left_leg]
+armor = 35
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 35
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

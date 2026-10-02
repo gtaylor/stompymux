@@ -1,0 +1,75 @@
+name = "Ostscout"
+class = "mech"
+movement = "biped"
+tons = 35
+walk_mp = 12
+jump_mp = 8
+heat_sinks = 10
+computer = 4
+radio = 4
+specials = ["ECM", "BeagleProbe"]
+
+[construction]
+engine = "xl"
+structure = "endo_steel"
+
+[sections.left_arm]
+armor = 9
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.ERMediumLaser" },
+    { at = "5-7", item = "EndoSteel" },
+]
+
+[sections.right_arm]
+armor = 9
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.ERMediumLaser" },
+    { at = "5-7", item = "EndoSteel" },
+]
+
+[sections.left_torso]
+armor = 12
+rear = 3
+slots = [
+    { at = "4-7", item = "JumpJet" },
+    { at = "8-9", item = "Ecm" },
+    { at = "10-11", item = "BeagleProbe" },
+    { at = 12, item = "EndoSteel" },
+]
+
+[sections.right_torso]
+armor = 12
+rear = 3
+slots = [
+    { at = "4-7", item = "JumpJet" },
+    { at = "8-9", item = "C3i" },
+    { at = "10-11", item = "EndoSteel" },
+]
+
+[sections.center_torso]
+armor = 14
+rear = 4
+slots = [
+    { at = 11, item = "IS.ERSmallLaser" },
+    { at = 12, item = "EndoSteel" },
+]
+
+[sections.left_leg]
+armor = 11
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 11
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 8
+slots = [
+    { at = 4, item = "TAG" },
+]

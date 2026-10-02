@@ -1,0 +1,46 @@
+name = "Morningstar"
+class = "vehicle"
+movement = "wheel"
+tons = 60
+walk_mp = 8
+computer = 4
+radio = 4
+cargo_space = 2500
+max_suits = 0
+max_ton = 5
+
+[construction]
+engine = "xl"
+
+[sections.left_side]
+armor = 29
+slots = [
+    { at = 1, item = "IS.MachineGun" },
+]
+
+[sections.right_side]
+armor = 29
+slots = [
+    { at = 1, item = "IS.MachineGun" },
+]
+
+[sections.front_side]
+armor = 43
+slots = [
+    { at = 1, item = "IS.MachineGun" },
+]
+
+[sections.aft_side]
+armor = 19
+slots = [
+    { at = "1-2", item = "Ammo_IS.AC/10", rounds = 10 },
+    { at = 3, item = "Ammo_IS.MachineGun", rounds = 200 },
+    { at = 4, item = "C3Master" },
+    { at = "5-6", item = "TargetingComputer" },
+]
+
+[sections.turret]
+armor = 24
+slots = [
+    { at = 1, item = "IS.AC/10", modes = ["OnTC"] },
+]

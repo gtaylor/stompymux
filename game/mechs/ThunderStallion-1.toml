@@ -1,0 +1,63 @@
+name = "Thunder Stallion"
+class = "mech"
+movement = "quad"
+tons = 85
+walk_mp = 5
+heat_sinks = 28
+
+[construction]
+tech_base = "clan"
+
+[sections.front_left_leg]
+armor = 36
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.front_right_leg]
+armor = 36
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.left_torso]
+armor = 20
+rear = 16
+slots = [
+    { at = "1-9", item = "CL.LB20-XAC" },
+    { at = "10-11", item = "CL.LRM-15" },
+    { at = 12, item = "Ammo_CL.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
+]
+
+[sections.right_torso]
+armor = 20
+rear = 16
+slots = [
+    { at = "1-4", item = "CL.LRM-15" },
+    { at = "5-12", item = "Ammo_CL.LRM-15", rounds = 8 },
+]
+
+[sections.center_torso]
+armor = 34
+rear = 20
+slots = [
+    { at = "11-12", item = "CL.LRM-15" },
+]
+
+[sections.rear_left_leg]
+armor = 36
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.rear_right_leg]
+armor = 36
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "Ammo_CL.LB20-XAC", rounds = 5 },
+]

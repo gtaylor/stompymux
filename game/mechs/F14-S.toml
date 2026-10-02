@@ -1,0 +1,49 @@
+name = "Cheetah"
+class = "aerofighter"
+movement = "fly"
+tons = 25
+walk_mp = 18
+computer = 3
+fuel = 900
+
+[sections.nose]
+armor = 18
+internals = 10
+slots = [
+    { at = "1-2", item = "IS.StreakSRM-2" },
+]
+
+[sections.left_wing]
+armor = 14
+internals = 10
+
+[sections.right_wing]
+armor = 14
+internals = 10
+
+[sections.cockpit]
+armor = 10
+internals = 10
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "Sensors" },
+    { at = 5, item = "LifeSupport" },
+]
+
+[sections.engine]
+armor = 16
+internals = 10
+slots = [
+    { at = "1-2", item = "HeatSink" },
+    { at = "4-10", item = "HeatSink" },
+    { at = 12, item = "HeatSink" },
+]
+
+[sections.fuselage]
+armor = 18
+internals = 10
+slots = [
+    { at = 1, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+]

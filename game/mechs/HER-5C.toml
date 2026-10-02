@@ -1,0 +1,61 @@
+name = "Hermes"
+class = "mech"
+movement = "biped"
+tons = 40
+walk_mp = 9
+heat_sinks = 20
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+
+[construction]
+engine = "xl"
+structure = "endo_steel"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 11
+slots = [
+    { at = "5-7", item = "IS.iNarcBeacon", brand = 0 },
+    { at = "8-10", item = "HeatSink", brand = 0 },
+    { at = "11-12", item = "Ammo_IS.iNarcBeacon", rounds = 4 },
+]
+
+[sections.right_arm]
+armor = 11
+slots = [
+    { at = "5-7", item = "IS.ERMediumLaser", brand = 0 },
+]
+
+[sections.left_torso]
+armor = 14
+rear = 5
+slots = [
+    { at = "4-10", item = "EndoSteel", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 14
+rear = 5
+slots = [
+    { at = "4-5", item = "IS.ERLargeLaser", brand = 0 },
+    { at = "6-12", item = "EndoSteel", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 17
+rear = 6
+slots = [
+    { at = "11-12", item = "C3i", brand = 0 },
+]
+
+[sections.left_leg]
+armor = 14
+
+[sections.right_leg]
+armor = 14
+
+[sections.head]
+armor = 9

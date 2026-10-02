@@ -1,0 +1,52 @@
+name = "Javelin"
+class = "mech"
+movement = "biped"
+tons = 30
+walk_mp = 9
+jump_mp = 6
+
+[sections.left_arm]
+armor = 6
+
+[sections.right_arm]
+armor = 6
+
+[sections.left_torso]
+armor = 8
+rear = 2
+slots = [
+    { at = "1-2", item = "IS.SRM-6" },
+    { at = 3, item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = 4, item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 8
+rear = 2
+slots = [
+    { at = "1-2", item = "IS.SRM-6" },
+    { at = 3, item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = "4-5", item = "HeatSink" },
+]
+
+[sections.center_torso]
+armor = 8
+rear = 2
+slots = [
+    { at = "11-12", item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 8
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 8
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 6

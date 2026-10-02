@@ -1,0 +1,43 @@
+name = "Transit"
+class = "aerofighter"
+movement = "fly"
+tons = 50
+walk_mp = 9
+heat_sinks = 13
+computer = 3
+fuel = 750
+
+[sections.nose]
+armor = 54
+internals = 10
+slots = [
+    { at = 1, item = "IS.AC/20" },
+    { at = "2-3", item = "Ammo_IS.AC/20", rounds = 5 },
+]
+
+[sections.left_wing]
+armor = 25
+internals = 10
+
+[sections.right_wing]
+armor = 25
+internals = 10
+
+[sections.cockpit]
+armor = 13
+internals = 10
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "Sensors" },
+    { at = 5, item = "LifeSupport" },
+]
+
+[sections.engine]
+armor = 23
+internals = 10
+
+[sections.fuselage]
+armor = 38
+internals = 10

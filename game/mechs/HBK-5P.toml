@@ -1,0 +1,62 @@
+name = "Swayback"
+class = "mech"
+movement = "biped"
+tons = 50
+walk_mp = 6
+heat_sinks = 36
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+
+[construction]
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 16
+slots = [
+    { at = "5-10", item = "HeatSink" },
+    { at = 11, item = "IS.MediumPulseLaser" },
+]
+
+[sections.right_arm]
+armor = 16
+slots = [
+    { at = "5-10", item = "HeatSink" },
+    { at = 11, item = "IS.MediumPulseLaser" },
+]
+
+[sections.left_torso]
+armor = 18
+rear = 6
+slots = [
+    { at = "1-9", item = "HeatSink" },
+    { at = "10-12", item = "IS.ERMediumLaser" },
+]
+
+[sections.right_torso]
+armor = 18
+rear = 6
+slots = [
+    { at = "1-9", item = "HeatSink" },
+    { at = "10-12", item = "IS.ERMediumLaser" },
+]
+
+[sections.center_torso]
+armor = 24
+rear = 8
+slots = [
+    { at = "11-12", item = "Ecm" },
+]
+
+[sections.left_leg]
+armor = 24
+
+[sections.right_leg]
+armor = 24
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "C3Slave" },
+]

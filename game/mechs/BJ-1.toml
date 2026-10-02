@@ -1,0 +1,61 @@
+name = "Blackjack"
+class = "mech"
+movement = "biped"
+tons = 45
+walk_mp = 6
+jump_mp = 4
+heat_sinks = 11
+
+[sections.left_arm]
+armor = 12
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = 3, item = "IS.AC/2", brand = 2 },
+    { at = 4, item = "IS.MediumLaser" },
+]
+
+[sections.right_arm]
+armor = 12
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = 3, item = "IS.AC/2", brand = 2 },
+    { at = 4, item = "IS.MediumLaser" },
+]
+
+[sections.left_torso]
+armor = 15
+rear = 6
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+    { at = "2-3", item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 15
+rear = 6
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+    { at = "2-3", item = "HeatSink" },
+]
+
+[sections.center_torso]
+armor = 18
+rear = 9
+slots = [
+    { at = 11, item = "Ammo_IS.AC/2", rounds = 45 },
+]
+
+[sections.left_leg]
+armor = 17
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 17
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9

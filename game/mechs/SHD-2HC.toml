@@ -1,0 +1,65 @@
+name = "Shadow Hawk"
+class = "mech"
+movement = "biped"
+tons = 55
+walk_mp = 8
+jump_mp = 5
+heat_sinks = 24
+computer = 4
+
+[construction]
+tech_base = "clan"
+
+[sections.left_arm]
+armor = 16
+
+[sections.right_arm]
+armor = 16
+slots = [
+    { at = "5-6", item = "CL.ERMediumLaser" },
+]
+
+[sections.left_torso]
+armor = 18
+rear = 6
+slots = [
+    { at = "1-4", item = "CL.LB5-XAC" },
+    { at = 5, item = "Ammo_CL.LB5-XAC", rounds = 20 },
+    { at = 6, item = "JumpJet" },
+]
+
+[sections.right_torso]
+armor = 18
+rear = 6
+slots = [
+    { at = 1, item = "CL.LRM-5" },
+    { at = 2, item = "Ammo_CL.LRM-5", rounds = 24 },
+    { at = 3, item = "JumpJet" },
+    { at = "4-5", item = "HeatSink" },
+]
+
+[sections.center_torso]
+armor = 23
+rear = 8
+slots = [
+    { at = 11, item = "Ammo_CL.StreakSRM-2", rounds = 50 },
+    { at = 12, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 16
+slots = [
+    { at = 6, item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 16
+slots = [
+    { at = 6, item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "CL.StreakSRM-2" },
+]

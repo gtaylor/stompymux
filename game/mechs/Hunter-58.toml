@@ -1,0 +1,29 @@
+name = "Hunter"
+class = "vehicle"
+movement = "track"
+tons = 35
+walk_mp = 6
+specials = ["SearchLight"]
+
+[sections.left_side]
+armor = 15
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 15
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 28
+slots = [
+    { at = "1-2", item = "IS.LRM-15" },
+    { at = "3-4", item = "ArtemisIV" },
+    { at = "5-6", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
+]
+
+[sections.aft_side]
+armor = 14

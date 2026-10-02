@@ -5,15 +5,15 @@ use stompymux_rs::*;
 
 /// Every supported movement class uses the same inventory and load projection.
 fn templates() -> Vec<String> {
-    let vehicle = include_str!("../game/mechs/Demolisher");
+    let vehicle = include_str!("../game/mechs/Demolisher.toml");
     vec![
-        include_str!("../game/mechs/JR7-D").into(),
-        include_str!("../game/mechs/GOL-1H").into(),
+        include_str!("../game/mechs/JR7-D.toml").into(),
+        include_str!("../game/mechs/GOL-1H.toml").into(),
         vehicle.into(),
         vehicle.replace("Tracked", "Wheeled"),
         vehicle.replace("Tracked", "Hover"),
         vehicle.replace("Tracked", "None"),
-        include_str!("../game/mechs/Kestrel").into(),
+        include_str!("../game/mechs/Kestrel.toml").into(),
     ]
 }
 
@@ -32,7 +32,7 @@ async fn fixture(
     )
     .unwrap();
     let id = world.create(&config, "Carrier".into(), Kind::Thing);
-    let mut template = BattleUnitTemplate::parse(source).unwrap();
+    let mut template = BattleUnitTemplate::parse("test", source).unwrap();
     let attributes = match &mut template {
         BattleUnitTemplate::Mech(unit) => &mut unit.attributes,
         BattleUnitTemplate::Vehicle(unit) => &mut unit.attributes,
@@ -180,7 +180,8 @@ async fn cargo_mass_and_throttle_are_shared_across_every_chassis() {
 /// Named stock corrections share native and Lua edits, detached lookup and rollback.
 #[tokio::test]
 async fn named_stock_controls_and_inspection_agree() {
-    let (_dir, config, world, _, id) = fixture(include_str!("../game/mechs/JR7-D"), false).await;
+    let (_dir, config, world, _, id) =
+        fixture(include_str!("../game/mechs/JR7-D.toml"), false).await;
     let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
     let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let command = format!("@btech inventory-set #{} Gold 0 2", id.0);
@@ -234,7 +235,7 @@ async fn carried_stock_affects_live_movement_and_adds_to_tow_load() {
         let (_dir, config, mut world, map, id) = fixture(&source, false).await;
         let unloaded = battle_throttle_maximum(&world, id, true).unwrap();
         let target = world.create(&config, "Tow target".into(), Kind::Thing);
-        BattleUnitTemplate::parse(include_str!("../game/mechs/JR7-D"))
+        BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
             .unwrap()
             .create(&mut world, target)
             .unwrap();
@@ -297,7 +298,7 @@ async fn construction_rejects_unknown_stock_before_mutation() {
         set_battle_inventory_quantity(&mut world, ObjectId(1), id, 384, 0, 1).unwrap();
         let before = world.btech.clone();
         assert!(
-            BattleUnitTemplate::parse(&source)
+            BattleUnitTemplate::parse("test", &source)
                 .unwrap()
                 .create(&mut world, id)
                 .is_err()
@@ -305,7 +306,7 @@ async fn construction_rejects_unknown_stock_before_mutation() {
         assert_eq!(world.btech, before);
         set_battle_inventory_quantity(&mut world, ObjectId(1), id, 384, 0, 0).unwrap();
         set_battle_inventory_named(&mut world, ObjectId(1), id, "Gold", 0, 1).unwrap();
-        BattleUnitTemplate::parse(&source)
+        BattleUnitTemplate::parse("test", &source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();

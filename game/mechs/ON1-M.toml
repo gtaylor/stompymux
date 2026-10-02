@@ -1,0 +1,68 @@
+name = "Orion"
+class = "mech"
+movement = "biped"
+tons = 75
+walk_mp = 6
+heat_sinks = 22
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+specials = ["AntiAircraft"]
+
+[construction]
+engine = "xl"
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 21
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.MediumLaser" },
+    { at = 7, item = "IS.LRM-20", modes = ["Narc/Smoke"] },
+    { at = "8-11", item = "IS.LRM-20" },
+]
+
+[sections.right_arm]
+armor = 21
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.MediumLaser" },
+]
+
+[sections.left_torso]
+armor = 22
+rear = 10
+slots = [
+    { at = 4, item = "IS.SRM-4", modes = ["Narc/Smoke"] },
+    { at = "5-6", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Narc/Smoke"] },
+    { at = "7-8", item = "Ammo_IS.SRM-4", rounds = 25, modes = ["Narc/Smoke"] },
+    { at = "9-10", item = "Ammo_IS.NarcBeacon", rounds = 6 },
+    { at = 11, item = "Case" },
+]
+
+[sections.right_torso]
+armor = 22
+rear = 10
+slots = [
+    { at = "4-9", item = "IS.LB10-XAC" },
+    { at = 10, item = "Ammo_IS.LB10-XAC", rounds = 10 },
+    { at = 11, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = 12, item = "Case" },
+]
+
+[sections.center_torso]
+armor = 36
+rear = 9
+slots = [
+    { at = "11-12", item = "IS.NarcBeacon" },
+]
+
+[sections.left_leg]
+armor = 32
+
+[sections.right_leg]
+armor = 32
+
+[sections.head]
+armor = 9

@@ -1,0 +1,28 @@
+name = "Command_Van"
+class = "vehicle"
+movement = "wheel"
+tons = 15
+walk_mp = 9
+
+[sections.left_side]
+armor = 14
+
+[sections.right_side]
+armor = 14
+
+[sections.front_side]
+armor = 16
+slots = [
+    { at = 1, item = "IS.MachineGun" },
+    { at = 2, item = "Ammo_IS.MachineGun", rounds = 200 },
+]
+
+[sections.aft_side]
+armor = 12
+
+[sections.turret]
+armor = 8
+slots = [
+    { at = 1, item = "IS.LRM-5" },
+    { at = 2, item = "Ammo_IS.LRM-5", rounds = 24 },
+]

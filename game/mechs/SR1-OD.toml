@@ -1,0 +1,72 @@
+name = "Strider"
+class = "mech"
+movement = "biped"
+tons = 40
+walk_mp = 9
+computer = 4
+radio = 4
+
+[construction]
+structure = "endo_steel"
+brand = 3
+
+[sections.left_arm]
+armor = 12
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = 3, item = "IS.StreakSRM-2", brand = 3 },
+    { at = 4, item = "IS.MediumPulseLaser", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 12
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = 3, item = "IS.StreakSRM-2", brand = 3 },
+    { at = 4, item = "IS.MediumPulseLaser", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 14
+rear = 5
+slots = [
+    { at = 1, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+    { at = "2-7", item = "EndoSteel", brand = 3 },
+    { at = 8, item = "Case", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 14
+rear = 5
+slots = [
+    { at = 1, item = "TAG", brand = 3 },
+    { at = 2, item = "C3Slave", brand = 3 },
+    { at = "3-8", item = "EndoSteel", brand = 3 },
+    { at = 9, item = "Case", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 15
+rear = 6
+slots = [
+    { at = "11-12", item = "BeagleProbe", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 14
+slots = [
+    { at = 5, item = "HeatSink", brand = 3 },
+    { at = 6, item = "EndoSteel", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 14
+slots = [
+    { at = 5, item = "EndoSteel", brand = 3 },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "IS.SmallLaser", brand = 3 },
+]

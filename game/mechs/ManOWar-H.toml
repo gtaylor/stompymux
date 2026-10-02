@@ -1,0 +1,60 @@
+name = "Man 'O War"
+class = "mech"
+movement = "biped"
+tons = 80
+walk_mp = 8
+heat_sinks = 32
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 23
+slots = [
+    { at = "5-7", item = "CL.HeavyLargeLaser" },
+    { at = "8-9", item = "CL.ERMediumLaser" },
+    { at = 10, item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 23
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-6", item = "CL.UltraAC/10" },
+    { at = 7, item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 24
+rear = 10
+slots = [
+    { at = 3, item = "CL.LRM-10" },
+    { at = 4, item = "Ammo_CL.LRM-10", rounds = 12 },
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 24
+rear = 10
+slots = [
+    { at = "3-4", item = "Ammo_CL.UltraAC/10", rounds = 10 },
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 30
+rear = 10
+
+[sections.left_leg]
+armor = 24
+
+[sections.right_leg]
+armor = 24
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

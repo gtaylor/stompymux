@@ -19,8 +19,11 @@ async fn fixture(
     .unwrap();
     let id = world.create(&config, "Vehicle".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    let mut template =
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Flatbed_Truck")).unwrap();
+    let mut template = BattleVehicleTemplate::parse(
+        "Flatbed_Truck",
+        include_str!("../game/mechs/Flatbed_Truck.toml"),
+    )
+    .unwrap();
     template.movement = movement;
     if movement == BattleVehicleMovement::Hover {
         template.max_speed = 64.5;

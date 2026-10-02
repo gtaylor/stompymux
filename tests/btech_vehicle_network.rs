@@ -24,7 +24,8 @@ async fn field_with_classic(
     let mut units = Vec::new();
     for (i, &master_count) in master_counts.iter().enumerate() {
         let mut template =
-            BattleTemplate::parse(include_str!("fixtures/btech/mechs/AS7-D")).unwrap();
+            BattleTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml"))
+                .unwrap();
         for slot in [10, 11] {
             template
                 .sections
@@ -98,7 +99,8 @@ async fn field_with_classic(
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if i % 2 == 0 {
             let mut vehicle =
-                BattleVehicleTemplate::parse(include_str!("../game/mechs/Hunter")).unwrap();
+                BattleVehicleTemplate::parse("Hunter", include_str!("../game/mechs/Hunter.toml"))
+                    .unwrap();
             let parts = &mut vehicle
                 .sections
                 .get_mut(&BattleVehicleSection::Front)

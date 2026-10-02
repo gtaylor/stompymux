@@ -1,0 +1,68 @@
+name = "Grizzly"
+class = "mech"
+movement = "biped"
+tons = 70
+walk_mp = 6
+jump_mp = 4
+heat_sinks = 22
+
+[construction]
+tech_base = "clan"
+structure = "endo_steel"
+
+[sections.left_arm]
+armor = 22
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "CL.LargePulseLaser" },
+    { at = 6, item = "CL.MediumPulseLaser" },
+    { at = 7, item = "CL.SmallPulseLaser" },
+    { at = "8-9", item = "EndoSteel" },
+]
+
+[sections.right_arm]
+armor = 22
+slots = [
+    { at = "5-10", item = "CL.GaussRifle" },
+    { at = "11-12", item = "Ammo_CL.GaussRifle", rounds = 8 },
+]
+
+[sections.left_torso]
+armor = 23
+rear = 7
+slots = [
+    { at = 1, item = "CL.LRM-10" },
+    { at = 2, item = "Ammo_CL.LRM-10", rounds = 12 },
+]
+
+[sections.right_torso]
+armor = 23
+rear = 7
+slots = [
+    { at = "1-2", item = "EndoSteel" },
+]
+
+[sections.center_torso]
+armor = 31
+rear = 10
+slots = [
+    { at = "11-12", item = "EndoSteel" },
+]
+
+[sections.left_leg]
+armor = 27
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 27
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "EndoSteel" },
+]

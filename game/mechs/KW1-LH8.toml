@@ -1,0 +1,73 @@
+name = "Lineholder"
+class = "mech"
+movement = "biped"
+tons = 55
+walk_mp = 8
+heat_sinks = 20
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+
+[construction]
+structure = "endo_steel"
+armor = "ferro_fibrous"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 16
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "IS.ERLargeLaser", brand = 3 },
+    { at = "6-7", item = "FerroFibrous", brand = 3 },
+    { at = "8-9", item = "EndoSteel", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 16
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-9", item = "IS.RotaryAC/2", brand = 3 },
+    { at = 10, item = "EndoSteel", brand = 3 },
+    { at = 11, item = "FerroFibrous", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 17
+rear = 5
+slots = [
+    { at = "1-6", item = "EndoSteel", brand = 3 },
+    { at = "7-8", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 17
+rear = 5
+slots = [
+    { at = 1, item = "Ammo_IS.RotaryAC/2", rounds = 45 },
+    { at = "2-6", item = "FerroFibrous", brand = 3 },
+    { at = "7-9", item = "EndoSteel", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 25
+rear = 6
+slots = [
+    { at = "11-12", item = "EndoSteel", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 18
+slots = [
+    { at = "5-6", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 18
+slots = [
+    { at = "5-6", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.head]
+armor = 9

@@ -1,0 +1,59 @@
+name = "Catapult"
+class = "mech"
+movement = "biped"
+tons = 65
+walk_mp = 6
+jump_mp = 4
+heat_sinks = 15
+
+[sections.left_arm]
+armor = 20
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-5", item = "IS.LRM-15", brand = 4 },
+]
+
+[sections.right_arm]
+armor = 20
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-5", item = "IS.LRM-15", brand = 4 },
+]
+
+[sections.left_torso]
+armor = 21
+rear = 9
+slots = [
+    { at = "1-2", item = "Ammo_IS.LRM-15", rounds = 8 },
+    { at = "3-4", item = "JumpJet" },
+]
+
+[sections.right_torso]
+armor = 21
+rear = 9
+slots = [
+    { at = "1-2", item = "Ammo_IS.LRM-15", rounds = 8 },
+    { at = "3-4", item = "JumpJet" },
+]
+
+[sections.center_torso]
+armor = 24
+rear = 11
+slots = [
+    { at = 11, item = "HeatSink" },
+]
+
+[sections.left_leg]
+armor = 24
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 24
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.head]
+armor = 9

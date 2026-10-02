@@ -1,0 +1,27 @@
+name = "Bandit"
+class = "vehicle"
+movement = "hover"
+tons = 50
+walk_mp = 14
+cargo_space = 400
+max_suits = 0
+max_ton = 4
+specials = ["CargoTech"]
+
+[sections.left_side]
+armor = 40
+
+[sections.right_side]
+armor = 40
+
+[sections.front_side]
+armor = 42
+
+[sections.aft_side]
+armor = 32
+
+[sections.turret]
+armor = 22
+slots = [
+    { at = 1, item = "IS.PPC" },
+]

@@ -1,0 +1,75 @@
+name = "Blood Asp"
+class = "mech"
+movement = "biped"
+tons = 90
+walk_mp = 6
+heat_sinks = 36
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+
+[sections.left_arm]
+armor = 28
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "CL.HeavyMediumLaser" },
+    { at = 6, item = "CL.MediumPulseLaser" },
+    { at = "7-9", item = "EndoSteel" },
+]
+
+[sections.right_arm]
+armor = 28
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "CL.HeavyMediumLaser" },
+    { at = 6, item = "CL.MediumPulseLaser" },
+    { at = "7-8", item = "HeatSink" },
+    { at = 9, item = "EndoSteel" },
+]
+
+[sections.left_torso]
+armor = 24
+rear = 11
+slots = [
+    { at = "3-8", item = "CL.GaussRifle" },
+    { at = 9, item = "Ammo_CL.GaussRifle", rounds = 8 },
+    { at = "10-11", item = "HeatSink" },
+    { at = 12, item = "EndoSteel" },
+]
+
+[sections.right_torso]
+armor = 24
+rear = 11
+slots = [
+    { at = 3, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+    { at = "4-9", item = "CL.GaussRifle" },
+    { at = 10, item = "Ammo_CL.GaussRifle", rounds = 8 },
+    { at = 11, item = "EndoSteel" },
+]
+
+[sections.center_torso]
+armor = 40
+rear = 13
+slots = [
+    { at = "11-12", item = "CL.StreakSRM-6" },
+]
+
+[sections.left_leg]
+armor = 34
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 34
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "EndoSteel" },
+]

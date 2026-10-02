@@ -1,0 +1,55 @@
+name = "Bashkir"
+class = "aerofighter"
+movement = "fly"
+tons = 20
+walk_mp = 20
+heat_sinks = 22
+fuel = 450
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
+
+[sections.nose]
+armor = 14
+internals = 13
+slots = [
+    { at = 1, item = "CL.ERSmallLaser" },
+]
+
+[sections.left_wing]
+armor = 12
+internals = 13
+slots = [
+    { at = 1, item = "CL.LRM-5" },
+    { at = 2, item = "Ammo_CL.LRM-5", rounds = 24 },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_wing]
+armor = 12
+internals = 13
+slots = [
+    { at = 1, item = "CL.LRM-5" },
+    { at = 2, item = "Ammo_CL.LRM-5", rounds = 24 },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.cockpit]
+armor = 10
+internals = 13
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "Sensors" },
+    { at = 5, item = "LifeSupport" },
+]
+
+[sections.engine]
+armor = 12
+internals = 13
+
+[sections.fuselage]
+armor = 17
+internals = 13

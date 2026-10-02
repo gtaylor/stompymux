@@ -758,39 +758,28 @@ pub(super) fn unbranded_weapon_name(equipment: &str) -> Option<&str> {
     }
 }
 
-/// Resolve explicit zero-based parent links without turning extension markers into equipment.
+/// Resolve each extension marker's explicit primary section and zero-based slot
+/// without turning the markers into equipment.
 fn split_criticals(
     template: &BattleTemplate,
 ) -> Result<BTreeMap<CriticalLocation, Vec<CriticalLocation>>> {
-    use BattleSection::*;
+    use super::template_document::{
+        is_split_proxy, parse_split_link, split_adjacent, split_proxy_name,
+    };
     let mut links: BTreeMap<CriticalLocation, Vec<CriticalLocation>> = BTreeMap::new();
     for (&section, layout) in &template.sections {
         for (&slot, part) in &layout.criticals {
-            let parent_section = match (part.equipment.as_str(), section) {
-                (name, LeftArm | LeftLeg | CenterTorso)
-                    if name.eq_ignore_ascii_case("SplitCrit_Left") =>
-                {
-                    LeftTorso
-                }
-                (name, RightArm | RightLeg | CenterTorso)
-                    if name.eq_ignore_ascii_case("SplitCrit_Right") =>
-                {
-                    RightTorso
-                }
-                (name, LeftTorso) if name.eq_ignore_ascii_case("SplitCrit_Left") => LeftArm,
-                (name, RightTorso) if name.eq_ignore_ascii_case("SplitCrit_Right") => RightArm,
-                (name, _)
-                    if name.eq_ignore_ascii_case("SplitCrit_Left")
-                        || name.eq_ignore_ascii_case("SplitCrit_Right") =>
-                {
-                    anyhow::bail!("Invalid split critical section")
-                }
-                _ => continue,
-            };
-            let parent_slot: u8 = part
-                .data
-                .parse()
-                .context("Invalid split critical parent slot")?;
+            if !is_split_proxy(&part.equipment) {
+                continue;
+            }
+            let (parent_section, parent_slot) = parse_split_link(&part.data)?;
+            ensure!(
+                split_adjacent(parent_section, section)
+                    && part
+                        .equipment
+                        .eq_ignore_ascii_case(split_proxy_name(parent_section, section)),
+                "Invalid split critical section"
+            );
             let parent = CriticalLocation {
                 section: parent_section,
                 slot: parent_slot,

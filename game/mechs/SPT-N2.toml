@@ -1,0 +1,57 @@
+name = "Spartan"
+class = "mech"
+movement = "biped"
+tons = 80
+walk_mp = 8
+heat_sinks = 26
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+
+[construction]
+engine = "xl"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 26
+
+[sections.right_arm]
+armor = 26
+slots = [
+    { at = "5-7", item = "IS.MediumPulseLaser", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 26
+rear = 8
+slots = [
+    { at = "4-6", item = "IS.ERPPC", brand = 3 },
+    { at = 7, item = "TAG", brand = 3 },
+    { at = "8-9", item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+]
+
+[sections.right_torso]
+armor = 26
+rear = 8
+slots = [
+    { at = 4, item = "IS.Anti-MissileSystem", brand = 3 },
+    { at = "5-6", item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
+]
+
+[sections.center_torso]
+armor = 31
+rear = 12
+slots = [
+    { at = "11-12", item = "IS.StreakSRM-2", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 26
+
+[sections.right_leg]
+armor = 26
+
+[sections.head]
+armor = 9

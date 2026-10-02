@@ -1,0 +1,60 @@
+name = "Atlas"
+class = "mech"
+movement = "biped"
+tons = 100
+walk_mp = 5
+heat_sinks = 20
+computer = 4
+
+[construction]
+tech_base = "clan"
+
+[sections.left_arm]
+armor = 32
+slots = [
+    { at = 5, item = "CL.ERMediumLaser" },
+]
+
+[sections.right_arm]
+armor = 32
+slots = [
+    { at = 5, item = "CL.ERMediumLaser" },
+]
+
+[sections.left_torso]
+armor = 32
+rear = 10
+config = "Case"
+slots = [
+    { at = "1-4", item = "CL.LRM-20" },
+    { at = "5-6", item = "Ammo_CL.LRM-20", rounds = 6 },
+    { at = 7, item = "Case" },
+    { at = "8-9", item = "CL.StreakSRM-6" },
+    { at = 10, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+]
+
+[sections.right_torso]
+armor = 32
+rear = 10
+config = "Case"
+slots = [
+    { at = "1-8", item = "CL.UltraAC/20" },
+    { at = "9-11", item = "Ammo_CL.UltraAC/20", rounds = 5 },
+    { at = 12, item = "Case" },
+]
+
+[sections.center_torso]
+armor = 47
+rear = 14
+slots = [
+    { at = "11-12", item = "CL.ERMediumLaser", modes = ["RearMount"] },
+]
+
+[sections.left_leg]
+armor = 41
+
+[sections.right_leg]
+armor = 41
+
+[sections.head]
+armor = 9

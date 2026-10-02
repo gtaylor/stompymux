@@ -9,9 +9,9 @@ async fn fixture(
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
     let source = |vehicle| {
         if vehicle {
-            include_str!("../game/mechs/Demolisher")
+            include_str!("../game/mechs/Demolisher.toml")
         } else {
-            include_str!("fixtures/btech/mechs/JR7-D")
+            include_str!("fixtures/btech/mechs/JR7-D.toml")
         }
     };
     fixture_sources([source(vehicle_attacker), source(vehicle_target)]).await
@@ -32,7 +32,7 @@ async fn fixture_sources(
             .unwrap()
             .flags
             .insert(Flag::InCharacter);
-        BattleUnitTemplate::parse(source)
+        BattleUnitTemplate::parse("test", source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();
@@ -385,8 +385,11 @@ fn vehicle_battle_value_applies_each_ground_movement_discount() {
         (BattleVehicleMovement::Hover, 386.4_f32),
         (BattleVehicleMovement::Stationary, 460.0_f32),
     ] {
-        let mut definition =
-            BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap();
+        let mut definition = BattleVehicleTemplate::parse(
+            "Demolisher",
+            include_str!("../game/mechs/Demolisher.toml"),
+        )
+        .unwrap();
         definition.movement = movement;
         let unit = BattleVehicle::new(definition).unwrap();
         assert_eq!(unit.battle_value().unwrap().defensive, f64::from(defensive));
@@ -405,7 +408,7 @@ fn shipped_vehicles_and_vtols_have_finite_battle_values() {
         let Ok(text) = std::fs::read_to_string(&path) else {
             continue;
         };
-        let Ok(definition) = BattleVehicleTemplate::parse(&text) else {
+        let Ok(definition) = BattleVehicleTemplate::parse("test", &text) else {
             continue;
         };
         rotorcraft += usize::from(definition.is_vtol());
@@ -450,7 +453,8 @@ fn tow_fixture(
     create_battle_vehicle(
         world,
         load,
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap(),
+        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+            .unwrap(),
     )
     .unwrap();
     place_battle_unit(world, load, map, 0, 0).unwrap();
@@ -588,7 +592,7 @@ async fn experience_load_queries_honor_hot_myomer_configuration() {
     create_battle_unit(
         &mut world,
         lighter,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, lighter, map, 0, 0).unwrap();
@@ -652,7 +656,7 @@ async fn experience_load_queries_honor_hot_myomer_configuration() {
 #[tokio::test]
 async fn vtol_value_shares_vehicle_accounting_and_has_its_class_movement_bonus() {
     let (_dir, config, mut world, id, _) =
-        fixture_sources([include_str!("../game/mechs/Kestrel"); 2]).await;
+        fixture_sources([include_str!("../game/mechs/Kestrel.toml"); 2]).await;
     let before = world.btech.clone();
     let initial = battle_unit_value(&world, id, true).unwrap();
     // 24 armor and 15 structure: 82.5, less 30%, then 18 MP (+5) plus VTOL (+1).
@@ -689,9 +693,9 @@ async fn vtol_value_shares_vehicle_accounting_and_has_its_class_movement_bonus()
 #[tokio::test]
 async fn vtol_battle_value_experience_supports_mixed_pairs_load_and_replay() {
     let chassis = [
-        include_str!("fixtures/btech/mechs/JR7-D"),
-        include_str!("../game/mechs/Demolisher"),
-        include_str!("../game/mechs/Kestrel"),
+        include_str!("fixtures/btech/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/mechs/Kestrel.toml"),
     ];
     for (a, attacker_source) in chassis.iter().enumerate() {
         for (t, target_source) in chassis.iter().enumerate() {
@@ -764,8 +768,8 @@ async fn vtol_battle_value_experience_supports_mixed_pairs_load_and_replay() {
 #[tokio::test]
 async fn authored_vtol_without_catalogued_engine_mass_survives_restart() {
     let (_dir, config, world, id, _) = fixture_sources([
-        include_str!("../game/mechs/SalvageVTOLII"),
-        include_str!("../game/mechs/Kestrel"),
+        include_str!("../game/mechs/SalvageVTOLII.toml"),
+        include_str!("../game/mechs/Kestrel.toml"),
     ])
     .await;
     let unit = &world.btech.vehicles()[&id];

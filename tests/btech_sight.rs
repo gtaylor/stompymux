@@ -11,7 +11,7 @@ async fn fixture(
     source: &str,
     weapon: Option<BattleWeapon>,
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {
-    fixture_with_target(source, weapon, include_str!("../game/mechs/JR7-D")).await
+    fixture_with_target(source, weapon, include_str!("../game/mechs/JR7-D.toml")).await
 }
 
 /// Independent script hosts compare native and Lua actions from exactly the same world.
@@ -99,8 +99,8 @@ async fn sight_all_chassis_targets_preserve_state_and_replay() {
 #[tokio::test]
 async fn sight_special_rolls_do_not_launch_or_spend() {
     for source in [
-        include_str!("../game/mechs/JR7-D"),
-        include_str!("../game/mechs/Demolisher"),
+        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/Demolisher.toml"),
     ] {
         for weapon in [
             BattleWeapon::MachineGun,
@@ -217,8 +217,8 @@ async fn sight_rejections_are_atomic_across_chassis() {
         }
     }
     for source in [
-        include_str!("../game/mechs/JR7-D"),
-        include_str!("../game/mechs/Demolisher"),
+        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/Demolisher.toml"),
     ] {
         let (_dir, config, world, shooter, _, index) =
             fixture(source, Some(BattleWeapon::LaserAms)).await;
@@ -235,13 +235,13 @@ async fn sight_rejections_are_atomic_across_chassis() {
 #[tokio::test]
 async fn stinger_sight_and_fire_share_vtol_admission() {
     for source in [
-        include_str!("../game/mechs/JR7-D"),
-        include_str!("../game/mechs/Demolisher"),
+        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/Demolisher.toml"),
     ] {
         let (_dir, config, base, shooter, target, index) = fixture_with_target(
             source,
             Some(BattleWeapon::Lrm5),
-            include_str!("../game/mechs/Kestrel"),
+            include_str!("../game/mechs/Kestrel.toml"),
         )
         .await;
         for airborne in [false, true] {

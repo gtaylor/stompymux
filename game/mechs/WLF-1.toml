@@ -1,0 +1,52 @@
+name = "Wolfhound"
+class = "mech"
+movement = "biped"
+tons = 35
+walk_mp = 9
+
+[sections.left_arm]
+armor = 12
+
+[sections.right_arm]
+armor = 12
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "IS.LargeLaser" },
+]
+
+[sections.left_torso]
+armor = 11
+rear = 5
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]
+
+[sections.right_torso]
+armor = 11
+rear = 5
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]
+
+[sections.center_torso]
+armor = 16
+rear = 6
+slots = [
+    { at = 11, item = "IS.MediumLaser" },
+    { at = 12, item = "IS.MediumLaser", modes = ["RearMount"] },
+]
+
+[sections.left_leg]
+armor = 16
+slots = [
+    { at = 5, item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 16
+slots = [
+    { at = 5, item = "HeatSink" },
+]
+
+[sections.head]
+armor = 9

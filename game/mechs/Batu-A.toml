@@ -1,0 +1,57 @@
+name = "Batu"
+class = "aerofighter"
+movement = "fly"
+tons = 40
+walk_mp = 14
+heat_sinks = 22
+fuel = 450
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
+
+[sections.nose]
+armor = 38
+internals = 9
+slots = [
+    { at = 1, item = "CL.NarcBeacon" },
+    { at = 2, item = "Ammo_CL.NarcBeacon", rounds = 6 },
+    { at = 3, item = "CL.ERPPC" },
+]
+
+[sections.left_wing]
+armor = 30
+internals = 9
+slots = [
+    { at = "1-2", item = "CL.SRM-6" },
+    { at = 3, item = "Ammo_CL.SRM-6", rounds = 15, modes = ["Narc/Smoke"] },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_wing]
+armor = 30
+internals = 9
+slots = [
+    { at = "1-2", item = "CL.SRM-6" },
+    { at = 3, item = "Ammo_CL.SRM-6", rounds = 15, modes = ["Narc/Smoke"] },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.cockpit]
+armor = 16
+internals = 9
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "Sensors" },
+    { at = 5, item = "LifeSupport" },
+]
+
+[sections.engine]
+armor = 20
+internals = 9
+
+[sections.fuselage]
+armor = 30
+internals = 9

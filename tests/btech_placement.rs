@@ -5,7 +5,7 @@ use stompymux_rs::{
     create_battle_unit, dbck, persistence, place_battle_unit, reload_battle_map,
     remove_battle_unit,
 };
-const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D");
+const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D.toml");
 const MAP: &str = "3 2\n.0.0.0\n.0~2.0\n";
 
 #[tokio::test]
@@ -25,7 +25,12 @@ async fn placement_round_trips_coordinates_and_containment_without_shared_unit_s
         let object = world.objects.get_mut(&id).unwrap();
         object.location = Some(ObjectId(config.start()));
         object.home = Some(ObjectId(config.home()));
-        create_battle_unit(&mut world, id, BattleTemplate::parse(JENNER).unwrap()).unwrap();
+        create_battle_unit(
+            &mut world,
+            id,
+            BattleTemplate::parse("JR7-D", JENNER).unwrap(),
+        )
+        .unwrap();
         ids.push(id);
     }
     place_battle_unit(&mut world, ids[0], map, 0, 0).unwrap();
@@ -106,7 +111,12 @@ async fn placement_callbacks_roll_back_and_native_commands_report_coordinates() 
     let id = world.create(&config, "Jenner".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().location = Some(ObjectId(config.start()));
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    create_battle_unit(&mut world, id, BattleTemplate::parse(JENNER).unwrap()).unwrap();
+    create_battle_unit(
+        &mut world,
+        id,
+        BattleTemplate::parse("JR7-D", JENNER).unwrap(),
+    )
+    .unwrap();
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let before = scripts.world().clone();
     assert!(
@@ -207,7 +217,12 @@ async fn map_slots_control_occupant_order_and_reuse() {
     for name in ["Observer", "Earlier ID", "Later ID", "Replacement"] {
         let id = world.create(&config, name.into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().location = Some(ObjectId(config.start()));
-        create_battle_unit(&mut world, id, BattleTemplate::parse(JENNER).unwrap()).unwrap();
+        create_battle_unit(
+            &mut world,
+            id,
+            BattleTemplate::parse("JR7-D", JENNER).unwrap(),
+        )
+        .unwrap();
         ids.push(id);
     }
     let [observer, earlier, later, replacement] = <[ObjectId; 4]>::try_from(ids).unwrap();

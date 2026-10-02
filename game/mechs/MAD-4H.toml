@@ -1,0 +1,70 @@
+name = "Marauder II"
+class = "mech"
+movement = "biped"
+tons = 100
+walk_mp = 5
+jump_mp = 3
+heat_sinks = 21
+computer = 4
+radio = 4
+specials = ["SearchLight"]
+
+[sections.left_arm]
+armor = 34
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-7", item = "HeatSink" },
+    { at = "8-10", item = "IS.ERPPC" },
+    { at = 11, item = "IS.ERMediumLaser" },
+]
+
+[sections.right_arm]
+armor = 34
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-7", item = "HeatSink" },
+    { at = "8-10", item = "IS.ERPPC" },
+    { at = 11, item = "IS.ERMediumLaser" },
+]
+
+[sections.left_torso]
+armor = 32
+rear = 10
+slots = [
+    { at = "1-6", item = "IS.RL-20", modes = ["OneShot"] },
+    { at = "7-12", item = "IS.RL-15", modes = ["OneShot"] },
+]
+
+[sections.right_torso]
+armor = 32
+rear = 10
+slots = [
+    { at = "1-6", item = "IS.RL-20", modes = ["OneShot"] },
+    { at = "7-12", item = "IS.RL-15", modes = ["OneShot"] },
+]
+
+[sections.center_torso]
+armor = 46
+rear = 16
+slots = [
+    { at = 11, item = "JumpJet" },
+    { at = 12, item = "HeatSink" },
+]
+
+[sections.left_leg]
+armor = 42
+slots = [
+    { at = 5, item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 42
+slots = [
+    { at = 5, item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "IS.RL-10", modes = ["OneShot"] },
+]

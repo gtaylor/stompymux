@@ -1,0 +1,31 @@
+name = "Rommel"
+class = "vehicle"
+movement = "track"
+tons = 65
+walk_mp = 6
+heat_sinks = 11
+computer = 3
+
+[sections.left_side]
+armor = 39
+
+[sections.right_side]
+armor = 39
+
+[sections.front_side]
+armor = 40
+slots = [
+    { at = 1, item = "IS.SmallLaser", brand = 3 },
+]
+
+[sections.aft_side]
+armor = 26
+
+[sections.turret]
+armor = 40
+slots = [
+    { at = 1, item = "IS.AC/20", brand = 3 },
+    { at = "2-5", item = "Ammo_IS.AC/20", rounds = 5 },
+    { at = 6, item = "IS.LRM-5", brand = 3 },
+    { at = 7, item = "Ammo_IS.LRM-5", rounds = 24 },
+]

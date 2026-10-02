@@ -1,0 +1,71 @@
+name = "Marauder"
+class = "mech"
+movement = "biped"
+tons = 75
+walk_mp = 6
+heat_sinks = 42
+computer = 4
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 24
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "CL.ERPPC" },
+    { at = 6, item = "CL.ERMediumLaser" },
+    { at = 7, item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 24
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "CL.ERPPC" },
+    { at = 6, item = "CL.ERMediumLaser" },
+    { at = 7, item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 25
+rear = 7
+slots = [
+    { at = 1, item = "FerroFibrous" },
+    { at = "2-9", item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 25
+rear = 7
+slots = [
+    { at = 1, item = "FerroFibrous" },
+    { at = "2-3", item = "CL.LargePulseLaser" },
+    { at = "4-11", item = "HeatSink" },
+]
+
+[sections.center_torso]
+armor = 34
+rear = 10
+slots = [
+    { at = "11-12", item = "HeatSink" },
+]
+
+[sections.left_leg]
+armor = 28
+slots = [
+    { at = 5, item = "FerroFibrous" },
+]
+
+[sections.right_leg]
+armor = 28
+slots = [
+    { at = 5, item = "FerroFibrous" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

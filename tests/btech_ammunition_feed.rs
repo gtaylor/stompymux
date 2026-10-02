@@ -3,7 +3,8 @@ use stompymux_rs::*;
 
 /// Three ordinary bins and one Artemis bin, including a preferred bin in the launcher section.
 fn unit() -> BattleUnit {
-    let mut template = BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+    let mut template =
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let bin = template.sections[&BattleSection::RightTorso].criticals[&0].clone();
     template
         .sections

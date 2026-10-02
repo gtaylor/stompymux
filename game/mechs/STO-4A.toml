@@ -1,0 +1,72 @@
+name = "Stilletto"
+class = "mech"
+movement = "biped"
+tons = 35
+walk_mp = 12
+heat_sinks = 20
+computer = 4
+radio = 4
+specials = ["ECM"]
+
+[construction]
+engine = "light"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 10
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = 3, item = "IS.StreakSRM-2" },
+    { at = "4-7", item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 10
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = 3, item = "IS.StreakSRM-2" },
+    { at = "4-7", item = "EndoSteel" },
+]
+
+[sections.left_torso]
+armor = 11
+rear = 4
+slots = [
+    { at = "3-4", item = "Ecm" },
+    { at = "5-12", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 11
+rear = 4
+slots = [
+    { at = 3, item = "Ammo_IS.LRM-5", rounds = 24 },
+    { at = 4, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+    { at = 5, item = "Case" },
+    { at = "6-12", item = "EndoSteel" },
+]
+
+[sections.center_torso]
+armor = 16
+rear = 5
+slots = [
+    { at = 11, item = "IS.LRM-5" },
+    { at = 12, item = "EndoSteel" },
+]
+
+[sections.left_leg]
+armor = 14
+slots = [
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.right_leg]
+armor = 14
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 9

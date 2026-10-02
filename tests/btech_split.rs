@@ -9,9 +9,12 @@ fn definition(
     extension: BattleSection,
 ) -> BattleTemplate {
     use BattleSection::*;
-    let mut template = BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+    let mut template =
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let count = weapon.profile().critical_slots;
-    let first = if count == 8 {
+    let first = if parent == CenterTorso {
+        10
+    } else if count == 8 {
         6
     } else if matches!(extension, LeftLeg | RightLeg | CenterTorso) && count == 11 {
         3
@@ -28,13 +31,14 @@ fn definition(
             .criticals
             .insert(slot, part.clone());
     }
-    part.equipment = if matches!(parent, LeftArm | LeftTorso) {
+    let left = |section| matches!(section, LeftArm | LeftTorso | LeftLeg);
+    part.equipment = if left(parent) || left(extension) {
         "SplitCrit_Left"
     } else {
         "SplitCrit_Right"
     }
     .into();
-    part.data = first.to_string();
+    part.data = format!("{}:{first}", parent.name());
     let extension_first = match extension {
         LeftArm | RightArm => 8,
         LeftTorso => 2,
@@ -74,6 +78,8 @@ fn split_mount_locations_metadata_and_critical_availability() {
             (RightTorso, RightLeg),
             (LeftTorso, CenterTorso),
             (RightTorso, CenterTorso),
+            (CenterTorso, LeftTorso),
+            (CenterTorso, RightTorso),
         ] {
             let template = definition(weapon, parent, extension);
             let original = BattleUnit::from_template(template.clone()).unwrap();
@@ -136,7 +142,7 @@ fn split_mount_locations_metadata_and_critical_availability() {
 fn invalid_split_links_are_rejected() {
     use BattleSection::*;
     let source = definition(BattleWeapon::HeavyGaussRifle, LeftArm, LeftTorso);
-    for variant in 0..7 {
+    for variant in 0..9 {
         let mut template = source.clone();
         let child = template.sections.get_mut(&LeftTorso).unwrap();
         match variant {
@@ -144,10 +150,10 @@ fn invalid_split_links_are_rejected() {
                 child.criticals.remove(&4);
             }
             1 => {
-                child.criticals.get_mut(&2).unwrap().data = "5".into();
+                child.criticals.get_mut(&2).unwrap().data = "Left_Arm:5".into();
             }
             2 => {
-                child.criticals.get_mut(&2).unwrap().data = "99".into();
+                child.criticals.get_mut(&2).unwrap().data = "Left_Arm:99".into();
             }
             3 => {
                 child.criticals.get_mut(&2).unwrap().equipment = "SplitCrit_Right".into();
@@ -166,6 +172,12 @@ fn invalid_split_links_are_rejected() {
             6 => {
                 let part = child.criticals.remove(&3).unwrap();
                 child.criticals.insert(5, part);
+            }
+            7 => {
+                child.criticals.get_mut(&2).unwrap().data = "Right_Arm:4".into();
+            }
+            8 => {
+                child.criticals.get_mut(&2).unwrap().data = "4".into();
             }
             _ => unreachable!(),
         }
@@ -295,7 +307,8 @@ async fn split_section_loss_preserves_remaining_slot_mass() {
 /// A fifteen-slot artillery mount shares construction and critical loss across its linked sections.
 #[test]
 fn arrow_mount_can_end_before_the_primary_section_boundary() {
-    let template = BattleTemplate::parse(include_str!("../game/mechs/CPLT-C5")).unwrap();
+    let template =
+        BattleTemplate::parse("CPLT-C5", include_str!("../game/mechs/CPLT-C5.toml")).unwrap();
     let unit = BattleUnit::from_template(template.clone()).unwrap();
     let loadout = unit.loadout().unwrap();
     let index = loadout
@@ -558,4 +571,52 @@ async fn repeated_split_proxy_criticals_accumulate_once_and_replay() {
             }
         }
     }
+}
+
+/// A centre torso weapon continuing into a side torso loads from TOML and survives a save.
+#[test]
+fn center_torso_split_mounts_load_and_round_trip_from_documents() {
+    use BattleSection::*;
+    let source = include_str!("fixtures/btech/mechs/JR7-D.toml")
+        .replace(
+            "    { at = 11, item = \"IS.SRM-4\" },\n    { at = 12, item = \"JumpJet\" },\n",
+            "",
+        )
+        .replace("    { at = \"1-2\", item = \"JumpJet\" },\n", "")
+        + "\n[[split_mounts]]\nitem = \"IS.AC/20\"\nplacements = [\n    { section = \"center_torso\", at = \"11-12\" },\n    { section = \"left_torso\", at = \"1-8\" },\n]\n";
+    let template = BattleTemplate::parse("JR7-D", &source).unwrap();
+    let loadout = BattleLoadout::resolve(&template).unwrap();
+    let mount = loadout
+        .weapons
+        .iter()
+        .find(|mount| mount.weapon == BattleWeapon::Ac20)
+        .unwrap();
+    assert_eq!(mount.criticals.len(), 10);
+    assert_eq!(mount.criticals[0].section, CenterTorso);
+    assert_eq!(mount.criticals.last().unwrap().section, LeftTorso);
+
+    let document = template.to_document().unwrap();
+    assert!(document.contains("{ section = \"center_torso\", at = \"11-12\" }"));
+    assert_eq!(BattleTemplate::parse("JR7-D", &document).unwrap(), template);
+
+    let reversed = source.replace(
+        "{ section = \"center_torso\", at = \"11-12\" },\n    { section = \"left_torso\", at = \"1-8\" },",
+        "{ section = \"left_torso\", at = \"1-8\" },\n    { section = \"center_torso\", at = \"11-12\" },",
+    );
+    assert_ne!(reversed, source);
+    let loadout =
+        BattleLoadout::resolve(&BattleTemplate::parse("JR7-D", &reversed).unwrap()).unwrap();
+    let mount = loadout
+        .weapons
+        .iter()
+        .find(|mount| mount.weapon == BattleWeapon::Ac20)
+        .unwrap();
+    assert_eq!(mount.criticals[0].section, LeftTorso);
+    assert_eq!(mount.criticals.last().unwrap().section, CenterTorso);
+
+    let distant = source.replace(
+        "\"left_torso\", at = \"1-8\"",
+        "\"left_arm\", at = \"5-12\"",
+    );
+    assert!(BattleTemplate::parse("JR7-D", &distant).is_err());
 }

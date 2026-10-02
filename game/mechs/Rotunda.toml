@@ -1,0 +1,26 @@
+name = "Rotunda"
+class = "vehicle"
+movement = "wheel"
+tons = 20
+walk_mp = 14
+computer = 3
+
+[construction]
+armor = "ferro_fibrous"
+
+[sections.left_side]
+armor = 4
+
+[sections.right_side]
+armor = 4
+
+[sections.front_side]
+armor = 6
+slots = [
+    { at = 1, item = "IS.LargeLaser" },
+    { at = 2, item = "IS.SRM-2" },
+    { at = 3, item = "Ammo_IS.SRM-2", rounds = 50 },
+]
+
+[sections.aft_side]
+armor = 4

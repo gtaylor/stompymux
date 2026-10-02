@@ -1,0 +1,79 @@
+name = "Gladiator"
+class = "mech"
+movement = "biped"
+tons = 95
+walk_mp = 6
+jump_mp = 4
+heat_sinks = 38
+computer = 4
+specials = ["Masc"]
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 32
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "HeatSink" },
+    { at = 6, item = "FerroFibrous" },
+    { at = "7-12", item = "CL.GaussRifle" },
+]
+
+[sections.right_arm]
+armor = 32
+slots = [
+    { at = "5-6", item = "CL.ERLargeLaser" },
+    { at = "7-10", item = "HeatSink" },
+    { at = 11, item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 20
+rear = 10
+engine_at = 3
+slots = [
+    { at = "1-2", item = "Ammo_CL.GaussRifle", rounds = 8 },
+    { at = 5, item = "Masc" },
+    { at = "7-8", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 20
+rear = 10
+engine_at = 3
+slots = [
+    { at = 1, item = "CL.MachineGun" },
+    { at = 2, item = "Ammo_CL.MachineGun", rounds = 200 },
+    { at = 5, item = "Masc" },
+    { at = 6, item = "CL.MachineGun" },
+    { at = "7-8", item = "FerroFibrous" },
+    { at = "9-10", item = "HeatSink" },
+]
+
+[sections.center_torso]
+armor = 37
+rear = 9
+slots = [
+    { at = "11-12", item = "Masc" },
+]
+
+[sections.left_leg]
+armor = 40
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 40
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

@@ -28,8 +28,11 @@ async fn fixture_movement(
     .unwrap();
     let id = world.create(&config, "Truck".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    let mut template =
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Flatbed_Truck")).unwrap();
+    let mut template = BattleVehicleTemplate::parse(
+        "Flatbed_Truck",
+        include_str!("../game/mechs/Flatbed_Truck.toml"),
+    )
+    .unwrap();
     template.movement = movement;
     if movement == BattleVehicleMovement::Hover {
         template.max_speed = 64.5;
@@ -768,7 +771,11 @@ async fn mine_blast_disables_a_later_vehicle_before_its_scheduled_movement() {
     create_battle_vehicle(
         &mut world,
         other,
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Flatbed_Truck")).unwrap(),
+        BattleVehicleTemplate::parse(
+            "Flatbed_Truck",
+            include_str!("../game/mechs/Flatbed_Truck.toml"),
+        )
+        .unwrap(),
     )
     .unwrap();
     place_battle_unit(
@@ -998,14 +1005,19 @@ async fn ground_vehicles_cross_crowded_hexes_without_stacking_effects() {
             create_battle_vehicle(
                 &mut world,
                 other,
-                BattleVehicleTemplate::parse(include_str!("../game/mechs/Flatbed_Truck")).unwrap(),
+                BattleVehicleTemplate::parse(
+                    "Flatbed_Truck",
+                    include_str!("../game/mechs/Flatbed_Truck.toml"),
+                )
+                .unwrap(),
             )
             .unwrap();
         } else {
             create_battle_unit(
                 &mut world,
                 other,
-                BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                    .unwrap(),
             )
             .unwrap();
         }
@@ -1323,8 +1335,11 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
             .unwrap();
         let neighbor = world.create(&config, "Waterproof neighbor".into(), Kind::Thing);
         world.objects.get_mut(&neighbor).unwrap().home = Some(ObjectId(config.home()));
-        let mut template =
-            BattleVehicleTemplate::parse(include_str!("../game/mechs/Flatbed_Truck")).unwrap();
+        let mut template = BattleVehicleTemplate::parse(
+            "Flatbed_Truck",
+            include_str!("../game/mechs/Flatbed_Truck.toml"),
+        )
+        .unwrap();
         template
             .attributes
             .insert("specials".into(), "Waterproof_Tech".into());
@@ -1335,7 +1350,8 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
         create_battle_unit(
             &mut world,
             mech,
-            BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                .unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, mech, map, 3, 2).unwrap();

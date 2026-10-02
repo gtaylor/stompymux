@@ -1,0 +1,53 @@
+name = "Lancelot"
+class = "mech"
+movement = "biped"
+tons = 60
+walk_mp = 9
+heat_sinks = 26
+computer = 4
+radio = 4
+
+[construction]
+engine = "xl"
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 14
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.LargeLaser" },
+]
+
+[sections.right_arm]
+armor = 14
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.LargeLaser" },
+]
+
+[sections.left_torso]
+armor = 16
+rear = 10
+
+[sections.right_torso]
+armor = 16
+rear = 10
+slots = [
+    { at = "4-6", item = "IS.PPC" },
+]
+
+[sections.center_torso]
+armor = 21
+rear = 16
+slots = [
+    { at = 11, item = "IS.MediumLaser" },
+]
+
+[sections.left_leg]
+armor = 14
+
+[sections.right_leg]
+armor = 14
+
+[sections.head]
+armor = 7

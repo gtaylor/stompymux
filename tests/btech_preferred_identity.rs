@@ -159,7 +159,7 @@ async fn unplaced_preference_and_invalid_saved_values() {
     for source in firing::templates() {
         let unit = world.create(&config, "Unit".into(), Kind::Thing);
         world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse(&source)
+        BattleUnitTemplate::parse("test", &source)
             .unwrap()
             .create(&mut world, unit)
             .unwrap();

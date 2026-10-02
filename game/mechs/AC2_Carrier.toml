@@ -1,0 +1,24 @@
+name = "AC2_Carrier"
+class = "vehicle"
+movement = "track"
+tons = 60
+walk_mp = 5
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 12
+
+[sections.right_side]
+armor = 12
+
+[sections.front_side]
+armor = 12
+slots = [
+    { at = "1-5", item = "IS.AC/2", brand = 3 },
+    { at = "6-9", item = "Ammo_IS.AC/2", rounds = 45 },
+]
+
+[sections.aft_side]
+armor = 12

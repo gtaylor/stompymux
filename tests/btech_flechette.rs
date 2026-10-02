@@ -13,7 +13,8 @@ fn flechette_bins_have_ordinary_capacity_and_half_ton_sizing() {
     ] {
         for half in [false, true] {
             let mut definition =
-                BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                    .unwrap();
             let mut part = definition.sections[&BattleSection::LeftArm].criticals[&2].clone();
             part.equipment = weapon.name().into();
             part.modes = vec!["Flechette".into()];

@@ -1,0 +1,53 @@
+name = "Assassin"
+class = "mech"
+movement = "biped"
+tons = 40
+walk_mp = 11
+jump_mp = 7
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+
+[sections.left_arm]
+armor = 6
+
+[sections.right_arm]
+armor = 6
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.MediumPulseLaser" },
+]
+
+[sections.left_torso]
+armor = 10
+rear = 2
+slots = [
+    { at = "1-3", item = "JumpJet" },
+]
+
+[sections.right_torso]
+armor = 10
+rear = 2
+slots = [
+    { at = "1-3", item = "JumpJet" },
+    { at = 4, item = "IS.LRM-5", modes = ["Artemis/Mine"] },
+    { at = 5, item = "ArtemisIV" },
+    { at = 6, item = "Ammo_IS.LRM-5", rounds = 24, modes = ["Artemis/Mine"] },
+]
+
+[sections.center_torso]
+armor = 12
+rear = 4
+slots = [
+    { at = 11, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 6
+
+[sections.right_leg]
+armor = 6
+
+[sections.head]
+armor = 8

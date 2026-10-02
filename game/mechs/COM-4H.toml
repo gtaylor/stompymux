@@ -1,0 +1,49 @@
+name = "Commando"
+class = "mech"
+movement = "biped"
+tons = 25
+walk_mp = 9
+heat_sinks = 10
+computer = 4
+radio = 4
+
+[sections.left_arm]
+armor = 6
+slots = [
+    { at = "5-6", item = "IS.MediumLaser" },
+]
+
+[sections.right_arm]
+armor = 6
+slots = [
+    { at = "5-8", item = "IS.RL-15", modes = ["OneShot"] },
+]
+
+[sections.left_torso]
+armor = 6
+rear = 3
+slots = [
+    { at = "1-2", item = "HeatSink" },
+    { at = "3-6", item = "IS.RL-15", modes = ["OneShot"] },
+]
+
+[sections.right_torso]
+armor = 6
+rear = 3
+slots = [
+    { at = "1-2", item = "HeatSink" },
+    { at = "3-6", item = "IS.RL-15", modes = ["OneShot"] },
+]
+
+[sections.center_torso]
+armor = 8
+rear = 4
+
+[sections.left_leg]
+armor = 8
+
+[sections.right_leg]
+armor = 8
+
+[sections.head]
+armor = 6

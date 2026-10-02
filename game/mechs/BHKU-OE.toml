@@ -1,0 +1,65 @@
+name = "Blackhawk-Ku"
+class = "mech"
+movement = "biped"
+tons = 60
+walk_mp = 8
+jump_mp = 5
+heat_sinks = 38
+computer = 4
+radio = 4
+
+[construction]
+engine = "xl"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 20
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-6", item = "HeatSink", brand = 3 },
+    { at = "7-12", item = "IS.ERMediumLaser", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 20
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-9", item = "IS.ERMediumLaser", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 20
+rear = 8
+slots = [
+    { at = "4-12", item = "HeatSink", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 20
+rear = 8
+slots = [
+    { at = "4-12", item = "HeatSink", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 30
+rear = 9
+slots = [
+    { at = 11, item = "JumpJet", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 28
+slots = [
+    { at = "5-6", item = "JumpJet", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 28
+slots = [
+    { at = "5-6", item = "JumpJet", brand = 3 },
+]
+
+[sections.head]
+armor = 9

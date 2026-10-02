@@ -1,0 +1,78 @@
+name = "Thor"
+class = "mech"
+movement = "biped"
+tons = 70
+walk_mp = 8
+jump_mp = 5
+heat_sinks = 28
+specials = ["SearchLight"]
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 17
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-7", item = "CL.LRM-20" },
+    { at = 8, item = "CL.SRM-4" },
+    { at = "9-10", item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Narc/Smoke"] },
+    { at = 11, item = "Ammo_CL.SRM-4", rounds = 25, modes = ["Narc/Smoke"] },
+    { at = 12, item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 17
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-7", item = "CL.LRM-20" },
+    { at = 8, item = "CL.SRM-4" },
+    { at = "9-10", item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Narc/Smoke"] },
+    { at = 11, item = "Ammo_CL.SRM-4", rounds = 25, modes = ["Narc/Smoke"] },
+    { at = 12, item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 22
+rear = 7
+slots = [
+    { at = 3, item = "CL.Anti-MissileSystem" },
+    { at = 4, item = "CL.NarcBeacon" },
+    { at = 5, item = "Ammo_CL.Anti-MissileSystem", rounds = 24 },
+    { at = 6, item = "Ammo_CL.NarcBeacon", rounds = 6 },
+    { at = "7-8", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 22
+rear = 7
+slots = [
+    { at = "3-4", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 27
+rear = 8
+slots = [
+    { at = 11, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 23
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 23
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

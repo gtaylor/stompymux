@@ -1,0 +1,81 @@
+name = "Hankyu"
+class = "mech"
+movement = "biped"
+tons = 30
+walk_mp = 12
+jump_mp = 6
+heat_sinks = 20
+computer = 4
+radio = 5
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+brand = 5
+
+[sections.left_arm]
+armor = 7
+slots = [
+    { at = 5, item = "FerroFibrous", brand = 5 },
+    { at = 6, item = "EndoSteel", brand = 5 },
+    { at = "7-8", item = "CL.ERMediumLaser", brand = 5 },
+]
+
+[sections.right_arm]
+armor = 7
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "FerroFibrous", brand = 5 },
+    { at = 5, item = "EndoSteel", brand = 5 },
+    { at = "6-7", item = "CL.ERMediumLaser", brand = 5 },
+]
+
+[sections.left_torso]
+armor = 8
+rear = 4
+engine_at = 6
+slots = [
+    { at = "1-2", item = "FerroFibrous", brand = 5 },
+    { at = "3-5", item = "EndoSteel", brand = 5 },
+    { at = 8, item = "CL.Flamer", brand = 5 },
+    { at = 9, item = "CL.MediumPulseLaser", brand = 5 },
+]
+
+[sections.right_torso]
+armor = 8
+rear = 4
+engine_at = 5
+slots = [
+    { at = "1-2", item = "FerroFibrous", brand = 5 },
+    { at = "3-4", item = "EndoSteel", brand = 5 },
+    { at = 7, item = "CL.MediumPulseLaser", brand = 5 },
+    { at = 8, item = "BeagleProbe", brand = 5 },
+    { at = "9-10", item = "HeatSink", brand = 0 },
+]
+
+[sections.center_torso]
+armor = 9
+rear = 5
+slots = [
+    { at = "11-12", item = "JumpJet", brand = 5 },
+]
+
+[sections.left_leg]
+armor = 8
+slots = [
+    { at = "5-6", item = "JumpJet", brand = 5 },
+]
+
+[sections.right_leg]
+armor = 8
+slots = [
+    { at = "5-6", item = "JumpJet", brand = 5 },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous", brand = 5 },
+]

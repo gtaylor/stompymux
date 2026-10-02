@@ -1,0 +1,69 @@
+name = "Hitman"
+class = "mech"
+movement = "biped"
+tons = 30
+walk_mp = 11
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+
+[construction]
+engine = "xl"
+structure = "endo_steel"
+
+[sections.left_arm]
+armor = 7
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-6", item = "IS.MediumLaser" },
+    { at = "7-8", item = "EndoSteel" },
+]
+
+[sections.right_arm]
+armor = 7
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.left_torso]
+armor = 8
+rear = 4
+slots = [
+    { at = "4-5", item = "Ecm" },
+    { at = 6, item = "IS.LRM-5", modes = ["Artemis/Mine"] },
+    { at = 7, item = "ArtemisIV" },
+    { at = 8, item = "Ammo_IS.LRM-5", rounds = 24, modes = ["Artemis/Mine"] },
+    { at = "9-12", item = "EndoSteel" },
+]
+
+[sections.right_torso]
+armor = 8
+rear = 4
+slots = [
+    { at = "4-5", item = "HeatSink" },
+    { at = "6-7", item = "BeagleProbe" },
+    { at = "8-11", item = "EndoSteel" },
+]
+
+[sections.center_torso]
+armor = 10
+rear = 6
+slots = [
+    { at = "11-12", item = "EndoSteel" },
+]
+
+[sections.left_leg]
+armor = 9
+
+[sections.right_leg]
+armor = 9
+slots = [
+    { at = "5-6", item = "Masc" },
+]
+
+[sections.head]
+armor = 8
+slots = [
+    { at = 4, item = "TAG" },
+]

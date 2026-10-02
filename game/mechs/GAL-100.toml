@@ -1,0 +1,32 @@
+name = "Galleon"
+class = "vehicle"
+movement = "track"
+tons = 30
+walk_mp = 9
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 10
+slots = [
+    { at = 1, item = "IS.SmallLaser" },
+]
+
+[sections.right_side]
+armor = 10
+slots = [
+    { at = 1, item = "IS.SmallLaser" },
+]
+
+[sections.front_side]
+armor = 11
+
+[sections.aft_side]
+armor = 11
+
+[sections.turret]
+armor = 14
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]

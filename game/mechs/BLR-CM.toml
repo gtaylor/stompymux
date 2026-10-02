@@ -1,0 +1,69 @@
+name = "Battlemaster"
+class = "mech"
+movement = "biped"
+tons = 85
+walk_mp = 5
+jump_mp = 3
+heat_sinks = 32
+computer = 4
+radio = 4
+specials = ["C3MasterTech", "SearchLight"]
+
+[construction]
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 27
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-12", item = "HeatSink" },
+]
+
+[sections.right_arm]
+armor = 27
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-9", item = "HeatSink" },
+    { at = "10-12", item = "IS.ERPPC" },
+]
+
+[sections.left_torso]
+armor = 26
+rear = 9
+slots = [
+    { at = "1-5", item = "C3Master" },
+    { at = "6-7", item = "IS.ERMediumLaser" },
+    { at = "8-12", item = "IS.MRM-30" },
+]
+
+[sections.right_torso]
+armor = 26
+rear = 9
+slots = [
+    { at = "1-5", item = "C3Master" },
+    { at = "6-8", item = "HeatSink" },
+    { at = "9-11", item = "Ammo_IS.MRM-30", rounds = 8 },
+    { at = 12, item = "Case" },
+]
+
+[sections.center_torso]
+armor = 40
+rear = 13
+slots = [
+    { at = 11, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 35
+slots = [
+    { at = 5, item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 35
+slots = [
+    { at = 5, item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9

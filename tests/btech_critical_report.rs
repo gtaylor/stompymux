@@ -5,17 +5,17 @@ use stompymux_rs::*;
 
 /// Supported chassis share the same report fixtures, including an authored stationary vehicle.
 fn templates() -> Vec<String> {
-    let vehicle = include_str!("../game/mechs/Demolisher");
+    let vehicle = include_str!("../game/mechs/Demolisher.toml");
     vec![
-        include_str!("../game/mechs/JR7-D").into(),
-        include_str!("../game/mechs/GOL-1H").into(),
+        include_str!("../game/mechs/JR7-D.toml").into(),
+        include_str!("../game/mechs/GOL-1H.toml").into(),
         vehicle.into(),
-        vehicle.replace("{ Track }", "{ Wheel }"),
-        vehicle.replace("{ Track }", "{ Hover }"),
+        vehicle.replace("movement = \"track\"", "movement = \"wheel\""),
+        vehicle.replace("movement = \"track\"", "movement = \"hover\""),
         vehicle
-            .replace("{ Track }", "{ None }")
-            .replace("{ 53.75 }", "{ 0 }"),
-        include_str!("../game/mechs/Kestrel").into(),
+            .replace("movement = \"track\"", "movement = \"none\"")
+            .replace("walk_mp = 5", "walk_mp = 0"),
+        include_str!("../game/mechs/Kestrel.toml").into(),
     ]
 }
 
@@ -51,7 +51,7 @@ fn without_nulls(value: &mut serde_json::Value) {
 #[tokio::test]
 async fn section_reports_preserve_all_supported_chassis() {
     for source in templates() {
-        let template = BattleUnitTemplate::parse(&source).unwrap();
+        let template = BattleUnitTemplate::parse("test", &source).unwrap();
         let sections: Vec<_> = match &template {
             BattleUnitTemplate::Mech(unit) => unit
                 .sections
@@ -144,7 +144,7 @@ async fn section_reports_preserve_all_supported_chassis() {
 async fn critical_report_native_access_and_anatomy() {
     for source in templates() {
         let (_dir, config, mut world, id) =
-            fixture(BattleUnitTemplate::parse(&source).unwrap()).await;
+            fixture(BattleUnitTemplate::parse("test", &source).unwrap()).await;
         let section = if world.btech.vehicles().contains_key(&id) {
             "fs"
         } else {
@@ -191,8 +191,10 @@ async fn critical_report_native_access_and_anatomy() {
         );
         assert_eq!(scripts.world().btech, before);
     }
-    let (_dir, _config, world, id) =
-        fixture(BattleUnitTemplate::parse(include_str!("../game/mechs/GOL-1H")).unwrap()).await;
+    let (_dir, _config, world, id) = fixture(
+        BattleUnitTemplate::parse("GOL-1H", include_str!("../game/mechs/GOL-1H.toml")).unwrap(),
+    )
+    .await;
     let front = battle_critical_report(&world, id, "fll", true).unwrap();
     assert_eq!(front.slots.len(), 6);
     assert_eq!(front.slots[0].equipment, "Hip");
@@ -204,8 +206,10 @@ async fn critical_report_native_access_and_anatomy() {
 /// Slot damage, flood disabling and section loss remain distinct without hiding empty positions.
 #[tokio::test]
 async fn critical_report_material_conditions() {
-    let (_dir, config, mut world, id) =
-        fixture(BattleUnitTemplate::parse(include_str!("../game/mechs/GOL-1H")).unwrap()).await;
+    let (_dir, config, mut world, id) = fixture(
+        BattleUnitTemplate::parse("GOL-1H", include_str!("../game/mechs/GOL-1H.toml")).unwrap(),
+    )
+    .await;
     let mount = world.btech.constructed_units()[&id]
         .loadout()
         .unwrap()
@@ -269,8 +273,11 @@ async fn critical_report_material_conditions() {
     )));
     world.validate(&config).unwrap();
 
-    let (_dir, _config, mut world, id) =
-        fixture(BattleUnitTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap()).await;
+    let (_dir, _config, mut world, id) = fixture(
+        BattleUnitTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+            .unwrap(),
+    )
+    .await;
     let bin = world.btech.vehicles()[&id].loadout().unwrap().ammunition[0].clone();
     let text = battle_critical_status(&world, id, bin.location.section.name(), true).unwrap();
     assert!(text.contains("[005/005]"));
@@ -291,7 +298,8 @@ async fn critical_report_material_conditions() {
 /// Live one-shot state, bin capacities, Artemis links and construction names survive formatting.
 #[tokio::test]
 async fn critical_equipment_labels_and_brand_configuration() {
-    let mut template = BattleTemplate::parse(include_str!("../game/mechs/JR7-D")).unwrap();
+    let mut template =
+        BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap();
     template
         .attributes
         .insert("specials".into(), "SMCPIT".into());
@@ -382,8 +390,10 @@ async fn critical_equipment_labels_and_brand_configuration() {
     assert!(text.contains("ArtemisIV (Destroyed)"));
     assert!(!text.contains("Controls Slot"));
 
-    let (_dir, _config, world, id) =
-        fixture(BattleUnitTemplate::parse(include_str!("../game/mechs/Daishi-H")).unwrap()).await;
+    let (_dir, _config, world, id) = fixture(
+        BattleUnitTemplate::parse("Daishi-H", include_str!("../game/mechs/Daishi-H.toml")).unwrap(),
+    )
+    .await;
     assert!(
         battle_critical_status(&world, id, "ll", true)
             .unwrap()

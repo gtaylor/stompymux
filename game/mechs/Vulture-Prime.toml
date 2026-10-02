@@ -1,0 +1,63 @@
+name = "Vulture"
+class = "mech"
+movement = "biped"
+tons = 60
+walk_mp = 8
+heat_sinks = 24
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 16
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "CL.LargePulseLaser" },
+    { at = 6, item = "CL.MediumPulseLaser" },
+    { at = 7, item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 16
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "CL.LargePulseLaser" },
+    { at = 6, item = "CL.MediumPulseLaser" },
+    { at = 7, item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 16
+rear = 7
+slots = [
+    { at = "3-6", item = "CL.LRM-20" },
+    { at = 7, item = "Ammo_CL.LRM-20", rounds = 6 },
+    { at = "8-9", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 16
+rear = 7
+slots = [
+    { at = 3, item = "Ammo_CL.LRM-20", rounds = 6 },
+    { at = "4-7", item = "CL.LRM-20" },
+    { at = "8-9", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 23
+rear = 7
+
+[sections.left_leg]
+armor = 23
+
+[sections.right_leg]
+armor = 23
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

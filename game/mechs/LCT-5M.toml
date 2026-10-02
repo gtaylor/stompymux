@@ -1,0 +1,66 @@
+name = "Locust"
+class = "mech"
+movement = "biped"
+tons = 20
+walk_mp = 18
+heat_sinks = 10
+computer = 4
+radio = 4
+
+[construction]
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 6
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.ERSmallLaser" },
+    { at = "5-7", item = "FerroFibrous" },
+    { at = "8-9", item = "EndoSteel" },
+]
+
+[sections.right_arm]
+armor = 6
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.ERSmallLaser" },
+    { at = "5-7", item = "FerroFibrous" },
+    { at = "8-9", item = "EndoSteel" },
+]
+
+[sections.left_torso]
+armor = 8
+rear = 2
+slots = [
+    { at = "4-7", item = "FerroFibrous" },
+    { at = "8-12", item = "EndoSteel" },
+]
+
+[sections.right_torso]
+armor = 8
+rear = 2
+slots = [
+    { at = "4-7", item = "FerroFibrous" },
+    { at = "8-12", item = "EndoSteel" },
+]
+
+[sections.center_torso]
+armor = 9
+rear = 3
+slots = [
+    { at = 11, item = "IS.ERMediumLaser" },
+]
+
+[sections.left_leg]
+armor = 8
+
+[sections.right_leg]
+armor = 8
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "HeatSink" },
+]

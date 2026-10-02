@@ -1,0 +1,73 @@
+name = "Highlander"
+class = "mech"
+movement = "biped"
+tons = 90
+walk_mp = 5
+jump_mp = 3
+heat_sinks = 28
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+
+[construction]
+engine = "light"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 30
+slots = [
+    { at = "5-10", item = "HeatSink", brand = 3 },
+    { at = "11-12", item = "IS.ERMediumLaser", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 30
+explicit = true
+slots = [
+    { at = 1, item = "ShoulderOrHip", brand = 3 },
+    { at = "2-12", item = "IS.LB20-XAC", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 28
+rear = 10
+slots = [
+    { at = "3-6", item = "IS.StreakSRM-6", brand = 3 },
+    { at = 7, item = "Ammo_IS.StreakSRM-6", rounds = 15 },
+    { at = 8, item = "Ammo_IS.LB20-XAC", rounds = 5 },
+    { at = "9-10", item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
+    { at = 11, item = "Case", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 28
+rear = 10
+slots = [
+    { at = "3-8", item = "HeatSink", brand = 3 },
+    { at = "11-12", item = "IS.ERLargeLaser", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 42
+rear = 16
+slots = [
+    { at = 11, item = "JumpJet", brand = 3 },
+    { at = 12, item = "IS.MediumPulseLaser", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 38
+slots = [
+    { at = 5, item = "JumpJet", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 38
+slots = [
+    { at = 5, item = "JumpJet", brand = 3 },
+]
+
+[sections.head]
+armor = 9

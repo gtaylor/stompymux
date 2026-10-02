@@ -1,0 +1,80 @@
+name = "Uller"
+class = "mech"
+movement = "biped"
+tons = 30
+walk_mp = 9
+heat_sinks = 20
+specials = ["SearchLight"]
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 7
+slots = [
+    { at = 5, item = "CL.MediumPulseLaser" },
+    { at = 6, item = "CL.StreakSRM-4" },
+    { at = 7, item = "Ammo_CL.StreakSRM-4", rounds = 25 },
+    { at = 8, item = "EndoSteel" },
+    { at = 9, item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 7
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "CL.LargePulseLaser" },
+    { at = 5, item = "CL.SmallPulseLaser" },
+    { at = 6, item = "EndoSteel" },
+    { at = 7, item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 8
+rear = 4
+slots = [
+    { at = "3-6", item = "HeatSink" },
+    { at = 7, item = "JumpJet" },
+    { at = 8, item = "CL.MachineGun" },
+    { at = "9-10", item = "EndoSteel" },
+    { at = "11-12", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 8
+rear = 4
+slots = [
+    { at = 3, item = "JumpJet" },
+    { at = 4, item = "CL.MachineGun" },
+    { at = 5, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = "6-8", item = "EndoSteel" },
+    { at = "9-10", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 9
+rear = 5
+slots = [
+    { at = "11-12", item = "HeatSink" },
+]
+
+[sections.left_leg]
+armor = 8
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 8
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

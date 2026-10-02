@@ -1,0 +1,31 @@
+name = "Marksman"
+class = "vehicle"
+movement = "track"
+tons = 65
+walk_mp = 6
+computer = 3
+
+[construction]
+armor = "ferro_fibrous"
+
+[sections.left_side]
+armor = 20
+
+[sections.right_side]
+armor = 20
+
+[sections.front_side]
+armor = 54
+slots = [
+    { at = 1, item = "IS.Sniper" },
+    { at = "2-3", item = "Ammo_IS.Sniper", rounds = 10 },
+]
+
+[sections.aft_side]
+armor = 20
+
+[sections.turret]
+armor = 20
+slots = [
+    { at = 1, item = "IS.LargeLaser" },
+]

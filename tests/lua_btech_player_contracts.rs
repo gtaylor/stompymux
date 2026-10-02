@@ -73,7 +73,7 @@ async fn player_configuration_errors_match_the_c_argument_shapes() {
         &directory.path().join("mechs"),
     );
     std::fs::write(
-        directory.path().join("mechs/BROKEN"),
+        directory.path().join("mechs/BROKEN.toml"),
         "not a template at all",
     )
     .unwrap();

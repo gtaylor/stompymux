@@ -1,0 +1,69 @@
+name = "Cougar"
+class = "mech"
+movement = "biped"
+tons = 35
+walk_mp = 8
+heat_sinks = 20
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 11
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "HeatSink" },
+    { at = "6-7", item = "CL.LargePulseLaser" },
+]
+
+[sections.right_arm]
+armor = 11
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "HeatSink" },
+    { at = "6-7", item = "CL.LargePulseLaser" },
+]
+
+[sections.left_torso]
+armor = 12
+rear = 4
+slots = [
+    { at = 3, item = "CL.LRM-10" },
+    { at = 4, item = "Ammo_CL.LRM-10", rounds = 12 },
+    { at = "5-9", item = "EndoSteel" },
+]
+
+[sections.right_torso]
+armor = 12
+rear = 4
+slots = [
+    { at = "3-4", item = "HeatSink" },
+    { at = 5, item = "CL.LRM-10" },
+    { at = 6, item = "Ammo_CL.LRM-10", rounds = 12 },
+    { at = "7-9", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 14
+rear = 6
+slots = [
+    { at = "11-12", item = "EndoSteel" },
+]
+
+[sections.left_leg]
+armor = 12
+slots = [
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.right_leg]
+armor = 12
+slots = [
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.head]
+armor = 8

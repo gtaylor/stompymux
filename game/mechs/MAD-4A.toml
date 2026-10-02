@@ -1,0 +1,63 @@
+name = "Marauder II"
+class = "mech"
+movement = "biped"
+tons = 100
+walk_mp = 5
+jump_mp = 3
+heat_sinks = 29
+specials = ["SearchLight"]
+
+[sections.left_arm]
+armor = 34
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-6", item = "IS.PPC", brand = 4 },
+    { at = 7, item = "IS.MediumLaser" },
+]
+
+[sections.right_arm]
+armor = 34
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-6", item = "IS.PPC", brand = 4 },
+    { at = 7, item = "IS.MediumLaser" },
+]
+
+[sections.left_torso]
+armor = 31
+rear = 11
+slots = [
+    { at = "1-8", item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 31
+rear = 11
+slots = [
+    { at = "1-2", item = "IS.LargeLaser" },
+    { at = "3-9", item = "HeatSink" },
+]
+
+[sections.center_torso]
+armor = 45
+rear = 16
+slots = [
+    { at = 11, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 41
+slots = [
+    { at = 5, item = "JumpJet" },
+    { at = 6, item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 41
+slots = [
+    { at = 5, item = "JumpJet" },
+    { at = 6, item = "HeatSink" },
+]
+
+[sections.head]
+armor = 9

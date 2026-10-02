@@ -1,0 +1,72 @@
+name = "Axeman"
+class = "mech"
+movement = "biped"
+tons = 65
+walk_mp = 6
+jump_mp = 4
+heat_sinks = 20
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+
+[construction]
+armor = "ferro_fibrous"
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 17
+slots = [
+    { at = "5-6", item = "IS.LargePulseLaser" },
+    { at = "7-12", item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 17
+slots = [
+    { at = "5-7", item = "IS.MediumLaser" },
+    { at = "8-11", item = "Axe" },
+    { at = 12, item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 21
+rear = 6
+explicit = true
+slots = [
+    { at = "1-4", item = "Engine" },
+    { at = "5-6", item = "Ammo_IS.AC/20", rounds = 5 },
+    { at = 7, item = "Case" },
+    { at = "8-12", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 21
+rear = 6
+explicit = true
+slots = [
+    { at = "1-2", item = "Engine" },
+    { at = "3-12", item = "IS.AC/20" },
+]
+
+[sections.center_torso]
+armor = 28
+rear = 6
+slots = [
+    { at = "11-12", item = "FerroFibrous" },
+]
+
+[sections.left_leg]
+armor = 24
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 24
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9

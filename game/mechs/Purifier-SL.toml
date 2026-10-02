@@ -1,0 +1,45 @@
+name = "Purifier"
+class = "battlesuit"
+movement = "biped"
+tons = 1
+walk_mp = 3
+jump_mp = 3
+heat_sinks = 12
+radio = 4
+cargo_space = 0
+max_suits = 4
+infantry_specials = ["Swarm_Attack_Tech", "Mount_Friends_Tech", "AntiLeg_Attack_Tech", "CS_Purifier_Stealth_Tech"]
+
+[sections.suit_1]
+armor = 6
+internals = 1
+slots = [
+    { at = 1, item = "IS.ERSmallLaser", brand = 3 },
+    { at = 2, item = "PurifierArmor" },
+]
+
+[sections.suit_2]
+armor = 6
+internals = 1
+slots = [
+    { at = 1, item = "IS.ERSmallLaser", brand = 3 },
+    { at = 2, item = "PurifierArmor" },
+]
+
+[sections.suit_3]
+armor = 6
+internals = 1
+rear = 6
+slots = [
+    { at = 1, item = "IS.ERSmallLaser", brand = 3 },
+    { at = 2, item = "PurifierArmor" },
+]
+
+[sections.suit_4]
+armor = 6
+internals = 1
+rear = 6
+slots = [
+    { at = 1, item = "IS.ERSmallLaser", brand = 3 },
+    { at = 2, item = "PurifierArmor" },
+]

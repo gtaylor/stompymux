@@ -1,0 +1,52 @@
+name = "Orion"
+class = "mech"
+movement = "biped"
+tons = 75
+walk_mp = 6
+specials = ["AntiAircraft"]
+
+[sections.left_arm]
+armor = 19
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.MediumLaser" },
+    { at = 5, item = "IS.SRM-4" },
+]
+
+[sections.right_arm]
+armor = 19
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.MediumLaser" },
+    { at = 5, item = "IS.SRM-4" },
+]
+
+[sections.left_torso]
+armor = 20
+rear = 8
+slots = [
+    { at = "1-3", item = "IS.LRM-15", brand = 2 },
+    { at = "4-5", item = "Ammo_IS.LRM-15", rounds = 8 },
+    { at = "6-7", item = "Ammo_IS.SRM-4", rounds = 25 },
+]
+
+[sections.right_torso]
+armor = 20
+rear = 8
+slots = [
+    { at = "1-7", item = "IS.AC/10", brand = 1 },
+    { at = "8-9", item = "Ammo_IS.AC/10", rounds = 10 },
+]
+
+[sections.center_torso]
+armor = 32
+rear = 9
+
+[sections.left_leg]
+armor = 20
+
+[sections.right_leg]
+armor = 20
+
+[sections.head]
+armor = 9

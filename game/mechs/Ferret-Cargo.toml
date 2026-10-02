@@ -1,0 +1,27 @@
+name = "Ferret"
+class = "vtol"
+movement = "vtol"
+tons = 5
+walk_mp = 23
+cargo_space = 200
+max_suits = 0
+max_ton = 1
+specials = ["CargoTech"]
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 0
+
+[sections.right_side]
+armor = 0
+
+[sections.front_side]
+armor = 0
+
+[sections.aft_side]
+armor = 0
+
+[sections.rotor]
+armor = 0

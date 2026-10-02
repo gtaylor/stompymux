@@ -1,0 +1,49 @@
+name = "Centurion"
+class = "mech"
+movement = "biped"
+tons = 50
+walk_mp = 6
+
+[sections.left_arm]
+armor = 16
+
+[sections.right_arm]
+armor = 16
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-12", item = "IS.AC/20", brand = 2 },
+]
+
+[sections.left_torso]
+armor = 13
+rear = 6
+slots = [
+    { at = "1-2", item = "IS.LRM-10", brand = 4 },
+    { at = "3-4", item = "Ammo_IS.LRM-10", rounds = 12 },
+]
+
+[sections.right_torso]
+armor = 13
+rear = 6
+slots = [
+    { at = "1-2", item = "Ammo_IS.AC/20", rounds = 5 },
+]
+
+[sections.center_torso]
+armor = 18
+rear = 7
+
+[sections.left_leg]
+armor = 16
+slots = [
+    { at = 5, item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 16
+slots = [
+    { at = 5, item = "HeatSink" },
+]
+
+[sections.head]
+armor = 9

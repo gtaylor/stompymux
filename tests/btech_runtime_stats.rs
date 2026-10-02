@@ -80,7 +80,7 @@ async fn runtime_statistics_match_live_state_native_lua_and_restart() {
 /// A solitary digging vehicle must keep ticking without scanner peers or unrelated timers.
 #[tokio::test]
 async fn digging_alone_keeps_simulation_pending_until_completion() {
-    for movement in ["Track", "Wheel"] {
+    for movement in ["track", "wheel"] {
         let (_dir, config, mut world) = support::isolated_world().await;
         for _ in 0..31 {
             advance_battle_reactor_windows(&mut world);
@@ -94,9 +94,11 @@ async fn digging_alone_keeps_simulation_pending_until_completion() {
         )
         .unwrap();
         let id = world.create(&config, "Digger".into(), Kind::Thing);
-        let source = include_str!("../game/mechs/Demolisher")
-            .replace("{ Track }", &format!("{{ {movement} }}"));
-        BattleUnitTemplate::parse(&source)
+        let source = include_str!("../game/mechs/Demolisher.toml").replace(
+            "movement = \"track\"",
+            &format!("movement = \"{movement}\""),
+        );
+        BattleUnitTemplate::parse("test", &source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();

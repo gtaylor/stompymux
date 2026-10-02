@@ -1,0 +1,67 @@
+name = "Huron Warrior"
+class = "mech"
+movement = "biped"
+tons = 50
+walk_mp = 8
+heat_sinks = 11
+computer = 4
+radio = 4
+
+[construction]
+engine = "xl"
+structure = "endo_steel"
+brand = 3
+
+[sections.left_arm]
+armor = 16
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "IS.ERLargeLaser", brand = 3 },
+    { at = 6, item = "EndoSteel", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 16
+slots = [
+    { at = "5-11", item = "IS.GaussRifle", brand = 3 },
+    { at = 12, item = "EndoSteel", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 17
+rear = 7
+slots = [
+    { at = 4, item = "HeatSink", brand = 3 },
+    { at = 5, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = "6-8", item = "EndoSteel", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 17
+rear = 7
+slots = [
+    { at = "4-5", item = "Ammo_IS.GaussRifle", rounds = 8 },
+    { at = "6-8", item = "EndoSteel", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 22
+rear = 9
+slots = [
+    { at = "11-12", item = "EndoSteel", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 20
+slots = [
+    { at = "5-6", item = "EndoSteel", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 20
+slots = [
+    { at = "5-6", item = "EndoSteel", brand = 3 },
+]
+
+[sections.head]
+armor = 9

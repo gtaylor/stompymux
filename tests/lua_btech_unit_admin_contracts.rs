@@ -28,8 +28,8 @@ async fn branded_scripts() -> (
     let root = config.path(&config.database.mech_database);
     std::fs::create_dir_all(&root).unwrap();
     std::fs::write(
-        root.join("PARITY"),
-        include_str!("fixtures/btech/mechs/PARITY"),
+        root.join("PARITY.toml"),
+        include_str!("fixtures/btech/mechs/PARITY.toml"),
     )
     .unwrap();
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
@@ -580,8 +580,11 @@ fn deferred_unit(s: &Scripts) -> stompymux_rs::ObjectId {
 #[tokio::test(flavor = "current_thread")]
 async fn c_schema_unit_configuration_normalizes_empty_invalid_and_stale_rows() {
     let (_d, config, s) = isolated_scripts().await;
-    let template =
-        stompymux_rs::BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+    let template = stompymux_rs::BattleTemplate::parse(
+        "JR7-D",
+        include_str!("fixtures/btech/mechs/JR7-D.toml"),
+    )
+    .unwrap();
     stompymux_rs::create_battle_unit(&mut s.world_mut(), stompymux_rs::ObjectId(14), template)
         .unwrap();
     stompymux_rs::btech::set_administrative_scalar(

@@ -1,0 +1,74 @@
+name = "Guillotine"
+class = "mech"
+movement = "biped"
+tons = 70
+walk_mp = 6
+jump_mp = 4
+heat_sinks = 32
+computer = 4
+radio = 4
+specials = ["SearchLight"]
+
+[construction]
+tech_base = "clan"
+structure = "endo_steel"
+
+[sections.left_arm]
+armor = 20
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "CL.ERPPC" },
+    { at = "5-7", item = "EndoSteel" },
+]
+
+[sections.right_arm]
+armor = 20
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-7", item = "CL.LargePulseLaser" },
+    { at = "8-10", item = "EndoSteel" },
+]
+
+[sections.left_torso]
+armor = 22
+rear = 8
+slots = [
+    { at = "1-6", item = "HeatSink" },
+    { at = 7, item = "JumpJet" },
+    { at = 8, item = "CL.ERMediumLaser" },
+]
+
+[sections.right_torso]
+armor = 22
+rear = 8
+slots = [
+    { at = "1-4", item = "HeatSink" },
+    { at = 5, item = "JumpJet" },
+    { at = 6, item = "CL.ERMediumLaser" },
+]
+
+[sections.center_torso]
+armor = 27
+rear = 12
+slots = [
+    { at = 11, item = "CL.SRM-6" },
+    { at = 12, item = "Ammo_CL.SRM-6", rounds = 15 },
+]
+
+[sections.left_leg]
+armor = 22
+slots = [
+    { at = 5, item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 22
+slots = [
+    { at = 5, item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "EndoSteel" },
+]

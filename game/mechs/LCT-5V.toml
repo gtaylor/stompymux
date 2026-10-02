@@ -1,0 +1,66 @@
+name = "Locust"
+class = "mech"
+movement = "biped"
+tons = 20
+walk_mp = 12
+heat_sinks = 20
+computer = 4
+radio = 4
+
+[construction]
+armor = "ferro_fibrous"
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 6
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = 3, item = "IS.RL-10", modes = ["OneShot"] },
+    { at = "4-6", item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 6
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = 3, item = "IS.RL-10", modes = ["OneShot"] },
+    { at = "4-6", item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 8
+rear = 2
+slots = [
+    { at = "1-6", item = "HeatSink" },
+    { at = "7-8", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 8
+rear = 2
+slots = [
+    { at = "1-6", item = "HeatSink" },
+    { at = "7-8", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 9
+rear = 3
+slots = [
+    { at = "11-12", item = "IS.ERMediumLaser" },
+]
+
+[sections.left_leg]
+armor = 8
+slots = [
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.right_leg]
+armor = 8
+slots = [
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.head]
+armor = 9

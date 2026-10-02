@@ -1,0 +1,84 @@
+name = "Koshi"
+class = "mech"
+movement = "biped"
+tons = 25
+walk_mp = 11
+jump_mp = 6
+heat_sinks = 20
+computer = 4
+specials = ["CL_AMS", "BeagleProbe"]
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 4
+slots = [
+    { at = "5-6", item = "CL.Anti-MissileSystem" },
+    { at = "8-10", item = "Ammo_CL.Anti-MissileSystem", rounds = 24 },
+    { at = 11, item = "EndoSteel" },
+    { at = 12, item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 4
+slots = [
+    { at = 5, item = "Ammo_CL.MachineGun", rounds = 200 },
+    { at = 6, item = "CL.MachineGun" },
+    { at = 7, item = "CL.Flamer" },
+    { at = 8, item = "EndoSteel" },
+    { at = 9, item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 7
+rear = 5
+engine_at = 4
+slots = [
+    { at = "1-3", item = "JumpJet" },
+    { at = 6, item = "EndoSteel" },
+    { at = "7-10", item = "HeatSink" },
+    { at = "11-12", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 7
+rear = 5
+engine_at = 4
+slots = [
+    { at = "1-3", item = "JumpJet" },
+    { at = 6, item = "EndoSteel" },
+    { at = "7-8", item = "HeatSink" },
+    { at = "9-10", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 10
+rear = 6
+slots = [
+    { at = 11, item = "EndoSteel" },
+    { at = 12, item = "FerroFibrous" },
+]
+
+[sections.left_leg]
+armor = 5
+slots = [
+    { at = 5, item = "CL.A-Pod" },
+    { at = 6, item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 5
+slots = [
+    { at = 5, item = "CL.A-Pod" },
+    { at = 6, item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "BeagleProbe" },
+]

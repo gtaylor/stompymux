@@ -22,14 +22,14 @@ async fn fixture(
     for id in [shooter, target] {
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     }
-    BattleUnitTemplate::parse(source)
+    BattleUnitTemplate::parse("test", source)
         .unwrap()
         .create(&mut world, shooter)
         .unwrap();
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse(include_str!("../game/mechs/AS7-D")).unwrap(),
+        BattleTemplate::parse("AS7-D", include_str!("../game/mechs/AS7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, shooter, map, 1, 4).unwrap();
@@ -80,20 +80,20 @@ fn scripts(config: &Config, world: &World) -> Scripts {
 /// Occupants take unit damage even with a terrain lock; empty hexes keep the saved mode's bonus.
 #[tokio::test]
 async fn coordinates_share_all_chassis_single_tic_and_restart() {
-    let tracked = include_str!("../game/mechs/Demolisher");
-    let wheeled = tracked.replace("{ Track }", "{ Wheel }");
-    let hover = tracked.replace("{ Track }", "{ Hover }");
+    let tracked = include_str!("../game/mechs/Demolisher.toml");
+    let wheeled = tracked.replace("movement = \"track\"", "movement = \"wheel\"");
+    let hover = tracked.replace("movement = \"track\"", "movement = \"hover\"");
     let stationary = tracked
-        .replace("{ Track }", "{ None }")
-        .replace("{ 53.75 }", "{ 0 }");
+        .replace("movement = \"track\"", "movement = \"none\"")
+        .replace("walk_mp = 5", "walk_mp = 0");
     for source in [
-        include_str!("../game/mechs/JR7-D"),
-        include_str!("../game/mechs/GOL-1H"),
+        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/GOL-1H.toml"),
         tracked,
         wheeled.as_str(),
         hover.as_str(),
         stationary.as_str(),
-        include_str!("../game/mechs/Kestrel"),
+        include_str!("../game/mechs/Kestrel.toml"),
     ] {
         for mode in [BattleHexTargetMode::UnitAtHex, BattleHexTargetMode::Hex] {
             let (_dir, config, world, shooter, target) = fixture(source, mode).await;
@@ -174,8 +174,8 @@ async fn coordinates_share_all_chassis_single_tic_and_restart() {
 #[tokio::test]
 async fn coordinate_rejections_and_cockpit_admission_preserve_state() {
     for source in [
-        include_str!("../game/mechs/JR7-D"),
-        include_str!("../game/mechs/Demolisher"),
+        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/Demolisher.toml"),
     ] {
         let (_dir, config, world, shooter, _) = fixture(source, BattleHexTargetMode::Hex).await;
         for arguments in ["nope 1", "2147483648 0", "-1 0", "1 999", "1 0 extra"] {
@@ -213,8 +213,8 @@ async fn coordinate_rejections_and_cockpit_admission_preserve_state() {
 #[tokio::test]
 async fn artillery_coordinates_preserve_locks_and_queue_once() {
     for source in [
-        include_str!("../game/mechs/Naga-Prime"),
-        include_str!("../game/mechs/Marksman"),
+        include_str!("../game/mechs/Naga-Prime.toml"),
+        include_str!("../game/mechs/Marksman.toml"),
     ] {
         let (_dir, config, base, shooter, target) = fixture(source, BattleHexTargetMode::Hex).await;
         for selection in 0..3 {
@@ -340,22 +340,22 @@ fn assert_mechanical_rejection(config: &Config, world: &World, shooter: ObjectId
 /// Mechanical admission precedes bad targets for direct, terrain, artillery and TIC firing.
 #[tokio::test]
 async fn weapon_mechanics_precede_targets_across_chassis_and_restart() {
-    let tracked = include_str!("../game/mechs/Demolisher");
-    let wheeled = tracked.replace("{ Track }", "{ Wheel }");
-    let hover = tracked.replace("{ Track }", "{ Hover }");
+    let tracked = include_str!("../game/mechs/Demolisher.toml");
+    let wheeled = tracked.replace("movement = \"track\"", "movement = \"wheel\"");
+    let hover = tracked.replace("movement = \"track\"", "movement = \"hover\"");
     let stationary = tracked
-        .replace("{ Track }", "{ None }")
-        .replace("{ 53.75 }", "{ 0 }");
+        .replace("movement = \"track\"", "movement = \"none\"")
+        .replace("walk_mp = 5", "walk_mp = 0");
     for source in [
-        include_str!("../game/mechs/JR7-D"),
-        include_str!("../game/mechs/GOL-1H"),
+        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/GOL-1H.toml"),
         tracked,
         wheeled.as_str(),
         hover.as_str(),
         stationary.as_str(),
-        include_str!("../game/mechs/Kestrel"),
-        include_str!("../game/mechs/Naga-Prime"),
-        include_str!("../game/mechs/Marksman"),
+        include_str!("../game/mechs/Kestrel.toml"),
+        include_str!("../game/mechs/Naga-Prime.toml"),
+        include_str!("../game/mechs/Marksman.toml"),
     ] {
         let (_dir, config, world, shooter, _) =
             fixture(source, BattleHexTargetMode::UnitAtHex).await;
@@ -457,10 +457,10 @@ async fn weapon_mechanics_precede_targets_across_chassis_and_restart() {
 #[tokio::test]
 async fn empty_ammunition_does_not_hide_native_target_errors() {
     for source in [
-        include_str!("../game/mechs/CPLT-C1"),
-        include_str!("../game/mechs/Demolisher"),
-        include_str!("../game/mechs/Naga-Prime"),
-        include_str!("../game/mechs/Marksman"),
+        include_str!("../game/mechs/CPLT-C1.toml"),
+        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/mechs/Naga-Prime.toml"),
+        include_str!("../game/mechs/Marksman.toml"),
     ] {
         let (_dir, config, mut world, shooter, _) =
             fixture(source, BattleHexTargetMode::UnitAtHex).await;
@@ -504,7 +504,7 @@ async fn empty_ammunition_does_not_hide_native_target_errors() {
 #[tokio::test]
 async fn anatomical_weapon_admission_shares_readiness_and_target_precedence() {
     let (_dir, config, world, shooter, _) = fixture(
-        include_str!("../game/mechs/AS7-D"),
+        include_str!("../game/mechs/AS7-D.toml"),
         BattleHexTargetMode::UnitAtHex,
     )
     .await;
@@ -546,7 +546,7 @@ async fn anatomical_weapon_admission_shares_readiness_and_target_precedence() {
     );
 
     let (_dir, config, mut quad, shooter, _) = fixture(
-        include_str!("../game/mechs/GOL-1H"),
+        include_str!("../game/mechs/GOL-1H.toml"),
         BattleHexTargetMode::UnitAtHex,
     )
     .await;
@@ -562,7 +562,7 @@ async fn anatomical_weapon_admission_shares_readiness_and_target_precedence() {
     assert_mechanical_rejection(&config, &quad, shooter, "Quads need at least 3 legs");
 
     let (_dir, config, mut covered, shooter, _) = fixture(
-        include_str!("../game/mechs/Hunter"),
+        include_str!("../game/mechs/Hunter.toml"),
         BattleHexTargetMode::UnitAtHex,
     )
     .await;
@@ -581,10 +581,13 @@ async fn anatomical_weapon_admission_shares_readiness_and_target_precedence() {
 #[tokio::test]
 async fn defensive_weapon_admission_precedes_targets_without_disabling_ams() {
     for source in [
-        include_str!("../game/mechs/JR7-D")
+        include_str!("../game/mechs/JR7-D.toml")
             .replace("IS.MediumLaser", "IS.LaserAMS")
-            .replace("Ammo_IS.SRM-4 25", "Ammo_IS.LaserAMS 24"),
-        include_str!("../game/mechs/Demolisher").replace("IS.AC/20", "IS.Anti-MissileSystem"),
+            .replace(
+                "item = \"Ammo_IS.SRM-4\", rounds = 25",
+                "item = \"Ammo_IS.LaserAMS\", rounds = 24",
+            ),
+        include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", "IS.Anti-MissileSystem"),
     ] {
         let (_dir, config, world, shooter, _) =
             fixture(&source, BattleHexTargetMode::UnitAtHex).await;

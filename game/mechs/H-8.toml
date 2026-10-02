@@ -1,0 +1,27 @@
+name = "Warrior"
+class = "vtol"
+movement = "vtol"
+tons = 20
+walk_mp = 15
+specials = ["SearchLight"]
+
+[sections.left_side]
+armor = 10
+
+[sections.right_side]
+armor = 10
+
+[sections.front_side]
+armor = 15
+slots = [
+    { at = 1, item = "IS.LRM-5" },
+    { at = "2-3", item = "IS.StreakSRM-2" },
+    { at = 4, item = "Ammo_IS.LRM-5", rounds = 24 },
+    { at = 5, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+]
+
+[sections.aft_side]
+armor = 8
+
+[sections.rotor]
+armor = 2

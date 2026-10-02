@@ -1,0 +1,57 @@
+name = "Thunder"
+class = "mech"
+movement = "biped"
+tons = 70
+walk_mp = 8
+heat_sinks = 22
+computer = 4
+radio = 4
+
+[construction]
+engine = "xl"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 22
+
+[sections.right_arm]
+armor = 22
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-12", item = "IS.AC/20", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 23
+rear = 7
+slots = [
+    { at = 4, item = "IS.LRM-5", brand = 3 },
+    { at = 5, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = "6-8", item = "Ammo_IS.AC/20", rounds = 5 },
+    { at = 9, item = "Ammo_IS.LRM-5", rounds = 24 },
+    { at = 10, item = "Case", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 23
+rear = 7
+slots = [
+    { at = 4, item = "IS.MediumPulseLaser", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 34
+rear = 9
+slots = [
+    { at = 11, item = "IS.MediumPulseLaser", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 30
+
+[sections.right_leg]
+armor = 30
+
+[sections.head]
+armor = 9

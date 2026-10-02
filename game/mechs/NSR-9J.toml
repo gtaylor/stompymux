@@ -1,0 +1,63 @@
+name = "Nightstar"
+class = "mech"
+movement = "biped"
+tons = 95
+walk_mp = 5
+heat_sinks = 28
+computer = 4
+radio = 4
+
+[construction]
+engine = "xl"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 32
+slots = [
+    { at = "5-11", item = "IS.GaussRifle", brand = 3 },
+    { at = 12, item = "IS.MediumPulseLaser", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 32
+slots = [
+    { at = "5-11", item = "IS.GaussRifle", brand = 3 },
+    { at = 12, item = "IS.MediumPulseLaser", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 32
+rear = 8
+slots = [
+    { at = "4-9", item = "HeatSink", brand = 3 },
+    { at = "10-12", item = "Ammo_IS.GaussRifle", rounds = 8 },
+]
+
+[sections.right_torso]
+armor = 32
+rear = 8
+slots = [
+    { at = "4-6", item = "HeatSink", brand = 3 },
+    { at = "7-9", item = "IS.ERPPC", brand = 3 },
+    { at = "10-12", item = "Ammo_IS.GaussRifle", rounds = 8 },
+]
+
+[sections.center_torso]
+armor = 50
+rear = 10
+slots = [
+    { at = 11, item = "Ammo_IS.GaussRifle", rounds = 8 },
+]
+
+[sections.left_leg]
+armor = 40
+
+[sections.right_leg]
+armor = 40
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "IS.SmallLaser", brand = 3 },
+]

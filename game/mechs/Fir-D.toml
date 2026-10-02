@@ -1,0 +1,67 @@
+name = "Fire Falcon"
+class = "mech"
+movement = "biped"
+tons = 25
+walk_mp = 12
+heat_sinks = 20
+computer = 4
+radio = 5
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+brand = 5
+
+[sections.left_arm]
+armor = 6
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = 3, item = "CL.ERMediumLaser", brand = 5 },
+    { at = "9-12", item = "FerroFibrous", brand = 5 },
+]
+
+[sections.right_arm]
+armor = 6
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = 3, item = "CL.NarcBeacon", brand = 5 },
+    { at = 4, item = "Ammo_CL.NarcBeacon", rounds = 6 },
+    { at = "9-12", item = "EndoSteel", brand = 5 },
+]
+
+[sections.left_torso]
+armor = 9
+rear = 2
+slots = [
+    { at = "3-4", item = "CL.SRM-4", brand = 5 },
+    { at = "5-6", item = "Ammo_CL.SRM-4", rounds = 25, modes = ["Narc/Smoke"] },
+    { at = "10-12", item = "FerroFibrous", brand = 5 },
+]
+
+[sections.right_torso]
+armor = 9
+rear = 2
+slots = [
+    { at = "10-12", item = "EndoSteel", brand = 5 },
+]
+
+[sections.center_torso]
+armor = 11
+rear = 3
+
+[sections.left_leg]
+armor = 10
+slots = [
+    { at = "5-6", item = "HeatSink", brand = 5 },
+]
+
+[sections.right_leg]
+armor = 10
+slots = [
+    { at = "5-6", item = "HeatSink", brand = 5 },
+]
+
+[sections.head]
+armor = 9

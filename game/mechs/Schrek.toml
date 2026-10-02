@@ -1,0 +1,24 @@
+name = "Schrek"
+class = "vehicle"
+movement = "track"
+tons = 80
+walk_mp = 5
+heat_sinks = 30
+
+[sections.left_side]
+armor = 22
+
+[sections.right_side]
+armor = 22
+
+[sections.front_side]
+armor = 25
+
+[sections.aft_side]
+armor = 21
+
+[sections.turret]
+armor = 30
+slots = [
+    { at = "1-3", item = "IS.PPC", brand = 3 },
+]

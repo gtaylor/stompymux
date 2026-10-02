@@ -1,0 +1,31 @@
+name = "Hover APC"
+class = "vehicle"
+movement = "hover"
+tons = 10
+walk_mp = 15
+computer = 3
+cargo_space = 500
+max_suits = 0
+max_ton = 4
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 5
+
+[sections.right_side]
+armor = 5
+
+[sections.front_side]
+armor = 5
+
+[sections.aft_side]
+armor = 4
+
+[sections.turret]
+armor = 5
+slots = [
+    { at = "1-2", item = "IS.MachineGun" },
+    { at = 3, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload", "Halfton"] },
+]

@@ -1,0 +1,27 @@
+name = "Gabriel"
+class = "vehicle"
+movement = "hover"
+tons = 5
+walk_mp = 23
+computer = 3
+
+[construction]
+armor = "ferro_fibrous"
+
+[sections.left_side]
+armor = 3
+
+[sections.right_side]
+armor = 3
+
+[sections.front_side]
+armor = 5
+
+[sections.aft_side]
+armor = 3
+
+[sections.turret]
+armor = 4
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]

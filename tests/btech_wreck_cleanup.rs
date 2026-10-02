@@ -16,25 +16,35 @@ fn unit(world: &mut World, config: &Config, map: ObjectId, chassis: &str) -> Obj
         create_battle_unit(
             world,
             id,
-            BattleTemplate::parse(if chassis == "quad" {
-                include_str!("../game/mechs/GOL-1H")
-            } else {
-                include_str!("../game/mechs/Daishi-H")
-            })
+            BattleTemplate::parse(
+                "test",
+                if chassis == "quad" {
+                    include_str!("../game/mechs/GOL-1H.toml")
+                } else {
+                    include_str!("../game/mechs/Daishi-H.toml")
+                },
+            )
             .unwrap(),
         )
         .unwrap();
     } else {
         let source = match chassis {
-            "vtol" => include_str!("../game/mechs/Kestrel").to_owned(),
-            "wheeled" => include_str!("../game/mechs/Demolisher").replace("{ Track }", "{ Wheel }"),
-            "hover" => include_str!("../game/mechs/Demolisher").replace("{ Track }", "{ Hover }"),
-            "stationary" => include_str!("../game/mechs/Demolisher")
-                .replace("{ Track }", "{ None }")
-                .replace("{ 53.75 }", "{ 0 }"),
-            _ => include_str!("../game/mechs/Demolisher").to_owned(),
+            "vtol" => include_str!("../game/mechs/Kestrel.toml").to_owned(),
+            "wheeled" => include_str!("../game/mechs/Demolisher.toml")
+                .replace("movement = \"track\"", "movement = \"wheel\""),
+            "hover" => include_str!("../game/mechs/Demolisher.toml")
+                .replace("movement = \"track\"", "movement = \"hover\""),
+            "stationary" => include_str!("../game/mechs/Demolisher.toml")
+                .replace("movement = \"track\"", "movement = \"none\"")
+                .replace("walk_mp = 5", "walk_mp = 0"),
+            _ => include_str!("../game/mechs/Demolisher.toml").to_owned(),
         };
-        create_battle_vehicle(world, id, BattleVehicleTemplate::parse(&source).unwrap()).unwrap();
+        create_battle_vehicle(
+            world,
+            id,
+            BattleVehicleTemplate::parse("test", &source).unwrap(),
+        )
+        .unwrap();
     }
     place_battle_unit(world, id, map, 0, 0).unwrap();
     id

@@ -1,0 +1,68 @@
+name = "Thorn"
+class = "mech"
+movement = "biped"
+tons = 20
+walk_mp = 9
+heat_sinks = 20
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+
+[construction]
+engine = "xl"
+structure = "endo_steel"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 6
+slots = [
+    { at = "5-10", item = "HeatSink", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 6
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-5", item = "IS.ERPPC", brand = 3 },
+    { at = "6-11", item = "HeatSink", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 6
+rear = 4
+slots = [
+    { at = "4-6", item = "HeatSink", brand = 3 },
+    { at = "7-12", item = "EndoSteel", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 6
+rear = 4
+slots = [
+    { at = "4-6", item = "HeatSink", brand = 3 },
+    { at = "7-12", item = "EndoSteel", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 8
+rear = 4
+
+[sections.left_leg]
+armor = 8
+slots = [
+    { at = 5, item = "EndoSteel", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 8
+slots = [
+    { at = 5, item = "EndoSteel", brand = 3 },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "IS.SmallLaser", brand = 3 },
+]

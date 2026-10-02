@@ -1,0 +1,33 @@
+name = "Chevalier"
+class = "vehicle"
+movement = "wheel"
+tons = 35
+walk_mp = 9
+heat_sinks = 12
+cargo_space = 0
+max_suits = 0
+
+[sections.left_side]
+armor = 12
+
+[sections.right_side]
+armor = 12
+
+[sections.front_side]
+armor = 16
+slots = [
+    { at = "1-2", item = "IS.StreakSRM-2", brand = 3 },
+    { at = 3, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+    { at = 4, item = "IS.MachineGun", brand = 3 },
+    { at = 5, item = "Ammo_IS.MachineGun", rounds = 100 },
+    { at = 6, item = "BeagleProbe", brand = 0 },
+]
+
+[sections.aft_side]
+armor = 10
+
+[sections.turret]
+armor = 14
+slots = [
+    { at = 1, item = "IS.ERLargeLaser", brand = 3 },
+]

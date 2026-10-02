@@ -1,0 +1,61 @@
+name = "Battlemaster"
+class = "mech"
+movement = "biped"
+tons = 85
+walk_mp = 6
+heat_sinks = 20
+specials = ["SearchLight"]
+
+[sections.left_arm]
+armor = 24
+slots = [
+    { at = 5, item = "IS.SRM-2" },
+]
+
+[sections.right_arm]
+armor = 24
+slots = [
+    { at = "5-7", item = "IS.LRM-15" },
+    { at = 8, item = "IS.LRM-5" },
+]
+
+[sections.left_torso]
+armor = 28
+rear = 8
+slots = [
+    { at = "1-2", item = "IS.MediumLaser" },
+    { at = 3, item = "IS.SRM-2" },
+    { at = 4, item = "Ammo_IS.SRM-2", rounds = 50 },
+    { at = 5, item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 28
+rear = 8
+slots = [
+    { at = "1-2", item = "IS.MediumLaser" },
+    { at = 3, item = "Ammo_IS.LRM-15", rounds = 8 },
+    { at = 4, item = "Ammo_IS.LRM-5", rounds = 24 },
+]
+
+[sections.center_torso]
+armor = 40
+rear = 11
+slots = [
+    { at = "11-12", item = "HeatSink" },
+]
+
+[sections.left_leg]
+armor = 26
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 26
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.head]
+armor = 9

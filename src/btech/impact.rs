@@ -1755,9 +1755,10 @@ mod tests {
 
     /// A Jenner with an extra chassis special, seeded for a deterministic damage stream.
     fn armored_world(special: &str, seed: u8) -> (World, ObjectId) {
-        let mut template = super::super::BattleTemplate::parse(include_str!(
-            "../../tests/fixtures/btech/mechs/JR7-D"
-        ))
+        let mut template = super::super::BattleTemplate::parse(
+            "JR7-D",
+            include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"),
+        )
         .unwrap();
         if !special.is_empty() {
             let specials = template.attributes.entry("specials".into()).or_default();

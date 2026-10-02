@@ -1,0 +1,76 @@
+name = "Marshal"
+class = "mech"
+movement = "biped"
+tons = 55
+walk_mp = 6
+jump_mp = 4
+heat_sinks = 22
+computer = 4
+radio = 4
+cargo_space = 0
+
+[construction]
+armor = "ferro_fibrous"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 18
+slots = [
+    { at = 5, item = "IS.MediumLaser", brand = 3 },
+    { at = "6-9", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 18
+slots = [
+    { at = "5-6", item = "IS.LargeLaser", brand = 3 },
+    { at = "7-10", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 20
+rear = 6
+slots = [
+    { at = "1-6", item = "HeatSink", brand = 3 },
+    { at = "7-8", item = "IS.MachineGun", brand = 3 },
+    { at = 9, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = "10-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 20
+rear = 6
+slots = [
+    { at = "1-3", item = "HeatSink", brand = 3 },
+    { at = 4, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = "5-7", item = "IS.LRM-15", brand = 3 },
+    { at = "8-10", item = "Ammo_IS.LRM-15", rounds = 8 },
+    { at = 12, item = "FerroFibrous", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 26
+rear = 8
+slots = [
+    { at = 11, item = "IS.Flamer", brand = 3 },
+    { at = 12, item = "FerroFibrous", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 24
+slots = [
+    { at = "5-6", item = "JumpJet", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 24
+slots = [
+    { at = "5-6", item = "JumpJet", brand = 3 },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous", brand = 3 },
+]

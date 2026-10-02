@@ -1,0 +1,56 @@
+name = "Hermes"
+class = "mech"
+movement = "biped"
+tons = 40
+walk_mp = 9
+heat_sinks = 20
+computer = 4
+radio = 4
+
+[construction]
+structure = "endo_steel"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 11
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.Flamer", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 11
+slots = [
+    { at = 5, item = "IS.MediumPulseLaser", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 14
+rear = 5
+slots = [
+    { at = "1-3", item = "HeatSink", brand = 3 },
+    { at = 4, item = "Ammo_IS.UltraAC/5", rounds = 20 },
+    { at = "5-11", item = "EndoSteel", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 14
+rear = 5
+slots = [
+    { at = "1-5", item = "IS.UltraAC/5", brand = 3 },
+    { at = "6-12", item = "EndoSteel", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 17
+rear = 6
+
+[sections.left_leg]
+armor = 14
+
+[sections.right_leg]
+armor = 14
+
+[sections.head]
+armor = 9

@@ -1,0 +1,56 @@
+name = "Wasp"
+class = "mech"
+movement = "biped"
+tons = 20
+walk_mp = 9
+jump_mp = 6
+
+[sections.left_arm]
+armor = 4
+
+[sections.right_arm]
+armor = 4
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.MediumLaser" },
+]
+
+[sections.left_torso]
+armor = 6
+rear = 2
+slots = [
+    { at = 1, item = "Ammo_IS.SRM-2", rounds = 50 },
+    { at = "2-4", item = "HeatSink" },
+    { at = 5, item = "JumpJet" },
+]
+
+[sections.right_torso]
+armor = 6
+rear = 2
+slots = [
+    { at = "1-3", item = "HeatSink" },
+    { at = 4, item = "JumpJet" },
+]
+
+[sections.center_torso]
+armor = 6
+rear = 4
+slots = [
+    { at = "11-12", item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 5
+slots = [
+    { at = 5, item = "IS.SRM-2" },
+    { at = 6, item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 5
+slots = [
+    { at = 5, item = "JumpJet" },
+]
+
+[sections.head]
+armor = 4

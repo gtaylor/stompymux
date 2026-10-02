@@ -1,0 +1,74 @@
+name = "Pein-Hammer"
+class = "mech"
+movement = "biped"
+tons = 30
+walk_mp = 8
+heat_sinks = 20
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+
+[construction]
+structure = "endo_steel"
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 10
+slots = [
+    { at = 5, item = "IS.ERMediumLaser" },
+    { at = "6-8", item = "HeatSink" },
+    { at = "9-10", item = "EndoSteel" },
+]
+
+[sections.right_arm]
+armor = 10
+slots = [
+    { at = 5, item = "IS.ERMediumLaser" },
+    { at = "6-8", item = "HeatSink" },
+    { at = "9-10", item = "EndoSteel" },
+]
+
+[sections.left_torso]
+armor = 11
+rear = 3
+slots = [
+    { at = "1-3", item = "HeatSink" },
+    { at = 4, item = "IS.StreakSRM-4" },
+    { at = 5, item = "IS.SmallPulseLaser" },
+    { at = "6-9", item = "EndoSteel" },
+    { at = "10-12", item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 11
+rear = 3
+slots = [
+    { at = "1-3", item = "HeatSink" },
+    { at = 4, item = "IS.StreakSRM-4" },
+    { at = 5, item = "IS.SmallPulseLaser" },
+    { at = 6, item = "Ammo_IS.StreakSRM-4", rounds = 25 },
+    { at = "7-10", item = "EndoSteel" },
+]
+
+[sections.center_torso]
+armor = 14
+rear = 5
+slots = [
+    { at = 11, item = "TAG" },
+]
+
+[sections.left_leg]
+armor = 10
+slots = [
+    { at = 6, item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 10
+slots = [
+    { at = 6, item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 9

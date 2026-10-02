@@ -1,0 +1,53 @@
+name = "Archer"
+class = "mech"
+movement = "biped"
+tons = 70
+walk_mp = 6
+
+[sections.left_arm]
+armor = 22
+slots = [
+    { at = 5, item = "IS.MediumLaser" },
+]
+
+[sections.right_arm]
+armor = 22
+slots = [
+    { at = 5, item = "IS.MediumLaser" },
+]
+
+[sections.left_torso]
+armor = 24
+rear = 6
+slots = [
+    { at = "1-3", item = "IS.LRM-15" },
+    { at = "4-5", item = "Ammo_IS.LRM-15", rounds = 8 },
+    { at = 6, item = "IS.SRM-4" },
+    { at = 7, item = "Ammo_IS.SRM-4", rounds = 25 },
+]
+
+[sections.right_torso]
+armor = 24
+rear = 6
+slots = [
+    { at = "1-3", item = "IS.LRM-15" },
+    { at = "4-5", item = "Ammo_IS.LRM-15", rounds = 8 },
+    { at = 6, item = "IS.SRM-4" },
+    { at = 7, item = "Ammo_IS.SRM-4", rounds = 25 },
+]
+
+[sections.center_torso]
+armor = 31
+rear = 10
+slots = [
+    { at = "11-12", item = "IS.MediumLaser", modes = ["RearMount"] },
+]
+
+[sections.left_leg]
+armor = 26
+
+[sections.right_leg]
+armor = 26
+
+[sections.head]
+armor = 9

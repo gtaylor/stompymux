@@ -1,0 +1,47 @@
+name = "Sentinel"
+class = "mech"
+movement = "biped"
+tons = 40
+walk_mp = 9
+computer = 4
+radio = 4
+
+[sections.left_arm]
+armor = 8
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-7", item = "IS.UltraAC/5" },
+]
+
+[sections.right_arm]
+armor = 8
+
+[sections.left_torso]
+armor = 8
+rear = 5
+slots = [
+    { at = 1, item = "Ammo_IS.UltraAC/5", rounds = 20 },
+    { at = 2, item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 8
+rear = 5
+slots = [
+    { at = 1, item = "IS.StreakSRM-2" },
+    { at = 2, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+    { at = 3, item = "IS.SmallLaser" },
+]
+
+[sections.center_torso]
+armor = 10
+rear = 7
+
+[sections.left_leg]
+armor = 10
+
+[sections.right_leg]
+armor = 10
+
+[sections.head]
+armor = 9

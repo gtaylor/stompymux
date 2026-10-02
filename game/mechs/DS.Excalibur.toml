@@ -1,0 +1,65 @@
+name = "Excalibur"
+class = "spheroid_dropship"
+movement = "fly"
+tons = 16000
+max_speed = 53.0
+heat_sinks = 127
+tac_range = 50
+lrs_range = 100
+scan_range = 50
+
+[sections.front_right_side]
+armor = 120
+internals = 127
+slots = [
+    { at = 1, item = "IS.PPC" },
+    { at = "2-3", item = "IS.LRM-10" },
+    { at = "4-5", item = "Ammo_IS.LRM-10", rounds = 12 },
+    { at = "6-7", item = "IS.MediumLaser" },
+]
+
+[sections.front_left_side]
+armor = 120
+internals = 127
+slots = [
+    { at = 1, item = "IS.PPC" },
+    { at = "2-3", item = "IS.LRM-10" },
+    { at = "4-5", item = "Ammo_IS.LRM-10", rounds = 12 },
+    { at = "6-7", item = "IS.MediumLaser" },
+    { at = 8, item = "DSMechDoor" },
+]
+
+[sections.rear_left_side]
+armor = 120
+internals = 127
+slots = [
+    { at = 1, item = "IS.LargeLaser" },
+    { at = "2-3", item = "IS.MediumLaser" },
+]
+
+[sections.rear_right_side]
+armor = 120
+internals = 127
+slots = [
+    { at = 1, item = "IS.LargeLaser" },
+    { at = "2-3", item = "IS.MediumLaser" },
+]
+
+[sections.aft]
+armor = 90
+internals = 127
+slots = [
+    { at = 1, item = "IS.LargeLaser" },
+    { at = 2, item = "IS.MediumLaser" },
+]
+
+[sections.nose]
+armor = 127
+internals = 127
+slots = [
+    { at = 1, item = "IS.AC/5" },
+    { at = 2, item = "Ammo_IS.AC/5", rounds = 20 },
+    { at = 3, item = "IS.LRM-10" },
+    { at = "4-5", item = "Ammo_IS.LRM-10", rounds = 12 },
+    { at = 6, item = "IS.MediumLaser" },
+]

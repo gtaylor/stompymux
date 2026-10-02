@@ -1,0 +1,59 @@
+name = "Challenger X"
+class = "vehicle"
+movement = "track"
+tons = 90
+walk_mp = 5
+computer = 3
+radio = 5
+radio_type = 126
+radio_range = 210
+tac_range = 46
+lrs_range = 85
+scan_range = 28
+cargo_space = 0
+max_suits = 0
+specials = ["SearchLight"]
+
+[construction]
+engine = "xl"
+
+[sections.left_side]
+armor = 50
+slots = [
+    { at = 1, item = "IS.StreakSRM-2" },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 50
+slots = [
+    { at = 1, item = "IS.StreakSRM-2" },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 57
+slots = [
+    { at = "1-2", item = "IS.MediumPulseLaser" },
+]
+
+[sections.aft_side]
+armor = 37
+slots = [
+    { at = "1-2", item = "Ammo_IS.LB10-XAC", rounds = 10 },
+    { at = "3-4", item = "Ammo_IS.GaussRifle", rounds = 8 },
+    { at = 5, item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
+    { at = 6, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+    { at = 7, item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
+    { at = 8, item = "IS.SmallPulseLaser" },
+]
+
+[sections.turret]
+armor = 57
+slots = [
+    { at = 1, item = "IS.GaussRifle" },
+    { at = 2, item = "IS.LRM-10", modes = ["Artemis/Mine"] },
+    { at = 3, item = "ArtemisIV" },
+    { at = 4, item = "IS.LB10-XAC" },
+    { at = 5, item = "IS.Anti-MissileSystem" },
+]

@@ -3,7 +3,8 @@ use stompymux_rs::*;
 
 /// A one-slot LRM installation fits the Jenner's missile mount without altering structure.
 fn definition(mode: &str) -> BattleTemplate {
-    let mut template = BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+    let mut template =
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let launcher = template
         .sections
         .get_mut(&BattleSection::CenterTorso)

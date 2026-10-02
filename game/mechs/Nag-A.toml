@@ -1,0 +1,67 @@
+name = "Naga"
+class = "mech"
+movement = "biped"
+tons = 80
+walk_mp = 8
+heat_sinks = 24
+computer = 4
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+
+[sections.left_arm]
+armor = 14
+explicit = true
+slots = [
+    { at = "1-12", item = "CL.ArrowIVSystem" },
+]
+
+[sections.right_arm]
+armor = 14
+explicit = true
+slots = [
+    { at = "1-12", item = "CL.ArrowIVSystem" },
+]
+
+[sections.left_torso]
+armor = 15
+rear = 9
+slots = [
+    { at = 3, item = "EndoSteel" },
+    { at = "8-10", item = "Ammo_CL.ArrowIVSystem", rounds = 5 },
+    { at = 11, item = "CL.ERSmallLaser" },
+]
+
+[sections.right_torso]
+armor = 15
+rear = 9
+slots = [
+    { at = 3, item = "EndoSteel" },
+    { at = "8-9", item = "Ammo_CL.ArrowIVSystem", rounds = 5 },
+    { at = 10, item = "CL.ERMediumLaser" },
+]
+
+[sections.center_torso]
+armor = 17
+rear = 10
+slots = [
+    { at = 11, item = "EndoSteel" },
+    { at = 12, item = "CL.ERMediumLaser" },
+]
+
+[sections.left_leg]
+armor = 16
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 16
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 9

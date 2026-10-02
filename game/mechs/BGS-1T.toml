@@ -1,0 +1,55 @@
+name = "Barghest"
+class = "mech"
+movement = "quad"
+tons = 70
+walk_mp = 8
+heat_sinks = 20
+
+[construction]
+heat_sinks = "double"
+brand = 3
+
+[sections.front_left_leg]
+armor = 27
+
+[sections.front_right_leg]
+armor = 27
+
+[sections.left_torso]
+armor = 21
+rear = 6
+explicit = true
+slots = [
+    { at = "1-5", item = "Engine", brand = 3 },
+    { at = "6-9", item = "IS.ERLargeLaser", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 21
+rear = 6
+explicit = true
+slots = [
+    { at = 1, item = "Engine", brand = 3 },
+    { at = "2-12", item = "IS.LB20-XAC", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 30
+rear = 9
+
+[sections.rear_left_leg]
+armor = 26
+slots = [
+    { at = 5, item = "Ammo_IS.LB20-XAC", rounds = 5 },
+    { at = 6, item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
+]
+
+[sections.rear_right_leg]
+armor = 26
+slots = [
+    { at = 5, item = "Ammo_IS.LB20-XAC", rounds = 5 },
+    { at = 6, item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
+]
+
+[sections.head]
+armor = 9

@@ -1,0 +1,43 @@
+name = "Hachiman"
+class = "vehicle"
+movement = "track"
+tons = 50
+walk_mp = 6
+specials = ["ArtemisIV"]
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
+
+[sections.left_side]
+armor = 29
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 29
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 30
+slots = [
+    { at = 1, item = "CL.StreakSRM-4" },
+    { at = 2, item = "Ammo_CL.StreakSRM-4", rounds = 25 },
+]
+
+[sections.aft_side]
+armor = 19
+
+[sections.turret]
+armor = 27
+slots = [
+    { at = "1-2", item = "CL.ERMediumLaser" },
+    { at = 3, item = "CL.LRM-20" },
+    { at = 4, item = "ArtemisIV" },
+    { at = 5, item = "CL.LRM-20" },
+    { at = 6, item = "ArtemisIV" },
+    { at = "7-10", item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
+]

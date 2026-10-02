@@ -40,7 +40,8 @@ async fn fixture_asset(
         create_battle_unit(
             &mut world,
             id,
-            BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                .unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, id, map, 1, 1).unwrap();
@@ -3879,7 +3880,7 @@ fn fracture_observer(
     create_battle_unit(
         world,
         observer,
-        BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(world, observer, map, 2, 1).unwrap();
@@ -7282,7 +7283,8 @@ async fn artillery_cluster_world_packets_and_random_rollback() {
             create_battle_unit(
                 &mut world,
                 id,
-                BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap(),
+                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                    .unwrap(),
             )
             .unwrap();
             place_battle_unit(&mut world, id, map, x, y).unwrap();
@@ -7658,7 +7660,8 @@ async fn fracture_cascade_matrix(vehicle: bool, trigger_last: bool) {
         create_battle_vehicle(
             &mut world,
             id,
-            BattleVehicleTemplate::parse(include_str!("../game/mechs/Kestrel")).unwrap(),
+            BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
+                .unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, id, map, 1, 1).unwrap();

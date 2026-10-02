@@ -1,0 +1,56 @@
+name = "Mackie"
+class = "mech"
+movement = "biped"
+tons = 100
+walk_mp = 5
+heat_sinks = 15
+radio = 2
+cargo_space = 0
+
+[construction]
+brand = 3
+
+[sections.left_arm]
+armor = 24
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-6", item = "IS.PPC", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 24
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-10", item = "IS.AC/10", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 20
+rear = 10
+slots = [
+    { at = "1-2", item = "HeatSink", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 20
+rear = 10
+slots = [
+    { at = 1, item = "HeatSink", brand = 3 },
+    { at = "2-3", item = "Ammo_IS.AC/10", rounds = 10 },
+]
+
+[sections.center_torso]
+armor = 30
+rear = 10
+slots = [
+    { at = "11-12", item = "IS.MediumLaser", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 28
+
+[sections.right_leg]
+armor = 28
+
+[sections.head]
+armor = 8

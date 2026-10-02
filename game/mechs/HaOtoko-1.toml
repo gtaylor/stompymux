@@ -1,0 +1,60 @@
+name = "Ha Otoko"
+class = "mech"
+movement = "biped"
+tons = 65
+walk_mp = 6
+heat_sinks = 13
+computer = 5
+radio = 5
+
+[sections.left_arm]
+armor = 20
+slots = [
+    { at = 5, item = "CL.LRM-10" },
+    { at = 6, item = "Ammo_CL.LRM-10", rounds = 12 },
+]
+
+[sections.right_arm]
+armor = 20
+slots = [
+    { at = 5, item = "CL.LRM-10" },
+    { at = 6, item = "Ammo_CL.LRM-10", rounds = 12 },
+]
+
+[sections.left_torso]
+armor = 23
+rear = 7
+slots = [
+    { at = "1-4", item = "CL.LRM-20" },
+    { at = "5-7", item = "Ammo_CL.LRM-20", rounds = 6 },
+]
+
+[sections.right_torso]
+armor = 23
+rear = 7
+slots = [
+    { at = "1-4", item = "CL.LRM-20" },
+    { at = "5-7", item = "Ammo_CL.LRM-20", rounds = 6 },
+]
+
+[sections.center_torso]
+armor = 31
+rear = 10
+slots = [
+    { at = 11, item = "HeatSink" },
+]
+
+[sections.left_leg]
+armor = 29
+slots = [
+    { at = 5, item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 29
+slots = [
+    { at = 5, item = "HeatSink" },
+]
+
+[sections.head]
+armor = 9

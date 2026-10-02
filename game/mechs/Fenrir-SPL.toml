@@ -1,0 +1,35 @@
+name = "Fenrir"
+class = "battlesuit"
+movement = "biped"
+tons = 1
+walk_mp = 4
+cargo_space = 0
+max_suits = 4
+
+[sections.suit_1]
+armor = 5
+internals = 1
+slots = [
+    { at = "1-2", item = "IS.SmallPulseLaser", brand = 3 },
+]
+
+[sections.suit_2]
+armor = 5
+internals = 1
+slots = [
+    { at = "1-2", item = "IS.SmallPulseLaser", brand = 3 },
+]
+
+[sections.suit_3]
+armor = 5
+internals = 1
+slots = [
+    { at = "1-2", item = "IS.SmallPulseLaser", brand = 3 },
+]
+
+[sections.suit_4]
+armor = 5
+internals = 1
+slots = [
+    { at = "1-2", item = "IS.SmallPulseLaser", brand = 3 },
+]

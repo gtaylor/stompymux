@@ -1,0 +1,57 @@
+name = "Batu"
+class = "aerofighter"
+movement = "fly"
+tons = 40
+walk_mp = 14
+heat_sinks = 24
+fuel = 450
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
+
+[sections.nose]
+armor = 38
+internals = 9
+slots = [
+    { at = 1, item = "CL.ERLargeLaser" },
+    { at = "2-4", item = "TargetingComputer" },
+]
+
+[sections.left_wing]
+armor = 30
+internals = 9
+slots = [
+    { at = 1, item = "CL.MediumPulseLaser" },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_wing]
+armor = 30
+internals = 9
+slots = [
+    { at = 1, item = "CL.MediumPulseLaser" },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.cockpit]
+armor = 16
+internals = 9
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "Sensors" },
+    { at = 5, item = "LifeSupport" },
+]
+
+[sections.engine]
+armor = 20
+internals = 9
+slots = [
+    { at = 1, item = "CL.ERMediumLaser" },
+]
+
+[sections.fuselage]
+armor = 30
+internals = 9

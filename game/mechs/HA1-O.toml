@@ -1,0 +1,70 @@
+name = "Hauptmann"
+class = "mech"
+movement = "biped"
+tons = 95
+walk_mp = 5
+heat_sinks = 34
+computer = 4
+radio = 4
+cargo_space = 0
+
+[construction]
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 32
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "IS.ERLargeLaser", brand = 3 },
+    { at = 6, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = "7-12", item = "HeatSink", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 32
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "IS.ERLargeLaser", brand = 3 },
+    { at = 6, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = "7-12", item = "HeatSink", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 30
+rear = 10
+slots = [
+    { at = "1-11", item = "IS.LB20-XAC", brand = 3 },
+    { at = 12, item = "IS.StreakSRM-2", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 30
+rear = 10
+slots = [
+    { at = 1, item = "IS.StreakSRM-2", brand = 3 },
+    { at = "2-3", item = "Ammo_IS.LB20-XAC", rounds = 5 },
+    { at = 4, item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
+    { at = 5, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+    { at = "6-11", item = "HeatSink", brand = 3 },
+    { at = 12, item = "Case", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 45
+rear = 15
+slots = [
+    { at = "11-12", item = "Ecm", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 40
+
+[sections.right_leg]
+armor = 40
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "IS.ERSmallLaser", brand = 3 },
+]

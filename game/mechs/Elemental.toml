@@ -1,0 +1,53 @@
+name = "Elemental"
+class = "battlesuit"
+movement = "biped"
+tons = 1
+max_speed = 32.5
+jump_speed = 32.5
+max_suits = 4
+infantry_specials = ["Swarm_Attack_Tech", "Mount_Friends_Tech", "AntiLeg_Attack_Tech"]
+
+[sections.suit_1]
+armor = 10
+internals = 1
+slots = [
+    { at = 1, item = "CL.SmallLaser" },
+    { at = 2, item = "CL.SRM-2" },
+    { at = 3, item = "Ammo_CL.SRM-2", rounds = 2 },
+]
+
+[sections.suit_2]
+armor = 10
+internals = 1
+slots = [
+    { at = 1, item = "CL.SmallLaser" },
+    { at = 2, item = "CL.SRM-2" },
+    { at = 3, item = "Ammo_CL.SRM-2", rounds = 2 },
+]
+
+[sections.suit_3]
+armor = 10
+internals = 1
+slots = [
+    { at = 1, item = "CL.SmallLaser" },
+    { at = 2, item = "CL.SRM-2" },
+    { at = 3, item = "Ammo_CL.SRM-2", rounds = 2 },
+]
+
+[sections.suit_4]
+armor = 10
+internals = 1
+slots = [
+    { at = 1, item = "CL.SmallLaser" },
+    { at = 2, item = "CL.SRM-2" },
+    { at = 3, item = "Ammo_CL.SRM-2", rounds = 2 },
+]
+
+[sections.suit_5]
+armor = 10
+internals = 1
+slots = [
+    { at = 1, item = "CL.SmallLaser" },
+    { at = 2, item = "CL.SRM-2" },
+    { at = 3, item = "Ammo_CL.SRM-2", rounds = 2 },
+]

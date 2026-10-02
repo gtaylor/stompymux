@@ -1,0 +1,44 @@
+name = "Athena"
+class = "vehicle"
+movement = "track"
+tons = 75
+walk_mp = 5
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
+
+[sections.left_side]
+armor = 26
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 26
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 38
+slots = [
+    { at = "1-2", item = "CL.GaussRifle", modes = ["OnTC"] },
+    { at = "3-6", item = "Ammo_CL.GaussRifle", rounds = 8 },
+    { at = 7, item = "CL.LRM-10" },
+    { at = 8, item = "Ammo_CL.LRM-10", rounds = 12 },
+]
+
+[sections.aft_side]
+armor = 24
+slots = [
+    { at = "1-6", item = "TargetingComputer" },
+]
+
+[sections.turret]
+armor = 30
+slots = [
+    { at = "1-2", item = "CL.ERMediumLaser", modes = ["OnTC"] },
+    { at = "3-4", item = "CL.MachineGun" },
+    { at = 5, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Hotload"] },
+]

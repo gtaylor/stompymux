@@ -1,0 +1,35 @@
+name = "Goblin"
+class = "vehicle"
+movement = "track"
+tons = 45
+walk_mp = 6
+computer = 3
+cargo_space = 950
+max_suits = 0
+max_ton = 1
+specials = ["CargoTech"]
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 24
+
+[sections.right_side]
+armor = 24
+
+[sections.front_side]
+armor = 30
+slots = [
+    { at = 1, item = "IS.MachineGun" },
+    { at = 2, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload", "Halfton"] },
+]
+
+[sections.aft_side]
+armor = 20
+
+[sections.turret]
+armor = 30
+slots = [
+    { at = 1, item = "IS.LargeLaser" },
+]

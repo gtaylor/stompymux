@@ -111,7 +111,7 @@ async fn new_units_use_destination_surface() {
     for source in firing::templates() {
         let unit = world.create(&config, "Unit".into(), Kind::Thing);
         world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse(&source)
+        BattleUnitTemplate::parse("test", &source)
             .unwrap()
             .create(&mut world, unit)
             .unwrap();
@@ -140,7 +140,7 @@ async fn map_capacity_counts_all_chassis_and_allows_existing_members() {
     for index in 0..251 {
         let id = world.create(&config, "Unit".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse(&sources[index % sources.len()])
+        BattleUnitTemplate::parse("test", &sources[index % sources.len()])
             .unwrap()
             .create(&mut world, id)
             .unwrap();
@@ -229,7 +229,7 @@ async fn map_assignment_releases_tows_across_all_chassis_pairings() {
             let b = world.create(&config, "Tow".into(), Kind::Thing);
             for (id, source) in [(a, source), (b, target)] {
                 world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-                BattleUnitTemplate::parse(source)
+                BattleUnitTemplate::parse("test", source)
                     .unwrap()
                     .create(&mut world, id)
                     .unwrap();

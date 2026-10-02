@@ -1,0 +1,78 @@
+name = "Anubis"
+class = "mech"
+movement = "biped"
+tons = 30
+walk_mp = 12
+heat_sinks = 24
+computer = 4
+radio = 4
+specials = ["ECM"]
+
+[construction]
+engine = "xl"
+structure = "endo_steel"
+armor = "stealth"
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 8
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.ERMediumLaser" },
+    { at = 5, item = "IS.ERSmallLaser" },
+    { at = "6-7", item = "StealthArmor" },
+    { at = "8-11", item = "EndoSteel" },
+]
+
+[sections.right_arm]
+armor = 8
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.ERLargeLaser" },
+    { at = 5, item = "IS.ERMediumLaser" },
+    { at = "6-7", item = "StealthArmor" },
+    { at = "8-12", item = "EndoSteel" },
+]
+
+[sections.left_torso]
+armor = 9
+rear = 3
+slots = [
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-8", item = "StealthArmor" },
+    { at = "9-11", item = "EndoSteel" },
+]
+
+[sections.right_torso]
+armor = 9
+rear = 3
+slots = [
+    { at = "4-9", item = "HeatSink" },
+    { at = "10-11", item = "StealthArmor" },
+    { at = 12, item = "EndoSteel" },
+]
+
+[sections.center_torso]
+armor = 11
+rear = 4
+slots = [
+    { at = "11-12", item = "Ecm" },
+]
+
+[sections.left_leg]
+armor = 12
+slots = [
+    { at = "5-6", item = "StealthArmor" },
+]
+
+[sections.right_leg]
+armor = 12
+slots = [
+    { at = "5-6", item = "StealthArmor" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "EndoSteel" },
+]

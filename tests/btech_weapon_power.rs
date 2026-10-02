@@ -29,7 +29,7 @@ async fn gauss_power_down_adapters_state_and_restart() {
             let (_dir, config, base, id, _target, index) = fixture_with_supply(
                 &source,
                 Some(weapon),
-                include_str!("../game/mechs/JR7-D"),
+                include_str!("../game/mechs/JR7-D.toml"),
                 false,
                 Some(""),
             )
@@ -130,13 +130,13 @@ async fn gauss_power_down_guards_and_validation() {
     for source in templates() {
         // Keep a non-Gauss mount when the front-mounted VTOL armament is replaced.
         let source = source.replace(
-            "Left_Side\n",
-            "Left_Side\n  CRIT_12 { IS.MediumLaser - - }\n",
+            "[sections.left_side]\n",
+            "[sections.left_side]\nslots = [{ at = 12, item = \"IS.MediumLaser\" }]\n",
         );
         let (_dir, config, base, id, _, index) = fixture_with_target(
             &source,
             Some(BattleWeapon::MagshotGaussRifle),
-            include_str!("../game/mechs/JR7-D"),
+            include_str!("../game/mechs/JR7-D.toml"),
         )
         .await;
         for change in ["recycle", "off", "absent"] {
@@ -215,7 +215,7 @@ async fn powered_down_vehicle_gauss_critical_is_inert() {
         let (_dir, config, mut base, id, _, index) = fixture_with_supply(
             &source,
             Some(BattleWeapon::MagshotGaussRifle),
-            include_str!("../game/mechs/JR7-D"),
+            include_str!("../game/mechs/JR7-D.toml"),
             false,
             Some(""),
         )

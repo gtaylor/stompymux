@@ -1,0 +1,52 @@
+name = "Longinus"
+class = "battlesuit"
+movement = "biped"
+tons = 1
+max_speed = 33.0
+jump_speed = 33.0
+heat_sinks = 15
+radio = 2
+tac_range = 12
+lrs_range = 20
+scan_range = 8
+cargo_space = 0
+max_suits = 4
+infantry_specials = ["Swarm_Attack_Tech", "Mount_Friends_Tech", "AntiLeg_Attack_Tech", "Must_Jettison_Pack_Tech", "Can_Jettison_Pack_Tech"]
+
+[sections.suit_1]
+armor = 9
+internals = 1
+slots = [
+    { at = 1, item = "IS.MachineGun" },
+    { at = 2, item = "IS.SRM-2", modes = ["OneShot", "BackPack"] },
+    { at = 3, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
+]
+
+[sections.suit_2]
+armor = 9
+internals = 1
+slots = [
+    { at = 1, item = "IS.MachineGun" },
+    { at = 2, item = "IS.SRM-2", modes = ["OneShot", "BackPack"] },
+    { at = 3, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
+]
+
+[sections.suit_3]
+armor = 9
+internals = 1
+rear = 10
+slots = [
+    { at = 1, item = "IS.MachineGun" },
+    { at = 2, item = "IS.SRM-2", modes = ["OneShot", "BackPack"] },
+    { at = 3, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
+]
+
+[sections.suit_4]
+armor = 9
+internals = 1
+rear = 10
+slots = [
+    { at = 1, item = "IS.MachineGun" },
+    { at = 2, item = "IS.SRM-2", modes = ["OneShot", "BackPack"] },
+    { at = 3, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
+]

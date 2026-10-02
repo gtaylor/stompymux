@@ -8,7 +8,7 @@ use stompymux_rs::*;
 #[tokio::test]
 async fn predictive_fire_shares_launching_and_callback_rollback_across_chassis() {
     for source in firing::templates() {
-        let target_source = include_str!("../game/mechs/JR7-D");
+        let target_source = include_str!("../game/mechs/JR7-D.toml");
         let (_dir, config, mut world, shooter, target, weapon) = firing::fixture_with_supply(
             &source,
             Some(BattleWeapon::ThumperCannon),
@@ -98,7 +98,7 @@ async fn predictive_fire_shares_launching_and_callback_rollback_across_chassis()
 /// Forecasting cannot leave the map or mutate the live target while finding an interception point.
 #[tokio::test]
 async fn prediction_stops_at_map_edge_without_consuming_live_state() {
-    let source = include_str!("../game/mechs/JR7-D");
+    let source = include_str!("../game/mechs/JR7-D.toml");
     let (_dir, _config, mut world, shooter, target, _) =
         firing::fixture_with_target(source, None, source).await;
     firing::edit(&mut world, target, |unit| {
@@ -132,7 +132,7 @@ async fn prediction_stops_at_map_edge_without_consuming_live_state() {
 /// All admitted target chassis use the same bounded terrain-stop policy, including fixed platforms.
 #[tokio::test]
 async fn prediction_handles_vehicle_targets_and_blocking_terrain() {
-    let source = include_str!("../game/mechs/JR7-D");
+    let source = include_str!("../game/mechs/JR7-D.toml");
     for target_source in firing::templates() {
         let (_dir, config, mut world, shooter, target, _) =
             firing::fixture_with_target(source, None, &target_source).await;
@@ -173,7 +173,7 @@ async fn prediction_handles_vehicle_targets_and_blocking_terrain() {
 /// Interception beyond the minimum flight time agrees with committed constant-order movement.
 #[tokio::test]
 async fn distant_prediction_matches_live_motion_until_shell_catches_up() {
-    let source = include_str!("../game/mechs/JR7-D");
+    let source = include_str!("../game/mechs/JR7-D.toml");
     let (_dir, config, mut world, shooter, target, _) =
         firing::fixture_with_target(source, None, source).await;
     let map = world.create(&config, "Long artillery lane".into(), Kind::Room);

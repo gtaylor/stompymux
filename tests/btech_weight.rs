@@ -115,7 +115,7 @@ async fn weight_report_permissions_literal_names_and_output_rollback() {
         let (dir, config, mut world) = support::isolated_world().await;
         let unit = world.create(&config, "Unit".into(), Kind::Thing);
         world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
-        let mut template = BattleUnitTemplate::parse(&source).unwrap();
+        let mut template = BattleUnitTemplate::parse("test", &source).unwrap();
         let criticals: Vec<_> = match &mut template {
             BattleUnitTemplate::Mech(definition) => definition
                 .sections

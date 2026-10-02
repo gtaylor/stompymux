@@ -1,0 +1,63 @@
+name = "Mirage"
+class = "mech"
+movement = "biped"
+tons = 35
+walk_mp = 9
+jump_mp = 6
+heat_sinks = 11
+cargo_space = 0
+max_suits = 0
+
+[sections.left_arm]
+armor = 12
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.MediumLaser" },
+    { at = 5, item = "IS.SmallLaser" },
+]
+
+[sections.right_arm]
+armor = 12
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.MediumLaser" },
+    { at = 5, item = "IS.SmallLaser" },
+]
+
+[sections.left_torso]
+armor = 12
+rear = 4
+slots = [
+    { at = 1, item = "IS.MachineGun" },
+    { at = "2-3", item = "HeatSink" },
+    { at = 4, item = "JumpJet" },
+]
+
+[sections.right_torso]
+armor = 12
+rear = 4
+slots = [
+    { at = 1, item = "IS.MachineGun" },
+    { at = 2, item = "Ammo_IS.MachineGun", rounds = 200 },
+    { at = 3, item = "HeatSink" },
+    { at = 4, item = "JumpJet" },
+]
+
+[sections.center_torso]
+armor = 16
+rear = 6
+
+[sections.left_leg]
+armor = 16
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 16
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9

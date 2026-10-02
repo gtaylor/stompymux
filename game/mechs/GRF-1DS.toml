@@ -1,0 +1,61 @@
+name = "Griffin"
+class = "mech"
+movement = "biped"
+tons = 55
+walk_mp = 8
+jump_mp = 5
+heat_sinks = 28
+computer = 4
+radio = 4
+
+[construction]
+engine = "xl"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 14
+slots = [
+    { at = "5-7", item = "HeatSink", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 14
+slots = [
+    { at = "5-7", item = "HeatSink", brand = 3 },
+    { at = "8-9", item = "IS.LargePulseLaser", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 20
+rear = 6
+slots = [
+    { at = "4-5", item = "JumpJet", brand = 3 },
+    { at = "6-8", item = "HeatSink", brand = 3 },
+    { at = "9-10", item = "Ammo_IS.LRM-20", rounds = 6 },
+    { at = 11, item = "Case", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 20
+rear = 6
+slots = [
+    { at = "4-5", item = "JumpJet", brand = 3 },
+    { at = "6-10", item = "IS.LRM-20", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 20
+rear = 7
+slots = [
+    { at = 11, item = "JumpJet", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 18
+
+[sections.right_leg]
+armor = 18
+
+[sections.head]
+armor = 9

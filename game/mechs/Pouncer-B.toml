@@ -1,0 +1,82 @@
+name = "Pouncer"
+class = "mech"
+movement = "biped"
+tons = 40
+walk_mp = 9
+jump_mp = 5
+heat_sinks = 24
+computer = 4
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 12
+slots = [
+    { at = 5, item = "FerroFibrous" },
+    { at = 6, item = "CL.ERLargeLaser" },
+    { at = 7, item = "CL.SRM-4" },
+    { at = 8, item = "Ammo_CL.SRM-4", rounds = 25 },
+]
+
+[sections.right_arm]
+armor = 12
+slots = [
+    { at = 5, item = "FerroFibrous" },
+    { at = 6, item = "CL.ERLargeLaser" },
+    { at = 7, item = "CL.SRM-4" },
+    { at = 8, item = "Ammo_CL.SRM-4", rounds = 25 },
+]
+
+[sections.left_torso]
+armor = 11
+rear = 7
+engine_at = 4
+slots = [
+    { at = 1, item = "EndoSteel" },
+    { at = "2-3", item = "FerroFibrous" },
+    { at = "6-7", item = "JumpJet" },
+    { at = "8-11", item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 11
+rear = 7
+engine_at = 4
+slots = [
+    { at = 1, item = "EndoSteel" },
+    { at = "2-3", item = "FerroFibrous" },
+    { at = "6-7", item = "JumpJet" },
+    { at = 8, item = "CL.LRM-10" },
+    { at = 9, item = "Ammo_CL.LRM-10", rounds = 12 },
+    { at = "10-11", item = "HeatSink" },
+]
+
+[sections.center_torso]
+armor = 12
+rear = 8
+slots = [
+    { at = 11, item = "EndoSteel" },
+    { at = 12, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 13
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 13
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

@@ -1,0 +1,69 @@
+name = "Kodiak"
+class = "mech"
+movement = "biped"
+tons = 100
+walk_mp = 6
+heat_sinks = 40
+computer = 4
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+
+[sections.left_arm]
+armor = 32
+slots = [
+    { at = "5-8", item = "CL.ERMediumLaser" },
+    { at = "9-12", item = "HeatSink" },
+]
+
+[sections.right_arm]
+armor = 32
+slots = [
+    { at = "5-8", item = "CL.ERMediumLaser" },
+    { at = "9-10", item = "HeatSink" },
+]
+
+[sections.left_torso]
+armor = 32
+rear = 10
+slots = [
+    { at = "3-4", item = "EndoSteel" },
+    { at = "5-8", item = "CL.StreakSRM-6" },
+    { at = "9-10", item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+    { at = "11-12", item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 32
+rear = 10
+slots = [
+    { at = "3-10", item = "CL.UltraAC/20" },
+    { at = "11-12", item = "Ammo_CL.UltraAC/20", rounds = 5 },
+]
+
+[sections.center_torso]
+armor = 40
+rear = 15
+slots = [
+    { at = 11, item = "CL.ERLargeLaser" },
+]
+
+[sections.left_leg]
+armor = 34
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 34
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "EndoSteel" },
+]

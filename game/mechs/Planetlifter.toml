@@ -1,0 +1,40 @@
+name = "Planetlifter"
+class = "aerofighter"
+movement = "fly"
+tons = 50
+walk_mp = 6
+heat_sinks = 0
+computer = 3
+fuel = 2500
+specials = ["CargoTech"]
+
+[sections.nose]
+armor = 12
+internals = 5
+
+[sections.left_wing]
+armor = 4
+internals = 5
+
+[sections.right_wing]
+armor = 4
+internals = 5
+
+[sections.cockpit]
+armor = 8
+internals = 5
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "Sensors" },
+    { at = 5, item = "LifeSupport" },
+]
+
+[sections.engine]
+armor = 10
+internals = 5
+
+[sections.fuselage]
+armor = 10
+internals = 5

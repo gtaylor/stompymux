@@ -1,0 +1,74 @@
+name = "Masakari"
+class = "mech"
+movement = "biped"
+tons = 85
+walk_mp = 6
+heat_sinks = 40
+computer = 4
+radio = 5
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+armor = "ferro_fibrous"
+brand = 5
+
+[sections.left_arm]
+armor = 28
+slots = [
+    { at = "5-6", item = "CL.ERLargeLaser", modes = ["OnTC"], brand = 5 },
+    { at = "7-8", item = "CL.StreakSRM-6", brand = 5 },
+    { at = 9, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+    { at = 12, item = "FerroFibrous", brand = 5 },
+]
+
+[sections.right_arm]
+armor = 28
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-7", item = "CL.LB10-XAC", modes = ["OnTC"], brand = 5 },
+    { at = 8, item = "Ammo_CL.LB10-XAC", rounds = 10, modes = ["OnTC"] },
+    { at = 9, item = "Ammo_CL.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = "11-12", item = "FerroFibrous", brand = 5 },
+]
+
+[sections.left_torso]
+armor = 26
+rear = 10
+slots = [
+    { at = "3-4", item = "FerroFibrous", brand = 5 },
+    { at = "5-12", item = "HeatSink", brand = 5 },
+]
+
+[sections.right_torso]
+armor = 26
+rear = 10
+slots = [
+    { at = 3, item = "FerroFibrous", brand = 5 },
+    { at = "4-5", item = "HeatSink", brand = 5 },
+    { at = "6-7", item = "CL.LRM-15", brand = 5 },
+    { at = "8-11", item = "TargetingComputer", brand = 5 },
+    { at = 12, item = "Ammo_CL.LRM-15", rounds = 8 },
+]
+
+[sections.center_torso]
+armor = 34
+rear = 10
+
+[sections.left_leg]
+armor = 35
+slots = [
+    { at = "5-6", item = "HeatSink", brand = 5 },
+]
+
+[sections.right_leg]
+armor = 35
+slots = [
+    { at = "5-6", item = "HeatSink", brand = 5 },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous", brand = 5 },
+]

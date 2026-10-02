@@ -1,0 +1,33 @@
+name = "Bulldog"
+class = "vehicle"
+movement = "track"
+tons = 60
+walk_mp = 6
+heat_sinks = 14
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 20
+
+[sections.right_side]
+armor = 20
+
+[sections.front_side]
+armor = 24
+slots = [
+    { at = 1, item = "IS.MachineGun", brand = 3 },
+    { at = 2, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
+]
+
+[sections.aft_side]
+armor = 20
+
+[sections.turret]
+armor = 20
+slots = [
+    { at = 1, item = "IS.LargeLaser", brand = 3 },
+    { at = "2-3", item = "IS.SRM-4", brand = 3 },
+    { at = "4-5", item = "Ammo_IS.SRM-4", rounds = 25 },
+]

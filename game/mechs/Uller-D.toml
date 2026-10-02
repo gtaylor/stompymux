@@ -1,0 +1,71 @@
+name = "Uller"
+class = "mech"
+movement = "biped"
+tons = 30
+walk_mp = 9
+heat_sinks = 20
+specials = ["SearchLight"]
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 7
+slots = [
+    { at = "5-6", item = "CL.LRM-15" },
+    { at = 7, item = "CL.LRM-5" },
+    { at = "8-9", item = "Ammo_CL.LRM-15", rounds = 8, modes = ["Narc/Smoke"] },
+    { at = 10, item = "EndoSteel" },
+    { at = 11, item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 7
+slots = [
+    { at = "5-6", item = "CL.LRM-15" },
+    { at = 7, item = "CL.NarcBeacon" },
+    { at = 8, item = "EndoSteel" },
+    { at = 9, item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 8
+rear = 4
+slots = [
+    { at = "3-6", item = "HeatSink" },
+    { at = 7, item = "Ammo_CL.LRM-5", rounds = 24, modes = ["Narc/Smoke"] },
+    { at = "8-9", item = "EndoSteel" },
+    { at = "10-11", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 8
+rear = 4
+slots = [
+    { at = "3-4", item = "Ammo_CL.LRM-15", rounds = 8, modes = ["Narc/Smoke"] },
+    { at = 5, item = "Ammo_CL.NarcBeacon", rounds = 6 },
+    { at = "6-8", item = "EndoSteel" },
+    { at = "9-10", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 9
+rear = 5
+slots = [
+    { at = "11-12", item = "HeatSink" },
+]
+
+[sections.left_leg]
+armor = 8
+
+[sections.right_leg]
+armor = 8
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

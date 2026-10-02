@@ -804,7 +804,7 @@ async fn authored_and_edited_metadata_share_validation_across_chassis_and_restar
 ) {
     let config = &f.config;
     for source in firing::templates() {
-        let source = format!("{source}\nUnit_Era {{ Clan Invasion }}\nUnit_TRO {{ TRO 3050 }}\n");
+        let source = format!("unit_era = \"Clan Invasion\"\nunit_tro = \"TRO 3050\"\n{source}");
         let (world, id, _, _) = f.pair(&source, &source);
         let native = &f.native;
         let lua = &f.lua;
@@ -1441,20 +1441,19 @@ async fn construction_fields_share_storage_authority_and_restart_without_changin
 async fn engine_sink_override_validates_authored_values_across_chassis_scenario(f: &UnitFields) {
     let config = &f.config;
     for source in firing::templates() {
-        let authored = format!("HSEngOverRide {{ 14 }}\n{source}");
+        let authored = format!("hs_engine_override = 14\n{source}");
         let (mut world, id, _, _) = f.pair(&authored, &source);
         let candidate = world.create(config, "Invalid construction".into(), Kind::Thing);
         let before = world.btech.clone();
-        for value in ["no", "2147483648", "-2147483649", "1.5"] {
-            let template =
-                BattleUnitTemplate::parse(&format!("HSEngOverRide {{ {value} }}\n{source}"));
-            let result = template.and_then(|template| template.create(&mut world, candidate));
-            assert!(
-                result
-                    .unwrap_err()
-                    .to_string()
-                    .contains("engine heat-sink override")
+        // Typed TOML values reject non-integers and values outside a signed 32-bit range.
+        for value in ["\"no\"", "2147483648", "-2147483649", "1.5"] {
+            let template = BattleUnitTemplate::parse(
+                "test",
+                &format!("hs_engine_override = {value}\n{source}"),
             );
+            let result = template.and_then(|template| template.create(&mut world, candidate));
+            let error = format!("{:#}", result.unwrap_err());
+            assert!(error.contains("hs_engine_override"), "{error}");
             assert_eq!(world.btech, before);
         }
         let scripts = &f.native;
@@ -1549,7 +1548,7 @@ async fn crew_and_target_fields_share_native_lua_validation_and_restart_scenario
         prepare_battle_recovery(&mut world, replacement).unwrap();
         let unplaced = world.create(config, "Unplaced unit".into(), Kind::Thing);
         world.objects.get_mut(&unplaced).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse(&source)
+        BattleUnitTemplate::parse("test", &source)
             .unwrap()
             .create(&mut world, unplaced)
             .unwrap();
@@ -2805,7 +2804,7 @@ async fn pilot_damage_fields_share_recovery_and_fatal_cleanup_scenario(f: &UnitF
 /// Saved propulsion must satisfy the same low-gravity capacity bounds as administrative edits.
 async fn saved_jump_override_rejects_capacity_overflow_before_runtime_scenario(f: &UnitFields) {
     let config = &f.config;
-    let source = include_str!("../game/mechs/JR7-D");
+    let source = include_str!("../game/mechs/JR7-D.toml");
     let (mut world, id, _, _) = f.pair(source, source);
     let location = world.btech.constructed_units()[&id]
         .loadout()
@@ -2885,7 +2884,7 @@ async fn live_mass_fields_share_load_and_expire_on_material_changes_scenario(f: 
         let (world, id, target, index) = f.supply(
             &source,
             Some(BattleWeapon::Mml3),
-            include_str!("../game/mechs/AS7-D"),
+            include_str!("../game/mechs/AS7-D.toml"),
             Some(""),
         );
         let original = battle_unit_load(&world, id, false).unwrap();

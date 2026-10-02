@@ -1,0 +1,75 @@
+name = "Dasher"
+class = "mech"
+movement = "biped"
+tons = 20
+walk_mp = 15
+heat_sinks = 22
+specials = ["Masc"]
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 3
+slots = [
+    { at = "5-8", item = "CL.HeavySmallLaser", modes = ["OnTC"] },
+    { at = 9, item = "EndoSteel" },
+    { at = 10, item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 3
+slots = [
+    { at = "5-9", item = "CL.HeavySmallLaser", modes = ["OnTC"] },
+    { at = 10, item = "EndoSteel" },
+    { at = 11, item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 4
+rear = 2
+slots = [
+    { at = "3-4", item = "HeatSink" },
+    { at = 5, item = "EndoSteel" },
+    { at = "6-7", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 4
+rear = 2
+slots = [
+    { at = "3-4", item = "HeatSink" },
+    { at = 5, item = "TargetingComputer" },
+    { at = "6-7", item = "HeatSink" },
+    { at = 8, item = "EndoSteel" },
+    { at = "9-10", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 5
+rear = 2
+slots = [
+    { at = 11, item = "Masc" },
+    { at = 12, item = "EndoSteel" },
+]
+
+[sections.left_leg]
+armor = 4
+slots = [
+    { at = 5, item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 4
+slots = [
+    { at = 5, item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 5
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

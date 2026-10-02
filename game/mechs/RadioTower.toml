@@ -1,0 +1,38 @@
+name = "Relay Tower"
+class = "vehicle"
+movement = "none"
+tons = 70
+walk_mp = 0
+heat_sinks = 12
+cargo_space = 0
+max_suits = 0
+specials = ["AntiAircraft", "CritProof_Tech"]
+
+[sections.left_side]
+armor = 99
+
+[sections.right_side]
+armor = 99
+
+[sections.front_side]
+armor = 99
+
+[sections.aft_side]
+armor = 99
+slots = [
+    { at = "1-2", item = "Ammo_IS.LRM-5", rounds = 24 },
+    { at = 3, item = "Ammo_IS.LRM-5", rounds = 24, modes = ["Stinger"] },
+    { at = "4-5", item = "Ammo_IS.LightGaussRifle", rounds = 16 },
+    { at = "6-7", item = "Ammo_IS.SRM-6", rounds = 15 },
+]
+
+[sections.turret]
+armor = 70
+slots = [
+    { at = 1, item = "IS.LightGaussRifle" },
+    { at = 2, item = "IS.LRM-5" },
+    { at = 3, item = "IS.LargeLaser" },
+    { at = "4-6", item = "IS.MediumLaser" },
+    { at = 7, item = "IS.SRM-6" },
+    { at = 8, item = "IS.LRM-5", modes = ["Stinger"] },
+]

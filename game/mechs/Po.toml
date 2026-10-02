@@ -1,0 +1,32 @@
+name = "Po"
+class = "vehicle"
+movement = "track"
+tons = 60
+walk_mp = 6
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 32
+
+[sections.right_side]
+armor = 32
+
+[sections.front_side]
+armor = 40
+slots = [
+    { at = 1, item = "IS.MachineGun", brand = 3 },
+    { at = 2, item = "Ammo_IS.MachineGun", rounds = 200 },
+]
+
+[sections.aft_side]
+armor = 30
+
+[sections.turret]
+armor = 34
+slots = [
+    { at = 1, item = "IS.MachineGun", brand = 3 },
+    { at = 2, item = "IS.AC/10", brand = 3 },
+    { at = "3-4", item = "Ammo_IS.AC/10", rounds = 10 },
+]

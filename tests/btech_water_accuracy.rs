@@ -17,6 +17,26 @@ fn rules() -> BattleAimRules {
     }
 }
 
+/// Insert one slot entry at the start of a section's `slots` array, creating it when absent.
+fn add_slot(source: &str, section: &str, entry: &str) -> String {
+    let header = format!("[sections.{section}]\n");
+    let start = source.find(&header).unwrap();
+    let end = source[start + 1..]
+        .find("\n[")
+        .map_or(source.len(), |next| start + 2 + next);
+    let opening = "slots = [\n";
+    let Some(found) = source[start..end].find(opening) else {
+        let offset = start + header.len();
+        return format!(
+            "{}slots = [{entry}]\n{}",
+            &source[..offset],
+            &source[offset..]
+        );
+    };
+    let offset = start + found + opening.len();
+    format!("{}    {entry},\n{}", &source[..offset], &source[offset..])
+}
+
 /// Both adapters use signed attacker elevation; shallow-water Mechs can fire their torso lasers.
 #[tokio::test]
 async fn water_modifier_is_attacker_owned_and_shared_by_supported_chassis() {
@@ -24,7 +44,7 @@ async fn water_modifier_is_attacker_owned_and_shared_by_supported_chassis() {
         let (_dir, config, base, shooter, target, index) = firing::fixture_with_target(
             &source,
             Some(BattleWeapon::MediumLaser),
-            include_str!("../game/mechs/JR7-D"),
+            include_str!("../game/mechs/JR7-D.toml"),
         )
         .await;
         for (shooter_tile, target_tile) in [(".0", ".0"), ("~0", ".0"), ("~1", ".0"), (".0", "~1")]
@@ -93,7 +113,7 @@ async fn deep_water_ranges_are_shared_across_chassis_and_coordinate_aim() {
         let (_dir, config, mut world, shooter, target, index) = firing::fixture_with_target(
             &source,
             Some(BattleWeapon::MediumLaser),
-            include_str!("../game/mechs/JR7-D"),
+            include_str!("../game/mechs/JR7-D.toml"),
         )
         .await;
         let map = world.create(&config, "Deep water range".into(), Kind::Room);
@@ -158,22 +178,22 @@ async fn deep_water_ranges_are_shared_across_chassis_and_coordinate_aim() {
 async fn shallow_water_aim_uses_mount_anatomy_and_posture() {
     for (source, headings) in [
         (
-            include_str!("../game/mechs/JR7-D"),
-            ["Left_Arm", "Left_Leg", "Left_Torso"],
+            include_str!("../game/mechs/JR7-D.toml"),
+            ["left_arm", "left_leg", "left_torso"],
         ),
         (
-            include_str!("../game/mechs/GOL-1H"),
-            ["Front_Left_Leg", "Rear_Left_Leg", "Left_Torso"],
+            include_str!("../game/mechs/GOL-1H.toml"),
+            ["front_left_leg", "rear_left_leg", "left_torso"],
         ),
     ] {
         for (mount_number, heading) in headings.into_iter().enumerate() {
-            let source = source.replace(
-                &format!("{heading}\n"),
-                &format!("{heading}\n    CRIT_6 {{ IS.SmallLaser - - }}\n"),
-            );
-            let (_dir, config, mut world, shooter, target, _) =
-                firing::fixture_with_target(&source, None, include_str!("../game/mechs/JR7-D"))
-                    .await;
+            let source = add_slot(source, heading, r#"{ at = 6, item = "IS.SmallLaser" }"#);
+            let (_dir, config, mut world, shooter, target, _) = firing::fixture_with_target(
+                &source,
+                None,
+                include_str!("../game/mechs/JR7-D.toml"),
+            )
+            .await;
             let index = world.btech.constructed_units()[&shooter]
                 .loadout()
                 .unwrap()
@@ -231,9 +251,9 @@ async fn shallow_water_aim_uses_mount_anatomy_and_posture() {
 #[tokio::test]
 async fn underwater_ppc_keeps_the_enclosing_zero_range_penalty() {
     let (_dir, config, mut world, shooter, target, index) = firing::fixture_with_target(
-        include_str!("../game/mechs/JR7-D"),
+        include_str!("../game/mechs/JR7-D.toml"),
         Some(BattleWeapon::Ppc),
-        include_str!("../game/mechs/JR7-D"),
+        include_str!("../game/mechs/JR7-D.toml"),
     )
     .await;
     let map = world.create(&config, "PPC water test".into(), Kind::Room);

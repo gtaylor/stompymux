@@ -1,0 +1,40 @@
+name = "Epona"
+class = "vehicle"
+movement = "hover"
+tons = 50
+walk_mp = 14
+heat_sinks = 15
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
+
+[sections.left_side]
+armor = 20
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 20
+slots = [
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 21
+slots = [
+    { at = 1, item = "Ecm" },
+    { at = 2, item = "TAG" },
+]
+
+[sections.aft_side]
+armor = 18
+
+[sections.turret]
+armor = 17
+slots = [
+    { at = 1, item = "CL.ERPPC" },
+    { at = 2, item = "CL.StreakSRM-6" },
+    { at = 3, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+]

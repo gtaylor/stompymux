@@ -1,0 +1,65 @@
+name = "Cyclops"
+class = "mech"
+movement = "biped"
+tons = 90
+walk_mp = 6
+heat_sinks = 24
+computer = 4
+radio = 4
+
+[construction]
+armor = "ferro_fibrous"
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 20
+slots = [
+    { at = 5, item = "IS.MediumLaser" },
+    { at = "6-8", item = "IS.RL-20", modes = ["OneShot"] },
+    { at = "9-12", item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 20
+slots = [
+    { at = 5, item = "IS.MediumLaser" },
+    { at = "6-8", item = "IS.RL-20", modes = ["OneShot"] },
+    { at = "9-12", item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 26
+rear = 8
+slots = [
+    { at = "1-12", item = "IS.RL-20", modes = ["OneShot"] },
+]
+
+[sections.right_torso]
+armor = 26
+rear = 8
+slots = [
+    { at = "1-10", item = "IS.AC/20" },
+    { at = "11-12", item = "Ammo_IS.AC/20", rounds = 5 },
+]
+
+[sections.center_torso]
+armor = 35
+rear = 11
+slots = [
+    { at = "11-12", item = "FerroFibrous" },
+]
+
+[sections.left_leg]
+armor = 26
+slots = [
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.right_leg]
+armor = 26
+slots = [
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.head]
+armor = 9

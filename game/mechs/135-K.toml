@@ -1,0 +1,26 @@
+name = "Coolant Truck"
+class = "vehicle"
+movement = "wheel"
+tons = 30
+walk_mp = 6
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 28
+
+[sections.right_side]
+armor = 28
+
+[sections.front_side]
+armor = 24
+
+[sections.aft_side]
+armor = 20
+
+[sections.turret]
+armor = 12
+slots = [
+    { at = "1-2", item = "IS.Flamer", brand = 5 },
+]

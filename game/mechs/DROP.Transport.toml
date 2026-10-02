@@ -1,0 +1,43 @@
+name = "Transport"
+class = "spheroid_dropship"
+movement = "fly"
+tons = 3500
+walk_mp = 6
+heat_sinks = 90
+computer = 3
+tac_range = 30
+lrs_range = 60
+scan_range = 30
+
+[sections.front_right_side]
+armor = 180
+internals = 15
+
+[sections.front_left_side]
+armor = 180
+internals = 15
+
+[sections.rear_left_side]
+armor = 180
+internals = 15
+slots = [
+    { at = 1, item = "DSMechDoor", brand = 3 },
+]
+
+[sections.rear_right_side]
+armor = 180
+internals = 15
+slots = [
+    { at = 1, item = "DSMechDoor", brand = 3 },
+]
+
+[sections.aft]
+armor = 180
+internals = 15
+
+[sections.nose]
+armor = 180
+internals = 15
+slots = [
+    { at = 1, item = "DSMechDoor", brand = 3 },
+]

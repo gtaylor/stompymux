@@ -149,8 +149,8 @@ async fn clear_restores_defaults_preserves_recovery_and_survives_restart() {
 #[tokio::test]
 async fn clear_preserves_mech_and_vehicle_pilot_state() {
     for source in [
-        include_str!("../game/mechs/JR7-D"),
-        include_str!("../game/mechs/Demolisher"),
+        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/Demolisher.toml"),
     ] {
         let (_dir, config, mut world, unit, _, _) =
             firing::fixture_with_target(source, None, source).await;

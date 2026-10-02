@@ -33,22 +33,22 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
         .unwrap(),
     )
     .unwrap();
-    let stationary = include_str!("../game/mechs/Demolisher")
-        .replace("{ Track }", "{ None }")
-        .replace("{ 53.75 }", "{ 0 }");
+    let stationary = include_str!("../game/mechs/Demolisher.toml")
+        .replace("movement = \"track\"", "movement = \"none\"")
+        .replace("walk_mp = 5", "walk_mp = 0");
     let sources = [
-        (include_str!("fixtures/btech/mechs/JR7-D"), 'b'),
-        (include_str!("../game/mechs/SCP-1N"), 'q'),
-        (include_str!("../game/mechs/Demolisher"), 't'),
-        (include_str!("../game/mechs/Jeep"), 'w'),
-        (include_str!("../game/mechs/Savannah_Master"), 'h'),
-        (include_str!("../game/mechs/Kestrel"), 'v'),
+        (include_str!("fixtures/btech/mechs/JR7-D.toml"), 'b'),
+        (include_str!("../game/mechs/SCP-1N.toml"), 'q'),
+        (include_str!("../game/mechs/Demolisher.toml"), 't'),
+        (include_str!("../game/mechs/Jeep.toml"), 'w'),
+        (include_str!("../game/mechs/Savannah_Master.toml"), 'h'),
+        (include_str!("../game/mechs/Kestrel.toml"), 'v'),
         (stationary.as_str(), 'u'),
     ];
     let mut ids = Vec::new();
     for (x, (source, _)) in sources.iter().enumerate() {
         let id = base.create(&config, "Formation unit".into(), Kind::Thing);
-        BattleUnitTemplate::parse(source)
+        BattleUnitTemplate::parse("test", source)
             .unwrap()
             .create(&mut base, id)
             .unwrap();

@@ -8,17 +8,18 @@ use stompymux_rs::*;
 async fn all_scan_silhouettes_use_symbols_and_preserve_owned_layouts() {
     use std::{cell::RefCell, rc::Rc};
     for template in [
-        include_str!("../game/mechs/JR7-D"),
-        include_str!("../game/mechs/SHD-2H"),
-        include_str!("../game/mechs/WHM-6R"),
-        include_str!("../game/mechs/AS7-D"),
-        include_str!("../game/mechs/GOL-1H"),
-        include_str!("../game/mechs/Demolisher"),
-        include_str!("../game/mechs/Savannah_Master"),
-        include_str!("../game/mechs/Kestrel"),
+        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/SHD-2H.toml"),
+        include_str!("../game/mechs/WHM-6R.toml"),
+        include_str!("../game/mechs/AS7-D.toml"),
+        include_str!("../game/mechs/GOL-1H.toml"),
+        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/mechs/Savannah_Master.toml"),
+        include_str!("../game/mechs/Kestrel.toml"),
     ] {
         let (_dir, config, world, source, target, _) =
-            firing::fixture_with_target(include_str!("../game/mechs/JR7-D"), None, template).await;
+            firing::fixture_with_target(include_str!("../game/mechs/JR7-D.toml"), None, template)
+                .await;
         let before = serde_json::to_value(&world.btech).unwrap();
         let scan = scan_battle_unit(&world, source, ObjectId(1), target, "A").unwrap();
         let plain = text::plain(&scan);

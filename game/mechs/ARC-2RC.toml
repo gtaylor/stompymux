@@ -1,0 +1,52 @@
+name = "Archer"
+class = "mech"
+movement = "biped"
+tons = 70
+walk_mp = 6
+
+[construction]
+tech_base = "clan"
+
+[sections.left_arm]
+armor = 22
+slots = [
+    { at = 5, item = "CL.ERMediumLaser" },
+]
+
+[sections.right_arm]
+armor = 22
+slots = [
+    { at = 5, item = "CL.ERMediumLaser" },
+]
+
+[sections.left_torso]
+armor = 29
+rear = 6
+slots = [
+    { at = "1-4", item = "CL.LRM-20" },
+    { at = "6-7", item = "Ammo_CL.LRM-20", rounds = 6 },
+]
+
+[sections.right_torso]
+armor = 29
+rear = 6
+slots = [
+    { at = "1-4", item = "CL.LRM-20" },
+    { at = "6-7", item = "Ammo_CL.LRM-20", rounds = 6 },
+]
+
+[sections.center_torso]
+armor = 34
+rear = 10
+slots = [
+    { at = "11-12", item = "CL.ERMediumLaser", modes = ["RearMount"] },
+]
+
+[sections.left_leg]
+armor = 29
+
+[sections.right_leg]
+armor = 29
+
+[sections.head]
+armor = 9

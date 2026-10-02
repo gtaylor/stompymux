@@ -1,0 +1,62 @@
+name = "Jagatai"
+class = "aerofighter"
+movement = "fly"
+tons = 70
+walk_mp = 9
+heat_sinks = 30
+fuel = 600
+
+[construction]
+tech_base = "clan"
+armor = "ferro_fibrous"
+
+[sections.nose]
+armor = 46
+internals = 7
+slots = [
+    { at = 1, item = "CL.LB20-XAC" },
+    { at = 2, item = "Ammo_CL.LB20-XAC", rounds = 5 },
+    { at = 3, item = "Ammo_CL.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
+    { at = "4-5", item = "CL.ERLargeLaser" },
+]
+
+[sections.left_wing]
+armor = 36
+internals = 7
+slots = [
+    { at = 1, item = "CL.LRM-10" },
+    { at = 2, item = "Ammo_CL.LRM-10", rounds = 12 },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_wing]
+armor = 36
+internals = 7
+slots = [
+    { at = 1, item = "CL.LRM-10" },
+    { at = 2, item = "Ammo_CL.LRM-10", rounds = 12 },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.cockpit]
+armor = 16
+internals = 7
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "Sensors" },
+    { at = 5, item = "LifeSupport" },
+]
+
+[sections.engine]
+armor = 32
+internals = 7
+slots = [
+    { at = 1, item = "CL.LargePulseLaser" },
+    { at = 2, item = "CL.ERLargeLaser" },
+]
+
+[sections.fuselage]
+armor = 55
+internals = 7

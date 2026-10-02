@@ -1,0 +1,74 @@
+name = "Cougar"
+class = "mech"
+movement = "biped"
+tons = 35
+walk_mp = 8
+heat_sinks = 20
+computer = 4
+radio = 5
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+brand = 5
+
+[sections.left_arm]
+armor = 11
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = 3, item = "CL.ERMediumLaser", brand = 5 },
+    { at = "4-5", item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
+    { at = "6-7", item = "HeatSink", brand = 5 },
+    { at = "10-12", item = "EndoSteel", brand = 5 },
+]
+
+[sections.right_arm]
+armor = 11
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = 3, item = "CL.ERMediumLaser", brand = 5 },
+    { at = "4-5", item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
+    { at = "6-7", item = "HeatSink", brand = 5 },
+    { at = "10-12", item = "EndoSteel", brand = 5 },
+]
+
+[sections.left_torso]
+armor = 12
+rear = 4
+slots = [
+    { at = "3-6", item = "CL.LRM-20", brand = 5 },
+    { at = 7, item = "ArtemisIV", brand = 5 },
+    { at = "10-12", item = "FerroFibrous", brand = 5 },
+]
+
+[sections.right_torso]
+armor = 12
+rear = 4
+slots = [
+    { at = "3-6", item = "CL.LRM-20", brand = 5 },
+    { at = 7, item = "ArtemisIV", brand = 5 },
+    { at = "8-9", item = "HeatSink", brand = 5 },
+    { at = "10-12", item = "FerroFibrous", brand = 5 },
+]
+
+[sections.center_torso]
+armor = 14
+rear = 6
+slots = [
+    { at = 11, item = "EndoSteel", brand = 5 },
+    { at = 12, item = "FerroFibrous", brand = 5 },
+]
+
+[sections.left_leg]
+armor = 12
+
+[sections.right_leg]
+armor = 12
+
+[sections.head]
+armor = 8
+slots = [
+    { at = 4, item = "CL.SmallPulseLaser", brand = 5 },
+]

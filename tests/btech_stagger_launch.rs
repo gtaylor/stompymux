@@ -8,8 +8,8 @@ use stompymux_rs::*;
 #[tokio::test]
 async fn prelaunch_stagger_shares_native_lua_and_saved_attempts() {
     for template in [
-        include_str!("../game/mechs/JR7-D"),
-        include_str!("../game/mechs/StalkingSpider-1"),
+        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/StalkingSpider-1.toml"),
     ] {
         let (_dir, config, base, unit, target, _) =
             firing::fixture_with_target(template, None, template).await;
@@ -123,8 +123,8 @@ async fn prelaunch_stagger_shares_native_lua_and_saved_attempts() {
 #[tokio::test]
 async fn rejected_native_requests_preserve_roll_and_private_rejection() {
     for template in [
-        include_str!("../game/mechs/JR7-D"),
-        include_str!("../game/mechs/StalkingSpider-1"),
+        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/mechs/StalkingSpider-1.toml"),
     ] {
         let (_dir, config, mut base, unit, _, _) =
             firing::fixture_with_target(template, None, template).await;
@@ -196,7 +196,7 @@ async fn rejected_native_requests_preserve_roll_and_private_rejection() {
 /// Typed Lua requests retain a successful roll on rejection but revert it with an enclosing failure.
 #[tokio::test]
 async fn rejected_lua_requests_and_early_admission_keep_transaction_boundaries() {
-    let template = include_str!("../game/mechs/JR7-D");
+    let template = include_str!("../game/mechs/JR7-D.toml");
     let (_dir, config, mut base, unit, _, _) =
         firing::fixture_with_target(template, None, template).await;
     select_battle_target(&mut base, unit, ObjectId(1), None).unwrap();

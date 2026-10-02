@@ -1,0 +1,44 @@
+name = "Ontos"
+class = "vehicle"
+movement = "track"
+tons = 95
+walk_mp = 5
+heat_sinks = 24
+specials = ["SearchLight"]
+
+[sections.left_side]
+armor = 32
+slots = [
+    { at = "6-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_side]
+armor = 32
+slots = [
+    { at = "6-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.front_side]
+armor = 40
+
+[sections.aft_side]
+armor = 30
+slots = [
+    { at = 1, item = "ArtemisIV", brand = 3 },
+    { at = "2-3", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
+    { at = 4, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Artemis/Mine"] },
+    { at = 5, item = "Ammo_IS.SRM-4", rounds = 25, modes = ["Artemis/Mine"] },
+    { at = 6, item = "Case", brand = 3 },
+]
+
+[sections.turret]
+armor = 36
+slots = [
+    { at = "1-4", item = "IS.MediumLaser", brand = 3 },
+    { at = "5-7", item = "IS.MediumPulseLaser", brand = 3 },
+    { at = 8, item = "IS.LRM-15", brand = 3 },
+    { at = 9, item = "ArtemisIV", brand = 3 },
+    { at = 10, item = "IS.SRM-6", brand = 3 },
+    { at = 11, item = "ArtemisIV", brand = 3 },
+    { at = 12, item = "IS.SRM-4", brand = 3 },
+]

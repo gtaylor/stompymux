@@ -1,0 +1,64 @@
+name = "Hermes"
+class = "mech"
+movement = "biped"
+tons = 30
+walk_mp = 14
+heat_sinks = 20
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+
+[construction]
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 9
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = "5-11", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 9
+slots = [
+    { at = 5, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = "6-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 10
+rear = 4
+slots = [
+    { at = "4-5", item = "Masc", brand = 3 },
+    { at = "6-12", item = "EndoSteel", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 10
+rear = 4
+slots = [
+    { at = "4-5", item = "Ecm", brand = 3 },
+    { at = "6-12", item = "EndoSteel", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 15
+rear = 5
+slots = [
+    { at = 11, item = "IS.MediumPulseLaser", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 12
+
+[sections.right_leg]
+armor = 12
+
+[sections.head]
+armor = 8

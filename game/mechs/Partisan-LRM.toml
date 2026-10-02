@@ -1,0 +1,28 @@
+name = "Partisan"
+class = "vehicle"
+movement = "track"
+tons = 80
+walk_mp = 5
+specials = ["AntiAircraft"]
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 18
+
+[sections.right_side]
+armor = 18
+
+[sections.front_side]
+armor = 22
+
+[sections.aft_side]
+armor = 16
+
+[sections.turret]
+armor = 22
+slots = [
+    { at = "1-4", item = "IS.LRM-15", brand = 3 },
+    { at = "5-10", item = "Ammo_IS.LRM-15", rounds = 8 },
+]

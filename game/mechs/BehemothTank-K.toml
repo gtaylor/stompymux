@@ -1,0 +1,45 @@
+name = "Behemoth"
+class = "vehicle"
+movement = "track"
+tons = 100
+walk_mp = 3
+tac_range = 30
+lrs_range = 60
+scan_range = 30
+cargo_space = 0
+max_suits = 0
+
+[sections.left_side]
+armor = 38
+
+[sections.right_side]
+armor = 38
+
+[sections.front_side]
+armor = 46
+slots = [
+    { at = 1, item = "IS.LRM-5", brand = 3 },
+    { at = 2, item = "ArtemisIV", brand = 3 },
+    { at = 3, item = "IS.LRM-5", brand = 3 },
+    { at = 4, item = "ArtemisIV", brand = 3 },
+    { at = 5, item = "Ammo_IS.LRM-5", rounds = 24, modes = ["Artemis/Mine"] },
+]
+
+[sections.aft_side]
+armor = 46
+slots = [
+    { at = "1-2", item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Artemis/Mine"] },
+    { at = "3-4", item = "Ammo_IS.MRM-10", rounds = 24 },
+]
+
+[sections.turret]
+armor = 40
+slots = [
+    { at = "1-2", item = "IS.UltraAC/10", brand = 3 },
+    { at = 3, item = "IS.SRM-6", brand = 3 },
+    { at = 4, item = "ArtemisIV", brand = 3 },
+    { at = 5, item = "IS.SRM-6", brand = 3 },
+    { at = 6, item = "ArtemisIV", brand = 3 },
+    { at = "7-8", item = "IS.MRM-10", brand = 3 },
+    { at = "9-12", item = "Ammo_IS.UltraAC/10", rounds = 10 },
+]

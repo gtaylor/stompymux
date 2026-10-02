@@ -158,7 +158,7 @@ async fn encounter_fixture() -> EncounterFixture {
     for (index, slot) in units.iter_mut().enumerate() {
         let unit = world.create(&config, format!("Tactical friend {index}"), Kind::Thing);
         world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse(include_str!("../game/mechs/JR7-D"))
+        BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
             .unwrap()
             .create(&mut world, unit)
             .unwrap();
@@ -169,7 +169,7 @@ async fn encounter_fixture() -> EncounterFixture {
     assign_battle_pilot(&mut world, units[0], ObjectId(1)).unwrap();
     let enemy = world.create(&config, "Tactical local hostile".into(), Kind::Thing);
     world.objects.get_mut(&enemy).unwrap().home = Some(ObjectId(config.home()));
-    BattleUnitTemplate::parse(include_str!("../game/mechs/JR7-D"))
+    BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
         .unwrap()
         .create(&mut world, enemy)
         .unwrap();

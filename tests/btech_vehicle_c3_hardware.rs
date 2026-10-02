@@ -6,7 +6,8 @@ use stompymux_rs::*;
 /// Install independent computers in a turret and surviving hull face.
 fn design() -> BattleVehicleTemplate {
     let mut template =
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap();
+        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+            .unwrap();
     for section in template.sections.values_mut() {
         section.criticals.clear();
     }
@@ -144,19 +145,25 @@ async fn vehicle_hardware_survives_storage_and_is_exposed_to_lua() {
 #[test]
 fn shipped_vehicle_master_and_slave_templates_have_live_hardware() {
     let master = BattleVehicle::new(
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Schiltron")).unwrap(),
+        BattleVehicleTemplate::parse("Schiltron", include_str!("../game/mechs/Schiltron.toml"))
+            .unwrap(),
     )
     .unwrap();
     assert_eq!(master.c3_hardware().unwrap().working_masters, 1);
     assert!(master.c3_operational().unwrap());
     let slave = BattleVehicle::new(
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher-MRM")).unwrap(),
+        BattleVehicleTemplate::parse(
+            "Demolisher-MRM",
+            include_str!("../game/mechs/Demolisher-MRM.toml"),
+        )
+        .unwrap(),
     )
     .unwrap();
     assert!(slave.c3_hardware().unwrap().slave_operational);
     assert!(slave.c3_operational().unwrap());
     let empty = BattleVehicle::new(
-        BattleVehicleTemplate::parse(include_str!("../game/mechs/Demolisher")).unwrap(),
+        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+            .unwrap(),
     )
     .unwrap();
     assert_eq!(empty.c3_hardware().unwrap(), BattleC3Hardware::default());

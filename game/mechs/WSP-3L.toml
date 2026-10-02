@@ -1,0 +1,76 @@
+name = "Wasp"
+class = "mech"
+movement = "biped"
+tons = 20
+walk_mp = 9
+jump_mp = 6
+heat_sinks = 10
+computer = 4
+radio = 4
+specials = ["ECM"]
+
+[construction]
+structure = "endo_steel"
+armor = "stealth"
+
+[sections.left_arm]
+armor = 6
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-9", item = "EndoSteel" },
+    { at = "10-11", item = "StealthArmor" },
+]
+
+[sections.right_arm]
+armor = 6
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "HeatSink" },
+    { at = 6, item = "IS.ERMediumLaser" },
+    { at = "7-8", item = "EndoSteel" },
+    { at = "9-10", item = "StealthArmor" },
+]
+
+[sections.left_torso]
+armor = 7
+rear = 2
+slots = [
+    { at = "1-2", item = "HeatSink" },
+    { at = "3-4", item = "JumpJet" },
+    { at = "5-6", item = "Ecm" },
+    { at = "7-9", item = "EndoSteel" },
+    { at = "10-11", item = "StealthArmor" },
+]
+
+[sections.right_torso]
+armor = 7
+rear = 2
+slots = [
+    { at = "1-2", item = "HeatSink" },
+    { at = "3-4", item = "JumpJet" },
+    { at = 5, item = "IS.RL-10", modes = ["OneShot"] },
+    { at = "6-8", item = "EndoSteel" },
+    { at = "9-10", item = "StealthArmor" },
+]
+
+[sections.center_torso]
+armor = 8
+rear = 3
+slots = [
+    { at = "11-12", item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 7
+slots = [
+    { at = "5-6", item = "StealthArmor" },
+]
+
+[sections.right_leg]
+armor = 7
+slots = [
+    { at = "5-6", item = "StealthArmor" },
+]
+
+[sections.head]
+armor = 9

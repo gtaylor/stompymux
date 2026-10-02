@@ -29,25 +29,30 @@ async fn fixture_movement(
     let id = world.create(&config, "Burning vehicle".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     let mut text = if movement == BattleVehicleMovement::Vtol {
-        include_str!("../game/mechs/Kestrel")
+        include_str!("../game/mechs/Kestrel.toml")
     } else {
-        include_str!("../game/mechs/Demolisher")
+        include_str!("../game/mechs/Demolisher.toml")
     }
     .to_owned();
     if movement == BattleVehicleMovement::Stationary {
         text = text
-            .replace("{ Track }", "{ None }")
-            .replace("{ 53.75 }", "{ 0 }");
+            .replace("movement = \"track\"", "movement = \"none\"")
+            .replace("walk_mp = 5", "walk_mp = 0");
     }
     text = text.replace(
-        "{ Track }",
+        "movement = \"track\"",
         match movement {
-            BattleVehicleMovement::Wheeled => "{ Wheel }",
-            BattleVehicleMovement::Hover => "{ Hover }",
-            _ => "{ Track }",
+            BattleVehicleMovement::Wheeled => "movement = \"wheel\"",
+            BattleVehicleMovement::Hover => "movement = \"hover\"",
+            _ => "movement = \"track\"",
         },
     );
-    create_battle_vehicle(&mut world, id, BattleVehicleTemplate::parse(&text).unwrap()).unwrap();
+    create_battle_vehicle(
+        &mut world,
+        id,
+        BattleVehicleTemplate::parse("test", &text).unwrap(),
+    )
+    .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();

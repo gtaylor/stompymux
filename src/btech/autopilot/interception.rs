@@ -467,7 +467,7 @@ mod integration_tests {
         let (mut world, id, target, map) = autopilot::encounters::fixture(
             &config,
             base,
-            include_str!("../../../game/mechs/JR7-D"),
+            include_str!("../../../game/mechs/JR7-D.toml"),
             "long_approach",
             1,
         )

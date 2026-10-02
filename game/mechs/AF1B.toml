@@ -1,0 +1,66 @@
+name = "Arctic Fox"
+class = "mech"
+movement = "biped"
+tons = 30
+walk_mp = 9
+heat_sinks = 20
+computer = 4
+radio = 4
+
+[construction]
+engine = "xl"
+structure = "endo_steel"
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 10
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-6", item = "EndoSteel" },
+    { at = "7-12", item = "IS.LB10-XAC" },
+]
+
+[sections.right_arm]
+armor = 10
+slots = [
+    { at = "5-8", item = "EndoSteel" },
+]
+
+[sections.left_torso]
+armor = 11
+rear = 3
+slots = [
+    { at = "4-6", item = "HeatSink" },
+    { at = 8, item = "Ammo_IS.LB10-XAC", rounds = 10 },
+    { at = 9, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+]
+
+[sections.right_torso]
+armor = 11
+rear = 3
+slots = [
+    { at = "4-9", item = "HeatSink" },
+    { at = 10, item = "IS.MediumLaser" },
+]
+
+[sections.center_torso]
+armor = 15
+rear = 4
+slots = [
+    { at = "11-12", item = "EndoSteel" },
+]
+
+[sections.left_leg]
+armor = 10
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 10
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 9

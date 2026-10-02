@@ -1,0 +1,35 @@
+name = "Striker"
+class = "vehicle"
+movement = "wheel"
+tons = 35
+walk_mp = 8
+specials = ["SearchLight"]
+
+[sections.left_side]
+armor = 23
+slots = [
+    { at = "6-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_side]
+armor = 23
+slots = [
+    { at = "6-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.front_side]
+armor = 26
+
+[sections.aft_side]
+armor = 20
+
+[sections.turret]
+armor = 24
+slots = [
+    { at = 1, item = "IS.NarcBeacon", brand = 3 },
+    { at = 2, item = "IS.LRM-10", brand = 3 },
+    { at = "3-4", item = "IS.SRM-2", brand = 3 },
+    { at = 5, item = "Ammo_IS.NarcBeacon", rounds = 6 },
+    { at = 6, item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Narc/Smoke"] },
+    { at = 7, item = "Ammo_IS.SRM-2", rounds = 50, modes = ["Narc/Smoke"] },
+]

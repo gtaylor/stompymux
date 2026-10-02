@@ -1,0 +1,61 @@
+name = "Ahab"
+class = "aerofighter"
+movement = "fly"
+tons = 90
+walk_mp = 8
+heat_sinks = 14
+computer = 3
+fuel = 750
+
+[sections.nose]
+armor = 62
+internals = 10
+slots = [
+    { at = 1, item = "IS.LargeLaser" },
+    { at = 2, item = "IS.NarcBeacon" },
+    { at = "3-6", item = "Ammo_IS.NarcBeacon", rounds = 6 },
+]
+
+[sections.left_wing]
+armor = 43
+internals = 10
+slots = [
+    { at = 1, item = "IS.LRM-20" },
+    { at = "2-4", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Narc/Smoke"] },
+    { at = 5, item = "IS.SRM-6" },
+    { at = 6, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Narc/Smoke"] },
+]
+
+[sections.right_wing]
+armor = 43
+internals = 10
+slots = [
+    { at = 1, item = "IS.LRM-20" },
+    { at = "2-4", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Narc/Smoke"] },
+    { at = 5, item = "IS.SRM-6" },
+    { at = 6, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Narc/Smoke"] },
+]
+
+[sections.cockpit]
+armor = 16
+internals = 10
+slots = [
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "Sensors" },
+    { at = 5, item = "LifeSupport" },
+]
+
+[sections.engine]
+armor = 30
+internals = 10
+slots = [
+    { at = "1-2", item = "IS.MediumLaser" },
+    { at = "4-10", item = "HeatSink" },
+    { at = 12, item = "HeatSink" },
+]
+
+[sections.fuselage]
+armor = 64
+internals = 10

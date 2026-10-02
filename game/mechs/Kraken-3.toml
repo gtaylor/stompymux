@@ -1,0 +1,67 @@
+name = "Kraken"
+class = "mech"
+movement = "biped"
+tons = 100
+walk_mp = 5
+heat_sinks = 38
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+
+[sections.left_arm]
+armor = 34
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "HeatSink" },
+    { at = "5-12", item = "CL.LRM-15" },
+]
+
+[sections.right_arm]
+armor = 34
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "HeatSink" },
+    { at = "5-12", item = "CL.LRM-15" },
+]
+
+[sections.left_torso]
+armor = 32
+rear = 10
+slots = [
+    { at = "3-4", item = "HeatSink" },
+    { at = "5-12", item = "Ammo_CL.LRM-15", rounds = 8 },
+]
+
+[sections.right_torso]
+armor = 32
+rear = 10
+slots = [
+    { at = "3-4", item = "HeatSink" },
+    { at = "5-12", item = "Ammo_CL.LRM-15", rounds = 8 },
+]
+
+[sections.center_torso]
+armor = 46
+rear = 13
+slots = [
+    { at = "11-12", item = "HeatSink" },
+]
+
+[sections.left_leg]
+armor = 42
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 42
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "CL.StreakSRM-4", modes = ["OneShot"] },
+]

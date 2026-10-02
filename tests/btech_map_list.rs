@@ -160,7 +160,8 @@ fn output(scripts: &Scripts) -> Vec<String> {
 async fn mixed_unit_lists_follow_slots_without_mutating_simulation() {
     for source in firing::templates() {
         let (_dir, config, mut world, id, target, _) =
-            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D")).await;
+            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml"))
+                .await;
         let map = world.btech.units()[&id].map.unwrap();
         firing::edit(&mut world, id, |unit| unit["map_slot"] = 5.into());
         firing::edit(&mut world, target, |unit| unit["map_slot"] = 2.into());

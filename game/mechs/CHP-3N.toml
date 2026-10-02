@@ -1,0 +1,73 @@
+name = "Champion"
+class = "mech"
+movement = "biped"
+tons = 60
+walk_mp = 8
+heat_sinks = 20
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+
+[construction]
+engine = "xl"
+armor = "ferro_fibrous"
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 12
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.LargeLaser" },
+    { at = "5-9", item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 12
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.LargeLaser" },
+    { at = "5-9", item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 15
+rear = 7
+slots = [
+    { at = 4, item = "IS.SRM-6", modes = ["Artemis/Mine"] },
+    { at = 5, item = "IS.SRM-6" },
+    { at = 6, item = "ArtemisIV" },
+    { at = "7-8", item = "IS.MediumLaser" },
+    { at = 9, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Artemis/Mine"] },
+]
+
+[sections.right_torso]
+armor = 15
+rear = 7
+slots = [
+    { at = "4-9", item = "IS.LB10-XAC" },
+    { at = 10, item = "Ammo_IS.LB10-XAC", rounds = 10 },
+    { at = 11, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+]
+
+[sections.center_torso]
+armor = 21
+rear = 6
+slots = [
+    { at = "11-12", item = "IS.SmallLaser" },
+]
+
+[sections.left_leg]
+armor = 15
+slots = [
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.right_leg]
+armor = 15
+slots = [
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.head]
+armor = 9

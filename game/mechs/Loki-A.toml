@@ -1,0 +1,62 @@
+name = "Loki"
+class = "mech"
+movement = "biped"
+tons = 65
+walk_mp = 8
+specials = ["SearchLight"]
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+
+[sections.left_arm]
+armor = 11
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "CL.ERLargeLaser" },
+]
+
+[sections.right_arm]
+armor = 11
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-5", item = "CL.UltraAC/5" },
+    { at = 6, item = "Ammo_CL.UltraAC/5", rounds = 20 },
+]
+
+[sections.left_torso]
+armor = 14
+rear = 7
+slots = [
+    { at = 3, item = "CL.NarcBeacon" },
+    { at = 4, item = "BeagleProbe" },
+    { at = 5, item = "Ammo_CL.NarcBeacon", rounds = 6 },
+]
+
+[sections.right_torso]
+armor = 14
+rear = 7
+slots = [
+    { at = "3-6", item = "CL.LRM-20" },
+    { at = "7-8", item = "CL.MachineGun" },
+    { at = 9, item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Narc/Smoke"] },
+]
+
+[sections.center_torso]
+armor = 17
+rear = 8
+slots = [
+    { at = 11, item = "Ammo_CL.MachineGun", rounds = 200 },
+]
+
+[sections.left_leg]
+armor = 15
+
+[sections.right_leg]
+armor = 15
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "CL.ERMediumLaser" },
+]

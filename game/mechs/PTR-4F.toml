@@ -1,0 +1,71 @@
+name = "Penetrator"
+class = "mech"
+movement = "biped"
+tons = 75
+walk_mp = 6
+jump_mp = 4
+heat_sinks = 24
+computer = 4
+radio = 4
+cargo_space = 0
+max_suits = 0
+
+[construction]
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 21
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.LRM-10", modes = ["Artemis/Mine"] },
+    { at = 5, item = "IS.LRM-10" },
+    { at = 6, item = "ArtemisIV" },
+]
+
+[sections.right_arm]
+armor = 21
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.LRM-10", modes = ["Artemis/Mine"] },
+    { at = 5, item = "IS.LRM-10" },
+    { at = 6, item = "ArtemisIV" },
+]
+
+[sections.left_torso]
+armor = 24
+rear = 7
+slots = [
+    { at = "1-2", item = "IS.MediumPulseLaser" },
+    { at = 3, item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
+]
+
+[sections.right_torso]
+armor = 24
+rear = 7
+slots = [
+    { at = "1-2", item = "IS.MediumPulseLaser" },
+    { at = 3, item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
+]
+
+[sections.center_torso]
+armor = 34
+rear = 9
+slots = [
+    { at = 11, item = "IS.Anti-MissileSystem" },
+    { at = 12, item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
+]
+
+[sections.left_leg]
+armor = 26
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 26
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9

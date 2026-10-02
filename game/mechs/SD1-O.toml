@@ -1,0 +1,64 @@
+name = "Sunder"
+class = "mech"
+movement = "biped"
+tons = 90
+walk_mp = 6
+heat_sinks = 30
+computer = 4
+radio = 4
+
+[construction]
+engine = "xl"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 30
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-12", item = "IS.AC/20", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 30
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-6", item = "HeatSink", brand = 3 },
+    { at = "7-10", item = "IS.LargeLaser", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 28
+rear = 10
+slots = [
+    { at = 4, item = "IS.MediumLaser", brand = 3 },
+    { at = 5, item = "Ammo_IS.AC/20", rounds = 5 },
+    { at = 6, item = "Ammo_IS.SRM-4", rounds = 25 },
+]
+
+[sections.right_torso]
+armor = 28
+rear = 10
+slots = [
+    { at = 4, item = "IS.MediumLaser", brand = 3 },
+    { at = 5, item = "Ammo_IS.AC/20", rounds = 5 },
+]
+
+[sections.center_torso]
+armor = 41
+rear = 12
+slots = [
+    { at = "11-12", item = "IS.SRM-4", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 33
+
+[sections.right_leg]
+armor = 33
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "IS.SRM-4", brand = 3 },
+]

@@ -1,0 +1,47 @@
+name = "Maxim"
+class = "vehicle"
+movement = "hover"
+tons = 50
+walk_mp = 12
+cargo_space = 350
+max_suits = 0
+max_ton = 10
+specials = ["CargoTech"]
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 23
+slots = [
+    { at = 1, item = "IS.StreakSRM-2" },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.right_side]
+armor = 23
+slots = [
+    { at = 1, item = "IS.StreakSRM-2" },
+    { at = "6-12", item = "FerroFibrous" },
+]
+
+[sections.front_side]
+armor = 25
+slots = [
+    { at = "1-2", item = "IS.LRM-5" },
+    { at = 3, item = "Ammo_IS.LRM-5", rounds = 24 },
+    { at = 6, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+]
+
+[sections.aft_side]
+armor = 16
+
+[sections.turret]
+armor = 20
+slots = [
+    { at = 1, item = "IS.SRM-6" },
+    { at = "2-3", item = "IS.MachineGun" },
+    { at = 4, item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = 5, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload", "Halfton"] },
+    { at = 6, item = "TAG" },
+]

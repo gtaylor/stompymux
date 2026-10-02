@@ -1,0 +1,62 @@
+name = "Catapult"
+class = "mech"
+movement = "biped"
+tons = 65
+walk_mp = 6
+jump_mp = 4
+heat_sinks = 26
+computer = 4
+radio = 4
+
+[construction]
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 13
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-5", item = "IS.PPC" },
+    { at = "6-8", item = "IS.RL-20", modes = ["OneShot"] },
+    { at = "9-11", item = "HeatSink" },
+]
+
+[sections.right_arm]
+armor = 13
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-11", item = "IS.RL-20", modes = ["OneShot"] },
+]
+
+[sections.left_torso]
+armor = 22
+rear = 8
+slots = [
+    { at = "1-2", item = "JumpJet" },
+    { at = "3-8", item = "IS.RL-20", modes = ["OneShot"] },
+    { at = "9-11", item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 22
+rear = 8
+slots = [
+    { at = "1-2", item = "JumpJet" },
+    { at = "3-8", item = "IS.RL-20", modes = ["OneShot"] },
+    { at = "9-11", item = "HeatSink" },
+]
+
+[sections.center_torso]
+armor = 26
+rear = 11
+slots = [
+    { at = "11-12", item = "IS.MediumLaser" },
+]
+
+[sections.left_leg]
+armor = 22
+
+[sections.right_leg]
+armor = 22
+
+[sections.head]
+armor = 9

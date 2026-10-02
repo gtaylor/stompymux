@@ -1,0 +1,74 @@
+name = "Grendel"
+class = "mech"
+movement = "biped"
+tons = 45
+walk_mp = 11
+jump_mp = 7
+heat_sinks = 20
+computer = 4
+radio = 5
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+brand = 5
+
+[sections.left_arm]
+armor = 12
+slots = [
+    { at = 5, item = "CL.MediumPulseLaser", brand = 5 },
+    { at = "7-10", item = "FerroFibrous", brand = 5 },
+]
+
+[sections.right_arm]
+armor = 12
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-5", item = "CL.UltraAC/5", brand = 5 },
+    { at = 6, item = "CL.ERMediumLaser", brand = 5 },
+    { at = 7, item = "EndoSteel", brand = 5 },
+    { at = "8-10", item = "FerroFibrous", brand = 5 },
+]
+
+[sections.left_torso]
+armor = 16
+rear = 6
+slots = [
+    { at = 9, item = "JumpJet", brand = 5 },
+    { at = "10-12", item = "EndoSteel", brand = 5 },
+]
+
+[sections.right_torso]
+armor = 16
+rear = 6
+slots = [
+    { at = 3, item = "Ammo_CL.UltraAC/5", rounds = 20 },
+    { at = 4, item = "CL.MediumPulseLaser", brand = 5 },
+    { at = 9, item = "JumpJet", brand = 5 },
+    { at = "10-12", item = "EndoSteel", brand = 5 },
+]
+
+[sections.center_torso]
+armor = 18
+rear = 9
+slots = [
+    { at = 11, item = "JumpJet", brand = 5 },
+    { at = 12, item = "CL.ERSmallLaser", brand = 5 },
+]
+
+[sections.left_leg]
+armor = 20
+slots = [
+    { at = "5-6", item = "JumpJet", brand = 5 },
+]
+
+[sections.right_leg]
+armor = 20
+slots = [
+    { at = "5-6", item = "JumpJet", brand = 5 },
+]
+
+[sections.head]
+armor = 9

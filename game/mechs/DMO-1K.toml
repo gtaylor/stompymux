@@ -1,0 +1,68 @@
+name = "Daimyo"
+class = "mech"
+movement = "biped"
+tons = 40
+walk_mp = 8
+heat_sinks = 22
+computer = 4
+radio = 4
+
+[construction]
+armor = "ferro_fibrous"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 12
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-6", item = "IS.ERPPC", brand = 3 },
+    { at = "7-8", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 12
+slots = [
+    { at = "5-6", item = "IS.MediumLaser", brand = 3 },
+    { at = "7-8", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 15
+rear = 5
+slots = [
+    { at = "1-6", item = "HeatSink", brand = 3 },
+    { at = "7-8", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 15
+rear = 5
+slots = [
+    { at = "1-3", item = "HeatSink", brand = 3 },
+    { at = "4-5", item = "IS.SRM-6", brand = 3 },
+    { at = "6-7", item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = "8-9", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 16
+rear = 7
+slots = [
+    { at = "11-12", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 19
+slots = [
+    { at = "5-6", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_leg]
+armor = 19
+slots = [
+    { at = "5-6", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.head]
+armor = 9

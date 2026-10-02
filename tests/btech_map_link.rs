@@ -9,7 +9,8 @@ use stompymux_rs::*;
 async fn setlinked_shares_wrapping_and_saved_state() {
     for source in firing::templates() {
         let (_dir, config, mut world, id, _, _) =
-            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D")).await;
+            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml"))
+                .await;
         let map = world.btech.units()[&id].map.unwrap();
         let actor = world.create(&config, "Map linker".into(), Kind::Player);
         world

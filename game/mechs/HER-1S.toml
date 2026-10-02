@@ -1,0 +1,56 @@
+name = "Hermes"
+class = "mech"
+movement = "biped"
+tons = 30
+walk_mp = 14
+computer = 4
+radio = 4
+
+[construction]
+structure = "endo_steel"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 9
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "IS.Flamer" },
+    { at = "5-11", item = "EndoSteel" },
+]
+
+[sections.right_arm]
+armor = 9
+slots = [
+    { at = 5, item = "IS.MediumLaser" },
+    { at = "6-12", item = "EndoSteel" },
+]
+
+[sections.left_torso]
+armor = 9
+rear = 4
+slots = [
+    { at = "1-7", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 9
+rear = 4
+slots = [
+    { at = "1-7", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 14
+rear = 5
+slots = [
+    { at = 11, item = "IS.MediumLaser" },
+]
+
+[sections.left_leg]
+armor = 10
+
+[sections.right_leg]
+armor = 10
+
+[sections.head]
+armor = 7

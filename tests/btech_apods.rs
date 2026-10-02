@@ -34,7 +34,8 @@ fn apod_assets_construct_and_round_trip() {
 /// Pods add defensive value while retaining their reference offensive catalogue contribution.
 #[test]
 fn apod_mass_and_battle_value() {
-    let mut template = BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+    let mut template =
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     for section in template.sections.values_mut() {
         section.criticals.retain(|_, part| {
             BattleWeapon::parse(&part.equipment).is_err() && !part.equipment.starts_with("Ammo_")

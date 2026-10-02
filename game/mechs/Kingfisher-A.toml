@@ -1,0 +1,73 @@
+name = "Kingfisher"
+class = "mech"
+movement = "biped"
+tons = 90
+walk_mp = 6
+heat_sinks = 34
+
+[construction]
+tech_base = "clan"
+structure = "endo_steel"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 30
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "CL.ERMediumLaser" },
+    { at = 5, item = "CL.MediumPulseLaser" },
+]
+
+[sections.right_arm]
+armor = 30
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-7", item = "CL.LB10-XAC" },
+]
+
+[sections.left_torso]
+armor = 28
+rear = 10
+slots = [
+    { at = 1, item = "CL.SRM-6" },
+    { at = 2, item = "Ammo_CL.SRM-6", rounds = 15 },
+    { at = "4-6", item = "FerroFibrous" },
+    { at = "7-10", item = "EndoSteel" },
+]
+
+[sections.right_torso]
+armor = 28
+rear = 10
+slots = [
+    { at = 1, item = "CL.ERSmallLaser" },
+    { at = "2-3", item = "HeatSink" },
+    { at = "4-6", item = "EndoSteel" },
+    { at = "7-9", item = "FerroFibrous" },
+    { at = 10, item = "Ammo_CL.LB10-XAC", rounds = 10 },
+    { at = 11, item = "Ammo_CL.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+]
+
+[sections.center_torso]
+armor = 44
+rear = 13
+slots = [
+    { at = "11-12", item = "CL.ERPPC" },
+]
+
+[sections.left_leg]
+armor = 38
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 38
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

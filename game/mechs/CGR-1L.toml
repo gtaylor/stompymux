@@ -1,0 +1,42 @@
+name = "Charger"
+class = "mech"
+movement = "biped"
+tons = 80
+walk_mp = 8
+
+[sections.left_arm]
+armor = 7
+omit = ["hand_actuator"]
+
+[sections.right_arm]
+armor = 7
+slots = [
+    { at = "5-6", item = "IS.LargeLaser", brand = 2 },
+]
+
+[sections.left_torso]
+armor = 9
+rear = 5
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]
+
+[sections.right_torso]
+armor = 9
+rear = 5
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]
+
+[sections.center_torso]
+armor = 10
+rear = 6
+
+[sections.left_leg]
+armor = 11
+
+[sections.right_leg]
+armor = 11
+
+[sections.head]
+armor = 8

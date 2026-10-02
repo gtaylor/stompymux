@@ -1,0 +1,70 @@
+name = "Nova Cat"
+class = "mech"
+movement = "biped"
+tons = 70
+walk_mp = 6
+jump_mp = 4
+heat_sinks = 50
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+structure = "endo_steel"
+
+[sections.left_arm]
+armor = 22
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "CL.ERLargeLaser", modes = ["OnTC"] },
+    { at = "5-12", item = "HeatSink" },
+]
+
+[sections.right_arm]
+armor = 22
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "CL.ERLargeLaser", modes = ["OnTC"] },
+    { at = "5-12", item = "HeatSink" },
+]
+
+[sections.left_torso]
+armor = 23
+rear = 7
+slots = [
+    { at = "3-4", item = "JumpJet" },
+    { at = "5-12", item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 23
+rear = 7
+slots = [
+    { at = "3-4", item = "JumpJet" },
+    { at = "5-8", item = "TargetingComputer" },
+    { at = "9-12", item = "HeatSink" },
+]
+
+[sections.center_torso]
+armor = 35
+rear = 8
+slots = [
+    { at = "11-12", item = "EndoSteel" },
+]
+
+[sections.left_leg]
+armor = 30
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.right_leg]
+armor = 30
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "EndoSteel" },
+]

@@ -1,0 +1,40 @@
+name = "Parity MechWarrior"
+class = "mechwarrior"
+movement = "biped"
+tons = 1
+walk_mp = 1
+
+[sections.left_arm]
+armor = 1
+internals = 1
+slots = [
+    { at = 1, item = "Agra.IS.PPC", brand = 5 },
+]
+
+[sections.right_arm]
+armor = 2
+internals = 1
+
+[sections.left_torso]
+armor = 3
+internals = 1
+
+[sections.right_torso]
+armor = 4
+internals = 1
+
+[sections.center_torso]
+armor = 5
+internals = 1
+
+[sections.left_leg]
+armor = 6
+internals = 1
+
+[sections.right_leg]
+armor = 7
+internals = 1
+
+[sections.head]
+armor = 8
+internals = 1

@@ -1,0 +1,71 @@
+name = "Thor"
+class = "mech"
+movement = "biped"
+tons = 70
+walk_mp = 8
+jump_mp = 5
+heat_sinks = 28
+specials = ["SearchLight"]
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+armor = "ferro_fibrous"
+
+[sections.left_arm]
+armor = 17
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-8", item = "CL.GaussRifle" },
+    { at = 9, item = "Ammo_CL.GaussRifle", rounds = 8 },
+    { at = 10, item = "FerroFibrous" },
+]
+
+[sections.right_arm]
+armor = 17
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "CL.LargePulseLaser" },
+    { at = 6, item = "FerroFibrous" },
+]
+
+[sections.left_torso]
+armor = 22
+rear = 7
+slots = [
+    { at = 3, item = "CL.SRM-6" },
+    { at = 4, item = "Ammo_CL.SRM-6", rounds = 15 },
+    { at = "5-6", item = "FerroFibrous" },
+]
+
+[sections.right_torso]
+armor = 22
+rear = 7
+slots = [
+    { at = "3-4", item = "FerroFibrous" },
+]
+
+[sections.center_torso]
+armor = 27
+rear = 8
+slots = [
+    { at = 11, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 23
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 23
+slots = [
+    { at = "5-6", item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

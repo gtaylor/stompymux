@@ -1,0 +1,60 @@
+name = "Spider"
+class = "mech"
+movement = "biped"
+tons = 30
+walk_mp = 12
+jump_mp = 8
+computer = 4
+radio = 4
+
+[construction]
+structure = "endo_steel"
+armor = "ferro_fibrous"
+brand = 3
+
+[sections.left_arm]
+armor = 5
+slots = [
+    { at = "5-11", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 5
+slots = [
+    { at = "5-11", item = "FerroFibrous", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 6
+rear = 2
+slots = [
+    { at = "1-4", item = "JumpJet", brand = 3 },
+    { at = "5-11", item = "EndoSteel", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 6
+rear = 2
+slots = [
+    { at = "1-4", item = "JumpJet", brand = 3 },
+    { at = "5-11", item = "EndoSteel", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 8
+rear = 4
+slots = [
+    { at = "11-12", item = "IS.MediumPulseLaser", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 5
+
+[sections.right_leg]
+armor = 5
+
+[sections.head]
+armor = 6
+slots = [
+    { at = 4, item = "HeatSink", brand = 3 },
+]

@@ -1,0 +1,65 @@
+name = "Guillotine"
+class = "mech"
+movement = "biped"
+tons = 70
+walk_mp = 6
+jump_mp = 4
+heat_sinks = 22
+specials = ["SearchLight"]
+
+[sections.left_arm]
+armor = 20
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.LargeLaser" },
+]
+
+[sections.right_arm]
+armor = 20
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "IS.MediumLaser" },
+]
+
+[sections.left_torso]
+armor = 22
+rear = 8
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+    { at = 2, item = "JumpJet" },
+    { at = "3-7", item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 22
+rear = 8
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+    { at = 2, item = "JumpJet" },
+    { at = "3-6", item = "HeatSink" },
+    { at = 7, item = "Ammo_IS.SRM-6", rounds = 15 },
+]
+
+[sections.center_torso]
+armor = 27
+rear = 12
+slots = [
+    { at = "11-12", item = "IS.SRM-6" },
+]
+
+[sections.left_leg]
+armor = 22
+slots = [
+    { at = 5, item = "JumpJet" },
+    { at = 6, item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 22
+slots = [
+    { at = 5, item = "JumpJet" },
+    { at = 6, item = "HeatSink" },
+]
+
+[sections.head]
+armor = 9

@@ -1,0 +1,72 @@
+name = "Crockett"
+class = "mech"
+movement = "biped"
+tons = 85
+walk_mp = 5
+jump_mp = 3
+heat_sinks = 30
+computer = 4
+radio = 4
+
+[construction]
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 28
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "IS.ERLargeLaser" },
+    { at = 6, item = "IS.SmallLaser" },
+    { at = "7-9", item = "HeatSink" },
+]
+
+[sections.right_arm]
+armor = 28
+omit = ["hand_actuator"]
+slots = [
+    { at = "4-5", item = "IS.ERLargeLaser" },
+    { at = 6, item = "IS.SmallLaser" },
+    { at = "7-9", item = "HeatSink" },
+]
+
+[sections.left_torso]
+armor = 25
+rear = 11
+slots = [
+    { at = "1-2", item = "IS.SRM-6" },
+    { at = "3-8", item = "IS.LB10-XAC" },
+    { at = 9, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = "10-12", item = "HeatSink" },
+]
+
+[sections.right_torso]
+armor = 25
+rear = 11
+slots = [
+    { at = "1-2", item = "IS.SRM-6" },
+    { at = "3-4", item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = "5-6", item = "Ammo_IS.LB10-XAC", rounds = 10 },
+    { at = "7-12", item = "HeatSink" },
+]
+
+[sections.center_torso]
+armor = 35
+rear = 19
+slots = [
+    { at = 11, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 36
+slots = [
+    { at = 5, item = "JumpJet" },
+]
+
+[sections.right_leg]
+armor = 36
+slots = [
+    { at = 5, item = "JumpJet" },
+]
+
+[sections.head]
+armor = 9

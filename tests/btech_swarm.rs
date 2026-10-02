@@ -6,17 +6,17 @@ use stompymux_rs::*;
 
 /// Representative construction for every supported movement class.
 fn templates() -> Vec<String> {
-    let tracked = include_str!("../game/mechs/Demolisher");
+    let tracked = include_str!("../game/mechs/Demolisher.toml");
     vec![
-        include_str!("../game/mechs/JR7-D").into(),
-        include_str!("../game/mechs/GOL-1H").into(),
+        include_str!("../game/mechs/JR7-D.toml").into(),
+        include_str!("../game/mechs/GOL-1H.toml").into(),
         tracked.into(),
-        tracked.replace("{ Track }", "{ Wheel }"),
-        tracked.replace("{ Track }", "{ Hover }"),
+        tracked.replace("movement = \"track\"", "movement = \"wheel\""),
+        tracked.replace("movement = \"track\"", "movement = \"hover\""),
         tracked
-            .replace("{ Track }", "{ None }")
-            .replace("{ 53.75 }", "{ 0 }"),
-        include_str!("../game/mechs/Kestrel").into(),
+            .replace("movement = \"track\"", "movement = \"none\"")
+            .replace("walk_mp = 5", "walk_mp = 0"),
+        include_str!("../game/mechs/Kestrel.toml").into(),
     ]
 }
 
@@ -59,7 +59,7 @@ async fn fixture(
         (if index == 0 {
             launcher(source, "Swarm")
         } else {
-            BattleUnitTemplate::parse(source).unwrap()
+            BattleUnitTemplate::parse("test", source).unwrap()
         })
         .create(&mut world, id)
         .unwrap();
@@ -114,8 +114,8 @@ fn shot_rules() -> BattleShotRules {
 
 /// Install the same Clan LRM-20 and full Swarm bin in either construction anatomy.
 fn launcher(source: &str, mode: &str) -> BattleUnitTemplate {
-    let mut definition = BattleUnitTemplate::parse(source).unwrap();
-    let part = BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D"))
+    let mut definition = BattleUnitTemplate::parse("test", source).unwrap();
+    let part = BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
         .unwrap()
         .sections[&BattleSection::LeftArm]
         .criticals[&2]
@@ -325,7 +325,7 @@ fn candidate(
     };
     let id = world.create(config, "Retarget candidate".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    BattleUnitTemplate::parse(source)
+    BattleUnitTemplate::parse("test", source)
         .unwrap()
         .create(world, id)
         .unwrap();
@@ -706,8 +706,8 @@ async fn swarm_can_return_to_its_launcher() {
 async fn swarm_skips_installed_ams_on_hits_and_misses() {
     for source in [templates()[0].clone(), templates()[2].clone()] {
         for target_source in [
-            include_str!("../game/mechs/Daishi-A"),
-            include_str!("../game/mechs/Goblin-58"),
+            include_str!("../game/mechs/Daishi-A.toml"),
+            include_str!("../game/mechs/Goblin-58.toml"),
         ] {
             let (_dir, _config, mut initial, shooter, target) =
                 fixture(&source, target_source, false).await;
@@ -764,7 +764,8 @@ fn swarm_template_modes_cover_compatible_catalogue() {
                 continue;
             }
             let mut template =
-                BattleTemplate::parse(include_str!("fixtures/btech/mechs/JR7-D")).unwrap();
+                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                    .unwrap();
             let arm = template.sections.get_mut(&BattleSection::LeftArm).unwrap();
             let mut mount = arm.criticals[&2].clone();
             mount.equipment = weapon.name().into();

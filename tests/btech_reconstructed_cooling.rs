@@ -93,7 +93,8 @@ async fn single_sink_reconstruction_preserves_samples_and_applies_later_damage()
 async fn double_sinks_count_complete_installations_and_two_points_per_internal_sink() {
     for clan in [false, true] {
         let (_dir, config, mut world) = support::isolated_world().await;
-        let mut definition = BattleTemplate::parse(include_str!("../game/mechs/JR7-D")).unwrap();
+        let mut definition =
+            BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap();
         definition.heat_sinks = 20;
         definition.attributes.insert(
             "specials".into(),

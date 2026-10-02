@@ -1,0 +1,74 @@
+name = "Fafnir"
+class = "mech"
+movement = "biped"
+tons = 100
+walk_mp = 5
+heat_sinks = 20
+computer = 4
+radio = 5
+cargo_space = 0
+max_suits = 0
+
+[construction]
+structure = "endo_steel"
+heat_sinks = "double"
+brand = 3
+
+[sections.left_arm]
+armor = 34
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = 3, item = "IS.ERMediumLaser", brand = 3 },
+    { at = "4-5", item = "Ammo_IS.HeavyGaussRifle", rounds = 4 },
+    { at = "6-12", item = "EndoSteel", brand = 3 },
+]
+
+[sections.right_arm]
+armor = 34
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = 3, item = "IS.ERMediumLaser", brand = 3 },
+    { at = "4-5", item = "Ammo_IS.HeavyGaussRifle", rounds = 4 },
+    { at = "6-12", item = "EndoSteel", brand = 3 },
+]
+
+[sections.left_torso]
+armor = 32
+rear = 10
+slots = [
+    { at = "1-11", item = "IS.HeavyGaussRifle", brand = 3 },
+    { at = 12, item = "Case", brand = 3 },
+]
+
+[sections.right_torso]
+armor = 32
+rear = 10
+slots = [
+    { at = "1-11", item = "IS.HeavyGaussRifle", brand = 3 },
+    { at = 12, item = "Case", brand = 3 },
+]
+
+[sections.center_torso]
+armor = 46
+rear = 16
+slots = [
+    { at = "11-12", item = "Ecm", brand = 3 },
+]
+
+[sections.left_leg]
+armor = 42
+slots = [
+    { at = "5-6", item = "Ammo_IS.HeavyGaussRifle", rounds = 4 },
+]
+
+[sections.right_leg]
+armor = 42
+slots = [
+    { at = "5-6", item = "Ammo_IS.HeavyGaussRifle", rounds = 4 },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = 4, item = "IS.MediumPulseLaser", brand = 3 },
+]

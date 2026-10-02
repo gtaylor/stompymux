@@ -1,0 +1,72 @@
+name = "Turkina"
+class = "mech"
+movement = "biped"
+tons = 95
+walk_mp = 5
+jump_mp = 3
+heat_sinks = 38
+computer = 5
+radio = 5
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+
+[sections.left_arm]
+armor = 32
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = 3, item = "Ammo_CL.LB5-XAC", rounds = 20 },
+    { at = "4-11", item = "CL.LB5-XAC" },
+    { at = 12, item = "Ammo_CL.LB5-XAC", rounds = 20, modes = ["LBX/Cluster"] },
+]
+
+[sections.right_arm]
+armor = 32
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-6", item = "CL.ERPPC" },
+    { at = "7-10", item = "HeatSink" },
+]
+
+[sections.left_torso]
+armor = 30
+rear = 10
+slots = [
+    { at = "3-6", item = "HeatSink" },
+    { at = 7, item = "JumpJet" },
+    { at = "8-9", item = "CL.LRM-15", brand = 0 },
+    { at = "10-11", item = "Ammo_CL.LRM-15", rounds = 8 },
+]
+
+[sections.right_torso]
+armor = 30
+rear = 10
+slots = [
+    { at = "3-6", item = "HeatSink" },
+    { at = 7, item = "JumpJet" },
+    { at = "8-9", item = "CL.LRM-15", brand = 0 },
+    { at = 10, item = "Ammo_CL.LRM-15", rounds = 8 },
+]
+
+[sections.center_torso]
+armor = 45
+rear = 10
+slots = [
+    { at = 11, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 40
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.right_leg]
+armor = 40
+slots = [
+    { at = "5-6", item = "HeatSink" },
+]
+
+[sections.head]
+armor = 9

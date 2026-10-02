@@ -1,0 +1,61 @@
+name = "Predator"
+class = "mech"
+movement = "biped"
+tons = 60
+walk_mp = 8
+heat_sinks = 20
+
+[construction]
+tech_base = "clan"
+engine = "xl"
+
+[sections.left_arm]
+armor = 18
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "CL.ERMediumLaser" },
+]
+
+[sections.right_arm]
+armor = 18
+omit = ["hand_actuator"]
+slots = [
+    { at = 4, item = "CL.ERMediumLaser" },
+]
+
+[sections.left_torso]
+armor = 20
+rear = 6
+slots = [
+    { at = "3-7", item = "CL.LB10-XAC" },
+    { at = 8, item = "Ammo_CL.LB10-XAC", rounds = 10 },
+    { at = 9, item = "Ammo_CL.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+]
+
+[sections.right_torso]
+armor = 20
+rear = 6
+slots = [
+    { at = "3-7", item = "CL.LB10-XAC" },
+    { at = 8, item = "Ammo_CL.LB10-XAC", rounds = 10 },
+    { at = 9, item = "Ammo_CL.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+]
+
+[sections.center_torso]
+armor = 28
+rear = 9
+
+[sections.left_leg]
+armor = 25
+slots = [
+    { at = 5, item = "CL.ERSmallLaser" },
+]
+
+[sections.right_leg]
+armor = 25
+slots = [
+    { at = 5, item = "CL.ERSmallLaser" },
+]
+
+[sections.head]
+armor = 9
