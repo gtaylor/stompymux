@@ -119,7 +119,7 @@ pub fn change_map_ice_action(
                             &mut scripts.world_mut(),
                             map,
                             coordinate,
-                            (original.base_hex(x, y)?).with_terrain(Terrain::Ice),
+                            original.base_hex(x, y)?.with_terrain(Terrain::Ice),
                         )?;
                     }
                     BattleIceChange::Melt => {
