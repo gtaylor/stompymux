@@ -1,5 +1,5 @@
 //! Anti-aircraft radar: long-range tracking of airborne targets using absolute altitude.
-use crate::btech::{BattleHex, BattleTerrainLos, BattleUnit, BattleVehicle, Terrain};
+use crate::btech::{BattleHex, BattleTerrainLos, BattleUnit, BattleVehicle};
 use anyhow::{Result, ensure};
 
 /// Radar reach on every chassis; the line-of-sight trace caps radar-equipped pairs here too.
@@ -53,16 +53,12 @@ impl BattleRadarTarget {
 
     /// Water and bridge surfaces use negative depth; intact ice uses sea level above the sheet.
     pub(crate) fn above_tile(elevation: i32, tile: BattleHex, flying_type: bool) -> Self {
-        let base = surface_datum(tile);
-        let upper = if tile.terrain() == Terrain::Ice {
-            0
+        // Targets on or above ice are measured from the ice; everything else from the datum.
+        let lower = surface_datum(tile);
+        let upper = if tile.is_ice() {
+            i32::from(tile.level())
         } else {
-            base
-        };
-        let lower = if tile.terrain() == Terrain::Bridge {
-            -1
-        } else {
-            base
+            lower
         };
         Self {
             flying_type,
@@ -74,12 +70,8 @@ impl BattleRadarTarget {
 }
 
 /// Terrain datum for radar's surface-clearance calculation.
-/// Water is measured from its bed. A bridge is measured from as far below the water surface
-/// as its deck is above it, as the reference server does.
+/// Water, including the river under a bridge, is measured from its bed.
 fn surface_datum(tile: BattleHex) -> i32 {
-    if let Some(deck) = tile.deck_clearance() {
-        return i32::from(tile.level()) - i32::from(deck);
-    }
     if tile.holds_water() {
         return i32::from(tile.bottom_height());
     }
@@ -103,6 +95,7 @@ impl BattleVehicle {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::btech::Terrain;
 
     /// Sensor clearance keeps the game's distinct land, water, ice and bridge datums.
     #[test]
@@ -112,7 +105,8 @@ mod tests {
             (Terrain::Water, 5, 9),
             (Terrain::Ice, 5, 5),
             (Terrain::Ice, -2, 2),
-            (Terrain::Bridge, 5, 9),
+            // Bridges are measured from the bed of the river beneath, like other water.
+            (Terrain::Bridge, 5, 6),
             (Terrain::Bridge, -5, -4),
         ] {
             assert_eq!(
