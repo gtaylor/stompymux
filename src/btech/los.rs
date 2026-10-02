@@ -130,13 +130,13 @@ fn terrain_los_with_endpoint(
                 }
                 report.water = report.water.saturating_add(1).min(7);
             }
-            match tile.terrain() {
-                _ if tile.is_woods() && intervening => {
-                    report.woods = (report.woods + tile.woods_density()).min(15);
+            if intervening {
+                report.woods = (report.woods + tile.woods_density()).min(15);
+                match tile.overlay() {
+                    Some(super::BattleDecorationKind::Smoke) => report.smoke = true,
+                    Some(super::BattleDecorationKind::Fire) => report.fire = true,
+                    None => {}
                 }
-                Terrain::Smoke if intervening => report.smoke = true,
-                Terrain::Fire if intervening => report.fire = true,
-                _ => {}
             }
         }
         if height >= sight_height
@@ -412,7 +412,7 @@ mod tests {
 
     /// A north/south lane avoids ambiguous hex-edge crossings in terrain rule fixtures.
     fn lane(tiles: &[(Terrain, u8)]) -> StoredBattleMap {
-        StoredBattleMap {
+        let mut map = StoredBattleMap {
             membership_extent: 0,
             building_parent: 0,
             cargo_transfer_point: None,
@@ -445,13 +445,16 @@ mod tests {
             fire_dice: None,
             decorations: Default::default(),
             static_decorations: Default::default(),
-            terrain: Some(Arc::new(
-                tiles
-                    .iter()
-                    .flat_map(|&(terrain, elevation)| [BattleHex::new(terrain, elevation); 3])
-                    .collect(),
-            )),
-        }
+            terrain: None,
+        };
+        map.establish_terrain(Arc::new(
+            tiles
+                .iter()
+                .flat_map(|&(terrain, elevation)| [BattleHex::new(terrain, elevation); 3])
+                .collect(),
+        ))
+        .unwrap();
+        map
     }
 
     fn sight(tiles: &[(Terrain, u8)]) -> BattleTerrainLos {

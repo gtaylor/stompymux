@@ -21,7 +21,7 @@ btech.map.set_hex(actor, dbref, x, y, terrain, elevation)
 | `dbref` | `integer` |  |
 | `x` | `integer` |  |
 | `y` | `integer` |  |
-| `terrain` | `BattleTerrainName` | Name from btech.map.terrain_types. |
+| `terrain` | `BattleTerrainName` | Name from btech.map.terrain_types; fire and smoke are rejected, use add_fire and add_smoke. |
 | `elevation` | `integer` | Absolute magnitude capped at nine. |
 
 ## Returns

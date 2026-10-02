@@ -1,10 +1,12 @@
-//! One battlefield hex as independent layers: ground height and cover, woods, water, structure.
+//! One battlefield hex as independent layers: ground height and cover, woods, water, structure,
+//! and a fire or smoke overlay.
 //!
 //! Each layer answers one question, so a hex can hold woods on a hill, ice over deep water or a
-//! bridge deck above a river without one value standing in for another. [`BattleHex::terrain`]
-//! and [`BattleHex::elevation`] still give the single-symbol view used by map files and
+//! bridge deck above a river without one value standing in for another. Fire and smoke never
+//! replace what they burn or cover: they are an overlay the map applies from its decorations.
+//! [`BattleHex::terrain`] and [`BattleHex::elevation`] still give the single-symbol view used by
 //! classification rules while those move onto the layers.
-use super::Terrain;
+use super::{BattleDecorationKind, Terrain};
 use serde::{Deserialize, Serialize};
 
 /// What the ground itself is made of, beneath any woods, water or structure.
@@ -17,10 +19,6 @@ pub enum Ground {
     Mountains,
     Snow,
     Sand,
-    /// Fire painted into the terrain grid rather than held as an overlay.
-    Fire,
-    /// Smoke painted into the terrain grid rather than held as an overlay.
-    Smoke,
 }
 
 /// Forest density covering the ground.
@@ -65,7 +63,9 @@ pub fn height_glyph(height: u8) -> char {
 }
 
 /// A battlefield hex. Build one with [`BattleHex::new`] from its single-terrain description.
-/// Saved and scripted as its layers; absent woods, water and structure are omitted.
+/// Saved and scripted as its layers; absent woods, water, structure and overlay are omitted.
+/// A map's terrain grid never holds an overlay: [`StoredBattleMap::hex`](super::StoredBattleMap::hex)
+/// adds it from the map's fire and smoke decorations.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct BattleHex {
@@ -77,12 +77,14 @@ pub struct BattleHex {
     water: Option<Water>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     structure: Option<Structure>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    overlay: Option<BattleDecorationKind>,
 }
 
 impl BattleHex {
     /// Build the hex a terrain symbol and elevation digit describe. The digit is the ground
     /// height, except for water and ice (depth), bridges (deck height) and buildings and walls
-    /// (their height). Bridges span water one level deep.
+    /// (their height). Bridges span water one level deep; fire and smoke overlay clear ground.
     pub const fn new(terrain: Terrain, elevation: u8) -> Self {
         let mut hex = Self {
             level: 0,
@@ -90,6 +92,7 @@ impl BattleHex {
             woods: None,
             water: None,
             structure: None,
+            overlay: None,
         };
         match terrain {
             Terrain::Grassland => hex.level = elevation,
@@ -98,8 +101,12 @@ impl BattleHex {
             Terrain::Mountains => (hex.level, hex.ground) = (elevation, Ground::Mountains),
             Terrain::Snow => (hex.level, hex.ground) = (elevation, Ground::Snow),
             Terrain::Sand => (hex.level, hex.ground) = (elevation, Ground::Sand),
-            Terrain::Fire => (hex.level, hex.ground) = (elevation, Ground::Fire),
-            Terrain::Smoke => (hex.level, hex.ground) = (elevation, Ground::Smoke),
+            Terrain::Fire => {
+                (hex.level, hex.overlay) = (elevation, Some(BattleDecorationKind::Fire))
+            }
+            Terrain::Smoke => {
+                (hex.level, hex.overlay) = (elevation, Some(BattleDecorationKind::Smoke))
+            }
             Terrain::LightForest => (hex.level, hex.woods) = (elevation, Some(Woods::Light)),
             Terrain::HeavyForest => (hex.level, hex.woods) = (elevation, Some(Woods::Heavy)),
             Terrain::Water | Terrain::Ice => {
@@ -121,7 +128,7 @@ impl BattleHex {
         hex
     }
 
-    /// Build a hex directly from its layers.
+    /// Build a hex directly from its layers, without an overlay.
     pub const fn from_layers(
         level: u8,
         ground: Ground,
@@ -135,7 +142,13 @@ impl BattleHex {
             woods,
             water,
             structure,
+            overlay: None,
         }
+    }
+
+    /// This hex with fire or smoke laid over it, or with its overlay removed.
+    pub const fn with_overlay(self, overlay: Option<BattleDecorationKind>) -> Self {
+        Self { overlay, ..self }
     }
 
     /// This hex with `structure` built on it, replacing any structure it had.
@@ -185,9 +198,19 @@ impl BattleHex {
         self.structure
     }
 
-    /// The single terrain symbol that best describes this hex: structure, then water, then
-    /// woods, then ground.
+    /// Fire or smoke over this hex, if any.
+    pub const fn overlay(self) -> Option<BattleDecorationKind> {
+        self.overlay
+    }
+
+    /// The single terrain symbol that best describes this hex: overlay, then structure, then
+    /// water, then woods, then ground.
     pub const fn terrain(self) -> Terrain {
+        match self.overlay {
+            Some(BattleDecorationKind::Fire) => return Terrain::Fire,
+            Some(BattleDecorationKind::Smoke) => return Terrain::Smoke,
+            None => {}
+        }
         match (self.structure, self.water, self.woods) {
             (Some(Structure::Building { .. }), _, _) => Terrain::Building,
             (Some(Structure::Wall { .. }), _, _) => Terrain::Wall,
@@ -203,8 +226,6 @@ impl BattleHex {
                 Ground::Mountains => Terrain::Mountains,
                 Ground::Snow => Terrain::Snow,
                 Ground::Sand => Terrain::Sand,
-                Ground::Fire => Terrain::Fire,
-                Ground::Smoke => Terrain::Smoke,
             },
         }
     }
@@ -227,9 +248,14 @@ impl BattleHex {
         Self::new(self.terrain(), elevation)
     }
 
-    /// This hex with its terrain replaced, keeping its elevation digit.
+    /// This hex with its terrain replaced, keeping its elevation digit. Fire and smoke are
+    /// laid over the hex's own layers instead of replacing them.
     pub const fn with_terrain(self, terrain: Terrain) -> Self {
-        Self::new(terrain, self.elevation())
+        match terrain {
+            Terrain::Fire => self.with_overlay(Some(BattleDecorationKind::Fire)),
+            Terrain::Smoke => self.with_overlay(Some(BattleDecorationKind::Smoke)),
+            _ => Self::new(terrain, self.elevation()),
+        }
     }
 
     /// Depth of the standing water in this hex, or zero when there is none.
@@ -459,6 +485,24 @@ mod tests {
             None,
         );
         assert!(too_deep.validate().is_err());
+    }
+
+    /// Fire and smoke lie over a hex's layers without replacing them.
+    #[test]
+    fn overlays_keep_the_layers_they_cover() {
+        let woods = BattleHex::new(Terrain::HeavyForest, 3);
+        let burning = woods.with_terrain(Terrain::Fire);
+        assert_eq!(burning.overlay(), Some(BattleDecorationKind::Fire));
+        assert_eq!((burning.terrain(), burning.elevation()), (Terrain::Fire, 3));
+        assert_eq!(burning.woods(), Some(Woods::Heavy));
+        assert_eq!(burning.with_overlay(None), woods);
+        let smoky = BattleHex::new(Terrain::Building, 4).with_terrain(Terrain::Smoke);
+        assert_eq!(smoky.structure(), Some(Structure::Building { height: 4 }));
+        assert_eq!(smoky.surface_height(), 4);
+        assert_eq!(
+            serde_json::to_value(BattleHex::new(Terrain::Fire, 1)).unwrap(),
+            serde_json::json!({"level": 1, "ground": "clear", "overlay": "fire"})
+        );
     }
 
     /// Hexes are saved as their layers, leaving out the ones that are absent.

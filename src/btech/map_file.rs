@@ -30,7 +30,9 @@
 //! `depth` does for water. Heights use `0`-`9` then `a`-`z`. Width and height come from the
 //! grids, whose rows must all be the same length.
 use super::hex::MAX_HEIGHT;
-use super::{BattleHex, BattleMapAsset, BattleMapFlag, Ground, Structure, Water, Woods};
+use super::{
+    BattleDecorationKind, BattleHex, BattleMapAsset, BattleMapFlag, Ground, Structure, Water, Woods,
+};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, fmt::Write, sync::Arc};
@@ -80,8 +82,12 @@ fn default_temperature() -> i8 {
 #[derive(Clone, Copy)]
 enum Cell {
     Ground(Ground),
+    /// Permanent fire or smoke over clear ground.
+    Overlay(BattleDecorationKind),
     Woods(Woods),
-    Water { frozen: bool },
+    Water {
+        frozen: bool,
+    },
     Building,
     Wall,
 }
@@ -95,8 +101,8 @@ fn cell(symbol: char) -> Option<Cell> {
         '^' => Cell::Ground(Ground::Mountains),
         '+' => Cell::Ground(Ground::Snow),
         '}' => Cell::Ground(Ground::Sand),
-        '&' => Cell::Ground(Ground::Fire),
-        ':' => Cell::Ground(Ground::Smoke),
+        '&' => Cell::Overlay(BattleDecorationKind::Fire),
+        ':' => Cell::Overlay(BattleDecorationKind::Smoke),
         '`' => Cell::Woods(Woods::Light),
         '"' => Cell::Woods(Woods::Heavy),
         '~' => Cell::Water { frozen: false },
@@ -108,7 +114,13 @@ fn cell(symbol: char) -> Option<Cell> {
 }
 
 /// The terrain-grid character for a hex; bridges show the water beneath them.
+/// Fire and smoke show only over clear ground; the file has no way to place them elsewhere.
 fn symbol(hex: BattleHex) -> char {
+    match hex.overlay() {
+        Some(BattleDecorationKind::Fire) if overlay_fits(hex) => return '&',
+        Some(BattleDecorationKind::Smoke) if overlay_fits(hex) => return ':',
+        _ => {}
+    }
     match (hex.structure(), hex.water(), hex.woods()) {
         (Some(Structure::Building { .. }), _, _) => '@',
         (Some(Structure::Wall { .. }), _, _) => '=',
@@ -123,10 +135,13 @@ fn symbol(hex: BattleHex) -> char {
             Ground::Mountains => '^',
             Ground::Snow => '+',
             Ground::Sand => '}',
-            Ground::Fire => '&',
-            Ground::Smoke => ':',
         },
     }
+}
+
+/// Whether a map file can hold this hex's fire or smoke: only over bare clear ground.
+pub(super) fn overlay_fits(hex: BattleHex) -> bool {
+    hex.with_overlay(None) == BattleHex::from_layers(hex.level(), Ground::Clear, None, None, None)
 }
 
 /// Decode a height character: `0`-`9`, then `a`-`z` for 10 through 35.
@@ -232,6 +247,10 @@ impl BattleMapAsset {
                 };
                 let hex = match cell {
                     Cell::Ground(kind) => BattleHex::from_layers(ground, kind, None, None, None),
+                    Cell::Overlay(kind) => {
+                        BattleHex::from_layers(ground, Ground::Clear, None, None, None)
+                            .with_overlay(Some(kind))
+                    }
                     Cell::Woods(woods) => {
                         BattleHex::from_layers(ground, Ground::Clear, Some(woods), None, None)
                     }
@@ -508,6 +527,47 @@ hexes = [[3, 0]]
         assert_eq!(BattleMapAsset::parse(&map.to_file().unwrap()).unwrap(), map);
         let stored = crate::btech::state::map_from_asset("tower", map).unwrap();
         stored.validate().unwrap();
+    }
+
+    /// `&` and `:` are permanent fire and smoke over clear ground; the map holds them as
+    /// decorations, never in its terrain.
+    #[test]
+    fn fire_and_smoke_load_as_permanent_overlays() {
+        let map = BattleMapAsset::parse("terrain = '&:'\nlevel = '12'\n").unwrap();
+        let fire = map.hex(0, 0).unwrap();
+        assert_eq!(fire.overlay(), Some(BattleDecorationKind::Fire));
+        assert_eq!(
+            fire.with_overlay(None),
+            BattleHex::new(Terrain::Grassland, 1)
+        );
+        assert_eq!(map.hex(1, 0).unwrap(), BattleHex::new(Terrain::Smoke, 2));
+        assert_eq!(BattleMapAsset::parse(&map.to_file().unwrap()).unwrap(), map);
+        let stored = crate::btech::state::map_from_asset("burning", map).unwrap();
+        assert_eq!(
+            stored.base_hex(0, 0).unwrap(),
+            BattleHex::new(Terrain::Grassland, 1)
+        );
+        assert_eq!(stored.hex(0, 0).unwrap(), fire);
+        let effect = stored
+            .decoration(super::super::BattleHexCoordinate { x: 1, y: 0 })
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            (effect.kind, effect.remaining),
+            (BattleDecorationKind::Smoke, 0)
+        );
+        // Fire over anything but clear ground has no symbol, so the file keeps the woods.
+        let woods = BattleHex::new(Terrain::LightForest, 1);
+        let burning = BattleMapAsset {
+            hexes: Arc::new(vec![woods.with_overlay(Some(BattleDecorationKind::Fire))]),
+            ..BattleMapAsset::parse("terrain = '.'\nlevel = '0'\n").unwrap()
+        };
+        assert_eq!(
+            BattleMapAsset::parse(&burning.to_file().unwrap())
+                .unwrap()
+                .hex(0, 0),
+            Some(woods)
+        );
     }
 
     #[test]

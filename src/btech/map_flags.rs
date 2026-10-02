@@ -13,8 +13,6 @@ pub enum BattleMapFlag {
     SpecialRules,
     /// The map has no atmosphere.
     Vacuum,
-    /// Authored fire never burns out.
-    PermanentFire,
     /// The map has a ceiling: no jumping, flight or indirect fire without an observer.
     Underground,
     /// Units only see terrain they have line of sight to.
@@ -29,10 +27,9 @@ pub enum BattleMapFlag {
 
 impl BattleMapFlag {
     /// Every flag, in bit order.
-    pub const ALL: [Self; 8] = [
+    pub const ALL: [Self; 7] = [
         Self::SpecialRules,
         Self::Vacuum,
-        Self::PermanentFire,
         Self::Underground,
         Self::Dark,
         Self::IndestructibleBridges,
@@ -45,7 +42,6 @@ impl BattleMapFlag {
         match self {
             Self::SpecialRules => 2,
             Self::Vacuum => 4,
-            Self::PermanentFire => 8,
             Self::Underground => 16,
             Self::Dark => 32,
             Self::IndestructibleBridges => 64,
@@ -59,7 +55,6 @@ impl BattleMapFlag {
         match self {
             Self::SpecialRules => "special_rules",
             Self::Vacuum => "vacuum",
-            Self::PermanentFire => "permanent_fire",
             Self::Underground => "underground",
             Self::Dark => "dark",
             Self::IndestructibleBridges => "indestructible_bridges",

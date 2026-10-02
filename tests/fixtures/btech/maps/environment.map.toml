@@ -1,6 +1,6 @@
 gravity = 88
 temperature = 19
-flags = ["special_rules", "permanent_fire", "dark"]
+flags = ["special_rules", "dark"]
 
 terrain = '''
 .

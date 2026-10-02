@@ -51,10 +51,11 @@ Alias: `"LeftArm"|"RightArm"|"LeftTorso"|"RightTorso"|"CenterTorso"|"LeftLeg"|"R
 ## BattleHex
 
 - `level`: `integer` — Ground height in levels; any water surface sits at this height.
-- `ground`: `"clear"|"road"|"rough"|"mountains"|"snow"|"sand"|"fire"|"smoke"` — What the ground is made of.
+- `ground`: `"clear"|"road"|"rough"|"mountains"|"snow"|"sand"` — What the ground is made of.
 - `woods`: `"light"|"heavy"` — Forest covering the ground.
 - `water`: `{depth: integer, frozen: boolean}` — Standing water whose surface is at the ground level.
 - `structure`: `{kind: "building"|"wall", height: integer}|{kind: "bridge", deck: integer}` — Built feature; heights are above the ground level.
+- `overlay`: `"fire"|"smoke"` — Fire or smoke over the hex; base tiles never have one.
 
 ## StoredBattleMap
 

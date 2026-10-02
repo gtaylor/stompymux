@@ -1064,7 +1064,6 @@ pub use btech::{
 
 pub use btech::{BattleMapHexChange, set_map_hex_action as set_battle_map_hex_action};
 
-pub use btech::BattleMapExport;
 pub use btech::BattleWoodsAbsorption;
 pub use btech::add_landing_exclusion_action as add_battle_landing_exclusion_action;
 pub use btech::clear_map_units_action as clear_battle_map_units_action;

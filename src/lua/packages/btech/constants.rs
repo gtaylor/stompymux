@@ -985,10 +985,6 @@ pub(super) static MAP_FLAGS: Catalog = Catalog {
             value: 4,
         },
         Entry {
-            name: "PERMANENT_FIRE",
-            value: 8,
-        },
-        Entry {
             name: "UNDERGROUND",
             value: 16,
         },

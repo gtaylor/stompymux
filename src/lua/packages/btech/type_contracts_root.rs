@@ -57,10 +57,11 @@
 // lua-types-begin btech 00007
 //|---@class BattleHex
 //|---@field level integer Ground height in levels; any water surface sits at this height.
-//|---@field ground "clear"|"road"|"rough"|"mountains"|"snow"|"sand"|"fire"|"smoke" What the ground is made of.
+//|---@field ground "clear"|"road"|"rough"|"mountains"|"snow"|"sand" What the ground is made of.
 //|---@field woods? "light"|"heavy" Forest covering the ground.
 //|---@field water? {depth: integer, frozen: boolean} Standing water whose surface is at the ground level.
 //|---@field structure? {kind: "building"|"wall", height: integer}|{kind: "bridge", deck: integer} Built feature; heights are above the ground level.
+//|---@field overlay? "fire"|"smoke" Fire or smoke over the hex; base tiles never have one.
 // lua-types-end
 
 // lua-types-begin btech 00008

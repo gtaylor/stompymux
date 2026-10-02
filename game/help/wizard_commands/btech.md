@@ -483,8 +483,9 @@ roll back together if the action fails.
 current map. Use a terrain symbol from the table below; elevation is converted
 to a positive magnitude and capped at nine. Units retain their physical altitude
 and current movement or flight state. Editing ice into water is a direct terrain
-edit; use `DELICE` to melt ice with normal occupant falls and flooding. Temporary
-fire/smoke overlays remain independent of the underlying tile. Lua offers
+edit; use `DELICE` to melt ice with normal occupant falls and flooding. Fire and
+smoke are not terrain: they lie over a tile without changing it, so use `ADDFIRE`
+and `ADDSMOKE` for them. Lua offers
 `btech.map.set_hex(actor, map, x, y, terrain, elevation)`, taking a name from
 `btech.map.terrain_types`, and returns the previous and resulting tiles. Occupied
 maps can be edited and saved without reloading their source assets.
@@ -500,15 +501,14 @@ maps can be edited and saved without reloading their source assets.
 | `/` | Bridge | `bridge` | deck height |
 | `%` | Rough | `rough` | height |
 | `^` | Mountains | `mountains` | height |
-| `&` | Fire | `fire` | height |
-| `:` | Smoke | `smoke` | height |
 | `+` | Snow | `snow` | height |
 | `@` | Building | `building` | height |
 | `=` | Wall | `wall` | height |
 | `}` | Sand | `sand` | height |
 
 Map files use the same symbols, except that bridges are listed separately and
-buildings, walls and water take their heights from their own grids.
+buildings, walls and water take their heights from their own grids. In a map file
+`&` and `:` draw permanent fire and smoke over clear ground.
 
 `@MAPEMIT <message>` broadcasts to the occupants of running units on the wizard's
 current map and privately confirms `Message sent!`. Unconscious crews do not receive
@@ -531,9 +531,8 @@ numbers in map-slot order. The actor must be a wizard.
 ## Resize a map
 
 `SETMAPSIZE <width> <height>` resizes your current map to dimensions from 1 through
-1000. It copies overlapping visible terrain and fills new cells with level grass.
-Map objects, temporary effect timers, wrapping and building return links are
-cleared. Units keep their coordinates; a resize that would leave a unit or active
+1000. It copies overlapping terrain and fills new cells with level grass.
+Map objects, fire and smoke, wrapping and building return links are cleared. Units keep their coordinates; a resize that would leave a unit or active
 map event outside the new bounds fails without changes. Clear or move units first
 when shrinking past them. Lua uses `btech.map.resize(actor, map, width, height)`.
 
@@ -541,20 +540,19 @@ when shrinking past them. Lua uses `btech.map.resize(actor, map, width, height)`
 
 `SAVEMAP <name>` writes your current map to `<name>.toml` in its configured map
 directory. Existing files are replaced atomically after the world transaction
-commits. Temporary fire and smoke are not saved; each hex saves the terrain beneath
-them. Fire or smoke painted into the terrain itself is saved as clear ground, and
-cleaned from the live map, unless the map has permanent fire. Map flags, gravity
-and temperature are always saved. Relative subdirectories must already exist; destinations outside
+commits. Permanent fire and smoke over clear ground are saved; fire and smoke that
+will burn out or drift away, or that cover anything else, are not, and those hexes
+save the terrain beneath them. Map flags, gravity and temperature are always saved. Relative subdirectories must already exist; destinations outside
 the map directory and symlinks are rejected. `Saving complete!` confirms the file
 replacement; a write failure preserves the previous file and reports an error.
-Stale-effect cleanup is already committed if the later file write fails.
 Lua `btech.map.save(actor, map, name)` returns true when queued. A failed callback
 or world save discards the queued write.
 
 ## Load a map asset
 
 `LOADMAP <name>` reads `<name>.toml` and replaces your current map's terrain,
-dimensions, bridges and conditions, and removes map objects. GOD (#1) keeps units on
+dimensions, bridges and conditions, and removes map objects. Fire and smoke drawn in
+the file start burning as permanent effects. GOD (#1) keeps units on
 the map; other wizards shut down and clear units after loading. Shutdown falls
 therefore use the newly loaded terrain and conditions. Units keep their physical
 altitude until movement resolves it. Other map settings, including cloud base,
@@ -587,8 +585,9 @@ budgets wrap positive at a spread and can therefore burn for a long time. Off-ma
 Lua uses `btech.map.add_fire(actor, map, x, y, duration)` and
 `btech.map.add_smoke(actor, map, x, y, duration)`.
 
-Saved fire and smoke records retain their restoration terrain without restarting
-spread or expiry timers. New effects at the same coordinate replace those records.
+Saved fire and smoke records are kept for `LIST OBJS` without restarting spread or
+expiry timers; they do not change the map. New effects at the same coordinate
+replace those records.
 `LIST OBJS` includes both stored restoration records and running effects.
 
 ## Delete map objects
@@ -660,7 +659,6 @@ names. Map `flags` are:
 | --- | --- |
 | `special_rules` | Environmental rules (gravity, temperature, vacuum) apply. |
 | `vacuum` | The map has no atmosphere. |
-| `permanent_fire` | Authored fire never burns out. |
 | `underground` | A ceiling blocks jumping and flight; artillery needs a spotter. |
 | `dark` | Units see only terrain in their line of sight. |
 | `indestructible_bridges` | Weapon fire cannot break bridges. |

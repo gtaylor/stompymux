@@ -39,8 +39,6 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
             ('`', Terrain::LightForest),
             ('"', Terrain::HeavyForest),
             ('%', Terrain::Rough),
-            ('&', Terrain::Fire),
-            (':', Terrain::Smoke),
             ('+', Terrain::Snow),
             ('@', Terrain::Building),
             ('=', Terrain::Wall),
@@ -103,9 +101,31 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
                 saved.btech
             );
         }
+        // Fire and smoke are not terrain; ADDFIRE and ADDSMOKE place them instead.
+        for symbol in ['&', ':'] {
+            let before = native.world().btech.clone();
+            let output = support::run_text(
+                &native,
+                &config,
+                actor,
+                1,
+                &format!("addhex 0 11 {symbol} 1"),
+            );
+            assert!(
+                output.contains("Fire and smoke are not terrain"),
+                "{output}"
+            );
+            assert_eq!(native.world().btech, before);
+        }
         // Lua takes terrain names; operator symbols belong to ADDHEX.
         let before = lua.world().btech.clone();
-        for terrain in ["'^'", "'Mountains'", "'bogus'"] {
+        for terrain in [
+            "'^'",
+            "'Mountains'",
+            "'bogus'",
+            "btech.map.terrain_types.FIRE",
+            "btech.map.terrain_types.SMOKE",
+        ] {
             assert!(
                 lua.eval_callback::<()>(&format!(
                     "btech.map.set_hex({},{},0,11,{terrain},1)",

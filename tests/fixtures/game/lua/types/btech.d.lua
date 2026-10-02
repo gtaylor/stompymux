@@ -43,10 +43,11 @@
 
 ---@class BattleHex
 ---@field level integer Ground height in levels; any water surface sits at this height.
----@field ground "clear"|"road"|"rough"|"mountains"|"snow"|"sand"|"fire"|"smoke" What the ground is made of.
+---@field ground "clear"|"road"|"rough"|"mountains"|"snow"|"sand" What the ground is made of.
 ---@field woods? "light"|"heavy" Forest covering the ground.
 ---@field water? {depth: integer, frozen: boolean} Standing water whose surface is at the ground level.
 ---@field structure? {kind: "building"|"wall", height: integer}|{kind: "bridge", deck: integer} Built feature; heights are above the ground level.
+---@field overlay? "fire"|"smoke" Fire or smoke over the hex; base tiles never have one.
 
 ---@class StoredBattleMap
 ---@field cargo_transfer_point BattleCargoTransferPoint|nil Saved cargo location and hint policy.
@@ -1011,7 +1012,7 @@ function btech_map.add_block(actor, dbref, x, y, radius, team) end
 ---@param dbref integer
 ---@param x integer
 ---@param y integer
----@param terrain BattleTerrainName Name from btech.map.terrain_types.
+---@param terrain BattleTerrainName Name from btech.map.terrain_types; fire and smoke are rejected, use add_fire and add_smoke.
 ---@param elevation integer Absolute magnitude capped at nine.
 ---@return BattleMapHexChange
 function btech_map.set_hex(actor, dbref, x, y, terrain, elevation) end

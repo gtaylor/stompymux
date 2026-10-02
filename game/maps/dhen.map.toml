@@ -1,6 +1,6 @@
 gravity = 100
 temperature = 20
-flags = ["permanent_fire"]
+flags = []
 
 terrain = '''
 .....................##....................................................

@@ -19,7 +19,11 @@ impl super::StoredBattleMap {
     /// Unit altitude, overlays and map objects stay with the caller; see [`replace_hex`].
     pub(crate) fn write_hex(&mut self, x: i64, y: i64, hex: BattleHex) -> Result<()> {
         hex.validate()?;
-        self.stored_hex(x, y)?;
+        ensure!(
+            hex.overlay().is_none(),
+            "Fire and smoke are not terrain; add them as fire or smoke instead"
+        );
+        self.base_hex(x, y)?;
         let index = (y * self.width + x) as usize;
         Arc::make_mut(
             self.terrain
@@ -38,6 +42,10 @@ pub(super) fn replace_hex(
     after: BattleHex,
 ) -> Result<BattleMapHexChange> {
     after.validate()?;
+    ensure!(
+        after.overlay().is_none(),
+        "Fire and smoke are not terrain; add them as fire or smoke instead"
+    );
     let before = world
         .btech
         .maps()
@@ -50,8 +58,7 @@ pub(super) fn replace_hex(
         before,
         after,
     };
-    if world.btech.maps()[&map].stored_hex(i64::from(coordinate.x), i64::from(coordinate.y))?
-        == after
+    if world.btech.maps()[&map].base_hex(i64::from(coordinate.x), i64::from(coordinate.y))? == after
     {
         return Ok(report);
     }
@@ -101,6 +108,10 @@ pub fn set_map_hex_action(
     terrain: Terrain,
     elevation: i32,
 ) -> Result<BattleMapHexChange> {
+    ensure!(
+        !matches!(terrain, Terrain::Fire | Terrain::Smoke),
+        "Fire and smoke are not terrain; use ADDFIRE or ADDSMOKE"
+    );
     scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(before, actor),
@@ -238,7 +249,7 @@ mod tests {
         .unwrap();
         let rough = BattleHex::new(Terrain::Rough, 3);
         map.write_hex(1, 0, rough).unwrap();
-        assert_eq!(map.stored_hex(1, 0).unwrap(), rough);
+        assert_eq!(map.base_hex(1, 0).unwrap(), rough);
         let before = map.clone();
         for (x, y, elevation) in [(2, 0, 0), (0, 1, 0), (-1, 0, 0), (0, 0, 36)] {
             assert!(

@@ -48,7 +48,7 @@ hexes = [[4, 0], [5, 0]]
 | --- | --- | --- |
 | `gravity` | `100` | Gravity in percent of standard, 0 to 255. |
 | `temperature` | `20` | Temperature in degrees Celsius, -128 to 127. |
-| `flags` | keep current | Map flags by name, such as `"dark"` or `"permanent_fire"`. When the key is absent, reloading a map keeps the flags it already has; `flags = []` clears them. See `help @setmap` for the list. |
+| `flags` | keep current | Map flags by name, such as `"dark"` or `"underground"`. When the key is absent, reloading a map keeps the flags it already has; `flags = []` clears them. See `help @setmap` for the list. |
 
 ## Grids
 
@@ -81,8 +81,8 @@ does not apply to a hex, that hex is `.`.
 | `-` | Ice over water |
 | `@` | Building |
 | `=` | Wall |
-| `&` | Fire, kept only on maps with the `permanent_fire` flag |
-| `:` | Smoke |
+| `&` | Permanent fire over clear ground |
+| `:` | Permanent smoke over clear ground |
 
 ## Bridges
 
@@ -93,7 +93,12 @@ be water or ice.
 
 ## Saving
 
-`SAVEMAP <name>` writes the current map to `<name>.toml` in this format. Fire
-and smoke that are burning as temporary effects are not saved; each hex saves
-the terrain underneath. Mine fields, landing zones and other map objects are
+Fire and smoke are not terrain. When a map is loaded, each `&` and `:` hex becomes
+clear ground with a fire or smoke effect over it that never burns out or drifts
+away.
+
+`SAVEMAP <name>` writes the current map to `<name>.toml` in this format.
+Permanent fire and smoke over clear ground are saved as `&` and `:`. Fire and smoke
+that will burn out or drift away, or that cover anything other than clear ground,
+are not saved; those hexes save the terrain underneath. Mine fields, landing zones and other map objects are
 kept in the database, not in map files.

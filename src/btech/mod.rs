@@ -1296,7 +1296,6 @@ pub use map_load::load_map_action;
 pub(crate) mod map_save;
 pub use map_save::save_map_action;
 mod map_export;
-pub use map_export::BattleMapExport;
 pub(crate) mod map_resize;
 pub use map_resize::resize_map_action;
 pub(crate) mod map_clear;

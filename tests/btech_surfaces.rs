@@ -3758,13 +3758,17 @@ async fn live_fire_and_smoke_tiles_allow_ground_crossings_without_control_dice()
         let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 5).await;
         let id = units[0];
         prepare_reverse_step(&mut world, id, 6);
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        // Asset loading normalizes overlays; represent the live tile explicitly.
-        crate::support::set_hex_terrain(
-            &mut state["maps"][map.0.to_string()]["terrain"][7],
-            terrain,
-        );
-        world.btech = serde_json::from_value(state).unwrap();
+        let kind = match terrain {
+            Terrain::Fire => BattleDecorationKind::Fire,
+            _ => BattleDecorationKind::Smoke,
+        };
+        set_map_decoration(
+            &mut world,
+            map,
+            BattleHexCoordinate { x: 1, y: 2 },
+            Some(BattleDecoration::new(kind, 0, None)),
+        )
+        .unwrap();
         let before = serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut loaded = persistence::load(&config.database()).await.unwrap();
@@ -4728,7 +4732,7 @@ async fn map_decorations_preserve_base_terrain_checkpoints_and_saved_state() {
     set_map_decoration(&mut world, map, coordinate, Some(fire)).unwrap();
     assert_eq!(
         world.btech.maps()[&map].hex(1, 1).unwrap(),
-        BattleHex::new(Terrain::Fire, 2)
+        BattleHex::new(Terrain::HeavyForest, 2).with_overlay(Some(BattleDecorationKind::Fire))
     );
     assert_eq!(
         world.btech.maps()[&map].base_hex(1, 1).unwrap().terrain(),
