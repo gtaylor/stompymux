@@ -952,9 +952,7 @@ async fn pellet_matrix(
                                 assert_eq!(initial["damage_before"], weapon.profile().damage);
                                 let effect = &initial["terrain"]["effect"];
                                 if effect["effect"] == "clear" {
-                                    if effect["terrain"]
-                                        == serde_json::to_value(Terrain::LightForest).unwrap()
-                                    {
+                                    if effect["clearing"] == "thin_to_light" {
                                         thinned = true;
                                         2
                                     } else {

@@ -69,9 +69,9 @@ pub fn resolve_woodland_attack(
     let effect = super::resolve_woodland_effect(tile, weapon, ammunition, damage, intent, dice);
     let verb = match effect {
         BattleWoodlandEffect::None => None,
-        BattleWoodlandEffect::Clear { terrain } => {
+        BattleWoodlandEffect::Clear { clearing } => {
             let _change =
-                super::apply_woodland_clearing(&mut candidate, map, coordinate, tile, terrain)?;
+                super::apply_woodland_clearing(&mut candidate, map, coordinate, tile, clearing)?;
             Some("clear")
         }
         BattleWoodlandEffect::Ignite { seconds } => {

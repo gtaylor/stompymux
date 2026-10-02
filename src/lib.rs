@@ -434,7 +434,9 @@ pub use btech::{
     pilot_hex_aim_modifiers as battle_pilot_hex_aim_modifiers,
 };
 
-pub use btech::{BattleWoodlandEffect, BattleWoodlandIntent, resolve_woodland_effect};
+pub use btech::{
+    BattleWoodlandClearing, BattleWoodlandEffect, BattleWoodlandIntent, resolve_woodland_effect,
+};
 
 pub use btech::{BattleWoodlandChange, apply_woodland_clearing};
 

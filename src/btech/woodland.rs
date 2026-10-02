@@ -1,5 +1,5 @@
 //! Woodland attack outcomes, independent of map storage and command publication.
-use super::{BattleAmmunitionMode, BattleDice, BattleHex, BattleWeapon, Terrain};
+use super::{BattleAmmunitionMode, BattleDice, BattleHex, BattleWeapon, Ground, Woods};
 use serde::{Deserialize, Serialize};
 
 /// Purpose of a terrain effect; incidental effects use the lower accidental ignition chance.
@@ -20,10 +20,34 @@ pub enum BattleWoodlandEffect {
     Ignite {
         seconds: u16,
     },
-    /// Replacement terrain retains the existing elevation.
+    /// Woods cut back, keeping the hex's height.
     Clear {
-        terrain: Terrain,
+        clearing: BattleWoodlandClearing,
     },
+}
+
+/// How clearing changes a wooded hex.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BattleWoodlandClearing {
+    /// Heavy woods thin to light woods.
+    ThinToLight,
+    /// Light woods are cut down to clear ground.
+    CutToClear,
+    /// Light woods are cut down, leaving rough ground.
+    CutToRough,
+}
+
+impl BattleWoodlandClearing {
+    /// The hex after clearing, or `None` when its woods cannot be cleared this way.
+    pub fn apply(self, hex: BattleHex) -> Option<BattleHex> {
+        Some(match (self, hex.woods()?) {
+            (Self::ThinToLight, Woods::Heavy) => hex.with_woods(Some(Woods::Light)),
+            (Self::CutToClear, Woods::Light) => hex.with_woods(None),
+            (Self::CutToRough, Woods::Light) => hex.with_woods(None).with_ground(Ground::Rough),
+            _ => return None,
+        })
+    }
 }
 
 impl BattleWeapon {
@@ -151,14 +175,14 @@ pub fn resolve_woodland_effect(
             if !woods || !weapon.can_clear_terrain() || u16::from(clearing_roll) > damage {
                 return BattleWoodlandEffect::None;
             }
-            let terrain = if hex.woods() == Some(super::Woods::Heavy) {
-                Terrain::LightForest
+            let clearing = if hex.woods() == Some(Woods::Heavy) {
+                BattleWoodlandClearing::ThinToLight
             } else if dice.die(2).expect("nonzero die") == 1 {
-                Terrain::Rough
+                BattleWoodlandClearing::CutToRough
             } else {
-                Terrain::Grassland
+                BattleWoodlandClearing::CutToClear
             };
-            return BattleWoodlandEffect::Clear { terrain };
+            return BattleWoodlandEffect::Clear { clearing };
         }
     }
     let roll = dice.generic_roll();
@@ -177,6 +201,7 @@ pub fn resolve_woodland_effect(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::btech::Terrain;
 
     /// The generic histogram excludes duration and replacement dice, including on bare terrain.
     #[test]
@@ -365,7 +390,7 @@ mod tests {
                     assert_eq!(
                         effect,
                         BattleWoodlandEffect::Clear {
-                            terrain: Terrain::LightForest
+                            clearing: BattleWoodlandClearing::ThinToLight
                         }
                     );
                     cleared = true;
@@ -391,15 +416,20 @@ mod tests {
                     intent,
                     &mut original.clone(),
                 );
-                if let BattleWoodlandEffect::Clear { terrain } = light {
-                    surfaces.insert(terrain);
+                if let BattleWoodlandEffect::Clear { clearing } = light {
+                    surfaces.insert(clearing);
                 }
             }
         }
         assert!(preempted && cleared);
         assert_eq!(
             surfaces,
-            [Terrain::Grassland, Terrain::Rough].into_iter().collect()
+            [
+                BattleWoodlandClearing::CutToClear,
+                BattleWoodlandClearing::CutToRough
+            ]
+            .into_iter()
+            .collect()
         );
     }
 }

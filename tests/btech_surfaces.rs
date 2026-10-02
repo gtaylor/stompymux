@@ -4640,7 +4640,14 @@ async fn woodland_clearing_on_occupied_map_is_durable_and_rejects_stale_results(
     let original = world.clone();
     let before = world.btech.maps()[&map].hex(1, 1).unwrap();
     assert!(
-        apply_woodland_clearing(&mut world, map, coordinate, before, Terrain::Grassland).is_err()
+        apply_woodland_clearing(
+            &mut world,
+            map,
+            coordinate,
+            before,
+            BattleWoodlandClearing::CutToClear
+        )
+        .is_err()
     );
     assert!(
         apply_woodland_clearing(
@@ -4648,17 +4655,30 @@ async fn woodland_clearing_on_occupied_map_is_durable_and_rejects_stale_results(
             map,
             BattleHexCoordinate { x: -1, y: 1 },
             before,
-            Terrain::LightForest
+            BattleWoodlandClearing::ThinToLight
         )
         .is_err()
     );
     assert_eq!(world.btech, original.btech);
-    let report =
-        apply_woodland_clearing(&mut world, map, coordinate, before, Terrain::LightForest).unwrap();
+    let report = apply_woodland_clearing(
+        &mut world,
+        map,
+        coordinate,
+        before,
+        BattleWoodlandClearing::ThinToLight,
+    )
+    .unwrap();
     assert_eq!(report.before, before);
     assert_eq!(report.after, BattleHex::new(Terrain::LightForest, 2));
     assert!(
-        apply_woodland_clearing(&mut world, map, coordinate, before, Terrain::LightForest).is_err()
+        apply_woodland_clearing(
+            &mut world,
+            map,
+            coordinate,
+            before,
+            BattleWoodlandClearing::ThinToLight
+        )
+        .is_err()
     );
     for id in units {
         assert_eq!(
@@ -4672,8 +4692,14 @@ async fn woodland_clearing_on_occupied_map_is_durable_and_rejects_stale_results(
         persistence::load(&config.database()).await.unwrap().btech,
         world.btech
     );
-    let report =
-        apply_woodland_clearing(&mut world, map, coordinate, report.after, Terrain::Rough).unwrap();
+    let report = apply_woodland_clearing(
+        &mut world,
+        map,
+        coordinate,
+        report.after,
+        BattleWoodlandClearing::CutToRough,
+    )
+    .unwrap();
     assert_eq!(report.after.level(), 2);
     persistence::save(&config.database(), &world).await.unwrap();
     assert_eq!(
@@ -4687,18 +4713,29 @@ async fn woodland_clearing_on_occupied_map_is_durable_and_rejects_stale_results(
             map,
             coordinate,
             report.after,
-            Terrain::Grassland
+            BattleWoodlandClearing::CutToClear
         )
         .is_err()
     );
     assert_eq!(world.btech, unchanged);
     // Two reductions in a single saved transaction are also valid with occupants present.
     let coordinate = BattleHexCoordinate { x: 0, y: 0 };
-    let first =
-        apply_woodland_clearing(&mut world, map, coordinate, before, Terrain::LightForest).unwrap();
-    let _second =
-        apply_woodland_clearing(&mut world, map, coordinate, first.after, Terrain::Grassland)
-            .unwrap();
+    let first = apply_woodland_clearing(
+        &mut world,
+        map,
+        coordinate,
+        before,
+        BattleWoodlandClearing::ThinToLight,
+    )
+    .unwrap();
+    let _second = apply_woodland_clearing(
+        &mut world,
+        map,
+        coordinate,
+        first.after,
+        BattleWoodlandClearing::CutToClear,
+    )
+    .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     assert_eq!(
         persistence::load(&config.database()).await.unwrap().btech,
