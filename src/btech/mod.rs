@@ -196,7 +196,7 @@ mod unit_template;
 pub use map::{BattleMapAsset, Terrain};
 mod hex;
 mod map_file;
-pub use hex::{BattleHex, Ground, Structure, Water, Woods};
+pub use hex::{BattleHex, Ground, MAX_DEPTH, MAX_HEIGHT, Structure, Water, Woods};
 pub use state::{
     BtechState, StoredBattleMap, StoredBattleUnit, create_map, create_unit,
     register_empty_battle_unit, reload_map, set_map_visibility,

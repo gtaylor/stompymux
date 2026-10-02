@@ -1,6 +1,7 @@
-// Draws the whole hex map in one pass: every pixel finds its hex, looks up that hex's terrain
-// and elevation code, and is colored from the palette, with grid gaps, elevation digits and
-// the brush outline computed per pixel. Panning and zooming only change the uniforms.
+// Draws the whole hex map in one pass: every pixel finds its hex, reads that hex's layers from
+// the hex texture, and composes its color from the terrain palette, with grid gaps, labels,
+// the brush outline and unsavable-hex hatching computed per pixel. Panning and zooming only
+// change the uniforms.
 //
 // Hexes are flat-topped in staggered columns, even columns offset half a hex south. Map
 // units are hex vertex radii, with the top-left of the map's bounding box at the origin.
@@ -20,16 +21,37 @@ struct Uniforms {
     grid_gap: f32,
     // Brush radius in hexes around `hover`, or negative for no brush outline.
     brush: f32,
-    // Nonzero to label hexes with their elevation.
-    digits: f32,
+    // Value to label hexes with (see LABEL_*), or negative for no labels.
+    label: f32,
 };
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
-// Fill color per hex code (terrain index * 10 + elevation). Alpha holds the label ink:
-// 0 for black, 1 for white.
-@group(0) @binding(1) var<uniform> palette: array<vec4<f32>, 150>;
-// One hex code per texel, indexed by hex coordinate.
+// One color per terrain in `Terrain::ALL` order, then the ink threshold in entry 15's red.
+@group(0) @binding(1) var<uniform> palette: array<vec4<f32>, 16>;
+// One texel of packed layers per hex, indexed by hex coordinate; see `hex_texel` in render.rs.
 @group(0) @binding(2) var hexes: texture_2d<u32>;
+
+// Palette positions, matching `Terrain::ALL`.
+const LIGHT_FOREST: u32 = 2u;
+const WATER: u32 = 4u;
+const ICE: u32 = 5u;
+const BRIDGE: u32 = 6u;
+const FIRE: u32 = 9u;
+const SMOKE: u32 = 10u;
+const BUILDING: u32 = 12u;
+const WALL: u32 = 13u;
+const INK_THRESHOLD: u32 = 15u;
+
+// Structure kinds in the texel's alpha.
+const STRUCTURE_BUILDING: u32 = 1u;
+const STRUCTURE_WALL: u32 = 2u;
+const STRUCTURE_BRIDGE: u32 = 3u;
+
+// Label modes, matching `Label` in render.rs.
+const LABEL_LEVEL: i32 = 0;
+const LABEL_DEPTH: i32 = 1;
+const LABEL_HEIGHT: i32 = 2;
+const LABEL_DECK: i32 = 3;
 
 const SQRT_3: f32 = 1.7320508;
 const APOTHEM: f32 = 0.8660254;
@@ -128,6 +150,22 @@ fn digit_distance(p: vec2<f32>, digit: u32) -> f32 {
     return d;
 }
 
+// Distance to a one- or two-digit number centered on the origin, in digit units.
+fn number_distance(p: vec2<f32>, value: u32) -> f32 {
+    if value < 10u {
+        return digit_distance(p, value);
+    }
+    return min(
+        digit_distance(p + vec2<f32>(0.85, 0.0), (value / 10u) % 10u),
+        digit_distance(p - vec2<f32>(0.85, 0.0), value % 10u),
+    );
+}
+
+// `color` mixed toward white by `amount`.
+fn lighten(color: vec3<f32>, amount: f32) -> vec3<f32> {
+    return mix(color, vec3<f32>(1.0), clamp(amount, 0.0, 0.7));
+}
+
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let point = (in.pixel - u.offset) / u.radius;
@@ -135,18 +173,76 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     if any(hex < vec2<i32>(0)) || any(hex >= vec2<i32>(u.map_size)) {
         return vec4<f32>(0.0);
     }
-    let code = textureLoad(hexes, hex, 0).r;
-    let entry = palette[code];
-    var color = entry.rgb;
+    let texel = textureLoad(hexes, hex, 0);
+    let ground = texel.r & 15u;
+    let woods = (texel.r >> 4u) & 3u;
+    let overlay = (texel.r >> 6u) & 3u;
+    let level = texel.g;
+    let water = texel.b & 15u;
+    let frozen = ((texel.b >> 4u) & 1u) == 1u;
+    let unsavable = ((texel.b >> 7u) & 1u) == 1u;
+    let structure = texel.a >> 6u;
+    let structure_height = texel.a & 63u;
     let local = point - center(hex);
+
+    // Ground, then woods over it; higher ground is lighter.
+    var color = palette[ground].rgb;
+    if woods != 0u {
+        color = palette[LIGHT_FOREST + woods - 1u].rgb;
+    }
+    color = lighten(color, 0.02 * f32(level));
+    // Water and ice over that, darker the deeper they are.
+    if water != 0u {
+        let depth = f32(water - 1u);
+        let surface = palette[select(WATER, ICE, frozen)].rgb;
+        color = mix(lighten(surface, 0.01 * f32(level)), vec3<f32>(0.0), 0.08 * depth);
+    }
+    // Buildings and walls fill the hex; a bridge deck crosses it as a band.
+    if structure == STRUCTURE_BUILDING {
+        color = palette[BUILDING].rgb;
+    } else if structure == STRUCTURE_WALL {
+        color = palette[WALL].rgb;
+    } else if structure == STRUCTURE_BRIDGE && abs(local.y) < 0.3 {
+        color = palette[BRIDGE].rgb;
+    }
+    // Fire and smoke tint whatever they cover.
+    if overlay == 1u {
+        color = mix(color, palette[FIRE].rgb, 0.7);
+    } else if overlay == 2u {
+        color = mix(color, palette[SMOKE].rgb, 0.6);
+    }
+
     // Distance in pixels to the visible edge of the hex, inside its share of the grid gap.
     let edge = edge_distance(local) * u.radius - u.grid_gap * 0.5;
 
-    let elevation = code % 10u;
-    if u.digits != 0.0 && elevation != 0u {
-        let half_height = u.radius * 0.35;
-        let stroke = (digit_distance(local * u.radius / half_height, elevation) - 0.16) * half_height;
-        color = mix(color, vec3<f32>(entry.a), clamp(0.5 - stroke, 0.0, 1.0));
+    // Hexes a map file cannot store are hatched red.
+    if unsavable {
+        let stripe = fract((in.pixel.x + in.pixel.y) / 8.0);
+        color = mix(color, vec3<f32>(0.85, 0.05, 0.05), select(0.0, 0.75, stripe < 0.4));
+    }
+
+    let mode = i32(u.label);
+    var value = 0u;
+    var labelled = false;
+    if mode == LABEL_LEVEL {
+        value = level;
+        labelled = level != 0u;
+    } else if mode == LABEL_DEPTH {
+        value = water - 1u;
+        labelled = water != 0u;
+    } else if mode == LABEL_HEIGHT {
+        value = structure_height;
+        labelled = structure == STRUCTURE_BUILDING || structure == STRUCTURE_WALL;
+    } else if mode == LABEL_DECK {
+        value = structure_height;
+        labelled = structure == STRUCTURE_BRIDGE;
+    }
+    if labelled {
+        let half_height = u.radius * select(0.35, 0.28, value >= 10u);
+        let stroke = (number_distance(local * u.radius / half_height, value) - 0.16) * half_height;
+        let luminance = dot(color, vec3<f32>(0.299, 0.587, 0.114));
+        let ink = select(vec3<f32>(1.0), vec3<f32>(0.0), luminance > palette[INK_THRESHOLD].r);
+        color = mix(color, ink, clamp(0.5 - stroke, 0.0, 1.0));
     }
 
     if u.brush >= 0.0 && hex_distance(hex, vec2<i32>(u.hover)) <= i32(u.brush) {

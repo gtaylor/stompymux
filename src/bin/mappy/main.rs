@@ -1,10 +1,11 @@
 //! Mappy: a desktop viewer and editor for BattleTech map assets.
 //!
-//! `mappy [MAP_DIR]` lists the map files in `MAP_DIR` (default `game/maps`) for opening.
-//! Terrain is painted with the left mouse button; Alt+click picks up a hex's terrain and
-//! elevation. Scrolling, right or middle drag and the arrow keys pan; Ctrl+scroll zooms.
-//! Maps are decoded, checked and encoded by the game's own map codec, so whatever Mappy
-//! saves loads the same in the server.
+//! `mappy [MAP_DIR]` lists the `.toml` map files in `MAP_DIR` (default `game/maps`) for
+//! opening. The left mouse button paints the brush's switched-on layers; Alt+click picks up
+//! every layer of a hex. Scrolling, right or middle drag and the arrow keys pan; Ctrl+scroll
+//! zooms. Maps are read and written by the game's own map file code, so whatever Mappy saves
+//! loads the same in the server.
+mod brush_panel;
 mod document;
 mod map_view;
 mod render;
@@ -12,17 +13,20 @@ mod render;
 use std::path::PathBuf;
 
 use iced::{
-    Alignment, Background, Border, Color, Element, Fill, Point, Size, Subscription, Task, Theme,
-    Vector, keyboard,
+    Alignment, Color, Element, Fill, Point, Size, Subscription, Task, Theme, Vector, keyboard,
     widget::{
-        button, checkbox, column, container, row, rule, scrollable, shader, slider, text,
-        text_input,
+        button, checkbox, column, container, row, rule, scrollable, shader, text, text_input,
     },
 };
-use stompymux_rs::{BattleHexCoordinate, BattleMapFlag, Terrain};
+use stompymux_rs::{
+    BattleDecorationKind, BattleGround, BattleHex, BattleHexCoordinate, BattleMapFlag,
+    BattleStructure, BattleWoods,
+};
 
-use document::{Brush, Document, MapSettings};
-use map_view::{Camera, MapView, contrast, terrain_color};
+use brush_panel::{BrushEdit, BrushPanel};
+use document::{Document, MapSettings};
+use map_view::{Camera, MapView};
+use render::Label;
 
 fn main() -> iced::Result {
     let map_dir = std::env::args()
@@ -56,13 +60,8 @@ pub enum Message {
         anchor: Point,
     },
     Fit,
-    SelectTerrain(Terrain),
-    SelectElevation(u8),
-    PaintTerrain(bool),
-    PaintElevation(bool),
-    BrushRadius(u8),
-    /// Grow or shrink the brush by one step.
-    BrushStep(i8),
+    Brush(BrushEdit),
+    Label(Label),
     Undo,
     Redo,
     FilterChanged(String),
@@ -91,11 +90,8 @@ struct Mappy {
     /// Fit the next reported viewport, for maps opened before the canvas has a size.
     fit_pending: bool,
     hover: Option<BattleHexCoordinate>,
-    terrain: Terrain,
-    elevation: u8,
-    paint_terrain: bool,
-    paint_elevation: bool,
-    brush_radius: u8,
+    brush: BrushPanel,
+    label: Label,
     new_width: String,
     new_height: String,
     save_name: String,
@@ -116,11 +112,8 @@ impl Mappy {
             viewport: None,
             fit_pending: true,
             hover: None,
-            terrain: Terrain::Grassland,
-            elevation: 0,
-            paint_terrain: true,
-            paint_elevation: true,
-            brush_radius: 0,
+            brush: BrushPanel::default(),
+            label: Label::default(),
             new_width: "30".into(),
             new_height: "30".into(),
             save_name: String::new(),
@@ -157,13 +150,12 @@ impl Mappy {
             Message::Hovered(hover) => self.hover = hover,
             Message::Paint(coordinate) => {
                 self.hover = Some(coordinate);
-                self.document.paint(coordinate, self.brush());
+                self.document.paint(coordinate, self.brush.brush());
             }
             Message::StrokeEnded => self.document.end_stroke(),
             Message::Pick(coordinate) => {
                 if let Some(hex) = self.document.hex(coordinate) {
-                    self.terrain = hex.terrain();
-                    self.elevation = hex.elevation();
+                    self.brush.pick(hex);
                 }
             }
             Message::Panned(delta) => {
@@ -173,20 +165,8 @@ impl Mappy {
                 self.camera = self.camera.zoomed(factor, anchor);
             }
             Message::Fit => self.fit(),
-            Message::SelectTerrain(terrain) => {
-                self.terrain = terrain;
-                self.paint_terrain = true;
-            }
-            Message::SelectElevation(elevation) => {
-                self.elevation = elevation;
-                self.paint_elevation = true;
-            }
-            Message::PaintTerrain(enabled) => self.paint_terrain = enabled,
-            Message::PaintElevation(enabled) => self.paint_elevation = enabled,
-            Message::BrushRadius(radius) => self.brush_radius = radius.min(5),
-            Message::BrushStep(step) => {
-                self.brush_radius = self.brush_radius.saturating_add_signed(step).min(5);
-            }
+            Message::Brush(edit) => self.brush.edit(edit),
+            Message::Label(label) => self.label = label,
             Message::Undo => {
                 self.document.undo();
                 self.sync_conditions();
@@ -199,10 +179,7 @@ impl Mappy {
             Message::RefreshList => self.refresh_list(),
             Message::Open(name) => match Document::open(&self.map_dir.join(&name)) {
                 Ok(document) => {
-                    self.status = match document.load_issues.len() {
-                        0 => format!("Opened {name}"),
-                        count => format!("Opened {name} with {count} file problem(s)"),
-                    };
+                    self.status = format!("Opened {name}");
                     self.save_name = name;
                     self.replace_document(document);
                 }
@@ -261,15 +238,6 @@ impl Mappy {
         Task::none()
     }
 
-    /// The brush built from the palette selections.
-    fn brush(&self) -> Brush {
-        Brush {
-            terrain: self.paint_terrain.then_some(self.terrain),
-            elevation: self.paint_elevation.then_some(self.elevation),
-            radius: self.brush_radius,
-        }
-    }
-
     /// Fit the map to the canvas, or once the canvas reports its size.
     fn fit(&mut self) {
         let Some(viewport) = self.viewport else {
@@ -305,7 +273,13 @@ impl Mappy {
         };
         self.maps = entries
             .filter_map(Result::ok)
-            .filter(|entry| entry.path().is_file())
+            .filter(|entry| {
+                let path = entry.path();
+                path.is_file()
+                    && path
+                        .extension()
+                        .is_some_and(|extension| extension == "toml")
+            })
             .map(|entry| entry.file_name().to_string_lossy().into_owned())
             .collect();
         self.maps.sort_by_key(|name| name.to_lowercase());
@@ -318,14 +292,20 @@ impl Mappy {
         };
     }
 
-    /// Save under the name in the save box, refusing to replace a different existing file.
+    /// Save under the name in the save box, adding `.toml` if it is missing, and refusing to
+    /// replace a different existing file.
     fn save_as(&mut self) {
         let name = self.save_name.trim();
         if name.is_empty() || name.contains(['/', '\\']) || name.starts_with('.') {
             self.status = "Enter a plain file name to save as".into();
             return;
         }
-        let path = self.map_dir.join(name);
+        let name = if name.ends_with(".toml") {
+            name.to_owned()
+        } else {
+            format!("{name}.toml")
+        };
+        let path = self.map_dir.join(&name);
         if path.exists() && self.document.path.as_deref() != Some(path.as_path()) {
             self.status = format!("{name} already exists; open it to overwrite it");
             return;
@@ -343,7 +323,8 @@ impl Mappy {
             document: &self.document,
             camera: self.camera,
             hover: self.hover,
-            brush_radius: self.brush_radius,
+            brush_radius: self.brush.radius,
+            label: self.label,
         };
         let body = row![
             self.map_list(),
@@ -386,6 +367,19 @@ impl Mappy {
             button("Undo").on_press_maybe(self.document.can_undo().then_some(Message::Undo)),
             button("Redo").on_press_maybe(self.document.can_redo().then_some(Message::Redo)),
             button("Fit").on_press(Message::Fit),
+            rule::vertical(1),
+            text("Labels"),
+            row(Label::ALL.into_iter().map(|label| {
+                button(text(label.name()).size(13))
+                    .style(if label == self.label {
+                        button::primary
+                    } else {
+                        button::secondary
+                    })
+                    .on_press(Message::Label(label))
+                    .into()
+            }))
+            .spacing(2),
         ]
         .spacing(8)
         .padding(8)
@@ -432,24 +426,6 @@ impl Mappy {
     }
 
     fn inspector(&self) -> Element<'_, Message> {
-        let swatches = Terrain::ALL.chunks(3).map(|terrains| {
-            row(terrains.iter().map(|&terrain| self.swatch(terrain)))
-                .spacing(4)
-                .into()
-        });
-        let elevations = (0..=9u8).map(|elevation| {
-            let selected = elevation == self.elevation;
-            button(text(elevation.to_string()).center())
-                .width(Fill)
-                .padding([4, 0])
-                .style(if selected {
-                    button::primary
-                } else {
-                    button::secondary
-                })
-                .on_press(Message::SelectElevation(elevation))
-                .into()
-        });
         let settings = self.document.settings();
         let flags = BattleMapFlag::ALL.into_iter().map(|flag| {
             checkbox(flag.is_set(i64::from(settings.flags)))
@@ -468,91 +444,59 @@ impl Mappy {
             ]
             .align_y(Alignment::Center)
         };
-        let issues: Vec<Element<'_, Message>> = self
-            .document
-            .load_issues
-            .iter()
-            .map(|issue| text(issue.to_string()).size(12).into())
-            .collect();
-        let mut panel = column![
-            heading("Terrain"),
-            checkbox(self.paint_terrain)
-                .label("Paint terrain")
-                .on_toggle(Message::PaintTerrain),
-            column(swatches).spacing(4),
-            heading("Elevation"),
-            checkbox(self.paint_elevation)
-                .label("Paint elevation")
-                .on_toggle(Message::PaintElevation),
-            row(elevations).spacing(2),
-            heading("Brush"),
-            row![
-                text(format!("Radius {}", self.brush_radius)).width(80),
-                slider(0..=5u8, self.brush_radius, Message::BrushRadius),
-            ]
-            .align_y(Alignment::Center),
-            heading("Conditions"),
-            condition("Gravity (%)", &self.gravity, Message::GravityChanged),
-            condition(
+        let mut panel = column![];
+        let unsavable = self.document.unsavable().len();
+        if unsavable > 0 {
+            panel = panel.push(
+                text(format!(
+                    "{unsavable} hex(es), hatched red, can't be saved. A map file holds one of \
+                     ground, woods, water, building or wall per hex; fire and smoke only over \
+                     bare clear ground; bridges only over water."
+                ))
+                .size(12)
+                .color(Color::from_rgb(1.0, 0.45, 0.4)),
+            );
+        }
+        let panel = panel
+            .push(self.brush.view().map(Message::Brush))
+            .push(heading("Conditions"))
+            .push(condition(
+                "Gravity (%)",
+                &self.gravity,
+                Message::GravityChanged,
+            ))
+            .push(condition(
                 "Temperature",
                 &self.temperature,
-                Message::TemperatureChanged
-            ),
-            heading("Flags"),
-            column(flags).spacing(4),
-        ]
-        .spacing(8);
-        if !issues.is_empty() {
-            panel = panel.push(heading("File problems (fixed on save)"));
-            panel = panel.push(column(issues).spacing(4));
-        }
-        scrollable(panel.padding(12)).width(300).height(Fill).into()
-    }
-
-    /// A palette button filled with a terrain's map color.
-    fn swatch(&self, terrain: Terrain) -> Element<'_, Message> {
-        let selected = terrain == self.terrain;
-        let fill = terrain_color(terrain);
-        button(text(terrain.name().replace('_', " ")).size(12).center())
-            .width(Fill)
-            .padding([6, 2])
-            .style(move |_theme: &Theme, status| button::Style {
-                background: Some(Background::Color(match status {
-                    button::Status::Hovered => Color { a: 0.85, ..fill },
-                    _ => fill,
-                })),
-                text_color: contrast(fill),
-                border: Border {
-                    color: if selected {
-                        Color::WHITE
-                    } else {
-                        Color::TRANSPARENT
-                    },
-                    width: 2.0,
-                    radius: 4.0.into(),
-                },
-                ..button::Style::default()
-            })
-            .on_press(Message::SelectTerrain(terrain))
-            .into()
+                Message::TemperatureChanged,
+            ))
+            .push(heading("Flags"))
+            .push(column(flags).spacing(4))
+            .spacing(8);
+        scrollable(panel.padding(12)).width(320).height(Fill).into()
     }
 
     fn status_bar(&self) -> Element<'_, Message> {
         let map = &self.document.map;
         let hover = self.hover.and_then(|coordinate| {
             let hex = self.document.hex(coordinate)?;
+            let index = coordinate.y as usize * usize::from(map.width) + coordinate.x as usize;
+            let unsavable = if self.document.unsavable().contains(&index) {
+                " · can't be saved"
+            } else {
+                ""
+            };
             Some(format!(
-                "{},{}  {} {}",
+                "{},{}  {}{unsavable}",
                 coordinate.x,
                 coordinate.y,
-                hex.terrain().name(),
-                hex.elevation()
+                describe(hex)
             ))
         });
         container(
             row![
                 text(format!("{}×{}", map.width, map.height)).width(90),
-                text(hover.unwrap_or_default()).width(260),
+                text(hover.unwrap_or_default()).width(520),
                 text(&self.status),
             ]
             .spacing(16),
@@ -562,13 +506,47 @@ impl Mappy {
     }
 }
 
+/// A hex's layers in words, for the hover readout.
+fn describe(hex: BattleHex) -> String {
+    let ground = match hex.ground() {
+        BattleGround::Clear => "clear",
+        BattleGround::Road => "road",
+        BattleGround::Rough => "rough",
+        BattleGround::Mountains => "mountains",
+        BattleGround::Snow => "snow",
+        BattleGround::Sand => "sand",
+    };
+    let mut parts = vec![format!("level {} {ground}", hex.level())];
+    match hex.woods() {
+        Some(BattleWoods::Light) => parts.push("light woods".into()),
+        Some(BattleWoods::Heavy) => parts.push("heavy woods".into()),
+        None => {}
+    }
+    if let Some(water) = hex.water() {
+        let kind = if water.frozen { "ice" } else { "water" };
+        parts.push(format!("{kind} depth {}", water.depth));
+    }
+    match hex.structure() {
+        Some(BattleStructure::Building { height }) => parts.push(format!("building {height}")),
+        Some(BattleStructure::Wall { height }) => parts.push(format!("wall {height}")),
+        Some(BattleStructure::Bridge { deck }) => parts.push(format!("bridge deck {deck}")),
+        None => {}
+    }
+    match hex.overlay() {
+        Some(BattleDecorationKind::Fire) => parts.push("fire".into()),
+        Some(BattleDecorationKind::Smoke) => parts.push("smoke".into()),
+        None => {}
+    }
+    parts.join(" · ")
+}
+
 /// A section heading in the inspector.
 fn heading(label: &str) -> Element<'_, Message> {
     text(label).size(15).into()
 }
 
 /// Keyboard shortcuts: Ctrl+Z/Ctrl+Shift+Z/Ctrl+Y for history, Ctrl+S to save, digits for
-/// elevation, `[` and `]` for brush size, F to fit and the arrow keys (faster with Shift) to
+/// the brush level, `[` and `]` for brush size, F to fit and the arrow keys (faster with Shift) to
 /// pan. Keys typed into text inputs are not seen.
 fn key_binding(event: keyboard::Event) -> Option<Message> {
     let keyboard::Event::KeyPressed { key, modifiers, .. } = event else {
@@ -602,10 +580,10 @@ fn key_binding(event: keyboard::Event) -> Option<Message> {
     }
     match character.as_str() {
         "f" => Some(Message::Fit),
-        "[" => Some(Message::BrushStep(-1)),
-        "]" => Some(Message::BrushStep(1)),
+        "[" => Some(Message::Brush(BrushEdit::RadiusStep(-1))),
+        "]" => Some(Message::Brush(BrushEdit::RadiusStep(1))),
         digit if digit.len() == 1 && digit.as_bytes()[0].is_ascii_digit() => {
-            Some(Message::SelectElevation(digit.as_bytes()[0] - b'0'))
+            Some(Message::Brush(BrushEdit::Level(digit.as_bytes()[0] - b'0')))
         }
         _ => None,
     }

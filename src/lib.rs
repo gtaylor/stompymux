@@ -21,8 +21,8 @@ pub use btech::{
 pub use btech::{BattleCommandClass, BattleSpecialCommand, BattleSpecialType};
 pub use btech::{BattleMinePlacement, add_mine_action as add_battle_mine_action};
 pub use btech::{
-    Ground as BattleGround, Structure as BattleStructure, Water as BattleWater,
-    Woods as BattleWoods,
+    Ground as BattleGround, MAX_DEPTH as BATTLE_MAX_DEPTH, MAX_HEIGHT as BATTLE_MAX_HEIGHT,
+    Structure as BattleStructure, Water as BattleWater, Woods as BattleWoods,
 };
 
 pub use btech::{

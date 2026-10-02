@@ -15,7 +15,7 @@ use stompymux_rs::{BattleHexCoordinate, BattleMapAsset, Terrain};
 use crate::{
     Message,
     document::Document,
-    render::{MapPrimitive, Uniforms},
+    render::{Label, MapPrimitive, Uniforms},
 };
 
 /// √3, the height of a flat-topped hex with a vertex radius of one.
@@ -25,7 +25,7 @@ const SQRT_3: f32 = 1.732_050_8;
 pub const MIN_RADIUS: f32 = 0.5;
 pub const MAX_RADIUS: f32 = 64.0;
 
-/// Below this radius no grid is drawn; below the next, elevation digits are not.
+/// Below this radius no grid is drawn; below the next, hex labels are not.
 const GRID_RADIUS: f32 = 7.0;
 const DIGIT_RADIUS: f32 = 12.0;
 
@@ -139,21 +139,6 @@ pub fn terrain_color(terrain: Terrain) -> Color {
     Color::from_rgb(red, green, blue)
 }
 
-/// A hex's fill: deeper water is darker, higher ground is lighter.
-pub fn hex_color(terrain: Terrain, elevation: u8) -> Color {
-    let base = terrain_color(terrain);
-    let level = f32::from(elevation);
-    let mix = |toward: f32, amount: f32| {
-        let blend = |channel: f32| channel + (toward - channel) * amount;
-        Color::from_rgb(blend(base.r), blend(base.g), blend(base.b))
-    };
-    match terrain {
-        Terrain::Water | Terrain::Ice => mix(0.0, 0.08 * level),
-        Terrain::Building | Terrain::Wall | Terrain::Bridge => base,
-        _ => mix(1.0, 0.055 * level),
-    }
-}
-
 /// Black or white, whichever reads better on `background`.
 pub fn contrast(background: Color) -> Color {
     let luminance = 0.299 * background.r + 0.587 * background.g + 0.114 * background.b;
@@ -198,6 +183,7 @@ pub struct MapView<'a> {
     pub camera: Camera,
     pub hover: Option<BattleHexCoordinate>,
     pub brush_radius: u8,
+    pub label: Label,
 }
 
 impl MapView<'_> {
@@ -325,10 +311,10 @@ impl shader::Program<Message> for MapView<'_> {
                     0.0
                 },
                 brush: self.hover.map_or(-1.0, |_| f32::from(self.brush_radius)),
-                digits: if camera.radius >= DIGIT_RADIUS {
-                    1.0
+                label: if camera.radius >= DIGIT_RADIUS {
+                    self.label.shader_value()
                 } else {
-                    0.0
+                    -1.0
                 },
             },
         }
