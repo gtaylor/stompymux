@@ -21,6 +21,16 @@ pub use fixtures::{copy, isolated_scripts, isolated_world, with_clock_save_inter
 pub use reuse::{attempt_heartbeat, install, restore_database, snapshot_database};
 pub use server::start;
 
+/// Write the map file `<name>.toml` into `dir`, built from the compact cell notation.
+pub fn write_map(dir: &std::path::Path, name: &str, cells: &str) {
+    std::fs::create_dir_all(dir).unwrap();
+    let text = stompymux_rs::BattleMapAsset::from_cells(cells)
+        .unwrap()
+        .to_file()
+        .unwrap();
+    std::fs::write(dir.join(format!("{name}.toml")), text).unwrap();
+}
+
 /// Rewrite one hex of serialized world state through [`stompymux_rs::BattleHex`].
 pub fn edit_hex(
     tile: &mut serde_json::Value,

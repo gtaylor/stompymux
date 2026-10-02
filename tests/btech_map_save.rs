@@ -26,12 +26,20 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
     (dir, config, world, map)
 }
 
-/// Authored fire remains permanent through both load paths, save preparation and restart.
+/// The fixture map as saved: its stale painted fire becomes clear ground.
+fn cleared() -> String {
+    BattleMapAsset::from_cells("2 1\n.2#1\n")
+        .unwrap()
+        .to_file()
+        .unwrap()
+}
+
+/// Fire painted into a permanent-fire map survives both load paths, saving and restart.
 #[tokio::test]
 async fn authored_eternal_fire_survives_load_save_and_restart() {
     let (_dir, config, world, map) = fixture().await;
     let root = config.path(&config.database.map_database);
-    std::fs::write(root.join("fire.map"), "2 1\n&2#1\n").unwrap();
+    support::write_map(&root, "fire.map", "2 1\n&2#1\n8: 100 20\n");
     let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
     let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let output = support::run_text(&native, &config, ObjectId(1), 1, "loadmap fire.map");
@@ -45,11 +53,14 @@ async fn authored_eternal_fire_survives_load_save_and_restart() {
     );
     assert_eq!(native.world().btech, lua.world().btech);
     assert_eq!(native.world().btech.maps()[&map].flags & 8, 8);
-    let source = "2 1\n&2#1\n8: 100 20\n";
+    let source = &BattleMapAsset::from_cells("2 1\n&2#1\n8: 100 20\n")
+        .unwrap()
+        .to_file()
+        .unwrap();
     for scripts in [&native, &lua] {
         let before = scripts.world().btech.clone();
         let exported = scripts.world().btech.maps()[&map].export_asset().unwrap();
-        assert_eq!(exported.source, source);
+        assert_eq!(&exported.source, source);
         assert!(exported.stale_effects.is_empty());
         assert!(
             scripts
@@ -66,10 +77,10 @@ async fn authored_eternal_fire_survives_load_save_and_restart() {
     let restored = persistence::load(&config.database()).await.unwrap();
     assert_eq!(restored.btech, saved.btech);
     assert_eq!(
-        restored.btech.maps()[&map].export_asset().unwrap().source,
+        &restored.btech.maps()[&map].export_asset().unwrap().source,
         source
     );
-    MapAssetWrite::new(&config, ObjectId(1), "saved-fire.map", source.into())
+    MapAssetWrite::new(&config, ObjectId(1), "saved-fire.map.toml", source.into())
         .unwrap()
         .publish(&config)
         .unwrap();
@@ -83,7 +94,7 @@ async fn authored_eternal_fire_survives_load_save_and_restart() {
 async fn map_save_staging_callbacks_and_paths() {
     let (_dir, config, world, map) = fixture().await;
     let root = config.path(&config.database.map_database);
-    let path = root.join("export.map");
+    let path = root.join("export.map.toml");
     std::fs::write(&path, "original").unwrap();
     let before = world.btech.clone();
     let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
@@ -107,14 +118,14 @@ async fn map_save_staging_callbacks_and_paths() {
     let request = MapAssetWrite::new(
         &config,
         ObjectId(1),
-        "export.map",
+        "export.map.toml",
         before.maps()[&map].export_asset().unwrap().source,
     )
     .unwrap();
     let saved = native.world().clone();
     persistence::save(&config.database(), &saved).await.unwrap();
     request.publish(&config).unwrap();
-    assert_eq!(std::fs::read_to_string(&path).unwrap(), "2 1\n.2#1\n");
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), cleared());
     for name in ["", "../escape", "/tmp/escape", "missing/asset", "bad\0name"] {
         assert!(MapAssetWrite::new(&config, ObjectId(1), name, "data".into()).is_err());
     }
@@ -139,7 +150,7 @@ async fn map_save_staging_callbacks_and_paths() {
 async fn server_map_save_waits_for_commit_and_reports_completion() {
     tokio::task::LocalSet::new().run_until(async {
         let (_dir, config, _, map) = fixture().await;
-        let path = config.path(&config.database.map_database).join("server.map");
+        let path = config.path(&config.database.map_database).join("server.map.toml");
         std::fs::write(&path, "original").unwrap();
         let (addr, shutdown, task, _) = support::start(&config, Rc::new(Cell::new(1))).await;
         let mut client = support::Client { socket: tokio::net::TcpStream::connect(addr).await.unwrap(), pending: Vec::new() };
@@ -159,7 +170,7 @@ async fn server_map_save_waits_for_commit_and_reports_completion() {
         sqlx::query("DROP TRIGGER deny_map_export").execute(&mut sql).await.unwrap();
         client.send("savemap server.map").await;
         client.until("Saving complete!").await;
-        assert_eq!(std::fs::read_to_string(&path).unwrap(), "2 1\n.2#1\n");
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), cleared());
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;

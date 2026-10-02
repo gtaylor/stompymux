@@ -1,8 +1,9 @@
-//! Map export encodes transient effects and metadata without mutating the running map.
+//! Map export writes underlying terrain and settings without mutating the running map.
 use crate::support;
 use stompymux_rs::*;
 
-/// Export every tile spelling, including the distinct permanent and temporary effect cases.
+/// Temporary fire and smoke save the terrain beneath them; painted fire survives only with
+/// permanent fire; settings are always written.
 #[tokio::test]
 async fn export_terrain_effects_and_metadata_match_asset_contract() {
     let (_dir, config, mut world) = support::isolated_world().await;
@@ -39,10 +40,6 @@ async fn export_terrain_effects_and_metadata_match_asset_contract() {
         let export = candidate.btech.maps()[&map].export_asset().unwrap();
         assert_eq!(candidate.btech, before);
         let permanent = flags & 8 != 0;
-        let mut expected = format!("5 1\n>0#1`2{}3.4\n", if permanent { '&' } else { '.' });
-        // Non-default conditions are saved even when no flag is set.
-        expected.push_str(&format!("{}: 50 -40\n", flags & !1));
-        assert_eq!(export.source, expected);
         assert_eq!(
             export.stale_effects,
             if permanent {
@@ -51,9 +48,22 @@ async fn export_terrain_effects_and_metadata_match_asset_contract() {
                 vec![BattleHexCoordinate { x: 3, y: 0 }]
             }
         );
-        let decoded = BattleMapAsset::from_cells(&export.source).unwrap();
-        assert_eq!(decoded.hex(0, 0).unwrap().terrain(), Terrain::Grassland);
-        assert_eq!(decoded.hex(1, 0).unwrap().terrain(), Terrain::Road);
+        let decoded = BattleMapAsset::parse(&export.source).unwrap();
+        let painted = if permanent {
+            Terrain::Fire
+        } else {
+            Terrain::Grassland
+        };
+        assert_eq!(
+            decoded.hexes.as_slice(),
+            [
+                BattleHex::new(Terrain::Grassland, 0),
+                BattleHex::new(Terrain::Road, 1),
+                BattleHex::new(Terrain::LightForest, 2),
+                BattleHex::new(painted, 3),
+                BattleHex::new(Terrain::Grassland, 4),
+            ]
+        );
         assert_eq!(decoded.flags, flags & !1);
         assert_eq!((decoded.gravity, decoded.temperature), (50, -40));
         persistence::save(&config.database(), &candidate)
@@ -72,7 +82,8 @@ async fn export_terrain_effects_and_metadata_match_asset_contract() {
     }
 }
 
-/// Explicit base smoke is stale; smoke over fire exports the underlying fire without another fire pass.
+/// Every terrain survives export. Painted smoke is stale; painted fire, even under a smoke
+/// overlay, is kept only while the map has permanent fire.
 #[tokio::test]
 async fn export_base_smoke_and_all_canonical_tiles() {
     let (_dir, config, mut world) = support::isolated_world().await;
@@ -97,34 +108,28 @@ async fn export_base_smoke_and_all_canonical_tiles() {
         Some(BattleDecoration::new(BattleDecorationKind::Smoke, 30, None)),
     )
     .unwrap();
-    let export = world.btech.maps()[&map].export_asset().unwrap();
-    assert_eq!(
-        export.source,
-        "15 1\n.0#1`2\"3~4-5/6}7%8^9&0.1+2@3=4\n8: 100 20\n"
-    );
+    let original = world.btech.maps()[&map].clone();
+    let export = original.export_asset().unwrap();
+    let mut expected =
+        BattleMapAsset::from_cells("15 1\n.0#1`2\"3~4-5/6}7%8^9&0.1+2@3=4\n8: 100 20\n").unwrap();
+    std::sync::Arc::make_mut(&mut expected.hexes)[11] = BattleHex::new(Terrain::Grassland, 1);
+    assert_eq!(BattleMapAsset::parse(&export.source).unwrap(), expected);
     assert_eq!(
         export.stale_effects,
         vec![BattleHexCoordinate { x: 11, y: 0 }]
     );
-    BattleMapAsset::from_cells(&export.source).unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["maps"][map.0.to_string()]["flags"] = 0.into();
     world.btech = serde_json::from_value(state).unwrap();
     let unflagged = world.btech.maps()[&map].export_asset().unwrap();
+    std::sync::Arc::make_mut(&mut expected.hexes)[10] = BattleHex::new(Terrain::Grassland, 0);
+    expected.flags = 0;
+    assert_eq!(BattleMapAsset::parse(&unflagged.source).unwrap(), expected);
     assert_eq!(
-        unflagged.source,
-        export.source.strip_suffix("8: 100 20\n").unwrap()
-    );
-    assert_eq!(unflagged.stale_effects, export.stale_effects);
-    // A single non-default condition is enough to write the line.
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["temperature"] = (-5).into();
-    world.btech = serde_json::from_value(state).unwrap();
-    let cold = world.btech.maps()[&map].export_asset().unwrap();
-    assert_eq!(cold.source, format!("{}0: 100 -5\n", unflagged.source));
-    let decoded = BattleMapAsset::from_cells(&cold.source).unwrap();
-    assert_eq!(
-        (decoded.flags, decoded.gravity, decoded.temperature),
-        (0, 100, -5)
+        unflagged.stale_effects,
+        vec![
+            BattleHexCoordinate { x: 10, y: 0 },
+            BattleHexCoordinate { x: 11, y: 0 }
+        ]
     );
 }

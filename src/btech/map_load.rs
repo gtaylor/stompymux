@@ -88,7 +88,8 @@ fn load_map_state_action(
         )
         .map_err(
             |error| match error.downcast_ref::<super::map::MapFileFailure>() {
-                Some(failure) => anyhow::anyhow!(*failure),
+                // Report the failure itself, keeping the decoder's reason beneath it.
+                Some(failure) => anyhow::anyhow!(error.root_cause().to_string()).context(*failure),
                 None => error,
             },
         )?;

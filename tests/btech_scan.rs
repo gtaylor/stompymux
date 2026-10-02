@@ -2446,13 +2446,13 @@ async fn landing_suitability_checks_full_hex_neighborhood_and_base_terrain() {
     let center = BattleHexCoordinate { x: 1, y: 1 };
     for (tiles, flags, expected) in [
         (
-            "~0~0~0\n~0#0~0\n~0~0~0\n",
+            "~0~0~0\n~0/0~0\n~0~0~0\n",
             0,
             BattleLandingSuitability::ImproperTerrain,
         ),
         (
             "~0~0~0\n~0#0~0\n~0~0~0\n",
-            128,
+            0,
             BattleLandingSuitability::Ready,
         ),
         (

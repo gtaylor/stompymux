@@ -35,13 +35,12 @@ async fn load_map_native_lua_and_restart_across_chassis() {
                 firing::edit(&mut world, id, |unit| unit["motion"]["speed"] = 21.5.into());
             }
             let root = config.path(&config.database.map_database);
-            std::fs::create_dir_all(&root).unwrap();
             // Raised terrain distinguishes retained physical altitude from implicit ground height.
-            std::fs::write(
-                root.join("loaded.map"),
-                format!("2 14\n{}2: 50 -40\n", "#2.0ignored suffix\n".repeat(14)),
-            )
-            .unwrap();
+            support::write_map(
+                &root,
+                "loaded.map",
+                &format!("2 14\n{}2: 50 -40\n", "#2.0\n".repeat(14)),
+            );
             persistence::save(&config.database(), &world).await.unwrap();
             let before = world.btech.clone();
             let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
@@ -107,10 +106,14 @@ async fn invalid_loads_preserve_map_membership_and_messages() {
     let map = world.btech.units()[&id].map.unwrap();
     let root = config.path(&config.database.map_database);
     std::fs::create_dir_all(&root).unwrap();
-    std::fs::write(root.join("short.map"), "1 1\n.0\n").unwrap();
-    std::fs::write(root.join("bad.map"), "2 3\n.0\n").unwrap();
-    std::fs::write(root.join("dimensions.map"), "0 2\n").unwrap();
-    std::fs::write(root.join("eof.map"), "2 2\n.0.0\n").unwrap();
+    support::write_map(&root, "short.map", "1 1\n.0\n");
+    std::fs::write(
+        root.join("bad.map.toml"),
+        "terrain = '''\n..\n.\n'''\nlevel = '''\n00\n0\n'''\n",
+    )
+    .unwrap();
+    std::fs::write(root.join("symbol.map.toml"), "terrain = 'X'\nlevel = '0'\n").unwrap();
+    std::fs::write(root.join("eof.map.toml"), "terrain = '''\n..\n").unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
     world
         .objects
@@ -122,19 +125,18 @@ async fn invalid_loads_preserve_map_membership_and_messages() {
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     for (name, expected) in [
         ("missing.map", "#-1 Map not found."),
-        ("dimensions.map", "#-1 Map invalid - Bad Height/Width."),
-        ("bad.map", "#-1 Map invalid - Height not loaded properly"),
-        ("eof.map", "#-1 Map invalid - Height not loaded properly"),
+        ("symbol.map", "#-1 Map invalid."),
+        ("bad.map", "#-1 Map invalid."),
+        ("eof.map", "#-1 Map invalid."),
     ] {
         let error = scripts
             .eval_callback::<bool>(&format!("return btech.map.load_as(1,{},'{name}')", map.0))
             .unwrap_err();
         assert!(error.to_string().contains(expected), "{error}");
         assert_eq!(
-            format!(
-                "{:#}",
-                load_battle_map_action(&scripts, &config, ObjectId(1), map, name).unwrap_err()
-            ),
+            load_battle_map_action(&scripts, &config, ObjectId(1), map, name)
+                .unwrap_err()
+                .to_string(),
             expected
         );
         for suffix in ["", " ignored"] {
@@ -185,12 +187,7 @@ async fn loaded_terrain_precedes_shutdown_consequences() {
     world.objects.get_mut(&actor).unwrap().location = Some(map);
     firing::edit(&mut world, id, |unit| unit["motion"]["speed"] = 21.5.into());
     let root = config.path(&config.database.map_database);
-    std::fs::create_dir_all(&root).unwrap();
-    std::fs::write(
-        root.join("water.map"),
-        format!("1 12\n{}", "~2\n".repeat(12)),
-    )
-    .unwrap();
+    support::write_map(&root, "water.map", &format!("1 12\n{}", "~2\n".repeat(12)));
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let output = support::run_text(&scripts, &config, actor, 1, "loadmap water.map");
     assert!(output.contains("free-fall"), "{output}");

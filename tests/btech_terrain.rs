@@ -7,17 +7,16 @@ use stompymux_rs::{
     create_battle_map, dbck, persistence, reload_battle_map,
 };
 
-const SOURCE: &str = "3 2\n.0~2'1\n#0-3^9\n32: 75 -12\n";
-const RELOAD: &str = "3 2\n.0~2'1\n#0-3%4\n64: 80 15\n";
+const SOURCE: &str = "3 2\n.0~2`1\n#0-3^9\n32: 75 -12\n";
+const RELOAD: &str = "3 2\n.0~2`1\n#0-3%4\n64: 80 15\n";
 
 /// An isolated schema-8 game, two equal-size assets, and an unregistered map container.
 async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, SqliteConnection) {
     let (dir, config, mut world) = support::isolated_world().await;
     world.accounts.get_mut(&ObjectId(1)).unwrap().hash =
         Some(stompymux_rs::accounts::hash("secret", &config).unwrap());
-    std::fs::create_dir_all(dir.path().join("maps")).unwrap();
-    std::fs::write(dir.path().join("maps/asymmetric.map"), SOURCE).unwrap();
-    std::fs::write(dir.path().join("maps/reload.map"), RELOAD).unwrap();
+    support::write_map(&dir.path().join("maps"), "asymmetric.map", SOURCE);
+    support::write_map(&dir.path().join("maps"), "reload.map", RELOAD);
     let id = world.create(&config, "Terrain lab".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().location = Some(ObjectId(config.start()));
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));

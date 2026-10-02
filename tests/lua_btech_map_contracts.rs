@@ -38,8 +38,7 @@ async fn terrain_zones_cargo_links_and_strict_errors_match_c_shapes() {
     )
     .unwrap();
     let root = config.path(&config.database.map_database);
-    std::fs::create_dir_all(&root).unwrap();
-    std::fs::write(root.join("contract.map"), "2 2\n.0.0\n.0.0\n").unwrap();
+    support::write_map(&root, "contract.map", "2 2\n.0.0\n.0.0\n");
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     scripts
         .inspect_lua()
@@ -139,12 +138,11 @@ async fn mixed_membership_range_lookup_los_and_exact_placement_are_canonical() {
     world.objects.get_mut(&second_pilot).unwrap().location = Some(mech);
     assign_battle_pilot(&mut world, mech, second_pilot).unwrap();
     let map_root = config.path(&config.database.map_database);
-    std::fs::create_dir_all(&map_root).unwrap();
-    std::fs::write(
-        map_root.join("occupied.map"),
-        format!("1 12\n{}", ".0\n".repeat(12)),
-    )
-    .unwrap();
+    support::write_map(
+        &map_root,
+        "occupied.map",
+        &format!("1 12\n{}", ".0\n".repeat(12)),
+    );
     let vehicle_label = world.btech.vehicles()[&vehicle].battlefield_id().unwrap();
     let mech_label = world.btech.constructed_units()[&mech]
         .battlefield_id()

@@ -157,7 +157,7 @@ async fn lua_map_flags_use_typed_constants_and_preserve_other_flags() {
         &mut world,
         map,
         "test",
-        BattleMapAsset::from_cells("1 1\n&0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n&0\n8: 100 20\n").unwrap(),
     )
     .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

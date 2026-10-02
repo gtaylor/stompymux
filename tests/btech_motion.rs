@@ -1324,7 +1324,7 @@ async fn perception_query_composes_live_terrain_and_spatial_range_without_acquir
         "forest.map",
         BattleMapAsset::from_cells(&format!(
             "12 12\n{}",
-            format!("{}\n", "'0".repeat(12)).repeat(12)
+            format!("{}\n", "`0".repeat(12)).repeat(12)
         ))
         .unwrap(),
     )

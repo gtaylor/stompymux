@@ -1,9 +1,9 @@
-//! Terrain substitutions share transactional diagnostics across map activation paths.
+//! Map files load whole or not at all, and rejected loads report why on the MapErrors channel.
 use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
-/// A map-error listener and an asset with two distinct substitutions in source order.
+/// A map-error listener, a blank 2x2 map unless `create`, and a valid 2x2 map file.
 async fn fixture(create: bool) -> (tempfile::TempDir, Config, World, ObjectId) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Terrain diagnostics".into(), Kind::Room);
@@ -29,63 +29,49 @@ async fn fixture(create: bool) -> (tempfile::TempDir, Config, World, ObjectId) {
         listening: true,
     });
     world.channels.insert(channel.name.clone(), channel);
-    let root = config.path(&config.database.map_database);
-    std::fs::create_dir_all(&root).unwrap();
-    std::fs::write(
-        root.join("unknown.map"),
-        "2 2\n!1&2ignored suffix\n.3$4.9\n",
-    )
-    .unwrap();
+    support::write_map(
+        &config.path(&config.database.map_database),
+        "field.map",
+        "2 2\n.1&2\n.3.4\n",
+    );
     (dir, config, world, map)
 }
 
-/// Each activation route preserves elevations, permanent fire and diagnostic order through restart.
+/// The native command and Lua agree for every activation route; a file without a `flags` key
+/// keeps the flags the live map already has, and an explicit list replaces them.
 #[tokio::test]
-async fn native_and_lua_map_activation_share_substitutions_and_channels() {
-    for (metadata, expected) in [
-        ("", (8, 100, 20)),
-        ("2: 50 nope\n", (8, 100, 20)),
-        ("\n2: 50 -40\n", (8, 100, 20)),
-        ("0: 300 -300\nignored\n", (0, 255, -128)),
-        ("2: -20 300\n", (2, 0, 127)),
-        ("\u{b}2\u{c}: \u{b}50\u{c} \u{c}-40\u{b}\n", (2, 50, -40)),
-        ("2: 50\u{a0}-40\n", (8, 100, 20)),
+async fn native_and_lua_map_activation_agree_and_inherit_unnamed_flags() {
+    for (settings, expected) in [
+        ("", None),
+        (
+            "gravity = 50\ntemperature = -40\nflags = []\n",
+            Some((0, 50, -40)),
+        ),
+        ("flags = [\"special_rules\"]\n", Some((2, 100, 20))),
     ] {
         for operation in ["create", "reload", "load"] {
             let (_dir, config, mut world, map) = fixture(operation == "create").await;
-            let inherited_flags = if operation == "create" { 0 } else { 49 };
+            let inherited = if operation == "create" { 0 } else { 49 };
             if operation != "create" {
                 let mut state = serde_json::to_value(&world.btech).unwrap();
-                state["maps"][map.0.to_string()]["flags"] = inherited_flags.into();
+                state["maps"][map.0.to_string()]["flags"] = inherited.into();
                 world.btech = serde_json::from_value(state).unwrap();
             }
-            let expected = if expected.0 == 8 {
-                (expected.0 | inherited_flags, expected.1, expected.2)
-            } else {
-                expected
-            };
-            std::fs::write(
-                config
-                    .path(&config.database.map_database)
-                    .join("unknown.map"),
-                {
-                    let mut bytes = b"2 2\n!1&2\xffignored suffix\n.3$4\xfe\n".to_vec();
-                    bytes.extend_from_slice(metadata.as_bytes());
-                    bytes
-                },
-            )
-            .unwrap();
+            let root = config.path(&config.database.map_database);
+            let text = std::fs::read_to_string(root.join("field.map.toml")).unwrap();
+            let body = text[text.find("terrain").unwrap()..].to_owned();
+            std::fs::write(root.join("field.map.toml"), format!("{settings}{body}")).unwrap();
             let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
             let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
             let command = if operation == "load" {
-                "loadmap unknown.map".into()
+                "loadmap field.map".into()
             } else {
-                format!("@btech map-{operation} #{}=unknown.map", map.0)
+                format!("@btech map-{operation} #{}=field.map", map.0)
             };
             let call = if operation == "load" {
-                format!("btech.map.load_as(1, {}, 'unknown.map')", map.0)
+                format!("btech.map.load_as(1, {}, 'field.map')", map.0)
             } else {
-                format!("btech.map.{operation}({}, 'unknown.map')", map.0)
+                format!("btech.map.{operation}({}, 'field.map')", map.0)
             };
             support::run_text(&native, &config, ObjectId(1), 1, &command);
             assert!(
@@ -98,132 +84,70 @@ async fn native_and_lua_map_activation_share_substitutions_and_channels() {
             native_state["maps"][map.0.to_string()]["fire_dice"] =
                 lua_state["maps"][map.0.to_string()]["fire_dice"].clone();
             assert_eq!(native_state, lua_state);
+            let expected = expected.unwrap_or((inherited, 100, 20));
             for scripts in [&native, &lua] {
                 let state = scripts.world();
                 let field = &state.btech.maps()[&map];
                 assert_eq!((field.flags, field.gravity, field.temperature), expected);
-                assert_eq!(
-                    field.hex(0, 0).unwrap(),
-                    BattleHex::new(Terrain::Grassland, 1)
-                );
+                assert_eq!(field.hex(1, 0).unwrap(), BattleHex::new(Terrain::Fire, 2));
                 assert_eq!(
                     field.hex(1, 1).unwrap(),
                     BattleHex::new(Terrain::Grassland, 4)
                 );
-                let channel = &state.channels["MapErrors"];
-                assert_eq!(channel.messages, 2);
-                assert_eq!(channel.history.len(), 2);
-                for (message, suffix) in channel.history.iter().zip(["0,0: '!'", "1,1: '$'"]) {
-                    assert!(
-                        message
-                            .message
-                            .contains(&format!("Map #{}: Invalid terrain at {suffix}", map.0))
-                    );
-                }
+                assert_eq!(state.channels["MapErrors"].messages, 0);
             }
             let saved = lua.world().clone();
             persistence::save(&config.database(), &saved).await.unwrap();
-            let restored = persistence::load(&config.database()).await.unwrap();
-            assert_eq!(saved.btech, restored.btech);
             assert_eq!(
-                serde_json::to_value(saved.channels).unwrap(),
-                serde_json::to_value(restored.channels).unwrap()
+                persistence::load(&config.database()).await.unwrap().btech,
+                saved.btech
             );
         }
     }
 }
 
-/// Late callback failure and channel capacity failure roll back terrain and every diagnostic.
+/// Loading works without a MapErrors channel; an invalid file is still rejected whole.
 #[tokio::test]
-async fn terrain_diagnostics_obey_action_and_callback_rollback() {
-    for operation in ["create", "reload", "load"] {
-        let (_dir, config, world, map) = fixture(operation == "create").await;
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let call = if operation == "load" {
-            format!("btech.map.load_as(1, {}, 'unknown.map')", map.0)
-        } else {
-            format!("btech.map.{operation}({}, 'unknown.map')", map.0)
-        };
-        assert!(
-            scripts
-                .eval_callback::<()>(&format!("{call}; error('abort')"))
-                .is_err()
-        );
-        assert_eq!(scripts.world().btech, world.btech);
-        assert_eq!(
-            serde_json::to_value(&scripts.world().channels).unwrap(),
-            serde_json::to_value(&world.channels).unwrap()
-        );
-        assert!(scripts.drain_outbox().is_empty());
-        let mut limited = world.clone();
-        limited.channels.get_mut("MapErrors").unwrap().messages = i64::MAX - 1;
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(limited.clone()))).unwrap();
-        let command = if operation == "load" {
-            "loadmap unknown.map".into()
-        } else {
-            format!("@btech map-{operation} #{}=unknown.map", map.0)
-        };
-        support::run_text(&scripts, &config, ObjectId(1), 1, &command);
-        assert_eq!(scripts.world().btech, limited.btech);
-        assert_eq!(
-            serde_json::to_value(&scripts.world().channels).unwrap(),
-            serde_json::to_value(&limited.channels).unwrap()
-        );
-        assert!(
-            !scripts
-                .eval_callback::<bool>(&format!("return pcall(function() {call} end)"))
-                .unwrap()
-        );
-        assert_eq!(scripts.world().btech, limited.btech);
-        assert_eq!(
-            serde_json::to_value(&scripts.world().channels).unwrap(),
-            serde_json::to_value(&limited.channels).unwrap()
-        );
-        assert!(scripts.drain_outbox().is_empty());
-    }
-}
-
-/// Missing diagnostic channels do not prevent loading; malformed elevations still reject the asset.
-#[tokio::test]
-async fn decoding_fallback_does_not_relax_structural_validation() {
+async fn invalid_files_are_rejected_without_a_diagnostic_channel() {
     let (_dir, config, mut world, map) = fixture(false).await;
     world.channels.clear();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-    load_battle_map_action(&scripts, &config, ObjectId(1), map, "unknown.map").unwrap();
+    load_battle_map_action(&scripts, &config, ObjectId(1), map, "field.map").unwrap();
     let before = scripts.world().btech.clone();
     std::fs::write(
-        config.path(&config.database.map_database).join("bad.map"),
-        "2 2\n!1.0\n.0!x\n",
+        config
+            .path(&config.database.map_database)
+            .join("bad.map.toml"),
+        "terrain = '''\n!.\n..\n'''\nlevel = '''\n10\n00\n'''\n",
     )
     .unwrap();
     assert!(load_battle_map_action(&scripts, &config, ObjectId(1), map, "bad.map").is_err());
     assert_eq!(scripts.world().btech, before);
     assert!(scripts.world().channels.is_empty());
-    assert!(Terrain::from_symbol('!').is_err());
 }
 
-/// Rejected loads publish preflight diagnostics without changing terrain or escaping callback rollback.
+/// Rejected loads publish their reason without changing terrain or escaping callback rollback.
 #[tokio::test]
 async fn failed_load_diagnostics_commit_only_with_the_enclosing_callback() {
     for (name, source, diagnostic) in [
         (
-            "dimensions.map",
-            Some("0 2\n"),
-            Some("Invalid height and or/width on dimensions.map"),
+            "ragged.map",
+            Some("terrain = '''\n..\n.\n'''\nlevel = '''\n00\n0\n'''\n"),
+            Some("ragged.map is not a valid map file: terrain grid row 1 has 1 hexes"),
         ),
         (
-            "rows.map",
-            Some("2 2\n.0.0\n"),
-            Some(
-                "Mapfile possibly corrupt and/or height/width flipped. Height != what was read in rows.map",
-            ),
+            "symbol.map",
+            Some("terrain = 'X'\nlevel = '0'\n"),
+            Some("symbol.map is not a valid map file: unknown terrain symbol 'X' at 0,0"),
         ),
         ("missing.map", None, None),
     ] {
         let (_dir, config, world, map) = fixture(false).await;
         if let Some(source) = source {
             std::fs::write(
-                config.path(&config.database.map_database).join(name),
+                config
+                    .path(&config.database.map_database)
+                    .join(format!("{name}.toml")),
                 source,
             )
             .unwrap();
@@ -248,7 +172,9 @@ async fn failed_load_diagnostics_commit_only_with_the_enclosing_callback() {
                 assert!(
                     channel.history[0]
                         .message
-                        .contains(&format!("Map #{}: {diagnostic}", map.0))
+                        .contains(&format!("Map #{}: {diagnostic}", map.0)),
+                    "{}",
+                    channel.history[0].message
                 );
             }
         }
