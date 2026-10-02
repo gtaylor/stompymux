@@ -21,14 +21,40 @@ pub use fixtures::{copy, isolated_scripts, isolated_world, with_clock_save_inter
 pub use reuse::{attempt_heartbeat, install, restore_database, snapshot_database};
 pub use server::start;
 
+/// Rewrite one hex of serialized world state through [`stompymux_rs::BattleHex`].
+pub fn edit_hex(
+    tile: &mut serde_json::Value,
+    change: impl FnOnce(stompymux_rs::BattleHex) -> stompymux_rs::BattleHex,
+) {
+    let hex = serde_json::from_value(tile.take()).expect("serialized hex");
+    *tile = serde_json::to_value(change(hex)).unwrap();
+}
+
+/// Replace one serialized hex outright with the hex a terrain and elevation digit describe.
+pub fn set_hex(tile: &mut serde_json::Value, terrain: stompymux_rs::Terrain, elevation: u8) {
+    *tile = serde_json::to_value(stompymux_rs::BattleHex::new(terrain, elevation)).unwrap();
+}
+
+/// Change one serialized hex's terrain, keeping its elevation digit.
+pub fn set_hex_terrain(tile: &mut serde_json::Value, terrain: stompymux_rs::Terrain) {
+    edit_hex(tile, |hex| hex.with_terrain(terrain));
+}
+
+/// Change one serialized hex's elevation digit, keeping its terrain.
+pub fn set_hex_elevation(tile: &mut serde_json::Value, elevation: u8) {
+    edit_hex(tile, |hex| hex.with_elevation(elevation));
+}
+
 /// Make a later neighboring-wood ignition fail after preceding mine effects have run.
 /// A map without active fire may lack its random stream; ignition requires it.
 pub fn fail_mine_ignition(world: &mut stompymux_rs::World, map: stompymux_rs::ObjectId, y: usize) {
     let mut state = serde_json::to_value(&world.btech).unwrap();
     let record = &mut state["maps"][map.0.to_string()];
     let width = record["width"].as_u64().unwrap() as usize;
-    record["terrain"][y * width]["terrain"] =
-        serde_json::to_value(stompymux_rs::Terrain::LightForest).unwrap();
+    set_hex_terrain(
+        &mut record["terrain"][y * width],
+        stompymux_rs::Terrain::LightForest,
+    );
     record["fire_dice"] = serde_json::Value::Null;
     world.btech = serde_json::from_value(state).unwrap();
 }

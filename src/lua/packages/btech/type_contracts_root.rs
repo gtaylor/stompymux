@@ -56,8 +56,11 @@
 
 // lua-types-begin btech 00007
 //|---@class BattleHex
-//|---@field terrain string Snake_case terrain name.
-//|---@field elevation integer Magnitude from 0 through 9; water and ice represent depth.
+//|---@field level integer Ground height in levels; any water surface sits at this height.
+//|---@field ground "clear"|"road"|"rough"|"mountains"|"snow"|"sand"|"fire"|"smoke" What the ground is made of.
+//|---@field woods? "light"|"heavy" Forest covering the ground.
+//|---@field water? {depth: integer, frozen: boolean} Standing water whose surface is at the ground level.
+//|---@field structure? {kind: "building"|"wall", height: integer}|{kind: "bridge", deck: integer} Built feature; heights are above the ground level.
 // lua-types-end
 
 // lua-types-begin btech 00008

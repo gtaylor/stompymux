@@ -85,7 +85,10 @@ async fn export_base_smoke_and_all_canonical_tiles() {
     )
     .unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["terrain"][11]["terrain"] = "smoke".into();
+    crate::support::set_hex_terrain(
+        &mut state["maps"][map.0.to_string()]["terrain"][11],
+        stompymux_rs::Terrain::Smoke,
+    );
     world.btech = serde_json::from_value(state).unwrap();
     set_map_decoration(
         &mut world,

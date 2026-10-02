@@ -7,7 +7,7 @@ use stompymux_rs::*;
 /// Raise only the target's terrain hex, keeping both units valid at their natural ground heights.
 fn raised_target(world: &mut World, map: ObjectId, target: ObjectId) {
     let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["terrain"][10]["elevation"] = 1.into();
+    crate::support::set_hex_elevation(&mut state["maps"][map.0.to_string()]["terrain"][10], 1);
     let key = if world.btech.vehicles().contains_key(&target) {
         "vehicles"
     } else {
@@ -134,7 +134,7 @@ async fn cloud_controls_persist_and_roll_back() {
 /// Raise one empty terrain hex a level above the flat lane.
 fn raised_hex(world: &mut World, map: ObjectId, index: usize) {
     let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["terrain"][index]["elevation"] = 1.into();
+    crate::support::set_hex_elevation(&mut state["maps"][map.0.to_string()]["terrain"][index], 1);
     world.btech = serde_json::from_value(state).unwrap();
 }
 

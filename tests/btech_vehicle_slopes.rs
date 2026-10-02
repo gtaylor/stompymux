@@ -121,8 +121,10 @@ async fn reverse_slope_checks_replay_success_and_failed_climbs_and_descents() {
             serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
         for row in 0..3 {
             for x in 0..12 {
-                saved["maps"][map.0.to_string()]["terrain"][row * 12 + x]["elevation"] =
-                    u8::from((x <= 6) == uphill).into();
+                crate::support::set_hex_elevation(
+                    &mut saved["maps"][map.0.to_string()]["terrain"][row * 12 + x],
+                    u8::from((x <= 6) == uphill),
+                );
             }
         }
         world.btech = serde_json::from_value(saved).unwrap();
@@ -227,7 +229,10 @@ async fn two_level_vehicle_cliffs_stop_before_entry() {
     let map = world.btech.vehicles()[&id].position().unwrap().map;
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     for row in 0..3 {
-        encoded["maps"][map.0.to_string()]["terrain"][row * 12 + 3]["elevation"] = 2.into();
+        crate::support::set_hex_elevation(
+            &mut encoded["maps"][map.0.to_string()]["terrain"][row * 12 + 3],
+            2,
+        );
     }
     world.btech = serde_json::from_value(encoded).unwrap();
     let mut stopped = false;
@@ -256,7 +261,10 @@ async fn retained_height_applies_only_to_the_departure_hex() {
     saved["vehicles"][id.0.to_string()]["ground_elevation"] = 2.into();
     for row in 0..3 {
         for x in 3..12 {
-            saved["maps"][map.0.to_string()]["terrain"][row * 12 + x]["elevation"] = 3.into();
+            crate::support::set_hex_elevation(
+                &mut saved["maps"][map.0.to_string()]["terrain"][row * 12 + x],
+                3,
+            );
         }
     }
     world.btech = serde_json::from_value(saved).unwrap();
@@ -361,16 +369,16 @@ async fn vehicle_cliffs_replay_stops_crashes_drops_and_water_destruction() {
             for x in 0..12 {
                 let destination = x >= 3;
                 let tile = &mut saved["maps"][map.0.to_string()]["terrain"][row * 12 + x];
-                tile["elevation"] = if water {
+                let elevation = if water {
                     1
                 } else if destination == downhill {
                     0
                 } else {
                     2
-                }
-                .into();
+                };
+                crate::support::set_hex_elevation(tile, elevation);
                 if water && destination {
-                    tile["terrain"] = serde_json::to_value(Terrain::Water).unwrap();
+                    crate::support::set_hex_terrain(tile, Terrain::Water);
                 }
             }
         }
@@ -457,8 +465,10 @@ async fn vehicle_auto_fall_skips_only_piloted_downhill_avoidance_and_replays() {
         }
         for row in 0..3 {
             for x in 0..12 {
-                saved["maps"][map.0.to_string()]["terrain"][row * 12 + x]["elevation"] =
-                    if (x >= 3) == downhill { 0 } else { 2 }.into();
+                crate::support::set_hex_elevation(
+                    &mut saved["maps"][map.0.to_string()]["terrain"][row * 12 + x],
+                    if (x >= 3) == downhill { 0 } else { 2 },
+                );
             }
         }
         world.btech = serde_json::from_value(saved).unwrap();

@@ -42,8 +42,11 @@
 ---@field flags BattleMapFlag[] Map flags the asset enables.
 
 ---@class BattleHex
----@field terrain string Snake_case terrain name.
----@field elevation integer Magnitude from 0 through 9; water and ice represent depth.
+---@field level integer Ground height in levels; any water surface sits at this height.
+---@field ground "clear"|"road"|"rough"|"mountains"|"snow"|"sand"|"fire"|"smoke" What the ground is made of.
+---@field woods? "light"|"heavy" Forest covering the ground.
+---@field water? {depth: integer, frozen: boolean} Standing water whose surface is at the ground level.
+---@field structure? {kind: "building"|"wall", height: integer}|{kind: "bridge", deck: integer} Built feature; heights are above the ground level.
 
 ---@class StoredBattleMap
 ---@field cargo_transfer_point BattleCargoTransferPoint|nil Saved cargo location and hint policy.

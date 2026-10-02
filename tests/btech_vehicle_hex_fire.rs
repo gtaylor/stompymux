@@ -54,7 +54,10 @@ async fn fixture_with_template(
         })
         .unwrap();
     let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["maps"][map.0.to_string()]["terrain"][1]["terrain"] = terrain.into();
+    crate::support::set_hex_terrain(
+        &mut saved["maps"][map.0.to_string()]["terrain"][1],
+        Terrain::from_name(terrain).unwrap(),
+    );
     saved["vehicles"][shooter.0.to_string()]["dice"] =
         serde_json::to_value(BattleDice::seeded([42; 32])).unwrap();
     world.btech = serde_json::from_value(saved).unwrap();
