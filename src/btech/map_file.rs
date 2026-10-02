@@ -224,7 +224,6 @@ impl BattleMapAsset {
                 let ground = height(level[y][x])
                     .with_context(|| format!("invalid level {:?} {}", level[y][x], at()))?;
                 let water = |frozen| -> Result<Water> {
-                    ensure!(ground == 0, "water must be at level 0 for now, {}", at());
                     let depth = depth
                         .as_ref()
                         .map(|rows| rows[y][x])
@@ -529,6 +528,24 @@ hexes = [[3, 0]]
         stored.validate().unwrap();
     }
 
+    /// A lake and a bridge on a plateau keep their surfaces at the plateau's level.
+    #[test]
+    fn water_and_bridges_sit_on_raised_ground() {
+        let source = "terrain = '~-~'\nlevel = '432'\ndepth = '231'\n\n[[bridges]]\ndeck = 2\nhexes = [[2, 0]]\n";
+        let map = BattleMapAsset::parse(source).unwrap();
+        let lake = map.hex(0, 0).unwrap();
+        assert_eq!((lake.water_line(), lake.surface_height()), (4, 2));
+        let ice = map.hex(1, 0).unwrap();
+        assert_eq!((ice.standing_height(), ice.surface_height()), (3, 0));
+        let bridge = map.hex(2, 0).unwrap();
+        assert_eq!((bridge.water_line(), bridge.deck_height()), (2, Some(4)));
+        assert_eq!(BattleMapAsset::parse(&map.to_file().unwrap()).unwrap(), map);
+        crate::btech::state::map_from_asset("plateau", map)
+            .unwrap()
+            .validate()
+            .unwrap();
+    }
+
     /// `&` and `:` are permanent fire and smoke over clear ground; the map holds them as
     /// decorations, never in its terrain.
     #[test]
@@ -597,7 +614,6 @@ hexes = [[3, 0]]
             (base("X\n", "0\n", ""), "unknown terrain symbol 'X'"),
             (base(".\n", "!\n", ""), "invalid level"),
             (base("~\n", "0\n", ""), "missing depth"),
-            (base("~\n", "1\n", "depth = \"2\\n\""), "level 0"),
             (base(".\n", "0\n", "depth = \"2\\n\""), "without water"),
             (base("@\n", "0\n", ""), "missing structure height"),
             (

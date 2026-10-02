@@ -30,27 +30,32 @@ pub(super) fn resolve(
         .map;
     let record = &world.btech.maps()[&map];
     let tile = record.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
-    let sides = match tile.terrain() {
-        Terrain::Ice => 15,
-        Terrain::Bridge if !record.has_flag(super::BattleMapFlag::IndestructibleBridges) => {
+    let Some(surface) = super::BattleSurface::of(tile) else {
+        return Ok(None);
+    };
+    let sides = match surface {
+        super::BattleSurface::Ice => 15,
+        super::BattleSurface::Bridge
+            if !record.has_flag(super::BattleMapFlag::IndestructibleBridges) =>
+        {
             10 * (1 + u16::from(tile.deck_clearance().unwrap_or_default()))
         }
-        _ => return Ok(None),
+        super::BattleSurface::Bridge => return Ok(None),
     };
     let threshold = weapon.0.profile_for_ammunition(weapon.1).damage;
     let roll = super::dice::unit_dice_mut(world, shooter)?.die(sides)?;
     let broken = roll <= u16::from(threshold);
-    let text = match (tile.terrain(), broken) {
-        (Terrain::Ice, true) => Some("The ice breaks from the blast!".to_owned()),
-        (Terrain::Bridge, true) => Some(format!(
+    let text = match (surface, broken) {
+        (super::BattleSurface::Ice, true) => Some("The ice breaks from the blast!".to_owned()),
+        (super::BattleSurface::Bridge, true) => Some(format!(
             "The bridge at {},{} is blown apart!",
             coordinate.x, coordinate.y
         )),
-        (Terrain::Bridge, false) => Some(format!(
+        (super::BattleSurface::Bridge, false) => Some(format!(
             "The bridge at {},{} shudders from direct hit!",
             coordinate.x, coordinate.y
         )),
-        _ => None,
+        (super::BattleSurface::Ice, false) => None,
     };
     let mut notices = Vec::new();
     let mut pilot_notices = Vec::new();
@@ -68,11 +73,7 @@ pub(super) fn resolve(
         None
     } else if character {
         Some(super::surface_break::break_surface_in_action(
-            world,
-            map,
-            coordinate,
-            tile.terrain(),
-            rules,
+            world, map, coordinate, surface, rules,
         )?)
     } else if tile.is_ice() {
         Some(break_ice(world, map, coordinate, None, rules)?)

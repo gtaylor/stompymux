@@ -96,12 +96,13 @@ fn flood_section_inner(
         .context("Map not found")?
         .base_hex(i64::from(position.x), i64::from(position.y))?;
     let elevation = unit.elevation_level(tile);
-    let depth = if whole_unit && elevation < 0 {
-        -i32::from(tile.surface_height())
+    let water_line = i32::from(tile.water_line());
+    let depth = if whole_unit && elevation < water_line {
+        water_line - i32::from(tile.surface_height())
     } else {
-        -elevation
+        water_line - elevation
     };
-    if !tile.holds_water() || elevation >= 0 || depth <= 0 {
+    if !tile.immerses(elevation) || depth <= 0 {
         return Ok(None);
     }
     let leg = unit.chassis().is_leg(section);

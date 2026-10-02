@@ -1165,7 +1165,7 @@ async fn missed_direct_shots_share_incidental_terrain_and_preserve_targets() {
             continue;
         }
         let effect = resolve_woodland_effect(
-            Terrain::HeavyForest,
+            BattleHex::new(Terrain::HeavyForest, 0),
             BattleWeapon::Flamer,
             BattleAmmunitionMode::Normal,
             3,

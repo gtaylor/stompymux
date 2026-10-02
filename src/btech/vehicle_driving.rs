@@ -211,18 +211,18 @@ pub(super) fn advance(
             }
             let bridge_collision = vehicle.definition().movement == BattleVehicleMovement::Hover
                 && previous_tile.deck_clearance().is_some_and(|deck| deck != 0)
-                && previous_height == 0
+                && previous_height == i32::from(previous_tile.water_line())
                 && tile.deck_clearance() == Some(1);
             let next_under = vehicle.definition().movement == BattleVehicleMovement::Hover
-                && previous_height == 0
+                && previous_height == i32::from(previous_tile.water_line())
                 && tile.deck_clearance().is_some_and(|deck| deck >= 2)
                 && (under_bridge || previous_tile.is_water_surface());
-            let height = if tile.is_ice() && previous_height < 0 {
+            let height = if tile.is_ice() && previous_height < i32::from(tile.water_line()) {
                 i32::from(tile.surface_height())
             } else {
                 vehicle.terrain_elevation(tile, next_under)
             };
-            let ice_check = tile.is_ice() && previous_height == 0;
+            let ice_check = tile.is_ice() && previous_height == i32::from(tile.water_line());
             let change = height - previous_height;
             let water_check = super::vehicle_water::requires_check(vehicle, tile, height);
             entries.push(VehicleStep {
@@ -476,13 +476,12 @@ pub(super) fn advance(
                 interrupted = true;
                 break;
             }
-            let terrain = world.btech.maps()[&position.map]
-                .base_hex(i64::from(hex.x), i64::from(hex.y))?
-                .terrain();
+            let tile =
+                world.btech.maps()[&position.map].base_hex(i64::from(hex.x), i64::from(hex.y))?;
             let obstacle = super::vehicle_obstacle::resolve(
                 world,
                 id,
-                terrain,
+                tile,
                 BattleMovementRules {
                     fall: fall_rules,
                     ..rules

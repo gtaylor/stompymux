@@ -54,7 +54,7 @@ impl BattleVtolMotionStep {
             last = Some(hex);
             let entry_altitude = initial + change * from;
             let blocks_elevation = if tile.is_ice() {
-                (entry_altitude as i32) < 0
+                (entry_altitude as i32) < i32::from(tile.water_line())
             } else {
                 tile.blocks_jump_entry(entry_altitude as i32)
             };
@@ -81,7 +81,14 @@ impl BattleVtolMotionStep {
             let mut times = vec![from, to];
             if change != 0.0 {
                 let surface = f64::from(tile.surface_height());
-                for height in [-1.0, 0.0, surface, surface - 1.0, surface - 2.0] {
+                let water_line = f64::from(tile.water_line());
+                for height in [
+                    water_line - 1.0,
+                    water_line,
+                    surface,
+                    surface - 1.0,
+                    surface - 2.0,
+                ] {
                     let t = (height - initial) / change;
                     // Work in parameter space: a next-representable height may round away
                     // when converted back to time near the start of a long movement segment.

@@ -104,7 +104,8 @@ pub fn extinguish_inferno_in_water(world: &mut World, id: ObjectId) -> Result<Ve
         .context("Map is unavailable")?;
     let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
     if !tile.is_open_water()
-        || (unit.elevation_level(tile) == -1 && unit.posture() != super::BattlePosture::Prone)
+        || (unit.elevation_level(tile) == i32::from(tile.water_line()) - 1
+            && unit.posture() != super::BattlePosture::Prone)
     {
         return Ok(Vec::new());
     }

@@ -55,7 +55,7 @@ pub(super) fn target_in_water(world: &World, target: ObjectId) -> Result<bool> {
             .context("Target is not constructed")?
             .elevation_level(tile)
     };
-    Ok(elevation <= 0)
+    Ok(elevation <= i32::from(tile.water_line()))
 }
 
 /// Torpedoes need a target in the water; other weapons are unaffected.

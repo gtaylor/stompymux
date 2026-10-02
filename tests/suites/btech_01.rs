@@ -41,6 +41,9 @@ mod btech_scenario_packets;
 #[path = "../btech_semiguided.rs"]
 mod btech_semiguided;
 
+#[path = "../btech_raised_water.rs"]
+mod btech_raised_water;
+
 #[path = "../btech_surfaces.rs"]
 mod btech_surfaces;
 

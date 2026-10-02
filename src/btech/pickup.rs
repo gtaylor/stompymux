@@ -196,7 +196,9 @@ pub fn pickup_admission(
     let tile =
         world.btech.maps()[&position.map].hex(i64::from(position.x), i64::from(position.y))?;
     ensure!(
-        !(tile.has_bridge() && target_height <= 0 && source_height > 0),
+        !(tile.has_bridge()
+            && target_height <= i32::from(tile.water_line())
+            && source_height > i32::from(tile.water_line())),
         "You need to be under the bridge to pick up this unit."
     );
     if source.signature.team != victim.signature.team {

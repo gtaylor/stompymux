@@ -216,7 +216,7 @@ fn relocate_precise(
         .get(&id)
         .is_some_and(|unit| unit.definition().movement == BattleVehicleMovement::Hover);
     let surface = if hover && tile.is_water_surface() {
-        0
+        tile.water_line()
     } else {
         tile.standing_height()
     };

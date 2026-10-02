@@ -118,7 +118,7 @@ impl Terrain {
     }
 }
 
-/// Parsed source terrain, before simulation-specific overlays or bridge generation.
+/// Parsed map terrain and settings; fire and smoke drawn in the file are hex overlays.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BattleMapAsset {
     pub width: u16,

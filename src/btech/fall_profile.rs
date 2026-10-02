@@ -9,7 +9,7 @@ pub(super) fn surface(tile: BattleHex, elevation: i32) -> i16 {
         return upper;
     }
     if tile.has_bridge() {
-        return -1;
+        return tile.water_line() - 1;
     }
     tile.surface_height()
 }

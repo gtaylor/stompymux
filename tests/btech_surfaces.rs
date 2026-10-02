@@ -4000,16 +4000,29 @@ async fn character_surface_actions_evacuate_and_roll_back_terrain() {
         let afterlife = ObjectId(config.battletech.afterlife_dbref);
         scripts.world_mut().objects.remove(&afterlife);
         assert!(
-            break_battle_surface_action(&scripts, &config, map, coordinate, terrain, rules())
-                .is_err()
+            break_battle_surface_action(
+                &scripts,
+                &config,
+                map,
+                coordinate,
+                BattleSurface::of(BattleHex::new(terrain, 1)).unwrap(),
+                rules()
+            )
+            .is_err()
         );
         assert_eq!(scripts.world().btech, baseline.btech);
         assert_eq!(scripts.world().objects[&ObjectId(2)].location, Some(victim));
         assert!(scripts.drain_outbox().is_empty());
         *scripts.world_mut() = baseline;
-        let report =
-            break_battle_surface_action(&scripts, &config, map, coordinate, terrain, rules())
-                .unwrap();
+        let report = break_battle_surface_action(
+            &scripts,
+            &config,
+            map,
+            coordinate,
+            BattleSurface::of(BattleHex::new(terrain, 1)).unwrap(),
+            rules(),
+        )
+        .unwrap();
         assert_eq!(report.falls.len(), 2);
         let output = scripts.drain_outbox();
         let mut checked = 0;

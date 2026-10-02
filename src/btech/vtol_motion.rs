@@ -43,7 +43,7 @@ impl BattleVtolMotionStep {
     /// Check the destination surface; horizontal path traversal remains the host's responsibility.
     pub fn surface_contact(self, hex: BattleHex) -> BattleVtolSurfaceContact {
         let altitude = self.elevation();
-        if hex.is_open_water() && altitude < 0 {
+        if hex.is_open_water() && altitude < i32::from(hex.water_line()) {
             return BattleVtolSurfaceContact::Water;
         }
         let surface = i32::from(hex.surface_height());

@@ -63,7 +63,7 @@ does not apply to a hex, that hex is `.`.
 | Grid | Character means |
 | --- | --- |
 | `terrain` | What the hex is; see the table below. |
-| `level` | Ground height, `0`-`9` then `a`-`z` for 10 to 35. Water and ice surfaces sit at this height, which must be 0 for now. |
+| `level` | Ground height, `0`-`9` then `a`-`z` for 10 to 35. Water and ice surfaces, and the water under a bridge, sit at this height; the water's bed is `depth` levels below it. |
 | `depth` | Water depth below the surface, `0`-`9`, for every `~` and `-` hex. |
 | `structure_height` | Height of the building or wall above the ground, `0`-`9` then `a`-`z`, for every `@` and `=` hex. |
 

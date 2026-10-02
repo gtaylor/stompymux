@@ -71,7 +71,7 @@ async fn melting_matches_combat_fractures_native_lua_and_restart() {
             &config,
             map,
             BattleHexCoordinate { x: 0, y: 11 },
-            Terrain::Ice,
+            BattleSurface::Ice,
             BattleFallRules::configured(&config),
         )
         .unwrap();

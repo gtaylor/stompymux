@@ -93,7 +93,7 @@ pub fn predict_artillery_target(
             let elevation = |tile: super::BattleHex| {
                 let height = tile.surface_height();
                 if movement == Some(BattleVehicleMovement::Hover) {
-                    height.max(0)
+                    height.max(tile.water_line())
                 } else {
                     height
                 }

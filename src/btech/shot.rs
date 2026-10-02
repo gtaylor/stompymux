@@ -399,7 +399,7 @@ fn resolve_shot_inner(
     // Torpedo launchers are built to fire from a submerged leg.
     ensure!(
         mount.weapon.is_torpedo()
-            || !(attacker.elevation_level(tile) < 0
+            || !(tile.immerses(attacker.elevation_level(tile))
                 && attacker.chassis().is_leg(mount.criticals[0].section)),
         "Submerged weapon firing requires underwater combat rules"
     );

@@ -24,8 +24,8 @@ pub(super) fn enter_water(
     let position = unit.position().context("Water entry requires placement")?;
     let tile =
         world.btech.maps()[&position.map].base_hex(i64::from(position.x), i64::from(position.y))?;
-    let below_bridge = tile.has_bridge() && unit.elevation_level(tile) < 0;
-    let below_ice = tile.is_ice() && unit.elevation_level(tile) < 0;
+    let below_bridge = tile.has_bridge() && tile.immerses(unit.elevation_level(tile));
+    let below_ice = tile.is_ice() && tile.immerses(unit.elevation_level(tile));
     if !tile.is_open_water() && !below_bridge && !below_ice {
         return Ok(WaterEntryReport::default());
     }

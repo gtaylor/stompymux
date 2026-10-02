@@ -1,5 +1,5 @@
 //! Terrain suitability and saved circular landing exclusions, independent of aircraft movement.
-use super::{BattleHexCoordinate, StoredBattleMap, Terrain};
+use super::{BattleHexCoordinate, StoredBattleMap};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -50,10 +50,7 @@ impl StoredBattleMap {
         team: i32,
     ) -> Result<BattleLandingSuitability> {
         let tile = self.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
-        if !matches!(
-            tile.terrain(),
-            Terrain::Grassland | Terrain::Road | Terrain::Sand
-        ) {
+        if !tile.is_open_ground() {
             return Ok(BattleLandingSuitability::ImproperTerrain);
         }
         for neighbor in coordinate.neighbors()? {

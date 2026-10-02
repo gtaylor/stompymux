@@ -1103,16 +1103,29 @@ async fn character_surface_fractures_publish_vehicle_injuries_atomically() {
             if initial == 9 {
                 scripts.world_mut().objects.remove(&afterlife);
                 assert!(
-                    break_battle_surface_action(&scripts, &config, map, coordinate, terrain, rules)
-                        .is_err()
+                    break_battle_surface_action(
+                        &scripts,
+                        &config,
+                        map,
+                        coordinate,
+                        BattleSurface::of(BattleHex::new(terrain, 1)).unwrap(),
+                        rules
+                    )
+                    .is_err()
                 );
                 assert_eq!(scripts.world().btech, before);
                 assert_eq!(scripts.world().objects[&ObjectId(2)].location, Some(id));
                 *scripts.world_mut() = world.clone();
             }
-            let report =
-                break_battle_surface_action(&scripts, &config, map, coordinate, terrain, rules)
-                    .unwrap();
+            let report = break_battle_surface_action(
+                &scripts,
+                &config,
+                map,
+                coordinate,
+                BattleSurface::of(BattleHex::new(terrain, 1)).unwrap(),
+                rules,
+            )
+            .unwrap();
             assert_eq!(report.vehicle_falls.len(), 1);
             assert_eq!(
                 report.vehicle_falls[0]
@@ -1135,8 +1148,15 @@ async fn character_surface_fractures_publish_vehicle_injuries_atomically() {
             assert_eq!(result.btech.vehicles()[&id].flooded(), initial == 0);
             *scripts.world_mut() = world;
             assert_eq!(
-                break_battle_surface_action(&scripts, &config, map, coordinate, terrain, rules)
-                    .unwrap(),
+                break_battle_surface_action(
+                    &scripts,
+                    &config,
+                    map,
+                    coordinate,
+                    BattleSurface::of(BattleHex::new(terrain, 1)).unwrap(),
+                    rules
+                )
+                .unwrap(),
                 report
             );
             assert_eq!(scripts.world().btech, result.btech);

@@ -634,7 +634,7 @@ pub fn break_surface_action(
     config: &Config,
     map: ObjectId,
     coordinate: super::BattleHexCoordinate,
-    terrain: super::Terrain,
+    surface: super::BattleSurface,
     rules: super::BattleFallRules,
 ) -> Result<super::BattleSurfaceBreak> {
     scripts.atomic(|before| {
@@ -642,7 +642,7 @@ pub fn break_surface_action(
             &mut scripts.world.borrow_mut(),
             map,
             coordinate,
-            terrain,
+            surface,
             rules,
         )?;
         super::piloting::publish_ordered_notices(scripts, &report.notices, &report.pilot_notices)?;

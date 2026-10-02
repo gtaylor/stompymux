@@ -1,5 +1,5 @@
 //! Operator ice growth and melting share map randomness and ordinary surface-break consequences.
-use super::{BattleFallRules, BattleHexCoordinate, BattleSurfaceBreak, StoredBattleMap, Terrain};
+use super::{BattleFallRules, BattleHexCoordinate, BattleSurfaceBreak, StoredBattleMap};
 use crate::{Config, ObjectId, Scripts};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -131,7 +131,7 @@ pub fn change_map_ice_action(
                                 config,
                                 map,
                                 coordinate,
-                                Terrain::Ice,
+                                super::BattleSurface::Ice,
                                 BattleFallRules::configured(config),
                             )?)
                     }

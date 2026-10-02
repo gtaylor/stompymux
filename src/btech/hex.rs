@@ -254,6 +254,12 @@ impl BattleHex {
         }
     }
 
+    /// Height of this hex's water surface, which sits at its ground level. Heights below it
+    /// are underwater when the hex holds water.
+    pub const fn water_line(self) -> i16 {
+        self.level as i16
+    }
+
     /// Depth of the standing water in this hex, or zero when there is none.
     pub const fn water_depth(self) -> u8 {
         match self.water {

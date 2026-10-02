@@ -53,7 +53,8 @@ pub(super) fn pickup(
         super::unit_elevation(world, carrier)?.context("Carrier height unavailable")?;
     let target_height =
         super::unit_elevation(world, target)?.context("Target height unavailable")?;
-    let through_ice = tile.is_ice() && source_height >= 0 && target_height < 0;
+    let water_line = i32::from(tile.water_line());
+    let through_ice = tile.is_ice() && source_height >= water_line && target_height < water_line;
     let hover = world
         .btech
         .vehicles()
@@ -113,7 +114,7 @@ pub(super) fn pickup(
             x: i32::from(position.x),
             y: i32::from(position.y),
         };
-        let report = match (source_height == 0 && !hover, character) {
+        let report = match (source_height == water_line && !hover, character) {
             (true, true) => super::surface_break::break_ice_in_action(
                 &mut candidate,
                 position.map,

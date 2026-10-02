@@ -38,12 +38,12 @@ pub fn apply_woodland_clearing(
         before == expected,
         "Woodland changed before the clearing result was applied"
     );
-    let after = match (before.overlay(), before.woods(), replacement) {
-        (None, Some(Woods::Heavy), Terrain::LightForest) => before.with_woods(Some(Woods::Light)),
-        (None, Some(Woods::Light), Terrain::Grassland) => before.with_woods(None),
-        (None, Some(Woods::Light), Terrain::Rough) => {
-            before.with_woods(None).with_ground(Ground::Rough)
-        }
+    ensure!(!before.is_burning(), "Invalid woodland reduction");
+    let base = before.with_overlay(None);
+    let after = match (base.woods(), replacement) {
+        (Some(Woods::Heavy), Terrain::LightForest) => base.with_woods(Some(Woods::Light)),
+        (Some(Woods::Light), Terrain::Grassland) => base.with_woods(None),
+        (Some(Woods::Light), Terrain::Rough) => base.with_woods(None).with_ground(Ground::Rough),
         _ => bail!("Invalid woodland reduction"),
     };
     world.attempt(|world| {

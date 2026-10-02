@@ -1,43 +1,24 @@
-//! Shared terrain rule lookups: terrain groupings, woods density and ground speed divisors.
+//! Shared terrain rule lookups on a hex's layers: open ground, woods density, water and
+//! ground speed divisors.
 //!
-//! Combat, movement and sensor code ask these questions of a [`Terrain`] instead of
-//! matching on variants locally, so a rule changes in exactly one place.
-use super::{BattleHex, Ground, Terrain, Woods};
-
-impl Terrain {
-    /// Light or heavy forest.
-    pub fn is_woods(self) -> bool {
-        matches!(self, Self::LightForest | Self::HeavyForest)
-    }
-
-    /// Woods density used by to-hit modifiers and line of sight: light 1, heavy 2, otherwise 0.
-    pub fn woods_density(self) -> u8 {
-        match self {
-            Self::LightForest => 1,
-            Self::HeavyForest => 2,
-            _ => 0,
-        }
-    }
-
-    /// Terrain whose column holds water a unit below the surface datum is immersed in.
-    /// Bridges span water, so a unit beneath a deck is in the water under it.
-    pub fn holds_water(self) -> bool {
-        matches!(self, Self::Water | Self::Ice | Self::Bridge)
-    }
-
-    /// Divisor terrain applies to a ground unit's desired speed.
-    /// Loose sand bogs down wheels; legs, tracks and hover skirts cross it like clear ground.
-    pub fn ground_speed_divisor(self, wheeled: bool) -> f64 {
-        match self {
-            Self::Rough | Self::Snow | Self::LightForest => 2.0,
-            Self::Mountains | Self::HeavyForest => 3.0,
-            Self::Sand if wheeled => 2.0,
-            _ => 1.0,
-        }
-    }
-}
+//! Combat, movement and sensor code ask these questions of a [`BattleHex`] instead of
+//! matching on layers locally, so a rule changes in exactly one place.
+use super::{BattleHex, Ground, Woods};
 
 impl BattleHex {
+    /// Whether nothing stands on or covers the ground: no woods, water or structure.
+    pub fn is_bare(self) -> bool {
+        self.woods().is_none() && self.water().is_none() && self.structure().is_none()
+    }
+
+    /// Bare clear ground, road or sand with no fire or smoke over it: firm, open ground a
+    /// unit can set down on.
+    pub fn is_open_ground(self) -> bool {
+        self.is_bare()
+            && self.overlay().is_none()
+            && matches!(self.ground(), Ground::Clear | Ground::Road | Ground::Sand)
+    }
+
     /// Whether woods cover this hex.
     pub fn is_woods(self) -> bool {
         self.woods().is_some()
@@ -87,56 +68,54 @@ impl BattleHex {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::btech::Terrain;
 
     #[test]
-    fn woods_density_matches_woods_grouping() {
-        for terrain in [
-            Terrain::Grassland,
-            Terrain::LightForest,
-            Terrain::HeavyForest,
-            Terrain::Smoke,
-            Terrain::Rough,
-        ] {
-            assert_eq!(terrain.is_woods(), terrain.woods_density() > 0);
+    fn woods_density_matches_woods_layer() {
+        let density = |terrain| BattleHex::new(terrain, 0).woods_density();
+        for terrain in [Terrain::Grassland, Terrain::Smoke, Terrain::Rough] {
+            assert_eq!(density(terrain), 0);
+            assert!(!BattleHex::new(terrain, 0).is_woods());
         }
-        assert_eq!(Terrain::LightForest.woods_density(), 1);
-        assert_eq!(Terrain::HeavyForest.woods_density(), 2);
+        assert_eq!(density(Terrain::LightForest), 1);
+        assert_eq!(density(Terrain::HeavyForest), 2);
+        let burning = BattleHex::new(Terrain::HeavyForest, 0)
+            .with_overlay(Some(crate::btech::BattleDecorationKind::Fire));
+        assert_eq!(burning.woods_density(), 2);
     }
 
     #[test]
     fn sand_slows_only_wheeled_units() {
-        assert_eq!(Terrain::Sand.ground_speed_divisor(true), 2.0);
-        assert_eq!(Terrain::Sand.ground_speed_divisor(false), 1.0);
+        let divisor = |terrain, wheeled| BattleHex::new(terrain, 0).ground_speed_divisor(wheeled);
+        assert_eq!(divisor(Terrain::Sand, true), 2.0);
+        assert_eq!(divisor(Terrain::Sand, false), 1.0);
         for wheeled in [false, true] {
-            assert_eq!(Terrain::Rough.ground_speed_divisor(wheeled), 2.0);
-            assert_eq!(Terrain::HeavyForest.ground_speed_divisor(wheeled), 3.0);
-            assert_eq!(Terrain::Road.ground_speed_divisor(wheeled), 1.0);
+            assert_eq!(divisor(Terrain::Rough, wheeled), 2.0);
+            assert_eq!(divisor(Terrain::HeavyForest, wheeled), 3.0);
+            assert_eq!(divisor(Terrain::Mountains, wheeled), 3.0);
+            assert_eq!(divisor(Terrain::Road, wheeled), 1.0);
+            assert_eq!(divisor(Terrain::Bridge, wheeled), 1.0);
         }
     }
 
-    /// Hex answers match the terrain answers for every hex the compact notation describes.
     #[test]
-    fn hex_rules_match_terrain_rules() {
+    fn open_ground_is_bare_clear_road_or_sand_without_fire_or_smoke() {
         for terrain in Terrain::ALL {
-            let hex = BattleHex::new(terrain, 1);
-            assert_eq!(hex.is_woods(), terrain.is_woods(), "{terrain:?}");
-            assert_eq!(hex.woods_density(), terrain.woods_density());
-            assert_eq!(hex.holds_water(), terrain.holds_water());
-            for wheeled in [false, true] {
-                assert_eq!(
-                    hex.ground_speed_divisor(wheeled),
-                    terrain.ground_speed_divisor(wheeled)
-                );
-            }
+            assert_eq!(
+                BattleHex::new(terrain, 0).is_open_ground(),
+                matches!(terrain, Terrain::Grassland | Terrain::Road | Terrain::Sand),
+                "{terrain:?}"
+            );
         }
     }
 
     #[test]
     fn water_columns_include_ice_and_bridges() {
-        assert!(Terrain::Water.holds_water());
-        assert!(Terrain::Ice.holds_water());
-        assert!(Terrain::Bridge.holds_water());
-        assert!(!Terrain::Grassland.holds_water());
+        let holds = |terrain| BattleHex::new(terrain, 1).holds_water();
+        assert!(holds(Terrain::Water));
+        assert!(holds(Terrain::Ice));
+        assert!(holds(Terrain::Bridge));
+        assert!(!holds(Terrain::Grassland));
     }
 
     #[test]

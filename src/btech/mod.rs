@@ -97,7 +97,7 @@ pub use arcs::{
     BattleContactArc, BattleFacing, BattleTorso, flip_arms, rotate_torso, weapon_bears_on,
 };
 mod surface_break;
-pub use surface_break::{BattleSurfaceBreak, break_bridge, break_ice};
+pub use surface_break::{BattleSurface, BattleSurfaceBreak, break_bridge, break_ice};
 mod balance;
 pub use balance::{BattleBalanceCause, BattleBalanceReport};
 mod character;

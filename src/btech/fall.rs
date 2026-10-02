@@ -209,7 +209,8 @@ fn resolve_material_with_tonnage(
         tile.deck_height()
             .is_some_and(|deck| unit.elevation_level(tile) < i32::from(deck) - 2)
     });
-    let below_ice = tile.is_some_and(|tile| tile.is_ice() && unit.elevation_level(tile) < 0);
+    let below_ice =
+        tile.is_some_and(|tile| tile.is_ice() && tile.immerses(unit.elevation_level(tile)));
     let tons = tonnage.unwrap_or(u32::from(unit.definition().tons));
     let pilot = unit.pilot();
     let has_pilot = pilot.is_some();

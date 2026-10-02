@@ -13,7 +13,7 @@ pub(super) struct WaterEntry {
 pub(super) fn requires_check(unit: &BattleVehicle, tile: BattleHex, height: i32) -> bool {
     unit.definition().movement != BattleVehicleMovement::Hover
         && !unit.definition().has_special("Waterproof_Tech")
-        && height < 0
+        && height < i32::from(tile.water_line())
         && (tile.is_open_water() || tile.has_bridge())
 }
 

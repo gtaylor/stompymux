@@ -71,7 +71,7 @@ async fn vehicle_slopes_reduce_speed_once_per_step_and_replay_mid_climb() {
                 .definition()
                 .ground_motion_step(
                     unit.motion().unwrap(),
-                    Terrain::Grassland,
+                    BattleHex::new(Terrain::Grassland, 0),
                     BattleVehicleMotionRules::STANDARD,
                 )
                 .unwrap();
@@ -153,7 +153,7 @@ async fn reverse_slope_checks_replay_success_and_failed_climbs_and_descents() {
                 let proposed = previous
                     .ground_motion_step(
                         previous.motion().unwrap(),
-                        Terrain::Grassland,
+                        BattleHex::new(Terrain::Grassland, 0),
                         BattleVehicleMotionRules::STANDARD,
                     )
                     .unwrap();
@@ -274,7 +274,7 @@ async fn retained_height_applies_only_to_the_departure_hex() {
         let proposed = unit
             .ground_motion_step(
                 unit.motion().unwrap(),
-                Terrain::Grassland,
+                BattleHex::new(Terrain::Grassland, 0),
                 BattleVehicleMotionRules::STANDARD,
             )
             .unwrap();
