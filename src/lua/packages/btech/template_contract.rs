@@ -53,10 +53,9 @@ fn read_unit(
     value: Value,
     argument_number: usize,
 ) -> mlua::Result<crate::BattleUnitTemplate> {
-    // Every C template callable resolves through load_refmech, whose critical
-    // names must exist in the manufacturer-qualified part registry; validate
-    // through the raw path before parsing so display and value projections
-    // reject the same templates the C reference rejects.
+    // Every critical must name a known part; validate through the raw path
+    // before parsing so display and value projections reject the same
+    // templates.
     read_raw_unit(lua, value.clone(), argument_number)?;
     let reference = reference(value, argument_number)?;
     let root = root(lua);

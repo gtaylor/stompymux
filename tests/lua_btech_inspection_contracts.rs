@@ -157,6 +157,12 @@ async fn template_lookup_is_case_insensitive_bounded_and_registry_gated() {
             "item = \"Ammo_IS.SRM-4\", rounds = 25, modes = [\"Destroyed\", \"Disabled\", \"Broken\", \"Damaged\", \"BackPack\", \"Jettisoned\", \"OmniBase\", \"RocketFired\", \"Inferno\", \"Precision\"]",
         );
     std::fs::write(root.join("stock/MODES.toml"), modes).unwrap();
+    let unknown = include_str!("fixtures/btech/mechs/JR7-D.toml").replacen(
+        "IS.MediumLaser",
+        "IS.NoSuchLaser",
+        1,
+    );
+    std::fs::write(root.join("stock/UNKNOWN.toml"), unknown).unwrap();
     std::fs::write(
         root.join("PARITY.toml"),
         include_str!("fixtures/btech/mechs/PARITY.toml"),
@@ -169,20 +175,24 @@ async fn template_lookup_is_case_insensitive_bounded_and_registry_gated() {
         local ok,e=mux.error.pcall(f,...)
         return ok and 'ok' or (e.code..' | '..e.message)
       end
-      -- The pinned C part registry has no unbranded rows, so templates naming
-      -- legacy generic criticals load as malformed there and here.
-      assert(fails(btech.template.exists,'jr7-d')=='btech.template.invalid | bad argument #1 to \'?\' (existing template is malformed)','jr7-d')
-      assert(fails(btech.template.exists,'modes')=='btech.template.invalid | bad argument #1 to \'?\' (existing template is malformed)','modes')
-      assert(fails(btech.template.engine,'jr7-d')=='btech.template.invalid | bad argument #1 to \'?\' (template is malformed)','engine')
-      assert(fails(btech.template.armor,'jr7-d')=='btech.template.invalid | bad argument #1 to \'?\' (template is malformed)','armor')
-      assert(fails(btech.template.critical_slots,'jr7-d',btech.unit.sections.HEAD)=='btech.template.invalid | bad argument #1 to \'?\' (template is malformed)','criticals')
-      assert(fails(btech.template.weapons,'jr7-d')=='btech.template.invalid | bad argument #1 to \'?\' (template is malformed)','weapons')
-      assert(fails(btech.template.base_cost,'jr7-d')=='btech.template.invalid | bad argument #1 to \'?\' (template is malformed)','cost')
-      assert(fails(btech.template.battle_value,'jr7-d')=='btech.template.invalid | bad argument #1 to \'?\' (template is malformed)','bv')
-      assert(fails(btech.template.payload,'jr7-d')=='btech.template.invalid | bad argument #1 to \'?\' (template is malformed)','payload')
-      assert(fails(btech.template.installed_parts,'jr7-d')=='btech.template.invalid | bad argument #1 to \'?\' (template is malformed)','installed')
-      assert(fails(btech.template.technologies,'jr7-d')=='btech.template.invalid | bad argument #1 to \'?\' (template is malformed)','technologies')
-      assert(fails(btech.template.show_status,'jr7-d',mux.world.object(1))=='btech.template.invalid | bad argument #1 to \'?\' (template is malformed)','show')
+      -- Stock templates name parts without a manufacturer and keep the brand in its own
+      -- field; they inspect like branded ones.
+      assert(btech.template.exists('jr7-d'),'jr7-d')
+      assert(btech.template.exists('modes'),'modes')
+      local engine=btech.template.engine('jr7-d')
+      assert(engine.rating==245 and engine.suspension_factor==0,'engine')
+      assert(#btech.template.weapons('jr7-d')==5,'weapons')
+      assert(btech.template.base_cost('jr7-d')==2962125,'cost')
+      assert(btech.template.battle_value('jr7-d').offensive==238,'bv')
+      assert(#btech.template.technologies('jr7-d')==1,'technologies')
+      assert(fails(btech.template.armor,'jr7-d')=='ok','armor')
+      assert(fails(btech.template.critical_slots,'jr7-d',btech.unit.sections.HEAD)=='ok','criticals')
+      assert(fails(btech.template.payload,'jr7-d')=='ok','payload')
+      assert(fails(btech.template.installed_parts,'jr7-d')=='ok','installed')
+      assert(fails(btech.template.show_status,'jr7-d',mux.world.object(1))=='ok','show')
+      -- A part no catalogue knows still rejects the whole template.
+      assert(fails(btech.template.exists,'unknown')=='btech.template.invalid | bad argument #1 to \'?\' (existing template is malformed)','unknown')
+      assert(fails(btech.template.engine,'unknown')=='btech.template.invalid | bad argument #1 to \'?\' (template is malformed)','unknown engine')
       -- Branded templates stay loadable and case-insensitive.
       assert(btech.template.exists('parity'))
       assert(not btech.template.exists('definitely-missing-template'))
@@ -221,18 +231,21 @@ async fn vehicle_inspection_uses_vehicle_sections_and_raw_slot_inventory() {
     let root = config.path(&config.database.mech_database);
     std::fs::create_dir_all(&root).unwrap();
     std::fs::write(root.join("Demolisher.toml"), source).unwrap();
-    // The shipped Demolisher names unbranded criticals, so the template
-    // surface rejects it exactly like the pinned C registry does.
-    scripts.eval_callback::<()>(r#"
+    // The shipped Demolisher names unbranded criticals, which the template surface accepts.
+    scripts
+        .eval_callback::<()>(
+            r#"
       local function fails(f,...)
         local ok,e=mux.error.pcall(f,...)
         return ok and 'ok' or (e.code..' | '..e.message)
       end
-      assert(fails(btech.template.exists,'demolisher')=='btech.template.invalid | bad argument #1 to \'?\' (existing template is malformed)')
-      assert(fails(btech.template.armor,'demolisher')=='btech.template.invalid | bad argument #1 to \'?\' (template is malformed)')
-      assert(fails(btech.template.weapons,'demolisher')=='btech.template.invalid | bad argument #1 to \'?\' (template is malformed)')
-      assert(fails(btech.template.engine,'demolisher')=='btech.template.invalid | bad argument #1 to \'?\' (template is malformed)')
-    "#).unwrap();
+      assert(btech.template.exists('demolisher'))
+      assert(fails(btech.template.armor,'demolisher')=='ok')
+      assert(#btech.template.weapons('demolisher')>0)
+      assert(fails(btech.template.engine,'demolisher')=='ok')
+    "#,
+        )
+        .unwrap();
     scripts.eval_callback::<()>(r#"
       local unit=mux.world.object(14)
       local armor=btech.unit.armor(unit)
