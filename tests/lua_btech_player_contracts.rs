@@ -25,7 +25,9 @@ async fn player_preferences_and_loadout_are_atomic_and_resettable() {
  local ok,e=mux.error.pcall(function() btech.player.set_loadout(p,{armor=l.armor,right={weapon='PC.Blazer'}}) end);assert(not ok and e.code=='btech.part.not_found' and btech.player.loadout(p).right==nil,'personal weapon: '..tostring(e))
  local ok2,e2=mux.error.pcall(function() btech.player.set_loadout(p,{armor=l.armor,right={weapon='Agra.IS.PPC'}}) end);assert(not ok2 and e2.code=='btech.part.wrong_kind' and btech.player.loadout(p).right==nil,'wrong kind: '..tostring(e2))
  local ok3,e3=mux.error.pcall(function() btech.player.set_mechwarrior_template(p,'missing') end);assert(not ok3 and e3.code=='btech.template.not_found' and btech.player.mechwarrior_template(p)=='PARITY','missing template: '..tostring(e3))
- local ok4,e4=mux.error.pcall(function() btech.player.set_mechwarrior_template(p,'JR7-D') end);assert(not ok4 and e4.code=='btech.template.invalid' and btech.player.mechwarrior_template(p)=='PARITY','generic template: '..tostring(e4))
+ -- Stock templates name parts without a manufacturer and are accepted.
+ assert(select('#',btech.player.set_mechwarrior_template(p,'JR7-D'))==0 and btech.player.mechwarrior_template(p)=='JR7-D','stock template')
+ assert(select('#',btech.player.set_mechwarrior_template(p,'PARITY'))==0,'restore template')
  assert(select('#',btech.player.set_ui_preferences(p,nil))==0,'clear ui arity');assert(not btech.player.ui_preferences(p).configured,'clear ui')
  "#).unwrap();
 

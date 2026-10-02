@@ -162,12 +162,19 @@ pub(super) fn part_equipment_name(part: PartReference) -> Option<String> {
     form_for(&registered_catalogue(), part).map(|form| form.very_long_name.clone())
 }
 
-/// Resolve every authored critical through the native very-long-name registry.
-/// The pinned C registry installs manufacturer-qualified rows only
-/// (create_brandname returns early for brand zero), so templates naming
-/// legacy unbranded parts are malformed there; this mirrors that gate.
+/// Every part name a template may use. Templates name most parts without a manufacturer and
+/// keep the brand in its own field, so unbranded names count alongside the
+/// manufacturer-qualified registry.
+fn known_catalogue() -> Vec<BattlePartForm> {
+    let mut catalogue = crate::btech::part_catalogue();
+    catalogue.extend(c_infantry_forms());
+    catalogue
+}
+
+/// Resolve every authored critical to its part, rejecting the whole template when one names
+/// no known part. A manufacturer-qualified name supplies the brand when the slot has none.
 pub(super) fn normalize_raw_template_parts(template: &mut crate::RawTemplate) -> bool {
-    let catalogue = registered_catalogue();
+    let catalogue = known_catalogue();
     for critical in template
         .sections
         .values_mut()
@@ -181,7 +188,7 @@ pub(super) fn normalize_raw_template_parts(template: &mut crate::RawTemplate) ->
         };
         critical.equipment = crate::btech::BattlePart::from_id(form.part_id)
             .map_or_else(|| critical.equipment.clone(), |part| part.name);
-        if critical.brand.unwrap_or_default() == 0 {
+        if form.brand_id != 0 && critical.brand.unwrap_or_default() == 0 {
             critical.brand = Some(form.brand_id);
         }
     }
@@ -189,11 +196,8 @@ pub(super) fn normalize_raw_template_parts(template: &mut crate::RawTemplate) ->
 }
 
 /// Whether every critical names a known part, rejecting the whole template when one does not.
-/// Templates name most parts without a manufacturer and keep the brand in its own field, so
-/// unbranded names count alongside the manufacturer-qualified registry.
 pub(super) fn unit_template_parts_known(template: &crate::BattleUnitTemplate) -> bool {
-    let mut catalogue = crate::btech::part_catalogue();
-    catalogue.extend(c_infantry_forms());
+    let catalogue = known_catalogue();
     let known = |critical: &crate::CriticalDefinition| {
         catalogue.iter().any(|form| {
             form.very_long_name
