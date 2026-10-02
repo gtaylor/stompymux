@@ -206,8 +206,8 @@ fn resolve_material_with_tonnage(
         (None, None)
     };
     let below_bridge = tile.is_some_and(|tile| {
-        tile.terrain() == super::Terrain::Bridge
-            && unit.elevation_level(tile) < i32::from(tile.elevation()) - 2
+        tile.deck_height()
+            .is_some_and(|deck| unit.elevation_level(tile) < i32::from(deck) - 2)
     });
     let below_ice = tile.is_some_and(|tile| {
         tile.terrain() == super::Terrain::Ice && unit.elevation_level(tile) < 0

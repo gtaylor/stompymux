@@ -176,10 +176,80 @@ impl BattleHex {
         Self::new(terrain, self.elevation())
     }
 
-    /// Supported standing surface; intact ice is at water level while its depth stays in the asset.
+    /// Depth of the standing water in this hex, or zero when there is none.
+    pub const fn water_depth(self) -> u8 {
+        match self.water {
+            Some(Water { depth, .. }) => depth,
+            None => 0,
+        }
+    }
+
+    /// Whether this hex is open water: unfrozen, with no bridge or other structure over it.
+    pub const fn is_open_water(self) -> bool {
+        matches!(
+            (self.water, self.structure),
+            (Some(Water { frozen: false, .. }), None)
+        )
+    }
+
+    /// Whether this hex is frozen water with no structure over it.
+    pub const fn is_ice(self) -> bool {
+        matches!(
+            (self.water, self.structure),
+            (Some(Water { frozen: true, .. }), None)
+        )
+    }
+
+    /// Height of the bridge deck in this hex, if it has one.
+    pub fn deck_height(self) -> Option<i16> {
+        match self.structure {
+            Some(Structure::Bridge { deck }) => Some(i16::from(self.level) + i16::from(deck)),
+            _ => None,
+        }
+    }
+
+    /// Height of the bridge deck above the hex's ground level, if it has a bridge.
+    pub const fn deck_clearance(self) -> Option<u8> {
+        match self.structure {
+            Some(Structure::Bridge { deck }) => Some(deck),
+            _ => None,
+        }
+    }
+
+    /// Height of the topmost surface: a structure's top or bridge deck, otherwise the ground
+    /// or water surface.
+    pub fn top_height(self) -> i16 {
+        match self.structure {
+            Some(_) => self.surface_height(),
+            None => i16::from(self.level),
+        }
+    }
+
+    /// Height of the bottom of the hex: the ground, or the bed beneath any water.
+    pub fn bottom_height(self) -> i16 {
+        i16::from(self.level) - i16::from(self.water_depth())
+    }
+
+    /// This hex after its ice cracks or its bridge collapses: the same water, now open.
+    pub const fn with_surface_broken(self) -> Self {
+        let mut hex = self;
+        if let Some(Structure::Bridge { .. }) = hex.structure {
+            hex.structure = None;
+        }
+        if let Some(water) = hex.water {
+            hex.water = Some(Water {
+                frozen: false,
+                ..water
+            });
+        }
+        hex
+    }
+
+    /// Supported standing surface: ice holds units at the water surface, a bridge or other
+    /// structure at its top, and anything else at its bottom.
     pub fn standing_height(self) -> i16 {
-        if self.terrain() == Terrain::Ice {
-            return 0;
+        if self.is_ice() {
+            return i16::from(self.level);
         }
         self.surface_height()
     }
@@ -188,26 +258,33 @@ impl BattleHex {
     /// Water entry uses immersion; bridge spans permit passage below their underside.
     /// This predicate does not authorize a route or move the unit.
     pub fn blocks_jump_entry(self, altitude: i32) -> bool {
-        match self.terrain() {
-            Terrain::Water => false,
-            Terrain::Bridge => altitude < 0 || altitude == i32::from(self.elevation()) - 1,
-            _ => altitude < i32::from(self.surface_height()),
+        if self.is_open_water() {
+            return false;
         }
+        if let Some(deck) = self.deck_height() {
+            return altitude < i32::from(self.level) || altitude == i32::from(deck) - 1;
+        }
+        altitude < i32::from(self.surface_height())
     }
 
     /// Bridge contact checked during vertical integration, before the hex transition.
-    /// Unlike entry checks, this stage only collides at positive altitude.
+    /// Unlike entry checks, this stage only collides above the water surface.
     pub fn strikes_bridge_during_jump(self, altitude: i32) -> bool {
-        self.terrain() == Terrain::Bridge && altitude > 0 && self.blocks_jump_entry(altitude)
+        self.deck_height().is_some()
+            && altitude > i32::from(self.level)
+            && self.blocks_jump_entry(altitude)
     }
 
-    /// Terrain-relative height used by ground movement.
+    /// Height ground movement treats as this hex's surface: a structure's top, a bridge deck,
+    /// the bed under water, or the ground.
     pub fn surface_height(self) -> i16 {
-        let elevation = i16::from(self.elevation());
-        if matches!(self.terrain(), Terrain::Water | Terrain::Ice) {
-            return -elevation;
+        match self.structure {
+            Some(Structure::Building { height } | Structure::Wall { height }) => {
+                i16::from(self.level) + i16::from(height)
+            }
+            Some(Structure::Bridge { .. }) => self.deck_height().unwrap_or_default(),
+            None => self.bottom_height(),
         }
-        elevation
     }
 }
 
@@ -269,6 +346,39 @@ mod tests {
         }
     }
 
+    /// The layer-based height rules give exactly the single-symbol answers they replaced.
+    #[test]
+    fn heights_match_the_single_symbol_rules() {
+        for terrain in Terrain::ALL {
+            for elevation in 0..=9 {
+                let hex = BattleHex::new(terrain, elevation);
+                let digit = i16::from(elevation);
+                let surface = if matches!(terrain, Terrain::Water | Terrain::Ice) {
+                    -digit
+                } else {
+                    digit
+                };
+                assert_eq!(hex.surface_height(), surface, "{terrain:?} {elevation}");
+                assert_eq!(
+                    hex.standing_height(),
+                    if terrain == Terrain::Ice { 0 } else { surface }
+                );
+                for altitude in -12..=12 {
+                    let blocks = match terrain {
+                        Terrain::Water => false,
+                        Terrain::Bridge => altitude < 0 || altitude == i32::from(elevation) - 1,
+                        _ => altitude < i32::from(surface),
+                    };
+                    assert_eq!(hex.blocks_jump_entry(altitude), blocks);
+                    assert_eq!(
+                        hex.strikes_bridge_during_jump(altitude),
+                        terrain == Terrain::Bridge && altitude > 0 && blocks
+                    );
+                }
+            }
+        }
+    }
+
     #[test]
     fn layers_separate_what_the_digit_used_to_mean() {
         let forest = BattleHex::new(Terrain::HeavyForest, 3);
@@ -288,6 +398,14 @@ mod tests {
         let bridge = BattleHex::new(Terrain::Bridge, 2);
         assert_eq!(bridge.structure(), Some(Structure::Bridge { deck: 2 }));
         assert_eq!(bridge.water().map(|water| water.depth), Some(1));
+        assert_eq!(
+            BattleHex::new(Terrain::Ice, 4).with_surface_broken(),
+            BattleHex::new(Terrain::Water, 4)
+        );
+        assert_eq!(
+            BattleHex::new(Terrain::Bridge, 3).with_surface_broken(),
+            BattleHex::new(Terrain::Water, 1)
+        );
         let building = BattleHex::new(Terrain::Building, 5);
         assert_eq!(
             building.structure(),

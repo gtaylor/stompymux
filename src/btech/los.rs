@@ -77,12 +77,12 @@ fn terrain_los_with_endpoint(
     let end_ground = f64::from(destination.standing_height());
     let start_height = airborne.0.unwrap_or(start_ground) + eyes.0;
     let end_height = airborne.1.unwrap_or(end_ground) + eyes.1;
-    let underwater = source.terrain().holds_water() && start_height < 0.0;
-    let target_underwater = destination.terrain().holds_water() && end_height < 0.0;
-    let both_worlds = source.terrain().holds_water() && start_ground == -1.0;
-    let target_both_worlds = destination.terrain().holds_water() && end_ground == -1.0;
+    let underwater = source.holds_water() && start_height < 0.0;
+    let target_underwater = destination.holds_water() && end_height < 0.0;
+    let both_worlds = source.holds_water() && start_ground == -1.0;
+    let target_both_worlds = destination.holds_water() && end_ground == -1.0;
     let mut report = BattleTerrainLos {
-        target_woods: visible_destination.terrain().woods_density(),
+        target_woods: visible_destination.woods_density(),
         ..BattleTerrainLos::default()
     };
     if start_height > 10.0 && end_height > 10.0 {
@@ -105,7 +105,7 @@ fn terrain_los_with_endpoint(
         let sight_height = start_height + (end_height - start_height) * index as f64 / steps as f64;
         let intervening = index < steps;
         if underwater {
-            if !ground.terrain().holds_water()
+            if !ground.holds_water()
                 || (ground.terrain() != Terrain::Bridge && height >= sight_height)
                 || (!target_both_worlds && sight_height > 0.0)
             {
@@ -131,8 +131,8 @@ fn terrain_los_with_endpoint(
                 report.water = report.water.saturating_add(1).min(7);
             }
             match tile.terrain() {
-                terrain if terrain.is_woods() && intervening => {
-                    report.woods = (report.woods + terrain.woods_density()).min(15);
+                _ if tile.is_woods() && intervening => {
+                    report.woods = (report.woods + tile.woods_density()).min(15);
                 }
                 Terrain::Smoke if intervening => report.smoke = true,
                 Terrain::Fire if intervening => report.fire = true,
@@ -309,7 +309,7 @@ pub(super) fn unit_terrain_geometry(
         (observer.height, target.height),
     )?;
     let tile = map.base_hex(i64::from(target.position.x), i64::from(target.position.y))?;
-    if target.level > i32::from(tile.elevation()) + 2 {
+    if target.level > i32::from(tile.level()) + 2 {
         report.target_woods = 0;
     }
     Ok((report, range))

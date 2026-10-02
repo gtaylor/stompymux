@@ -280,7 +280,7 @@ pub(super) fn ignite_forest(
 ) -> Result<bool> {
     let record = &world.btech.maps()[&map];
     let tile = record.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
-    if !tile.terrain().is_woods() || record.decoration(coordinate)?.is_some() {
+    if !tile.is_woods() || record.decoration(coordinate)?.is_some() {
         return Ok(false);
     }
     let dice = world

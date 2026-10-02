@@ -78,7 +78,7 @@ pub(super) fn replace_hex(
         {
             unit.ground_elevation = Some(unit.altitude(before));
         }
-        if after.terrain() != Terrain::Bridge || after.elevation() < 2 {
+        if after.deck_clearance().is_none_or(|deck| deck < 2) {
             unit.under_bridge = false;
         }
     }

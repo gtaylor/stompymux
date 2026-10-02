@@ -38,7 +38,7 @@ pub fn save_map_action(
                 &mut scripts.world_mut(),
                 id,
                 coordinate,
-                super::BattleHex::new(super::Terrain::Grassland, tile.elevation()),
+                tile.with_terrain(super::Terrain::Grassland),
             )?;
         }
         super::notify_message(

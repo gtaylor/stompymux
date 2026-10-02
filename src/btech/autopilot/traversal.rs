@@ -319,8 +319,7 @@ fn support_heights(
         to_height = 0;
     }
     if kind == GroundUnitKind::Hover
-        && to.terrain() == Terrain::Bridge
-        && to.elevation() >= 2
+        && to.deck_clearance().is_some_and(|deck| deck >= 2)
         && from_height == 0
         && (from.terrain() == Terrain::Water
             || from.terrain() == Terrain::Ice

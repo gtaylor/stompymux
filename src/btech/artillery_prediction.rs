@@ -102,10 +102,10 @@ pub fn predict_artillery_target(
             };
             let floodable = mech.is_some_and(|unit| {
                 tile.terrain() == Terrain::Water
-                    && tile.elevation() > 0
+                    && tile.water_depth() > 0
                     && unit.sections().iter().any(|(section, state)| {
                         let exposed =
-                            tile.elevation() > 1 || unit.chassis().legs().contains(section);
+                            tile.water_depth() > 1 || unit.chassis().legs().contains(section);
                         exposed
                             && state.internal > 0
                             && (state.armor == 0

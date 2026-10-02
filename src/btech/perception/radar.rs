@@ -74,12 +74,16 @@ impl BattleRadarTarget {
 }
 
 /// Terrain datum for radar's surface-clearance calculation.
+/// Water is measured from its bed. A bridge is measured from as far below the water surface
+/// as its deck is above it, as the reference server does.
 fn surface_datum(tile: BattleHex) -> i32 {
-    let magnitude = i32::from(tile.elevation());
-    if tile.terrain().holds_water() {
-        return -magnitude;
+    if let Some(deck) = tile.deck_clearance() {
+        return i32::from(tile.level()) - i32::from(deck);
     }
-    magnitude
+    if tile.holds_water() {
+        return i32::from(tile.bottom_height());
+    }
+    i32::from(tile.surface_height())
 }
 
 impl BattleUnit {

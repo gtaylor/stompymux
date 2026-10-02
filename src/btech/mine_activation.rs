@@ -1,5 +1,5 @@
 //! Read-only mine coverage and ordered activation selection for movement and landing callers.
-use super::{BattleHexCoordinate, BattleMineKind, BattleMinefield, StoredBattleMap, Terrain};
+use super::{BattleHexCoordinate, BattleMineKind, BattleMinefield, StoredBattleMap};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -171,13 +171,7 @@ pub fn mine_activations(
         return Ok(Vec::new());
     }
     let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
-    let surface = if tile.terrain() == Terrain::Ice {
-        0
-    } else if tile.terrain() == Terrain::Water {
-        -i32::from(tile.elevation())
-    } else {
-        i32::from(tile.elevation())
-    };
+    let surface = i32::from(tile.standing_height());
     let (elevation, mass) = if let Some(vehicle) = world.btech.vehicles().get(&id) {
         (vehicle.elevation_level(tile), vehicle.effective_mass()?)
     } else {

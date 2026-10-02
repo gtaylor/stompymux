@@ -444,12 +444,7 @@ fn draw_cliffs(
                 i64::from(viewport.origin.x) + x as i64,
                 i64::from(viewport.origin.y) + y as i64,
             )?;
-            *elevation = i16::from(tile.elevation())
-                * if matches!(tile.terrain(), Terrain::Water | Terrain::Ice) {
-                    -1
-                } else {
-                    1
-                };
+            *elevation = tile.surface_height();
         }
     }
     let edge = |glyph, marker| Pixel {

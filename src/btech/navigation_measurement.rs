@@ -125,14 +125,7 @@ pub(super) fn elevation(world: &World, map: ObjectId, endpoint: &Endpoint) -> Re
         }
         EndpointSource::Hex(hex) => {
             let tile = world.btech.maps()[&map].base_hex(i64::from(hex.x), i64::from(hex.y))?;
-            let height = f64::from(tile.elevation());
-            Ok(
-                if matches!(tile.terrain(), super::Terrain::Water | super::Terrain::Ice) {
-                    -height
-                } else {
-                    height
-                },
-            )
+            Ok(f64::from(tile.surface_height()))
         }
     }
 }

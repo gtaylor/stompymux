@@ -29,7 +29,7 @@ pub(super) fn enter_water(
     if tile.terrain() != Terrain::Water && !below_bridge && !below_ice {
         return Ok(WaterEntryReport::default());
     }
-    let depth = if below_bridge { 1 } else { tile.elevation() };
+    let depth = tile.water_depth();
     let pilot = unit.pilot();
     let mut notices = Vec::new();
     let mut pilot_notices = Vec::new();

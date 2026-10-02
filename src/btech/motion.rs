@@ -822,7 +822,7 @@ fn resolve_ground_segment(
             let next_height = if !settle {
                 actual_height
             } else if tile.terrain() == Terrain::Ice && actual_height < 0 {
-                if actual_height == -1 && tile.elevation() == 1 {
+                if actual_height == -1 && tile.water_depth() == 1 {
                     0
                 } else {
                     tile.surface_height()

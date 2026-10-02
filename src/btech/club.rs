@@ -120,7 +120,7 @@ pub fn grab_club(
     let tile =
         world.btech.maps()[&position.map].hex(i64::from(position.x), i64::from(position.y))?;
     ensure!(
-        tile.terrain().is_woods(),
+        tile.is_woods(),
         "There don't appear to be any trees within grabbing distance."
     );
     world.attempt(|world| {

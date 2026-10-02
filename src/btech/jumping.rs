@@ -815,7 +815,7 @@ fn advance_jumps_inner(
                 notices.len(),
             );
             notices.extend(fracture.notices);
-            if downward && previous_tile.elevation() > 0 {
+            if downward && previous_tile.water_depth() > 0 {
                 let events = if character {
                     let segment = super::motion::finish_interrupted_jump_in_action(
                         &mut candidate,

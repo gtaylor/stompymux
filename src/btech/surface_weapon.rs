@@ -33,7 +33,7 @@ pub(super) fn resolve(
     let sides = match tile.terrain() {
         Terrain::Ice => 15,
         Terrain::Bridge if !record.has_flag(super::BattleMapFlag::IndestructibleBridges) => {
-            10 * (1 + u16::from(tile.elevation()))
+            10 * (1 + u16::from(tile.deck_clearance().unwrap_or_default()))
         }
         _ => return Ok(None),
     };

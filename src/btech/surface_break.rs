@@ -212,8 +212,8 @@ fn break_surface(
     );
     let bridge = expected == Terrain::Bridge;
     let surface_height = if bridge { 1 } else { 0 };
-    let fall_levels = if bridge { 2 } else { tile.elevation() };
-    let replacement = BattleHex::new(Terrain::Water, if bridge { 1 } else { tile.elevation() });
+    let fall_levels = if bridge { 2 } else { tile.water_depth() };
+    let replacement = tile.with_surface_broken();
     let on_tile = |id| {
         super::scanner::scanner_unit(world, id)
             .and_then(|unit| unit.position)

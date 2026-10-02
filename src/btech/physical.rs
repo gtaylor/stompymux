@@ -760,7 +760,6 @@ fn attack_profile_inner(
             source.carried_club.is_some()
                 || map
                     .hex(i64::from(position.x), i64::from(position.y))?
-                    .terrain()
                     .is_woods(),
             "You can not seem to find any trees around to club with."
         );

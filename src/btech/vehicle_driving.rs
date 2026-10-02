@@ -212,15 +212,12 @@ pub(super) fn advance(
                 continue;
             }
             let bridge_collision = vehicle.definition().movement == BattleVehicleMovement::Hover
-                && previous_tile.terrain() == Terrain::Bridge
-                && previous_tile.elevation() != 0
+                && previous_tile.deck_clearance().is_some_and(|deck| deck != 0)
                 && previous_height == 0
-                && tile.terrain() == Terrain::Bridge
-                && tile.elevation() == 1;
-            let next_under = tile.terrain() == Terrain::Bridge
-                && vehicle.definition().movement == BattleVehicleMovement::Hover
+                && tile.deck_clearance() == Some(1);
+            let next_under = vehicle.definition().movement == BattleVehicleMovement::Hover
                 && previous_height == 0
-                && tile.elevation() >= 2
+                && tile.deck_clearance().is_some_and(|deck| deck >= 2)
                 && (under_bridge
                     || matches!(previous_tile.terrain(), Terrain::Water | Terrain::Ice));
             let height = if tile.terrain() == Terrain::Ice && previous_height < 0 {

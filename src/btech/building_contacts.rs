@@ -170,7 +170,7 @@ fn candidate(
                 i64::from(entrance.coordinate.x),
                 i64::from(entrance.coordinate.y),
             )?
-            .elevation(),
+            .surface_height(),
     ) + 1;
     let altitude = super::unit_elevation(world, observer)?.context("Unit has no elevation")?;
     let heading = unit.heading.context("Unit has no heading")?;

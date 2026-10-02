@@ -73,7 +73,7 @@ pub fn propose_mech_ground_motion(
         rules.fasa_turning,
         unit.chassis().turn_multiplier(),
     );
-    let divisor = current.terrain().ground_speed_divisor(false);
+    let divisor = current.ground_speed_divisor(false);
     let desired = motion.desired_speed;
     if unit.definition().has_triple_myomer() && motion.desired_speed >= maximum {
         motion.desired_speed = maximum;

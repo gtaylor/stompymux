@@ -26,7 +26,7 @@ pub(super) fn entered(
     let pilot = unit.pilot();
     let map = &world.btech.maps()[&position.map];
     let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
-    if super::unit_elevation(world, id)? != Some(i32::from(tile.elevation())) {
+    if super::unit_elevation(world, id)? != Some(i32::from(tile.surface_height())) {
         return Ok((None, None));
     }
     let Some(entrance) = map.building_at(super::BattleHexCoordinate {

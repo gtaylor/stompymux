@@ -77,7 +77,7 @@ fn advance_fire(map: &mut StoredBattleMap) -> Result<()> {
             Arc::make_mut(&mut map.decorations).remove(&index);
             let (x, y) = (i64::from(index) % map.width, i64::from(index) / map.width);
             let tile = map.stored_hex(x, y)?;
-            if tile.terrain().is_woods() {
+            if tile.is_woods() {
                 let terrain = if map.fire_dice.as_mut().unwrap().d6() < 3 {
                     Terrain::Grassland
                 } else {
@@ -128,7 +128,6 @@ fn spread(map: &mut StoredBattleMap, index: u32, replaced: &mut BTreeSet<u32>) -
         };
         if !map
             .base_hex(i64::from(index) % map.width, i64::from(index) / map.width)?
-            .terrain()
             .is_woods()
         {
             continue;

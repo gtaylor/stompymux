@@ -651,8 +651,7 @@ impl BtechState {
                     .context("Vehicle references missing map")?;
                 let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
                 ensure!(
-                    !vehicle.under_bridge()
-                        || (tile.terrain() == super::Terrain::Bridge && tile.elevation() >= 2),
+                    !vehicle.under_bridge() || tile.deck_clearance().is_some_and(|deck| deck >= 2),
                     "Vehicle under-bridge state requires a clear bridge span"
                 );
                 ensure!(

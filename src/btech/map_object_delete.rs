@@ -160,15 +160,10 @@ fn remove_kind(
         if let (MapObjectSlot::Stored(_), Some(stored_kind)) = (slot, restoration_kind(kind)) {
             let record = &world.btech.maps()[&map];
             let terrain = record.static_decorations(stored_kind)[&ordinal].restored_terrain;
-            let elevation = record
+            let restored = record
                 .base_hex(i64::from(position.x), i64::from(position.y))?
-                .elevation();
-            super::terrain_edit::replace_hex(
-                world,
-                map,
-                position,
-                super::BattleHex::new(terrain, elevation),
-            )?;
+                .with_terrain(terrain);
+            super::terrain_edit::replace_hex(world, map, position, restored)?;
             super::set_static_decoration(world, map, stored_kind, ordinal, None)?;
             count += 1;
             continue;

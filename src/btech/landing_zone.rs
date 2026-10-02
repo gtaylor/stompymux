@@ -66,8 +66,8 @@ impl StoredBattleMap {
             }
             if self
                 .base_hex(i64::from(neighbor.x), i64::from(neighbor.y))?
-                .elevation()
-                != tile.elevation()
+                .surface_height()
+                != tile.surface_height()
             {
                 return Ok(BattleLandingSuitability::UnevenGround);
             }

@@ -58,7 +58,7 @@ impl BattleVtolMotionStep {
             } else {
                 tile.blocks_jump_entry(entry_altitude as i32)
             };
-            let entry_contact = if tile.terrain().is_woods()
+            let entry_contact = if tile.is_woods()
                 && (entry_altitude as i32) < i32::from(tile.surface_height()) + 2
             {
                 Some(BattleVtolSurfaceContact::Forest)

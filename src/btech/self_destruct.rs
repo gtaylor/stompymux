@@ -507,10 +507,11 @@ fn immolate(scripts: &Scripts, id: ObjectId) -> Result<BattleSelfDestructOutcome
     let falling = unit.elevation_level(tile) > i32::from(tile.standing_height());
     // Destruction places the wreck on the selected surface before the explosion raises it.
     // Beneath a bridge the destruction surface is the bed, including for hovercraft.
-    let surface = if tile.terrain() == super::Terrain::Bridge
-        && unit.elevation_level(tile) < i32::from(tile.elevation())
+    let surface = if tile
+        .deck_height()
+        .is_some_and(|deck| unit.elevation_level(tile) < i32::from(deck))
     {
-        -1
+        i32::from(tile.bottom_height())
     } else {
         i32::from(tile.surface_height())
     };
