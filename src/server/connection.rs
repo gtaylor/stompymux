@@ -307,7 +307,7 @@ impl Server {
                             if self.scripts.flows.active(id.0) {
                                 self.flow_input(id, &line).await;
                             } else {
-                                let _ = s.stats.commands.fetch_update(
+                                let _ = s.stats.commands.try_update(
                                     std::sync::atomic::Ordering::Relaxed,
                                     std::sync::atomic::Ordering::Relaxed,
                                     |n| Some(n.saturating_add(1)),

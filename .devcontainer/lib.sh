@@ -11,7 +11,7 @@ REQUIRED_TOOLS=(cargo rustfmt just stylua node npm go hugo)
 # Rust toolchain pinned by rust-toolchain.toml at the repository root. The
 # devcontainer image is built without the repository, so the version is repeated
 # here; check_rust_toolchain fails setup when the two disagree.
-RUST_VERSION="1.98.1"
+RUST_VERSION="1.99.0"
 
 # Tools that improve the editing experience but are not needed by `just checks`.
 OPTIONAL_TOOLS=(lua-language-server)
