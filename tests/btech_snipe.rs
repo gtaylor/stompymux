@@ -189,7 +189,7 @@ async fn distant_prediction_matches_live_motion_until_shell_catches_up() {
         &mut world,
         map,
         "long",
-        BattleMapAsset::parse(&format!("1 100\n{}", ".0\n".repeat(100))).unwrap(),
+        BattleMapAsset::from_cells(&format!("1 100\n{}", ".0\n".repeat(100))).unwrap(),
     )
     .unwrap();
     for id in [shooter, target] {

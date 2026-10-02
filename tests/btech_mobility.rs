@@ -212,7 +212,7 @@ async fn quad_shallow_water_counts_front_leg_sinks_and_excludes_flooded_equipmen
         &mut world,
         map,
         "water.map",
-        BattleMapAsset::parse("1 1\n~1\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n~1\n").unwrap(),
     )
     .unwrap();
     let mut encoded = serde_json::to_value(quad()).unwrap();

@@ -140,7 +140,7 @@ async fn tic_firing_reuses_shots_and_rolls_back_callbacks() {
             &mut world,
             map,
             "range",
-            BattleMapAsset::parse("1 3\n.0\n.0\n.0\n").unwrap(),
+            BattleMapAsset::from_cells("1 3\n.0\n.0\n.0\n").unwrap(),
         )
         .unwrap();
         let shooter = world.create(&config, "Shooter".into(), Kind::Thing);

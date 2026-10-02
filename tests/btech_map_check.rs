@@ -118,7 +118,7 @@ async fn empty_map_authority_and_publication_rollback() {
         &mut world,
         map,
         "empty",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

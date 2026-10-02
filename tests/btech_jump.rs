@@ -106,7 +106,7 @@ async fn runtime_fixture() -> (
         &mut world,
         map,
         "jump.map",
-        BattleMapAsset::parse(&source).unwrap(),
+        BattleMapAsset::from_cells(&source).unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Jump Jenner".into(), Kind::Thing);
@@ -917,7 +917,7 @@ async fn flooded_capacity_and_lua_inspection_survive_restart_without_mutation() 
         &mut world,
         map,
         "jump.map",
-        BattleMapAsset::parse("2 2\n.0.0\n.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Jump Jenner".into(), Kind::Thing);
@@ -2050,7 +2050,7 @@ fn jump_hills(
         world,
         map,
         "hills.map",
-        BattleMapAsset::parse(&source).unwrap(),
+        BattleMapAsset::from_cells(&source).unwrap(),
     )
     .unwrap();
     place_battle_unit(world, id, map, 5, 5).unwrap();
@@ -2259,7 +2259,7 @@ async fn dry_terrain_jump_routes_share_adapters_heat_and_restartable_landing() {
             &mut world,
             map,
             "dry.map",
-            BattleMapAsset::parse(&format!("12 12\n{}", row.repeat(12))).unwrap(),
+            BattleMapAsset::from_cells(&format!("12 12\n{}", row.repeat(12))).unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, id, map, 5, 5).unwrap();
@@ -2386,7 +2386,7 @@ async fn water_jump_fixture(
         &mut world,
         map,
         "water-jump.map",
-        BattleMapAsset::parse(&source).unwrap(),
+        BattleMapAsset::from_cells(&source).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 5, 5).unwrap();
@@ -5498,7 +5498,7 @@ async fn jump_fields_cross_wrapping_seams_and_restart() {
                 &mut world,
                 other,
                 "redirect.map",
-                BattleMapAsset::parse(&asset).unwrap(),
+                BattleMapAsset::from_cells(&asset).unwrap(),
             )
             .unwrap();
             reassign_battle_map(&mut world, id, other, None).unwrap();

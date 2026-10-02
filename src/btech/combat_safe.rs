@@ -93,7 +93,7 @@ mod tests {
                         &mut world,
                         map,
                         "field",
-                        crate::BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+                        crate::BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
                     )
                     .unwrap();
                     let id = world.create(&config, "Unit".into(), Kind::Thing);

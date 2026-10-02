@@ -98,7 +98,7 @@ mod tests {
             &mut world,
             map,
             "test",
-            BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
         let mut expected = BattleRollStatistics::default();
@@ -127,7 +127,7 @@ mod tests {
             &mut world,
             map,
             "replacement",
-            BattleMapAsset::parse("1 1\n~1\n").unwrap(),
+            BattleMapAsset::from_cells("1 1\n~1\n").unwrap(),
         )
         .unwrap();
         assert_eq!(world.battle_roll_statistics().unwrap(), expected);

@@ -16,14 +16,14 @@ async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassi
             &mut world,
             exterior,
             "outside",
-            BattleMapAsset::parse("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+            BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
         )
         .unwrap();
         create_battle_map(
             &mut world,
             interior,
             "inside",
-            BattleMapAsset::parse("2 2\n.3.3\n.3.3\n").unwrap(),
+            BattleMapAsset::from_cells("2 2\n.3.3\n.3.3\n").unwrap(),
         )
         .unwrap();
         let occupant = world.create(&config, "Existing occupant".into(), Kind::Thing);

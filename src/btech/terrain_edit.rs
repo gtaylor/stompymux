@@ -233,7 +233,7 @@ mod tests {
     fn write_hex_checks_bounds_and_elevation() {
         let mut map = super::super::state::map_from_asset(
             "write",
-            super::super::BattleMapAsset::parse("2 1\n.0.0\n").unwrap(),
+            super::super::BattleMapAsset::from_cells("2 1\n.0.0\n").unwrap(),
         )
         .unwrap();
         let rough = BattleHex::new(Terrain::Rough, 3);

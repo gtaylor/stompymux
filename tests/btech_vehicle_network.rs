@@ -18,7 +18,8 @@ async fn field_with_classic(
         &mut world,
         map,
         "network.map",
-        BattleMapAsset::parse(&format!("20 20\n{}", (".0".repeat(20) + "\n").repeat(20))).unwrap(),
+        BattleMapAsset::from_cells(&format!("20 20\n{}", (".0".repeat(20) + "\n").repeat(20)))
+            .unwrap(),
     )
     .unwrap();
     let mut units = Vec::new();

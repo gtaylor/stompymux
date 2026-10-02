@@ -11,7 +11,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
         &mut world,
         map,
         "mines",
-        BattleMapAsset::parse("5 3\n.0.0.0.0.0\n.0.0.0.0.0\n.0.0.0.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("5 3\n.0.0.0.0.0\n.0.0.0.0.0\n.0.0.0.0.0\n").unwrap(),
     )
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);

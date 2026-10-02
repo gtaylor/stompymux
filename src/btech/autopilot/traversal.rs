@@ -589,7 +589,7 @@ mod tests {
             &mut world,
             map,
             "occupancy",
-            crate::BattleMapAsset::parse("1 5\n.0\n.0\n.0\n.0\n.0\n").unwrap(),
+            crate::BattleMapAsset::from_cells("1 5\n.0\n.0\n.0\n.0\n.0\n").unwrap(),
         )
         .unwrap();
         let observer = world.create(&config, "Observer".into(), Kind::Thing);

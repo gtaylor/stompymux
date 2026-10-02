@@ -16,7 +16,7 @@ async fn linked_map_movement_replays_for_mechs_ground_vehicles_and_aircraft() {
                 &mut world,
                 map,
                 "wrapped",
-                BattleMapAsset::parse("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+                BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
             )
             .unwrap();
             set_battle_map_wrapping(&mut world, map, true).unwrap();
@@ -120,7 +120,7 @@ async fn aircraft_rolls_back_when_the_opposite_edge_is_too_high() {
         &mut world,
         map,
         "hill",
-        BattleMapAsset::parse("3 1\n^9.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 1\n^9.0.0\n").unwrap(),
     )
     .unwrap();
     set_battle_map_wrapping(&mut world, map, true).unwrap();
@@ -194,7 +194,7 @@ async fn imported_link_marker_payloads_survive_unchanged_saves() {
         &mut world,
         map,
         "import",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
@@ -272,7 +272,7 @@ async fn native_and_lua_wrapping_controls_share_authority_state_and_rollback() {
         &mut world,
         map,
         "configured",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     world
@@ -346,7 +346,7 @@ async fn wrapped_jump_paths_keep_distance_and_replay_through_all_four_edges() {
             &mut world,
             map,
             "jump",
-            BattleMapAsset::parse(
+            BattleMapAsset::from_cells(
                 "5 5\n.0.0.0.0.0\n.0.0.0.0.0\n.0.0.0.0.0\n.0.0.0.0.0\n.0.0.0.0.0\n",
             )
             .unwrap(),

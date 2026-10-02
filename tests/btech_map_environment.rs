@@ -166,7 +166,7 @@ async fn environment_validation_and_authority_are_atomic() {
         &mut world,
         map,
         "weather",
-        BattleMapAsset::parse("1 1\n.0\n272: 100 20\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n272: 100 20\n").unwrap(),
     )
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
@@ -326,7 +326,7 @@ async fn environment_confirmation_failure_restores_shared_state() {
         &mut world,
         map,
         "rollback",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);

@@ -14,14 +14,14 @@ async fn terrain_zones_cargo_links_and_strict_errors_match_c_shapes() {
         &mut world,
         map,
         "map",
-        BattleMapAsset::parse("3 2\n.0~1^2\n@3#4+5\n").unwrap(),
+        BattleMapAsset::from_cells("3 2\n.0~1^2\n@3#4+5\n").unwrap(),
     )
     .unwrap();
     create_battle_map(
         &mut world,
         parent,
         "parent",
-        BattleMapAsset::parse("2 2\n.0.0\n.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
     set_battle_landing_exclusion(
@@ -271,7 +271,7 @@ async fn going_handles_and_checking_mode_preserve_object_and_mutation_boundaries
         &mut world,
         map,
         "map",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

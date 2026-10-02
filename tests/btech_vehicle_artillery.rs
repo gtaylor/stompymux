@@ -12,7 +12,7 @@ async fn fixture(
         &mut world,
         map,
         "test",
-        BattleMapAsset::parse("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -245,7 +245,7 @@ async fn artillery_water_depth_excludes_submerged_hulls_but_not_hovercraft() {
             &mut world,
             map,
             "water",
-            BattleMapAsset::parse(&format!("3 3\n{}", row.repeat(3))).unwrap(),
+            BattleMapAsset::from_cells(&format!("3 3\n{}", row.repeat(3))).unwrap(),
         )
         .unwrap();
         let hover = world.create(&config, "Hover target".into(), Kind::Thing);

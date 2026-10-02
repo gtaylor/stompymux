@@ -346,7 +346,7 @@ async fn setxy_moves_complete_tow_pairs() {
                 &mut world,
                 map,
                 "yard",
-                BattleMapAsset::parse("2 2\n.0.0\n.0.0\n").unwrap(),
+                BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
             )
             .unwrap();
             let a = world.create(&config, "Carrier".into(), Kind::Thing);

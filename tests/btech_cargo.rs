@@ -27,7 +27,7 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId, O
         &mut world,
         map,
         "bay",
-        BattleMapAsset::parse("3 2\n.0.0.0\n.0.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 2\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     set_battle_cargo_transfer_point(

@@ -12,7 +12,8 @@ fn fixture() -> (Config, World, Vec<ObjectId>) {
         &mut world,
         map,
         "scheduler",
-        BattleMapAsset::parse(&format!("20 20\n{}", (".0".repeat(20) + "\n").repeat(20))).unwrap(),
+        BattleMapAsset::from_cells(&format!("20 20\n{}", (".0".repeat(20) + "\n").repeat(20)))
+            .unwrap(),
     )
     .unwrap();
     let mut units = Vec::new();
@@ -232,7 +233,7 @@ fn crowded_world(config: Config, mut world: World) -> (Config, World, Vec<Object
         &mut world,
         map,
         "corridor",
-        BattleMapAsset::parse(&format!("1 8\n{}", ".0\n".repeat(8))).unwrap(),
+        BattleMapAsset::from_cells(&format!("1 8\n{}", ".0\n".repeat(8))).unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();

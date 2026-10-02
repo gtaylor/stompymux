@@ -15,7 +15,13 @@ fn add_map(
         "{width} {height}\n{}",
         format!("{}\n", ".0".repeat(width)).repeat(height)
     );
-    create_battle_map(world, id, name, BattleMapAsset::parse(&source).unwrap()).unwrap();
+    create_battle_map(
+        world,
+        id,
+        name,
+        BattleMapAsset::from_cells(&source).unwrap(),
+    )
+    .unwrap();
     id
 }
 
@@ -443,7 +449,7 @@ async fn parent_metadata_is_owned_independently_of_return_routes() {
         &mut world,
         child,
         "renamed",
-        BattleMapAsset::parse("2 2\n.0.0\n.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
     assert_eq!(world.btech.maps()[&child].building_parent, root.0);

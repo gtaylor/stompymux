@@ -15,7 +15,7 @@ async fn fixture(hover: bool) -> (tempfile::TempDir, Config, World, ObjectId, Ob
         &mut world,
         map,
         "bridge",
-        BattleMapAsset::parse(&format!("12 3\n{row}\n{row}\n{row}\n")).unwrap(),
+        BattleMapAsset::from_cells(&format!("12 3\n{row}\n{row}\n{row}\n")).unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Vehicle".into(), Kind::Thing);

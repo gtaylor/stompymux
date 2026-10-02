@@ -209,7 +209,7 @@ async fn shot_induced_water_and_vacuum_exposure_use_distinct_attribution() {
                 &mut base,
                 map,
                 "exposure",
-                BattleMapAsset::parse(&format!(
+                BattleMapAsset::from_cells(&format!(
                     "1 12\n{}",
                     if water { "~2\n" } else { ".0\n" }.repeat(12)
                 ))

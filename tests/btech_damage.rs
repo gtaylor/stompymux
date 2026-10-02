@@ -80,7 +80,7 @@ async fn core_damage_survives_restart_and_rejects_invalid_phase_targets_atomical
         &mut world,
         map,
         "damage.map",
-        stompymux_rs::BattleMapAsset::parse("2 2\n.0.0\n.0.0\n").unwrap(),
+        stompymux_rs::BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
     stompymux_rs::place_battle_unit(&mut world, id, map, 0, 1).unwrap();

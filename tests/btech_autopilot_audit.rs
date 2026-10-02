@@ -33,7 +33,7 @@ async fn mech_fixture(
         &mut world,
         map,
         "autopilot.audit",
-        BattleMapAsset::parse(asset).unwrap(),
+        BattleMapAsset::from_cells(asset).unwrap(),
     )
     .unwrap();
     let unit = world.create(&config, "Autopilot audit mech".into(), Kind::Thing);
@@ -138,7 +138,7 @@ async fn vehicle_ground_classes_are_admitted_on_water_and_bridge_maps() {
         &mut world,
         map,
         "autopilot.surfaces",
-        BattleMapAsset::parse("3 4\n.0.0.0\n~0/0.0\n.0~0.0\n.0.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 4\n.0.0.0\n~0/0.0\n.0~0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     let templates = [

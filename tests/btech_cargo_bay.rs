@@ -11,7 +11,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
         &mut world,
         map,
         "bay",
-        BattleMapAsset::parse("3 2\n.0.0.0\n.0.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 2\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     (dir, config, world, map)
@@ -163,7 +163,7 @@ async fn cargo_points_load_save_reload_and_purge_with_the_map() {
         &mut world,
         map,
         "reloaded",
-        BattleMapAsset::parse("3 2\n.0.0.0\n.0.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 2\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     assert_eq!(world.btech.maps()[&map].cargo_transfer_point(), Some(point));

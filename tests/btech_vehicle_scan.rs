@@ -13,7 +13,7 @@ async fn fixture(
         &mut world,
         map,
         "sight",
-        BattleMapAsset::parse(&format!("1 5\n{tiles}")).unwrap(),
+        BattleMapAsset::from_cells(&format!("1 5\n{tiles}")).unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -275,7 +275,7 @@ fn terrain_targets(world: &mut World, config: &Config, map: ObjectId) -> ObjectI
         world,
         interior,
         "hangar",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     set_building_state(

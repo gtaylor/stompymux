@@ -90,7 +90,7 @@ async fn digging_alone_keeps_simulation_pending_until_completion() {
             &mut world,
             map,
             "dig",
-            BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
         let id = world.create(&config, "Digger".into(), Kind::Thing);

@@ -28,7 +28,7 @@ async fn object_table_keeps_effect_creation_order_across_restart_and_rollback() 
             &mut world,
             map,
             "plain",
-            BattleMapAsset::parse("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+            BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
         )
         .unwrap();
         set_battle_static_decoration(

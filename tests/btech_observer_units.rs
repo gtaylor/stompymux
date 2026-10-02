@@ -16,7 +16,7 @@ async fn observers_share_admin_disclosure_radio_and_saved_role() {
             &mut world,
             map,
             "observer",
-            BattleMapAsset::parse("1 5\n.0\n.0\n.0\n.0\n.0\n").unwrap(),
+            BattleMapAsset::from_cells("1 5\n.0\n.0\n.0\n.0\n.0\n").unwrap(),
         )
         .unwrap();
         let id = world.create(&config, "Observer".into(), Kind::Thing);

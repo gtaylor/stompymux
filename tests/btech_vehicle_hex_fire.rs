@@ -23,7 +23,7 @@ async fn fixture_with_template(
         &mut world,
         map,
         "test",
-        BattleMapAsset::parse("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     let shooter = world.create(&config, "Demolisher".into(), Kind::Thing);

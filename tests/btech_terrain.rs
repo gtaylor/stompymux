@@ -43,7 +43,7 @@ async fn create(config: &Config, world: &mut World, id: ObjectId) {
         world,
         id,
         "asymmetric.map",
-        BattleMapAsset::parse(SOURCE).unwrap(),
+        BattleMapAsset::from_cells(SOURCE).unwrap(),
     )
     .unwrap();
     persistence::save(&config.database(), world).await.unwrap();
@@ -96,7 +96,7 @@ async fn dictionary_round_trip_is_per_map_and_preserves_unowned_columns() {
         &mut loaded,
         id,
         "reload.map",
-        BattleMapAsset::parse(RELOAD).unwrap(),
+        BattleMapAsset::from_cells(RELOAD).unwrap(),
     )
     .unwrap();
     assert_eq!(
@@ -162,7 +162,7 @@ async fn dictionary_round_trip_is_per_map_and_preserves_unowned_columns() {
         &mut loaded,
         second,
         "water.map",
-        BattleMapAsset::parse("1 1\n~9\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n~9\n").unwrap(),
     )
     .unwrap();
     persistence::save(&config.database(), &loaded)
@@ -392,7 +392,7 @@ async fn lua_map_operations_participate_in_callback_rollback_and_checking_guards
             &mut world,
             id,
             "different.map",
-            BattleMapAsset::parse("1 1\n.0\n").unwrap()
+            BattleMapAsset::from_cells("1 1\n.0\n").unwrap()
         )
         .is_err()
     );
@@ -464,7 +464,7 @@ async fn reload_rejects_unowned_objects_and_preserves_deferred_rows() {
         &mut world,
         id,
         "reload.map",
-        BattleMapAsset::parse(RELOAD).unwrap(),
+        BattleMapAsset::from_cells(RELOAD).unwrap(),
     )
     .unwrap();
     let error = persistence::save(&config.database(), &world)
@@ -679,7 +679,7 @@ async fn wind_and_fire_randomness_survive_reload_and_reject_missing_streams() {
         &mut world,
         id,
         "reload.map",
-        BattleMapAsset::parse(RELOAD).unwrap(),
+        BattleMapAsset::from_cells(RELOAD).unwrap(),
     )
     .unwrap();
     assert_eq!(

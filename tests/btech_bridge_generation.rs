@@ -21,7 +21,7 @@ fn road_spans_require_two_water_ends_within_three_steps() {
                         )
                     })
                     .collect::<String>();
-                let mut asset = BattleMapAsset::parse(&format!("1 {height}\n{rows}")).unwrap();
+                let mut asset = BattleMapAsset::from_cells(&format!("1 {height}\n{rows}")).unwrap();
                 let original = asset.clone();
                 asset.generate_bridges().unwrap();
                 assert_eq!(
@@ -44,7 +44,7 @@ fn road_spans_require_two_water_ends_within_three_steps() {
     }
     for obstruction in ['.', '%', '?', '^', '@'] {
         let mut asset =
-            BattleMapAsset::parse(&format!("1 5\n~0\n{obstruction}0\n#0\n#0\n~0\n")).unwrap();
+            BattleMapAsset::from_cells(&format!("1 5\n~0\n{obstruction}0\n#0\n#0\n~0\n")).unwrap();
         asset.generate_bridges().unwrap();
         assert_eq!(asset.hex(0, 2).unwrap().terrain(), Terrain::Road);
     }
@@ -58,7 +58,7 @@ fn diagonal_corridors_and_western_edge_use_asset_search_coordinates() {
         "5 3\n.0.0.0.0.0\n.0.0#0~0.0\n.0~0.0.0.0\n",
         "3 3\n~0.0.0\n.0#0.0\n.0.0~0\n",
     ] {
-        let mut asset = BattleMapAsset::parse(source).unwrap();
+        let mut asset = BattleMapAsset::from_cells(source).unwrap();
         let x = if asset.width == 3 { 1 } else { 2 };
         assert_eq!(asset.generate_bridges().unwrap(), 1);
         assert_eq!(asset.hex(x, 1).unwrap().terrain(), Terrain::Bridge);
@@ -70,7 +70,7 @@ fn diagonal_corridors_and_western_edge_use_asset_search_coordinates() {
 async fn map_activation_generates_bridges_and_persists_them() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Bridge map".into(), Kind::Room);
-    let asset = BattleMapAsset::parse("1 3\n~0\n#2\n-0\n").unwrap();
+    let asset = BattleMapAsset::from_cells("1 3\n~0\n#2\n-0\n").unwrap();
     create_battle_map(&mut world, map, "span", asset.clone()).unwrap();
     assert_eq!(
         world.btech.maps()[&map].base_hex(0, 1).unwrap().terrain(),

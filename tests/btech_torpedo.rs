@@ -62,7 +62,7 @@ async fn fixture(rows: [i64; 2]) -> (tempfile::TempDir, Config, World, ObjectId,
         &mut world,
         map,
         "lake",
-        BattleMapAsset::parse("1 8\n~2\n~2\n~2\n~2\n~2\n~1\n.0\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 8\n~2\n~2\n~2\n~2\n~2\n~1\n.0\n.0\n").unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();

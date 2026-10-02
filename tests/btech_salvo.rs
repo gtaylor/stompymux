@@ -345,7 +345,7 @@ async fn rear_weapon_hits_ignite_one_dumped_salvo_and_replay_after_restart() {
         &mut world,
         map,
         "ignition.map",
-        BattleMapAsset::parse("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 1, 1).unwrap();

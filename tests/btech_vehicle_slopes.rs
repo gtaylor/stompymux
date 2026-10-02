@@ -14,7 +14,7 @@ async fn fixture(
         &mut world,
         map,
         "slopes",
-        BattleMapAsset::parse(&format!("12 3\n{row}\n{row}\n{row}\n")).unwrap(),
+        BattleMapAsset::from_cells(&format!("12 3\n{row}\n{row}\n{row}\n")).unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Vehicle".into(), Kind::Thing);

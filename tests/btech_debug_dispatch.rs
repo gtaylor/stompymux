@@ -154,7 +154,7 @@ async fn debug_weapon_permissions_diagnostics_and_restart() {
         &mut scripts.world_mut(),
         map,
         "clearable",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     assert_eq!(

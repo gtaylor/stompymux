@@ -28,7 +28,8 @@ async fn fixture(
         &mut world,
         map,
         "stock",
-        BattleMapAsset::parse(&format!("10 10\n{}", (".0".repeat(10) + "\n").repeat(10))).unwrap(),
+        BattleMapAsset::from_cells(&format!("10 10\n{}", (".0".repeat(10) + "\n").repeat(10)))
+            .unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Carrier".into(), Kind::Thing);

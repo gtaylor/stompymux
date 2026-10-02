@@ -64,7 +64,7 @@ async fn linked_confirmation_failure_restores_state() {
         &mut world,
         map,
         "map",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);

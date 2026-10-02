@@ -176,7 +176,7 @@ async fn map_emit_authority_empty_maps_and_all_occupants() {
         &mut world,
         empty,
         "empty",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

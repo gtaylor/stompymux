@@ -76,7 +76,7 @@ async fn water_destruction_clears_controls_and_survives_sqlite_and_lua() {
         &mut world,
         map,
         "test",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Vehicle".into(), Kind::Thing);

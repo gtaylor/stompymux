@@ -42,7 +42,7 @@ async fn fixture(
         &mut world,
         map,
         "visibility",
-        BattleMapAsset::parse("1 5\n.0\n.0\n.0\n.0\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 5\n.0\n.0\n.0\n.0\n.0\n").unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();

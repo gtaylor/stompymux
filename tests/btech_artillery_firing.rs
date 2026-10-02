@@ -18,7 +18,7 @@ async fn fixture_source(
         &mut world,
         map,
         "artillery.map",
-        BattleMapAsset::parse("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     let mut template = BattleTemplate::parse("test", source).unwrap();
@@ -663,7 +663,7 @@ async fn artillery_observed_launch_and_link_revalidation() {
                     &mut world,
                     ridge,
                     "ridge.map",
-                    BattleMapAsset::parse("3 3\n.0.0.0\n.9.9.9\n.0.0.0\n").unwrap(),
+                    BattleMapAsset::from_cells("3 3\n.0.0.0\n.9.9.9\n.0.0.0\n").unwrap(),
                 )
                 .unwrap();
                 for (unit, pilot, y) in [(shooter, ObjectId(1), 1), (observer, ObjectId(2), 0)] {
@@ -692,7 +692,7 @@ async fn artillery_observed_launch_and_link_revalidation() {
                     &mut world,
                     other,
                     "other.map",
-                    BattleMapAsset::parse("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+                    BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
                 )
                 .unwrap();
                 stop_battle_unit(&mut world, observer, ObjectId(2), rules()).unwrap();

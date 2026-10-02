@@ -123,7 +123,7 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
                 &mut candidate,
                 map,
                 "replacement",
-                BattleMapAsset::parse(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap()
+                BattleMapAsset::from_cells(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap()
             )
             .is_err()
         );
@@ -425,7 +425,7 @@ async fn terrain_saves_preserve_persisted_landing_exclusions() {
             &mut reloaded,
             map,
             "replacement",
-            BattleMapAsset::parse(&format!("1 12\n{}", "#1\n".repeat(12))).unwrap(),
+            BattleMapAsset::from_cells(&format!("1 12\n{}", "#1\n".repeat(12))).unwrap(),
         )
         .unwrap();
         persistence::save(&config.database(), &reloaded)

@@ -210,15 +210,15 @@ pub(super) fn parse_metadata(record: &[u8]) -> Option<(i32, i32, i32)> {
 }
 
 impl BattleMapAsset {
-    /// Decode width/height, two-byte tiles, and optional `flags: gravity temperature`.
-    /// Unknown terrain becomes grassland; malformed dimensions and elevations remain errors.
-    pub fn parse(source: &str) -> Result<Self> {
-        Self::parse_diagnostics(source.as_bytes(), 0).map(|(map, _)| map)
+    /// Build a map from the compact cell notation: a `width height` line, rows of
+    /// terrain-symbol and elevation-digit pairs, and an optional `flags: gravity temperature`.
+    pub fn from_cells(source: &str) -> Result<Self> {
+        Self::from_cells_diagnostics(source.as_bytes(), 0).map(|(map, _)| map)
     }
 
     /// Decode with existing flags for reload; fresh inspection supplies zero.
     /// Return terrain substitutions without coupling decoding to channels.
-    pub(super) fn parse_diagnostics(
+    pub(super) fn from_cells_diagnostics(
         source: &[u8],
         initial_flags: i32,
     ) -> Result<(Self, Vec<MapTerrainWarning>)> {
@@ -319,7 +319,7 @@ mod tests {
             ("1 1\n&2\n10: 75 -30\n", 10),
         ] {
             assert_eq!(
-                BattleMapAsset::parse(source).unwrap().flags,
+                BattleMapAsset::from_cells(source).unwrap().flags,
                 flags,
                 "{source}"
             );
@@ -345,7 +345,7 @@ mod tests {
             ("+0: -0 +0\r\n", (0, 0, 0)),
             ("2: 50 -40\0 extra\n", (2, 50, -40)),
         ] {
-            let map = BattleMapAsset::parse(&format!("1 1\n&2\n{metadata}")).unwrap();
+            let map = BattleMapAsset::from_cells(&format!("1 1\n&2\n{metadata}")).unwrap();
             assert_eq!(
                 (map.flags, map.gravity, map.temperature),
                 expected,
@@ -353,7 +353,7 @@ mod tests {
             );
         }
         let metadata = format!("0: 50 20{}extra\n", " ".repeat(1994));
-        let map = BattleMapAsset::parse(&format!("1 1\n&2\n{metadata}")).unwrap();
+        let map = BattleMapAsset::from_cells(&format!("1 1\n&2\n{metadata}")).unwrap();
         assert_eq!((map.flags, map.gravity, map.temperature), (0, 50, 20));
     }
 
@@ -370,10 +370,10 @@ mod tests {
                 ] {
                     let source = format!("1 1\n{terrain}\n{metadata}");
                     let (map, _) =
-                        BattleMapAsset::parse_diagnostics(source.as_bytes(), initial).unwrap();
+                        BattleMapAsset::from_cells_diagnostics(source.as_bytes(), initial).unwrap();
                     assert_eq!(map.flags, replacement.unwrap_or(initial | fire));
                     assert_eq!(
-                        BattleMapAsset::parse(&source).unwrap().flags,
+                        BattleMapAsset::from_cells(&source).unwrap().flags,
                         replacement.unwrap_or(fire)
                     );
                 }
@@ -385,7 +385,7 @@ mod tests {
     #[test]
     fn byte_map_records_decode_without_global_utf8_validation() {
         let (map, warnings) =
-            BattleMapAsset::parse_diagnostics(b"2 1\n\xff3&2\xfe\n\xff: 50 20\n", 32).unwrap();
+            BattleMapAsset::from_cells_diagnostics(b"2 1\n\xff3&2\xfe\n\xff: 50 20\n", 32).unwrap();
         assert_eq!((map.flags, map.gravity, map.temperature), (40, 100, 20));
         assert_eq!(
             map.hex(0, 0).unwrap(),
@@ -396,10 +396,10 @@ mod tests {
             (warnings[0].x, warnings[0].y, warnings[0].symbol),
             (0, 0, '\u{ff}')
         );
-        assert!(BattleMapAsset::parse_diagnostics(b"1 \xff\n.0\n", 0).is_err());
-        assert!(BattleMapAsset::parse_diagnostics(b"1 1\n.\xff\n", 0).is_err());
+        assert!(BattleMapAsset::from_cells_diagnostics(b"1 \xff\n.0\n", 0).is_err());
+        assert!(BattleMapAsset::from_cells_diagnostics(b"1 1\n.\xff\n", 0).is_err());
         let (map, warnings) =
-            BattleMapAsset::parse_diagnostics(b"1 1\n.3\xff\n0: 50 20\n\xff", 0).unwrap();
+            BattleMapAsset::from_cells_diagnostics(b"1 1\n.3\xff\n0: 50 20\n\xff", 0).unwrap();
         assert_eq!((map.flags, map.gravity, map.temperature), (0, 50, 20));
         assert!(warnings.is_empty());
     }
@@ -424,7 +424,7 @@ mod tests {
     /// Sand's `}` symbol decodes without a substitution warning and round-trips.
     #[test]
     fn sand_symbol_decodes_and_round_trips() {
-        let (map, warnings) = BattleMapAsset::parse_diagnostics(b"2 1\n}1.0\n", 0).unwrap();
+        let (map, warnings) = BattleMapAsset::from_cells_diagnostics(b"2 1\n}1.0\n", 0).unwrap();
         assert!(warnings.is_empty());
         assert_eq!(map.hex(0, 0).unwrap(), BattleHex::new(Terrain::Sand, 1));
         assert_eq!(Terrain::Sand.symbol(), '}');
@@ -435,7 +435,7 @@ mod tests {
     #[test]
     fn numeric_file_fields_match_ascii_token_boundaries() {
         for header in ["+1 +1", "\u{b}1 1\u{c}", "1\u{c} \u{b}1"] {
-            let map = BattleMapAsset::parse(&format!(
+            let map = BattleMapAsset::from_cells(&format!(
                 "{header}\n.0\n\u{b}2\u{c}: \u{b}50\u{c} \u{c}-40\u{b}\n"
             ))
             .unwrap();
@@ -443,12 +443,12 @@ mod tests {
         }
         for header in ["1\u{b}1", "1\u{a0}1", "\u{a0}1 1", "2147483648 1", "1 -0"] {
             assert!(
-                BattleMapAsset::parse(&format!("{header}\n.0\n")).is_err(),
+                BattleMapAsset::from_cells(&format!("{header}\n.0\n")).is_err(),
                 "{header:?}"
             );
         }
         for metadata in ["2: 50\u{b}-40", "2: 50\u{a0}-40", "2: \u{a0}50 -40"] {
-            let map = BattleMapAsset::parse(&format!("1 1\n&0\n{metadata}\n")).unwrap();
+            let map = BattleMapAsset::from_cells(&format!("1 1\n&0\n{metadata}\n")).unwrap();
             assert_eq!((map.flags, map.gravity, map.temperature), (8, 100, 20));
         }
     }
@@ -491,7 +491,7 @@ mod tests {
 
     #[test]
     fn rectangular_map_preserves_axes_depth_and_environment() {
-        let map = BattleMapAsset::parse("3 2\r\n.0~2'1\r\n#0-3^9\r\n32: 75 -12\r\n").unwrap();
+        let map = BattleMapAsset::from_cells("3 2\r\n.0~2'1\r\n#0-3^9\r\n32: 75 -12\r\n").unwrap();
         assert_eq!((map.width, map.height), (3, 2));
         assert_eq!(map.hex(1, 0).unwrap().surface_height(), -2);
         assert_eq!(map.hex(1, 1).unwrap().surface_height(), -3);
@@ -506,7 +506,7 @@ mod tests {
     #[test]
     fn invalid_input_is_an_error_without_partial_maps() {
         for source in ["", "0 1", "1 1001", "2 1\n.0", "1 1\n.:"] {
-            assert!(BattleMapAsset::parse(source).is_err(), "{source:?}");
+            assert!(BattleMapAsset::from_cells(source).is_err(), "{source:?}");
         }
     }
 
@@ -519,23 +519,26 @@ mod tests {
             "1 1\r\n.3suffix\r\n",
             "1 1\n.3\0ignored\n",
         ] {
-            let map = BattleMapAsset::parse(source).unwrap();
+            let map = BattleMapAsset::from_cells(source).unwrap();
             assert_eq!(map.hexes.len(), 1);
             assert_eq!(map.hex(0, 0).unwrap().elevation(), 3);
         }
         let source = format!("1 2\n.3{}.7\n", "x".repeat(1999));
-        let map = BattleMapAsset::parse(&source).unwrap();
+        let map = BattleMapAsset::from_cells(&source).unwrap();
         assert_eq!(map.hex(0, 0).unwrap().elevation(), 3);
         assert_eq!(map.hex(0, 1).unwrap().elevation(), 7);
         for ending in ["\n", "\r\n"] {
             let source = format!("1000 1\n{}{ending}", ".0".repeat(1000));
-            assert_eq!(BattleMapAsset::parse(&source).unwrap().hexes.len(), 1000);
+            assert_eq!(
+                BattleMapAsset::from_cells(&source).unwrap().hexes.len(),
+                1000
+            );
         }
         // The extra LF after a maximum-width CRLF row is the next bounded record.
         let source = format!("1000 2\n{}\r\n{}\r\n", ".0".repeat(1000), ".0".repeat(1000));
-        assert!(BattleMapAsset::parse(&source).is_err());
+        assert!(BattleMapAsset::from_cells(&source).is_err());
         for source in ["1 1\n.\n", "1 1\n.\r\n", "1 1\n.\0ignored\n", "1 2\n.0\n"] {
-            assert!(BattleMapAsset::parse(source).is_err(), "{source:?}");
+            assert!(BattleMapAsset::from_cells(source).is_err(), "{source:?}");
         }
     }
 }

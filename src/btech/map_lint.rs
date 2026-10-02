@@ -27,7 +27,7 @@ impl std::fmt::Display for MapCheckIssue {
 /// depend on the declared dimensions being right.
 pub fn check_map_source(source: &[u8]) -> Vec<MapCheckIssue> {
     let issue = |line: Option<usize>, message: String| MapCheckIssue { line, message };
-    let (map, warnings) = match BattleMapAsset::parse_diagnostics(source, 0) {
+    let (map, warnings) = match BattleMapAsset::from_cells_diagnostics(source, 0) {
         Ok(decoded) => decoded,
         Err(error) => return vec![issue(None, format!("{error:#}"))],
     };
@@ -98,7 +98,7 @@ pub fn tidy_map_source(source: &[u8]) -> Vec<u8> {
         .collect();
     let mut cleaned = lines.join("\n").into_bytes();
     cleaned.push(b'\n');
-    let Ok((map, _)) = BattleMapAsset::parse_diagnostics(&cleaned, 0) else {
+    let Ok((map, _)) = BattleMapAsset::from_cells_diagnostics(&cleaned, 0) else {
         return cleaned;
     };
     let height = usize::from(map.height);

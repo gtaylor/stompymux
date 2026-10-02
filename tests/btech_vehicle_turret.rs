@@ -10,7 +10,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
         &mut world,
         map,
         "test",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Vehicle".into(), Kind::Thing);
@@ -435,7 +435,7 @@ async fn automatic_turret_tracks_moving_units_and_hexes() {
         &mut world,
         map,
         "tracking",
-        BattleMapAsset::parse("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     stop_battle_unit(
@@ -479,7 +479,7 @@ async fn automatic_turret_tracks_moving_units_and_hexes() {
         &mut world,
         elsewhere,
         "other",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, target, elsewhere, 0, 0).unwrap();
@@ -519,7 +519,7 @@ async fn automatic_tracking_is_shared_by_ground_and_rotorcraft() {
             &mut world,
             map,
             "field",
-            BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
         let id = world.create(&config, "Tracking carrier".into(), Kind::Thing);

@@ -14,7 +14,7 @@ async fn enter_pilot_restart_and_leave_preserve_ordinary_movement() {
         &mut world,
         map,
         "test.map",
-        BattleMapAsset::parse("2 1\n.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("2 1\n.0.0\n").unwrap(),
     )
     .unwrap();
     world

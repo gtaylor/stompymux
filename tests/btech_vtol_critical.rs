@@ -450,7 +450,7 @@ async fn aircraft_explosions_settle_at_surface_and_share_case_containment_atomic
         &mut world,
         map,
         "explosion",
-        BattleMapAsset::parse("1 1\n.3\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.3\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Exploding aircraft".into(), Kind::Thing);
@@ -541,7 +541,7 @@ async fn engine_emergency_landings_use_shared_checks_and_commit_failed_attempts_
         &mut world,
         map,
         "emergency",
-        BattleMapAsset::parse("1 1\n.3\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.3\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Emergency aircraft".into(), Kind::Thing);
@@ -688,7 +688,7 @@ async fn engine_loss_over_water_starts_falling_without_a_landing_roll() {
         &mut world,
         map,
         "water",
-        BattleMapAsset::parse("1 1\n~3\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n~3\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Aircraft".into(), Kind::Thing);
@@ -757,7 +757,7 @@ async fn emergency_landing_feedback_is_private_and_replayable() {
         &mut world,
         map,
         "test",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Aircraft".into(), Kind::Thing);

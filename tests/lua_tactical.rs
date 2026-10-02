@@ -10,7 +10,7 @@ async fn fixture() -> (tempfile::TempDir, Config, Scripts, Vec<ObjectId>, Object
         &mut world,
         map,
         "tactical",
-        BattleMapAsset::parse(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap(),
+        BattleMapAsset::from_cells(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap(),
     )
     .unwrap();
     let mut units = Vec::new();

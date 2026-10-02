@@ -29,7 +29,7 @@ async fn targeted_radio_mixed_pairs_share_visibility_delivery_and_restart() {
                 &mut world,
                 map,
                 "radio",
-                BattleMapAsset::parse("2 2\n.0.0\n.0.0\n").unwrap(),
+                BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
             )
             .unwrap();
             let listener = world.create(&config, "Listener".into(), Kind::Player);
@@ -165,7 +165,7 @@ async fn channel_radio_rotates_mixed_transmitters_relays_and_receivers() {
             &mut world,
             map,
             "channel",
-            BattleMapAsset::parse("6 2\n.0.0.0.0.0.0\n.0.0.0.0.0.0\n").unwrap(),
+            BattleMapAsset::from_cells("6 2\n.0.0.0.0.0.0\n.0.0.0.0.0.0\n").unwrap(),
         )
         .unwrap();
         let mut ids = Vec::new();

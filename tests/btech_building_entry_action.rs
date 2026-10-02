@@ -22,7 +22,7 @@ async fn fixture(
             &mut world,
             map,
             "entry",
-            BattleMapAsset::parse("2 2\n.0.0\n.0.0\n").unwrap(),
+            BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
         )
         .unwrap();
     }

@@ -109,6 +109,31 @@ impl BattleHex {
         hex
     }
 
+    /// Build a hex directly from its layers.
+    pub const fn from_layers(
+        level: u8,
+        ground: Ground,
+        woods: Option<Woods>,
+        water: Option<Water>,
+        structure: Option<Structure>,
+    ) -> Self {
+        Self {
+            level,
+            ground,
+            woods,
+            water,
+            structure,
+        }
+    }
+
+    /// This hex with `structure` built on it, replacing any structure it had.
+    pub const fn with_structure(self, structure: Structure) -> Self {
+        Self {
+            structure: Some(structure),
+            ..self
+        }
+    }
+
     /// Ground height in levels; water surfaces sit at this height.
     pub const fn level(self) -> u8 {
         self.level

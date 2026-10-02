@@ -43,7 +43,7 @@ async fn fixture_on(chassis: &str, tile: &str) -> (tempfile::TempDir, Config, Wo
         &mut world,
         map,
         "self destruct",
-        BattleMapAsset::parse(&format!("1 1\n{tile}\n")).unwrap(),
+        BattleMapAsset::from_cells(&format!("1 1\n{tile}\n")).unwrap(),
     )
     .unwrap();
     let id = world.create(&config, chassis.into(), Kind::Thing);
@@ -144,7 +144,7 @@ async fn self_destruct_airborne_vehicle_placement() {
             let world = scripts.world();
             let unit = &world.btech.vehicles()[&id];
             let falling = !(tile == "/4" && altitude < 4.0);
-            let hex = BattleMapAsset::parse(&format!("1 1\n{tile}\n"))
+            let hex = BattleMapAsset::from_cells(&format!("1 1\n{tile}\n"))
                 .unwrap()
                 .hex(0, 0)
                 .unwrap();

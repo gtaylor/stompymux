@@ -58,7 +58,7 @@ async fn fixture_assets(
         &mut world,
         map,
         "motion.map",
-        BattleMapAsset::parse(source).unwrap(),
+        BattleMapAsset::from_cells(source).unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Jenner".into(), Kind::Thing);
@@ -1261,7 +1261,7 @@ async fn terrain_los_queries_follow_placement_and_leave_world_unchanged() {
         &mut world,
         other,
         "other.map",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, target, other, 0, 0).unwrap();
@@ -1322,7 +1322,7 @@ async fn perception_query_composes_live_terrain_and_spatial_range_without_acquir
         &mut world,
         map,
         "forest.map",
-        BattleMapAsset::parse(&format!(
+        BattleMapAsset::from_cells(&format!(
             "12 12\n{}",
             format!("{}\n", "'0".repeat(12)).repeat(12)
         ))
@@ -4638,7 +4638,7 @@ async fn prone_fire_cannot_cross_the_waterline_before_expenditure() {
         &mut world,
         map,
         "shallow.map",
-        BattleMapAsset::parse(&source).unwrap(),
+        BattleMapAsset::from_cells(&source).unwrap(),
     )
     .unwrap();
     stop_battle_unit(
@@ -5391,7 +5391,7 @@ async fn water_flooded_equipment_stays_disabled_after_restart_and_leaving_water(
         &mut loaded,
         map,
         "dry.map",
-        BattleMapAsset::parse(&source).unwrap(),
+        BattleMapAsset::from_cells(&source).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut loaded, id, map, 5, 5).unwrap();
@@ -7279,7 +7279,7 @@ async fn snub_ppc_range_damage_native_lua_and_restart() {
         &mut base,
         map,
         "snub.map",
-        BattleMapAsset::parse(&source).unwrap(),
+        BattleMapAsset::from_cells(&source).unwrap(),
     )
     .unwrap();
     stop_battle_unit(&mut base, id, ObjectId(1), fall_rules()).unwrap();
@@ -8369,7 +8369,7 @@ async fn heavy_gauss_range_damage_native_lua_and_restart() {
         &mut base,
         map,
         "heavy-gauss.map",
-        BattleMapAsset::parse(&source).unwrap(),
+        BattleMapAsset::from_cells(&source).unwrap(),
     )
     .unwrap();
     stop_battle_unit(&mut base, id, ObjectId(1), fall_rules()).unwrap();
@@ -13247,7 +13247,7 @@ async fn observer_broadcasts_use_current_acquired_contacts_without_mutation() {
                 &mut altered,
                 map,
                 "other",
-                BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+                BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
             )
             .unwrap();
             place_battle_unit(&mut altered, subject, map, 0, 0).unwrap();
@@ -28679,7 +28679,7 @@ async fn electronics_flooding_and_map_membership() {
         &mut world,
         other,
         "other.map",
-        BattleMapAsset::parse(&format!("12 12\n{}", format!("{row}\n").repeat(12))).unwrap(),
+        BattleMapAsset::from_cells(&format!("12 12\n{}", format!("{row}\n").repeat(12))).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, target, other, 5, 5).unwrap();
@@ -33002,7 +33002,7 @@ async fn building_fire_damage_policies_and_committed_repair() {
             &mut world,
             interior,
             "inside.map",
-            BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
         let coordinate = BattleHexCoordinate { x: 5, y: 4 };
@@ -33207,7 +33207,7 @@ async fn building_fire_native_lua_interior_messages_and_rollback() {
         &mut world,
         interior,
         "inside.map",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let resident = world.create(&config, "Resident".into(), Kind::Player);

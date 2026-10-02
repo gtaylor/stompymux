@@ -13,7 +13,7 @@ async fn lua_controls_a_typed_autopilot_queue() {
         &mut world,
         map,
         "autopilot.lua",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();

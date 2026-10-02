@@ -113,7 +113,7 @@ async fn damaged_weapon_controls_and_reservations_share_saved_state() {
             &mut world,
             map,
             "field",
-            BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -257,7 +257,7 @@ async fn critical_launch_failures_are_atomic_and_distinguish_permanent_jams() {
             &mut world,
             map,
             "field",
-            BattleMapAsset::parse("1 3\n.0\n.0\n.0\n").unwrap(),
+            BattleMapAsset::from_cells("1 3\n.0\n.0\n.0\n").unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, id, map, 0, 2).unwrap();

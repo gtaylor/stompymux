@@ -34,7 +34,8 @@ async fn field_with_equipment(
         &mut world,
         map,
         "network.map",
-        BattleMapAsset::parse(&format!("20 20\n{}", (".0".repeat(20) + "\n").repeat(20))).unwrap(),
+        BattleMapAsset::from_cells(&format!("20 20\n{}", (".0".repeat(20) + "\n").repeat(20)))
+            .unwrap(),
     )
     .unwrap();
     let mut units = Vec::new();
@@ -349,7 +350,7 @@ async fn interference_is_temporary_but_hardware_team_and_map_loss_disconnect() {
         &mut world,
         other_map,
         "other.map",
-        BattleMapAsset::parse("2 2\n.0.0\n.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, first, other_map, 0, 0).unwrap();
@@ -1727,7 +1728,8 @@ async fn underwater_network_aim_keeps_the_physical_water_limit() {
         &mut world,
         map,
         "water",
-        BattleMapAsset::parse(&format!("20 20\n{}", ("~2".repeat(20) + "\n").repeat(20))).unwrap(),
+        BattleMapAsset::from_cells(&format!("20 20\n{}", ("~2".repeat(20) + "\n").repeat(20)))
+            .unwrap(),
     )
     .unwrap();
     for (id, y) in [(shooter, 2), (peer, 7), (target, 8)] {

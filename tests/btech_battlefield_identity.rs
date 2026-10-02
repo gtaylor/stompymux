@@ -84,7 +84,7 @@ async fn normal_placement_avoids_authored_ids_without_reordering_membership() {
         &mut world,
         map,
         "ids",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let mut units = Vec::new();

@@ -74,7 +74,7 @@ async fn actor_location_and_linked_inventory_order_survive_restart() {
         &mut world,
         map,
         "help",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     world.objects.get_mut(&actor).unwrap().location = Some(map);
@@ -165,7 +165,7 @@ async fn help_respects_uncompressed_input() {
         &mut world,
         map,
         "help",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);

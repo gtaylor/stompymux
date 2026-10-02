@@ -18,7 +18,7 @@ async fn fixture(quad: bool, tile: &str) -> (tempfile::TempDir, Config, World, O
         &mut world,
         map,
         "drop",
-        BattleMapAsset::parse(&format!("1 1\n{tile}\n")).unwrap(),
+        BattleMapAsset::from_cells(&format!("1 1\n{tile}\n")).unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Controlled drop".into(), Kind::Thing);

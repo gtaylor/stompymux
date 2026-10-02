@@ -73,7 +73,8 @@ async fn reactor_blast_cross_chassis_and_atomic_replay() {
         &mut world,
         map,
         "blast",
-        BattleMapAsset::parse(&format!("7 7\n{}", "\"0\"0\"0\"0\"0\"0\"0\n".repeat(7))).unwrap(),
+        BattleMapAsset::from_cells(&format!("7 7\n{}", "\"0\"0\"0\"0\"0\"0\"0\n".repeat(7)))
+            .unwrap(),
     )
     .unwrap();
     let source = unit(&mut world, &config, map, "biped", 3, 3);
@@ -200,7 +201,7 @@ async fn reactor_casualties_and_callback_failure_are_atomic() {
         &mut world,
         map,
         "crew",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let source = unit(&mut world, &config, map, "quad", 0, 0);
@@ -294,7 +295,7 @@ async fn chain_fixture() -> (
         &mut world,
         map,
         "chain",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let first = unit(&mut world, &config, map, "biped", 0, 0);

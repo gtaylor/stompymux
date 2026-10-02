@@ -17,7 +17,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
         &mut world,
         map,
         "instability",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Unstable Jenner".into(), Kind::Thing);
@@ -457,7 +457,7 @@ async fn instability_flooded_engine_compartment() {
         &mut world,
         water,
         "water",
-        BattleMapAsset::parse("1 1\n~3\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n~3\n").unwrap(),
     )
     .unwrap();
     edit(&mut world, id, |state| {

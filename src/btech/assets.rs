@@ -45,7 +45,7 @@ pub(super) fn read_map_diagnostics(
     name: &str,
     initial_flags: i32,
 ) -> Result<(BattleMapAsset, Vec<super::map::MapTerrainWarning>)> {
-    BattleMapAsset::parse_diagnostics(
+    BattleMapAsset::from_cells_diagnostics(
         &read_bytes(root, name, 2_100_000).context(super::map::MapFileFailure::Unavailable)?,
         initial_flags,
     )

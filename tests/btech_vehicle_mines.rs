@@ -10,7 +10,7 @@ async fn vehicle_mine_queries_use_live_mass_and_preserve_saved_state() {
         &mut world,
         map,
         "test",
-        BattleMapAsset::parse("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Demolisher".into(), Kind::Thing);
@@ -110,7 +110,7 @@ async fn mine_queries_share_surface_gates_across_ground_vehicle_types() {
         &mut world,
         map,
         "test",
-        BattleMapAsset::parse("3 1\n.2~2-2\n").unwrap(),
+        BattleMapAsset::from_cells("3 1\n.2~2-2\n").unwrap(),
     )
     .unwrap();
     for x in 0..3 {
@@ -164,7 +164,7 @@ async fn blast_fixture(
         &mut world,
         map,
         "test",
-        BattleMapAsset::parse("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();

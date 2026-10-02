@@ -26,7 +26,7 @@ async fn fixture_on_surface(
         &mut world,
         map,
         "crew",
-        BattleMapAsset::parse(&format!("1 1\n{tile}\n")).unwrap(),
+        BattleMapAsset::from_cells(&format!("1 1\n{tile}\n")).unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Character vehicle".into(), Kind::Thing);

@@ -14,7 +14,7 @@ async fn fixture(
         &mut world,
         map,
         "targets",
-        BattleMapAsset::parse("3 5\n.0.0.0\n.0.0.0\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 5\n.0.0.0\n.0.0.0\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     let shooter = world.create(&config, "Shooter".into(), Kind::Thing);

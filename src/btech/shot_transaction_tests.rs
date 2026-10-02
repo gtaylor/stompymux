@@ -11,7 +11,7 @@ fn fixture(source: &str, recipient: &str, seed: u8) -> (Config, World, ObjectId,
         &mut world,
         map,
         "shot-lane",
-        BattleMapAsset::parse(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap(),
+        BattleMapAsset::from_cells(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap(),
     )
     .unwrap();
     let shooter = world.create(&config, "Shooter".into(), Kind::Thing);

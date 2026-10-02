@@ -12,7 +12,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
         &mut world,
         map,
         "grid",
-        BattleMapAsset::parse("2 2\n.1.1\n.1&1\n").unwrap(),
+        BattleMapAsset::from_cells("2 2\n.1.1\n.1&1\n").unwrap(),
     )
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);

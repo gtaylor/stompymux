@@ -38,10 +38,10 @@ fn main() -> Result<ExitCode> {
             let tidy = tidy_map_source(&source);
             let before = String::from_utf8(source.clone())
                 .ok()
-                .and_then(|text| BattleMapAsset::parse(&text).ok());
+                .and_then(|text| BattleMapAsset::from_cells(&text).ok());
             let after = String::from_utf8(tidy.clone())
                 .ok()
-                .and_then(|text| BattleMapAsset::parse(&text).ok());
+                .and_then(|text| BattleMapAsset::from_cells(&text).ok());
             if tidy != source && (before.is_none() || before == after) {
                 fs::write(path, &tidy).with_context(|| format!("writing {}", path.display()))?;
                 source = tidy;

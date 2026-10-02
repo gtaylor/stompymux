@@ -16,7 +16,7 @@ async fn fixture(
         &mut world,
         map,
         "ridge",
-        BattleMapAsset::parse("3 3\n.0.1.0\n.0.1.0\n.0.1.0\n").unwrap(),
+        BattleMapAsset::from_cells("3 3\n.0.1.0\n.0.1.0\n.0.1.0\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Quad".into(), Kind::Thing);

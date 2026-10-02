@@ -16,7 +16,7 @@ async fn placement_round_trips_coordinates_and_containment_without_shared_unit_s
         &mut world,
         map,
         "test.map",
-        BattleMapAsset::parse(MAP).unwrap(),
+        BattleMapAsset::from_cells(MAP).unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -51,7 +51,7 @@ async fn placement_round_trips_coordinates_and_containment_without_shared_unit_s
             &mut loaded,
             map,
             "test.map",
-            BattleMapAsset::parse(MAP).unwrap()
+            BattleMapAsset::from_cells(MAP).unwrap()
         )
         .is_err()
     );
@@ -105,7 +105,7 @@ async fn placement_callbacks_roll_back_and_native_commands_report_coordinates() 
         &mut world,
         map,
         "test.map",
-        BattleMapAsset::parse(MAP).unwrap(),
+        BattleMapAsset::from_cells(MAP).unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Jenner".into(), Kind::Thing);
@@ -182,7 +182,7 @@ async fn placement_callbacks_roll_back_and_native_commands_report_coordinates() 
         &mut scripts.world_mut(),
         map,
         "changed.map",
-        BattleMapAsset::parse(&format!("{MAP}1: 100 20\n")).unwrap(),
+        BattleMapAsset::from_cells(&format!("{MAP}1: 100 20\n")).unwrap(),
     )
     .unwrap();
     let candidate = scripts.world().clone();
@@ -210,7 +210,7 @@ async fn map_slots_control_occupant_order_and_reuse() {
         &mut world,
         map,
         "slots.map",
-        BattleMapAsset::parse(MAP).unwrap(),
+        BattleMapAsset::from_cells(MAP).unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -286,7 +286,7 @@ async fn map_slots_control_occupant_order_and_reuse() {
         &mut world,
         other_map,
         "other.map",
-        BattleMapAsset::parse(MAP).unwrap(),
+        BattleMapAsset::from_cells(MAP).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, earlier, other_map, 0, 0).unwrap();

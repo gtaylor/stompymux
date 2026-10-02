@@ -28,7 +28,7 @@ async fn ranges_include_depth_and_elevation_and_reject_different_maps() {
         &mut world,
         map,
         "range.map",
-        BattleMapAsset::parse("3 1\n~2.0^3\n").unwrap(),
+        BattleMapAsset::from_cells("3 1\n~2.0^3\n").unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -106,7 +106,7 @@ async fn ranges_include_depth_and_elevation_and_reject_different_maps() {
         &mut scripts.world_mut(),
         other,
         "other.map",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut scripts.world_mut(), ids[1], other, 0, 0).unwrap();

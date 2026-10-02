@@ -27,7 +27,7 @@ async fn ground_entry_reports_live_cf_once_and_replays_after_restart() {
                 &mut world,
                 interior,
                 "interior",
-                BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+                BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
             )
             .unwrap();
             set_building_state(
@@ -140,7 +140,7 @@ async fn aircraft_overflight_does_not_report_ground_buildings() {
         &mut world,
         interior,
         "inside",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     set_building_entrance(
@@ -187,7 +187,7 @@ async fn interrupted_ground_steps_report_only_accepted_surface_entries() {
                 &mut world,
                 interior,
                 "shelter",
-                BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+                BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
             )
             .unwrap();
             set_building_entrance(

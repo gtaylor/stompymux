@@ -86,7 +86,7 @@ async fn reshape_persists_grid_and_removes_map_objects() {
         &mut world,
         map,
         "grid",
-        BattleMapAsset::parse("1 4\n.0\n.0\n.0\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 4\n.0\n.0\n.0\n.0\n").unwrap(),
     )
     .unwrap();
     let actor = operator(&mut world, &config, map);
@@ -160,7 +160,7 @@ async fn resize_clears_effects_and_building_routes() {
             &mut world,
             id,
             "grid",
-            BattleMapAsset::parse("2 2\n`2#1\n.0.0\n").unwrap(),
+            BattleMapAsset::from_cells("2 2\n`2#1\n.0.0\n").unwrap(),
         )
         .unwrap();
     }

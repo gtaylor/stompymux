@@ -17,7 +17,7 @@ async fn fixture_movement(
         &mut world,
         map,
         "road",
-        BattleMapAsset::parse(&format!(
+        BattleMapAsset::from_cells(&format!(
             "20 3\n{}\n{}\n{}\n",
             ".0".repeat(20),
             ".0".repeat(20),

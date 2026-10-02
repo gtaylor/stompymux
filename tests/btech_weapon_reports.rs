@@ -49,7 +49,7 @@ async fn fixture(
             &mut world,
             map,
             "yard",
-            BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();

@@ -90,7 +90,7 @@ fn malformed_templates_do_not_become_partially_supported_units() {
         "Jenner"
     );
     // Optional metadata is ignored as a whole when its field count is invalid.
-    let map = BattleMapAsset::parse("1 1\n.0\n42: 88 19 extra\n").unwrap();
+    let map = BattleMapAsset::from_cells("1 1\n.0\n42: 88 19 extra\n").unwrap();
     assert_eq!((map.flags, map.gravity, map.temperature), (0, 100, 20));
     assert_eq!(map.hexes.len(), 1);
     assert_eq!(

@@ -18,7 +18,7 @@ async fn lane(rows: &[&str]) -> (tempfile::TempDir, Config, World, ObjectId) {
         &mut world,
         map,
         "probe",
-        BattleMapAsset::parse(&format!("1 {}\n{}\n", rows.len(), rows.join("\n"))).unwrap(),
+        BattleMapAsset::from_cells(&format!("1 {}\n{}\n", rows.len(), rows.join("\n"))).unwrap(),
     )
     .unwrap();
     (dir, config, world, map)

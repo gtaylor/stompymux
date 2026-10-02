@@ -813,7 +813,7 @@ mod tests {
             &mut world,
             map,
             "contact.facts",
-            BattleMapAsset::parse(&format!("1 3\n.0\n{middle}\n.0\n")).unwrap(),
+            BattleMapAsset::from_cells(&format!("1 3\n.0\n{middle}\n.0\n")).unwrap(),
         )
         .unwrap();
         let observer = world.create(&config, "Contact facts observer".into(), Kind::Thing);

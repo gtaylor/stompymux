@@ -61,7 +61,7 @@ async fn fixture(
         &mut world,
         map,
         "wreck",
-        BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let id = unit(&mut world, &config, map, chassis);

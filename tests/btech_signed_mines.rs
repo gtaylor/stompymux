@@ -37,7 +37,7 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
             &mut base,
             map,
             "signed",
-            BattleMapAsset::parse("3 3\n.0.0.0\n\"0.0.0\n.0.0.0\n").unwrap(),
+            BattleMapAsset::from_cells("3 3\n.0.0.0\n\"0.0.0\n.0.0.0\n").unwrap(),
         )
         .unwrap();
         let id = base.create(&config, "Blast target".into(), Kind::Thing);
