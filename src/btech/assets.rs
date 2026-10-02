@@ -34,41 +34,24 @@ fn read_bytes(root: &Path, name: &str, limit: usize) -> Result<Vec<u8>> {
     Ok(bytes)
 }
 
-/// Decode a map from a configured map directory.
+/// Decode the map file `NAME.toml` from a configured map directory.
 pub fn read_map(root: &Path, name: &str) -> Result<BattleMapAsset> {
-    read_map_diagnostics(root, name, 0).map(|(map, _)| map)
+    read_map_with_flags(root, name, 0)
 }
 
-/// Keep decoding and file confinement identical for inspection and activated maps.
-pub(super) fn read_map_diagnostics(
+/// Decode a map file, keeping `inherited_flags` when it names no flags of its own.
+pub(super) fn read_map_with_flags(
     root: &Path,
     name: &str,
-    initial_flags: i32,
-) -> Result<(BattleMapAsset, Vec<super::map::MapTerrainWarning>)> {
-    BattleMapAsset::from_cells_diagnostics(
-        &read_bytes(root, name, 2_100_000).context(super::map::MapFileFailure::Unavailable)?,
-        initial_flags,
-    )
-    .with_context(|| format!("map {name}"))
-}
-
-/// Publish substitutions through the configured map-error channel inside the caller's transaction.
-pub(super) fn publish_map_warnings(
-    scripts: &crate::Scripts,
-    config: &crate::Config,
-    id: crate::ObjectId,
-    warnings: &[super::map::MapTerrainWarning],
-) -> Result<()> {
-    let messages = warnings
-        .iter()
-        .map(|&super::map::MapTerrainWarning { x, y, symbol }| {
-            super::BattleChannelMessage::new(
-                super::BattleChannel::MapErrors,
-                format!("Map #{}: Invalid terrain at {x},{y}: '{symbol}'", id.0),
-            )
-        })
-        .collect::<Vec<_>>();
-    super::channels::publish(scripts, config, &messages)
+    inherited_flags: i64,
+) -> Result<BattleMapAsset> {
+    let bytes = read_bytes(root, &format!("{name}.toml"), 2_100_000)
+        .context(super::map::MapFileFailure::Unavailable)?;
+    String::from_utf8(bytes)
+        .context("map file is not UTF-8")
+        .and_then(|source| BattleMapAsset::parse_with_flags(&source, inherited_flags))
+        .context(super::map::MapFileFailure::Invalid)
+        .with_context(|| format!("map {name}"))
 }
 
 /// Decode a biped template from a configured mech directory.

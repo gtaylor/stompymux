@@ -24,28 +24,23 @@ Inspect the BattleTech foundation:
 @btech unit-place #44=#43,0,0
 @btech unit-remove #44=#2
 @btech unit-towable #44=on
-@btech mapfile test.map
+@btech mapfile test
 @btech inspect #42
 @btech range #44,#45
-@btech map-create #43=test.map
-@btech map-reload #43=test.map
+@btech map-create #43=test
+@btech map-reload #43=test
 ```
 
 `template` reads a biped BattleMech definition from the configured mech directory.
-`mapfile` reads source terrain and environmental settings from the configured map
-directory. `inspect` reports saved map or unit metadata for a database object.
+`mapfile` reads a map file's terrain and environmental settings from the
+configured map directory; `test` reads `test.toml`. `inspect` reports saved map or unit metadata for a database object.
 `status` reports the loaded identity counts and implementation status.
 
-Map assets containing `&` fire terrain automatically enable the `permanent_fire`
-map flag. An explicit `flags: gravity temperature` line overrides that
-default; retain bit 8 (`permanent_fire`) to preserve those fires when saving. Temporary-fire `>`
-and smoke `:` markers load as grassland.
-
-Unknown terrain characters also load as grassland, retaining their elevation.
-Map creation and loading report each substitution to the ordinary `MapErrors`
-channel, when that channel exists. Diagnostics participate in the load transaction;
-an aborted load leaves neither terrain changes nor channel messages. Malformed
-dimensions, rows and elevations are still rejected.
+Map files are TOML documents with a terrain grid, a level grid, depth and
+structure-height grids where needed, and an explicit list of bridges; see the
+"Map files" page of the documentation for the format. Any error in a map file
+rejects the whole file; `LOADMAP` also reports the reason to the `MapErrors`
+channel, when that channel exists.
 
 Inspection commands are read-only. All `@btech` operations require Wizard authority.
 No unit or map becomes active as a result of inspection.
@@ -512,8 +507,8 @@ maps can be edited and saved without reloading their source assets.
 | `=` | Wall | `wall` | height |
 | `}` | Sand | `sand` | height |
 
-In map files `.` is grassland, `'` is light forest, and `>` (temporary fire) and
-`:` load as grassland.
+Map files use the same symbols, except that bridges are listed separately and
+buildings, walls and water take their heights from their own grids.
 
 `@MAPEMIT <message>` broadcasts to the occupants of running units on the wizard's
 current map and privately confirms `Message sent!`. Unconscious crews do not receive
@@ -544,11 +539,12 @@ when shrinking past them. Lua uses `btech.map.resize(actor, map, width, height)`
 
 ## Save a map asset
 
-`SAVEMAP <name>` exports your current map to its configured map directory. Existing
-files are replaced atomically after the world transaction commits. Temporary fire
-reloads as grass; smoke exposes underlying terrain. Stale fire/smoke is cleaned
-from the live map. Map flags, gravity and temperature are saved whenever any of
-them differs from the defaults (no flags, gravity 100, 20°C). Relative subdirectories must already exist; destinations outside
+`SAVEMAP <name>` writes your current map to `<name>.toml` in its configured map
+directory. Existing files are replaced atomically after the world transaction
+commits. Temporary fire and smoke are not saved; each hex saves the terrain beneath
+them. Fire or smoke painted into the terrain itself is saved as clear ground, and
+cleaned from the live map, unless the map has permanent fire. Map flags, gravity
+and temperature are always saved. Relative subdirectories must already exist; destinations outside
 the map directory and symlinks are rejected. `Saving complete!` confirms the file
 replacement; a write failure preserves the previous file and reports an error.
 Stale-effect cleanup is already committed if the later file write fails.
@@ -557,8 +553,8 @@ or world save discards the queued write.
 
 ## Load a map asset
 
-`LOADMAP <name>` replaces your current map's terrain, dimensions and asset
-conditions, generates bridges, and removes map objects. GOD (#1) keeps units on
+`LOADMAP <name>` reads `<name>.toml` and replaces your current map's terrain,
+dimensions, bridges and conditions, and removes map objects. GOD (#1) keeps units on
 the map; other wizards shut down and clear units after loading. Shutdown falls
 therefore use the newly loaded terrain and conditions. Units keep their physical
 altitude until movement resolves it. Other map settings, including cloud base,
@@ -668,7 +664,6 @@ names. Map `flags` are:
 | `underground` | A ceiling blocks jumping and flight; artillery needs a spotter. |
 | `dark` | Units see only terrain in their line of sight. |
 | `indestructible_bridges` | Weapon fire cannot break bridges. |
-| `no_bridge_generation` | Loading does not turn roads over water into bridges. |
 | `no_friendly_fire` | Teammates cannot damage each other with non-coolant weapons. |
 | `no_physical_attacks` | Physical attacks are not allowed. |
 

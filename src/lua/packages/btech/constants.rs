@@ -1001,10 +1001,6 @@ pub(super) static MAP_FLAGS: Catalog = Catalog {
             value: 64,
         },
         Entry {
-            name: "NO_BRIDGE_GENERATION",
-            value: 128,
-        },
-        Entry {
             name: "NO_FRIENDLY_FIRE",
             value: 256,
         },

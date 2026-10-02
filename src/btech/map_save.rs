@@ -30,7 +30,12 @@ pub fn save_map_action(
             .get(&id)
             .context("Map not found")?
             .export_asset()?;
-        let request = crate::runtime::MapAssetWrite::new(config, actor, name, export.source)?;
+        let request = crate::runtime::MapAssetWrite::new(
+            config,
+            actor,
+            &format!("{name}.toml"),
+            export.source,
+        )?;
         for coordinate in export.stale_effects {
             let tile = before.btech.maps()[&id]
                 .base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;

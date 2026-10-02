@@ -21,8 +21,6 @@ pub enum BattleMapFlag {
     Dark,
     /// Weapon fire cannot break bridges.
     IndestructibleBridges,
-    /// Loading the map does not convert roads over water into bridges.
-    NoBridgeGeneration,
     /// Teammates cannot damage each other with non-coolant weapons.
     NoFriendlyFire,
     /// Physical attacks are not allowed.
@@ -31,14 +29,13 @@ pub enum BattleMapFlag {
 
 impl BattleMapFlag {
     /// Every flag, in bit order.
-    pub const ALL: [Self; 9] = [
+    pub const ALL: [Self; 8] = [
         Self::SpecialRules,
         Self::Vacuum,
         Self::PermanentFire,
         Self::Underground,
         Self::Dark,
         Self::IndestructibleBridges,
-        Self::NoBridgeGeneration,
         Self::NoFriendlyFire,
         Self::NoPhysicalAttacks,
     ];
@@ -52,7 +49,6 @@ impl BattleMapFlag {
             Self::Underground => 16,
             Self::Dark => 32,
             Self::IndestructibleBridges => 64,
-            Self::NoBridgeGeneration => 128,
             Self::NoFriendlyFire => 256,
             Self::NoPhysicalAttacks => 512,
         }
@@ -67,7 +63,6 @@ impl BattleMapFlag {
             Self::Underground => "underground",
             Self::Dark => "dark",
             Self::IndestructibleBridges => "indestructible_bridges",
-            Self::NoBridgeGeneration => "no_bridge_generation",
             Self::NoFriendlyFire => "no_friendly_fire",
             Self::NoPhysicalAttacks => "no_physical_attacks",
         }

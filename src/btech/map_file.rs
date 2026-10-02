@@ -6,24 +6,26 @@
 //! temperature = 20           # optional, default 20 (Celsius)
 //! flags = ["dark"]           # optional; when absent a reload keeps the map's current flags
 //!
-//! terrain = """
+//! terrain = '''
 //! ..""~~#.
 //! .^^"~~#.
-//! """
-//! level = """
+//! '''
+//! level = '''
 //! 00110000
 //! 02210000
-//! """
-//! depth = """               # water depth under every ~ and - hex; . elsewhere
+//! '''
+//! # Water depth under every ~ and - hex; . elsewhere.
+//! depth = '''
 //! ....23..
 //! ....34..
-//! """
+//! '''
 //!
 //! [[bridges]]
 //! deck = 2
 //! hexes = [[4, 0], [5, 0]]
 //! ```
 //!
+//! Grids are TOML literal strings (`'''`), since `"` is the heavy-woods symbol.
 //! `structure_height` gives the height of every `@` (building) and `=` (wall) hex the same way
 //! `depth` does for water. Heights use `0`-`9` then `a`-`z`. Width and height come from the
 //! grids, whose rows must all be the same length.
@@ -377,16 +379,16 @@ impl BattleMapAsset {
                 .trim_end()
         )?;
         writeln!(text)?;
-        writeln!(text, "terrain = \"\"\"\n{}\"\"\"", rows(&symbol))?;
+        writeln!(text, "terrain = '''\n{}'''", rows(&symbol))?;
         writeln!(
             text,
-            "level = \"\"\"\n{}\"\"\"",
+            "level = '''\n{}'''",
             rows(&|hex| height_symbol(hex.level()))
         )?;
         if has_water {
             writeln!(
                 text,
-                "depth = \"\"\"\n{}\"\"\"",
+                "depth = '''\n{}'''",
                 rows(&|hex| match hex.water() {
                     Some(water) => height_symbol(water.depth),
                     None => '.',
@@ -396,7 +398,7 @@ impl BattleMapAsset {
         if has_structures {
             writeln!(
                 text,
-                "structure_height = \"\"\"\n{}\"\"\"",
+                "structure_height = '''\n{}'''",
                 rows(&|hex| match hex.structure() {
                     Some(Structure::Building { height } | Structure::Wall { height }) => {
                         height_symbol(height)
@@ -434,22 +436,22 @@ gravity = 80
 temperature = -10
 flags = ["dark", "special_rules"]
 
-terrain = """
+terrain = '''
 .`"~-
 #%^@=
-"""
-level = """
+'''
+level = '''
 01200
 1a000
-"""
-depth = """
+'''
+depth = '''
 ...23
 .....
-"""
-structure_height = """
+'''
+structure_height = '''
 .....
 ...45
-"""
+'''
 
 [[bridges]]
 deck = 2
@@ -482,6 +484,12 @@ hexes = [[3, 0]]
         let text = map.to_file().unwrap();
         assert_eq!(BattleMapAsset::parse(&text).unwrap(), map);
         assert_eq!(map.to_file().unwrap(), text);
+        // Three heavy-woods hexes in a row would end a basic multi-line string.
+        let woods = BattleMapAsset::from_cells("3 1\n\"0\"0\"0\n").unwrap();
+        assert_eq!(
+            BattleMapAsset::parse(&woods.to_file().unwrap()).unwrap(),
+            woods
+        );
         let plain = BattleMapAsset::parse("terrain = \"..\\n\"\nlevel = \"01\\n\"").unwrap();
         let text = plain.to_file().unwrap();
         assert!(
