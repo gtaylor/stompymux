@@ -158,8 +158,6 @@ fn anti_missile_system_value_and_mass() {
     for (weapon, capacity, defensive, recycle) in [
         (BattleWeapon::AntiMissileSystem, 12, 388.5, 10),
         (BattleWeapon::ClanAntiMissileSystem, 24, 445.9, 10),
-        (BattleWeapon::LaserAms, 24, 475.3, 25),
-        (BattleWeapon::ClanLaserAms, 24, 475.3, 25),
     ] {
         let mut definition = BattleTemplate::parse("JR7-D", JENNER).unwrap();
         let arm = definition
@@ -174,14 +172,52 @@ fn anti_missile_system_value_and_mass() {
         arm.criticals.insert(5, part);
         let mut equipped = BattleUnit::from_template(definition).unwrap();
         assert_eq!(weapon.mass(), 512);
-        assert_eq!(
-            weapon.supports_targeting_computer(),
-            matches!(weapon, BattleWeapon::LaserAms | BattleWeapon::ClanLaserAms)
-        );
+        assert!(!weapon.supports_targeting_computer());
         assert_eq!(weapon.profile().recycle_seconds, recycle);
         assert_eq!(
             weapon.ammunition_explosion_damage(capacity),
             u32::from(capacity) * 2
+        );
+        assert!(equipped.ams_enabled());
+        score(&equipped, 215.0, defensive);
+        equipped
+            .destroy_critical(CriticalLocation {
+                section: BattleSection::LeftArm,
+                slot: 4,
+            })
+            .unwrap();
+        score(&equipped, 215.0, defensive);
+    }
+}
+
+/// Laser AMS draws on heat rather than a bin, so it adds defense without an ammunition penalty.
+#[test]
+fn laser_anti_missile_system_value_and_mass() {
+    for (weapon, mass, defensive) in [
+        (BattleWeapon::LaserAms, 1536, 412.3),
+        (BattleWeapon::ClanLaserAms, 1024, 412.3),
+    ] {
+        let mut definition = BattleTemplate::parse("JR7-D", JENNER).unwrap();
+        let arm = definition
+            .sections
+            .get_mut(&BattleSection::LeftArm)
+            .unwrap();
+        let mut part = arm.criticals[&2].clone();
+        part.equipment = weapon.name().into();
+        for slot in 4..4 + weapon.profile().critical_slots {
+            arm.criticals.insert(slot, part.clone());
+        }
+        let mut equipped = BattleUnit::from_template(definition).unwrap();
+        assert_eq!(weapon.mass(), mass);
+        assert_eq!(weapon.profile().ammunition_per_ton, 0);
+        assert!(weapon.supports_targeting_computer());
+        assert!(
+            !equipped
+                .loadout()
+                .unwrap()
+                .ammunition
+                .iter()
+                .any(|bin| bin.weapon == weapon)
         );
         assert!(equipped.ams_enabled());
         score(&equipped, 215.0, defensive);

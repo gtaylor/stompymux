@@ -137,7 +137,7 @@ fn engine_slots(loadout: &BattleLoadout) -> Result<[u8; 3]> {
 impl BattleUnit {
     /// Installed fusion-engine type, retained through critical or section losses.
     pub fn engine(&self) -> Result<BattleEngine> {
-        BattleEngine::resolve(&self.loadout()?, self.definition().has_special("Clan"))
+        BattleEngine::resolve(&self.loadout()?, self.definition().clan_engine())
     }
 }
 

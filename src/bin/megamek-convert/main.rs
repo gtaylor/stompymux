@@ -48,6 +48,8 @@ pub struct Converted {
     pub draft: draft::Draft,
     /// Suggested template reference, before sanitizing.
     pub reference: String,
+    /// Chassis-qualified reference to use when the suggested one is already taken.
+    pub full_reference: String,
     /// Data the converter dropped without failing.
     pub warnings: Vec<String>,
 }
@@ -63,8 +65,9 @@ fn main() -> Result<ExitCode> {
         "--reference names a single unit"
     );
     let mut failures = 0;
+    let mut written = std::collections::BTreeSet::new();
     for path in &args.files {
-        if let Err(error) = run(&args, path) {
+        if let Err(error) = run(&args, path, &mut written) {
             failures += 1;
             eprintln!("{}: error: {error:#}", path.display());
         }
@@ -82,8 +85,9 @@ fn main() -> Result<ExitCode> {
     })
 }
 
-/// Convert one file and print or write its template.
-fn run(args: &Args, path: &Path) -> Result<()> {
+/// Convert one file and print or write its template. `written` holds the references already
+/// written in this run, so two units sharing a model name never overwrite each other.
+fn run(args: &Args, path: &Path, written: &mut std::collections::BTreeSet<String>) -> Result<()> {
     let source = fs::read_to_string(path).context("reading")?;
     let converted = match path
         .extension()
@@ -98,7 +102,21 @@ fn run(args: &Args, path: &Path) -> Result<()> {
     for warning in &converted.warnings {
         eprintln!("{}: warning: {warning}", path.display());
     }
-    let reference = sanitize(args.reference.as_deref().unwrap_or(&converted.reference))?;
+    let reference = match &args.reference {
+        Some(reference) => sanitize(reference)?,
+        None => {
+            let suggested = sanitize(&converted.reference)?;
+            if written.contains(&suggested) {
+                sanitize(&converted.full_reference)?
+            } else {
+                suggested
+            }
+        }
+    };
+    ensure!(
+        !written.contains(&reference),
+        "another unit in this run already wrote {reference}; pass --reference"
+    );
     let template = finish(&reference, &converted.draft)?;
     let Some(directory) = &args.output_dir else {
         print!("{template}");
@@ -111,6 +129,7 @@ fn run(args: &Args, path: &Path) -> Result<()> {
         target.display()
     );
     fs::write(&target, template).with_context(|| format!("writing {}", target.display()))?;
+    written.insert(reference);
     eprintln!("{} -> {}", path.display(), target.display());
     Ok(())
 }

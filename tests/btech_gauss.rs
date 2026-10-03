@@ -75,7 +75,7 @@ fn gauss_catalog_inert_bins_and_mount_destruction() {
         ),
         (
             BattleWeapon::MagshotGaussRifle,
-            0,
+            1,
             2,
             2,
             50,

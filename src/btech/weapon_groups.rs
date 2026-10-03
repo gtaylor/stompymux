@@ -88,13 +88,7 @@ pub(super) fn roll_weapon_groups(
             BattleWeapon::ClanStreakLrm20 => BattleWeapon::ClanLrm20,
             _ => unreachable!("Streak family checked"),
         };
-        let groups = conventional.damage_groups_for_hit(cluster_roll, glancing, distance)?;
-        if weapon.profile().damage == 1 {
-            // Streak LRMs retain single-missile hit locations when their homing is confused.
-            vec![1; groups.iter().map(|&damage| usize::from(damage)).sum()]
-        } else {
-            groups
-        }
+        conventional.damage_groups_for_hit(cluster_roll, glancing, distance)?
     } else if weapon.is_rotary() && burst {
         weapon.rotary_damage_groups(fire_mode, cluster_roll.unwrap(), glancing)?
     } else if burst {
@@ -128,6 +122,7 @@ pub(super) fn roll_weapon_groups(
             glancing && !defer_glancing,
             distance,
             artemis_v,
+            guidance_blocked,
         )?
     };
     if defer_glancing {
@@ -260,7 +255,8 @@ mod tests {
                         Some(roll),
                         false,
                         None,
-                        true
+                        true,
+                        false
                     )
                     .unwrap(),
                 weapon
@@ -586,7 +582,7 @@ mod tests {
 mod streak_lrm_tests {
     use super::*;
 
-    /// Angel confusion switches to Clan LRM tables, preserving grouping and glancing penalties.
+    /// Streak LRMs group five-point hits; Angel confusion switches to the Clan LRM tables.
     #[test]
     fn streak_lrm_confusion_and_cluster_packets() {
         for (weapon, conventional) in [
@@ -622,12 +618,11 @@ mod streak_lrm_tests {
                         .unwrap();
                         assert_eq!(groups.cluster_roll, Some(roll));
                         let expected = if confused {
-                            let hits = conventional
+                            conventional
                                 .damage_groups_for_hit(Some(roll), glancing, Some(7.0))
-                                .unwrap();
-                            vec![1; hits.iter().map(|&damage| usize::from(damage)).sum()]
+                                .unwrap()
                         } else {
-                            vec![1; usize::from(weapon.profile().missiles)]
+                            vec![5; usize::from(weapon.profile().missiles / 5)]
                         };
                         assert_eq!(groups.damage, expected);
                         assert_eq!(dice, expected_dice);

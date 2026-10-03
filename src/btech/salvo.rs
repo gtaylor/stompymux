@@ -4,6 +4,23 @@ use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, bail, ensure};
 use serde::Serialize;
 
+/// Total Warfare cluster hits table, rows indexed by rack size and columns by the 2d6 roll.
+const CLUSTER_HITS: &[(u8, [u8; 11])] = &[
+    (2, [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2]),
+    (3, [1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3]),
+    (4, [1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4]),
+    (5, [1, 2, 2, 3, 3, 3, 3, 4, 4, 5, 5]),
+    (6, [2, 2, 3, 3, 4, 4, 4, 5, 5, 6, 6]),
+    (7, [2, 2, 3, 4, 4, 4, 4, 6, 6, 7, 7]),
+    (9, [3, 3, 4, 5, 5, 5, 5, 7, 7, 9, 9]),
+    (10, [3, 3, 4, 6, 6, 6, 6, 8, 8, 10, 10]),
+    (12, [4, 4, 5, 8, 8, 8, 8, 10, 10, 12, 12]),
+    (15, [5, 5, 6, 9, 9, 9, 9, 12, 12, 15, 15]),
+    (20, [6, 6, 9, 12, 12, 12, 12, 16, 16, 20, 20]),
+    (30, [10, 10, 12, 18, 18, 18, 18, 24, 24, 30, 30]),
+    (40, [12, 12, 18, 24, 24, 24, 24, 32, 32, 40, 40]),
+];
+
 impl BattleWeapon {
     /// Resolve an unmodified 2d6 cluster roll for a supported conventional launcher.
     pub fn missile_hits(self, roll: u8) -> Result<u8> {
@@ -12,21 +29,16 @@ impl BattleWeapon {
         {
             return Ok(self.profile().missiles);
         }
-        let table = match self {
-            Self::Mml3 => [1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3],
-            Self::Mml7 => [2, 2, 3, 4, 4, 4, 4, 6, 6, 7, 7],
-            Self::Mml9 => [3, 3, 4, 5, 5, 5, 5, 7, 7, 9, 9],
-            Self::ClanAtm3 => [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3],
-            Self::ClanAtm6 => [2, 2, 3, 3, 4, 4, 4, 5, 5, 6, 6],
-            Self::ClanAtm9 => [2, 2, 3, 4, 4, 5, 5, 6, 7, 8, 9],
-            Self::ClanAtm12 => [4, 4, 6, 6, 8, 8, 8, 10, 10, 12, 12],
+        let size = match self {
             Self::ClanSrm2
             | Self::Srm2
             | Self::ClanSrt2
             | Self::Srt2
             | Self::SrDfm2
             | Self::ClanLbx2
-            | Self::Lbx2 => [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2],
+            | Self::Lbx2 => 2,
+            Self::Mml3 | Self::ClanAtm3 => 3,
+            Self::ClanSrm4 | Self::Srm4 | Self::ClanSrt4 | Self::Srt4 | Self::SrDfm4 => 4,
             Self::Mml5
             | Self::ClanLrm5
             | Self::Lrm5
@@ -36,21 +48,35 @@ impl BattleWeapon {
             | Self::Elrm5
             | Self::LrDfm5
             | Self::ClanLbx5
-            | Self::Lbx5 => [1, 2, 2, 3, 3, 3, 3, 4, 4, 5, 5],
-            Self::ClanLrm10 | Self::ClanLrt10 => [3, 3, 4, 6, 6, 6, 6, 8, 8, 10, 10],
-            Self::ClanLrm15 | Self::ClanLrt15 => [5, 5, 6, 9, 9, 9, 9, 12, 12, 15, 15],
-            Self::Lrm10 | Self::Lrt10 | Self::Nlrm10 | Self::Rocket10 => {
-                [3, 4, 4, 5, 6, 6, 6, 8, 8, 10, 10]
-            }
-            Self::Lrm15 | Self::Lrt15 | Self::Nlrm15 | Self::Rocket15 => {
-                [5, 5, 9, 9, 9, 9, 9, 12, 12, 15, 15]
-            }
-            Self::ClanSrm4 | Self::Srm4 | Self::ClanSrt4 | Self::Srt4 | Self::SrDfm4 => {
-                [1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4]
-            }
-            Self::ClanSrm6 | Self::Srm6 | Self::ClanSrt6 | Self::Srt6 | Self::SrDfm6 => {
-                [2, 2, 3, 3, 4, 4, 4, 5, 5, 6, 6]
-            }
+            | Self::Lbx5 => 5,
+            Self::ClanSrm6
+            | Self::Srm6
+            | Self::ClanSrt6
+            | Self::Srt6
+            | Self::SrDfm6
+            | Self::ClanAtm6 => 6,
+            Self::Mml7 => 7,
+            Self::Mml9 | Self::ClanAtm9 => 9,
+            Self::ClanLrm10
+            | Self::ClanLrt10
+            | Self::Lrm10
+            | Self::Lrt10
+            | Self::Nlrm10
+            | Self::Rocket10
+            | Self::Elrm10
+            | Self::LrDfm10
+            | Self::ClanLbx10
+            | Self::Lbx10
+            | Self::Mrm10 => 10,
+            Self::ClanAtm12 => 12,
+            Self::ClanLrm15
+            | Self::ClanLrt15
+            | Self::Lrm15
+            | Self::Lrt15
+            | Self::Nlrm15
+            | Self::Rocket15
+            | Self::Elrm15
+            | Self::LrDfm15 => 15,
             Self::ClanLrm20
             | Self::ClanLrt20
             | Self::Lrt20
@@ -61,16 +87,16 @@ impl BattleWeapon {
             | Self::Elrm20
             | Self::LrDfm20
             | Self::ClanLbx20
-            | Self::Lbx20 => [6, 6, 9, 12, 12, 12, 12, 16, 16, 20, 20],
-            Self::Elrm10 | Self::LrDfm10 => [3, 4, 4, 5, 6, 6, 6, 7, 7, 10, 10],
-            Self::Elrm15 | Self::LrDfm15 => [5, 5, 9, 9, 9, 9, 12, 12, 12, 15, 15],
-            Self::ClanLbx10 | Self::Lbx10 => [3, 3, 4, 6, 6, 6, 6, 8, 8, 10, 10],
-            Self::Mrm10 => [2, 3, 4, 5, 6, 6, 6, 8, 8, 10, 10],
-            Self::Mrm30 => [10, 10, 12, 18, 18, 18, 18, 24, 24, 30, 30],
-            Self::Mrm40 => [12, 12, 18, 24, 24, 24, 24, 32, 32, 40, 40],
+            | Self::Lbx20 => 20,
+            Self::Mrm30 => 30,
+            Self::Mrm40 => 40,
             _ => bail!("Weapon is not a missile launcher"),
         };
-        Ok(table[usize::from(roll - 2)])
+        let (_, row) = CLUSTER_HITS
+            .iter()
+            .find(|(rack, _)| *rack == size)
+            .context("Missing cluster table row")?;
+        Ok(row[usize::from(roll - 2)])
     }
 
     /// Each group receives an independent location; dead-fire missiles always hit individually.
@@ -120,11 +146,11 @@ impl BattleWeapon {
         glancing: bool,
         distance: Option<f64>,
     ) -> Result<Vec<u16>> {
-        self.damage_groups_for_guided_hit(mode, cluster_roll, glancing, distance, false)
+        self.damage_groups_for_guided_hit(mode, cluster_roll, glancing, distance, false, false)
     }
 
     /// As [`Self::damage_groups_for_ammunition_hit`], with Artemis V guidance adding one more
-    /// to the Artemis cluster bonus.
+    /// to the Artemis cluster bonus. ATMs add their own guidance bonus unless ECM blocks it.
     pub(super) fn damage_groups_for_guided_hit(
         self,
         mode: super::BattleAmmunitionMode,
@@ -132,6 +158,7 @@ impl BattleWeapon {
         glancing: bool,
         distance: Option<f64>,
         artemis_v: bool,
+        guidance_blocked: bool,
     ) -> Result<Vec<u16>> {
         ensure!(!self.is_artillery(), "Artillery damage requires an arrival");
         ensure!(
@@ -192,7 +219,12 @@ impl BattleWeapon {
             (true, false) => 2,
             (false, _) => 0,
         };
-        let adjusted = i16::from(roll) + artemis_bonus - if glancing { 4 } else { 0 };
+        let atm_bonus = if self.is_atm() && !guidance_blocked {
+            super::atm::ATM_CLUSTER_BONUS
+        } else {
+            0
+        };
+        let adjusted = i16::from(roll) + artemis_bonus + atm_bonus - if glancing { 4 } else { 0 };
         let mut hits = if self.is_streak() {
             self.profile().missiles
         } else if glancing && adjusted < 2 {
@@ -234,22 +266,34 @@ impl BattleWeapon {
                     | Self::Elrm10
                     | Self::Elrm15
                     | Self::Elrm20
+                    | Self::ClanStreakLrm5
+                    | Self::ClanStreakLrm10
+                    | Self::ClanStreakLrm15
+                    | Self::ClanStreakLrm20
             ) {
             5
         } else {
             1
         };
+        let damage = if cluster {
+            1
+        } else {
+            u16::from(self.profile_for_ammunition(mode).damage)
+        };
         let mut groups = Vec::new();
+        if self.is_atm() {
+            // ATM damage lands in five-point clusters whatever the missile payload.
+            let mut remaining = u16::from(hits) * damage;
+            while remaining > 0 {
+                let group = remaining.min(5);
+                groups.push(group);
+                remaining -= group;
+            }
+            return Ok(groups);
+        }
         while hits > 0 {
             let count = hits.min(group_size);
-            groups.push(
-                u16::from(count)
-                    * if cluster {
-                        1
-                    } else {
-                        u16::from(self.profile_for_ammunition(mode).damage)
-                    },
-            );
+            groups.push(u16::from(count) * damage);
             hits -= count;
         }
         Ok(groups)
@@ -961,6 +1005,33 @@ mod tests {
         }
     }
 
+    /// The ATM's guidance adds two to the cluster roll unless ECM blocks it.
+    #[test]
+    fn atm_guidance_bonus_is_lost_to_ecm() {
+        use super::super::BattleAmmunitionMode as Mode;
+        for roll in 2..=12u8 {
+            let landed = |guidance_blocked| {
+                W::ClanAtm12
+                    .damage_groups_for_guided_hit(
+                        Mode::Normal,
+                        Some(roll),
+                        false,
+                        None,
+                        false,
+                        guidance_blocked,
+                    )
+                    .unwrap()
+                    .iter()
+                    .sum::<u16>()
+                    / 2
+            };
+            let guided = W::ClanAtm12.missile_hits((roll + 2).min(12)).unwrap();
+            let unguided = W::ClanAtm12.missile_hits(roll).unwrap();
+            assert_eq!(landed(false), u16::from(guided));
+            assert_eq!(landed(true), u16::from(unguided));
+        }
+    }
+
     #[test]
     fn glancing_damage_rounds_up_and_missiles_shift_clusters_without_halving_damage() {
         assert_eq!(
@@ -973,7 +1044,7 @@ mod tests {
             W::Ac20.damage_groups_for_hit(None, true, None).unwrap(),
             [10]
         );
-        for (weapon, expected) in [(W::LightAc2, 1), (W::LightAc5, 3), (W::HeavyMachineGun, 1)] {
+        for (weapon, expected) in [(W::LightAc2, 1), (W::LightAc5, 3), (W::HeavyMachineGun, 2)] {
             assert_eq!(
                 weapon.damage_groups_for_hit(None, true, None).unwrap(),
                 [expected]
@@ -982,29 +1053,29 @@ mod tests {
         for (weapon, expected) in [
             (W::Srm2, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]),
             (W::Lrm5, [1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 3]),
-            (W::Rocket10, [1, 1, 1, 1, 3, 4, 4, 5, 6, 6, 6]),
-            (W::Rocket15, [1, 1, 1, 1, 5, 5, 9, 9, 9, 9, 9]),
+            (W::Rocket10, [1, 1, 1, 1, 3, 3, 4, 6, 6, 6, 6]),
+            (W::Rocket15, [1, 1, 1, 1, 5, 5, 6, 9, 9, 9, 9]),
             (W::Rocket20, [1, 1, 1, 1, 6, 6, 9, 12, 12, 12, 12]),
-            (W::Lrm10, [1, 1, 1, 1, 3, 4, 4, 5, 6, 6, 6]),
-            (W::Lrm15, [1, 1, 1, 1, 5, 5, 9, 9, 9, 9, 9]),
+            (W::Lrm10, [1, 1, 1, 1, 3, 3, 4, 6, 6, 6, 6]),
+            (W::Lrm15, [1, 1, 1, 1, 5, 5, 6, 9, 9, 9, 9]),
             (W::Srm4, [1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3]),
             (W::Srm6, [1, 1, 1, 1, 2, 2, 3, 3, 4, 4, 4]),
             (W::Lrm20, [1, 1, 1, 1, 6, 6, 9, 12, 12, 12, 12]),
-            (W::Mrm10, [1, 1, 1, 1, 2, 3, 4, 5, 6, 6, 6]),
+            (W::Mrm10, [1, 1, 1, 1, 3, 3, 4, 6, 6, 6, 6]),
             (W::Mrm20, [1, 1, 1, 1, 6, 6, 9, 12, 12, 12, 12]),
             (W::Mrm30, [1, 1, 1, 1, 10, 10, 12, 18, 18, 18, 18]),
             (W::Mrm40, [1, 1, 1, 1, 12, 12, 18, 24, 24, 24, 24]),
             (W::Nlrm5, [1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 3]),
-            (W::Nlrm10, [1, 1, 1, 1, 3, 4, 4, 5, 6, 6, 6]),
-            (W::Nlrm15, [1, 1, 1, 1, 5, 5, 9, 9, 9, 9, 9]),
+            (W::Nlrm10, [1, 1, 1, 1, 3, 3, 4, 6, 6, 6, 6]),
+            (W::Nlrm15, [1, 1, 1, 1, 5, 5, 6, 9, 9, 9, 9]),
             (W::Nlrm20, [1, 1, 1, 1, 6, 6, 9, 12, 12, 12, 12]),
             (W::Elrm5, [1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 3]),
-            (W::Elrm10, [1, 1, 1, 1, 3, 4, 4, 5, 6, 6, 6]),
-            (W::Elrm15, [1, 1, 1, 1, 5, 5, 9, 9, 9, 9, 12]),
+            (W::Elrm10, [1, 1, 1, 1, 3, 3, 4, 6, 6, 6, 6]),
+            (W::Elrm15, [1, 1, 1, 1, 5, 5, 6, 9, 9, 9, 9]),
             (W::Elrm20, [1, 1, 1, 1, 6, 6, 9, 12, 12, 12, 12]),
             (W::LrDfm5, [1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 3]),
-            (W::LrDfm10, [1, 1, 1, 1, 3, 4, 4, 5, 6, 6, 6]),
-            (W::LrDfm15, [1, 1, 1, 1, 5, 5, 9, 9, 9, 9, 12]),
+            (W::LrDfm10, [1, 1, 1, 1, 3, 3, 4, 6, 6, 6, 6]),
+            (W::LrDfm15, [1, 1, 1, 1, 5, 5, 6, 9, 9, 9, 9]),
             (W::LrDfm20, [1, 1, 1, 1, 6, 6, 9, 12, 12, 12, 12]),
             (W::SrDfm2, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]),
             (W::SrDfm4, [1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3]),

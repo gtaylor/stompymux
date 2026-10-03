@@ -540,8 +540,10 @@ fn supercharger_technology_flag_and_critical_mass_match_construction_behavior() 
     let mut unit = BattleUnit::from_template(template.clone()).unwrap();
     assert!(unit.supercharger_installed());
     assert!(unit.supercharger_operational());
-    // The reference's critical-weight switch assigns no separate mass to this part.
-    assert_eq!(unit.mass().unwrap(), base.mass().unwrap());
+    // A supercharger weighs a tenth of the 19-ton engine, rounded up to the half ton.
+    let (with, without) = (unit.mass().unwrap(), base.mass().unwrap());
+    assert_eq!(with.equipment, without.equipment + 2048);
+    assert_eq!(with.total, without.total + 2048);
     assert!(matches!(
         unit.destroy_critical(compressor).unwrap(),
         Some(BattleCriticalLoss::System {

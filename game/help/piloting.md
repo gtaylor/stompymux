@@ -325,8 +325,8 @@ Streak SRM-2/4/6 and Clan Streak LRM-5/10/15/20 launchers require a successful
 lock before launching. A failed lock still starts the normal recycle time, but
 uses no ammunition or heat.
 Successful locks hit with every missile; glancing rules do not reduce the salvo.
-Streak LRMs have a six-hex minimum range, cannot fire indirectly or hotload,
-and resolve each missile as a separate one-point hit. Their recycle times are 15, 20, 25 and
+Streak LRMs have no minimum range, cannot fire indirectly or hotload,
+and group their damage into five-point hits like other LRMs. Their recycle times are 15, 20, 25 and
 30 seconds respectively. Angel ECM disrupts their lock protection and makes
 them use the Clan LRM cluster tables.
 
@@ -550,10 +550,8 @@ An empty bin prevents activation. Critical destruction disables AMS until its
 capability is restored. Lua can toggle with `btech.unit.ams(unit, pilot)` or set
 an explicit state with a third boolean argument.
 
-Laser AMS uses the same switch and requires matching ammunition in this game.
-Its recycle time is 25 seconds; IS laser AMS generates 12 heat per activation,
-and Clan laser AMS generates 1. An installation without a matching bin cannot
-intercept missiles.
+Laser AMS uses the same switch but needs no ammunition. Its recycle time is 25
+seconds; IS laser AMS generates 7 heat per activation and Clan laser AMS 5.
 
 ### Narc beacons
 
@@ -635,15 +633,16 @@ restart and continues after shutdown. Lua uses `btech.unit.removepods(unit, pilo
 ### Stealth armor
 
 `stealth` toggles equipped stealth armor after a 30-second delay. The assigned,
-conscious pilot must be in a running, placed unit with working Guardian ECM.
+conscious pilot must be in a running, placed unit with a working Guardian or
+Angel ECM suite. Stealth armor cannot be combined with a null signature system.
 Repeated requests leave the current transition unchanged.
 
 Active armor produces ten additional heat and disrupts your own electronic
 guidance. Enemy sensors cannot detect you, so enemies must see you or
 probe you with a Bloodhound; your own sensor band and probe are jammed too. Enemies firing at you take range penalties of 3 at medium range, 6 at
 long range and 12 at extreme range. Short and minimum range are unchanged.
-Shutdown or Guardian damage disables active armor. A pending switch only completes
-if the unit is running and Guardian equipment works when the delay expires.
+Shutdown or ECM damage disables active armor. A pending switch only completes
+if the unit is running and its ECM works when the delay expires.
 
 Lua provides `btech.unit.stealth(unit, pilot)`. Unit inspection exposes `stealth`,
 including its active selection and any pending switch.
@@ -1326,9 +1325,9 @@ second arm recovering. Use `punch` for bare fists.
 |---|---|---|---|---|
 | Axe | `Axe` | tons / 5 | -1 | yes |
 | Sword | `Sword` | tons / 10 + 1 | -2 | yes |
-| Mace | `Mace` | tons / 4 | +1 | yes |
+| Mace | `Mace` | tons / 4, rounded up | +1 | yes |
 | Dual saw | `Dual_Saw` | 7 | 0 | no |
-| Claw | `Claw` | tons / 7 | +1 | no |
+| Claw | `Claw` | tons / 7, rounded up | +1 | no |
 | Retractable blade | `Retractable_Blade` | tons / 10, rounded up | -2 | yes |
 | Lance | `Lance` | tons / 5 | +1 | no |
 | Flail | `Flail` | 9 | 0 | no |
@@ -1348,7 +1347,8 @@ more, one point of damage goes straight to internal structure, and its critical
 hit roll takes a -2 penalty. Once that location's armor is gone, the lance hits
 normally.
 
-Weapons need these working critical slots in one arm: retractable blade, one
+Weapons need these working critical slots in one arm: axe, sword and claw, one
+per 15 tons (rounded up); mace, one per 10 tons (rounded up); retractable blade, one
 per 20 tons (rounded up) plus one; lance, one per 20 tons (rounded up); flail 4;
 wrecking ball 5; chain whip 2; vibroblades 1, 2 or 4.
 
@@ -1360,12 +1360,13 @@ powered down after shutdown or restart. There is no cockpit command to power it
 back up.
 
 Clan ATM-3/6/9/12 launchers use 5/10/15 range bands, a four-hex minimum range,
-and two damage per missile. `atmrange <selection>` toggles Extended Range bins;
-`atmexplosive <selection>` toggles High Explosive bins. These commands also work
-on other eligible indirect missile launchers. A matching bin is required; toggle the command again to return to normal
-ammunition.
-As in the reference game, these two ammunition labels do not alter range or
-damage. Templates use the `ExtendedRange` and `HighExplosive` flags.
+and two damage per missile. Their built-in guidance adds 2 to the cluster roll
+unless ECM interferes, and damage lands in five-point groups.
+`atmrange <selection>` toggles Extended Range bins: one damage per missile at
+9/18/27 hexes with a four-hex minimum. `atmexplosive <selection>` toggles High
+Explosive bins: three damage per missile at 3/6/9 hexes with no minimum range.
+A matching bin is required; toggle the command again to return to normal
+ammunition. Templates use the `ExtendedRange` and `HighExplosive` flags.
 
 MML-3/5/7/9 launchers use dedicated MML ammunition. `mml <selection>` toggles
 between SRM and LRM supplies. SRMs use 3/6/9 range bands, no minimum range, and

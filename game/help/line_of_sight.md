@@ -33,8 +33,9 @@ them.
 
 ## Special equipment
 
-- Active probes (Beagle six hexes, Light three, Bloodhound eight) see through
-  terrain, woods, smoke and darkness and reveal hidden units. A probe contact
+- Active probes (Beagle four hexes, Clan active probe and Watchdog five, Light
+  three, Bloodhound eight) see through terrain, woods, smoke and darkness and
+  reveal hidden units. A probe contact
   behind a hill shows as `p` in `contacts`: you can lock it, spot it for indirect
   fire and share it over C3, but you cannot fire at it directly or scan it.
 - Radar on AntiAircraft units tracks airborne targets out to 180 hexes.

@@ -581,12 +581,7 @@ async fn anatomical_weapon_admission_shares_readiness_and_target_precedence() {
 #[tokio::test]
 async fn defensive_weapon_admission_precedes_targets_without_disabling_ams() {
     for source in [
-        include_str!("../game/mechs/JR7-D.toml")
-            .replace("IS.MediumLaser", "IS.LaserAMS")
-            .replace(
-                "item = \"Ammo_IS.SRM-4\", rounds = 25",
-                "item = \"Ammo_IS.LaserAMS\", rounds = 24",
-            ),
+        include_str!("../game/mechs/JR7-D.toml").replace("IS.MediumLaser", "IS.LaserAMS"),
         include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", "IS.Anti-MissileSystem"),
     ] {
         let (_dir, config, world, shooter, _) =

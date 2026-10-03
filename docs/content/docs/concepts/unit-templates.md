@@ -79,12 +79,20 @@ armor = "ferro_fibrous"
 | `gyro` | `standard`, `xl`, `compact`, `heavy_duty` |
 | `cockpit` | `standard`, `small` |
 | `structure` | `standard`, `endo_steel`, `composite`, `reinforced` |
-| `armor` | `standard`, `ferro_fibrous`, `light_ferro_fibrous`, `heavy_ferro_fibrous`, `stealth`, `hardened`, `laser_reflective`, `reactive` |
-| `heat_sinks` | `single`, `double`, `laser`, `compact`; Clan units default to and require doubles or better |
+| `armor` | `standard`, `ferro_fibrous`, `light_ferro_fibrous`, `heavy_ferro_fibrous`, `stealth`, `hardened`, `laser_reflective` |
+| `heat_sinks` | `single`, `double`, `laser`; Clan units default to and require doubles or better, and laser heat sinks are Clan only |
 | `myomer` | `standard`, `triple_strength` |
+| `engine_tech`, `structure_tech`, `armor_tech` | `inner_sphere`, `clan`; default to `tech_base` |
 
 Endo steel and ferro-fibrous slots are still listed in the sections: where
-they go is a design choice, not a consequence of the type.
+they go is a design choice, not a consequence of the type. Inner Sphere endo
+steel and ferro-fibrous armor fill fourteen slots and Clan versions seven.
+
+A mixed-technology unit may take its engine, structure or armor from the other
+technology base. An Inner Sphere Mech with a Clan XL engine sets
+`engine_tech = "clan"`, giving the engine two slots in each side torso and the
+Clan XL engine's mass; a Clan Mech with Inner Sphere ferro-fibrous armor sets
+`armor_tech = "inner_sphere"`.
 
 ## Sections
 
@@ -185,9 +193,18 @@ cargo run --bin megamek-convert -- "Atlas AS7-D.mtf"
 cargo run --bin megamek-convert -- --output-dir game/mechs units/*.mtf units/*.blk
 ```
 
-The reference is the mech's model (`AS7-D`), or its chassis and model when the
-model has no digits (`NightGyr-Prime`); vehicles use their name. Pass
-`--reference` to choose one for a single file.
+The reference is the mech's model when that is a designation such as `AS7-D`,
+or its chassis and model otherwise (`NightGyr-Prime`, `PackHunter-2`); vehicles
+use their name. When two units in one run would share a reference, the second
+takes the chassis-qualified one instead. Pass `--reference` to choose one for a
+single file.
+
+OmniMechs get the `OmniMech_Tech` special and a searchlight design quirk the
+`SearchLight` special; other quirks have no stompymux counterpart and are not
+converted. Mixed-technology units keep a Clan or Inner Sphere engine,
+structure or armor through the `[construction]` technology keys. CASE II, ECM
+suites and active probes take their technology from the chassis in stompymux,
+so one built from the other technology base is refused.
 
 Every converted unit must load and construct exactly as the game would, so the
 tool refuses anything stompymux cannot field instead of dropping it: other unit

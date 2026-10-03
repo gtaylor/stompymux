@@ -301,15 +301,15 @@ impl BattleWeapon {
             | Self::ClanMediumPulseLaser
             | Self::ClanSmallPulseLaser
             | Self::ClanMicroPulseLaser
-            | Self::ClanErLargePulseLaser
-            | Self::ClanErMediumPulseLaser
-            | Self::ClanErSmallPulseLaser
             | Self::SmallPulseLaser
             | Self::MediumPulseLaser
             | Self::LargePulseLaser
             | Self::XSmallPulseLaser
             | Self::XMediumPulseLaser
             | Self::XLargePulseLaser => -2,
+            Self::ClanErLargePulseLaser
+            | Self::ClanErMediumPulseLaser
+            | Self::ClanErSmallPulseLaser => -1,
             Self::ClanHeavyLargeLaser
             | Self::ClanHeavyMediumLaser
             | Self::ClanHeavySmallLaser

@@ -15621,7 +15621,7 @@ async fn fueled_flamer_modes_native_lua_and_saved_replay() {
     .unwrap();
     let pristine_db = snapshot_database(&config);
     for (weapon, mass, ranges) in [
-        (BattleWeapon::HeavyFlamer, 1024, (2, 4, 6)),
+        (BattleWeapon::HeavyFlamer, 1536, (2, 3, 4)),
         (BattleWeapon::VehicleFlamer, 512, (1, 2, 3)),
         (BattleWeapon::VehicleHeavyFlamer, 1024, (2, 4, 6)),
     ] {
@@ -16934,7 +16934,7 @@ async fn punch_profiles_boundaries_and_independent_arms() {
                 profile.damage,
                 profile.target_number
             ),
-            (4, 3, 1, 3)
+            (4, 3, 2, 3)
         );
         assert_eq!(profile.hit_table, BattleHitTable::Punch);
     }
@@ -17655,7 +17655,7 @@ async fn myomer_physical_damage_threshold_and_passive_loss() {
         )
         .unwrap();
         assert_eq!(kick.damage, if active { 14 } else { 7 });
-        assert_eq!(punch.damage, if active { 3 } else { 1 });
+        assert_eq!(punch.damage, if active { 4 } else { 2 });
         assert_eq!(trip.damage, 0);
         for slot in 2..8 {
             destroy_battle_critical(
@@ -17861,14 +17861,13 @@ fn install_test_handweapons(
     use stompymux_rs::*;
     let mut definition = world.btech.constructed_units()[&id].definition().clone();
     let equipment = handweapon_template_name(kind);
+    // A 35-ton mace fills four slots; the other hand weapons fill three.
+    let last = if kind == BattleArmAttack::Mace { 7 } else { 6 };
     for section in [BattleSection::LeftArm, BattleSection::RightArm] {
-        for (slot, name) in [
-            (2, "LowerActuator"),
-            (3, "HandOrFootActuator"),
-            (4, equipment),
-            (5, equipment),
-            (6, equipment),
-        ] {
+        for (slot, name) in [(2, "LowerActuator"), (3, "HandOrFootActuator")]
+            .into_iter()
+            .chain((4..=last).map(|slot| (slot, equipment)))
+        {
             definition
                 .sections
                 .get_mut(&section)
@@ -17921,10 +17920,10 @@ fn install_test_handweapons(
 async fn handweapon_profiles_parts_mass_and_myomer() {
     use stompymux_rs::*;
     let (_dir, config, original, id, target) = kick_fixture().await;
-    for (kind, damage, fixed_base, slot_mass) in [
-        (BattleArmAttack::Axe, 7, 4, 1024),
-        (BattleArmAttack::Mace, 8, 4, 1024),
-        (BattleArmAttack::Sword, 5, 3, 682),
+    for (kind, damage, fixed_base, slots, slot_mass) in [
+        (BattleArmAttack::Axe, 7, 4, 3, 1024),
+        (BattleArmAttack::Mace, 9, 4, 4, 1024),
+        (BattleArmAttack::Sword, 5, 3, 3, 682),
     ] {
         let mut base = original.clone();
         install_test_handweapons(&mut base, id, kind);
@@ -17935,8 +17934,8 @@ async fn handweapon_profiles_parts_mass_and_myomer() {
         let mut bare = base.clone();
         let mut state = serde_json::to_value(&bare.btech).unwrap();
         for section in ["LeftArm", "RightArm"] {
-            for slot in ["4", "5", "6"] {
-                state["constructed"][id.0.to_string()]["definition"]["sections"][section]["criticals"].as_object_mut().unwrap().remove(slot);
+            for slot in 4..4 + slots {
+                state["constructed"][id.0.to_string()]["definition"]["sections"][section]["criticals"].as_object_mut().unwrap().remove(&slot.to_string());
             }
         }
         bare.btech = serde_json::from_value(state).unwrap();
@@ -17958,7 +17957,7 @@ async fn handweapon_profiles_parts_mass_and_myomer() {
                 .mass()
                 .unwrap()
                 .equipment,
-            6 * slot_mass
+            2 * slots * slot_mass
         );
         assert!(
             base.btech.constructed_units()[&id]
@@ -18103,7 +18102,8 @@ async fn handweapon_profiles_parts_mass_and_myomer() {
             critical.notices.iter().any(|notice| notice.unit == id
                 && notice.text == format!("Your {name} has been destroyed!"))
         );
-        assert_eq!(
+        // A hand weapon fills exactly the slots it needs, so one critical hit disables it.
+        assert!(
             battle_arm_attack_profile(
                 &world,
                 id,
@@ -18113,8 +18113,7 @@ async fn handweapon_profiles_parts_mass_and_myomer() {
                 kind,
                 kick_rules()
             )
-            .is_ok(),
-            kind != BattleArmAttack::Mace
+            .is_err()
         );
         assert_eq!(
             world.btech.constructed_units()[&id]
@@ -19247,7 +19246,8 @@ async fn claw_parts_actuators_damage_and_dice() {
             },
         )
         .unwrap();
-        assert_eq!(profile(&base, kick_rules()).is_ok(), slot == 4);
+        // A claw needs every one of its slots: any critical hit puts it out of action.
+        assert!(profile(&base, kick_rules()).is_err());
         assert_eq!(
             base.btech.constructed_units()[&id]
                 .mass()
@@ -27013,12 +27013,13 @@ async fn unjam_character_server_tick_retries_failed_commit() {
     }).await;
 }
 
-/// Add a one-slot defense and matching bin without replacing the fixture's offensive mounts.
+/// Add a defense and, for ballistic AMS, a matching bin without replacing the fixture's
+/// offensive mounts.
 fn install_test_ams(
     world: &mut stompymux_rs::World,
     id: ObjectId,
     weapon: stompymux_rs::BattleWeapon,
-) -> (usize, usize) {
+) -> (usize, Option<usize>) {
     install_test_ams_at(world, id, weapon, stompymux_rs::BattleSection::LeftArm)
 }
 
@@ -27028,16 +27029,21 @@ fn install_test_ams_at(
     id: ObjectId,
     weapon: stompymux_rs::BattleWeapon,
     section: stompymux_rs::BattleSection,
-) -> (usize, usize) {
+) -> (usize, Option<usize>) {
     use stompymux_rs::*;
     let mut definition = world.btech.constructed_units()[&id].definition().clone();
     let arm = definition.sections.get_mut(&section).unwrap();
     let mut part = arm.criticals[&2].clone();
     part.equipment = weapon.name().into();
-    arm.criticals.insert(4, part.clone());
-    part.equipment = format!("Ammo_{}", weapon.name());
-    part.data = weapon.profile().ammunition_per_ton.to_string();
-    arm.criticals.insert(5, part);
+    let slots = weapon.profile().critical_slots;
+    for slot in 0..slots {
+        arm.criticals.insert(4 + slot, part.clone());
+    }
+    if weapon.profile().ammunition_per_ton > 0 {
+        part.equipment = format!("Ammo_{}", weapon.name());
+        part.data = weapon.profile().ammunition_per_ton.to_string();
+        arm.criticals.insert(4 + slots, part);
+    }
     let constructed = BattleUnit::from_template(definition.clone()).unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["constructed"][id.0.to_string()]["definition"] =
@@ -27052,11 +27058,7 @@ fn install_test_ams_at(
             .iter()
             .position(|m| m.weapon == weapon)
             .unwrap(),
-        loadout
-            .ammunition
-            .iter()
-            .position(|b| b.weapon == weapon)
-            .unwrap(),
+        loadout.ammunition.iter().position(|b| b.weapon == weapon),
     )
 }
 
@@ -27081,6 +27083,10 @@ async fn ams_interception_matrix(entries: &[(stompymux_rs::BattleWeapon, bool, f
             "laser",
             "flooded",
         ] {
+            let fed = weapon.profile().ammunition_per_ton > 0;
+            if !fed && matches!(case, "short" | "empty" | "no_bin" | "flooded") {
+                continue;
+            }
             restore_database(&config, &pristine_db);
             let (mut world, id, target) = (pristine.clone(), _id, _target);
             let (ams_index, bin) = install_test_ams(&mut world, target, weapon);
@@ -27127,7 +27133,7 @@ async fn ams_interception_matrix(entries: &[(stompymux_rs::BattleWeapon, bool, f
             shot_seed(&mut world, target, cluster_seed);
             let mut state = serde_json::to_value(&world.btech).unwrap();
             if matches!(case, "short" | "empty") {
-                state["constructed"][target.0.to_string()]["ammunition"][bin] =
+                state["constructed"][target.0.to_string()]["ammunition"][bin.unwrap()] =
                     if case == "short" { 1 } else { 0 }.into();
             }
             if case == "recycling" {
@@ -27137,7 +27143,7 @@ async fn ams_interception_matrix(entries: &[(stompymux_rs::BattleWeapon, bool, f
             if case == "flooded" {
                 state["constructed"][target.0.to_string()]["flooded_sections"] =
                     serde_json::json!(["LeftArm"]);
-                state["constructed"][target.0.to_string()]["ammunition"][bin] = 0.into();
+                state["constructed"][target.0.to_string()]["ammunition"][bin.unwrap()] = 0.into();
                 // A dry reserve bin isolates the disabled mount from the lack of supply.
                 let part = &mut state["constructed"][target.0.to_string()]["definition"]["sections"]
                     ["RightTorso"]["criticals"]["0"];
@@ -27226,10 +27232,10 @@ async fn ams_interception_matrix(entries: &[(stompymux_rs::BattleWeapon, bool, f
                 assert_eq!(ams.shot_down, roll.min(4));
                 assert_eq!(
                     ams.ammunition_spent,
-                    if case == "short" {
-                        1
-                    } else {
-                        u16::from(roll.min(4))
+                    match case {
+                        _ if !fed => 0,
+                        "short" => 1,
+                        _ => u16::from(roll.min(4)),
                     }
                 );
                 assert_eq!(
@@ -27240,11 +27246,13 @@ async fn ams_interception_matrix(entries: &[(stompymux_rs::BattleWeapon, bool, f
                     world.btech.constructed_units()[&target].heat().stored,
                     before.btech.constructed_units()[&target].heat().stored + heat
                 );
-                assert_eq!(
-                    world.btech.constructed_units()[&target].ammunition()[bin],
-                    before.btech.constructed_units()[&target].ammunition()[bin]
-                        - ams.ammunition_spent
-                );
+                if let Some(bin) = bin {
+                    assert_eq!(
+                        world.btech.constructed_units()[&target].ammunition()[bin],
+                        before.btech.constructed_units()[&target].ammunition()[bin]
+                            - ams.ammunition_spent
+                    );
+                }
                 let salvo = report.salvo.as_ref().unwrap().as_mech().unwrap();
                 assert_eq!(salvo.missiles_before_defense, Some(4));
                 assert_eq!(
@@ -27282,13 +27290,13 @@ async fn ams_interception_expenditure_eligibility_and_restart_clan_ams() {
 #[tokio::test]
 async fn ams_interception_expenditure_eligibility_and_restart_laser_ams() {
     use stompymux_rs::BattleWeapon;
-    ams_interception_matrix(&[(BattleWeapon::LaserAms, false, 12.0, 25)]).await;
+    ams_interception_matrix(&[(BattleWeapon::LaserAms, false, 7.0, 25)]).await;
 }
 
 #[tokio::test]
 async fn ams_interception_expenditure_eligibility_and_restart_clan_laser_ams() {
     use stompymux_rs::BattleWeapon;
-    ams_interception_matrix(&[(BattleWeapon::ClanLaserAms, true, 1.0, 25)]).await;
+    ams_interception_matrix(&[(BattleWeapon::ClanLaserAms, true, 5.0, 25)]).await;
 }
 /// Native and Lua controls/firing share defense effects and rollback all expenditure on callback abort.
 #[tokio::test]
@@ -27523,7 +27531,7 @@ async fn ams_multiple_mount_selection_and_capability_loss() {
         let (first, first_bin) = install_test_ams_at(
             &mut world,
             target,
-            BattleWeapon::LaserAms,
+            BattleWeapon::AntiMissileSystem,
             BattleSection::LeftArm,
         );
         let (second, second_bin) = install_test_ams_at(
@@ -27532,6 +27540,7 @@ async fn ams_multiple_mount_selection_and_capability_loss() {
             BattleWeapon::ClanAntiMissileSystem,
             BattleSection::RightArm,
         );
+        let (first_bin, second_bin) = (first_bin.unwrap(), second_bin.unwrap());
         world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
         assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
         start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
@@ -27613,15 +27622,14 @@ async fn ams_multiple_mount_selection_and_capability_loss() {
             assert_eq!(defense.weapon_index, if use_first { first } else { second });
             assert_eq!(
                 defense.ammunition_bin,
-                if use_first { first_bin } else { second_bin }
+                Some(if use_first { first_bin } else { second_bin })
             );
             assert_eq!(defense.roll, if use_first { 6 } else { 12 });
             assert_eq!(defense.shot_down, 4);
             assert_eq!(defense.ammunition_spent, 4);
             assert_eq!(
                 target_state.heat().stored,
-                before.btech.constructed_units()[&target].heat().stored
-                    + if use_first { 12.0 } else { 1.0 }
+                before.btech.constructed_units()[&target].heat().stored + 1.0
             );
             assert!(
                 report
@@ -27791,7 +27799,7 @@ async fn narc_pod_outcomes_and_restart() {
                     );
                 }
             }
-            assert_eq!(world.btech.constructed_units()[&id].heat().stored, 1.0);
+            assert_eq!(world.btech.constructed_units()[&id].heat().stored, 0.0);
             assert_eq!(
                 world.btech.constructed_units()[&id].weapon_recycle()[&index],
                 30
@@ -29735,13 +29743,13 @@ async fn nss_switch_damage_accounting_and_restart() {
             .unwrap()
             .equipment;
         install_test_nss(&mut world, id);
+        // The null signature system occupies seven slots but weighs nothing.
         assert_eq!(
             world.btech.constructed_units()[&id]
                 .mass()
                 .unwrap()
-                .equipment
-                - before_mass,
-            7 * 1024
+                .equipment,
+            before_mass
         );
         toggle_battle_null_signature(&mut world, id, ObjectId(1)).unwrap();
         let before = world.btech.clone();
@@ -29825,21 +29833,37 @@ async fn nss_switch_damage_accounting_and_restart() {
     }
 }
 
-/// Both concealment systems add heat, share one range adjustment, and retain distinct firing-lock rules.
+/// A null signature system cannot share a Mech with stealth armor; on its own it conceals the
+/// unit at range without requiring a firing lock.
 #[tokio::test]
-async fn nss_concealment_coexists_and_allows_unlocked_fire() {
+async fn nss_excludes_stealth_armor_and_allows_unlocked_fire() {
     use stompymux_rs::*;
     let (_dir, _config, mut world, id, target) = shot_fixture().await;
-    install_test_stealth(&mut world, target);
     install_test_nss(&mut world, target);
-    // Fit both systems by replacing each foot actuator with the NSS device.
+    let mut definition = world.btech.constructed_units()[&target]
+        .definition()
+        .clone();
+    let arm = &mut definition
+        .sections
+        .get_mut(&BattleSection::LeftArm)
+        .unwrap()
+        .criticals;
+    let free = (0..12).find(|slot| !arm.contains_key(slot)).unwrap();
+    arm.insert(
+        free,
+        CriticalDefinition {
+            equipment: "StealthArmor".into(),
+            data: "-".into(),
+            modes: vec![],
+        },
+    );
+    assert!(
+        BattleUnit::from_template(definition)
+            .unwrap_err()
+            .to_string()
+            .contains("cannot be combined with stealth armor")
+    );
     let mut state = serde_json::to_value(&world.btech).unwrap();
-    for section in ["LeftLeg", "RightLeg"] {
-        state["constructed"][target.0.to_string()]["definition"]["sections"][section]["criticals"]
-            ["5"]["equipment"] = "StealthArmor".into();
-        state["constructed"][target.0.to_string()]["definition"]["sections"][section]["criticals"]
-            ["3"] = serde_json::json!({"equipment":"NullSig_Device","data":"-","modes":[]});
-    }
     state["constructed"][target.0.to_string()]["power"] = serde_json::json!({"state":"running"});
     state["constructed"][target.0.to_string()]["null_signature"] =
         serde_json::json!({"enabled":true,"pending":null});
@@ -29850,17 +29874,6 @@ async fn nss_concealment_coexists_and_allows_unlocked_fire() {
     let mut fired = world.clone();
     let result = resolve_battle_shot(&mut fired, id, ObjectId(1), target, 0, shot_rules());
     assert!(result.is_ok(), "{result:?}");
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][target.0.to_string()]["stealth"] =
-        serde_json::json!({"enabled":true,"pending":null});
-    world.btech = serde_json::from_value(state).unwrap();
-    assert_eq!(
-        world.btech.constructed_units()[&target]
-            .heat_rates(&world)
-            .production,
-        20.0
-    );
-    assert!(battle_electronic_field(&world, target).unwrap().disturbed);
     let range = BattleWeapon::MediumLaser
         .range_modifier(4.0, false)
         .unwrap()
@@ -30239,7 +30252,7 @@ fn install_test_probe(
         BattleActiveProbe::Beagle => ("BeagleProbe", 2),
         BattleActiveProbe::Light => ("Light_BAP", 1),
         BattleActiveProbe::Bloodhound => ("BloodhoundProbe", 3),
-        BattleActiveProbe::Watchdog => ("ECM", 1),
+        BattleActiveProbe::Watchdog => ("ECM", 2),
     };
     let mut definition = world.btech.constructed_units()[&id].definition().clone();
     if probe == BattleActiveProbe::Watchdog {
@@ -30313,7 +30326,7 @@ async fn active_probe_equipment_damage_and_restart() {
             battle_perception_profile(&world, id).unwrap().probe,
             Some(BattleProbeProfile {
                 kind: probe,
-                range: u16::from(probe.range()),
+                range: u16::from(probe.range(false)),
                 status: BattlePerceptionStatus::Ready,
             })
         );

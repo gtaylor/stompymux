@@ -15,13 +15,9 @@ pub(super) fn priority<S: Eq>(preferred: Option<S>, mount: S, bin: S) -> u8 {
     2
 }
 
-/// Laser AMS retains catalogue ammunition fields but remains an energy weapon for cockpit controls.
+/// Only weapons fed by ammunition bins carry a preferred feed section.
 fn supports(weapon: super::BattleWeapon) -> bool {
     weapon.profile().ammunition_per_ton > 0
-        && !matches!(
-            weapon,
-            super::BattleWeapon::LaserAms | super::BattleWeapon::ClanLaserAms
-        )
 }
 
 /// Saved preferences may survive section damage but must refer to authored anatomy and ammo weapons.

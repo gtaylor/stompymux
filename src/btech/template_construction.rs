@@ -148,7 +148,6 @@ choice!(
         Stealth = "stealth" => ["StealthArmor_Tech"],
         Hardened = "hardened" => ["HardenedArmor_Tech", "HARM"],
         LaserReflective = "laser_reflective" => ["LaserRefArmor_Tech", "LRARM"],
-        Reactive = "reactive" => ["ReactiveArmor_Tech"],
     }
 );
 
@@ -158,7 +157,6 @@ choice!(
         Single = "single" => [],
         Double = "double" => ["DoubleHS"],
         Laser = "laser" => ["LaserHS_Tech", "LHS"],
-        Compact = "compact" => ["CompactHS"],
     }
 );
 
@@ -170,10 +168,55 @@ choice!(
     }
 );
 
+/// A chassis component that a mixed-technology unit may build from the other technology base.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub(super) enum Component {
+    Engine,
+    Structure,
+    Armor,
+}
+
+impl Component {
+    const ALL: [Self; 3] = [Self::Engine, Self::Structure, Self::Armor];
+
+    /// The `[construction]` key naming this component's technology base.
+    fn key(self) -> &'static str {
+        match self {
+            Self::Engine => "engine_tech",
+            Self::Structure => "structure_tech",
+            Self::Armor => "armor_tech",
+        }
+    }
+
+    /// The chassis flag recording that this component uses Clan (`clan`) or Inner Sphere
+    /// technology on a chassis of the other base.
+    pub(super) fn flag(self, clan: bool) -> &'static str {
+        match (self, clan) {
+            (Self::Engine, true) => "ClanEngine_Tech",
+            (Self::Engine, false) => "ISEngine_Tech",
+            (Self::Structure, true) => "ClanStructure_Tech",
+            (Self::Structure, false) => "ISStructure_Tech",
+            (Self::Armor, true) => "ClanArmor_Tech",
+            (Self::Armor, false) => "ISArmor_Tech",
+        }
+    }
+}
+
+/// Decode a `tech_base`-style spelling: `true` for Clan.
+fn tech_base(key: &str, value: &str) -> Result<bool> {
+    match value {
+        "inner_sphere" => Ok(false),
+        "clan" => Ok(true),
+        _ => bail!("{key} must be one of inner_sphere, clan"),
+    }
+}
+
 /// The `[construction]` table: technology types for the chassis and its fixed equipment.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(super) struct Construction {
     pub clan: bool,
+    /// Components built from the other technology base, in [`Component::ALL`] order.
+    pub mixed: Vec<Component>,
     pub engine: Engine,
     pub gyro: Gyro,
     pub cockpit: Cockpit,
@@ -195,6 +238,9 @@ struct ConstructionDocument {
     armor: Option<String>,
     heat_sinks: Option<String>,
     myomer: Option<String>,
+    engine_tech: Option<String>,
+    structure_tech: Option<String>,
+    armor_tech: Option<String>,
 }
 
 impl Construction {
@@ -202,10 +248,21 @@ impl Construction {
     pub fn decode(value: toml::Value) -> Result<Self> {
         let document: ConstructionDocument = value.try_into()?;
         let clan = match document.tech_base.as_deref() {
-            None | Some("inner_sphere") => false,
-            Some("clan") => true,
-            Some(_) => bail!("tech_base must be one of inner_sphere, clan"),
+            None => false,
+            Some(value) => tech_base("tech_base", value)?,
         };
+        let mut mixed = Vec::new();
+        for (component, value) in Component::ALL.into_iter().zip([
+            &document.engine_tech,
+            &document.structure_tech,
+            &document.armor_tech,
+        ]) {
+            if let Some(value) = value
+                && tech_base(component.key(), value)? != clan
+            {
+                mixed.push(component);
+            }
+        }
         let heat_sinks = match document.heat_sinks.as_deref() {
             None if clan => HeatSinks::Double,
             None => HeatSinks::Single,
@@ -217,6 +274,7 @@ impl Construction {
         );
         Ok(Self {
             clan,
+            mixed,
             engine: choice(document.engine, Engine::parse, "engine")?,
             gyro: choice(document.gyro, Gyro::parse, "gyro")?,
             cockpit: choice(document.cockpit, Cockpit::parse, "cockpit")?,
@@ -234,8 +292,21 @@ impl Construction {
             HeatSinks::Single if clan => HeatSinks::Double,
             heat_sinks => heat_sinks,
         };
+        let has = |name: &str| flags.iter().any(|flag| flag.eq_ignore_ascii_case(name));
+        let mut mixed = Vec::new();
+        for component in Component::ALL {
+            ensure!(
+                !has(component.flag(clan)),
+                "{} names the chassis technology base",
+                component.flag(clan)
+            );
+            if has(component.flag(!clan)) {
+                mixed.push(component);
+            }
+        }
         let construction = Self {
             clan,
+            mixed,
             engine: engine_from_flags(flags)?,
             gyro: Gyro::from_flags("gyro", flags)?,
             cockpit: Cockpit::from_flags("cockpit", flags)?,
@@ -267,7 +338,17 @@ impl Construction {
             flags.extend(self.heat_sinks.flags().first());
         }
         flags.extend(self.myomer.flags().first());
+        flags.extend(
+            self.mixed
+                .iter()
+                .map(|component| component.flag(!self.clan)),
+        );
         flags
+    }
+
+    /// Whether `component` is built from Clan technology.
+    pub fn clan_component(&self, component: Component) -> bool {
+        self.clan != self.mixed.contains(&component)
     }
 
     /// Render the non-default choices as a `[construction]` table, or nothing.
@@ -312,6 +393,14 @@ impl Construction {
                 line(key, value);
             }
         }
+        for component in &self.mixed {
+            let _ = writeln!(
+                lines,
+                "{} = \"{}\"",
+                component.key(),
+                if self.clan { "inner_sphere" } else { "clan" }
+            );
+        }
         if lines.is_empty() {
             return lines;
         }
@@ -343,9 +432,19 @@ fn choice<T: Default>(
     value.map_or(Ok(T::default()), |value| parse(key, &value))
 }
 
+/// Whether a flag records a component built from the other technology base.
+pub(super) fn mixed_technology_flag(flag: &str) -> bool {
+    Component::ALL.into_iter().any(|component| {
+        [true, false]
+            .into_iter()
+            .any(|clan| component.flag(clan).eq_ignore_ascii_case(flag))
+    })
+}
+
 /// Whether a flag is set by a construction choice or derived, so `specials` may not list it.
 pub(super) fn owned_flag(flag: &str) -> bool {
     flag.eq_ignore_ascii_case(CLAN)
+        || mixed_technology_flag(flag)
         || Engine::ALL
             .iter()
             .flat_map(|choice| choice.flags())
@@ -494,7 +593,10 @@ pub(super) fn fixed_equipment(
             omission.spelling()
         );
     }
-    let side_engine = match (construction.engine, construction.clan) {
+    let side_engine = match (
+        construction.engine,
+        construction.clan_component(Component::Engine),
+    ) {
         (Engine::Xl, false) => 3,
         (Engine::Xl, true) | (Engine::Light, _) => 2,
         (Engine::Xxl, false) => 6,
@@ -639,6 +741,7 @@ mod tests {
     fn choices_round_trip_through_flags() {
         let construction = Construction {
             clan: true,
+            mixed: vec![Component::Engine, Component::Armor],
             engine: Engine::Xl,
             gyro: Gyro::HeavyDuty,
             cockpit: Cockpit::Small,
@@ -682,6 +785,22 @@ mod tests {
         assert_eq!(clan.render(), "\n[construction]\ntech_base = \"clan\"\n");
         assert_eq!(table("").unwrap().render(), "");
         assert!(table("tech_base = \"clan\"\nheat_sinks = \"single\"").is_err());
+        // A component from the other technology base round-trips; one from the chassis base is
+        // the default and is not recorded.
+        let mixed = table("engine_tech = \"clan\"\narmor_tech = \"inner_sphere\"").unwrap();
+        assert_eq!(mixed.mixed, [Component::Engine]);
+        assert!(mixed.clan_component(Component::Engine));
+        assert!(!mixed.clan_component(Component::Armor));
+        assert_eq!(mixed.flags(), ["ClanEngine_Tech"]);
+        assert_eq!(mixed.render(), "\n[construction]\nengine_tech = \"clan\"\n");
+        let clan_mixed = table("tech_base = \"clan\"\nstructure_tech = \"inner_sphere\"").unwrap();
+        assert_eq!(clan_mixed.flags(), ["Clan", "ISStructure_Tech"]);
+        assert_eq!(
+            Construction::from_flags(&clan_mixed.flags()).unwrap().0,
+            clan_mixed
+        );
+        assert!(Construction::from_flags(&["Clan", "ClanEngine_Tech"]).is_err());
+        assert!(table("engine_tech = \"periphery\"").is_err());
         assert!(table("engine = \"warp\"").is_err());
         assert!(table("colour = \"red\"").is_err());
     }

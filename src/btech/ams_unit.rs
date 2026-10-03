@@ -3,11 +3,11 @@ use super::*;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
 
-/// One selected mount and its first usable normal-ammunition bin.
+/// One selected mount and its first usable normal-ammunition bin; laser AMS draws no ammunition.
 pub(super) struct Defense {
     pub index: usize,
     pub weapon: BattleWeapon,
-    pub bin: usize,
+    pub bin: Option<usize>,
 }
 
 /// Inspect the saved whole-unit switch without requiring a specific construction class.
@@ -112,8 +112,8 @@ pub(super) fn select(world: &World, id: ObjectId) -> Result<Option<Defense>> {
     ))
 }
 
-/// Select the first ready mount, then a matching bin with local-section preference.
-/// A ready but unloaded mount does not cause another mount to activate in the same attack.
+/// Select the first ready mount, then a matching bin with local-section preference. Laser AMS
+/// needs no bin. A ready but unloaded mount does not cause another mount to activate in the same attack.
 fn first_defense<L: Copy + Ord>(
     weapons: &[WeaponMount<L>],
     bins: &[AmmunitionBin<L>],
@@ -125,6 +125,13 @@ fn first_defense<L: Copy + Ord>(
         .iter()
         .enumerate()
         .find(|(index, mount)| mount.weapon.is_ams() && ready(*index, mount))?;
+    if mount.weapon.profile().ammunition_per_ton == 0 {
+        return Some(Defense {
+            index,
+            weapon: mount.weapon,
+            bin: None,
+        });
+    }
     let (bin, _) = bins
         .iter()
         .enumerate()
@@ -142,23 +149,26 @@ fn first_defense<L: Copy + Ord>(
     Some(Defense {
         index,
         weapon: mount.weapon,
-        bin,
+        bin: Some(bin),
     })
 }
 
-/// Commit capped supply and recycle to its owner; both carriers store weapon heat.
+/// Commit capped supply and recycle to its owner; both carriers store weapon heat. A mount
+/// without a bin spends no ammunition.
 pub(super) fn expend(
     world: &mut World,
     id: ObjectId,
     index: usize,
     weapon: BattleWeapon,
-    bin: usize,
+    bin: Option<usize>,
     rounds: u16,
 ) -> Result<u16> {
     let recycle = world.btech.weapon_settings.recycle_seconds(weapon);
     if let Some(unit) = world.btech.vehicles.get_mut(&id) {
-        let spent = unit.ammunition()[bin].min(rounds);
-        unit.expend_reserved_ammunition(bin, spent)?;
+        let spent = bin.map_or(0, |bin| unit.ammunition()[bin].min(rounds));
+        if let Some(bin) = bin {
+            unit.expend_reserved_ammunition(bin, spent)?;
+        }
         unit.weapon_heat += f64::from(weapon.profile().heat);
         unit.weapon_recycle.insert(index, u16::from(recycle));
         return Ok(spent);
@@ -168,8 +178,10 @@ pub(super) fn expend(
         .constructed
         .get_mut(&id)
         .context("Unit is unavailable")?;
-    let spent = unit.ammunition[bin].min(rounds);
-    unit.ammunition[bin] -= spent;
+    let spent = bin.map_or(0, |bin| unit.ammunition[bin].min(rounds));
+    if let Some(bin) = bin {
+        unit.ammunition[bin] -= spent;
+    }
     unit.live_mass.invalidate();
     unit.heat.stored += f64::from(weapon.profile().heat);
     unit.weapon_recycle.insert(index, u16::from(recycle));

@@ -96,8 +96,9 @@ fn stealth_equipment_layout_and_accounting() {
             part.equipment = "AngelEcm".into();
         }
     }
+    // Any ECM suite powers stealth armor, the Angel as well as the Guardian.
     assert!(
-        !BattleUnit::from_template(angel_only)
+        BattleUnit::from_template(angel_only)
             .unwrap()
             .has_stealth_armor()
             .unwrap()

@@ -5,8 +5,8 @@ linkTitle: "atmrange"
 manualLinkTitle: "atmrange"
 ---
 
-Toggle Extended Range ammunition on an eligible indirect launcher; requires matching bins.
-This reference ammunition marker does not change the weapon's range or damage profile.
+Toggle Extended Range ammunition on an ATM launcher; requires matching bins.
+Extended Range missiles deal one damage each at 9/18/27 hexes with a four-hex minimum.
 
 ## Signature
 

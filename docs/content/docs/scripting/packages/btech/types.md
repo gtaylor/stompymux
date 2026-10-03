@@ -871,7 +871,7 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 ## BattleAmsReport
 
 - `weapon_index`: `integer` — Zero-based defensive weapon index.
-- `ammunition_bin`: `integer` — Selected normal-ammunition bin.
+- `ammunition_bin`: `integer|nil` — Selected normal-ammunition bin; nil for laser AMS, which uses none.
 - `roll`: `integer` — Interception capacity before rack and cluster limits.
 - `ammunition_spent`: `integer` — May be less than interception capacity.
 - `shot_down`: `integer` — Actual intercepted hits after the missile meets its base target number.

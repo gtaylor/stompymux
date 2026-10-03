@@ -104,6 +104,29 @@ impl BattleTemplate {
         1
     }
 
+    /// Whether a component is Clan technology: the chassis base unless a mixed-technology flag
+    /// names the other base.
+    fn clan_component(&self, component: super::template_construction::Component) -> bool {
+        let clan = self.has_special("Clan");
+        clan != self.has_special(component.flag(!clan))
+    }
+
+    /// Whether the engine is a Clan engine, which governs XL and XXL side slots and mass.
+    pub(crate) fn clan_engine(&self) -> bool {
+        self.clan_component(super::template_construction::Component::Engine)
+    }
+
+    /// Whether the internal structure is Clan technology, which governs endo steel slots.
+    pub(crate) fn clan_structure(&self) -> bool {
+        self.clan_component(super::template_construction::Component::Structure)
+    }
+
+    /// Whether the armor is Clan technology, which governs ferro-fibrous and reflective slots
+    /// and ferro-fibrous protection per ton.
+    pub(crate) fn clan_armor(&self) -> bool {
+        self.clan_component(super::template_construction::Component::Armor)
+    }
+
     /// Test a chassis technology by its full name or the reference's abbreviation, which
     /// templates use interchangeably.
     pub(crate) fn has_technology(&self, technology: super::BattleTechnology) -> bool {

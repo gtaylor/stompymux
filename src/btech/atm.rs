@@ -1,10 +1,44 @@
-//! ATM ammunition controls reuse indirect-launcher eligibility, feed selection and transaction ordering.
-use super::BattleAmmunitionMode;
+//! Advanced Tactical Missiles: Extended Range and High Explosive ammunition profiles, and
+//! ammunition controls that reuse indirect-launcher eligibility, feed selection and
+//! transaction ordering.
+use super::{BattleAmmunitionMode, BattleWeapon, WeaponProfile};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
+/// Cluster-roll bonus from the ATM's integral guidance, which ECM suppresses.
+pub(super) const ATM_CLUSTER_BONUS: i16 = 2;
+
+impl BattleWeapon {
+    /// Clan Advanced Tactical Missile launchers.
+    pub fn is_atm(self) -> bool {
+        matches!(
+            self,
+            Self::ClanAtm3 | Self::ClanAtm6 | Self::ClanAtm9 | Self::ClanAtm12
+        )
+    }
+
+    /// Extended Range missiles trade damage for reach and High Explosive missiles trade reach
+    /// for damage; standard ammunition keeps the catalogue profile.
+    pub(super) fn atm_profile(
+        mut profile: WeaponProfile,
+        ammunition: BattleAmmunitionMode,
+    ) -> WeaponProfile {
+        let (damage, minimum, short, medium, long) = match ammunition {
+            BattleAmmunitionMode::ExtendedRange => (1, 4, 9, 18, 27),
+            BattleAmmunitionMode::HighExplosive => (3, 0, 3, 6, 9),
+            _ => return profile,
+        };
+        profile.damage = damage;
+        profile.minimum_range = minimum;
+        profile.short_range = short;
+        profile.medium_range = medium;
+        profile.long_range = long;
+        profile
+    }
+}
+
 impl BattleAmmunitionMode {
-    /// Cockpit wording for the selected ATM ammunition marker; normal profiles remain unchanged.
+    /// Cockpit wording for the selected ATM ammunition.
     pub(crate) fn atm_message(self, index: usize) -> String {
         let label = match self {
             Self::ExtendedRange => "Extended Range",

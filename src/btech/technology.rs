@@ -185,7 +185,7 @@ impl super::BattleTemplate {
             })
             .count();
         let expected = if self.has_technology(BattleTechnology::LaserReflectiveArmor) {
-            reflective_armor_slots(self.has_special("Clan"))
+            reflective_armor_slots(self.clan_armor())
         } else {
             0
         };

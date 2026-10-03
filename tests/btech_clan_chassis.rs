@@ -196,18 +196,30 @@ fn clan_game_assets_construct_without_rewriting_templates() {
     }
 }
 
-/// The laser-sink designation is retained but does not override the chassis sink rules.
+/// Laser heat sinks are Clan technology; on a Clan chassis the designation keeps the double
+/// sink rules.
 #[test]
-fn laser_sink_designation_preserves_single_and_double_sink_behavior() {
-    for mut template in [
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
-        definition(),
-    ] {
+fn laser_sink_designation_preserves_double_sink_behavior() {
+    let mut inner_sphere =
+        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+    let specials = inner_sphere
+        .attributes
+        .entry("specials".into())
+        .or_default();
+    if specials == "-" {
+        specials.clear();
+    }
+    specials.push_str(" LaserHS_Tech");
+    assert!(
+        BattleUnit::from_template(inner_sphere)
+            .unwrap_err()
+            .to_string()
+            .contains("Laser heat sinks are Clan technology")
+    );
+    {
+        let mut template = definition();
         let baseline = BattleUnit::from_template(template.clone()).unwrap();
         let specials = template.attributes.entry("specials".into()).or_default();
-        if specials == "-" {
-            specials.clear();
-        }
         specials.push_str(" LaserHS_Tech");
         let mut unit = BattleUnit::from_template(template).unwrap();
         assert_eq!(unit.mass().unwrap(), baseline.mass().unwrap());

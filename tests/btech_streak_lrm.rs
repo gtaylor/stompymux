@@ -14,7 +14,7 @@ fn launched(report: &mlua::Table) -> bool {
     report.get("launched").unwrap()
 }
 
-/// Four authored launchers retain stable economy identities and single-missile packet sizing.
+/// Four authored launchers retain stable economy identities and five-point packet sizing.
 #[test]
 fn streak_lrm_catalogue_and_packet_facts() {
     for (weapon, id, size, slots, capacity, mass, heat, recycle) in [
@@ -43,7 +43,7 @@ fn streak_lrm_catalogue_and_packet_facts() {
                 p.medium_range,
                 p.long_range
             ),
-            (1, 6, 7, 14, 21)
+            (1, 0, 7, 14, 21)
         );
         assert_eq!(BattlePart::from_id(id).unwrap().name, weapon.name());
         assert_eq!(
@@ -59,7 +59,7 @@ fn streak_lrm_catalogue_and_packet_facts() {
             assert_eq!(weapon.missile_hits(roll).unwrap(), size);
             assert_eq!(
                 weapon.damage_groups(Some(roll)).unwrap(),
-                vec![1; usize::from(size)]
+                vec![5; usize::from(size / 5)]
             );
         }
     }

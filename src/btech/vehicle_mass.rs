@@ -129,23 +129,24 @@ impl BattleVehicleTemplate {
                 })
             })
             .sum();
-        let protection = if self.has_special("FerroFibrous_Tech") {
-            protection * 50 / if self.has_special("Clan") { 60 } else { 56 }
+        // Fiftieths of a standard armor point that one point of this armor is worth.
+        let denominator = if self.has_special("FerroFibrous_Tech") {
+            if self.has_special("Clan") { 60 } else { 56 }
         } else if self.has_special("HvyFerroFibrous_Tech") {
-            protection * 50 / 62
+            62
         } else if self.has_special("LtFerroFibrous_Tech") {
-            protection * 50 / 53
+            53
         } else if self.has_technology(super::BattleTechnology::HardenedArmor) {
-            protection * 2
+            25
         } else {
-            protection
+            50
         };
-        let armor = half_ton(protection * 1024 / 16);
+        let armor = super::mass::armor_mass(protection, denominator);
         let equipment = loadout
             .weapons
             .iter()
             .filter(|mount| present(mount.criticals[0].section))
-            .map(|mount| mount.weapon.mass())
+            .map(|mount| mount.weapon.mass() + super::mass::one_shot_mass(mount))
             .sum::<u32>()
             + loadout
                 .systems
@@ -244,7 +245,14 @@ impl BattleVehicleTemplate {
             BattleSystem::Sword => {
                 u32::from(self.tons.div_ceil(10)) * 512 / u32::from(self.tons.div_ceil(15))
             }
-            BattleSystem::BeagleProbe => 1536,
+            // A Clan active probe weighs a ton; the Beagle a ton and a half.
+            BattleSystem::BeagleProbe => {
+                if self.has_special("Clan") {
+                    1024
+                } else {
+                    1536
+                }
+            }
             BattleSystem::ArtemisIv => {
                 if self.has_technology(super::BattleTechnology::ArtemisV) {
                     1536
@@ -252,7 +260,9 @@ impl BattleVehicleTemplate {
                     1024
                 }
             }
-            BattleSystem::RetractableBlade => u32::from(self.tons.div_ceil(20)) * 1024 + 512,
+            BattleSystem::RetractableBlade => {
+                512 + super::mass::half_ton((u32::from(self.tons) * 1024).div_ceil(20))
+            }
             BattleSystem::Lance => u32::from(self.tons.div_ceil(20)) * 1024,
             BattleSystem::WreckingBall => 4096,
             BattleSystem::ChainWhip | BattleSystem::SmallVibroblade => 3072,

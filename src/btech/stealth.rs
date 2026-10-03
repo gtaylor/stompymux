@@ -9,13 +9,21 @@ impl BattleUnit {
         self.stealth
     }
 
-    /// Bipeds require Guardian ECM and two passive armor slots in each arm, leg and side torso.
+    /// Stealth armor draws on any working ECM suite, Guardian or Angel.
+    pub(super) fn stealth_ecm_available(&self) -> Result<bool> {
+        Ok(
+            self.electronic_suite_available(BattleElectronicSuite::Guardian)?
+                || self.electronic_suite_available(BattleElectronicSuite::Angel)?,
+        )
+    }
+
+    /// Bipeds require an ECM suite and two passive armor slots in each arm, leg and side torso.
     pub fn has_stealth_armor(&self) -> Result<bool> {
         let loadout = self.loadout()?;
         Ok(loadout
             .systems
             .iter()
-            .any(|part| part.system == BattleSystem::Ecm)
+            .any(|part| matches!(part.system, BattleSystem::Ecm | BattleSystem::AngelEcm))
             && BattleSection::ALL
                 .into_iter()
                 .filter(|section| {
@@ -34,13 +42,11 @@ impl BattleUnit {
                 }))
     }
 
-    /// Loss of power or Guardian equipment clears the active effect without retargeting a pending event.
+    /// Loss of power or ECM equipment clears the active effect without retargeting a pending event.
     pub(super) fn reconcile_stealth(&mut self) {
         if self.stealth.enabled
             && (self.power() != BattlePower::Running
-                || !self
-                    .electronic_suite_available(BattleElectronicSuite::Guardian)
-                    .unwrap_or(false))
+                || !self.stealth_ecm_available().unwrap_or(false))
         {
             self.stealth.enabled = false;
         }
@@ -50,7 +56,7 @@ impl BattleUnit {
     pub(super) fn validate_stealth(&self) -> Result<()> {
         ensure!(
             self.stealth == BattleSignatureState::default() || self.has_stealth_armor()?,
-            "Stealth state requires complete installed armor and Guardian ECM"
+            "Stealth state requires complete installed armor and ECM"
         );
         ensure!(
             self.stealth
@@ -60,9 +66,8 @@ impl BattleUnit {
         );
         ensure!(
             !self.stealth.enabled
-                || (self.power() == BattlePower::Running
-                    && self.electronic_suite_available(BattleElectronicSuite::Guardian)?),
-            "Active stealth requires running, working Guardian ECM"
+                || (self.power() == BattlePower::Running && self.stealth_ecm_available()?),
+            "Active stealth requires running, working ECM"
         );
         Ok(())
     }
@@ -79,8 +84,8 @@ pub fn toggle_stealth(world: &mut World, id: ObjectId, pilot: ObjectId) -> Resul
         "Your 'mech isn't equipped with a Stealth Armor system!"
     );
     ensure!(
-        unit.electronic_suite_available(BattleElectronicSuite::Guardian)?,
-        "Your 'mech doesn't have a working Guardian ECM suite!"
+        unit.stealth_ecm_available()?,
+        "Your 'mech doesn't have a working ECM suite!"
     );
     ensure!(
         unit.stealth.pending.is_none(),
@@ -120,10 +125,8 @@ pub fn advance_stealth(world: &mut World) -> Vec<BattleNotice> {
     }
     let mut notices = Vec::new();
     for (&id, unit) in &mut world.btech.constructed {
-        let available = unit.power() == BattlePower::Running
-            && unit
-                .electronic_suite_available(BattleElectronicSuite::Guardian)
-                .unwrap_or(false);
+        let available =
+            unit.power() == BattlePower::Running && unit.stealth_ecm_available().unwrap_or(false);
         if let Some(enabled) = unit.stealth.advance(available) {
             notices.push(BattleNotice {
                 unit: id,
