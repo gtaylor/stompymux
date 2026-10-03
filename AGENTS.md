@@ -10,6 +10,7 @@ stompymux-rs is a Rust rewrite of stompymux, a C-based MUD server that includes 
 - `docs`: Docs for the game server and its sources.
 - `src`: Location of all Rust sources for the game and its supporting utilities.
 - `src/btech`: Battletech extensions that layer on top of the base MUX game server.
+- `crates/mapgen`: Standalone map generation library and `mapgen` CLI. Keep it free of dependencies on the server crate so map editors can embed it.
 - `tests`: Integration tests.
 
 ## Principals

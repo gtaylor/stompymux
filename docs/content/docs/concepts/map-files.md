@@ -14,6 +14,9 @@ Each map is a TOML document named `<name>.toml`. The name is what `LOADMAP`,
 reads `game/maps/CC.top.toml`. Names may include subdirectories that already
 exist under the map directory.
 
+To generate a map from a biome, size, settlements and roads instead of drawing
+one by hand, see [Map generation](../map-generation/).
+
 `just check-maps` (part of `just checks`) parses every map in `game/maps` and
 fails if any would not load.
 

@@ -605,6 +605,55 @@ hexes = [[3, 0]]
         assert!(!plain.to_file().unwrap().contains("overlay"));
     }
 
+    /// Every biome the map generator offers, with every kind of settlement, loads as a valid
+    /// battlefield.
+    #[test]
+    fn generated_maps_load() {
+        use stompymux_mapgen::{
+            Amount, Biome, MapSize, MapSpec, RoadSpec, SettlementKind, SettlementSize,
+            SettlementSpec, generate,
+        };
+        let settlement = |size, kind| SettlementSpec {
+            kind: Some(kind),
+            walled: Some(true),
+            ..SettlementSpec::new(size)
+        };
+        for biome in Biome::ALL {
+            let spec = MapSpec {
+                seed: Some(1),
+                biome: Some(biome),
+                size: Some(MapSize::Medium),
+                fire: Some(Amount::Low),
+                settlements: vec![
+                    settlement(SettlementSize::City, SettlementKind::Civilian),
+                    settlement(SettlementSize::Village, SettlementKind::Ruins),
+                    settlement(SettlementSize::Hamlet, SettlementKind::Industrial),
+                    settlement(SettlementSize::Outpost, SettlementKind::Military),
+                ],
+                roads: Some(RoadSpec {
+                    width: Some(2),
+                    through_roads: Some(2),
+                    ..RoadSpec::default()
+                }),
+                ..MapSpec::default()
+            };
+            let generated = generate(&spec).unwrap();
+            let map = BattleMapAsset::parse(&generated.to_toml().unwrap())
+                .unwrap_or_else(|error| panic!("{biome:?}: {error:#}"));
+            assert_eq!((map.width, map.height), (50, 50));
+            for (index, hex) in generated.map.hexes.iter().enumerate() {
+                let (x, y) = (index % 50, index / 50);
+                let loaded = map.hex(x as i32, y as i32).unwrap();
+                assert_eq!(loaded.level(), hex.level, "{biome:?} at {x},{y}");
+                assert_eq!(loaded.deck_clearance(), hex.bridge, "{biome:?} at {x},{y}");
+            }
+            crate::btech::state::map_from_asset("generated", map)
+                .unwrap()
+                .validate()
+                .unwrap_or_else(|error| panic!("{biome:?}: {error:#}"));
+        }
+    }
+
     #[test]
     fn missing_flags_keep_inherited_ones() {
         let source = "terrain = \".\\n\"\nlevel = \"0\\n\"";

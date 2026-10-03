@@ -83,6 +83,11 @@ docsite:
 docsite-serve:
     npm --prefix docs run serve
 
+# Generate a battlefield map file, e.g.
+# `just mapgen generate --biome desert --settlement town@center -o game/maps/dunes.toml`.
+mapgen *args:
+    cargo run --quiet -p stompymux-mapgen --bin mapgen -- {{args}}
+
 # Fail when any map file in game/maps would not load.
 check-maps:
     cargo run --quiet --bin map-check -- game/maps
