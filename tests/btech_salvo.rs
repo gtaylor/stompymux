@@ -86,10 +86,12 @@ async fn salvo_locations_replay_and_restart_preserves_every_group_and_roll() {
         BattleTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
     )
     .unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([0; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([0; 32])).unwrap();
+        })
+        .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let before = world.clone();
     let rules = BattleHitRules {
@@ -197,10 +199,12 @@ async fn tactical_fixture() -> (
 /// Seed only unit hit-selection dice, retaining the rest of a validated fixture snapshot.
 fn seeded_target(world: &stompymux_rs::World, id: ObjectId, seed: u8) -> stompymux_rs::World {
     let mut trial = world.clone();
-    let mut state = serde_json::to_value(&trial.btech).unwrap();
-    state["constructed"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-    trial.btech = serde_json::from_value(state).unwrap();
+    trial
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        })
+        .unwrap();
     trial
 }
 
@@ -293,9 +297,12 @@ async fn pilot_loss_stops_remaining_missile_groups_without_rolling_them() {
         inferno_penalty: false,
         exile_stun_mode: 0,
     };
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["pilot_injuries"] = 5.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["pilot_injuries"] = 5.into();
+        })
+        .unwrap();
     for seed in 0..=255 {
         let mut trial = seeded_target(&world, id, seed);
         let mut dice = BattleDice::seeded([seed; 32]);
@@ -361,13 +368,16 @@ async fn rear_weapon_hits_ignite_one_dumped_salvo_and_replay_after_restart() {
     let mut selected = None;
     for seed in 0..=255 {
         let mut trial = seeded_target(&world, id, seed);
-        let mut state = serde_json::to_value(&trial.btech).unwrap();
-        state["constructed"][id.0.to_string()]["dumping"] = serde_json::to_value(BattleDump {
-            selection: BattleDumpSelection::Slot(bin.location),
-            phase: 4,
-        })
-        .unwrap();
-        trial.btech = serde_json::from_value(state).unwrap();
+        trial
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["dumping"] = serde_json::to_value(BattleDump {
+                    selection: BattleDumpSelection::Slot(bin.location),
+                    phase: 4,
+                })
+                .unwrap();
+            })
+            .unwrap();
         let before = trial.clone();
         let report = resolve_battle_tactical_salvo(
             &mut trial,

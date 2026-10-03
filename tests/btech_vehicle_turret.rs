@@ -325,9 +325,12 @@ async fn powered_off_turret_repair_retries_failed_server_ticks() {
 #[tokio::test]
 async fn automatic_turret_controls_tracking_gates_and_restart() {
     let (_dir, config, mut world, id) = fixture().await;
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][id.0.to_string()]["power"] = serde_json::to_value(BattlePower::Off).unwrap();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+        })
+        .unwrap();
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let before = scripts.world().btech.clone();
     assert!(
@@ -344,10 +347,12 @@ async fn automatic_turret_controls_tracking_gates_and_restart() {
     assert!(!battle_automatic_turrets_pending(&scripts.world()));
     assert!(toggle_battle_automatic_turret(&mut scripts.world_mut(), id, ObjectId(2)).is_err());
     let mut world = scripts.world().clone();
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][id.0.to_string()]["power"] =
-        serde_json::to_value(BattlePower::Running).unwrap();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+        })
+        .unwrap();
     select_battle_hex_target(
         &mut world,
         id,
@@ -374,12 +379,15 @@ async fn automatic_turret_controls_tracking_gates_and_restart() {
         ("turret_locked", serde_json::json!(true)),
     ] {
         let mut stopped = world.clone();
-        let mut state = serde_json::to_value(&stopped.btech).unwrap();
-        state["vehicles"][id.0.to_string()][field] = value;
-        if field == "power" {
-            state["vehicles"][id.0.to_string()]["target_lock"] = serde_json::Value::Null;
-        }
-        stopped.btech = serde_json::from_value(state).unwrap();
+        stopped
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record[field] = value;
+                if field == "power" {
+                    record["target_lock"] = serde_json::Value::Null;
+                }
+            })
+            .unwrap();
         let before = stopped.btech.clone();
         assert!(!battle_automatic_turrets_pending(&stopped), "{field}");
         advance_battle_automatic_turrets(&mut stopped);
@@ -397,14 +405,20 @@ async fn automatic_turret_controls_tracking_gates_and_restart() {
     advance_battle_automatic_turrets(&mut unconscious);
     assert_eq!(unconscious.btech, before);
     let mut stunned = world.clone();
-    let mut snapshot = serde_json::to_value(&stunned.btech).unwrap();
-    snapshot["vehicles"][id.0.to_string()]["crew_stun_remaining"] = 1.into();
-    stunned.btech = serde_json::from_value(snapshot).unwrap();
+    stunned
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["crew_stun_remaining"] = 1.into();
+        })
+        .unwrap();
     advance_battle_automatic_turrets(&mut stunned);
     assert_eq!(stunned.btech.vehicles()[&id].turret_heading(), Some(180.0));
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()]["motion"]["heading"] = 120.5.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["motion"]["heading"] = 120.5.into();
+        })
+        .unwrap();
     advance_battle_automatic_turrets(&mut world);
     assert_eq!(world.btech.vehicles()[&id].turret_heading(), Some(180.0));
     world.validate(&config).unwrap();
@@ -466,11 +480,14 @@ async fn automatic_turret_tracks_moving_units_and_hexes() {
     set_battle_turret(&mut world, id, ObjectId(1), 90.0).unwrap();
     advance_battle_automatic_turrets(&mut world);
     assert_eq!(world.btech.vehicles()[&id].turret_heading(), Some(0.0));
-    let mut moved = serde_json::to_value(&world.btech).unwrap();
-    moved["constructed"][target.0.to_string()]["position"]["y"] = 2.into();
-    moved["constructed"][target.0.to_string()]["motion"]["point"] =
-        serde_json::to_value(BattleHexCoordinate { x: 1, y: 2 }.center()).unwrap();
-    world.btech = serde_json::from_value(moved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(target, |record| {
+            record["position"]["y"] = 2.into();
+            record["motion"]["point"] =
+                serde_json::to_value(BattleHexCoordinate { x: 1, y: 2 }.center()).unwrap();
+        })
+        .unwrap();
     world.validate(&config).unwrap();
     advance_battle_automatic_turrets(&mut world);
     assert_eq!(world.btech.vehicles()[&id].turret_heading(), Some(180.0));

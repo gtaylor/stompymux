@@ -172,10 +172,12 @@ async fn fatal_vehicle_character_injury_evacuates_atomically_and_preserves_mater
 
 /// Set only the vehicle's random stream; character recovery keeps its independent seed.
 fn seed_vehicle(world: &mut World, id: ObjectId, seed: u8) {
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        })
+        .unwrap();
 }
 
 #[tokio::test]
@@ -443,10 +445,12 @@ async fn nested_crew_death_finishes_weapon_damage_before_single_evacuation() {
             Some(seed)
         })
         .unwrap();
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded(seed)).unwrap();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
+        })
+        .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let rules = BattleVehicleCriticalRules {
         rotor_damage_divisor: 0,
@@ -660,17 +664,15 @@ async fn fire_exposure_evacuates_crew_and_rolls_back_failed_publication() {
             Some(seed)
         })
         .unwrap();
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded(seed)).unwrap();
-    for section in saved["vehicles"][id.0.to_string()]["sections"]
-        .as_object_mut()
-        .unwrap()
-        .values_mut()
-    {
-        section["armor"] = 0.into();
-    }
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
+            for section in record["sections"].as_object_mut().unwrap().values_mut() {
+                section["armor"] = 0.into();
+            }
+        })
+        .unwrap();
     let rules = BattleVehicleCriticalRules {
         rotor_damage_divisor: 0,
         extended_piloting: false,
@@ -705,10 +707,13 @@ async fn scheduled_fires_publish_character_injuries_and_fatal_evacuation_with_re
         if fatal {
             injure_battle_character_pilot(&mut initial, id, 9, false).unwrap();
         }
-        let mut saved = serde_json::to_value(&initial.btech).unwrap();
-        saved["vehicles"][id.0.to_string()]["burning_sections"] = serde_json::json!({"front":1});
-        saved["vehicles"][id.0.to_string()]["sections"]["front"]["armor"] = 0.into();
-        initial.btech = serde_json::from_value(saved).unwrap();
+        initial
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["burning_sections"] = serde_json::json!({"front":1});
+                record["sections"]["front"]["armor"] = 0.into();
+            })
+            .unwrap();
         let (before, expected, expected_report) = (0..=255)
             .find_map(|seed| {
                 let mut world = initial.clone();
@@ -842,10 +847,13 @@ async fn character_mine_heat_evacuates_after_packets_and_rolls_back_the_field() 
         }),
     )
     .unwrap();
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["vehicles"][id.0.to_string()]["motion"]["heading"] = 180.0.into();
-    encoded["vehicles"][id.0.to_string()]["motion"]["desired_heading"] = 180.0.into();
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["motion"]["heading"] = 180.0.into();
+            record["motion"]["desired_heading"] = 180.0.into();
+        })
+        .unwrap();
     let seed = (0..=255)
         .find(|seed| {
             let mut dice = BattleDice::seeded([*seed; 32]);
@@ -889,15 +897,13 @@ async fn character_mine_heat_evacuates_after_packets_and_rolls_back_the_field() 
 #[tokio::test]
 async fn advanced_thermal_actions_publish_nested_character_feedback_once() {
     let (_dir, config, mut base, id, _) = fixture().await;
-    let mut saved = serde_json::to_value(&base.btech).unwrap();
-    for section in saved["vehicles"][id.0.to_string()]["sections"]
-        .as_object_mut()
-        .unwrap()
-        .values_mut()
-    {
-        section["armor"] = 0.into();
-    }
-    base.btech = serde_json::from_value(saved).unwrap();
+    base.btech
+        .rewrite_unit_record(id, |record| {
+            for section in record["sections"].as_object_mut().unwrap().values_mut() {
+                section["armor"] = 0.into();
+            }
+        })
+        .unwrap();
     let mut rules = BattleVehicleImpactRules::STANDARD;
     rules.advanced_fire = true;
     rules.criticals.table = BattleVehicleCriticalTable::Standard;
@@ -969,10 +975,12 @@ async fn character_vehicle_falls_share_personal_injury_and_atomic_evacuation() {
         let seed = (0..=255)
             .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
             .unwrap();
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        saved["vehicles"][id.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        world.btech = serde_json::from_value(saved).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            })
+            .unwrap();
         let rules = BattleMovementRules::STANDARD.fall;
         let before = world.btech.clone();
         assert!(resolve_battle_vehicle_fall(&mut world, id, 0, rules).is_err());
@@ -1037,12 +1045,13 @@ async fn character_vehicle_fall_protection_reuses_control_experience() {
     let seed = (0..=255)
         .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
         .unwrap();
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-    saved["vehicles"][id.0.to_string()]["definition"]["attributes"]["specials"] =
-        "ICEEngine_Tech CritProof_Tech".into();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            record["definition"]["attributes"]["specials"] = "ICEEngine_Tech CritProof_Tech".into();
+        })
+        .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let report = resolve_battle_vehicle_fall_action(
         &scripts,
@@ -1081,12 +1090,14 @@ async fn character_surface_fractures_publish_vehicle_injuries_atomically() {
             let seed = (0..=255)
                 .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
                 .unwrap();
-            let mut saved = serde_json::to_value(&world.btech).unwrap();
-            saved["vehicles"][id.0.to_string()]["dice"] =
-                serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-            saved["vehicles"][id.0.to_string()]["definition"]["attributes"]["specials"] =
-                "ICEEngine_Tech CritProof_Tech".into();
-            world.btech = serde_json::from_value(saved).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                    record["definition"]["attributes"]["specials"] =
+                        "ICEEngine_Tech CritProof_Tech".into();
+                })
+                .unwrap();
             let map = world.btech.vehicles()[&id].position().unwrap().map;
             let coordinate = BattleHexCoordinate { x: 0, y: 0 };
             let rules = BattleMovementRules::STANDARD.fall;

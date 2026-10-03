@@ -132,11 +132,13 @@ async fn vehicle_aim_combines_mixed_targets_controls_locks_and_saved_replay() {
             },
         )
         .unwrap();
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        saved["vehicles"][shooter.0.to_string()]["motion"]["speed"] = serde_json::json!(10.0);
-        saved["vehicles"][shooter.0.to_string()]["motion"]["desired_speed"] =
-            serde_json::json!(10.0);
-        world.btech = serde_json::from_value(saved).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(shooter, |record| {
+                record["motion"]["speed"] = serde_json::json!(10.0);
+                record["motion"]["desired_speed"] = serde_json::json!(10.0);
+            })
+            .unwrap();
         let damaged =
             battle_pilot_aim_modifiers(&world, shooter, target, 0, false, rules()).unwrap();
         assert_eq!(damaged.control_damage, 1);
@@ -209,10 +211,13 @@ async fn vehicle_aim_applies_computer_and_ammunition_accuracy_without_fire_admis
     refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     let equipped = battle_aim_modifiers(&world, shooter, target, 0, 6, rules()).unwrap();
     assert_eq!(equipped.targeting_computer, -1);
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][shooter.0.to_string()]["ammunition_modes"]["0"] =
-        serde_json::to_value(BattleAmmunitionMode::ArmorPiercing).unwrap();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(shooter, |record| {
+            record["ammunition_modes"]["0"] =
+                serde_json::to_value(BattleAmmunitionMode::ArmorPiercing).unwrap();
+        })
+        .unwrap();
     let ap = battle_aim_modifiers(&world, shooter, target, 0, 6, rules()).unwrap();
     assert_eq!(ap.ammunition_accuracy, 1);
     assert_eq!(ap.subtotal(), equipped.subtotal().map(|n| n + 1));

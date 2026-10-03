@@ -112,10 +112,12 @@ async fn clan_ammunition_containment_and_sink_losses_survive_restart() {
     base.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_unit(&mut base, id, definition()).unwrap();
     let mut corrupt = base.clone();
-    let mut state = serde_json::to_value(&corrupt.btech).unwrap();
-    state["constructed"][id.0.to_string()]["lost_criticals"] =
-        serde_json::json!([{"section":"LeftTorso","slot":2}]);
-    corrupt.btech = serde_json::from_value(state).unwrap();
+    corrupt
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["lost_criticals"] = serde_json::json!([{"section":"LeftTorso","slot":2}]);
+        })
+        .unwrap();
     assert!(corrupt.validate(&config).is_err());
     destroy_battle_critical(
         &mut base,
@@ -128,10 +130,11 @@ async fn clan_ammunition_containment_and_sink_losses_survive_restart() {
     .unwrap();
     let mut found = false;
     for seed in 0..=u8::MAX {
-        let mut state = serde_json::to_value(&base.btech).unwrap();
-        state["constructed"][id.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        base.btech = serde_json::from_value(state).unwrap();
+        base.btech
+            .rewrite_unit_record(id, |record| {
+                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            })
+            .unwrap();
         let hit = BattleHit {
             section: BattleSection::RightTorso,
             rear_armor: false,

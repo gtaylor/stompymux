@@ -19,14 +19,7 @@ pub fn templates() -> Vec<String> {
 
 /// Edit only explicitly selected saved test state, retaining the normal validation path.
 pub fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Value)) {
-    let key = if world.btech.vehicles().contains_key(&id) {
-        "vehicles"
-    } else {
-        "constructed"
-    };
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    change(&mut state[key][id.0.to_string()]);
-    world.btech = serde_json::from_value(state).unwrap();
+    world.btech.rewrite_unit_record(id, change).unwrap();
 }
 
 /// A configurable recipient supports both ground and airborne target admission cases.

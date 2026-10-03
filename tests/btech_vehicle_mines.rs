@@ -61,9 +61,12 @@ async fn vehicle_mine_queries_use_live_mass_and_preserve_saved_state() {
         [3, 5, 9]
     );
     assert_eq!(world.btech, original);
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["vehicles"][id.0.to_string()]["ammunition"][0] = 4.into();
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["ammunition"][0] = 4.into();
+        })
+        .unwrap();
     let mass = world.btech.vehicles()[&id].mass().unwrap();
     assert_eq!(mass.total / 1024, 79);
     let before = world.btech.clone();

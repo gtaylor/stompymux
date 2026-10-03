@@ -289,9 +289,11 @@ async fn vehicle_lock_snapshots_reject_invalid_countdowns_targets_and_coordinate
         serde_json::json!({"hex":{"x":-1,"y":0},"mode":"hex","remaining":8}),
     ] {
         let mut bad = world.clone();
-        let mut saved = serde_json::to_value(&bad.btech).unwrap();
-        saved["vehicles"][observer.0.to_string()]["target_lock"] = value;
-        bad.btech = serde_json::from_value(saved).unwrap();
+        bad.btech
+            .rewrite_unit_record(observer, |record| {
+                record["target_lock"] = value;
+            })
+            .unwrap();
         assert!(bad.validate(&config).is_err());
     }
     for field in ["remaining", "power"] {

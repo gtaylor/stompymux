@@ -222,10 +222,11 @@ async fn split_gauss_explosion_origin_case_and_restart() {
         crew_stun: false,
     };
     for seed in 0..=255 {
-        let mut state = serde_json::to_value(&base.btech).unwrap();
-        state["constructed"][id.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        base.btech = serde_json::from_value(state).unwrap();
+        base.btech
+            .rewrite_unit_record(id, |record| {
+                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            })
+            .unwrap();
         let mut fired = base.clone();
         let report = resolve_battle_impact(&mut fired, id, hit, 1).unwrap();
         if !report.criticals.iter().any(|(slot, loss)| {
@@ -490,10 +491,12 @@ async fn repeated_split_proxy_criticals_accumulate_once_and_replay() {
                 if unit.sections()[&extension].armor == 0 {
                     expected.two_d6();
                 }
-                let mut state = serde_json::to_value(&world.btech).unwrap();
-                state["constructed"][id.0.to_string()]["dice"] =
-                    serde_json::to_value(dice).unwrap();
-                world.btech = serde_json::from_value(state).unwrap();
+                world
+                    .btech
+                    .rewrite_unit_record(id, |record| {
+                        record["dice"] = serde_json::to_value(dice).unwrap();
+                    })
+                    .unwrap();
                 persistence::save(&config.database(), &world).await.unwrap();
                 let mut replay = persistence::load(&config.database()).await.unwrap();
                 let report = resolve_battle_impact(&mut world, id, hit, 1).unwrap();

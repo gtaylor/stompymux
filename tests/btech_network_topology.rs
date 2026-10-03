@@ -344,10 +344,12 @@ async fn autopilot_observation_includes_relayed_network_sightings() {
     )
     .unwrap();
     // Once the observer acquires the enemy itself, the contact is direct.
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["constructed"][observer.0.to_string()]["contacts"][enemy.0.to_string()] =
-        serde_json::json!({"identified":true});
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(observer, |record| {
+            record["contacts"][enemy.0.to_string()] = serde_json::json!({"identified":true});
+        })
+        .unwrap();
     let contact = observe(&world)
         .contacts
         .into_iter()

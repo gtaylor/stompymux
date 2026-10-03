@@ -407,9 +407,11 @@ async fn shutdown_inferno_expiry_retries_failed_save() {
 async fn shutdown_radio_xp_gate_retries_failed_save() {
     tokio::task::LocalSet::new().run_until(async {
         let (_dir, config, mut world, id) = fixture().await;
-        let mut encoded = serde_json::to_value(&world.btech).unwrap();
-        encoded["constructed"][id.0.to_string()]["radio_experience_remaining"] = 1.into();
-        world.btech = serde_json::from_value(encoded).unwrap();
+        world.btech
+            .rewrite_unit_record(id, |record| {
+        record["radio_experience_remaining"] = 1.into();
+        })
+            .unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let expected = world.btech.clone();
         let mut sql = SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();

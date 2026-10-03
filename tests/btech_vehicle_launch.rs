@@ -33,10 +33,12 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 
 /// Install deterministic shooter dice while keeping the rest of construction unchanged.
 fn seed(world: &mut World, id: ObjectId, value: u8) {
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
+        })
+        .unwrap();
 }
 
 /// Give every slot entry for `item` in a template document the listed modes.
@@ -243,9 +245,12 @@ async fn vehicle_gatling_preparation_precedes_attack_and_burst_supply_falls_back
     );
     let (_dir, _config, mut world, id) = fixture(&template).await;
     seed(&mut world, id, 17);
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][id.0.to_string()]["ammunition"] = serde_json::json!([5, 0, 0, 0]);
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["ammunition"] = serde_json::json!([5, 0, 0, 0]);
+        })
+        .unwrap();
     let mut dice = BattleDice::seeded([17; 32]);
     dice.d6();
     let expected_roll = dice.two_d6();
@@ -271,9 +276,12 @@ async fn vehicle_gatling_preparation_precedes_attack_and_burst_supply_falls_back
     );
     let (_dir, _config, mut world, id) = fixture(&template).await;
     seed(&mut world, id, 17);
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][id.0.to_string()]["ammunition"] = serde_json::json!([1, 0, 0, 0]);
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["ammunition"] = serde_json::json!([1, 0, 0, 0]);
+        })
+        .unwrap();
     let report = launch_battle_vehicle_weapon(&mut world, request(id)).unwrap();
     assert_eq!(report.expenditure.fire_mode, BattleFireMode::Normal);
     assert_eq!(
@@ -641,9 +649,12 @@ async fn vehicle_misload_policy_and_caseless_short_supply_are_retained() {
             .unwrap();
         let mut world = base.clone();
         seed(&mut world, id, value);
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        saved["vehicles"][id.0.to_string()]["ammunition"] = serde_json::json!([1, 0, 0, 0]);
-        world.btech = serde_json::from_value(saved).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["ammunition"] = serde_json::json!([1, 0, 0, 0]);
+            })
+            .unwrap();
         let report = launch_battle_vehicle_weapon(&mut world, request(id)).unwrap();
         assert_eq!(report.loader_destroyed, ignition);
         assert_eq!(report.jammed, !ignition);

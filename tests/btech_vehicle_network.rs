@@ -466,11 +466,14 @@ async fn vehicle_hex_aim_reuses_weapon_terms_modes_and_read_only_lua() {
         hotload_half_minimum: false,
         override_weapon_arcs: false,
     };
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][shooter.0.to_string()]["motion"]["speed"] = 20.into();
-    saved["vehicles"][shooter.0.to_string()]["motion"]["desired_speed"] = 20.into();
-    saved["vehicles"][shooter.0.to_string()]["gunnery_damage"] = 1.into();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(shooter, |record| {
+            record["motion"]["speed"] = 20.into();
+            record["motion"]["desired_speed"] = 20.into();
+            record["gunnery_damage"] = 1.into();
+        })
+        .unwrap();
     let unit = battle_aim_modifiers(&world, shooter, target, index, 4, rules).unwrap();
     for mode in [
         BattleHexTargetMode::UnitAtHex,
@@ -565,10 +568,12 @@ async fn vehicle_hex_aim_shares_mixed_network_range_and_rejects_stinger() {
         Some(units[5].0)
     );
     assert_eq!(aim.modifiers.range.unwrap().modifier, 0);
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][shooter.0.to_string()]["ammunition_modes"][index.to_string()] =
-        "stinger".into();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(shooter, |record| {
+            record["ammunition_modes"][index.to_string()] = "stinger".into();
+        })
+        .unwrap();
     let before = world.btech.clone();
     assert!(
         battle_hex_aim_modifiers(&world, shooter, hex, index, 4, rules)

@@ -33,10 +33,12 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 
 /// Seed only the selected vehicle's dice, keeping all material and equipment state unchanged.
 fn seed(world: &mut World, id: ObjectId, value: u8) {
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
+        })
+        .unwrap();
 }
 
 /// Select a deterministic critical stream without consuming the live victim's dice.

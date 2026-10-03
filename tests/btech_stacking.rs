@@ -54,10 +54,12 @@ fn seed(world: &mut World, id: ObjectId, count: u16, selection: u16, roll: Optio
             dice.die(count).unwrap() == selection && roll.is_none_or(|roll| dice.two_d6() == roll)
         })
         .unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([chosen; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([chosen; 32])).unwrap();
+        })
+        .unwrap();
 }
 
 /// Current mass and thrust are explicit until construction-weight calculation is integrated.
@@ -171,10 +173,13 @@ async fn crowding_avoidance_falls_and_success_replay_without_target_damage() {
             })
             .await;
             let id = ids[0];
-            let mut state = serde_json::to_value(&world.btech).unwrap();
-            state["constructed"][id.0.to_string()]["motion"]["speed"] = 21.5.into();
-            state["constructed"][id.0.to_string()]["motion"]["desired_speed"] = 21.5.into();
-            world.btech = serde_json::from_value(state).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    record["motion"]["speed"] = 21.5.into();
+                    record["motion"]["desired_speed"] = 21.5.into();
+                })
+                .unwrap();
             let target = if entry == BattleStackingEntry::Ground {
                 9
             } else {
@@ -364,19 +369,22 @@ async fn ground_entry_collisions_use_current_mass_and_replay_the_whole_tick() {
         let (_dir, config, mut world, ids) = fixture(&[0, 0, 0]).await;
         let id = ids[0];
         seed(&mut world, id, 3, 1, Some(9));
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        let moving = &mut state["constructed"][id.0.to_string()];
-        moving["position"]["y"] = 0.into();
-        moving["motion"]["point"] = serde_json::to_value(BattlePoint {
-            y: 0.49,
-            ..BattleHexCoordinate { x: 1, y: 0 }.center()
-        })
-        .unwrap();
-        moving["motion"]["heading"] = 180.0.into();
-        moving["motion"]["desired_heading"] = 180.0.into();
-        moving["motion"]["speed"] = 21.5.into();
-        moving["motion"]["desired_speed"] = 21.5.into();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                let moving = record;
+                moving["position"]["y"] = 0.into();
+                moving["motion"]["point"] = serde_json::to_value(BattlePoint {
+                    y: 0.49,
+                    ..BattleHexCoordinate { x: 1, y: 0 }.center()
+                })
+                .unwrap();
+                moving["motion"]["heading"] = 180.0.into();
+                moving["motion"]["desired_heading"] = 180.0.into();
+                moving["motion"]["speed"] = 21.5.into();
+                moving["motion"]["desired_speed"] = 21.5.into();
+            })
+            .unwrap();
         world.validate(&config).unwrap();
         let movement = BattleMovementRules {
             fall: BattleFallRules {
@@ -618,10 +626,12 @@ async fn early_landing_uses_configured_crowding_in_native_and_lua_transactions()
                 dice.two_d6() >= 6 && dice.die(3).unwrap() == 1
             })
             .unwrap();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][id.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([chosen; 32])).unwrap();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["dice"] = serde_json::to_value(BattleDice::seeded([chosen; 32])).unwrap();
+            })
+            .unwrap();
         refresh_battle_contacts(&mut world, &[ids[2]]).unwrap();
         assert!(
             visible_battle_contact(&world, ids[2], id)
@@ -893,12 +903,16 @@ async fn airborne_shutdown_scales_fall_and_commits_crowding_before_power_down() 
     for mode in [0, 2] {
         let (_dir, config, mut world, ids) = landing_fixture(2).await;
         let id = ids[0];
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        let unit = &mut state["constructed"][id.0.to_string()];
-        unit["dice"] = serde_json::to_value(thermal_fall_dice()).unwrap();
-        unit["heat"] = serde_json::json!({"stored":24.0,"excess":14.0});
-        unit["overheat_clock"] = serde_json::json!({"elapsed":30,"phase":0,"injury_due":false});
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                let unit = record;
+                unit["dice"] = serde_json::to_value(thermal_fall_dice()).unwrap();
+                unit["heat"] = serde_json::json!({"stored":24.0,"excess":14.0});
+                unit["overheat_clock"] =
+                    serde_json::json!({"elapsed":30,"phase":0,"injury_due":false});
+            })
+            .unwrap();
         let rules = BattleOverheatRules {
             vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
             hit: fall().hit,
@@ -992,10 +1006,13 @@ async fn airborne_critical_falls_apply_configured_collisions_inside_the_impact()
                         && (jet || dice.two_d6() < 9)
                 })
                 .unwrap();
-            let mut state = serde_json::to_value(&world.btech).unwrap();
-            state["constructed"][id.0.to_string()]["dice"] =
-                serde_json::to_value(BattleDice::seeded([chosen; 32])).unwrap();
-            world.btech = serde_json::from_value(state).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    record["dice"] =
+                        serde_json::to_value(BattleDice::seeded([chosen; 32])).unwrap();
+                })
+                .unwrap();
             let hit = BattleHit {
                 section: location.section,
                 rear_armor: false,
@@ -1071,17 +1088,20 @@ async fn ground_shutdown_speed_boundary_and_facing_match_native_lua() {
                 protected && dice.two_d6() == 7 && dice.die(3).unwrap() == 1
             })
             .unwrap();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        let unit = &mut state["constructed"][id.0.to_string()];
-        unit["motion"]["speed"] = speed.into();
-        unit["motion"]["desired_speed"] = speed.into();
-        unit["facing"] = serde_json::to_value(BattleFacing {
-            torso: BattleTorso::Left,
-            arms_flipped: true,
-        })
-        .unwrap();
-        unit["dice"] = serde_json::to_value(BattleDice::seeded([chosen; 32])).unwrap();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                let unit = record;
+                unit["motion"]["speed"] = speed.into();
+                unit["motion"]["desired_speed"] = speed.into();
+                unit["facing"] = serde_json::to_value(BattleFacing {
+                    torso: BattleTorso::Left,
+                    arms_flipped: true,
+                })
+                .unwrap();
+                unit["dice"] = serde_json::to_value(BattleDice::seeded([chosen; 32])).unwrap();
+            })
+            .unwrap();
         world.validate(&config).unwrap();
         let native = Scripts::new(
             &config,
@@ -1139,21 +1159,23 @@ async fn ground_shutdown_speed_boundary_and_facing_match_native_lua() {
 async fn moving_shutdown_neighbor_failure_rolls_back_power_fall_and_facing() {
     let (_dir, config, mut world, ids) = fixture(&[0, 0, 0]).await;
     let id = ids[0];
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["motion"]["speed"] = 21.5.into();
-    state["constructed"][id.0.to_string()]["motion"]["desired_speed"] = 21.5.into();
-    state["constructed"][id.0.to_string()]["facing"]["torso"] = "right".into();
-    let chosen = (0..=255)
-        .find(|value| {
-            let mut dice = BattleDice::seeded([*value; 32]);
-            let protected = dice.two_d6() >= 7;
-            dice.d6();
-            protected && dice.two_d6() == 7
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["motion"]["speed"] = 21.5.into();
+            record["motion"]["desired_speed"] = 21.5.into();
+            record["facing"]["torso"] = "right".into();
+            let chosen = (0..=255)
+                .find(|value| {
+                    let mut dice = BattleDice::seeded([*value; 32]);
+                    let protected = dice.two_d6() >= 7;
+                    dice.d6();
+                    protected && dice.two_d6() == 7
+                })
+                .unwrap();
+            record["dice"] = serde_json::to_value(BattleDice::seeded([chosen; 32])).unwrap();
         })
         .unwrap();
-    state["constructed"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([chosen; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
     for target in &ids[1..] {
         world
             .objects
@@ -1193,12 +1215,14 @@ async fn collision_observers_filter_each_participant_and_replay_all_entry_modes(
     let actor = ids[0];
     let target = ids[1];
     let observer = ids[4];
-    let mut state = serde_json::to_value(&base.btech).unwrap();
-    state["constructed"][observer.0.to_string()]["position"]["x"] = 2.into();
-    state["constructed"][observer.0.to_string()]["position"]["y"] = 2.into();
-    state["constructed"][observer.0.to_string()]["motion"]["point"] =
-        serde_json::to_value(BattleHexCoordinate { x: 2, y: 2 }.center()).unwrap();
-    base.btech = serde_json::from_value(state).unwrap();
+    base.btech
+        .rewrite_unit_record(observer, |record| {
+            record["position"]["x"] = 2.into();
+            record["position"]["y"] = 2.into();
+            record["motion"]["point"] =
+                serde_json::to_value(BattleHexCoordinate { x: 2, y: 2 }.center()).unwrap();
+        })
+        .unwrap();
     base.validate(&config).unwrap();
     for _ in 0..32 {
         refresh_battle_contacts(&mut base, &[observer]).unwrap();
@@ -1231,10 +1255,11 @@ async fn collision_observers_filter_each_participant_and_replay_all_entry_modes(
             locations == [2, 3, 4]
         })
         .unwrap();
-    let mut state = serde_json::to_value(&base.btech).unwrap();
-    state["constructed"][target.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([target_seed; 32])).unwrap();
-    base.btech = serde_json::from_value(state).unwrap();
+    base.btech
+        .rewrite_unit_record(target, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([target_seed; 32])).unwrap();
+        })
+        .unwrap();
     for entry in [
         BattleStackingEntry::Ground,
         BattleStackingEntry::Jump,
@@ -1395,10 +1420,12 @@ async fn character_collision_action_replays_injury_and_evacuation() {
         let chosen = (0..=255)
             .find(|byte| BattleDice::seeded([*byte; 32]).d6() == 6)
             .unwrap();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][target.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([chosen; 32])).unwrap();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(target, |record| {
+                record["dice"] = serde_json::to_value(BattleDice::seeded([chosen; 32])).unwrap();
+            })
+            .unwrap();
         let rules = BattleStackingRules {
             damage_percent: 1,
             ..BattleStackingRules::STANDARD
@@ -1641,10 +1668,13 @@ async fn character_crowding_experience_and_delivery_rollback() {
                 },
             )
             .unwrap();
-            let mut state = serde_json::to_value(&world.btech).unwrap();
-            state["constructed"][id.0.to_string()]["motion"]["speed"] = 21.5.into();
-            state["constructed"][id.0.to_string()]["motion"]["desired_speed"] = 21.5.into();
-            world.btech = serde_json::from_value(state).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    record["motion"]["speed"] = 21.5.into();
+                    record["motion"]["desired_speed"] = 21.5.into();
+                })
+                .unwrap();
             seed(&mut world, id, 3, 1, Some(12));
             let mut channel = Channel::new("MechPilotXP".into());
             channel.users.push(communication::Membership {
@@ -1857,17 +1887,21 @@ async fn collision_damage_preserves_target_balance_feedback() {
         )
         .unwrap();
     }
-    let mut encoded = serde_json::to_value(&base.btech).unwrap();
-    encoded["constructed"][mover.0.to_string()]["motion"]["speed"] = 43.0.into();
-    encoded["constructed"][mover.0.to_string()]["motion"]["desired_speed"] = 43.0.into();
-    base.btech = serde_json::from_value(encoded).unwrap();
+    base.btech
+        .rewrite_unit_record(mover, |record| {
+            record["motion"]["speed"] = 43.0.into();
+            record["motion"]["desired_speed"] = 43.0.into();
+        })
+        .unwrap();
     seed(&mut base, mover, 3, 1, None);
     for byte in 0..=255 {
         let mut world = base.clone();
-        let mut encoded = serde_json::to_value(&world.btech).unwrap();
-        encoded["constructed"][target.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([byte; 32])).unwrap();
-        world.btech = serde_json::from_value(encoded).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(target, |record| {
+                record["dice"] = serde_json::to_value(BattleDice::seeded([byte; 32])).unwrap();
+            })
+            .unwrap();
         let before = world.clone();
         let scripts =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
@@ -1984,16 +2018,19 @@ async fn airborne_critical_collision_publishes_secondary_character_effects() {
     let head_seed = (0..=255)
         .find(|byte| BattleDice::seeded([*byte; 32]).d6() == 6)
         .unwrap();
-    let mut encoded = serde_json::to_value(&base.btech).unwrap();
-    encoded["constructed"][neighbor.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([head_seed; 32])).unwrap();
-    base.btech = serde_json::from_value(encoded).unwrap();
+    base.btech
+        .rewrite_unit_record(neighbor, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([head_seed; 32])).unwrap();
+        })
+        .unwrap();
     for byte in 0..=255 {
         let mut world = base.clone();
-        let mut encoded = serde_json::to_value(&world.btech).unwrap();
-        encoded["constructed"][airborne.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([byte; 32])).unwrap();
-        world.btech = serde_json::from_value(encoded).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(airborne, |record| {
+                record["dice"] = serde_json::to_value(BattleDice::seeded([byte; 32])).unwrap();
+            })
+            .unwrap();
         let before = world.clone();
         let scripts =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();

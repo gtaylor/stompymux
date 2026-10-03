@@ -32,10 +32,12 @@ async fn ground_fixture() -> (tempfile::TempDir, Config, World, ObjectId, Object
 
     // Starting directly in Running keeps this fixture focused on controller behavior;
     // the ordinary startup state machine is covered by the BTech power scenarios.
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][unit.0.to_string()]["power"] =
-        serde_json::to_value(BattlePower::Running).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(unit, |record| {
+            record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+        })
+        .unwrap();
     world.validate(&config).unwrap();
     (directory, config, world, map, unit)
 }

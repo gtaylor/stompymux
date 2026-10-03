@@ -8,9 +8,7 @@ const LIFT: u8 = 3;
 
 /// Set isolated runtime facts through the persisted representation.
 fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Value)) {
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    change(&mut saved["constructed"][id.0.to_string()]);
-    world.btech = serde_json::from_value(saved).unwrap();
+    world.btech.rewrite_unit_record(id, change).unwrap();
 }
 
 /// A Jenner whose only weapon is an IS SRT-6 in its left leg, fed by two torpedo bins. A leg

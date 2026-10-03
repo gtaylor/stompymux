@@ -341,9 +341,11 @@ async fn masc_failure_retries_failed_server_saves_atomically() {
     tokio::task::LocalSet::new().run_until(async {
         let (_dir, config, mut world, id) = powered_masc().await;
         toggle_battle_masc(&mut world, id, ObjectId(1)).unwrap();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][id.0.to_string()]["masc"]["counter"] = serde_json::json!(5);
-        world.btech = serde_json::from_value(state).unwrap();
+        world.btech
+            .rewrite_unit_record(id, |record| {
+        record["masc"]["counter"] = serde_json::json!(5);
+        })
+            .unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let before = world.btech.clone();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
@@ -460,11 +462,13 @@ async fn supercharger_failure_damages_ordered_engine_slots_and_replays() {
             .unwrap();
         let mut trial = world.clone();
         toggle_battle_supercharger(&mut trial, id, ObjectId(1)).unwrap();
-        let mut state = serde_json::to_value(&trial.btech).unwrap();
-        state["constructed"][id.0.to_string()]["supercharger"]["counter"] = serde_json::json!(5);
-        state["constructed"][id.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        trial.btech = serde_json::from_value(state).unwrap();
+        trial
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["supercharger"]["counter"] = serde_json::json!(5);
+                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            })
+            .unwrap();
         persistence::save(&config.database(), &trial).await.unwrap();
         let restored = persistence::load(&config.database()).await.unwrap();
         let scripts =
@@ -504,14 +508,16 @@ async fn simultaneous_boosters_apply_the_other_devices_roll_penalty() {
             toggle_battle_masc(&mut trial, id, ObjectId(1)).unwrap();
         }
         toggle_battle_supercharger(&mut trial, id, ObjectId(1)).unwrap();
-        let mut state = serde_json::to_value(&trial.btech).unwrap();
-        state["constructed"][id.0.to_string()]["supercharger"]["counter"] = serde_json::json!(4);
-        if both {
-            state["constructed"][id.0.to_string()]["masc"]["remaining"] = serde_json::json!(60);
-        }
-        state["constructed"][id.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        trial.btech = serde_json::from_value(state).unwrap();
+        trial
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["supercharger"]["counter"] = serde_json::json!(4);
+                if both {
+                    record["masc"]["remaining"] = serde_json::json!(60);
+                }
+                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            })
+            .unwrap();
         let scripts =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(trial))).unwrap();
         let notices = advance_battle_boosters_action(&scripts, &config).unwrap();
@@ -614,9 +620,12 @@ fn myomer_booster_design() -> BattleTemplate {
 
 /// Set the last committed thermal sample without advancing movement or booster timers.
 fn sample_booster_heat(world: &mut World, id: ObjectId, heat: f64) {
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["heat"]["excess"] = serde_json::json!(heat);
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["heat"]["excess"] = serde_json::json!(heat);
+        })
+        .unwrap();
 }
 
 #[tokio::test]

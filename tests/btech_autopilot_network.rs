@@ -47,10 +47,12 @@ fn place(
         assign_battle_pilot(world, id, pilot).unwrap();
     }
     // Start directly in Running; the startup state machine has its own scenarios.
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["power"] =
-        serde_json::to_value(BattlePower::Running).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+        })
+        .unwrap();
     id
 }
 

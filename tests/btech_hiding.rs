@@ -5,14 +5,7 @@ use stompymux_rs::*;
 
 /// Edit isolated scenario facts without bypassing final world validation.
 fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Value)) {
-    let class = if world.btech.vehicles().contains_key(&id) {
-        "vehicles"
-    } else {
-        "constructed"
-    };
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    change(&mut state[class][id.0.to_string()]);
-    world.btech = serde_json::from_value(state).unwrap();
+    world.btech.rewrite_unit_record(id, change).unwrap();
 }
 
 /// Observe common hiding state without exposing anatomy in assertions.

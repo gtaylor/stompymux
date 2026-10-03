@@ -35,10 +35,12 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 async fn critical_jams_select_unaffected_weapons_and_replay_powered_recovery() {
     let (_dir, config, mut world, id) =
         fixture(include_str!("../game/mechs/Demolisher.toml")).await;
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["vehicles"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([31; 32])).unwrap();
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([31; 32])).unwrap();
+        })
+        .unwrap();
     let checkpoint = world.btech.clone();
     assert!(
         jam_battle_vehicle_weapon(&mut world, id, BattleVehicleSection::Front)

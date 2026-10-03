@@ -242,9 +242,12 @@ async fn classic_vehicle_difficulty_uses_current_motive_damage() {
     let undamaged = award_battle_classic_gunnery_experience(&mut world.clone(), request)
         .unwrap()
         .unwrap();
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][target.0.to_string()]["immobilized"] = true.into();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(target, |record| {
+            record["immobilized"] = true.into();
+        })
+        .unwrap();
     let expected = BattleGunneryExperienceInput {
         attacker_tons: 80,
         target_tons: 80,
@@ -368,10 +371,13 @@ async fn vehicle_battle_value_uses_live_protection_and_installed_weapons() {
         value.offensive,
         80.0 + f64::from(BattleWeapon::parse("IS.AC/20").unwrap().battle_value() / 2) * 2.0
     );
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][attacker.0.to_string()]["ammunition"] = serde_json::json!([0, 0, 0, 0]);
-    saved["vehicles"][attacker.0.to_string()]["sections"]["front"]["armor"] = 0.into();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(attacker, |record| {
+            record["ammunition"] = serde_json::json!([0, 0, 0, 0]);
+            record["sections"]["front"]["armor"] = 0.into();
+        })
+        .unwrap();
     let damaged = world.btech.vehicles()[&attacker].battle_value().unwrap();
     assert_eq!(damaged.offensive, value.offensive);
     assert_eq!(damaged.defensive, f64::from(388.8_f32));
@@ -575,11 +581,13 @@ async fn experience_load_queries_honor_hot_myomer_configuration() {
         }
     }
     assert_eq!(remaining, 0);
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["constructed"][attacker.0.to_string()]["definition"] =
-        serde_json::to_value(definition).unwrap();
-    encoded["constructed"][attacker.0.to_string()]["heat"]["excess"] = 9.0.into();
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(attacker, |record| {
+            record["definition"] = serde_json::to_value(definition).unwrap();
+            record["heat"]["excess"] = 9.0.into();
+        })
+        .unwrap();
     tow_fixture(&mut world, &config, attacker, target, attacker);
     // Use a Mech-sized load so enabled assistance crosses both XP and BV movement bands.
     set_battle_tow(&mut world, attacker, None).unwrap();
@@ -665,22 +673,31 @@ async fn vtol_value_shares_vehicle_accounting_and_has_its_class_movement_bonus()
         25.0 + 2.0 * f64::from(BattleWeapon::MachineGun.battle_value())
     );
     assert_eq!(world.btech, before);
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["vehicles"][id.0.to_string()]["ammunition"] = serde_json::json!([0]);
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["ammunition"] = serde_json::json!([0]);
+        })
+        .unwrap();
     assert_eq!(battle_unit_value(&world, id, true).unwrap(), initial);
     // A surviving but unarmored rotor changes only protection, not installed weapons or movement.
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["vehicles"][id.0.to_string()]["sections"]["rotor"]["armor"] = 0.into();
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["sections"]["rotor"]["armor"] = 0.into();
+        })
+        .unwrap();
     assert_eq!(
         battle_unit_value(&world, id, true).unwrap().defensive,
         f64::from(86.8_f32)
     );
     // Destroying the rotor also removes three internal points and drops speed to zero; +1 remains.
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["vehicles"][id.0.to_string()]["sections"]["rotor"]["internal"] = 0.into();
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["sections"]["rotor"]["internal"] = 0.into();
+        })
+        .unwrap();
     let stopped = battle_unit_value(&world, id, true).unwrap();
     assert_eq!(stopped.offensive, initial.offensive);
     assert_eq!(stopped.defensive, f64::from(56.21_f32));

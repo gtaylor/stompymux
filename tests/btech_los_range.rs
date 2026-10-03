@@ -39,14 +39,7 @@ async fn fixture(
 
 /// Edit only fixture facts, leaving the live geometry and LOS services under test.
 fn edit(world: &mut World, id: ObjectId, update: impl FnOnce(&mut serde_json::Value)) {
-    let class = if world.btech.vehicles().contains_key(&id) {
-        "vehicles"
-    } else {
-        "constructed"
-    };
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    update(&mut encoded[class][id.0.to_string()]);
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world.btech.rewrite_unit_record(id, update).unwrap();
 }
 
 #[tokio::test]

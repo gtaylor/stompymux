@@ -482,12 +482,15 @@ async fn horizontal_fuel_gate_shares_policy_without_blocking_heading_or_readouts
             if phase == "airborne" {
                 advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
             }
-            let mut encoded = serde_json::to_value(&world.btech).unwrap();
-            let unit = &mut encoded["vehicles"][id.0.to_string()];
-            unit["vtol_fuel"]["remaining"] = fuel.into();
-            unit["definition"]["attributes"]["specials"] =
-                if ice { "ICEEngine_Tech" } else { "" }.into();
-            world.btech = serde_json::from_value(encoded).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    let unit = record;
+                    unit["vtol_fuel"]["remaining"] = fuel.into();
+                    unit["definition"]["attributes"]["specials"] =
+                        if ice { "ICEEngine_Tech" } else { "" }.into();
+                })
+                .unwrap();
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
             let output = support::run_text(&scripts, &config, ObjectId(2), 1, "speed 20");
             assert_eq!(

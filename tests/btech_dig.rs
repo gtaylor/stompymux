@@ -33,16 +33,13 @@ async fn fixture(
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
     }
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    let class = if world.btech.vehicles().contains_key(&shooter) {
-        "vehicles"
-    } else {
-        "constructed"
-    };
-    saved[class][shooter.0.to_string()]["power"] = serde_json::json!({"state":"running"});
-    saved[class][shooter.0.to_string()]["contacts"][target.0.to_string()] =
-        serde_json::json!({"identified": true});
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(shooter, |record| {
+            record["power"] = serde_json::json!({"state":"running"});
+            record["contacts"][target.0.to_string()] = serde_json::json!({"identified": true});
+        })
+        .unwrap();
     (dir, config, world, target, shooter)
 }
 
@@ -186,10 +183,13 @@ async fn dug_in_cover_is_shared_by_mech_and_vehicle_aim_with_arc_and_height_gate
             (2, 90.0, 7),
             (2, 90.001, 0),
         ] {
-            let mut saved = serde_json::to_value(&world.btech).unwrap();
-            saved["vehicles"][target.0.to_string()]["motion"]["heading"] = heading.into();
-            saved["vehicles"][target.0.to_string()]["motion"]["desired_heading"] = heading.into();
-            world.btech = serde_json::from_value(saved).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(target, |record| {
+                    record["motion"]["heading"] = heading.into();
+                    record["motion"]["desired_heading"] = heading.into();
+                })
+                .unwrap();
             assert_eq!(
                 battle_aim_modifiers(
                     &world,
@@ -208,24 +208,25 @@ async fn dug_in_cover_is_shared_by_mech_and_vehicle_aim_with_arc_and_height_gate
                 "mode={mode}, heading={heading}"
             );
         }
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        saved["vehicles"][target.0.to_string()]["motion"]["heading"] = 180.0.into();
-        saved["vehicles"][target.0.to_string()]["motion"]["desired_heading"] = 180.0.into();
-        world.btech = serde_json::from_value(saved).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(target, |record| {
+                record["motion"]["heading"] = 180.0.into();
+                record["motion"]["desired_heading"] = 180.0.into();
+            })
+            .unwrap();
         assert_eq!(
             battle_aim_modifiers(&world, shooter, target, 0, 4, rules)
                 .unwrap()
                 .dug_in,
             0
         );
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        let class = if world.btech.vehicles().contains_key(&shooter) {
-            "vehicles"
-        } else {
-            "constructed"
-        };
-        saved[class][shooter.0.to_string()]["ground_elevation"] = 1.into();
-        world.btech = serde_json::from_value(saved).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(shooter, |record| {
+                record["ground_elevation"] = 1.into();
+            })
+            .unwrap();
         assert_eq!(
             battle_aim_modifiers(&world, shooter, target, 0, 4, aim_rules())
                 .unwrap()
@@ -294,10 +295,12 @@ async fn dug_in_turret_routing_uses_the_41_42_boundary_for_each_hit_table() {
                     (roll == 7 && dice.die(100).unwrap() == percentage).then_some(seed)
                 })
                 .unwrap();
-            let mut saved = serde_json::to_value(&world.btech).unwrap();
-            saved["vehicles"][id.0.to_string()]["dice"] =
-                serde_json::to_value(BattleDice::seeded(seed)).unwrap();
-            world.btech = serde_json::from_value(saved).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    record["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
+                })
+                .unwrap();
             let mut replay = world.clone();
             let mut rules = BattleVehicleImpactRules::STANDARD;
             rules.criticals.table = table;
@@ -399,10 +402,12 @@ async fn pickup_clears_completed_cover_but_shutdown_preserves_it() {
     }
     set_battle_towable(&mut world, target, true).unwrap();
     // Administrative placement clears acquired contacts; restore the carrier's explicit acquisition.
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["constructed"][carrier.0.to_string()]["contacts"][target.0.to_string()] =
-        serde_json::json!({"identified": true});
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(carrier, |record| {
+            record["contacts"][target.0.to_string()] = serde_json::json!({"identified": true});
+        })
+        .unwrap();
     let before = world.btech.clone();
     assert!(set_battle_tow(&mut world, carrier, Some(target)).is_err());
     assert_eq!(world.btech, before);

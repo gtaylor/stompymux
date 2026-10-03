@@ -60,19 +60,22 @@ async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassi
         } else {
             "constructed"
         };
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        let unit = &mut saved[key][id.0.to_string()];
-        unit["motion"]["heading"] = 90.into();
-        unit["motion"]["desired_heading"] = 135.into();
-        unit["motion"]["speed"] = 3.into();
-        unit["motion"]["desired_speed"] = 4.into();
-        if key == "constructed" {
-            unit["stagger"] = serde_json::json!({
-                "hits": [{"damage": 12, "remaining": 45, "counted": false}],
-                "elapsed": 15, "turn_damage": 0, "phase": 5, "checked_phase": null
-            });
-        }
-        world.btech = serde_json::from_value(saved).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                let unit = record;
+                unit["motion"]["heading"] = 90.into();
+                unit["motion"]["desired_heading"] = 135.into();
+                unit["motion"]["speed"] = 3.into();
+                unit["motion"]["desired_speed"] = 4.into();
+                if key == "constructed" {
+                    unit["stagger"] = serde_json::json!({
+                        "hits": [{"damage": 12, "remaining": 45, "counted": false}],
+                        "elapsed": 15, "turn_damage": 0, "phase": 5, "checked_phase": null
+                    });
+                }
+            })
+            .unwrap();
         world.validate(&config).unwrap();
         let mut airborne = world.clone();
         if key == "constructed" {

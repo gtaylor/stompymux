@@ -79,10 +79,12 @@ async fn native_and_lua_vehicle_firing_controls_share_state_and_rollback() {
         };
         // A temporary main-weapon failure permits mode selection but never restores firing.
         let mut failed = world.clone();
-        let mut state = serde_json::to_value(&failed.btech).unwrap();
-        state["vehicles"][id.0.to_string()]["weapon_failures"] =
-            serde_json::json!({"0":"disabled"});
-        failed.btech = serde_json::from_value(state).unwrap();
+        failed
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["weapon_failures"] = serde_json::json!({"0":"disabled"});
+            })
+            .unwrap();
         let failed =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(failed))).unwrap();
         failed.eval_callback::<mlua::Value>(&lua_command).unwrap();
@@ -116,13 +118,15 @@ async fn native_and_lua_vehicle_firing_controls_share_state_and_rollback() {
         {
             for recycling in [false, true] {
                 let mut jammed = world.clone();
-                let mut state = serde_json::to_value(&jammed.btech).unwrap();
-                state["vehicles"][id.0.to_string()]["jammed_weapons"] = serde_json::json!([0]);
-                if recycling {
-                    state["vehicles"][id.0.to_string()]["weapon_recycle"] =
-                        serde_json::json!({"0":1});
-                }
-                jammed.btech = serde_json::from_value(state).unwrap();
+                jammed
+                    .btech
+                    .rewrite_unit_record(id, |record| {
+                        record["jammed_weapons"] = serde_json::json!([0]);
+                        if recycling {
+                            record["weapon_recycle"] = serde_json::json!({"0":1});
+                        }
+                    })
+                    .unwrap();
                 let jammed =
                     Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(jammed)))
                         .unwrap();
@@ -205,18 +209,14 @@ async fn vehicle_firing_mode_guards_and_snapshot_validation_preserve_state() {
     let (_dir, _config, base, id) = fixture(&template).await;
     for damage in ["unauthorized", "off", "recycling", "destroyed"] {
         let mut world = base.clone();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        match damage {
-            "off" => {
-                state["vehicles"][id.0.to_string()]["power"] =
-                    serde_json::to_value(BattlePower::Off).unwrap()
-            }
-            "recycling" => {
-                state["vehicles"][id.0.to_string()]["weapon_recycle"] = serde_json::json!({"0":1})
-            }
-            _ => (),
-        }
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| match damage {
+                "off" => record["power"] = serde_json::to_value(BattlePower::Off).unwrap(),
+                "recycling" => record["weapon_recycle"] = serde_json::json!({"0":1}),
+                _ => (),
+            })
+            .unwrap();
         if damage == "destroyed" {
             destroy_battle_vehicle_critical(
                 &mut world,
@@ -316,10 +316,12 @@ async fn live_modes_control_reservations_and_hotloaded_critical_eligibility() {
         );
         assert_eq!(cycle.ammunition.len(), 1);
         assert_eq!(cycle.ammunition[0].rounds, 1);
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["vehicles"][id.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["dice"] = serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
+            })
+            .unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         world = persistence::load(&config.database()).await.unwrap();
         let result = resolve_battle_vehicle_critical(
@@ -356,10 +358,13 @@ async fn temporary_weapon_failures_keep_recycle_admission_and_firing_lock() {
         let source = include_str!("../game/mechs/Demolisher.toml")
             .replace("item = \"IS.AC/20\" }", &format!("item = \"{weapon}\" }}"));
         let (_dir, config, mut world, id) = fixture(&source).await;
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["vehicles"][id.0.to_string()]["weapon_failures"] = serde_json::json!({"0":failure});
-        state["vehicles"][id.0.to_string()]["weapon_recycle"] = serde_json::json!({"0":1});
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["weapon_failures"] = serde_json::json!({"0":failure});
+                record["weapon_recycle"] = serde_json::json!({"0":1});
+            })
+            .unwrap();
         let scripts =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
         let before = scripts.world().btech.clone();

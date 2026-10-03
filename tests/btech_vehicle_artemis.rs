@@ -148,10 +148,12 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId) {
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()]["power"] =
-        serde_json::to_value(BattlePower::Running).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+        })
+        .unwrap();
     (dir, config, world, id)
 }
 

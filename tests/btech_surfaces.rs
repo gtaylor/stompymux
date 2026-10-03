@@ -213,10 +213,12 @@ fn ice_seed(world: &mut World, id: ObjectId, fracture: bool, avoidance_first: bo
             (dice.d6() == 1) == fracture
         })
         .unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        })
+        .unwrap();
 }
 
 #[tokio::test]
@@ -418,10 +420,12 @@ async fn early_ice_landing_native_lua_parity_and_callback_rollback_include_the_m
             dice.two_d6() >= 6 && dice.d6() == 1
         })
         .unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        })
+        .unwrap();
     let native = Scripts::new(
         &config,
         std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
@@ -754,10 +758,12 @@ async fn ice_standing_native_lua_and_restart_cover_success_failure_and_fracture(
                 dice.two_d6() >= 7 && dice.d6() != 1
             })
             .unwrap();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][id.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            })
+            .unwrap();
         let initial = resolve_battle_fall(&mut world, id, 1, rules()).unwrap();
         assert!(initial.avoidance.unwrap().success && initial.ice_break.is_none());
         let seed = (0..=255)
@@ -1110,9 +1116,12 @@ async fn bridge_falls_choose_deck_or_lower_surface_at_the_two_level_boundary() {
     ] {
         let (_dir, config, mut world, map, units) = fixture_surface(Terrain::Bridge, deck).await;
         let id = units[0];
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][id.0.to_string()]["ground_elevation"] = serde_json::json!(initial);
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["ground_elevation"] = serde_json::json!(initial);
+            })
+            .unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut loaded = persistence::load(&config.database()).await.unwrap();
         let fall = resolve_battle_fall(&mut world, id, 1, rules()).unwrap();
@@ -1153,10 +1162,12 @@ async fn bridge_deck_fire_and_standing_share_native_lua_transactions() {
     )
     .unwrap();
     place_battle_unit(&mut world, target, map, 1, 0).unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([0; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([0; 32])).unwrap();
+        })
+        .unwrap();
     refresh_battle_contacts(&mut world, &[id]).unwrap();
     let native = Scripts::new(
         &config,
@@ -1197,10 +1208,12 @@ async fn bridge_deck_fire_and_standing_share_native_lua_transactions() {
     let safe_seed = (0..=255)
         .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() >= 7)
         .unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([safe_seed; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([safe_seed; 32])).unwrap();
+        })
+        .unwrap();
     let fall = resolve_battle_fall(&mut world, id, 1, rules()).unwrap();
     assert!(fall.avoidance.unwrap().success);
     for success in [true, false] {
@@ -1208,10 +1221,12 @@ async fn bridge_deck_fire_and_standing_share_native_lua_transactions() {
             .find(|seed| (BattleDice::seeded([*seed; 32]).two_d6() >= 6) == success)
             .unwrap();
         let mut candidate = world.clone();
-        let mut state = serde_json::to_value(&candidate.btech).unwrap();
-        state["constructed"][id.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        candidate.btech = serde_json::from_value(state).unwrap();
+        candidate
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            })
+            .unwrap();
         let native = Scripts::new(
             &config,
             std::rc::Rc::new(std::cell::RefCell::new(candidate.clone())),
@@ -1254,11 +1269,13 @@ async fn bridge_deck_fire_and_standing_share_native_lua_transactions() {
 async fn below_bridge_cooling_and_fresh_breaches_use_actual_depth() {
     let (_dir, config, mut world, _map, units) = fixture_surface(Terrain::Bridge, 3).await;
     let id = units[0];
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["ground_elevation"] = serde_json::json!(0);
-    state["constructed"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([3; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["ground_elevation"] = serde_json::json!(0);
+            record["dice"] = serde_json::to_value(BattleDice::seeded([3; 32])).unwrap();
+        })
+        .unwrap();
     let fall = resolve_battle_fall(&mut world, id, 1, rules()).unwrap();
     assert_eq!(fall.damage, 2);
     assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(-1));
@@ -1485,10 +1502,12 @@ async fn bridge_jump_entry_underpass_and_interrupted_hex_update_replay_after_res
             let seed = (0..=255)
                 .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() >= 6)
                 .unwrap();
-            let mut state = serde_json::to_value(&resumed.btech).unwrap();
-            state["constructed"][id.0.to_string()]["dice"] =
-                serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-            resumed.btech = serde_json::from_value(state).unwrap();
+            resumed
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                })
+                .unwrap();
             let stand = begin_battle_stand(
                 &mut resumed,
                 id,
@@ -1575,9 +1594,12 @@ async fn lost_jump_thrust_beneath_bridge_preserves_altitude_for_the_fall() {
     let (_dir, config, mut world, _map, units) =
         fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["ground_elevation"] = serde_json::json!(-1);
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["ground_elevation"] = serde_json::json!(-1);
+        })
+        .unwrap();
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
     let jets: Vec<_> = world.btech.constructed_units()[&id]
         .loadout()
@@ -1676,10 +1698,13 @@ async fn bridge_deck_jumps_and_early_landings_share_native_lua_state() {
                 let seed = (0..=255)
                     .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() >= 6)
                     .unwrap();
-                let mut state = serde_json::to_value(&current.btech).unwrap();
-                state["constructed"][id.0.to_string()]["dice"] =
-                    serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-                current.btech = serde_json::from_value(state).unwrap();
+                current
+                    .btech
+                    .rewrite_unit_record(id, |record| {
+                        record["dice"] =
+                            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                    })
+                    .unwrap();
                 loaded.btech = current.btech.clone();
                 let native = Scripts::new(
                     &config,
@@ -1758,12 +1783,13 @@ async fn level_bridge_deck_motion_matches_native_lua_and_replays_both_directions
             let id = units[0];
             let heading = if reverse { 0.0 } else { 180.0 };
             let speed = if reverse { -21.5 } else { 21.5 };
-            let mut state = serde_json::to_value(&world.btech).unwrap();
-            state["constructed"][id.0.to_string()]["motion"]["heading"] =
-                serde_json::json!(heading);
-            state["constructed"][id.0.to_string()]["motion"]["desired_heading"] =
-                serde_json::json!(heading);
-            world.btech = serde_json::from_value(state).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    record["motion"]["heading"] = serde_json::json!(heading);
+                    record["motion"]["desired_heading"] = serde_json::json!(heading);
+                })
+                .unwrap();
             let dice = serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"]
                 .clone();
             let native = Scripts::new(
@@ -1842,9 +1868,12 @@ async fn level_bridge_deck_motion_matches_native_lua_and_replays_both_directions
 async fn bridge_motion_does_not_replace_a_retained_lower_altitude_with_deck_height() {
     let (_dir, config, mut world, _map, units) = fixture_surface(Terrain::Bridge, 3).await;
     let id = units[0];
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["ground_elevation"] = serde_json::json!(-1);
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["ground_elevation"] = serde_json::json!(-1);
+        })
+        .unwrap();
     let point = world.btech.constructed_units()[&id].motion().unwrap().point;
     set_battle_speed(&mut world, id, ObjectId(1), 21.5).unwrap();
     let notices = advance_battle_motion(
@@ -1885,11 +1914,13 @@ async fn forward_ground_steps_charge_each_height_change_and_replay_mid_slope() {
             let (_dir, config, mut world, _map, units) =
                 fixture_asset(BattleMapAsset::from_cells(&format!("3 5\n{rows}")).unwrap()).await;
             let id = units[0];
-            let mut state = serde_json::to_value(&world.btech).unwrap();
-            state["constructed"][id.0.to_string()]["motion"]["heading"] = serde_json::json!(180.0);
-            state["constructed"][id.0.to_string()]["motion"]["desired_heading"] =
-                serde_json::json!(180.0);
-            world.btech = serde_json::from_value(state).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    record["motion"]["heading"] = serde_json::json!(180.0);
+                    record["motion"]["desired_heading"] = serde_json::json!(180.0);
+                })
+                .unwrap();
             set_battle_speed(&mut world, id, ObjectId(1), 21.5).unwrap();
             let dice = serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"]
                 .clone();
@@ -1961,13 +1992,16 @@ async fn pending_hex_sync_completes_an_allowed_step_without_retaining_the_old_he
     let (_dir, config, mut world, _map, units) =
         fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    let unit = &mut state["constructed"][id.0.to_string()];
-    unit["ground_elevation"] = serde_json::json!(5);
-    unit["hex_sync_pending"] = serde_json::json!(true);
-    unit["motion"]["point"] =
-        serde_json::to_value(BattleHexCoordinate { x: 1, y: 2 }.center()).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            let unit = record;
+            unit["ground_elevation"] = serde_json::json!(5);
+            unit["hex_sync_pending"] = serde_json::json!(true);
+            unit["motion"]["point"] =
+                serde_json::to_value(BattleHexCoordinate { x: 1, y: 2 }.center()).unwrap();
+        })
+        .unwrap();
     world.validate(&config).unwrap();
     set_battle_heading(&mut world, id, ObjectId(1), 90.0).unwrap();
     assert!(
@@ -1996,17 +2030,20 @@ fn prepare_reverse_step(world: &mut World, id: ObjectId, roll: u8) {
     let seed = (0..=u8::MAX)
         .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == roll)
         .unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    let unit = &mut state["constructed"][id.0.to_string()];
-    unit["motion"]["point"] = serde_json::to_value(BattlePoint {
-        y: 1.49,
-        ..BattleHexCoordinate { x: 1, y: 1 }.center()
-    })
-    .unwrap();
-    unit["motion"]["speed"] = serde_json::json!(-21.5);
-    unit["motion"]["desired_speed"] = serde_json::json!(-21.5);
-    unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            let unit = record;
+            unit["motion"]["point"] = serde_json::to_value(BattlePoint {
+                y: 1.49,
+                ..BattleHexCoordinate { x: 1, y: 1 }.center()
+            })
+            .unwrap();
+            unit["motion"]["speed"] = serde_json::json!(-21.5);
+            unit["motion"]["desired_speed"] = serde_json::json!(-21.5);
+            unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        })
+        .unwrap();
 }
 
 /// One shard per terrain symbol; each elevation change owns one fixture that the
@@ -2180,9 +2217,12 @@ async fn unpiloted_reverse_step_bypasses_control_dice_and_preserves_speed() {
         fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
     prepare_reverse_step(&mut world, id, 2);
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["pilot"] = serde_json::Value::Null;
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["pilot"] = serde_json::Value::Null;
+        })
+        .unwrap();
     let dice = serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"].clone();
     let notices = advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
     let unit = &world.btech.constructed_units()[&id];
@@ -2219,13 +2259,17 @@ async fn cliffs_apply_speed_checks_matrix(symbol: char, downhill: bool) {
                 };
                 let target = 6i16 + modifier;
                 prepare_reverse_step(&mut world, id, (target - i16::from(!success)) as u8);
-                let mut state = serde_json::to_value(&world.btech).unwrap();
-                let motion = &mut state["constructed"][id.0.to_string()]["motion"];
-                motion["speed"] = serde_json::json!(speed);
-                motion["desired_speed"] = serde_json::json!(speed);
-                motion["heading"] = serde_json::json!(if speed > 0.0 { 180.0 } else { 0.0 });
-                motion["desired_heading"] = motion["heading"].clone();
-                world.btech = serde_json::from_value(state).unwrap();
+                world
+                    .btech
+                    .rewrite_unit_record(id, |record| {
+                        let motion = &mut record["motion"];
+                        motion["speed"] = serde_json::json!(speed);
+                        motion["desired_speed"] = serde_json::json!(speed);
+                        motion["heading"] =
+                            serde_json::json!(if speed > 0.0 { 180.0 } else { 0.0 });
+                        motion["desired_heading"] = motion["heading"].clone();
+                    })
+                    .unwrap();
                 world.validate(&config).unwrap();
                 let before = world.clone();
                 persistence::save(&config.database(), &world).await.unwrap();
@@ -2500,35 +2544,47 @@ async fn autofall_skips_only_the_piloted_downhill_avoidance_roll() {
             prepare_reverse_step(&mut world, id, 12);
             set_battle_auto_fall(&mut world, id, ObjectId(1), true).unwrap();
             if !piloted {
-                let mut state = serde_json::to_value(&world.btech).unwrap();
-                state["constructed"][id.0.to_string()]["pilot"] = serde_json::Value::Null;
-                world.btech = serde_json::from_value(state).unwrap();
+                world
+                    .btech
+                    .rewrite_unit_record(id, |record| {
+                        record["pilot"] = serde_json::Value::Null;
+                    })
+                    .unwrap();
             }
             persistence::save(&config.database(), &world).await.unwrap();
             let mut loaded = persistence::load(&config.database()).await.unwrap();
             let mut expected = world.clone();
             if downhill && piloted {
-                let mut state = serde_json::to_value(&expected.btech).unwrap();
-                let unit = &mut state["constructed"][id.0.to_string()];
-                unit["position"]["y"] = serde_json::json!(2);
-                let point = world.btech.constructed_units()[&id]
-                    .motion()
-                    .unwrap()
-                    .point
-                    .project(180.0, 21.5 / 645.0)
+                expected
+                    .btech
+                    .rewrite_unit_record(id, |record| {
+                        let unit = record;
+                        unit["position"]["y"] = serde_json::json!(2);
+                        let point = world.btech.constructed_units()[&id]
+                            .motion()
+                            .unwrap()
+                            .point
+                            .project(180.0, 21.5 / 645.0)
+                            .unwrap();
+                        unit["motion"]["point"] = serde_json::to_value(point).unwrap();
+                    })
                     .unwrap();
-                unit["motion"]["point"] = serde_json::to_value(point).unwrap();
-                expected.btech = serde_json::from_value(state).unwrap();
                 let report = resolve_battle_fall(&mut expected, id, 3, rules()).unwrap();
                 assert_eq!(report.avoidance.unwrap().roll, Some(12));
             } else {
-                let mut state = serde_json::to_value(&expected.btech).unwrap();
-                state["constructed"][id.0.to_string()]["auto_fall"] = serde_json::json!(false);
-                expected.btech = serde_json::from_value(state).unwrap();
+                expected
+                    .btech
+                    .rewrite_unit_record(id, |record| {
+                        record["auto_fall"] = serde_json::json!(false);
+                    })
+                    .unwrap();
                 advance_battle_motion(&mut expected, BattleMovementRules::STANDARD).unwrap();
-                let mut state = serde_json::to_value(&expected.btech).unwrap();
-                state["constructed"][id.0.to_string()]["auto_fall"] = serde_json::json!(true);
-                expected.btech = serde_json::from_value(state).unwrap();
+                expected
+                    .btech
+                    .rewrite_unit_record(id, |record| {
+                        record["auto_fall"] = serde_json::json!(true);
+                    })
+                    .unwrap();
             }
             let notices = advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
             assert_eq!(
@@ -2629,13 +2685,16 @@ async fn running_into_water_caps_throttle_and_adds_two_to_the_control_check() {
         let maximum = world.btech.constructed_units()[&id]
             .mobility()
             .maximum_speed;
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        let motion = &mut state["constructed"][id.0.to_string()]["motion"];
-        motion["heading"] = serde_json::json!(180.0);
-        motion["desired_heading"] = serde_json::json!(180.0);
-        motion["speed"] = serde_json::json!(maximum);
-        motion["desired_speed"] = serde_json::json!(maximum);
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                let motion = &mut record["motion"];
+                motion["heading"] = serde_json::json!(180.0);
+                motion["desired_heading"] = serde_json::json!(180.0);
+                motion["speed"] = serde_json::json!(maximum);
+                motion["desired_speed"] = serde_json::json!(maximum);
+            })
+            .unwrap();
         let before = world.clone();
         let notices = advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
         assert!(
@@ -2746,13 +2805,16 @@ async fn leaving_shallow_water_restores_land_height_and_charges_the_upward_step(
         fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
     prepare_reverse_step(&mut world, id, 12);
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    let motion = &mut state["constructed"][id.0.to_string()]["motion"];
-    motion["heading"] = serde_json::json!(180.0);
-    motion["desired_heading"] = serde_json::json!(180.0);
-    motion["speed"] = serde_json::json!(21.5);
-    motion["desired_speed"] = serde_json::json!(21.5);
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            let motion = &mut record["motion"];
+            motion["heading"] = serde_json::json!(180.0);
+            motion["desired_heading"] = serde_json::json!(180.0);
+            motion["speed"] = serde_json::json!(21.5);
+            motion["desired_speed"] = serde_json::json!(21.5);
+        })
+        .unwrap();
     let before = world.clone();
     assert!(
         advance_battle_motion(&mut world, BattleMovementRules::STANDARD)
@@ -2789,20 +2851,23 @@ async fn bridge_ground_routes_select_lower_or_deck_surface_and_replay() {
                 fixture_asset(BattleMapAsset::from_cells(&source).unwrap()).await;
             let id = units[0];
             prepare_reverse_step(&mut world, id, 12);
-            let mut state = serde_json::to_value(&world.btech).unwrap();
-            let unit = &mut state["constructed"][id.0.to_string()];
-            unit["ground_elevation"] = if old_height == old_deck {
-                serde_json::Value::Null
-            } else {
-                serde_json::json!(old_height)
-            };
-            if !reverse {
-                unit["motion"]["heading"] = serde_json::json!(180.0);
-                unit["motion"]["desired_heading"] = serde_json::json!(180.0);
-                unit["motion"]["speed"] = serde_json::json!(21.5);
-                unit["motion"]["desired_speed"] = serde_json::json!(21.5);
-            }
-            world.btech = serde_json::from_value(state).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    let unit = record;
+                    unit["ground_elevation"] = if old_height == old_deck {
+                        serde_json::Value::Null
+                    } else {
+                        serde_json::json!(old_height)
+                    };
+                    if !reverse {
+                        unit["motion"]["heading"] = serde_json::json!(180.0);
+                        unit["motion"]["desired_heading"] = serde_json::json!(180.0);
+                        unit["motion"]["speed"] = serde_json::json!(21.5);
+                        unit["motion"]["desired_speed"] = serde_json::json!(21.5);
+                    }
+                })
+                .unwrap();
             let before = world.clone();
             persistence::save(&config.database(), &world).await.unwrap();
             let mut loaded = persistence::load(&config.database()).await.unwrap();
@@ -2862,9 +2927,12 @@ async fn below_bridge_water_check_failure_falls_on_the_lower_surface() {
     let (_dir, config, mut world, _, units) = fixture_field(Terrain::Bridge, 9, 5).await;
     let id = units[0];
     prepare_reverse_step(&mut world, id, 4);
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["ground_elevation"] = serde_json::json!(-1);
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["ground_elevation"] = serde_json::json!(-1);
+        })
+        .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     let notices = advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
@@ -2894,9 +2962,12 @@ async fn exiting_below_bridge_retains_mapped_cliff_checks_and_lower_rollback() {
             fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
         let id = units[0];
         prepare_reverse_step(&mut world, id, if success { 6 } else { 5 });
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][id.0.to_string()]["ground_elevation"] = serde_json::json!(-1);
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["ground_elevation"] = serde_json::json!(-1);
+            })
+            .unwrap();
         let before = world.clone();
         let notices = advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
         let unit = &world.btech.constructed_units()[&id];
@@ -3041,16 +3112,19 @@ async fn submerged_ice_routes_use_bottom_depth_and_depth_one_surface_transition(
             fixture_asset(BattleMapAsset::from_cells(&source).unwrap()).await;
         let id = units[0];
         prepare_reverse_step(&mut world, id, 12);
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        let unit = &mut state["constructed"][id.0.to_string()];
-        if old_terrain == Terrain::Ice {
-            unit["ground_elevation"] = serde_json::json!(-old_depth);
-        }
-        unit["motion"]["heading"] = serde_json::json!(180.0);
-        unit["motion"]["desired_heading"] = serde_json::json!(180.0);
-        unit["motion"]["speed"] = serde_json::json!(21.5);
-        unit["motion"]["desired_speed"] = serde_json::json!(21.5);
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                let unit = record;
+                if old_terrain == Terrain::Ice {
+                    unit["ground_elevation"] = serde_json::json!(-old_depth);
+                }
+                unit["motion"]["heading"] = serde_json::json!(180.0);
+                unit["motion"]["desired_heading"] = serde_json::json!(180.0);
+                unit["motion"]["speed"] = serde_json::json!(21.5);
+                unit["motion"]["desired_speed"] = serde_json::json!(21.5);
+            })
+            .unwrap();
         let before = world.clone();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut loaded = persistence::load(&config.database()).await.unwrap();
@@ -3090,21 +3164,23 @@ async fn failed_under_ice_control_keeps_the_bottom_and_allows_standing() {
     let (_dir, config, mut world, map, units) = fixture_field(Terrain::Ice, 3, 5).await;
     let id = units[0];
     prepare_reverse_step(&mut world, id, 6);
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["ground_elevation"] = serde_json::json!(-3);
-    // Fail water control but protect the pilot, then hit a torso rather than the head.
-    let fall_seed = (0..=255)
-        .find(|seed| {
-            let mut dice = BattleDice::seeded([*seed; 32]);
-            dice.two_d6() == 6 && dice.two_d6() >= 7 && {
-                dice.d6();
-                dice.two_d6() == 7
-            }
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["ground_elevation"] = serde_json::json!(-3);
+            // Fail water control but protect the pilot, then hit a torso rather than the head.
+            let fall_seed = (0..=255)
+                .find(|seed| {
+                    let mut dice = BattleDice::seeded([*seed; 32]);
+                    dice.two_d6() == 6 && dice.two_d6() >= 7 && {
+                        dice.d6();
+                        dice.two_d6() == 7
+                    }
+                })
+                .unwrap();
+            record["dice"] = serde_json::to_value(BattleDice::seeded([fall_seed; 32])).unwrap();
         })
         .unwrap();
-    state["constructed"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([fall_seed; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
     let notices = advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
     assert!(
         notices
@@ -3123,10 +3199,12 @@ async fn failed_under_ice_control_keeps_the_bottom_and_allows_standing() {
     let seed = (0..=255)
         .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
         .unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        })
+        .unwrap();
     let report = begin_battle_stand(
         &mut world,
         id,
@@ -3536,10 +3614,12 @@ async fn wet_running_controls_match_native_lua_and_preserve_rejected_throttle() 
         let maximum = world.btech.constructed_units()[&id]
             .mobility()
             .maximum_speed;
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][id.0.to_string()]["ground_elevation"] =
-            serde_json::to_value(altitude).unwrap();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["ground_elevation"] = serde_json::to_value(altitude).unwrap();
+            })
+            .unwrap();
         let native = Scripts::new(
             &config,
             std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
@@ -4098,10 +4178,12 @@ async fn character_fall_fractures_ice_with_nested_evacuation() {
             dice.d6() == 1
         })
         .unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][trigger.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(trigger, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        })
+        .unwrap();
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let report = fall_battle_unit_action(&scripts, &config, trigger, 1, rules()).unwrap();
     let fracture = report.ice_break.unwrap();
@@ -5192,10 +5274,12 @@ async fn woodland_impacts_commit_dice_terrain_and_notices_with_restart_replay() 
                 }
             })
             .unwrap();
-        let mut encoded = serde_json::to_value(&world.btech).unwrap();
-        encoded["constructed"][shooter.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        world.btech = serde_json::from_value(encoded).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(shooter, |record| {
+                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            })
+            .unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut replay = persistence::load(&config.database()).await.unwrap();
         let original = world.clone();
@@ -5776,9 +5860,12 @@ async fn mine_activation_queries_preserve_state_and_saved_order() {
         vec![5, 9]
     );
     let mut elevated = world.clone();
-    let mut encoded = serde_json::to_value(&elevated.btech).unwrap();
-    encoded["constructed"][unit.0.to_string()]["ground_elevation"] = 1.into();
-    elevated.btech = serde_json::from_value(encoded).unwrap();
+    elevated
+        .btech
+        .rewrite_unit_record(unit, |record| {
+            record["ground_elevation"] = 1.into();
+        })
+        .unwrap();
     assert!(
         mine_activations(&elevated, unit, BattleMineTriggerReason::Land)
             .unwrap()
@@ -5999,9 +6086,12 @@ async fn inferno_duration_cooling_extension_and_saved_expiry() {
     assert!(advance_inferno_burns(&mut world).is_empty());
     assert!(!battle_unit_illuminated(&world, id));
     assert!(!battle_unit_illuminated(&world, units[1]));
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["constructed"][id.0.to_string()]["inferno_remaining"] = u32::MAX.into();
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["inferno_remaining"] = u32::MAX.into();
+        })
+        .unwrap();
     assert!(world.validate(&config).is_err());
 }
 
@@ -6275,11 +6365,14 @@ async fn inferno_ammunition_explosion_halves_damage_and_applies_configured_heat(
         for penalty in [false, true] {
             let (_dir, config, mut world, _map, units) = fixture_field(terrain, depth, 3).await;
             let id = units[0];
-            let mut encoded = serde_json::to_value(&world.btech).unwrap();
-            encoded["constructed"][id.0.to_string()]["definition"]["sections"]["RightTorso"]["criticals"]
-                ["0"]["modes"] = serde_json::json!(["Inferno"]);
-            encoded["constructed"][id.0.to_string()]["ammunition"][0] = 1.into();
-            world.btech = serde_json::from_value(encoded).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    record["definition"]["sections"]["RightTorso"]["criticals"]["0"]["modes"] =
+                        serde_json::json!(["Inferno"]);
+                    record["ammunition"][0] = 1.into();
+                })
+                .unwrap();
             let mut rules = rules();
             rules.hit.inferno_penalty = penalty;
             let before = world.clone();
@@ -6806,11 +6899,14 @@ async fn command_mines_character_publication_and_late_rejection_are_atomic() {
     let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 7).await;
     let sender = units[0];
     let target = units[1];
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["constructed"][target.0.to_string()]["position"]["y"] = 5.into();
-    encoded["constructed"][target.0.to_string()]["motion"]["point"] =
-        serde_json::to_value(BattleHexCoordinate { x: 1, y: 5 }.center()).unwrap();
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(target, |record| {
+            record["position"]["y"] = 5.into();
+            record["motion"]["point"] =
+                serde_json::to_value(BattleHexCoordinate { x: 1, y: 5 }.center()).unwrap();
+        })
+        .unwrap();
     world
         .objects
         .get_mut(&target)

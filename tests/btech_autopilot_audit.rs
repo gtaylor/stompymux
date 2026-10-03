@@ -44,10 +44,12 @@ async fn mech_fixture(
         .unwrap();
     place_battle_unit(&mut world, unit, map, start.0, start.1).unwrap();
 
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][unit.0.to_string()]["power"] =
-        serde_json::to_value(BattlePower::Running).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(unit, |record| {
+            record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+        })
+        .unwrap();
     world.validate(&config).unwrap();
     (directory, config, world, map, unit)
 }
@@ -55,10 +57,12 @@ async fn mech_fixture(
 #[tokio::test(flavor = "current_thread")]
 async fn observation_is_safe_before_startup_and_expires_future_or_old_memory() {
     let (_directory, config, mut world, map, unit) = mech_fixture("1 2\n.0\n.0\n", (0, 1)).await;
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][unit.0.to_string()]["power"] =
-        serde_json::to_value(BattlePower::Off).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(unit, |record| {
+            record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+        })
+        .unwrap();
     world.validate(&config).unwrap();
 
     let sightings = BTreeMap::from([
@@ -237,10 +241,12 @@ async fn competing_routes_make_progress_without_permanent_congestion_block() {
         .create(&mut world, second)
         .unwrap();
     place_battle_unit(&mut world, second, map, 5, 6).unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][second.0.to_string()]["power"] =
-        serde_json::to_value(BattlePower::Running).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(second, |record| {
+            record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+        })
+        .unwrap();
     world.validate(&config).unwrap();
 
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

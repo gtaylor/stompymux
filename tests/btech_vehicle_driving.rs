@@ -249,10 +249,12 @@ fn terrain_seed(world: &mut World, id: ObjectId, fire: u8, motive: u8) -> Battle
             (dice.two_d6() == fire && dice.two_d6() == motive).then_some(seed)
         })
         .unwrap();
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded(seed)).unwrap();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
+        })
+        .unwrap();
     BattleDice::seeded(seed)
 }
 
@@ -353,15 +355,14 @@ async fn fire_exposure_requires_entry_and_hull_loss_preserves_occupants() {
         hex.x as u16
     );
     terrain_seed(&mut world, id, 8, 7); // Wheeled fire 10, sweep on fragile truck.
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    for section in saved["vehicles"][id.0.to_string()]["sections"]
-        .as_object_mut()
-        .unwrap()
-        .values_mut()
-    {
-        section["armor"] = 0.into();
-    }
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            for section in record["sections"].as_object_mut().unwrap().values_mut() {
+                section["armor"] = 0.into();
+            }
+        })
+        .unwrap();
     world
         .objects
         .get_mut(&id)
@@ -404,10 +405,12 @@ async fn every_crossed_fire_hex_checks_once_without_adding_stationary_exposure()
             (0..crossings).all(|_| dice.two_d6() <= 5).then_some(seed)
         })
         .unwrap();
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded(seed)).unwrap();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
+        })
+        .unwrap();
     let rules = BattleMovementRules {
         fall: BattleFallRules {
             vehicle_impact: BattleVehicleImpactRules {
@@ -476,9 +479,12 @@ fn seed_corridor_mines(
                 .then_some(initial)
         })
         .unwrap();
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][id.0.to_string()]["dice"] = serde_json::to_value(&seed).unwrap();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(&seed).unwrap();
+        })
+        .unwrap();
     for (index, &coordinate) in entries.iter().enumerate() {
         for (offset, kind, strength) in [
             (0, BattleMineKind::Trigger, 0),
@@ -504,13 +510,15 @@ fn seed_corridor_mines(
 
 /// Give the test truck enough protection for several independent weak blasts.
 fn reinforce_truck(world: &mut World, id: ObjectId) {
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    for section in ["left", "right", "front", "rear"] {
-        saved["vehicles"][id.0.to_string()]["definition"]["sections"][section]["armor"] =
-            100.into();
-        saved["vehicles"][id.0.to_string()]["sections"][section]["armor"] = 100.into();
-    }
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            for section in ["left", "right", "front", "rear"] {
+                record["definition"]["sections"][section]["armor"] = 100.into();
+                record["sections"][section]["armor"] = 100.into();
+            }
+        })
+        .unwrap();
 }
 
 #[tokio::test]
@@ -643,12 +651,14 @@ async fn unrelated_mines_and_motion_inside_one_hex_do_not_trigger_or_stop_vehicl
         .point
         .containing_hex()
         .unwrap();
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][id.0.to_string()]["motion"]["point"] =
-        serde_json::to_value(coordinate.center()).unwrap();
-    saved["vehicles"][id.0.to_string()]["motion"]["speed"] = 1.0.into();
-    saved["vehicles"][id.0.to_string()]["motion"]["desired_speed"] = 1.0.into();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["motion"]["point"] = serde_json::to_value(coordinate.center()).unwrap();
+            record["motion"]["speed"] = 1.0.into();
+            record["motion"]["desired_speed"] = 1.0.into();
+        })
+        .unwrap();
     set_minefield(
         &mut world,
         map,
@@ -716,9 +726,12 @@ async fn disabling_mine_heat_precedes_terrain_fire_and_stops_at_entry() {
             (dice.two_d6() == 6 && dice.two_d6() == 10 && dice.two_d6() <= 5).then_some(initial)
         })
         .unwrap();
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["vehicles"][id.0.to_string()]["dice"] = serde_json::to_value(&dice).unwrap();
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(&dice).unwrap();
+        })
+        .unwrap();
     let before = world.clone();
     let mut rules = mine_movement_rules();
     rules.fall.vehicle_impact.advanced_fire = true;
@@ -787,12 +800,14 @@ async fn mine_blast_disables_a_later_vehicle_before_its_scheduled_movement() {
         i64::from(neighbor.y),
     )
     .unwrap();
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["vehicles"][other.0.to_string()]["power"] =
-        serde_json::to_value(BattlePower::Running).unwrap();
-    encoded["vehicles"][other.0.to_string()]["motion"]["speed"] = 86.0.into();
-    encoded["vehicles"][other.0.to_string()]["motion"]["desired_speed"] = 86.0.into();
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(other, |record| {
+            record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+            record["motion"]["speed"] = 86.0.into();
+            record["motion"]["desired_speed"] = 86.0.into();
+        })
+        .unwrap();
     let second_point = world.btech.vehicles()[&other].motion().unwrap().point;
     set_minefield(
         &mut world,
@@ -964,11 +979,14 @@ async fn fatal_mine_heat_still_checks_terrain_fire_before_stopping() {
             Some((initial, dice))
         })
         .unwrap();
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][id.0.to_string()]["dice"] = serde_json::to_value(initial).unwrap();
-    saved["vehicles"][id.0.to_string()]["sections"]["left"]["armor"] = 0.into();
-    saved["vehicles"][id.0.to_string()]["sections"]["left"]["internal"] = 1.into();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(initial).unwrap();
+            record["sections"]["left"]["armor"] = 0.into();
+            record["sections"]["left"]["internal"] = 1.into();
+        })
+        .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
     let mut rules = mine_movement_rules();
@@ -1538,17 +1556,15 @@ async fn terrain_fire_crew_death_evacuates_in_the_movement_checkpoint() {
             Some(seed)
         })
         .unwrap();
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded(seed)).unwrap();
-    for section in saved["vehicles"][id.0.to_string()]["sections"]
-        .as_object_mut()
-        .unwrap()
-        .values_mut()
-    {
-        section["armor"] = 0.into();
-    }
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
+            for section in record["sections"].as_object_mut().unwrap().values_mut() {
+                section["armor"] = 0.into();
+            }
+        })
+        .unwrap();
     world
         .objects
         .get_mut(&id)

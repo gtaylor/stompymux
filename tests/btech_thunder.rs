@@ -4,14 +4,7 @@ use stompymux_rs::*;
 
 /// Set isolated runtime facts through the persisted representation for either anatomy.
 fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Value)) {
-    let collection = if world.btech.vehicles().contains_key(&id) {
-        "vehicles"
-    } else {
-        "constructed"
-    };
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    change(&mut saved[collection][id.0.to_string()]);
-    world.btech = serde_json::from_value(saved).unwrap();
+    world.btech.rewrite_unit_record(id, change).unwrap();
 }
 
 /// A Jenner whose only weapon is an IS LRM-20 fed by one bin of each Thunder round.

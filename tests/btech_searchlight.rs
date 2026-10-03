@@ -46,9 +46,12 @@ async fn fixture() -> (
 
 /// Change one persisted field to exercise ownership validation and deterministic scenarios.
 fn field(world: &mut World, id: ObjectId, key: &str, value: serde_json::Value) {
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()][key] = value;
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record[key] = value;
+        })
+        .unwrap();
 }
 
 #[tokio::test]

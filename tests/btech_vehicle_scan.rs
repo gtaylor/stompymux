@@ -95,10 +95,12 @@ async fn mixed_unit_scans_match_native_lua_and_preserve_ordinary_disclosure() {
                     .contains(" AC/20              [ 0]  Turret        Ready")
             );
             let mut damaged = world.clone();
-            let mut saved = serde_json::to_value(&damaged.btech).unwrap();
-            saved["vehicles"][target.0.to_string()]["weapon_failures"]["0"] =
-                serde_json::json!("disabled");
-            damaged.btech = serde_json::from_value(saved).unwrap();
+            damaged
+                .btech
+                .rewrite_unit_record(target, |record| {
+                    record["weapon_failures"]["0"] = serde_json::json!("disabled");
+                })
+                .unwrap();
             let damaged_text =
                 scan_battle_unit(&damaged, observer, ObjectId(1), target, "W").unwrap();
             assert!(
@@ -180,10 +182,12 @@ async fn vehicle_scan_ranges_and_observer_disclosure_follow_current_state() {
     assign_battle_pilot(&mut world, c, ObjectId(1)).unwrap();
     refresh_battle_contacts(&mut world, &[c]).unwrap();
     assert!(world.btech.vehicles()[&c].contacts().contains_key(&d));
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][c.0.to_string()]["definition"]["attributes"]["scan_range"] =
-        serde_json::json!("3");
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(c, |record| {
+            record["definition"]["attributes"]["scan_range"] = serde_json::json!("3");
+        })
+        .unwrap();
     let before = world.btech.clone();
     assert!(
         scan_battle_unit(&world, c, ObjectId(1), d, "")
@@ -193,10 +197,12 @@ async fn vehicle_scan_ranges_and_observer_disclosure_follow_current_state() {
     );
     assert!(report_battle_unit(&world, c, ObjectId(1), d).is_ok());
     assert_eq!(world.btech, before);
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][c.0.to_string()]["hardware"]["scan"] =
-        serde_json::json!({"value": 0, "sensor_hits": 0});
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(c, |record| {
+            record["hardware"]["scan"] = serde_json::json!({"value": 0, "sensor_hits": 0});
+        })
+        .unwrap();
     assert_eq!(world.btech.vehicles()[&c].sensor_ranges().scan, 0);
     assert!(
         report_battle_unit(&world, c, ObjectId(1), d)
@@ -220,18 +226,19 @@ async fn coordinate_scans_choose_visible_mixed_occupants_in_battlefield_order() 
     initial.validate(&config).unwrap();
     for selected in [Some(vehicle), Some(mech), None] {
         let mut world = initial.clone();
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        let contacts = saved["constructed"][observer.0.to_string()]["contacts"]
-            .as_object_mut()
+        world
+            .btech
+            .rewrite_unit_record(observer, |record| {
+                let contacts = record["contacts"].as_object_mut().unwrap();
+                contacts.remove(&other.0.to_string());
+                if selected != Some(vehicle) {
+                    contacts.remove(&vehicle.0.to_string());
+                }
+                if selected.is_none() {
+                    contacts.clear();
+                }
+            })
             .unwrap();
-        contacts.remove(&other.0.to_string());
-        if selected != Some(vehicle) {
-            contacts.remove(&vehicle.0.to_string());
-        }
-        if selected.is_none() {
-            contacts.clear();
-        }
-        world.btech = serde_json::from_value(saved).unwrap();
         let expected = selected.map_or_else(
             || "You see nobody in the hex!".to_owned(),
             |target| scan_battle_unit(&world, observer, ObjectId(1), target, "").unwrap(),
@@ -365,10 +372,12 @@ async fn vehicle_coordinate_and_structure_scans_share_native_lua_admission() {
         .is_err()
     );
     assert_eq!(world.btech, before);
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][observer.0.to_string()]["definition"]["attributes"]["scan_range"] =
-        serde_json::json!("1");
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(observer, |record| {
+            record["definition"]["attributes"]["scan_range"] = serde_json::json!("1");
+        })
+        .unwrap();
     let limited = world.btech.clone();
     assert!(
         scan_battle_building(
@@ -452,9 +461,12 @@ async fn vehicle_terrain_perception_owns_dice_and_rolls_back_experience() {
         },
     )
     .unwrap();
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][observer.0.to_string()]["scanner_perception"] = serde_json::json!(18);
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(observer, |record| {
+            record["scanner_perception"] = serde_json::json!(18);
+        })
+        .unwrap();
     let mut expected = world.clone();
     roll_unit_dice(&mut expected, observer, 2).unwrap();
     assert!(
@@ -464,9 +476,12 @@ async fn vehicle_terrain_perception_owns_dice_and_rolls_back_experience() {
             .contains("no building")
     );
     assert_eq!(world.btech, expected.btech);
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][observer.0.to_string()]["scanner_perception"] = serde_json::json!(-10);
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(observer, |record| {
+            record["scanner_perception"] = serde_json::json!(-10);
+        })
+        .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
     restored

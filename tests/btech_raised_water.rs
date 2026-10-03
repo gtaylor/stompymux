@@ -395,15 +395,16 @@ async fn lifting_a_map_keeps_combat_in_water_unchanged() {
         }
         // Strip the target's armor so any submerged section floods.
         for world in [&mut low, &mut high] {
-            let mut state = serde_json::to_value(&world.btech).unwrap();
-            let sections = state["constructed"][target.0.to_string()]["sections"]
-                .as_object_mut()
+            world
+                .btech
+                .rewrite_unit_record(target, |record| {
+                    let sections = record["sections"].as_object_mut().unwrap();
+                    for section in sections.values_mut() {
+                        section["armor"] = 0.into();
+                        section["rear"] = 0.into();
+                    }
+                })
                 .unwrap();
-            for section in sections.values_mut() {
-                section["armor"] = 0.into();
-                section["rear"] = 0.into();
-            }
-            world.btech = serde_json::from_value(state).unwrap();
         }
         assert_eq!(
             format!("{:?}", flood_battle_unit(&mut low, target, rules_fall())),
@@ -490,20 +491,26 @@ async fn barrage(
             },
         )
         .unwrap();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        let unit = &mut state["constructed"][id.0.to_string()];
-        unit["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-        unit["dice"] = serde_json::to_value(BattleDice::seeded([31; 32])).unwrap();
-        unit["crew_recovery"]["dice"] = serde_json::to_value(BattleDice::seeded([13; 32])).unwrap();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                let unit = record;
+                unit["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+                unit["dice"] = serde_json::to_value(BattleDice::seeded([31; 32])).unwrap();
+                unit["crew_recovery"]["dice"] =
+                    serde_json::to_value(BattleDice::seeded([13; 32])).unwrap();
+            })
+            .unwrap();
         units.push(id);
     }
     let [shooter, spotter, target] = [units[0], units[1], units[2]];
     let seen = (0..=255).any(|seed| {
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][spotter.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(spotter, |record| {
+                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            })
+            .unwrap();
         refresh_battle_contacts(&mut world, &[spotter, shooter]).unwrap();
         visible_battle_contact(&world, spotter, target)
             .unwrap()

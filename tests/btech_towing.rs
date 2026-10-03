@@ -353,14 +353,12 @@ async fn towing_load_shares_equipment_discounts_and_live_mass_across_chassis() {
                 assert_eq!(load.carried_mass, u64::from(mass) * 2 / divisor);
                 assert_eq!(world.btech, before);
                 assert!(load.maximum_speed(100.0).unwrap() <= 100.0);
-                let mut encoded = serde_json::to_value(&world.btech).unwrap();
-                let key = if world.btech.vehicles().contains_key(&b) {
-                    "vehicles"
-                } else {
-                    "constructed"
-                };
-                encoded[key][b.0.to_string()]["ammunition"][0] = 0.into();
-                world.btech = serde_json::from_value(encoded).unwrap();
+                world
+                    .btech
+                    .rewrite_unit_record(b, |record| {
+                        record["ammunition"][0] = 0.into();
+                    })
+                    .unwrap();
                 let lighter = battle_unit_load(&world, a, false).unwrap();
                 assert!(lighter.carried_mass < load.carried_mass);
                 assert!(
@@ -426,14 +424,19 @@ async fn hot_myomer_tow_discount_requires_hardware_heat_and_configuration() {
         advance_battle_units(&mut world, 0);
     }
     set_battle_observer(&mut world, observer, true).unwrap();
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["constructed"][observer.0.to_string()]["contacts"][carrier.0.to_string()] =
-        serde_json::json!({"identified": true});
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(observer, |record| {
+            record["contacts"][carrier.0.to_string()] = serde_json::json!({"identified": true});
+        })
+        .unwrap();
     for heat in [8.0, 9.0] {
-        let mut encoded = serde_json::to_value(&world.btech).unwrap();
-        encoded["constructed"][carrier.0.to_string()]["heat"]["excess"] = heat.into();
-        world.btech = serde_json::from_value(encoded).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(carrier, |record| {
+                record["heat"]["excess"] = heat.into();
+            })
+            .unwrap();
         for enabled in [false, true] {
             let load = battle_unit_load(&world, carrier, enabled).unwrap();
             let path = config.root.join("stompymux.toml");
@@ -600,19 +603,23 @@ async fn native_and_lua_tow_speed_limits_and_reports_agree() {
             advance_battle_units(&mut world, 0);
         }
         if index == 2 {
-            let mut encoded = serde_json::to_value(&world.btech).unwrap();
-            encoded["vehicles"][a.0.to_string()]["vtol_flight"]["phase"] =
-                serde_json::json!({"kind":"airborne"});
-            encoded["vehicles"][a.0.to_string()]["vtol_flight"]["altitude"] = 5.0.into();
-            world.btech = serde_json::from_value(encoded).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(a, |record| {
+                    record["vtol_flight"]["phase"] = serde_json::json!({"kind":"airborne"});
+                    record["vtol_flight"]["altitude"] = 5.0.into();
+                })
+                .unwrap();
         }
         set_battle_tow(&mut world, a, Some(b)).unwrap();
         let maximum = battle_throttle_maximum(&world, a, true).unwrap();
         let horizontal = if index == 2 {
-            let mut encoded = serde_json::to_value(&world.btech).unwrap();
-            encoded["vehicles"][a.0.to_string()]["vtol_flight"]["vertical_speed"] =
-                (maximum * 0.6).into();
-            world.btech = serde_json::from_value(encoded).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(a, |record| {
+                    record["vtol_flight"]["vertical_speed"] = (maximum * 0.6).into();
+                })
+                .unwrap();
             maximum * 0.8
         } else {
             maximum
@@ -713,11 +720,13 @@ async fn reverse_towing_guard_is_shared_by_native_lua_and_direct_controls() {
             .get(&carrier)
             .is_some_and(|u| u.definition().is_vtol())
         {
-            let mut encoded = serde_json::to_value(&world.btech).unwrap();
-            encoded[key][carrier.0.to_string()]["vtol_flight"]["phase"] =
-                serde_json::json!({"kind":"airborne"});
-            encoded[key][carrier.0.to_string()]["vtol_flight"]["altitude"] = 5.0.into();
-            world.btech = serde_json::from_value(encoded).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(carrier, |record| {
+                    record["vtol_flight"]["phase"] = serde_json::json!({"kind":"airborne"});
+                    record["vtol_flight"]["altitude"] = 5.0.into();
+                })
+                .unwrap();
         }
         set_battle_tow(&mut world, carrier, Some(target)).unwrap();
         for salvage in [false, true] {
@@ -802,13 +811,16 @@ async fn vertical_commands_share_loaded_budget_and_atomic_native_lua_behavior() 
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);
         }
-        let mut encoded = serde_json::to_value(&world.btech).unwrap();
-        let unit = &mut encoded["vehicles"][a.0.to_string()];
-        unit["vtol_flight"]["phase"] = serde_json::json!({"kind":"airborne"});
-        unit["vtol_flight"]["altitude"] = 20.0.into();
-        unit["motion"]["heading"] = 90.0.into();
-        unit["motion"]["desired_heading"] = 90.0.into();
-        world.btech = serde_json::from_value(encoded).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(a, |record| {
+                let unit = record;
+                unit["vtol_flight"]["phase"] = serde_json::json!({"kind":"airborne"});
+                unit["vtol_flight"]["altitude"] = 20.0.into();
+                unit["motion"]["heading"] = 90.0.into();
+                unit["motion"]["desired_heading"] = 90.0.into();
+            })
+            .unwrap();
         set_battle_tow(&mut world, a, Some(b)).unwrap();
         let maximum = battle_throttle_maximum(&world, a, true).unwrap();
         if maximum > 0.0 {
@@ -1080,10 +1092,12 @@ async fn pickup_equipment_requires_both_arms_and_one_working_shoulder_hand_pair(
         unreachable!()
     };
     prepare_pickup(&mut vehicle_world, carrier, target);
-    let mut saved = serde_json::to_value(&vehicle_world.btech).unwrap();
-    saved["vehicles"][carrier.0.to_string()]["definition"]["attributes"]["specials"] =
-        "ICEEngine_Tech".into();
-    vehicle_world.btech = serde_json::from_value(saved).unwrap();
+    vehicle_world
+        .btech
+        .rewrite_unit_record(carrier, |record| {
+            record["definition"]["attributes"]["specials"] = "ICEEngine_Tech".into();
+        })
+        .unwrap();
     assert!(battle_pickup_admission(&vehicle_world, carrier, ObjectId(1), target).is_err());
     let (_dir, _, mut handless, _, ids) = fixture(&[CHASSIS[0], CHASSIS[1]]).await;
     let [carrier, target] = ids[..] else {
@@ -1298,9 +1312,12 @@ async fn ground_descent_rejects_conflicting_state_and_advances_on_the_shared_hea
     let before = world.btech.clone();
     assert!(begin_battle_vehicle_descent(&mut world, id).is_err());
     assert_eq!(world.btech, before);
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][id.0.to_string()]["ground_elevation"] = 5.into();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["ground_elevation"] = 5.into();
+        })
+        .unwrap();
     begin_battle_vehicle_descent(&mut world, id).unwrap();
     let saved = serde_json::to_value(&world.btech).unwrap();
     for key in ["ground_elevation", "motion", "position"] {
@@ -1946,9 +1963,12 @@ async fn fractional_release_threshold_and_descent_clock_are_shared_and_restartab
                 unreachable!()
             };
             set_battle_tow(&mut world, carrier, Some(target)).unwrap();
-            let mut saved = serde_json::to_value(&world.btech).unwrap();
-            saved["vehicles"][carrier.0.to_string()]["vtol_flight"]["altitude"] = height.into();
-            world.btech = serde_json::from_value(saved).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(carrier, |record| {
+                    record["vtol_flight"]["altitude"] = height.into();
+                })
+                .unwrap();
             advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
             release_battle_tow(&mut world, carrier).unwrap();
             assert_eq!(
@@ -2023,12 +2043,15 @@ async fn vtol_vertical_towing_preserves_continuous_height_each_tick() {
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);
         }
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        let flight = &mut saved["vehicles"][carrier.0.to_string()]["vtol_flight"];
-        flight["phase"] = serde_json::json!({"kind":"airborne"});
-        flight["altitude"] = 5.25.into();
-        flight["vertical_speed"] = 1.0.into();
-        world.btech = serde_json::from_value(saved).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(carrier, |record| {
+                let flight = &mut record["vtol_flight"];
+                flight["phase"] = serde_json::json!({"kind":"airborne"});
+                flight["altitude"] = 5.25.into();
+                flight["vertical_speed"] = 1.0.into();
+            })
+            .unwrap();
         set_battle_tow(&mut world, carrier, Some(target)).unwrap();
         let mut previous = 5.25;
         for _ in 0..5 {
@@ -2064,12 +2087,15 @@ async fn airborne_carrier_shutdown_retains_tow_and_saved_descent() {
         };
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(carrier);
         assign_battle_pilot(&mut world, carrier, ObjectId(1)).unwrap();
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        let unit = &mut saved["vehicles"][carrier.0.to_string()];
-        unit["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-        unit["vtol_flight"]["phase"] = serde_json::json!({"kind":"airborne"});
-        unit["vtol_flight"]["altitude"] = 5.5.into();
-        world.btech = serde_json::from_value(saved).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(carrier, |record| {
+                let unit = record;
+                unit["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+                unit["vtol_flight"]["phase"] = serde_json::json!({"kind":"airborne"});
+                unit["vtol_flight"]["altitude"] = 5.5.into();
+            })
+            .unwrap();
         set_battle_tow(&mut world, carrier, Some(load)).unwrap();
         world.validate(&config).unwrap();
         let scripts =

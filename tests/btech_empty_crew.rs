@@ -197,10 +197,12 @@ async fn empty_crew_server_recovery_retries_without_spending_unsaved_dice() {
         use sqlx::Connection;
         let (_dir, config, mut world, id, _) = fixture(true).await;
         injure_battle_tactical_pilot(&mut world,id,3,false).unwrap();
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        saved["vehicles"][id.0.to_string()]["power"] = serde_json::to_value(BattlePower::Off).unwrap();
-        saved["vehicles"][id.0.to_string()]["crew_recovery"]["remaining"] = 1.into();
-        world.btech = serde_json::from_value(saved).unwrap();
+        world.btech
+            .rewrite_unit_record(id, |record| {
+        record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+        record["crew_recovery"]["remaining"] = 1.into();
+        })
+            .unwrap();
         assert!(battle_contact_observers(&world).is_empty());
         let before = recovery(&world,id).clone();
         let mut expected = world.clone();

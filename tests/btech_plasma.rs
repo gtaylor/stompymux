@@ -23,19 +23,22 @@ async fn plasma_heat_transfer_unwind_and_saved_dice_replay() {
     for (transfer, fatal, expected_rolls) in [(false, false, 1), (true, false, 3), (false, true, 0)]
     {
         let mut scenario = base.clone();
-        let mut state = serde_json::to_value(&scenario.btech).unwrap();
-        let sections = &mut state["constructed"][id.0.to_string()]["sections"];
-        if transfer {
-            for section in ["LeftArm", "LeftTorso"] {
-                sections[section]["armor"] = 0.into();
-                sections[section]["internal"] = 1.into();
-            }
-        }
-        if fatal {
-            sections["CenterTorso"]["armor"] = 0.into();
-            sections["CenterTorso"]["internal"] = 1.into();
-        }
-        scenario.btech = serde_json::from_value(state).unwrap();
+        scenario
+            .btech
+            .rewrite_unit_record(id, |record| {
+                let sections = &mut record["sections"];
+                if transfer {
+                    for section in ["LeftArm", "LeftTorso"] {
+                        sections[section]["armor"] = 0.into();
+                        sections[section]["internal"] = 1.into();
+                    }
+                }
+                if fatal {
+                    sections["CenterTorso"]["armor"] = 0.into();
+                    sections["CenterTorso"]["internal"] = 1.into();
+                }
+            })
+            .unwrap();
         let section = if fatal {
             BattleSection::CenterTorso
         } else {
@@ -44,10 +47,13 @@ async fn plasma_heat_transfer_unwind_and_saved_dice_replay() {
         let (before, ordinary, ordinary_report) = (0..=u8::MAX)
             .find_map(|seed| {
                 let mut before = scenario.clone();
-                let mut state = serde_json::to_value(&before.btech).unwrap();
-                state["constructed"][id.0.to_string()]["dice"] =
-                    serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-                before.btech = serde_json::from_value(state).unwrap();
+                before
+                    .btech
+                    .rewrite_unit_record(id, |record| {
+                        record["dice"] =
+                            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                    })
+                    .unwrap();
                 let mut ordinary = before.clone();
                 let report = resolve_battle_salvo(
                     &mut ordinary,

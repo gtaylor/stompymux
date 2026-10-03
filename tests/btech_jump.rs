@@ -18,14 +18,17 @@ async fn cargo_jump_admission_matches_native_lua_and_restart_at_one_mp() {
         let (target, _) = jump_observer(&mut world, &config, id);
         refresh_battle_contacts(&mut world, &[id]).unwrap();
         select_battle_target(&mut world, id, ObjectId(1), Some(target)).unwrap();
-        let mut encoded = serde_json::to_value(&world.btech).unwrap();
-        let unit = &mut encoded["constructed"][id.0.to_string()];
-        // Fix material mass at nominal: seven half-ton crates then cost exactly one MP.
-        unit["live_mass"] = serde_json::json!(35 * 1024);
-        if cargo_tech {
-            unit["definition"]["attributes"]["specials"] = "FlipArms CargoTech".into();
-        }
-        world.btech = serde_json::from_value(encoded).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                let unit = record;
+                // Fix material mass at nominal: seven half-ton crates then cost exactly one MP.
+                unit["live_mass"] = serde_json::json!(35 * 1024);
+                if cargo_tech {
+                    unit["definition"]["attributes"]["specials"] = "FlipArms CargoTech".into();
+                }
+            })
+            .unwrap();
         set_battle_inventory_named(&mut world, ObjectId(1), id, "Cockpit", quantity).unwrap();
         let loss = 118.25 - battle_effective_maximum_speed(&world, id, true).unwrap();
         assert_eq!(loss <= 10.75, allowed);
@@ -183,12 +186,15 @@ async fn destruction_and_thermal_shutdown_cancel_airborne_state() {
             dice.two_d6() >= 6 && dice.d6() == 1 && dice.two_d6() == 7
         })
         .unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    let unit = &mut state["constructed"][id.0.to_string()];
-    unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-    unit["heat"] = serde_json::json!({"stored":24.0,"excess":14.0});
-    unit["overheat_clock"] = serde_json::json!({"elapsed":30,"phase":0,"injury_due":false});
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            let unit = record;
+            unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            unit["heat"] = serde_json::json!({"stored":24.0,"excess":14.0});
+            unit["overheat_clock"] = serde_json::json!({"elapsed":30,"phase":0,"injury_due":false});
+        })
+        .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
     let rules = BattleOverheatRules {
@@ -502,10 +508,12 @@ async fn native_and_lua_launch_share_state_and_reject_routes_or_callbacks_atomic
     use stompymux_rs::*;
     let (_dir, config, base, id) = runtime_fixture().await;
     let mut base = base;
-    let mut state = serde_json::to_value(&base.btech).unwrap();
-    state["constructed"][id.0.to_string()]["stagger"]["hits"] =
-        serde_json::json!([{"damage":20,"remaining":60,"counted":false}]);
-    base.btech = serde_json::from_value(state).unwrap();
+    base.btech
+        .rewrite_unit_record(id, |record| {
+            record["stagger"]["hits"] =
+                serde_json::json!([{"damage":20,"remaining":60,"counted":false}]);
+        })
+        .unwrap();
     let native = Scripts::new(
         &config,
         std::rc::Rc::new(std::cell::RefCell::new(base.clone())),
@@ -982,10 +990,12 @@ fn seed_airborne_critical(
             matches!(dice.two_d6(), 8 | 9) && dice.die(count).unwrap() == selected
         })
         .unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        })
+        .unwrap();
     let mut expected = BattleDice::seeded([seed; 32]);
     expected.two_d6(); // Material entry.
     expected.two_d6();
@@ -1292,9 +1302,12 @@ async fn traditional_airborne_stagger_consumes_damage_without_a_piloting_roll() 
     use stompymux_rs::*;
     let (_dir, config, mut world, id) = runtime_fixture().await;
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["stagger"]["turn_damage"] = 20.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["stagger"]["turn_damage"] = 20.into();
+        })
+        .unwrap();
     let before = serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap();
     let reports = advance_battle_stagger(
         &mut world,
@@ -1740,10 +1753,12 @@ async fn early_landing_native_lua_success_failure_and_rollback_share_current_poi
         let seed = (0..=255)
             .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() < 11)
             .unwrap();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][id.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            })
+            .unwrap();
         let point = world.btech.constructed_units()[&id].motion().unwrap().point;
         persistence::save(&config.database(), &world).await.unwrap();
         let mut reloaded = persistence::load(&config.database()).await.unwrap();
@@ -1831,10 +1846,12 @@ async fn early_landing_success_still_checks_damaged_landing_gear() {
             dice.two_d6() >= 7 && dice.two_d6() < 7
         })
         .unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        })
+        .unwrap();
     let notices = land_battle_jump(
         &mut world,
         id,
@@ -1918,15 +1935,18 @@ async fn damage_history_does_not_block_launch_or_add_an_unrelated_landing_roll()
     ] {
         for damage in [1, 20, 40] {
             let mut world = base.clone();
-            let mut state = serde_json::to_value(&world.btech).unwrap();
-            let history = &mut state["constructed"][id.0.to_string()]["stagger"];
-            if mode == BattleStaggerMode::Traditional {
-                history["turn_damage"] = damage.into();
-            } else {
-                history["hits"] =
-                    serde_json::json!([{"damage":damage,"remaining":60,"counted":false}]);
-            }
-            world.btech = serde_json::from_value(state).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    let history = &mut record["stagger"];
+                    if mode == BattleStaggerMode::Traditional {
+                        history["turn_damage"] = damage.into();
+                    } else {
+                        history["hits"] =
+                            serde_json::json!([{"damage":damage,"remaining":60,"counted":false}]);
+                    }
+                })
+                .unwrap();
             let before = serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap();
             launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
             persistence::save(&config.database(), &world).await.unwrap();
@@ -1986,10 +2006,13 @@ async fn rolling_damage_can_still_force_a_fall_after_launch() {
             .unwrap()
             .flags
             .insert(Flag::Connected);
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][id.0.to_string()]["stagger"]["hits"] =
-            serde_json::json!([{"damage":20,"remaining":60,"counted":false}]);
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["stagger"]["hits"] =
+                    serde_json::json!([{"damage":20,"remaining":60,"counted":false}]);
+            })
+            .unwrap();
         launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
         let reports = advance_battle_stagger(
             &mut world,
@@ -2828,9 +2851,12 @@ async fn restarted_free_fall_can_land_and_retains_its_pending_impact() {
         let (_dir, config, mut world, id) = runtime_fixture().await;
         launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
         stop_battle_unit(&mut world, id, ObjectId(1), jump_rules()).unwrap();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][id.0.to_string()]["free_fall"]["elevation"] = 50.into();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["free_fall"]["elevation"] = 50.into();
+            })
+            .unwrap();
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
         let before = world.btech.clone();
         assert!(
@@ -2865,9 +2891,12 @@ async fn restarted_free_fall_can_land_and_retains_its_pending_impact() {
                 (check.two_d6() == roll).then_some(dice)
             })
             .unwrap();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][id.0.to_string()]["dice"] = serde_json::to_value(dice).unwrap();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["dice"] = serde_json::to_value(dice).unwrap();
+            })
+            .unwrap();
         let before = world.btech.clone();
         let native = Scripts::new(
             &config,
@@ -2949,10 +2978,12 @@ async fn restarted_free_fall_can_land_and_retains_its_pending_impact() {
 async fn powered_off_free_fall_stabilization_counts_down_through_restart() {
     use stompymux_rs::*;
     let (_dir, config, mut world, id) = runtime_fixture().await;
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([1; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([1; 32])).unwrap();
+        })
+        .unwrap();
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
     stop_battle_unit(&mut world, id, ObjectId(1), jump_rules()).unwrap();
     for _ in 0..3 {
@@ -3037,9 +3068,11 @@ async fn tcp_free_fall_retries_shutdown_and_impact_saves_across_restart() {
     tokio::task::LocalSet::new().run_until(async {
         let (_dir, config, mut world, id) = runtime_fixture().await;
         launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][id.0.to_string()]["dice"] = serde_json::to_value(BattleDice::seeded([1; 32])).unwrap();
-        world.btech = serde_json::from_value(state).unwrap();
+        world.btech
+            .rewrite_unit_record(id, |record| {
+        record["dice"] = serde_json::to_value(BattleDice::seeded([1; 32])).unwrap();
+        })
+            .unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::query("UPDATE player_state SET password_hash=? WHERE object_dbref=1").bind(accounts::hash("secret", &config).unwrap()).execute(&mut sql).await.unwrap();
@@ -3110,12 +3143,14 @@ async fn hardened_gyro_airborne_protection_and_restart() {
         .unwrap()
         .flags
         .insert(Flag::Connected);
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["definition"]["attributes"]["specials"] =
-        "HDGYRO".into();
-    // Keep the test retrofit at nominal mass so launch tests gyro protection, not overload.
-    state["constructed"][id.0.to_string()]["live_mass"] = serde_json::json!(35 * 1024);
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["definition"]["attributes"]["specials"] = "HDGYRO".into();
+            // Keep the test retrofit at nominal mass so launch tests gyro protection, not overload.
+            record["live_mass"] = serde_json::json!(35 * 1024);
+        })
+        .unwrap();
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
     advance_battle_jumps(
         &mut world,
@@ -3280,10 +3315,12 @@ async fn jump_observers_cover_launch_landings_damage_and_transaction_replay() {
         let seed = (0..=255)
             .find(|seed| (BattleDice::seeded([*seed; 32]).two_d6() >= 6) == (scenario == "early"))
             .unwrap();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][id.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            })
+            .unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
         let suffix = match scenario {
@@ -3452,22 +3489,28 @@ fn improved_jet_construction_pairs_and_mass() {
 async fn improved_jet_group_loss_flight_and_adapter_replay() {
     use stompymux_rs::*;
     let (_dir, config, mut base, id) = runtime_fixture().await;
-    let mut state = serde_json::to_value(&base.btech).unwrap();
-    state["constructed"][id.0.to_string()]["definition"] =
-        serde_json::to_value(improved_jet_template()).unwrap();
-    base.btech = serde_json::from_value(state).unwrap();
+    base.btech
+        .rewrite_unit_record(id, |record| {
+            record["definition"] = serde_json::to_value(improved_jet_template()).unwrap();
+        })
+        .unwrap();
     base.validate(&config).unwrap();
     let (observer, _witness) = jump_observer(&mut base, &config, id);
     let mut partial = base.clone();
-    let mut state = serde_json::to_value(&partial.btech).unwrap();
-    state["constructed"][id.0.to_string()]["lost_criticals"] =
-        serde_json::json!([{"section":"LeftTorso","slot":0}]);
-    partial.btech = serde_json::from_value(state).unwrap();
+    partial
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["lost_criticals"] = serde_json::json!([{"section":"LeftTorso","slot":0}]);
+        })
+        .unwrap();
     assert!(partial.validate(&config).is_err());
     let mut flooded = base.clone();
-    let mut state = serde_json::to_value(&flooded.btech).unwrap();
-    state["constructed"][id.0.to_string()]["flooded_sections"] = serde_json::json!(["LeftTorso"]);
-    flooded.btech = serde_json::from_value(state).unwrap();
+    flooded
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["flooded_sections"] = serde_json::json!(["LeftTorso"]);
+        })
+        .unwrap();
     assert_eq!(
         flooded.btech.constructed_units()[&id].system_hits(BattleSystem::JumpJet),
         5
@@ -3519,9 +3562,12 @@ async fn improved_jet_group_loss_flight_and_adapter_replay() {
             }
             // The deliberately crowded jet retrofit is not a balanced construction.
             // Reset its administrative test mass after each pre-launch critical change.
-            let mut encoded = serde_json::to_value(&before.btech).unwrap();
-            encoded["constructed"][id.0.to_string()]["live_mass"] = serde_json::json!(35 * 1024);
-            before.btech = serde_json::from_value(encoded).unwrap();
+            before
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    record["live_mass"] = serde_json::json!(35 * 1024);
+                })
+                .unwrap();
             let native = Scripts::new(
                 &config,
                 std::rc::Rc::new(std::cell::RefCell::new(before.clone())),
@@ -3655,10 +3701,12 @@ async fn airborne_charge_timer_and_saved_replay() {
     )
     .unwrap();
     launch_battle_jump(&mut base, id, ObjectId(1), 0, 2.0).unwrap();
-    let mut state = serde_json::to_value(&base.btech).unwrap();
-    state["constructed"][id.0.to_string()]["charge"]["elapsed"] = 59.into();
-    state["constructed"][id.0.to_string()]["charge"]["distance"] = 3.25.into();
-    base.btech = serde_json::from_value(state).unwrap();
+    base.btech
+        .rewrite_unit_record(id, |record| {
+            record["charge"]["elapsed"] = 59.into();
+            record["charge"]["distance"] = 3.25.into();
+        })
+        .unwrap();
     for new_rules in [false, true] {
         let mut world = base.clone();
         let rules = BattleMovementRules {
@@ -3720,9 +3768,12 @@ async fn airborne_charge_rejection_clears_one_or_both_selections() {
     for mutual in [false, true] {
         let mut world = base.clone();
         if mutual {
-            let mut state = serde_json::to_value(&world.btech).unwrap();
-            state["constructed"][target.0.to_string()]["charge"]["target"] = id.0.into();
-            world.btech = serde_json::from_value(state).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(target, |record| {
+                    record["charge"]["target"] = id.0.into();
+                })
+                .unwrap();
         }
         let before = serde_json::to_value(&world.btech).unwrap();
         let notices = advance_battle_jumps(
@@ -3856,14 +3907,16 @@ async fn dfa_launch_fixed_destination_and_saved_intent() {
         .motion()
         .unwrap()
         .point;
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][target.0.to_string()]["motion"]["point"] =
-        serde_json::to_value(BattlePoint {
-            x: center.x + (start.x - center.x) * 0.25,
-            y: center.y + (start.y - center.y) * 0.25,
+    world
+        .btech
+        .rewrite_unit_record(target, |record| {
+            record["motion"]["point"] = serde_json::to_value(BattlePoint {
+                x: center.x + (start.x - center.x) * 0.25,
+                y: center.y + (start.y - center.y) * 0.25,
+            })
+            .unwrap();
         })
         .unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
     refresh_battle_contacts(&mut world, &[id]).unwrap();
     select_battle_target(&mut world, id, ObjectId(1), Some(target)).unwrap();
     let before = serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap();
@@ -3877,10 +3930,13 @@ async fn dfa_launch_fixed_destination_and_saved_intent() {
         before["dice"],
         serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"]
     );
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][target.0.to_string()]["motion"]["speed"] = 21.5.into();
-    state["constructed"][target.0.to_string()]["motion"]["desired_speed"] = 21.5.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(target, |record| {
+            record["motion"]["speed"] = 21.5.into();
+            record["motion"]["desired_speed"] = 21.5.into();
+        })
+        .unwrap();
     let rules = BattleMovementRules {
         fall: jump_rules(),
         ..BattleMovementRules::STANDARD
@@ -3933,9 +3989,12 @@ async fn dfa_launch_rejection_and_shutdown() {
         Some(target)
     );
     let mut invalid = world.clone();
-    let mut state = serde_json::to_value(&invalid.btech).unwrap();
-    state["constructed"][id.0.to_string()]["flight"]["dfa_target"] = id.0.into();
-    invalid.btech = serde_json::from_value(state).unwrap();
+    invalid
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["flight"]["dfa_target"] = id.0.into();
+        })
+        .unwrap();
     assert!(invalid.validate(&config).is_err());
     let before = world.btech.clone();
     assert!(launch_battle_dfa(&mut world, id, ObjectId(1), Some(target)).is_err());
@@ -4030,10 +4089,12 @@ async fn dfa_landing_dispatch_and_saved_replay() {
     let seed = (0..=255)
         .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
         .unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        })
+        .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     loaded
@@ -4307,10 +4368,12 @@ async fn character_free_fall_action_replays_and_rolls_back_casualties() {
         let seed = (0..=255)
             .find(|byte| BattleDice::seeded([*byte; 32]).two_d6() == 2)
             .unwrap();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][id.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            })
+            .unwrap();
         let baseline = world.clone();
         assert!(advance_battle_jumps(&mut world, movement).is_err());
         assert_eq!(world.btech, baseline.btech);
@@ -4824,10 +4887,13 @@ async fn character_landing_control_experience_and_restart() {
                         dice.two_d6() == 12 && dice.two_d6() == 12
                     })
                     .unwrap();
-                let mut state = serde_json::to_value(&world.btech).unwrap();
-                state["constructed"][id.0.to_string()]["dice"] =
-                    serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-                world.btech = serde_json::from_value(state).unwrap();
+                world
+                    .btech
+                    .rewrite_unit_record(id, |record| {
+                        record["dice"] =
+                            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                    })
+                    .unwrap();
                 let mut channel = Channel::new("MechPilotXP".into());
                 channel.users.push(communication::Membership {
                     who: ObjectId(1),
@@ -5052,9 +5118,12 @@ async fn character_manual_landing_adapters_and_casualty_rollback() {
                     (probe.two_d6() == 12 && probe.two_d6() == 12).then_some(dice)
                 })
                 .unwrap();
-            let mut state = serde_json::to_value(&world.btech).unwrap();
-            state["constructed"][id.0.to_string()]["dice"] = serde_json::to_value(dice).unwrap();
-            world.btech = serde_json::from_value(state).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    record["dice"] = serde_json::to_value(dice).unwrap();
+                })
+                .unwrap();
             let mut channel = Channel::new("MechPilotXP".into());
             channel.users.push(communication::Membership {
                 who: pilot,
@@ -5672,13 +5741,14 @@ async fn free_fall_landing_feedback_is_private_and_replays() {
         let byte = (0..=255)
             .find(|byte| BattleDice::seeded([*byte; 32]).two_d6() == roll)
             .unwrap();
-        let mut encoded = serde_json::to_value(&world.btech).unwrap();
-        encoded["constructed"][id.0.to_string()]["free_fall"] =
-            serde_json::to_value(BattleFreeFall::new(1)).unwrap();
-        encoded["constructed"][id.0.to_string()]["free_fall"]["remaining"] = 1.into();
-        encoded["constructed"][id.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([byte; 32])).unwrap();
-        world.btech = serde_json::from_value(encoded).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["free_fall"] = serde_json::to_value(BattleFreeFall::new(1)).unwrap();
+                record["free_fall"]["remaining"] = 1.into();
+                record["dice"] = serde_json::to_value(BattleDice::seeded([byte; 32])).unwrap();
+            })
+            .unwrap();
         world.validate(&config).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let scripts =

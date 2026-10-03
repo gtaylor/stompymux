@@ -7,10 +7,12 @@ use stompymux_rs::{
 
 /// Seed an isolated owned unit stream for deterministic damage scenarios.
 fn seed(world: &mut stompymux_rs::World, id: ObjectId, value: u8) {
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
+        })
+        .unwrap();
 }
 
 /// A supported constructed unit in an isolated world.
@@ -247,9 +249,11 @@ async fn character_explosion_injuries_are_applied_once() {
     )
     .unwrap();
     assign_battle_pilot(&mut base, id, ObjectId(1)).unwrap();
-    let mut state = serde_json::to_value(&base.btech).unwrap();
-    state["constructed"][id.0.to_string()]["ammunition"] = serde_json::json!([1]);
-    base.btech = serde_json::from_value(state).unwrap();
+    base.btech
+        .rewrite_unit_record(id, |record| {
+            record["ammunition"] = serde_json::json!([1]);
+        })
+        .unwrap();
     let scripts = Scripts::new(
         &config,
         std::rc::Rc::new(std::cell::RefCell::new(base.clone())),

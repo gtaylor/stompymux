@@ -201,9 +201,12 @@ async fn observers_share_admin_disclosure_radio_and_saved_role() {
             digital
         );
         let mut analog_world = observing.clone();
-        let mut saved = serde_json::to_value(&analog_world.btech).unwrap();
-        saved["vehicles"][target.0.to_string()]["radio"][0]["mode"]["digital"] = false.into();
-        analog_world.btech = serde_json::from_value(saved).unwrap();
+        analog_world
+            .btech
+            .rewrite_unit_record(target, |record| {
+                record["radio"][0]["mode"]["digital"] = false.into();
+            })
+            .unwrap();
         persistence::save(&config.database(), &analog_world)
             .await
             .unwrap();
