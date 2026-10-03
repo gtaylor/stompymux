@@ -1800,7 +1800,7 @@ fn validate_definition(definition: &BattleTemplate) -> Result<()> {
             "Rear armor outside torso"
         );
     }
-    let loadout = BattleLoadout::resolve(definition)?;
+    let loadout = super::equipment_context::mech(definition, false)?;
     super::BattleEngine::resolve(&loadout, definition.has_special("Clan"))?;
     ensure!(
         ["HDGYRO", "XLGYRO", "CGYRO"]
