@@ -21,8 +21,8 @@ struct Uniforms {
     grid_gap: f32,
     // Brush radius in hexes around `hover`, or negative for no brush outline.
     brush: f32,
-    // Value to label hexes with (see LABEL_*), or negative for no labels.
-    label: f32,
+    // Nonzero to write each hex's layer heights on it.
+    labels: f32,
 };
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
@@ -47,15 +47,8 @@ const STRUCTURE_BUILDING: u32 = 1u;
 const STRUCTURE_WALL: u32 = 2u;
 const STRUCTURE_BRIDGE: u32 = 3u;
 
-// Label modes, matching `Label` in render.rs.
-const LABEL_ALL: i32 = 0;
-const LABEL_LEVEL: i32 = 1;
-const LABEL_DEPTH: i32 = 2;
-const LABEL_HEIGHT: i32 = 3;
-
-// Digit half heights in map units for one centered number and for the stacked rows of
-// LABEL_ALL, and how far the top and bottom rows sit from the hex center.
-const SINGLE_SIZE: f32 = 0.35;
+// Digit half height in map units for the label rows, and how far the top and bottom rows sit
+// from the hex center.
 const ROW_SIZE: f32 = 0.17;
 const ROW_OFFSET: f32 = 0.5;
 
@@ -275,14 +268,13 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     // Labels. Ground level is the one elevation; every other layer is an offset from it,
     // signed to say which way: water depth below the surface (which sits at ground level),
     // and a bridge deck, building or wall above.
-    let mode = i32(u.label);
     let has_water = water != 0u;
     let has_structure = structure != 0u;
     let depth = water - 1u;
     let top = structure_height;
     let top_sign = sign_for(top, SIGN_PLUS);
     let depth_sign = sign_for(depth, SIGN_MINUS);
-    if mode == LABEL_ALL {
+    if u.labels != 0.0 {
         // Fixed rows, so a lone number still says which layer it belongs to: ground level on
         // top, the structure above it in the middle, the water below it at the bottom.
         if level != 0u || has_water || has_structure {
@@ -294,12 +286,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         if has_water {
             color = ink_number(color, local, ROW_OFFSET, ROW_SIZE, depth, depth_sign);
         }
-    } else if mode == LABEL_LEVEL && level != 0u {
-        color = ink_number(color, local, 0.0, SINGLE_SIZE, level, SIGN_NONE);
-    } else if mode == LABEL_DEPTH && has_water {
-        color = ink_number(color, local, 0.0, SINGLE_SIZE, depth, depth_sign);
-    } else if mode == LABEL_HEIGHT && has_structure {
-        color = ink_number(color, local, 0.0, SINGLE_SIZE, top, top_sign);
     }
 
     if u.brush >= 0.0 && hex_distance(hex, vec2<i32>(u.hover)) <= i32(u.brush) {

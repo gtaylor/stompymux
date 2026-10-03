@@ -26,7 +26,7 @@ use stompymux_rs::{
 use brush_panel::{BrushEdit, BrushPanel};
 use document::{Document, MapSettings};
 use map_view::{Camera, MapView};
-use render::Label;
+use render::LABEL_LEGEND;
 
 fn main() -> iced::Result {
     let map_dir = std::env::args()
@@ -61,7 +61,6 @@ pub enum Message {
     },
     Fit,
     Brush(BrushEdit),
-    Label(Label),
     Undo,
     Redo,
     FilterChanged(String),
@@ -91,7 +90,6 @@ struct Mappy {
     fit_pending: bool,
     hover: Option<BattleHexCoordinate>,
     brush: BrushPanel,
-    label: Label,
     new_width: String,
     new_height: String,
     save_name: String,
@@ -113,7 +111,6 @@ impl Mappy {
             fit_pending: true,
             hover: None,
             brush: BrushPanel::default(),
-            label: Label::default(),
             new_width: "30".into(),
             new_height: "30".into(),
             save_name: String::new(),
@@ -166,7 +163,6 @@ impl Mappy {
             }
             Message::Fit => self.fit(),
             Message::Brush(edit) => self.brush.edit(edit),
-            Message::Label(label) => self.label = label,
             Message::Undo => {
                 self.document.undo();
                 self.sync_conditions();
@@ -324,7 +320,6 @@ impl Mappy {
             camera: self.camera,
             hover: self.hover,
             brush_radius: self.brush.radius,
-            label: self.label,
         };
         let body = row![
             self.map_list(),
@@ -368,19 +363,7 @@ impl Mappy {
             button("Redo").on_press_maybe(self.document.can_redo().then_some(Message::Redo)),
             button("Fit").on_press(Message::Fit),
             rule::vertical(1),
-            text("Labels"),
-            row(Label::ALL.into_iter().map(|label| {
-                button(text(label.name()).size(13))
-                    .style(if label == self.label {
-                        button::primary
-                    } else {
-                        button::secondary
-                    })
-                    .on_press(Message::Label(label))
-                    .into()
-            }))
-            .spacing(2),
-            text(self.label.legend()).size(12),
+            text(format!("Labels — {LABEL_LEGEND}")).size(12),
         ]
         .spacing(8)
         .padding(8)

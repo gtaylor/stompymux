@@ -28,68 +28,17 @@ pub struct Uniforms {
     pub radius: f32,
     pub grid_gap: f32,
     pub brush: f32,
-    /// Which value to label hexes with, a [`Label`] as a number, or negative for none.
-    pub label: f32,
+    /// Nonzero to write each hex's layer heights on it; see [`LABEL_LEGEND`].
+    pub labels: f32,
 }
 
-/// What is written on each hex when zoomed in. Ground level is the one elevation; every other
+/// What the numbers written on each hex mean. Ground level is the one elevation; every other
 /// layer is an offset from it, signed to say which way: water depth as a negative number below
 /// the surface (-2), which sits at ground level, and a bridge deck, building or wall as a
-/// positive one above it (+2). A layer's own elevation is ground level plus its offset.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum Label {
-    /// Every layer in fixed rows: ground level on top, deck, building or wall height in the
-    /// middle, water depth at the bottom. Ground level is left off bare level-zero hexes.
-    #[default]
-    All,
-    /// Ground level, on hexes above level zero.
-    Level,
-    /// Water depth below the surface, on water and ice.
-    Depth,
-    /// Bridge deck, building or wall height above the ground or water.
-    Height,
-}
-
-impl Label {
-    pub const ALL: [Self; 4] = [Self::All, Self::Level, Self::Depth, Self::Height];
-
-    /// Name shown on the label selector.
-    pub fn name(self) -> &'static str {
-        match self {
-            Self::All => "All layers",
-            Self::Level => "Level",
-            Self::Depth => "Depth",
-            Self::Height => "Height",
-        }
-    }
-
-    /// What the numbers on each hex mean, for the toolbar.
-    pub fn legend(self) -> &'static str {
-        match self {
-            Self::All => {
-                "top: ground level · middle: +deck, building or wall height · \
-                 bottom: -depth below the water"
-            }
-            Self::Level => "ground level",
-            Self::Depth => "-depth below the water surface",
-            Self::Height => "+deck, building or wall height above the ground or water",
-        }
-    }
-
-    /// The smallest hex radius, in pixels, at which these labels are legible. All layers
-    /// stacks three small rows, so it needs more room than one centered number.
-    pub fn min_radius(self) -> f32 {
-        match self {
-            Self::All => 20.0,
-            Self::Level | Self::Depth | Self::Height => 12.0,
-        }
-    }
-
-    /// The value `map.wgsl` selects this label with.
-    pub fn shader_value(self) -> f32 {
-        self as u8 as f32
-    }
-}
+/// positive one above it (+2). Each has a fixed row, so a lone number still says which layer it
+/// belongs to; ground level is left off bare level-zero hexes.
+pub const LABEL_LEGEND: &str = "top: ground level · middle: +deck, building or wall height · \
+                                bottom: -depth below the water";
 
 impl Uniforms {
     /// The uniform block's bytes in WGSL layout: four `vec2<f32>` then four `f32`.
@@ -97,7 +46,7 @@ impl Uniforms {
         [self.size, self.offset, self.map_size, self.hover]
             .into_iter()
             .flatten()
-            .chain([self.radius, self.grid_gap, self.brush, self.label])
+            .chain([self.radius, self.grid_gap, self.brush, self.labels])
             .flat_map(f32::to_ne_bytes)
             .collect()
     }
@@ -226,7 +175,7 @@ impl shader::Pipeline for MapPipeline {
             radius: 0.0,
             grid_gap: 0.0,
             brush: 0.0,
-            label: 0.0,
+            labels: 0.0,
         }
         .to_bytes()
         .len();
@@ -578,15 +527,15 @@ mod tests {
 
     /// A frame of `document` at the test camera, with a grid and no labels or brush.
     fn frame(document: &Document, size: Size<u32>) -> MapPrimitive {
-        labelled_frame(document, size, RADIUS, None)
+        labelled_frame(document, size, RADIUS, false)
     }
 
-    /// A frame of `document` with hexes of `radius` pixels, labelled as `label` says.
+    /// A frame of `document` with hexes of `radius` pixels, with or without labels.
     fn labelled_frame(
         document: &Document,
         size: Size<u32>,
         radius: f32,
-        label: Option<Label>,
+        labels: bool,
     ) -> MapPrimitive {
         let map = &document.map;
         MapPrimitive {
@@ -601,7 +550,7 @@ mod tests {
                 radius,
                 grid_gap: 1.0,
                 brush: -1.0,
-                label: label.map_or(-1.0, Label::shader_value),
+                labels: if labels { 1.0 } else { 0.0 },
             },
         }
     }
@@ -732,25 +681,24 @@ mod tests {
         assert_color(&pixels, size, 1, 0, terrain_color(Terrain::Road));
     }
 
-    /// Hex radius and frame size for the label tests, large enough for small digits.
-    const LABEL_RADIUS: f32 = 40.0;
-    const LABEL_FRAME: Size<u32> = Size::new(128, 128);
+    /// Hex radius and frame size for the label tests, large enough for the small row digits.
+    const LABEL_RADIUS: f32 = 80.0;
+    const LABEL_FRAME: Size<u32> = Size::new(256, 256);
 
-    /// Whether `label` changes the pixel at `(dx, dy)` from the center of a lone `hex`, in hex
-    /// radii, compared with the same hex drawn without labels. Returns a lookup for any offset.
+    /// Whether labels change the pixel at `(dx, dy)` from the center of a lone `hex`, in hex
+    /// radii, compared with the same hex drawn without them. Returns a lookup for any offset.
     fn label_ink(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         hex: BattleHex,
-        label: Label,
     ) -> impl Fn(f32, f32) -> bool {
         let (size, radius) = (LABEL_FRAME, LABEL_RADIUS);
         let mut document = Document::new(1, 1).unwrap();
         put(&mut document, 0, 0, hex);
         let mut pipeline = MapPipeline::new(device, queue, FORMAT);
-        let plain = labelled_frame(&document, size, radius, None);
+        let plain = labelled_frame(&document, size, radius, false);
         let plain = render(device, queue, &mut pipeline, &plain, size);
-        let labelled = labelled_frame(&document, size, radius, Some(label));
+        let labelled = labelled_frame(&document, size, radius, true);
         let labelled = render(device, queue, &mut pipeline, &labelled, size);
         let center_x = OFFSET[0] + radius;
         let center_y = OFFSET[1] + radius * 3.0_f32.sqrt();
@@ -762,14 +710,9 @@ mod tests {
         }
     }
 
-    /// Which of the three label rows (top, middle, bottom) `label` writes on a lone `hex`.
-    fn inked_rows(
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        hex: BattleHex,
-        label: Label,
-    ) -> [bool; 3] {
-        let inked = label_ink(device, queue, hex, label);
+    /// Which of the three label rows (top, middle, bottom) are written on a lone `hex`.
+    fn inked_rows(device: &wgpu::Device, queue: &wgpu::Queue, hex: BattleHex) -> [bool; 3] {
+        let inked = label_ink(device, queue, hex);
         let steps =
             |from: f32, to: f32| (0..=20).map(move |step| from + (to - from) * step as f32 / 20.0);
         [-0.5, 0.0, 0.5].map(|row: f32| {
@@ -777,51 +720,48 @@ mod tests {
         })
     }
 
-    /// All layers writes each layer in its own row and leaves bare level-zero ground blank;
-    /// single-value modes write one larger number across the middle.
+    /// Each layer is written in its own row, and bare level-zero ground is left blank.
     #[test]
-    fn all_layers_labels_use_fixed_rows() {
+    fn labels_use_fixed_rows() {
         let Some((device, queue)) = device() else {
             eprintln!("no graphics adapter; skipping");
             return;
         };
+        let rows = |hex| inked_rows(&device, &queue, hex);
         let bridge = BattleHex::new(Terrain::Bridge, 2).with_level(4);
+        assert_eq!(rows(bridge), [true, true, true]);
         let water = BattleHex::new(Terrain::Water, 3).with_level(2);
+        assert_eq!(rows(water), [true, false, true]);
         let building = BattleHex::new(Terrain::Building, 3);
-        let bare = BattleHex::at_level(0);
-        let rows = |hex, label| inked_rows(&device, &queue, hex, label);
-        assert_eq!(rows(bridge, Label::All), [true, true, true]);
-        assert_eq!(rows(water, Label::All), [true, false, true]);
-        assert_eq!(rows(building, Label::All), [true, true, false]);
-        assert_eq!(rows(bare, Label::All), [false, false, false]);
-        assert!(rows(bridge, Label::Height)[1]);
-        assert_eq!(rows(bare, Label::Level), [false, false, false]);
+        assert_eq!(rows(building), [true, true, false]);
+        assert_eq!(rows(BattleHex::at_level(5)), [true, false, false]);
+        assert_eq!(rows(BattleHex::at_level(0)), [false, false, false]);
     }
 
     /// Depth is written with a minus sign and a bridge deck, building or wall height with a plus
     /// sign, each to the left of its digit, and neither sign appears on a zero.
     #[test]
-    fn depth_and_deck_labels_are_signed() {
+    fn depth_and_height_labels_are_signed() {
         let Some((device, queue)) = device() else {
             eprintln!("no graphics adapter; skipping");
             return;
         };
-        let inked = |hex, label, dx, dy| label_ink(&device, &queue, hex, label)(dx, dy);
-        // A sign and one digit put the sign's bar about a quarter radius left of center; a
-        // lone centered digit, anti-aliased edge included, stops short of 0.3. A plus also
-        // has a vertical stroke just above that bar, which a minus lacks.
-        let (bar, stem) = ((-0.3, 0.0), (-0.24, -0.08));
+        // In a row, a sign and one digit put the sign about 0.12 radius left of center, its
+        // bar reaching past 0.16, where a lone digit, anti-aliased edge included, never does. A
+        // plus also has a vertical stroke just above the bar's middle, which a minus lacks.
+        let (bar, stem) = ((-0.16, 0.0), (-0.115, -0.045));
+        let inked =
+            |hex, row: f32, (dx, dy): (f32, f32)| label_ink(&device, &queue, hex)(dx, row + dy);
+        let (middle, bottom) = (0.0, 0.5);
         let deep = BattleHex::new(Terrain::Water, 3);
-        let still = BattleHex::new(Terrain::Water, 0);
+        assert!(inked(deep, bottom, bar));
+        assert!(!inked(deep, bottom, stem));
+        assert!(!inked(BattleHex::new(Terrain::Water, 0), bottom, bar));
         let bridge = BattleHex::new(Terrain::Bridge, 3).with_level(4);
-        let flush = BattleHex::new(Terrain::Bridge, 0);
+        assert!(inked(bridge, middle, bar));
+        assert!(inked(bridge, middle, stem));
+        assert!(!inked(BattleHex::new(Terrain::Bridge, 0), middle, bar));
         let building = BattleHex::new(Terrain::Building, 3).with_level(5);
-        assert!(inked(deep, Label::Depth, bar.0, bar.1));
-        assert!(!inked(deep, Label::Depth, stem.0, stem.1));
-        assert!(!inked(still, Label::Depth, bar.0, bar.1));
-        assert!(inked(bridge, Label::Height, bar.0, bar.1));
-        assert!(inked(bridge, Label::Height, stem.0, stem.1));
-        assert!(!inked(flush, Label::Height, bar.0, bar.1));
-        assert!(inked(building, Label::Height, stem.0, stem.1));
+        assert!(inked(building, middle, stem));
     }
 }
