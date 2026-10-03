@@ -176,10 +176,12 @@ async fn vehicle_fall_fractures_ice_before_outer_damage_and_replays_nested_falls
     let seed = (0..=255)
         .find(|seed| BattleDice::seeded([*seed; 32]).d6() == 1)
         .unwrap();
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        })
+        .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
     let fall =
@@ -234,11 +236,14 @@ async fn vehicle_shutdown_ice_cascade_keeps_each_pilots_feedback_private() {
             (probe.two_d6() == 12 && probe.d6() == 1).then_some(dice)
         })
         .unwrap();
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["vehicles"][tank.0.to_string()]["dice"] = serde_json::to_value(dice).unwrap();
-    encoded["vehicles"][tank.0.to_string()]["motion"]["speed"] = 21.5.into();
-    encoded["vehicles"][tank.0.to_string()]["motion"]["desired_speed"] = 21.5.into();
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(tank, |record| {
+            record["dice"] = serde_json::to_value(dice).unwrap();
+            record["motion"]["speed"] = 21.5.into();
+            record["motion"]["desired_speed"] = 21.5.into();
+        })
+        .unwrap();
     let before = world.clone();
     let native = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let lua = Scripts::new(

@@ -499,6 +499,37 @@ impl BtechState {
         &self.units
     }
 
+    /// Rewrite one Mech or vehicle record through its serialized form.
+    ///
+    /// The result matches serializing the whole state, editing the record, and
+    /// deserializing it all back, including clearing the runtime-only state that
+    /// never survives serialization. It re-encodes only the one record instead of
+    /// every unit and map. Fixtures use it to set fields that gameplay never writes.
+    /// Keep the cleared fields in step with this type's `#[serde(skip)]` fields.
+    pub fn rewrite_unit_record(
+        &mut self,
+        id: ObjectId,
+        edit: impl FnOnce(&mut serde_json::Value),
+    ) -> Result<()> {
+        if let Some(unit) = self.constructed.get(&id) {
+            let mut record = serde_json::to_value(unit)?;
+            edit(&mut record);
+            let unit: BattleUnit = serde_json::from_value(record)?;
+            self.constructed.insert(id, unit);
+        } else if let Some(vehicle) = self.vehicles.get(&id) {
+            let mut record = serde_json::to_value(vehicle)?;
+            edit(&mut record);
+            let vehicle: super::BattleVehicle = serde_json::from_value(record)?;
+            self.vehicles.insert(id, vehicle);
+        } else {
+            anyhow::bail!("#{} has no unit or vehicle record", id.0);
+        }
+        self.template_registry = Default::default();
+        self.retire_sanctions = Default::default();
+        self.autopilot_plans = Default::default();
+        Ok(())
+    }
+
     /// Invariant check after one gameplay operation, with the same build split as
     /// [`World::validate_action`]: full in debug and test builds, skipped in release
     /// builds, where the server validates the finished transaction before persisting it.
@@ -1292,4 +1323,58 @@ pub fn set_map_visibility(
         super::searchlight::reconcile_map(world, id);
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod rewrite_tests {
+    use super::*;
+    use crate::{BattleVehicleTemplate, Config};
+
+    /// Rewriting one record matches a whole-state serialize, edit, deserialize.
+    #[test]
+    fn unit_record_rewrite_matches_a_whole_state_round_trip() {
+        let config = Config::load("tests/fixtures/game").unwrap();
+        let mut world = World {
+            next_id: 42,
+            ..Default::default()
+        };
+        let mech = world.create(&config, "Mech".into(), Kind::Thing);
+        let vehicle = world.create(&config, "Vehicle".into(), Kind::Thing);
+        let map = world.create(&config, "Map".into(), Kind::Room);
+        create_unit(
+            &mut world,
+            mech,
+            BattleTemplate::parse("JR7-D", include_str!("../../game/mechs/JR7-D.toml")).unwrap(),
+        )
+        .unwrap();
+        crate::create_battle_vehicle(
+            &mut world,
+            vehicle,
+            BattleVehicleTemplate::parse(
+                "Demolisher",
+                include_str!("../../game/mechs/Demolisher.toml"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        create_map(
+            &mut world,
+            map,
+            "test",
+            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        )
+        .unwrap();
+        world.btech.retire_sanctions.borrow_mut().insert(mech);
+        for (id, class) in [(mech, "constructed"), (vehicle, "vehicles")] {
+            let edit = |record: &mut serde_json::Value| record["heading"] = 120.into();
+            let mut rewritten = world.btech.clone();
+            rewritten.rewrite_unit_record(id, edit).unwrap();
+            let mut whole = serde_json::to_value(&world.btech).unwrap();
+            edit(&mut whole[class][id.0.to_string()]);
+            let round_trip: BtechState = serde_json::from_value(whole).unwrap();
+            assert_eq!(rewritten, round_trip);
+            assert!(rewritten.retire_sanctions.borrow().is_empty());
+        }
+        assert!(world.btech.rewrite_unit_record(map, |_| {}).is_err());
+    }
 }

@@ -627,10 +627,13 @@ async fn engine_emergency_landings_use_shared_checks_and_commit_failed_attempts_
                         .unwrap(),
                     *changed
                 );
-                let mut saved = serde_json::to_value(&world.btech).unwrap();
-                saved["vehicles"][id.0.to_string()]["dice"] =
-                    serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-                world.btech = serde_json::from_value(saved).unwrap();
+                world
+                    .btech
+                    .rewrite_unit_record(id, |record| {
+                        record["dice"] =
+                            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                    })
+                    .unwrap();
                 let cursor = world.btech.vehicles()[&id].vtol_flight().unwrap().fall;
                 let repeated = resolve_battle_vehicle_critical(
                     &mut world,
@@ -820,18 +823,21 @@ async fn emergency_landing_feedback_is_private_and_replayable() {
             })
             .unwrap();
         let mut candidate = world.clone();
-        let mut state = serde_json::to_value(&candidate.btech).unwrap();
-        let aircraft = &mut state["vehicles"][id.0.to_string()];
-        aircraft["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-        aircraft["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
-            fall: None,
-            phase: BattleVtolFlightPhase::Airborne,
-            altitude: 2.0,
-            vertical_speed: 0.0,
-        })
-        .unwrap();
-        aircraft["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        candidate.btech = serde_json::from_value(state).unwrap();
+        candidate
+            .btech
+            .rewrite_unit_record(id, |record| {
+                let aircraft = record;
+                aircraft["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+                aircraft["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
+                    fall: None,
+                    phase: BattleVtolFlightPhase::Airborne,
+                    altitude: 2.0,
+                    vertical_speed: 0.0,
+                })
+                .unwrap();
+                aircraft["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            })
+            .unwrap();
         persistence::save(&config.database(), &candidate)
             .await
             .unwrap();

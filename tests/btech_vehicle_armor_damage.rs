@@ -33,10 +33,12 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 
 /// Seed only the selected vehicle's dice, keeping all material and equipment state unchanged.
 fn seed(world: &mut World, id: ObjectId, value: u8) {
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
+        })
+        .unwrap();
 }
 
 /// Isolated internal damage with criticals disabled still consumes its two diagnostic rolls.
@@ -66,10 +68,12 @@ fn matching_seed(predicate: impl Fn(&mut BattleDice) -> bool) -> [u8; 32] {
 
 /// Change only the victim's random stream.
 fn set_seed(world: &mut World, id: ObjectId, seed: [u8; 32]) {
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded(seed)).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
+        })
+        .unwrap();
 }
 
 /// Plain front armor hit; hit-table secondary effects have already been resolved by the caller.

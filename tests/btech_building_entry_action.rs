@@ -1124,14 +1124,12 @@ async fn tow_transfer_denial_and_either_arrival_callback_restore_the_entire_pair
 
 /// Edit only actual motion so entry tests distinguish admission from throttle requests.
 fn actual_speed(world: &mut World, id: ObjectId, speed: f64) {
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    let class = if world.btech.vehicles().contains_key(&id) {
-        "vehicles"
-    } else {
-        "constructed"
-    };
-    state[class][id.0.to_string()]["motion"]["speed"] = speed.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["motion"]["speed"] = speed.into();
+        })
+        .unwrap();
 }
 
 #[tokio::test]
@@ -1265,11 +1263,13 @@ async fn building_host_honors_configured_hot_myomer_load_assistance() {
         }
     }
     assert_eq!(remaining, 0);
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["constructed"][id.0.to_string()]["definition"] =
-        serde_json::to_value(definition).unwrap();
-    encoded["constructed"][id.0.to_string()]["heat"]["excess"] = 9.0.into();
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["definition"] = serde_json::to_value(definition).unwrap();
+            record["heat"]["excess"] = 9.0.into();
+        })
+        .unwrap();
     attach(
         &mut world,
         &config,
@@ -1503,10 +1503,12 @@ async fn entry_posture_and_flight_refusals_match_native_and_lua() {
         let (_dir, config, mut world, id, _, _) = fixture(source).await;
         let expected = match case {
             0 => {
-                let mut state = serde_json::to_value(&world.btech).unwrap();
-                state["constructed"][id.0.to_string()]["posture"] =
-                    serde_json::to_value(BattlePosture::Prone).unwrap();
-                world.btech = serde_json::from_value(state).unwrap();
+                world
+                    .btech
+                    .rewrite_unit_record(id, |record| {
+                        record["posture"] = serde_json::to_value(BattlePosture::Prone).unwrap();
+                    })
+                    .unwrap();
                 "Crawl inside? I think not. Stand first."
             }
             1 => {
@@ -1514,10 +1516,12 @@ async fn entry_posture_and_flight_refusals_match_native_and_lua() {
                 "While in mid-jump? No way."
             }
             2 => {
-                let mut state = serde_json::to_value(&world.btech).unwrap();
-                state["vehicles"][id.0.to_string()]["vtol_flight"]["phase"] =
-                    serde_json::json!({"kind":"airborne"});
-                world.btech = serde_json::from_value(state).unwrap();
+                world
+                    .btech
+                    .rewrite_unit_record(id, |record| {
+                        record["vtol_flight"]["phase"] = serde_json::json!({"kind":"airborne"});
+                    })
+                    .unwrap();
                 "You need to land before you can enter the hangar."
             }
             _ => {

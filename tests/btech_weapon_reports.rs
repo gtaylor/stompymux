@@ -62,19 +62,14 @@ async fn fixture(
 async fn reports_share_chassis_state_and_preserve_empty_ammunition() {
     for (reference, source) in templates() {
         let (_dir, config, mut world, id) = fixture(reference, &source, true).await;
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        let group = if world.btech.vehicles().contains_key(&id) {
-            "vehicles"
-        } else {
-            "constructed"
-        };
-        for rounds in state[group][id.0.to_string()]["ammunition"]
-            .as_array_mut()
-            .unwrap()
-        {
-            *rounds = serde_json::json!(0);
-        }
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                for rounds in record["ammunition"].as_array_mut().unwrap() {
+                    *rounds = serde_json::json!(0);
+                }
+            })
+            .unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let before = scripts.world().btech.clone();
         let diagnostics = battle_weapon_diagnostics(&scripts.world(), id).unwrap();
@@ -202,13 +197,15 @@ async fn damage_and_vehicle_failures_are_distinct_from_readiness() {
         .position(|mount| mount.weapon == BattleWeapon::Ppc)
         .unwrap();
     let location = loadout.weapons[index].criticals[0];
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["weapon_damage"] =
-        serde_json::json!([BattleWeaponDamage::new(
-            location,
-            BattleWeaponDamageKind::Focus
-        )]);
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["weapon_damage"] = serde_json::json!([BattleWeaponDamage::new(
+                location,
+                BattleWeaponDamageKind::Focus
+            )]);
+        })
+        .unwrap();
     world.validate(&config).unwrap();
     let row = &battle_weapon_diagnostics(&world, id).unwrap()[index];
     assert_eq!(row.condition, BattleEquipmentCondition::Damaged);

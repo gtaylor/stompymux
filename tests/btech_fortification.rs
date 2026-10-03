@@ -234,14 +234,12 @@ async fn tow_pairs_reject_either_fortified_endpoint_and_cannot_be_fortified_afte
                 assert_eq!(world.btech, before);
             }
             world.validate(&config).unwrap();
-            let mut saved = serde_json::to_value(&world.btech).unwrap();
-            let class = if world.btech.vehicles().contains_key(&target) {
-                "vehicles"
-            } else {
-                "constructed"
-            };
-            saved[class][target.0.to_string()]["fortified"] = serde_json::json!(true);
-            world.btech = serde_json::from_value(saved).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(target, |record| {
+                    record["fortified"] = serde_json::json!(true);
+                })
+                .unwrap();
             assert!(world.validate(&config).is_err());
         }
     }
@@ -255,9 +253,12 @@ async fn enabling_requires_settled_motion_and_a_landed_aircraft() {
     assert!(set_battle_fortified(&mut world, id, true).is_err());
     assert_eq!(world.btech, before);
     set_battle_speed(&mut world, id, ObjectId(1), 0.0).unwrap();
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["constructed"][id.0.to_string()]["jump_stabilization"] = serde_json::json!(2);
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["jump_stabilization"] = serde_json::json!(2);
+        })
+        .unwrap();
     set_battle_fortified(&mut world, id, true).unwrap();
     for _ in 0..2 {
         advance_battle_jumps(&mut world, BattleMovementRules::STANDARD).unwrap();

@@ -33,11 +33,13 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 
 /// Set inventory and the saved random stream without changing construction or mode selections.
 fn supply(world: &mut World, id: ObjectId, amounts: &[u16]) {
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()]["ammunition"] = serde_json::to_value(amounts).unwrap();
-    state["vehicles"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([41; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["ammunition"] = serde_json::to_value(amounts).unwrap();
+            record["dice"] = serde_json::to_value(BattleDice::seeded([41; 32])).unwrap();
+        })
+        .unwrap();
 }
 
 #[tokio::test]

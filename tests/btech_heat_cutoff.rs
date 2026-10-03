@@ -9,9 +9,12 @@ use stompymux_rs::*;
 
 /// Isolate thermal sampling from startup timers without changing any other saved state.
 fn reactor(world: &mut World, id: ObjectId, power: BattlePower) {
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["constructed"][id.0.to_string()]["power"] = serde_json::to_value(power).unwrap();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["power"] = serde_json::to_value(power).unwrap();
+        })
+        .unwrap();
 }
 
 /// A powered-off cockpit, optionally placed on an authored environment tile.
@@ -129,10 +132,12 @@ async fn cutoff_cockpit_transition_and_restart() {
         .unwrap();
         place_battle_unit(&mut restored, id, map, 0, 0).unwrap();
         assign_battle_pilot(&mut restored, id, ObjectId(1)).unwrap();
-        let mut powered = serde_json::to_value(&restored.btech).unwrap();
-        powered["constructed"][id.0.to_string()]["power"] =
-            serde_json::to_value(BattlePower::Running).unwrap();
-        restored.btech = serde_json::from_value(powered).unwrap();
+        restored
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+            })
+            .unwrap();
         advance_battle_heat(&mut restored);
         let unit = &restored.btech.constructed_units()[&id];
         assert_eq!(
@@ -211,12 +216,16 @@ async fn cutoff_environment_samples_and_damaged_capacity() {
             Some((tile, temperature)),
         )
         .await;
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        let unit = &mut saved["constructed"][id.0.to_string()];
-        unit["heat_cutoff"] = serde_json::json!({"enabled":true,"disabled":4,"remaining":null});
-        unit["heat"] = serde_json::json!({"stored":stored,"excess":0.0});
-        unit["inferno_remaining"] = inferno.into();
-        world.btech = serde_json::from_value(saved).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                let unit = record;
+                unit["heat_cutoff"] =
+                    serde_json::json!({"enabled":true,"disabled":4,"remaining":null});
+                unit["heat"] = serde_json::json!({"stored":stored,"excess":0.0});
+                unit["inferno_remaining"] = inferno.into();
+            })
+            .unwrap();
         world.validate(&config).unwrap();
         advance_battle_heat(&mut world);
         let unit = &world.btech.constructed_units()[&id];
@@ -231,11 +240,14 @@ async fn cutoff_environment_samples_and_damaged_capacity() {
     }
     let (_dir, config, mut world, id) =
         fixture(include_str!("../game/mechs/JR7-D.toml"), None).await;
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["constructed"][id.0.to_string()]["heat_cutoff"] =
-        serde_json::json!({"enabled":true,"disabled":10,"remaining":null});
-    saved["constructed"][id.0.to_string()]["heat"] = serde_json::json!({"stored":9.5,"excess":0.0});
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["heat_cutoff"] =
+                serde_json::json!({"enabled":true,"disabled":10,"remaining":null});
+            record["heat"] = serde_json::json!({"stored":9.5,"excess":0.0});
+        })
+        .unwrap();
     let sink = world.btech.constructed_units()[&id]
         .loadout()
         .unwrap()

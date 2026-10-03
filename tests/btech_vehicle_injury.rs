@@ -100,10 +100,12 @@ async fn vehicle_injury_guards_and_critical_casualties_are_atomic() {
         .unwrap();
     for absent in [false, true] {
         let mut world = base.clone();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["vehicles"][id.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            })
+            .unwrap();
         if absent {
             release_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
         } else {

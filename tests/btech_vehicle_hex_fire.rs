@@ -181,10 +181,12 @@ async fn vehicle_coordinate_misload_is_tagged_and_rolls_back_with_terrain_action
     let seed = (0..=255)
         .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
         .unwrap();
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][shooter.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(shooter, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        })
+        .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let lua = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
     let replay = Scripts::new(
@@ -264,12 +266,14 @@ async fn character_vehicle_terrain_fire_shares_commands_replay_and_rollback() {
                 fixture_with_template(mode, "heavy_forest", template).await;
             character_crew(&mut world, shooter);
             if world.btech.vehicles()[&shooter].definition().is_vtol() {
-                let mut saved = serde_json::to_value(&world.btech).unwrap();
-                saved["vehicles"][shooter.0.to_string()]["vtol_flight"]["phase"] =
-                    serde_json::to_value(BattleVtolFlightPhase::Airborne).unwrap();
-                saved["vehicles"][shooter.0.to_string()]["vtol_flight"]["altitude"] =
-                    serde_json::json!(1.5);
-                world.btech = serde_json::from_value(saved).unwrap();
+                world
+                    .btech
+                    .rewrite_unit_record(shooter, |record| {
+                        record["vtol_flight"]["phase"] =
+                            serde_json::to_value(BattleVtolFlightPhase::Airborne).unwrap();
+                        record["vtol_flight"]["altitude"] = serde_json::json!(1.5);
+                    })
+                    .unwrap();
             }
             persistence::save(&config.database(), &world).await.unwrap();
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
@@ -356,10 +360,12 @@ async fn character_coordinate_misload_publishes_injuries_and_rolls_back_failed_e
                 .then_some(seed)
             })
             .unwrap();
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        saved["vehicles"][shooter.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded(seed)).unwrap();
-        world.btech = serde_json::from_value(saved).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(shooter, |record| {
+                record["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
+            })
+            .unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let replay = Scripts::new(

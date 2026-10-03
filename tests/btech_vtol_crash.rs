@@ -413,10 +413,13 @@ async fn world_contacts_commit_clear_flight_landing_crash_and_water_with_replay(
         )
         .unwrap();
         aircraft(&mut world, id, map, false);
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["vehicles"][id.0.to_string()]["vtol_flight"]["altitude"] = altitude.into();
-        state["vehicles"][id.0.to_string()]["vtol_flight"]["vertical_speed"] = vertical.into();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["vtol_flight"]["altitude"] = altitude.into();
+                record["vtol_flight"]["vertical_speed"] = vertical.into();
+            })
+            .unwrap();
         let before = world.btech.clone();
         let mut replay = world.clone();
         let mut rules = BattleMovementRules::STANDARD.fall;
@@ -520,10 +523,13 @@ async fn world_contact_failure_restores_precontact_height_position_and_dice() {
     .unwrap();
     let id = world.create(&config, "Rejected aircraft".into(), Kind::Thing);
     aircraft(&mut world, id, map, false);
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()]["vtol_flight"]["altitude"] = 1.5.into();
-    state["vehicles"][id.0.to_string()]["vtol_flight"]["vertical_speed"] = (-129.0).into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["vtol_flight"]["altitude"] = 1.5.into();
+            record["vtol_flight"]["vertical_speed"] = (-129.0).into();
+        })
+        .unwrap();
     let before = world.btech.clone();
     let mut rules = BattleMovementRules::STANDARD.fall;
     rules.vehicle_impact.criticals.enabled = false;
@@ -554,22 +560,22 @@ async fn launch_flight_and_fuel_exhaustion_share_one_restartable_tick() {
     for free_fuel in [false, true] {
         let mut world = base.clone();
         aircraft(&mut world, id, map, false);
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["vehicles"][id.0.to_string()]["vtol_flight"] =
-            serde_json::to_value(BattleVtolFlight {
-                phase: BattleVtolFlightPhase::Launching { remaining: 2 },
-                altitude: 0.0,
-                vertical_speed: 0.0,
-                fall: None,
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
+                    phase: BattleVtolFlightPhase::Launching { remaining: 2 },
+                    altitude: 0.0,
+                    vertical_speed: 0.0,
+                    fall: None,
+                })
+                .unwrap();
+                record["vtol_fuel"]["remaining"] = if free_fuel { 0 } else { 1 }.into();
+                if free_fuel {
+                    record["definition"]["attributes"]["specials"] = "CargoTech".into();
+                }
             })
             .unwrap();
-        state["vehicles"][id.0.to_string()]["vtol_fuel"]["remaining"] =
-            if free_fuel { 0 } else { 1 }.into();
-        if free_fuel {
-            state["vehicles"][id.0.to_string()]["definition"]["attributes"]["specials"] =
-                "CargoTech".into();
-        }
-        world.btech = serde_json::from_value(state).unwrap();
         let rules = BattleMovementRules {
             free_fusion_vtol_fuel: free_fuel,
             ..BattleMovementRules::STANDARD
@@ -649,9 +655,12 @@ async fn launch_rechecks_ceiling_and_unlinked_boundaries_stop_horizontal_flight(
     state["maps"][map.0.to_string()]["movement_modifier"] = 64500.into();
     state["vehicles"][id.0.to_string()]["motion"]["desired_speed"] = 100.into();
     world.btech = serde_json::from_value(state).unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()]["vtol_flight"]["vertical_speed"] = 60.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["vtol_flight"]["vertical_speed"] = 60.into();
+        })
+        .unwrap();
     let before = world.btech.clone();
     let notices = advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
     assert!(
@@ -701,10 +710,13 @@ async fn shared_control_commands_apply_aircraft_velocity_and_rotor_limits() {
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     aircraft(&mut world, id, map, false);
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(id);
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()]["pilot"] = 2.into();
-    state["vehicles"][id.0.to_string()]["vtol_flight"]["vertical_speed"] = 60.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["pilot"] = 2.into();
+            record["vtol_flight"]["vertical_speed"] = 60.into();
+        })
+        .unwrap();
     let maximum = world.btech.vehicles()[&id]
         .vtol_horizontal_limit(60.0)
         .unwrap();
@@ -718,17 +730,22 @@ async fn shared_control_commands_apply_aircraft_velocity_and_rotor_limits() {
         world.btech.vehicles()[&id].motion().unwrap().desired_speed,
         -maximum * 2.0 / 3.0
     );
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()]["tail_rotor_destroyed"] = true.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["tail_rotor_destroyed"] = true.into();
+        })
+        .unwrap();
     let before = world.btech.clone();
     assert!(set_battle_speed(&mut world, id, ObjectId(2), maximum).is_err());
     assert_eq!(world.btech, before);
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()]["vtol_flight"]["phase"] =
-        serde_json::json!({"kind":"landed"});
-    state["vehicles"][id.0.to_string()]["vtol_flight"]["vertical_speed"] = 0.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["vtol_flight"]["phase"] = serde_json::json!({"kind":"landed"});
+            record["vtol_flight"]["vertical_speed"] = 0.into();
+        })
+        .unwrap();
     let before = world.btech.clone();
     set_battle_speed(&mut world, id, ObjectId(2), 1.0).unwrap();
     assert_eq!(
@@ -739,10 +756,12 @@ async fn shared_control_commands_apply_aircraft_velocity_and_rotor_limits() {
         world.btech.vehicles()[&id].vtol_flight(),
         before.vehicles()[&id].vtol_flight()
     );
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()]["vtol_flight"]["phase"] =
-        serde_json::json!({"kind":"airborne"});
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["vtol_flight"]["phase"] = serde_json::json!({"kind":"airborne"});
+        })
+        .unwrap();
     let _ = stop_battle_unit(
         &mut world,
         id,
@@ -906,14 +925,17 @@ async fn movement_dispatch_recovers_powered_aircraft_without_impact_or_dice() {
     )
     .unwrap();
     aircraft(&mut world, id, map, true);
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    let unit = &mut saved["vehicles"][id.0.to_string()];
-    unit["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-    unit["definition"]["attributes"]["specials"] = "CargoTech".into();
-    unit["vtol_fuel"]["remaining"] = 0.into();
-    unit["vtol_flight"]["fall"]["speed"] = 0.into();
-    unit["vtol_flight"]["fall"]["remaining"] = 1.into();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            let unit = record;
+            unit["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+            unit["definition"]["attributes"]["specials"] = "CargoTech".into();
+            unit["vtol_fuel"]["remaining"] = 0.into();
+            unit["vtol_flight"]["fall"]["speed"] = 0.into();
+            unit["vtol_flight"]["fall"]["remaining"] = 1.into();
+        })
+        .unwrap();
     let before = serde_json::to_value(&world.btech.vehicles()[&id]).unwrap();
     let mut replay = world.clone();
     let rules = BattleMovementRules {

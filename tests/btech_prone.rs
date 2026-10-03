@@ -5,9 +5,7 @@ use stompymux_rs::*;
 
 /// Edit isolated scenario state without introducing production mutation helpers.
 fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Value)) {
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    change(&mut state["constructed"][id.0.to_string()]);
-    world.btech = serde_json::from_value(state).unwrap();
+    world.btech.rewrite_unit_record(id, change).unwrap();
 }
 
 /// A conscious pilot in a running biped or quad on a chosen surface.

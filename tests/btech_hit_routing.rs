@@ -5,14 +5,7 @@ use stompymux_rs::*;
 
 /// Update either anatomy's saved runtime facts without duplicating combat mechanics.
 fn edit(world: &mut World, id: ObjectId, update: impl FnOnce(&mut serde_json::Value)) {
-    let collection = if world.btech.vehicles().contains_key(&id) {
-        "vehicles"
-    } else {
-        "constructed"
-    };
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    update(&mut state[collection][id.0.to_string()]);
-    world.btech = serde_json::from_value(state).unwrap();
+    world.btech.rewrite_unit_record(id, update).unwrap();
 }
 
 /// Use host configuration, a piloted laser or cannon, and a constructed Mech target.

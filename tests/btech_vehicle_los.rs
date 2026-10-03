@@ -270,14 +270,17 @@ async fn vehicle_acquisition_uses_hull_and_turret_weights_and_saves_exact_dice()
             (180.0, 0.0, 882, BattleSensorArc::Rear),
             (180.0, 180.0, 1176, BattleSensorArc::Rear),
         ] {
-            let mut saved = serde_json::to_value(&world.btech).unwrap();
-            let vehicle = &mut saved["vehicles"][vehicle_a.0.to_string()];
-            vehicle["motion"]["heading"] = serde_json::json!(heading);
-            vehicle["motion"]["desired_heading"] = serde_json::json!(heading);
-            vehicle["turret_offset"] = serde_json::json!(offset);
-            vehicle["dice"] = serde_json::to_value(BattleDice::seeded([43; 32])).unwrap();
-            vehicle["contacts"] = serde_json::json!({});
-            world.btech = serde_json::from_value(saved).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(vehicle_a, |record| {
+                    let vehicle = record;
+                    vehicle["motion"]["heading"] = serde_json::json!(heading);
+                    vehicle["motion"]["desired_heading"] = serde_json::json!(heading);
+                    vehicle["turret_offset"] = serde_json::json!(offset);
+                    vehicle["dice"] = serde_json::to_value(BattleDice::seeded([43; 32])).unwrap();
+                    vehicle["contacts"] = serde_json::json!({});
+                })
+                .unwrap();
             assert_eq!(
                 BattleSensorArc::from_bearing(0.0, heading, BattleFacing::default()).unwrap(),
                 arc
@@ -321,10 +324,12 @@ async fn vehicle_acquisition_rolls_only_for_hidden_hostiles_beyond_automatic_ran
     .await;
     set_battle_map_visibility(&mut world, map, BattleLight::Night, 30).unwrap();
     running(&mut world, &[vehicle_a]);
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][vehicle_a.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([77; 32])).unwrap();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(vehicle_a, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([77; 32])).unwrap();
+        })
+        .unwrap();
     let before = world.btech.clone();
     for (hostile, hidden) in [(false, false), (true, false), (false, true)] {
         let mut trial = world.clone();
@@ -392,10 +397,12 @@ async fn dug_in_eye_height_changes_live_los_and_survives_restart() {
             .unwrap()
             .blocked
     );
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][target.0.to_string()]["dig"] =
-        serde_json::to_value(BattleDigState::covered()).unwrap();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(target, |record| {
+            record["dig"] = serde_json::to_value(BattleDigState::covered()).unwrap();
+        })
+        .unwrap();
     let before = world.btech.clone();
     for (a, b) in [(observer, target), (target, observer)] {
         assert!(battle_unit_terrain_los(&world, a, b).unwrap().blocked);

@@ -33,14 +33,12 @@ async fn hill_lane(length: usize) -> (tempfile::TempDir, Config, World, ObjectId
 
 /// Start a unit without the startup countdown by editing its saved power state.
 fn running(world: &mut World, id: ObjectId) {
-    let key = if world.btech.vehicles().contains_key(&id) {
-        "vehicles"
-    } else {
-        "constructed"
-    };
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state[key][id.0.to_string()]["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+        })
+        .unwrap();
 }
 
 /// Place a running tank, or a stationary tower, whose only front item is the given equipment.
@@ -124,23 +122,24 @@ fn target(world: &mut World, config: &Config, map: ObjectId, y: i64) -> ObjectId
 
 /// Administratively move a running unit, which requires a brief shutdown.
 fn relocate(world: &mut World, id: ObjectId, map: ObjectId, y: i64) {
-    let key = if world.btech.vehicles().contains_key(&id) {
-        "vehicles"
-    } else {
-        "constructed"
-    };
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state[key][id.0.to_string()]["power"] = serde_json::to_value(BattlePower::Off).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+        })
+        .unwrap();
     place_battle_unit(world, id, map, 0, y).unwrap();
     running(world, id);
 }
 
 /// Switch on a Mech's null signature system directly in saved state.
 fn conceal(world: &mut World, id: ObjectId) {
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["null_signature"]["enabled"] = true.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["null_signature"]["enabled"] = true.into();
+        })
+        .unwrap();
 }
 
 /// Seat a pilot in a unit so it can operate equipment.

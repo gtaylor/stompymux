@@ -61,9 +61,7 @@ async fn fixture_movement(
 
 /// Alter selected saved fields while retaining domain deserialization validation.
 fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Value)) {
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    change(&mut saved["vehicles"][id.0.to_string()]);
-    world.btech = serde_json::from_value(saved).unwrap();
+    world.btech.rewrite_unit_record(id, change).unwrap();
 }
 
 /// Find an independent stream with a selected leading result.

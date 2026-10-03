@@ -5,14 +5,7 @@ use stompymux_rs::*;
 
 /// Isolate event scheduling from unrelated movement and combat setup.
 fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Value)) {
-    let key = if world.btech.vehicles().contains_key(&id) {
-        "vehicles"
-    } else {
-        "constructed"
-    };
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    change(&mut saved[key][id.0.to_string()]);
-    world.btech = serde_json::from_value(saved).unwrap();
+    world.btech.rewrite_unit_record(id, change).unwrap();
 }
 
 /// Reload actual validated configuration rather than constructing a parallel set of rules.

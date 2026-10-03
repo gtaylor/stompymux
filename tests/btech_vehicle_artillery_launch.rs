@@ -169,10 +169,12 @@ async fn vehicle_artillery_payloads_and_hotload_use_common_launch_rules() {
         let seed = (0..=255)
             .find(|seed| (BattleDice::seeded([*seed; 32]).two_d6() <= 3) == jam)
             .unwrap();
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        saved["vehicles"][shooter.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        world.btech = serde_json::from_value(saved).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(shooter, |record| {
+                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            })
+            .unwrap();
         let ammunition = world.btech.vehicles()[&shooter]
             .ammunition()
             .iter()

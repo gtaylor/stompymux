@@ -74,10 +74,12 @@ fn unblind(world: &mut World, map: ObjectId) {
 
 /// Save a known contact without consuming acquisition dice.
 fn acquire(world: &mut World, source: ObjectId, target: ObjectId) {
-    let mut value = serde_json::to_value(&world.btech).unwrap();
-    value["constructed"][source.0.to_string()]["contacts"][target.0.to_string()] =
-        serde_json::json!({"identified": false});
-    world.btech = serde_json::from_value(value).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(source, |record| {
+            record["contacts"][target.0.to_string()] = serde_json::json!({"identified": false});
+        })
+        .unwrap();
 }
 
 #[test]
@@ -205,11 +207,14 @@ async fn observer_scan_bypasses_range_but_not_visibility_or_failed_hardware() {
     set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
     assert!(scan_battle_unit(&world, source, ObjectId(1), target, "I").is_err());
     set_battle_map_visibility(&mut world, map, BattleLight::Day, 30).unwrap();
-    let mut value = serde_json::to_value(&world.btech).unwrap();
-    value["constructed"][source.0.to_string()]["lost_criticals"] = serde_json::json!([
-        {"section": "Head", "slot": 1}, {"section": "Head", "slot": 4}
-    ]);
-    world.btech = serde_json::from_value(value).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(source, |record| {
+            record["lost_criticals"] = serde_json::json!([
+                {"section": "Head", "slot": 1}, {"section": "Head", "slot": 4}
+            ]);
+        })
+        .unwrap();
     assert_eq!(
         world.btech.constructed_units()[&source]
             .sensor_ranges()
@@ -545,9 +550,12 @@ async fn concealed_building_rolls_awards_and_callback_rollback_replay() {
     let missed = scan_battle_building(&mut world, source, ObjectId(1), coordinate, 1000).unwrap();
     assert!(missed.text.contains("no building"));
     assert_eq!(world.btech, expected.btech);
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][source.0.to_string()]["scanner_perception"] = (-10).into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(source, |record| {
+            record["scanner_perception"] = (-10).into();
+        })
+        .unwrap();
     let checkpoint = world.clone();
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world.clone()));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
@@ -651,9 +659,12 @@ fn scan_perception(world: &mut World, source: ObjectId) {
         },
     )
     .unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][source.0.to_string()]["scanner_perception"] = (-10).into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(source, |record| {
+            record["scanner_perception"] = (-10).into();
+        })
+        .unwrap();
 }
 
 #[tokio::test]
@@ -1165,11 +1176,14 @@ async fn display_center_observer_exemption_is_projection_only() {
         )
         .is_ok()
     );
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][source.0.to_string()]["lost_criticals"] = serde_json::json!([
-        {"section": "Head", "slot": 1}, {"section": "Head", "slot": 4}
-    ]);
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(source, |record| {
+            record["lost_criticals"] = serde_json::json!([
+                {"section": "Head", "slot": 1}, {"section": "Head", "slot": 4}
+            ]);
+        })
+        .unwrap();
     assert!(
         parse_battle_view_center(&world, source, ObjectId(1), BattleViewKind::LongRange, "")
             .is_err()
@@ -1275,10 +1289,12 @@ async fn viewports_clip_requested_dimensions_and_match_lua_without_state_changes
         .unwrap(),
         far
     );
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][source.0.to_string()]["lost_criticals"] =
-        serde_json::json!([{ "section": "Head", "slot": 1 }]);
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(source, |record| {
+            record["lost_criticals"] = serde_json::json!([{ "section": "Head", "slot": 1 }]);
+        })
+        .unwrap();
     let damaged = resolve_battle_viewport(
         &world,
         source,
@@ -1568,10 +1584,12 @@ async fn long_range_elevation_rows_preserve_zero_space_and_water_depth() {
         BattleMapAsset::from_cells("3 2\n.0#3~2\n.0.0.0\n").unwrap(),
     )
     .unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][source.0.to_string()]["power"] =
-        serde_json::to_value(BattlePower::Off).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(source, |record| {
+            record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+        })
+        .unwrap();
     place_battle_unit(&mut world, source, map, 1, 1).unwrap();
     start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
     for _ in 0..5 {
@@ -2070,10 +2088,12 @@ async fn tactical_clipping_preserves_global_hex_parity_and_elevation() {
             .unwrap(),
     )
     .unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][source.0.to_string()]["power"] =
-        serde_json::to_value(BattlePower::Off).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(source, |record| {
+            record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+        })
+        .unwrap();
     place_battle_unit(&mut world, source, map, 5, 1).unwrap();
     place_battle_unit(&mut world, target, map, 6, 1).unwrap();
     start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
@@ -2136,10 +2156,12 @@ async fn tactical_cliffs_use_signed_depth_thresholds_and_share_native_lua_output
         BattleMapAsset::from_cells("3 3\n.0.3.0\n.0.0~2\n.0-3.0\n").unwrap(),
     )
     .unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][source.0.to_string()]["power"] =
-        serde_json::to_value(BattlePower::Off).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(source, |record| {
+            record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+        })
+        .unwrap();
     place_battle_unit(&mut world, source, map, 1, 1).unwrap();
     place_battle_unit(&mut world, target, map, 2, 1).unwrap();
     start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
@@ -2590,12 +2612,15 @@ async fn findcenter_measures_continuous_position_without_sensor_hardware() {
         "Current hex: (1,1,0)\tRange to center: 0.00\tBearing to center: 180"
     );
     let center = BattleHexCoordinate { x: 1, y: 1 }.center();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][source.0.to_string()]["motion"]["point"] =
-        serde_json::to_value(center.project(270.0, 0.2).unwrap()).unwrap();
-    state["constructed"][source.0.to_string()]["lost_criticals"] =
-        serde_json::json!([{"section":"Head","slot":1},{"section":"Head","slot":4}]);
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(source, |record| {
+            record["motion"]["point"] =
+                serde_json::to_value(center.project(270.0, 0.2).unwrap()).unwrap();
+            record["lost_criticals"] =
+                serde_json::json!([{"section":"Head","slot":1},{"section":"Head","slot":4}]);
+        })
+        .unwrap();
     let before = world.btech.clone();
     let report = find_battle_hex_center(&world, source, ObjectId(1)).unwrap();
     assert!((report.range - 0.2).abs() < 1e-10);
@@ -2633,10 +2658,12 @@ async fn findcenter_measures_continuous_position_without_sensor_hardware() {
         report
     );
     assert!(find_battle_hex_center(&world, source, ObjectId(3)).is_err());
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][source.0.to_string()]["power"] =
-        serde_json::to_value(BattlePower::Off).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(source, |record| {
+            record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+        })
+        .unwrap();
     assert!(find_battle_hex_center(&world, source, ObjectId(1)).is_err());
 }
 
@@ -2646,10 +2673,13 @@ async fn navigation_combines_local_map_continuous_plot_and_readouts_without_muta
     place_battle_unit(&mut world, target, map, 1, 1).unwrap();
     acquire(&mut world, source, target);
     let center = BattleHexCoordinate { x: 1, y: 1 };
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][target.0.to_string()]["motion"]["point"] =
-        serde_json::to_value(center.center().project(0.0, 0.2).unwrap()).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(target, |record| {
+            record["motion"]["point"] =
+                serde_json::to_value(center.center().project(0.0, 0.2).unwrap()).unwrap();
+        })
+        .unwrap();
     let before = world.btech.clone();
     let report = battle_navigate(&world, source, ObjectId(1), "").unwrap();
     let plain = text::plain(&report.text);
@@ -2735,10 +2765,12 @@ async fn navigation_keeps_even_center_on_single_hex_maps_with_off_map_surroundin
         BattleMapAsset::from_cells("1 1\n#3\n").unwrap(),
     )
     .unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][source.0.to_string()]["power"] =
-        serde_json::to_value(BattlePower::Off).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(source, |record| {
+            record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+        })
+        .unwrap();
     place_battle_unit(&mut world, source, map, 0, 0).unwrap();
     start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
     for _ in 0..5 {
@@ -3099,10 +3131,13 @@ async fn contact_preferences_filter_lists_without_bypassing_acquisition() {
             .unwrap()
             .is_empty()
     );
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][target.0.to_string()]["pilot_injuries"] = 6.into();
-    state["constructed"][target.0.to_string()]["pilot_killed"] = true.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(target, |record| {
+            record["pilot_injuries"] = 6.into();
+            record["pilot_killed"] = true.into();
+        })
+        .unwrap();
     assert!(world.btech.constructed_units()[&target].is_destroyed());
     let dead = BattleContactPreferences {
         include_dead: true,
@@ -4084,10 +4119,13 @@ async fn probe_contacts_through_terrain_hide_identity_and_friendly_categories() 
     for _ in 0..5 {
         let _ = advance_battle_units(&mut world, 0);
     }
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][source.0.to_string()]["definition"]["sections"]["LeftTorso"]["criticals"]
-        ["8"] = serde_json::json!({"equipment":"BeagleProbe","data":"-","modes":[]});
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(source, |record| {
+            record["definition"]["sections"]["LeftTorso"]["criticals"]["8"] =
+                serde_json::json!({"equipment":"BeagleProbe","data":"-","modes":[]});
+        })
+        .unwrap();
     assert!(
         battle_unit_terrain_los(&world, source, target)
             .unwrap()
@@ -4718,10 +4756,12 @@ async fn lateral_changes_delay_cancel_persist_and_move_without_turning_weapons()
         BattleLateralMode::RearLeft,
     )
     .unwrap();
-    let mut encoded = serde_json::to_value(&stopped.btech).unwrap();
-    encoded["constructed"][source.0.to_string()]["power"] =
-        serde_json::to_value(BattlePower::Off).unwrap();
-    stopped.btech = serde_json::from_value(encoded).unwrap();
+    stopped
+        .btech
+        .rewrite_unit_record(source, |record| {
+            record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+        })
+        .unwrap();
     for _ in 0..5 {
         let _ = advance_battle_units(&mut stopped, 0);
     }

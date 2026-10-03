@@ -105,12 +105,15 @@ async fn damaged_installed_tanks_retain_capacity_and_cargo_contribution() {
         .create(&mut world, id)
         .unwrap();
     let before = battle_vtol_fuel_status(&world, id).unwrap();
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    let unit = &mut encoded["vehicles"][id.0.to_string()];
-    unit["lost_criticals"] = serde_json::json!([{"section":"left","slot":0}]);
-    unit["sections"]["left"]["internal"] = 0.into();
-    unit["sections"]["left"]["armor"] = 0.into();
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            let unit = record;
+            unit["lost_criticals"] = serde_json::json!([{"section":"left","slot":0}]);
+            unit["sections"]["left"]["internal"] = 0.into();
+            unit["sections"]["left"]["armor"] = 0.into();
+        })
+        .unwrap();
     assert_eq!(battle_vtol_fuel_status(&world, id).unwrap(), before);
     assert_eq!(
         battle_unit_load(&world, id, true).unwrap().carried_mass,

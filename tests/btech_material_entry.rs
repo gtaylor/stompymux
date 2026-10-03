@@ -70,10 +70,12 @@ async fn biped_and_quad_material_entries_consume_exact_dice_and_replay() {
                     dice.two_d6() <= 7
                 })
                 .unwrap();
-            let mut saved = serde_json::to_value(&before.btech).unwrap();
-            saved["constructed"][id.0.to_string()]["dice"] =
-                serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-            before.btech = serde_json::from_value(saved).unwrap();
+            before
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                })
+                .unwrap();
             before.validate(&config).unwrap();
             persistence::save(&config.database(), &before)
                 .await

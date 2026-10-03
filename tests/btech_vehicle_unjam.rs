@@ -33,17 +33,22 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 
 /// Install deterministic shooter dice while keeping the rest of construction unchanged.
 fn seed(world: &mut World, id: ObjectId, value: u8) {
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
+        })
+        .unwrap();
 }
 
 /// Set up one jammed feed without introducing a firing or recycle event.
 fn jam(world: &mut World, id: ObjectId) {
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][id.0.to_string()]["jammed_weapons"] = serde_json::json!([0]);
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["jammed_weapons"] = serde_json::json!([0]);
+        })
+        .unwrap();
 }
 
 #[tokio::test]
@@ -297,10 +302,12 @@ async fn vehicle_feed_clearing_broadcasts_only_to_current_contacts() {
     .unwrap();
     let map = world.btech.vehicles()[&id].position().unwrap().map;
     place_battle_unit(&mut world, observer, map, 0, 0).unwrap();
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][observer.0.to_string()]["power"] =
-        serde_json::to_value(BattlePower::Running).unwrap();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(observer, |record| {
+            record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+        })
+        .unwrap();
     refresh_battle_contacts(&mut world, &[observer]).unwrap();
     let value = (0..=255)
         .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
@@ -311,9 +318,12 @@ async fn vehicle_feed_clearing_broadcasts_only_to_current_contacts() {
         advance_battle_unjamming(&mut world, false, false).unwrap();
     }
     let mut unseen = world.clone();
-    let mut saved = serde_json::to_value(&unseen.btech).unwrap();
-    saved["vehicles"][observer.0.to_string()]["contacts"] = serde_json::json!({});
-    unseen.btech = serde_json::from_value(saved).unwrap();
+    unseen
+        .btech
+        .rewrite_unit_record(observer, |record| {
+            record["contacts"] = serde_json::json!({});
+        })
+        .unwrap();
     let visible = advance_battle_unjamming(&mut world, false, false).unwrap();
     let hidden = advance_battle_unjamming(&mut unseen, false, false).unwrap();
     assert!(visible.iter().any(|(recipient, text)| *recipient

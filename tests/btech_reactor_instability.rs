@@ -4,9 +4,7 @@ use stompymux_rs::*;
 
 /// Adjust isolated saved scenario facts while retaining production construction and impact paths.
 fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Value)) {
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    change(&mut state["constructed"][id.0.to_string()]);
-    world.btech = serde_json::from_value(state).unwrap();
+    world.btech.rewrite_unit_record(id, change).unwrap();
 }
 
 /// A running reactor with two real engine critical losses and an already damaged center torso.

@@ -47,10 +47,12 @@ async fn critical_degradation_replays_and_survives_database_restart() {
         let mut found = None;
         for value in 0..=255 {
             let mut world = base.clone();
-            let mut state = serde_json::to_value(&world.btech).unwrap();
-            state["constructed"][id.0.to_string()]["dice"] =
-                serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
-            world.btech = serde_json::from_value(state).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    record["dice"] = serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
+                })
+                .unwrap();
             let before = world.clone();
             let hit = BattleHit {
                 section: BattleSection::LeftTorso,
@@ -123,16 +125,17 @@ async fn damaged_weapon_controls_and_reservations_share_saved_state() {
             .unwrap()
             .weapons[index]
             .criticals[0];
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][id.0.to_string()]["power"] =
-            serde_json::to_value(BattlePower::Running).unwrap();
-        state["constructed"][id.0.to_string()]["weapon_damage"] =
-            serde_json::json!([BattleWeaponDamage::new(location, kind)]);
-        if kind == BattleWeaponDamageKind::Barrel {
-            state["constructed"][id.0.to_string()]["weapon_damage_jams"] =
-                serde_json::json!([index]);
-        }
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+                record["weapon_damage"] =
+                    serde_json::json!([BattleWeaponDamage::new(location, kind)]);
+                if kind == BattleWeaponDamageKind::Barrel {
+                    record["weapon_damage_jams"] = serde_json::json!([index]);
+                }
+            })
+            .unwrap();
         world.validate(&config).unwrap();
         let scripts =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
@@ -269,14 +272,15 @@ async fn critical_launch_failures_are_atomic_and_distinguish_permanent_jams() {
             .unwrap()
             .weapons[index]
             .criticals[0];
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][id.0.to_string()]["power"] =
-            serde_json::to_value(BattlePower::Running).unwrap();
-        state["constructed"][id.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        state["constructed"][id.0.to_string()]["weapon_damage"] =
-            serde_json::json!([BattleWeaponDamage::new(location, kind)]);
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                record["weapon_damage"] =
+                    serde_json::json!([BattleWeaponDamage::new(location, kind)]);
+            })
+            .unwrap();
         let scripts =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
         let before = scripts.world().btech.clone();

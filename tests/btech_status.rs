@@ -97,11 +97,14 @@ async fn advanced_technology_keeps_reference_order_and_counter_colors() {
         (3, "yellow bold"),
         (4, "red bold"),
     ] {
-        let mut encoded = serde_json::to_value(&world.btech).unwrap();
-        for field in ["masc", "supercharger"] {
-            encoded["constructed"][id.0.to_string()][field]["counter"] = counter.into();
-        }
-        world.btech = serde_json::from_value(encoded).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                for field in ["masc", "supercharger"] {
+                    record[field]["counter"] = counter.into();
+                }
+            })
+            .unwrap();
         let before = world.btech.clone();
         let report = battle_unit_status(&world, id, "W").unwrap();
         let line = report
@@ -220,12 +223,17 @@ async fn coordinate_target_labels_keep_reference_spacing() {
 async fn limb_recycling_uses_cockpit_ticks_without_advancing_time() {
     let (_dir, _config, mut world, id, _) = fixture(include_str!("../game/mechs/JR7-D.toml")).await;
     for (seconds, ticks) in [(1, 1), (2, 1), (3, 2), (60, 30)] {
-        let mut encoded = serde_json::to_value(&world.btech).unwrap();
-        encoded["constructed"][id.0.to_string()]["limb_recycle"] = serde_json::to_value(
-            std::collections::BTreeMap::from([(BattleSection::LeftArm, seconds)]),
-        )
-        .unwrap();
-        world.btech = serde_json::from_value(encoded).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["limb_recycle"] =
+                    serde_json::to_value(std::collections::BTreeMap::from([(
+                        BattleSection::LeftArm,
+                        seconds,
+                    )]))
+                    .unwrap();
+            })
+            .unwrap();
         let before = world.btech.clone();
         let report = text::plain(&battle_unit_status(&world, id, "W").unwrap());
         assert!(report.contains(&format!("LARM: {ticks:<5} RARM: Ready")));
@@ -268,15 +276,18 @@ async fn concurrent_fire_sources_have_one_status_banner() {
     let (_dir, _config, mut world, id, _) =
         fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     for (burning, inferno) in [(true, 0), (false, 30), (true, 30)] {
-        let mut encoded = serde_json::to_value(&world.btech).unwrap();
-        let vehicle = &mut encoded["vehicles"][id.0.to_string()];
-        vehicle["burning_sections"] = if burning {
-            serde_json::json!({"front": 30})
-        } else {
-            serde_json::json!({})
-        };
-        vehicle["inferno_remaining"] = serde_json::json!(inferno);
-        world.btech = serde_json::from_value(encoded).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                let vehicle = record;
+                vehicle["burning_sections"] = if burning {
+                    serde_json::json!({"front": 30})
+                } else {
+                    serde_json::json!({})
+                };
+                vehicle["inferno_remaining"] = serde_json::json!(inferno);
+            })
+            .unwrap();
         let before = world.btech.clone();
         let report = text::plain(&battle_unit_status(&world, id, "").unwrap());
         assert_eq!(report.matches("ON FIRE").count(), 1);
@@ -344,10 +355,12 @@ async fn named_fixture(
         advance_battle_units(&mut world, 0);
     }
     set_battle_observer(&mut world, observer, true).unwrap();
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["constructed"][observer.0.to_string()]["contacts"][id.0.to_string()] =
-        serde_json::json!({"identified": true});
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(observer, |record| {
+            record["contacts"][id.0.to_string()] = serde_json::json!({"identified": true});
+        })
+        .unwrap();
     (dir, config, world, id, observer)
 }
 
@@ -489,13 +502,16 @@ async fn vehicle_status_tracks_live_load_damage_ammunition_and_flight() {
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
     }
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    let unit = &mut encoded["vehicles"][id.0.to_string()];
-    unit["vtol_flight"]["phase"] = serde_json::json!({"kind":"airborne"});
-    unit["vtol_flight"]["altitude"] = 12.25.into();
-    unit["vtol_flight"]["vertical_speed"] = 1.0.into();
-    unit["vtol_fuel"]["remaining"] = 37.into();
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            let unit = record;
+            unit["vtol_flight"]["phase"] = serde_json::json!({"kind":"airborne"});
+            unit["vtol_flight"]["altitude"] = 12.25.into();
+            unit["vtol_flight"]["vertical_speed"] = 1.0.into();
+            unit["vtol_fuel"]["remaining"] = 37.into();
+        })
+        .unwrap();
     world.validate(&config).unwrap();
     let info = battle_unit_status(&world, id, "info").unwrap();
     assert!(info.contains(&format!(
@@ -696,11 +712,14 @@ async fn charge_target_timer_uses_configured_native_and_lua_layout() {
         let config_path = dir.path().join("stompymux.toml");
         let original_config = std::fs::read_to_string(&config_path).unwrap();
         for elapsed in [0, 1, 3, 4, 60] {
-            let mut encoded = serde_json::to_value(&world.btech).unwrap();
-            encoded["constructed"][id.0.to_string()]["charge"] = serde_json::json!({
-                "target": target, "elapsed": elapsed, "distance": 0.0
-            });
-            world.btech = serde_json::from_value(encoded).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    record["charge"] = serde_json::json!({
+                        "target": target, "elapsed": elapsed, "distance": 0.0
+                    });
+                })
+                .unwrap();
             for enabled in [false, true] {
                 std::fs::write(
                     &config_path,

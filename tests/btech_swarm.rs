@@ -22,14 +22,7 @@ fn templates() -> Vec<String> {
 
 /// Set isolated runtime facts through the persisted representation for either anatomy.
 fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Value)) {
-    let collection = if world.btech.vehicles().contains_key(&id) {
-        "vehicles"
-    } else {
-        "constructed"
-    };
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    change(&mut saved[collection][id.0.to_string()]);
-    world.btech = serde_json::from_value(saved).unwrap();
+    world.btech.rewrite_unit_record(id, change).unwrap();
 }
 
 /// A piloted observer and target on opposite sides of an optional obstructing hill.

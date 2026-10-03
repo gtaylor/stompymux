@@ -426,20 +426,23 @@ async fn unidentified_friendly_contact_can_join_without_disclosing_its_name() {
 
 /// Set consistent same-map coordinates and face south without advancing movement or timers.
 fn relocate(world: &mut World, id: ObjectId, y: u16) {
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    let unit = &mut encoded["constructed"][id.0.to_string()];
-    unit["position"]["y"] = y.into();
-    unit["motion"]["point"] = serde_json::to_value(
-        BattleHexCoordinate {
-            x: 10,
-            y: i32::from(y),
-        }
-        .center(),
-    )
-    .unwrap();
-    unit["motion"]["heading"] = 180.into();
-    unit["motion"]["desired_heading"] = 180.into();
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            let unit = record;
+            unit["position"]["y"] = y.into();
+            unit["motion"]["point"] = serde_json::to_value(
+                BattleHexCoordinate {
+                    x: 10,
+                    y: i32::from(y),
+                }
+                .center(),
+            )
+            .unwrap();
+            unit["motion"]["heading"] = 180.into();
+            unit["motion"]["desired_heading"] = 180.into();
+        })
+        .unwrap();
 }
 
 /// Locate a surviving fixture weapon without depending on catalogue ordering.
@@ -626,9 +629,12 @@ async fn shared_range_ignores_unavailable_peers_and_does_not_grant_firing_visibi
     assert_eq!(stopped.network_range.unwrap().source, None);
     assert_eq!(battle_c3i_members(&world, first).unwrap().len(), 2);
     let mut world = baseline;
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["constructed"][first.0.to_string()]["contacts"] = serde_json::json!({});
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(first, |record| {
+            record["contacts"] = serde_json::json!({});
+        })
+        .unwrap();
     let unseen = battle_aim_modifiers(&world, first, target, index, 4, aim_rules()).unwrap();
     assert_eq!(unseen.network_range.unwrap().source, Some(peer));
     assert_eq!(unseen.range.unwrap().modifier, 0);
@@ -1728,15 +1734,19 @@ async fn underwater_network_aim_keeps_the_physical_water_limit() {
     )
     .unwrap();
     for (id, y) in [(shooter, 2), (peer, 7), (target, 8)] {
-        let mut encoded = serde_json::to_value(&world.btech).unwrap();
-        encoded["constructed"][id.0.to_string()]["power"] =
-            serde_json::to_value(BattlePower::Off).unwrap();
-        world.btech = serde_json::from_value(encoded).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+            })
+            .unwrap();
         place_battle_unit(&mut world, id, map, 10, y).unwrap();
-        let mut encoded = serde_json::to_value(&world.btech).unwrap();
-        encoded["constructed"][id.0.to_string()]["power"] =
-            serde_json::to_value(BattlePower::Running).unwrap();
-        world.btech = serde_json::from_value(encoded).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+            })
+            .unwrap();
     }
     // This scenario tests network range after acquisition. Moving to the water map
     // clears the fixture's known contacts; do not replace them with random detection rolls.

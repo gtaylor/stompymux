@@ -83,14 +83,7 @@ fn equipment(source: &str) -> BattleUnitTemplate {
 
 /// Change only explicitly selected scenario state, using the same representation as restart.
 fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Value)) {
-    let key = if world.btech.vehicles().contains_key(&id) {
-        "vehicles"
-    } else {
-        "constructed"
-    };
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    change(&mut saved[key][id.0.to_string()]);
-    world.btech = serde_json::from_value(saved).unwrap();
+    world.btech.rewrite_unit_record(id, change).unwrap();
 }
 
 /// A running, equipped observer faces an ordinary target down a lane, optionally behind a hill.

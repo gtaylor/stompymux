@@ -749,10 +749,12 @@ async fn artillery_hotload_launch_and_jam() {
         let seed = (0..=255)
             .find(|seed| (BattleDice::seeded([*seed; 32]).two_d6() <= 3) == jam)
             .unwrap();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][shooter.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(shooter, |record| {
+                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            })
+            .unwrap();
         let lua = Scripts::new(
             &config,
             std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
@@ -906,9 +908,12 @@ async fn artillery_fires_after_radio_observer_connection() {
         )
         .unwrap();
         select_battle_spotter(&mut world, observer, ObjectId(2), Some(observer)).unwrap();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][shooter.0.to_string()]["contacts"] = serde_json::json!({});
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(shooter, |record| {
+                record["contacts"] = serde_json::json!({});
+            })
+            .unwrap();
         select_battle_spotter(&mut world, shooter, ObjectId(1), Some(observer)).unwrap();
         for _ in 0..10 {
             advance_battle_spotter_links(&mut world).unwrap();

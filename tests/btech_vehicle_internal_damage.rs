@@ -33,10 +33,12 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 
 /// Seed only the selected vehicle's dice, keeping all material and equipment state unchanged.
 fn seed(world: &mut World, id: ObjectId, value: u8) {
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
+        })
+        .unwrap();
 }
 
 /// Isolated internal damage with criticals disabled still consumes its two diagnostic rolls.
@@ -187,10 +189,12 @@ async fn weapon_explosions_disable_mount_before_damage_and_injure_surviving_crew
         let mut world = base.clone();
         seed(&mut world, id, value);
         if disabled {
-            let mut state = serde_json::to_value(&world.btech).unwrap();
-            state["vehicles"][id.0.to_string()]["weapon_failures"] =
-                serde_json::json!({"0":"disabled"});
-            world.btech = serde_json::from_value(state).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    record["weapon_failures"] = serde_json::json!({"0":"disabled"});
+                })
+                .unwrap();
         }
         let mut critical_rules = rules();
         critical_rules.enabled = true;
@@ -237,10 +241,12 @@ fn matching_seed(predicate: impl Fn(&mut BattleDice) -> bool) -> [u8; 32] {
 
 /// Change only the victim's random stream.
 fn set_seed(world: &mut World, id: ObjectId, seed: [u8; 32]) {
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded(seed)).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
+        })
+        .unwrap();
 }
 
 #[tokio::test]
@@ -370,10 +376,12 @@ async fn hotloaded_vehicle_criticals_require_usable_normal_ammunition() {
             .unwrap();
         }
         if disabled {
-            let mut state = serde_json::to_value(&world.btech).unwrap();
-            state["vehicles"][id.0.to_string()]["weapon_failures"] =
-                serde_json::json!({index.to_string(): "disabled"});
-            world.btech = serde_json::from_value(state).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    record["weapon_failures"] = serde_json::json!({index.to_string(): "disabled"});
+                })
+                .unwrap();
         }
         set_seed(&mut world, id, stream);
         let ammo = world.btech.vehicles()[&id].ammunition().to_vec();
@@ -456,10 +464,12 @@ async fn incendiary_vehicle_criticals_require_recycling_and_matching_supply() {
             .position(|mount| mount.weapon == BattleWeapon::Ac2)
             .unwrap();
         if recycling {
-            let mut state = serde_json::to_value(&world.btech).unwrap();
-            state["vehicles"][id.0.to_string()]["weapon_recycle"] =
-                serde_json::json!({index.to_string(): 1});
-            world.btech = serde_json::from_value(state).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    record["weapon_recycle"] = serde_json::json!({index.to_string(): 1});
+                })
+                .unwrap();
         }
         set_seed(&mut world, id, stream);
         let ammo = world.btech.vehicles()[&id].ammunition().to_vec();

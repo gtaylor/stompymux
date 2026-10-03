@@ -689,10 +689,13 @@ async fn wizard_stock_actions_share_audits_and_immediate_load_limits() {
         } else {
             "constructed"
         };
-        let mut encoded = serde_json::to_value(&world.btech).unwrap();
-        encoded[registry][unit.0.to_string()]["motion"]["speed"] = maximum.into();
-        encoded[registry][unit.0.to_string()]["motion"]["desired_speed"] = maximum.into();
-        world.btech = serde_json::from_value(encoded).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(unit, |record| {
+                record["motion"]["speed"] = maximum.into();
+                record["motion"]["desired_speed"] = maximum.into();
+            })
+            .unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let output = support::run_text(
             &scripts,

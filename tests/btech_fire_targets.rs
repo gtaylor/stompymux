@@ -282,14 +282,7 @@ async fn artillery_coordinates_preserve_locks_and_queue_once() {
 
 /// Change one unit's scenario facts while preserving the same mutation path for both chassis stores.
 fn edit_shooter(world: &mut World, id: ObjectId, edit: impl FnOnce(&mut serde_json::Value)) {
-    let class = if world.btech.vehicles().contains_key(&id) {
-        "vehicles"
-    } else {
-        "constructed"
-    };
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    edit(&mut state[class][id.0.to_string()]);
-    world.btech = serde_json::from_value(state).unwrap();
+    world.btech.rewrite_unit_record(id, edit).unwrap();
 }
 
 /// Native, Lua and Rust TIC attempts reject identically without committing any gameplay effects.

@@ -145,14 +145,12 @@ async fn lane(rows: &[&str], observer: Observer<'_>) -> Lane {
 
 /// Switch a unit on or off without startup countdowns by editing its saved power state.
 fn set_power(world: &mut World, id: ObjectId, power: BattlePower) {
-    let key = if world.btech.vehicles().contains_key(&id) {
-        "vehicles"
-    } else {
-        "constructed"
-    };
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state[key][id.0.to_string()]["power"] = serde_json::to_value(power).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["power"] = serde_json::to_value(power).unwrap();
+        })
+        .unwrap();
 }
 
 /// Drift permanent smoke over row two of the lane.

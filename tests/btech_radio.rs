@@ -219,9 +219,12 @@ async fn radio_settings_native_lua_restart_bounds_and_callback_rollback() {
         persistence::load(&config.database()).await.unwrap().btech,
         saved.btech
     );
-    let mut encoded = serde_json::to_value(&saved.btech).unwrap();
-    encoded["constructed"][id.0.to_string()]["radio"][15]["frequency"] = 1000000.into();
-    saved.btech = serde_json::from_value(encoded).unwrap();
+    saved
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["radio"][15]["frequency"] = 1000000.into();
+        })
+        .unwrap();
     assert!(saved.validate(&config).is_err());
 }
 
@@ -284,9 +287,7 @@ async fn relay_fixture() -> (tempfile::TempDir, Config, World, ObjectId, Vec<Obj
 
 /// Modify serialized fixture facts without spending clock time or changing radio configuration.
 fn radio_fact(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Value)) {
-    let mut value = serde_json::to_value(&world.btech).unwrap();
-    change(&mut value["constructed"][id.0.to_string()]);
-    world.btech = serde_json::from_value(value).unwrap();
+    world.btech.rewrite_unit_record(id, change).unwrap();
 }
 
 #[tokio::test]

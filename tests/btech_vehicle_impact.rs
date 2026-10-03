@@ -45,10 +45,12 @@ fn matching_seed(predicate: impl Fn(&mut BattleDice) -> bool) -> [u8; 32] {
 
 /// Change only the victim's random stream.
 fn set_seed(world: &mut World, id: ObjectId, seed: [u8; 32]) {
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded(seed)).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
+        })
+        .unwrap();
 }
 
 /// Explicit policy for the hit table and critical consequences.
@@ -379,10 +381,13 @@ async fn advanced_motive_impacts_commit_steering_speed_and_penetration_together(
         dice.two_d6() < 8
     });
     set_seed(&mut world, id, stream);
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()]["motion"]["speed"] = 10.into();
-    state["vehicles"][id.0.to_string()]["motion"]["desired_speed"] = 10.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["motion"]["speed"] = 10.into();
+            record["motion"]["desired_speed"] = 10.into();
+        })
+        .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
     let policy = rules(BattleVehicleCriticalTable::Advanced);

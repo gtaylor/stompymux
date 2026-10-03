@@ -220,13 +220,15 @@ async fn critical_report_material_conditions() {
         .clone();
     let location = mount.criticals[0];
     let section = location.section.name();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["weapon_damage"] =
-        serde_json::json!([BattleWeaponDamage::new(
-            location,
-            BattleWeaponDamageKind::Focus
-        )]);
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["weapon_damage"] = serde_json::json!([BattleWeaponDamage::new(
+                location,
+                BattleWeaponDamageKind::Focus
+            )]);
+        })
+        .unwrap();
     world.validate(&config).unwrap();
     assert_eq!(
         battle_critical_report(&world, id, section).unwrap().slots[usize::from(location.slot)]
@@ -234,10 +236,12 @@ async fn critical_report_material_conditions() {
         BattleEquipmentCondition::Damaged
     );
     let mut flooded = world.clone();
-    let mut state = serde_json::to_value(&flooded.btech).unwrap();
-    state["constructed"][id.0.to_string()]["flooded_sections"] =
-        serde_json::json!([location.section]);
-    flooded.btech = serde_json::from_value(state).unwrap();
+    flooded
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["flooded_sections"] = serde_json::json!([location.section]);
+        })
+        .unwrap();
     assert_eq!(
         battle_critical_report(&flooded, id, section).unwrap().slots[usize::from(location.slot)]
             .condition,

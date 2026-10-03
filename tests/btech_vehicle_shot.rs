@@ -332,14 +332,14 @@ async fn vehicle_shot_checks_reject_submerged_weapons_and_depleted_ammunition() 
     );
     assert_eq!(world.btech, before);
     let (_dir, _config, mut world, _, [target, _, shooter, _]) = engagement().await;
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    for rounds in saved["vehicles"][shooter.0.to_string()]["ammunition"]
-        .as_array_mut()
-        .unwrap()
-    {
-        *rounds = serde_json::json!(0);
-    }
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(shooter, |record| {
+            for rounds in record["ammunition"].as_array_mut().unwrap() {
+                *rounds = serde_json::json!(0);
+            }
+        })
+        .unwrap();
     let before = world.btech.clone();
     assert!(
         check_battle_vehicle_shot(&world, shooter, ObjectId(1), target, 0, shot_rules())

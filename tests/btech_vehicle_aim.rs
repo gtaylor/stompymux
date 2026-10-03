@@ -33,12 +33,15 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 
 /// Install a valid instantaneous speed without advancing into neighboring terrain.
 fn motion(world: &mut World, id: ObjectId, speed: f64, turning: bool) {
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    let motion = &mut state["vehicles"][id.0.to_string()]["motion"];
-    motion["speed"] = serde_json::json!(speed);
-    motion["desired_speed"] = serde_json::json!(speed.clamp(-86.0 * 2.0 / 3.0, 86.0));
-    motion["desired_heading"] = serde_json::json!(if turning { 90.0 } else { 0.0 });
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            let motion = &mut record["motion"];
+            motion["speed"] = serde_json::json!(speed);
+            motion["desired_speed"] = serde_json::json!(speed.clamp(-86.0 * 2.0 / 3.0, 86.0));
+            motion["desired_heading"] = serde_json::json!(if turning { 90.0 } else { 0.0 });
+        })
+        .unwrap();
 }
 
 #[tokio::test]

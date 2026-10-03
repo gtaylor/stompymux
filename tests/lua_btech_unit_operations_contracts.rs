@@ -320,9 +320,12 @@ async fn off_map_vehicle_piloting_failure_still_applies_fall_damage() {
             .unwrap(),
     )
     .unwrap();
-    let mut vehicle_state = serde_json::to_value(&world.btech).unwrap();
-    vehicle_state["vehicles"][id.0.to_string()]["detached_heading"] = serde_json::json!(15.0);
-    world.btech = serde_json::from_value(vehicle_state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["detached_heading"] = serde_json::json!(15.0);
+        })
+        .unwrap();
     let pilot = world.create(&config, "Pilot".into(), Kind::Player);
     world.objects.get_mut(&pilot).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, pilot).unwrap();
@@ -368,13 +371,16 @@ async fn editing_one_slot_preserves_unrelated_live_weapon_and_ammunition_state()
         include_str!("../game/mechs/JR7-D.toml"),
     )
     .await;
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    let vehicle = &mut state["vehicles"][id.0.to_string()];
-    vehicle["ammunition"][0] = serde_json::json!(2);
-    vehicle["weapon_recycle"] = serde_json::json!({"0":7});
-    vehicle["jammed_weapons"] = serde_json::json!([0]);
-    vehicle["weapon_failures"] = serde_json::json!({"0":"shorted"});
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            let vehicle = record;
+            vehicle["ammunition"][0] = serde_json::json!(2);
+            vehicle["weapon_recycle"] = serde_json::json!({"0":7});
+            vehicle["jammed_weapons"] = serde_json::json!([0]);
+            vehicle["weapon_failures"] = serde_json::json!({"0":"shorted"});
+        })
+        .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     scripts
         .inspect_lua()
@@ -407,13 +413,16 @@ async fn mech_slot_edit_preserves_unrelated_live_weapon_and_ammunition_state() {
         BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    let unit = &mut state["constructed"][id.0.to_string()];
-    unit["ammunition"][0] = serde_json::json!(2);
-    unit["weapon_recycle"] = serde_json::json!({"0":7});
-    unit["jammed_weapons"] = serde_json::json!([0]);
-    unit["weapon_failures"] = serde_json::json!({"0":"shorted"});
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            let unit = record;
+            unit["ammunition"][0] = serde_json::json!(2);
+            unit["weapon_recycle"] = serde_json::json!({"0":7});
+            unit["jammed_weapons"] = serde_json::json!([0]);
+            unit["weapon_failures"] = serde_json::json!({"0":"shorted"});
+        })
+        .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     scripts
         .inspect_lua()
@@ -444,11 +453,14 @@ async fn restock_allows_environmental_disable_but_rejects_destroyed_ammunition()
         include_str!("../game/mechs/JR7-D.toml"),
     )
     .await;
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    let vehicle = &mut state["vehicles"][id.0.to_string()];
-    vehicle["ammunition"][0] = serde_json::json!(2);
-    vehicle["breached_sections"] = serde_json::json!(["turret"]);
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            let vehicle = record;
+            vehicle["ammunition"][0] = serde_json::json!(2);
+            vehicle["breached_sections"] = serde_json::json!(["turret"]);
+        })
+        .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     scripts
         .inspect_lua()

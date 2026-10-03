@@ -96,14 +96,17 @@ async fn water_destruction_clears_controls_and_survives_sqlite_and_lua() {
         BattleElectronicMode::Ecm,
     )
     .unwrap();
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    let value = &mut saved["vehicles"][id.0.to_string()];
-    value["motion"]["speed"] = 20.into();
-    value["motion"]["desired_speed"] = 20.into();
-    value["inferno_remaining"] = 30.into();
-    value["burning_sections"]["front"] = 15.into();
-    value["extinguishing"] = 20.into();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            let value = record;
+            value["motion"]["speed"] = 20.into();
+            value["motion"]["desired_speed"] = 20.into();
+            value["inferno_remaining"] = 30.into();
+            value["burning_sections"]["front"] = 15.into();
+            value["extinguishing"] = 20.into();
+        })
+        .unwrap();
     let mut unit = world.btech.vehicles()[&id].clone();
     let before = unit.clone();
     assert!(unit.destroy_by_flooding());

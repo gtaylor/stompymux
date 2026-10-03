@@ -161,11 +161,14 @@ fn mech(world: &mut World, config: &Config, map: ObjectId, x: i64, y: i64) -> Ob
     )
     .unwrap();
     place_battle_unit(world, id, map, x, y).unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    let unit = &mut state["constructed"][id.0.to_string()];
-    unit["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-    unit["dice"] = serde_json::to_value(BattleDice::seeded([19; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            let unit = record;
+            unit["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+            unit["dice"] = serde_json::to_value(BattleDice::seeded([19; 32])).unwrap();
+        })
+        .unwrap();
     id
 }
 
@@ -180,9 +183,12 @@ async fn fire_heats_only_mechs_in_the_flames() {
     for (x, burns) in [(0, true), (1, true), (2, false), (3, true), (4, false)] {
         let id = mech(&mut world, &config, map, x, 0);
         if x == 4 {
-            let mut state = serde_json::to_value(&world.btech).unwrap();
-            state["constructed"][id.0.to_string()]["ground_elevation"] = (-1).into();
-            world.btech = serde_json::from_value(state).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    record["ground_elevation"] = (-1).into();
+                })
+                .unwrap();
         }
         let cool = world.btech.constructed_units()[&id].heat_rates(&world);
         ignite(&mut world, map, x as i32, 0, 30);

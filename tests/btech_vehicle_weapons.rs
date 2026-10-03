@@ -54,22 +54,27 @@ async fn vehicle_weapon_inspection_preserves_indices_failure_details_and_replay(
             )
             .unwrap();
         } else {
-            let mut saved = serde_json::to_value(&world.btech).unwrap();
-            let vehicle = &mut saved["vehicles"][id.0.to_string()];
-            match condition {
-                "recycle" => vehicle["weapon_recycle"]["0"] = serde_json::json!(3),
-                "disabled" => vehicle["weapon_failures"]["0"] = serde_json::json!("disabled"),
-                "jammed" => {
-                    vehicle["weapon_failures"]["0"] = serde_json::json!("jammed");
-                    vehicle["weapon_recycle"]["0"] = serde_json::json!(60);
-                }
-                "ap" => {
-                    vehicle["ammunition_modes"]["0"] =
-                        serde_json::to_value(BattleAmmunitionMode::ArmorPiercing).unwrap()
-                }
-                _ => {}
-            }
-            world.btech = serde_json::from_value(saved).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    let vehicle = record;
+                    match condition {
+                        "recycle" => vehicle["weapon_recycle"]["0"] = serde_json::json!(3),
+                        "disabled" => {
+                            vehicle["weapon_failures"]["0"] = serde_json::json!("disabled")
+                        }
+                        "jammed" => {
+                            vehicle["weapon_failures"]["0"] = serde_json::json!("jammed");
+                            vehicle["weapon_recycle"]["0"] = serde_json::json!(60);
+                        }
+                        "ap" => {
+                            vehicle["ammunition_modes"]["0"] =
+                                serde_json::to_value(BattleAmmunitionMode::ArmorPiercing).unwrap()
+                        }
+                        _ => {}
+                    }
+                })
+                .unwrap();
         }
         let expected = battle_weapon_status(&world, id).unwrap();
         let first = expected.lines().nth(1).unwrap();
@@ -116,10 +121,13 @@ async fn electrical_vehicle_failures_display_shorted_without_claiming_physical_l
         .join("\n")
         .replace("IS.AC/20", "IS.MediumLaser");
     let (_dir, config, mut world, id) = fixture(&template).await;
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][id.0.to_string()]["weapon_failures"]["0"] = serde_json::json!("shorted");
-    saved["vehicles"][id.0.to_string()]["weapon_recycle"]["0"] = serde_json::json!(60);
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["weapon_failures"]["0"] = serde_json::json!("shorted");
+            record["weapon_recycle"]["0"] = serde_json::json!(60);
+        })
+        .unwrap();
     let expected = battle_weapon_status(&world, id).unwrap();
     assert!(
         expected.contains("0: IS.MediumLaser in Turret; shorted; 60s; -"),

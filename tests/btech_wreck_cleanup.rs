@@ -112,12 +112,14 @@ async fn fixture(
     // Find a fixed victim stream that hits its remaining rear section in the reactor packets.
     for seed in 0..=255u8 {
         let mut candidate = world.clone();
-        let mut state = serde_json::to_value(&candidate.btech).unwrap();
-        if source != id {
-            state["vehicles"][id.0.to_string()]["dice"] =
-                serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        }
-        candidate.btech = serde_json::from_value(state).unwrap();
+        candidate
+            .btech
+            .rewrite_unit_record(id, |record| {
+                if source != id {
+                    record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                }
+            })
+            .unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(candidate))).unwrap();
         reactor_explosion_action(&scripts, &config, source).unwrap();
         if source == id
@@ -397,9 +399,11 @@ async fn wreck_idle_server_commit_retry() {
         let mut world = scripts.world().clone();
         for _ in 0..31 { advance_battle_reactor_windows(&mut world); }
         // No other running systems are needed to keep the retirement timer alive.
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][id.0.to_string()]["crew_recovery"]["remaining"] = 0.into();
-        world.btech = serde_json::from_value(state).unwrap();
+        world.btech
+            .rewrite_unit_record(id, |record| {
+        record["crew_recovery"]["remaining"] = 0.into();
+        })
+            .unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::query("CREATE TRIGGER deny_wreck BEFORE DELETE ON btech_units BEGIN SELECT RAISE(ABORT,'wreck commit failure'); END").execute(&mut sql).await.unwrap();
@@ -440,9 +444,12 @@ async fn wreck_timer_validation_and_object_purge() {
         assert!(candidate.validate(&config).is_err());
     }
     let mut candidate = world.clone();
-    let mut state = serde_json::to_value(&candidate.btech).unwrap();
-    state["constructed"][id.0.to_string()]["sections"]["LeftLeg"]["internal"] = 1.into();
-    candidate.btech = serde_json::from_value(state).unwrap();
+    candidate
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["sections"]["LeftLeg"]["internal"] = 1.into();
+        })
+        .unwrap();
     assert!(candidate.validate(&config).is_err());
     persistence::save(&config.database(), &world).await.unwrap();
     let mut deleted = world.clone();

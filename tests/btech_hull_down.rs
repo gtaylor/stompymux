@@ -191,10 +191,12 @@ async fn chassis_admission_countdown_bounds_and_invalid_saved_states() {
     }
     let (_dir, config, mut world, id, _) = fixture(QUAD, MECH).await;
     for (speed, delay) in [(0.0, 30), (10.75, 30), (64.5, 5), (96.75, 3), (400.0, 1)] {
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        saved["constructed"][id.0.to_string()]["definition"]["max_speed"] =
-            serde_json::json!(speed);
-        world.btech = serde_json::from_value(saved).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["definition"]["max_speed"] = serde_json::json!(speed);
+            })
+            .unwrap();
         set_battle_hull_down(&mut world, id, ObjectId(1), "").unwrap();
         assert_eq!(
             world.btech.constructed_units()[&id].hull_down().remaining,
@@ -319,10 +321,12 @@ async fn pickup_clears_completed_quad_cover() {
         advance_battle_units(&mut world, 0);
     }
     set_battle_towable(&mut world, id, true).unwrap();
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["constructed"][carrier.0.to_string()]["contacts"][id.0.to_string()] =
-        serde_json::json!({"identified":true});
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(carrier, |record| {
+            record["contacts"][id.0.to_string()] = serde_json::json!({"identified":true});
+        })
+        .unwrap();
     let before = world.btech.clone();
     assert!(set_battle_tow(&mut world, carrier, Some(id)).is_err());
     assert_eq!(world.btech, before);

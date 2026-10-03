@@ -126,9 +126,12 @@ async fn vehicle_one_shots_energy_and_empty_bins_obey_readiness() {
         );
     }
     let (_dir, _config, mut world, id) = fixture(base).await;
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()]["ammunition"] = serde_json::json!([0, 0, 0, 0]);
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["ammunition"] = serde_json::json!([0, 0, 0, 0]);
+        })
+        .unwrap();
     assert!(
         !world.btech.vehicles()[&id]
             .weapon_readiness(0)
@@ -192,9 +195,12 @@ async fn vehicle_ammunition_prefers_mount_section_before_other_live_bins() {
         }]
     );
     assert_eq!(world.btech.vehicles()[&id].ammunition(), &[5, 4, 5, 5, 5]);
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()]["ammunition"] = serde_json::json!([5, 0, 0, 0, 0]);
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["ammunition"] = serde_json::json!([5, 0, 0, 0, 0]);
+        })
+        .unwrap();
     let cycle = reserve_battle_vehicle_weapon(&mut world, id, ObjectId(1), 1, true).unwrap();
     assert_eq!(
         cycle.ammunition,
@@ -264,9 +270,12 @@ async fn vehicle_failed_streak_locks_recycle_without_expenditure() {
 
     let template = base.replace("IS.AC/20", streak);
     let (_dir, _config, mut world, id) = fixture(&template).await;
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()]["ammunition"] = serde_json::json!([0, 0, 0, 0]);
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["ammunition"] = serde_json::json!([0, 0, 0, 0]);
+        })
+        .unwrap();
     let checkpoint = world.btech.clone();
     assert!(reserve_battle_vehicle_weapon(&mut world, id, ObjectId(1), 0, false).is_err());
     assert_eq!(world.btech, checkpoint);
@@ -350,9 +359,12 @@ async fn vehicle_stinger_selection_controls_live_ammunition() {
         loadout.ammunition[stinger_bin].mode,
         BattleAmmunitionMode::Stinger
     );
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()]["ammunition"][stinger_bin] = 0.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["ammunition"][stinger_bin] = 0.into();
+        })
+        .unwrap();
     for _ in 0..cycle.weapon.profile().recycle_seconds {
         advance_battle_recycle(&mut world);
     }
@@ -564,10 +576,12 @@ async fn vehicle_equipment_losses_disable_mounts_and_matching_supply() {
 async fn vehicle_weapon_critical_selection_excludes_losses_and_replays() {
     let (_dir, config, mut world, id) =
         fixture(include_str!("../game/mechs/Demolisher.toml")).await;
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([31; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded([31; 32])).unwrap();
+        })
+        .unwrap();
     let section = BattleVehicleSection::Turret;
     let before = world.btech.clone();
     assert_eq!(
@@ -578,9 +592,12 @@ async fn vehicle_weapon_critical_selection_excludes_losses_and_replays() {
     assert_eq!(world.btech, before);
     // Recycling and empty bins leave weapons eligible for critical damage.
     let _cycle = reserve_battle_vehicle_weapon(&mut world, id, ObjectId(1), 0, true).unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()]["ammunition"] = serde_json::json!([0, 0, 0, 0]);
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["ammunition"] = serde_json::json!([0, 0, 0, 0]);
+        })
+        .unwrap();
     assert_eq!(
         world.btech.vehicles()[&id]
             .weapon_critical_candidates(section)

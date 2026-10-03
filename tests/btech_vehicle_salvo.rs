@@ -45,10 +45,12 @@ fn matching_seed(predicate: impl Fn(&mut BattleDice) -> bool) -> [u8; 32] {
 
 /// Change only the victim's random stream.
 fn set_seed(world: &mut World, id: ObjectId, seed: [u8; 32]) {
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded(seed)).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
+        })
+        .unwrap();
 }
 
 /// Explicit policy for the hit table and critical consequences.
@@ -165,9 +167,12 @@ async fn vehicle_salvos_share_packet_rules_and_order_every_impact() {
         if report.cluster_roll.is_some() {
             dice.two_d6();
         }
-        let mut saved = serde_json::to_value(&replay.btech).unwrap();
-        saved["vehicles"][id.0.to_string()]["dice"] = serde_json::to_value(dice).unwrap();
-        replay.btech = serde_json::from_value(saved).unwrap();
+        replay
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["dice"] = serde_json::to_value(dice).unwrap();
+            })
+            .unwrap();
         for (group, amount) in report.groups.iter().zip(expected) {
             let expected = resolve_battle_vehicle_impact(
                 &mut replay,
@@ -271,10 +276,12 @@ async fn vehicle_salvos_apply_interception_glancing_and_streak_confusion() {
 #[tokio::test]
 async fn vehicle_salvos_finish_after_hull_loss_and_reject_invalid_effects_atomically() {
     let (_dir, config, mut base, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
-    let mut saved = serde_json::to_value(&base.btech).unwrap();
-    saved["vehicles"][id.0.to_string()]["sections"]["front"]["armor"] = serde_json::json!(0);
-    saved["vehicles"][id.0.to_string()]["sections"]["front"]["internal"] = serde_json::json!(1);
-    base.btech = serde_json::from_value(saved).unwrap();
+    base.btech
+        .rewrite_unit_record(id, |record| {
+            record["sections"]["front"]["armor"] = serde_json::json!(0);
+            record["sections"]["front"]["internal"] = serde_json::json!(1);
+        })
+        .unwrap();
     set_seed(
         &mut base,
         id,

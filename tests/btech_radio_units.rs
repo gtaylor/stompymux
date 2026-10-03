@@ -4,14 +4,7 @@ use stompymux_rs::*;
 
 /// Update one chassis's saved facts without duplicating the mixed-pair scenarios.
 fn fact(world: &mut World, id: ObjectId, update: impl FnOnce(&mut serde_json::Value)) {
-    let key = if world.btech.vehicles().contains_key(&id) {
-        "vehicles"
-    } else {
-        "constructed"
-    };
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    update(&mut state[key][id.0.to_string()]);
-    world.btech = serde_json::from_value(state).unwrap();
+    world.btech.rewrite_unit_record(id, update).unwrap();
 }
 
 #[tokio::test]

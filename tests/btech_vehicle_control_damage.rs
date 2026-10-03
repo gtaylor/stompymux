@@ -102,10 +102,13 @@ async fn vehicle_control_damage_stacks_without_changing_skills_or_construction()
         ))
         .unwrap();
     assert_eq!(values, (4, 2));
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()]["motion"]["speed"] = 53.75.into();
-    state["vehicles"][id.0.to_string()]["motion"]["desired_speed"] = 53.75.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["motion"]["speed"] = 53.75.into();
+            record["motion"]["desired_speed"] = 53.75.into();
+        })
+        .unwrap();
     assert_eq!(
         world.btech.vehicles()[&id]
             .weapon_control_modifier(turret, true)
