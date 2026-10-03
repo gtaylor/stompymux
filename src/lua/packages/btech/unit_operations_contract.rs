@@ -617,18 +617,8 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             if parts_contract::part_category(part.id) != "weapon" {
                 return Err(failure(2, "btech.part.wrong_kind", "part must be a weapon"));
             }
-            // Native administration validates the selected manufacturer form, then stores
-            // only the part identity.  The eight infantry weapons are intentionally absent
-            // from the combat enum, so derive their unbranded C template spelling from the
-            // registered fully-qualified name instead of rejecting their raw critical.
             let equipment = crate::BattlePart::from_id(part.id)
                 .map(|part| part.name)
-                .or_else(|| {
-                    parts_contract::part_equipment_name(part).and_then(|name| {
-                        name.split_once('.')
-                            .map(|(_, equipment)| equipment.to_owned())
-                    })
-                })
                 .ok_or_else(|| failure(2, "btech.part.not_found", "part was not found"))?;
             let section = section(contract::field(&request, "section")?, 2, &shared, id)?;
             let Value::Table(raw) = contract::field(&request, "slots")? else {
@@ -678,7 +668,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     &mut shared.borrow_mut(),
                     id,
                     &equipment,
-                    0,
                     section,
                     &slots,
                     modes,
@@ -687,7 +676,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     &mut shared.borrow_mut(),
                     id,
                     &equipment,
-                    0,
                     section,
                     slots[0],
                     modes,
@@ -744,7 +732,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     &mut shared.borrow_mut(),
                     id,
                     weapon,
-                    0,
                     section,
                     slot,
                     half,
@@ -754,7 +741,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     &mut shared.borrow_mut(),
                     id,
                     weapon,
-                    0,
                     section,
                     slot,
                     half,
@@ -882,12 +868,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 .map(|p| {
                     crate::BattlePart::from_id(p.id)
                         .map(|part| part.name)
-                        .or_else(|| {
-                            parts_contract::part_equipment_name(p).and_then(|name| {
-                                name.split_once('.')
-                                    .map(|(_, equipment)| equipment.to_owned())
-                            })
-                        })
                         .ok_or_else(|| failure(2, "btech.part.not_found", "part was not found"))
                 })
                 .transpose()?;
@@ -897,7 +877,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     &mut shared.borrow_mut(),
                     id,
                     equipment,
-                    0,
                     section,
                     slot,
                     data,
@@ -906,7 +885,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     &mut shared.borrow_mut(),
                     id,
                     equipment,
-                    0,
                     section,
                     slot,
                     data,

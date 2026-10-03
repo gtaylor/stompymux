@@ -5,7 +5,6 @@ tons = 75
 walk_mp = 6
 jump_mp = 4
 heat_sinks = 24
-computer = 4
 radio = 5
 
 [construction]
@@ -13,42 +12,41 @@ tech_base = "clan"
 engine = "xl"
 structure = "endo_steel"
 armor = "ferro_fibrous"
-brand = 5
 
 [sections.left_arm]
 armor = 24
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-8", item = "CL.GaussRifle", brand = 5 },
-    { at = "9-10", item = "HeatSink", brand = 5 },
-    { at = "11-12", item = "FerroFibrous", brand = 5 },
+    { at = "3-8", item = "CL.GaussRifle" },
+    { at = "9-10", item = "HeatSink" },
+    { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 24
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-8", item = "CL.GaussRifle", brand = 5 },
-    { at = "11-12", item = "EndoSteel", brand = 5 },
+    { at = "3-8", item = "CL.GaussRifle" },
+    { at = "11-12", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
 armor = 22
 rear = 10
 slots = [
-    { at = "3-5", item = "CL.LB2-XAC", brand = 5 },
+    { at = "3-5", item = "CL.LB2-XAC" },
     { at = 6, item = "Ammo_CL.LB2-XAC", rounds = 45 },
     { at = 7, item = "Ammo_CL.GaussRifle", rounds = 8 },
-    { at = "8-12", item = "FerroFibrous", brand = 5 },
+    { at = "8-12", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 22
 rear = 10
 slots = [
-    { at = "3-5", item = "CL.LB2-XAC", brand = 5 },
+    { at = "3-5", item = "CL.LB2-XAC" },
     { at = "6-7", item = "Ammo_CL.GaussRifle", rounds = 8 },
-    { at = "8-12", item = "EndoSteel", brand = 5 },
+    { at = "8-12", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
@@ -58,13 +56,13 @@ rear = 10
 [sections.left_leg]
 armor = 28
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 5 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 28
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 5 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.head]

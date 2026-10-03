@@ -4,7 +4,6 @@ movement = "biped"
 tons = 30
 walk_mp = 8
 jump_mp = 5
-computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0

@@ -3,7 +3,6 @@ class = "mech"
 movement = "quad"
 tons = 55
 walk_mp = 9
-computer = 4
 radio = 4
 
 [sections.front_left_leg]

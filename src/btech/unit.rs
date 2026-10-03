@@ -630,7 +630,7 @@ impl BattleUnit {
                 {
                     // C stores mount modes on the first critical while the remaining
                     // slots can retain older raw values. Emptying weapon modes in the
-                    // diagnostic copy keeps grouping based on equipment/data/brand.
+                    // diagnostic copy keeps grouping based on equipment/data.
                     critical.modes.clear();
                 }
             }
@@ -670,7 +670,6 @@ impl BattleUnit {
                     | "RocketFired"
             )
         });
-        critical.brand = critical.brand.map(|brand| brand % 16);
         if weapon.is_some() || ammunition.is_some() {
             critical.data = "0".into();
         }
@@ -1709,9 +1708,6 @@ fn validate_definition(definition: &BattleTemplate) -> Result<()> {
             | "administrative_unit_type"
             | "administrative_movement_type"
             | "carrier_maximum_tonnage" => {}
-            "computer" => {
-                ensure!(value.parse::<u8>().is_ok(), "Invalid electronics rating")
-            }
             "cargo_space" => ensure!(value.parse::<u32>().is_ok(), "Invalid cargo space"),
             "max_suits" => ensure!(
                 value.parse::<u16>() == Ok(0),

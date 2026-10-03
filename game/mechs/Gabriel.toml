@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "hover"
 tons = 5
 walk_mp = 23
-computer = 3
 
 [construction]
 armor = "ferro_fibrous"

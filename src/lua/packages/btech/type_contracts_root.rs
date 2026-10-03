@@ -21,7 +21,6 @@
 //|---@field equipment string Unresolved asset equipment name.
 //|---@field data string Unresolved asset data token.
 //|---@field modes string[] Unresolved asset mode names.
-//|---@field brand integer|nil Optional asset brand.
 // lua-types-end
 
 // lua-types-begin btech 00004
@@ -134,7 +133,6 @@
 //|---@field initial_fire_mode BattleFireMode Template mode; live mode is reported by unit.weapons.
 //|---@field rear_mount boolean
 //|---@field on_targeting_computer boolean Explicit authored link, separate from automatic eligibility.
-//|---@field brand integer|nil Manufacturer metadata.
 // lua-types-end
 
 // lua-types-begin btech 00016
@@ -146,14 +144,12 @@
 //|---@field hotload boolean Retained bin flag; does not hotload the launcher.
 //|---@field half_ton boolean Explicit half-ton construction flag.
 //|---@field mode BattleAmmunitionMode
-//|---@field brand integer|nil
 // lua-types-end
 
 // lua-types-begin btech 00017
 //|---@class BattleSystemCritical
 //|---@field location BattleCriticalLocation
 //|---@field system string Snake_case system identity.
-//|---@field brand integer|nil
 // lua-types-end
 
 // lua-types-begin btech 00018
@@ -206,7 +202,7 @@
 //|---@field original_capacity integer Template fuel capacity.
 //|---@field capacity integer Current capacity including 2000 per installed or carried auxiliary tank.
 //|---@field remaining integer Saved fuel; -1 indicates announced exhaustion.
-//|---@field auxiliary_tanks integer Carried Fuel_Tank items across manufacturers.
+//|---@field auxiliary_tanks integer Carried Fuel_Tank items.
 //|---@field installed_tanks integer Fuel_Tank criticals in saved VTOL construction.
 //|---@field excess_mass integer Fuel above original capacity in 1/1024 tons before cargo discounts.
 // lua-types-end
@@ -1137,7 +1133,6 @@
 // lua-types-begin btech 00225
 //|---@class BattleInventoryEntry
 //|---@field part_id integer Stable game-directory part identifier.
-//|---@field brand_id integer Manufacturer identifier, zero through five.
 //|---@field quantity integer Positive stock quantity, at most 2147483647.
 // lua-types-end
 
@@ -1162,7 +1157,7 @@
 
 // lua-types-begin btech 00239
 //|---@class BattleCargoRow: BattleInventoryEntry
-//|---@field name string Stock display name, including a known weapon manufacturer when available.
+//|---@field name string Stock display name.
 // lua-types-end
 
 // lua-types-begin btech 00240
@@ -1289,13 +1284,12 @@
 // lua-types-begin btech 00283
 //|---@class BattleCriticalInspection
 //|---@field slot integer Zero-based physical slot; native labels add one.
-//|---@field equipment string Resolved display name, including configured manufacturer and bin mode.
+//|---@field equipment string Resolved display name, including bin mode.
 //|---@field condition BattleEquipmentCondition
 //|---@field weapon_index integer? Stable zero-based mount index, including split extensions.
 //|---@field ammunition_index integer? Zero-based bin index.
 //|---@field ammunition_remaining integer? Saved bin quantity; native text hides it when unavailable.
 //|---@field ammunition_capacity integer? Installed bin capacity, including special rounds and half tons.
-//|---@field brand integer? Authored quality; split slots use their parent weapon's brand.
 //|---@field rear_mount boolean
 //|---@field one_shot boolean
 //|---@field spent boolean
@@ -1706,8 +1700,6 @@
 // lua-types-begin btech 00430
 //|---@class BattlePartDefinition
 //|---@field id integer Stable catalogue part identifier.
-//|---@field brand integer Manufacturer identifier.
-//|---@field packed_id integer Brand-major combined identifier.
 //|---@field short_name string
 //|---@field long_name string
 //|---@field very_long_name string

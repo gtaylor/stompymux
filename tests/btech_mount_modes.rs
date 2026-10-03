@@ -39,7 +39,6 @@ fn template(weapon: BattleWeapon, modes: &[&str]) -> BattleTemplate {
             CriticalDefinition {
                 equipment: weapon.name().into(),
                 data: "-".into(),
-                brand: Some(4),
                 modes: if slot == 0 {
                     modes.iter().map(|s| (*s).into()).collect()
                 } else {
@@ -106,8 +105,8 @@ fn primary_only_modes_resolve_like_repeated_modes() {
         if weapon == BattleWeapon::Rocket20 {
             assert!(mount.one_shot && mount.initially_spent);
         }
-        // Continuations still cannot change the primary's identity, data, brand or modes.
-        for change in 0..4 {
+        // Continuations still cannot change the primary's identity, data or modes.
+        for change in 0..3 {
             let mut invalid = source.clone();
             let part = invalid
                 .sections
@@ -119,7 +118,6 @@ fn primary_only_modes_resolve_like_repeated_modes() {
             match change {
                 0 => part.equipment = "IS.MediumLaser".into(),
                 1 => part.data = "1".into(),
-                2 => part.brand = Some(3),
                 _ => part.modes = vec!["Heat".into()],
             }
             assert!(BattleLoadout::resolve(&invalid).is_err());

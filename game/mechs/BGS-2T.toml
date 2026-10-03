@@ -8,7 +8,6 @@ cargo_space = 0
 
 [construction]
 heat_sinks = "double"
-brand = 3
 
 [sections.front_left_leg]
 armor = 27
@@ -21,7 +20,7 @@ armor = 21
 rear = 6
 engine_slots = 4
 slots = [
-    { at = "5-7", item = "IS.ERPPC", brand = 3 },
+    { at = "5-7", item = "IS.ERPPC" },
 ]
 
 [sections.right_torso]
@@ -29,7 +28,7 @@ armor = 21
 rear = 6
 engine_slots = 2
 slots = [
-    { at = "3-12", item = "IS.UltraAC/20", brand = 3 },
+    { at = "3-12", item = "IS.UltraAC/20" },
 ]
 
 [sections.center_torso]

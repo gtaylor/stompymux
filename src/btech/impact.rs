@@ -1778,7 +1778,6 @@ mod tests {
                         equipment: "LaserReflective".into(),
                         data: "-".into(),
                         modes: Vec::new(),
-                        brand: None,
                     },
                 );
             }

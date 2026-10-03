@@ -144,10 +144,6 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                 let part = part
                     .parse()
                     .or_else(|_| super::BattlePart::parse(part).map(|part| part.part_id))?;
-                let brand = args
-                    .next()
-                    .context("Expected manufacturer identifier")?
-                    .parse()?;
                 let quantity = args.next().context("Expected quantity")?.parse()?;
                 ensure!(args.next().is_none(), "Unexpected inventory arguments");
                 super::set_inventory_quantity_action(
@@ -156,11 +152,10 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                     ctx.player,
                     object,
                     part,
-                    brand,
                     quantity,
                 )?;
                 return Ok(format!(
-                    "Inventory #{}: part {part}, manufacturer {brand}, quantity {quantity}.",
+                    "Inventory #{}: part {part}, quantity {quantity}.",
                     object.0
                 ));
             }
@@ -174,9 +169,8 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                 .iter()
                 .map(|entry| {
                     format!(
-                        "Part {} / manufacturer {}: {} ({})",
+                        "Part {}: {} ({})",
                         entry.part_id,
-                        entry.brand_id,
                         entry.quantity,
                         super::BattlePart::from_id(entry.part_id)
                             .map_or_else(|| "Unknown part".into(), |part| part.name)
@@ -196,7 +190,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
     ) {
         let result = (|| -> Result<String> {
             if operation.eq_ignore_ascii_case("weapon-settings") {
-                let weapon = super::BattleWeapon::parse_operator_name(argument.trim())?;
+                let weapon = super::BattleWeapon::parse(argument.trim())?;
                 let values = ctx.scripts.world().btech.weapon_settings().get(weapon);
                 return Ok(format!(
                     "{}: recycle {} seconds; Battle Value {}.",

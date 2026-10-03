@@ -10,7 +10,7 @@ radio = 5
 armor = 11
 omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "IS.Flamer", brand = 5 },
+    { at = 4, item = "IS.Flamer" },
 ]
 
 [sections.right_arm]

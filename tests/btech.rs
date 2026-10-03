@@ -40,10 +40,6 @@ fn supplied_templates_and_maps_decode_without_asset_conversion() {
         atlas.sections[&BattleSection::CenterTorso].criticals[&10].modes,
         ["RearMount"]
     );
-    assert_eq!(
-        atlas.sections[&BattleSection::LeftArm].criticals[&4].brand,
-        Some(4)
-    );
     let map = read_battle_map(&dir.path().join("maps"), "test.map").unwrap();
     assert_eq!((map.width, map.height, map.hexes.len()), (50, 50, 2500));
     assert_eq!(map.hex(0, 0).unwrap().terrain(), Terrain::Grassland);

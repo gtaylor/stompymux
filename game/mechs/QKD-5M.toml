@@ -5,53 +5,51 @@ tons = 60
 walk_mp = 8
 jump_mp = 5
 heat_sinks = 26
-computer = 4
 radio = 4
 
 [construction]
 armor = "ferro_fibrous"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 13
 slots = [
-    { at = 5, item = "IS.MediumLaser", brand = 3 },
-    { at = "6-12", item = "FerroFibrous", brand = 3 },
+    { at = 5, item = "IS.MediumLaser" },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 13
 slots = [
-    { at = 5, item = "IS.MediumLaser", brand = 3 },
-    { at = "6-12", item = "FerroFibrous", brand = 3 },
+    { at = 5, item = "IS.MediumLaser" },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 17
 rear = 8
 slots = [
-    { at = "1-3", item = "HeatSink", brand = 3 },
-    { at = "4-5", item = "JumpJet", brand = 3 },
-    { at = "6-7", item = "IS.LRM-10", brand = 3 },
+    { at = "1-3", item = "HeatSink" },
+    { at = "4-5", item = "JumpJet" },
+    { at = "6-7", item = "IS.LRM-10" },
     { at = 8, item = "Ammo_IS.LRM-10", rounds = 12 },
-    { at = 9, item = "Case", brand = 3 },
+    { at = 9, item = "Case" },
 ]
 
 [sections.right_torso]
 armor = 17
 rear = 8
 slots = [
-    { at = "1-2", item = "JumpJet", brand = 3 },
-    { at = "3-4", item = "IS.MediumLaser", modes = ["RearMount"], brand = 3 },
+    { at = "1-2", item = "JumpJet" },
+    { at = "3-4", item = "IS.MediumLaser", modes = ["RearMount"] },
 ]
 
 [sections.center_torso]
 armor = 18
 rear = 8
 slots = [
-    { at = 11, item = "JumpJet", brand = 3 },
-    { at = 12, item = "IS.SRM-4", modes = ["OneShot"], brand = 4 },
+    { at = 11, item = "JumpJet" },
+    { at = 12, item = "IS.SRM-4", modes = ["OneShot"] },
 ]
 
 [sections.left_leg]

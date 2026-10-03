@@ -17,7 +17,7 @@ slots = [
 armor = 22
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "IS.LRM-15", brand = 1 },
+    { at = "4-6", item = "IS.LRM-15" },
 ]
 
 [sections.left_torso]

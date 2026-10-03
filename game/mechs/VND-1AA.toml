@@ -9,7 +9,7 @@ heat_sinks = 16
 [sections.left_arm]
 armor = 5
 slots = [
-    { at = 5, item = "IS.SmallLaser", brand = 2 },
+    { at = 5, item = "IS.SmallLaser" },
 ]
 
 [sections.right_arm]
@@ -23,7 +23,7 @@ slots = [
 armor = 8
 rear = 3
 slots = [
-    { at = 1, item = "IS.LRM-5", brand = 2 },
+    { at = 1, item = "IS.LRM-5" },
     { at = 2, item = "Ammo_IS.LRM-5", rounds = 24 },
     { at = "3-4", item = "HeatSink" },
 ]
@@ -58,5 +58,5 @@ slots = [
 [sections.head]
 armor = 7
 slots = [
-    { at = 4, item = "IS.MediumLaser", brand = 2 },
+    { at = 4, item = "IS.MediumLaser" },
 ]

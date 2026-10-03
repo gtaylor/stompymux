@@ -78,7 +78,7 @@ fn set(
         crate::authority::is_wizard(world, actor),
         "Permission denied."
     );
-    let weapon = BattleWeapon::parse_operator_name(name)?;
+    let weapon = BattleWeapon::parse(name)?;
     apply(world, weapon, setting, value)
 }
 
@@ -142,7 +142,7 @@ pub(crate) fn edit_command(
     value: i64,
     recycle: bool,
 ) -> Result<String> {
-    let weapon = BattleWeapon::parse_operator_name(name)?;
+    let weapon = BattleWeapon::parse(name)?;
     let values =
         super::edit_weapon_settings(ctx.scripts, ctx.config, ctx.player, name, value, recycle)?;
     Ok(format!(

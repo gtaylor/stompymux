@@ -4,7 +4,6 @@ movement = "fly"
 tons = 80
 walk_mp = 9
 heat_sinks = 20
-computer = 3
 fuel = 1500
 
 [sections.nose]

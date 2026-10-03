@@ -4,13 +4,11 @@ movement = "biped"
 tons = 40
 walk_mp = 12
 heat_sinks = 20
-computer = 4
 radio = 4
 
 [construction]
 engine = "xl"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 4
@@ -24,24 +22,24 @@ omit = ["lower_actuator", "hand_actuator"]
 armor = 6
 rear = 3
 slots = [
-    { at = 4, item = "IS.MediumLaser", brand = 3 },
-    { at = "5-9", item = "IS.UltraAC/5", brand = 3 },
+    { at = 4, item = "IS.MediumLaser" },
+    { at = "5-9", item = "IS.UltraAC/5" },
 ]
 
 [sections.right_torso]
 armor = 6
 rear = 3
 slots = [
-    { at = 4, item = "IS.MediumLaser", brand = 3 },
+    { at = 4, item = "IS.MediumLaser" },
     { at = 5, item = "Ammo_IS.UltraAC/5", rounds = 20 },
-    { at = 6, item = "Case", brand = 3 },
+    { at = 6, item = "Case" },
 ]
 
 [sections.center_torso]
 armor = 11
 rear = 6
 slots = [
-    { at = 11, item = "IS.SmallPulseLaser", brand = 3 },
+    { at = 11, item = "IS.SmallPulseLaser" },
 ]
 
 [sections.left_leg]

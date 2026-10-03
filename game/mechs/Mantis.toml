@@ -14,7 +14,7 @@ armor = 8
 [sections.front_side]
 armor = 14
 slots = [
-    { at = "1-5", item = "IS.ERSmallLaser", brand = 3 },
+    { at = "1-5", item = "IS.ERSmallLaser" },
 ]
 
 [sections.aft_side]

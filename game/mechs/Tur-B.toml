@@ -5,7 +5,6 @@ tons = 95
 walk_mp = 5
 jump_mp = 3
 heat_sinks = 50
-computer = 5
 radio = 5
 
 [construction]

@@ -1,14 +1,14 @@
 //! Computer failure selection is independent of heartbeat admission, state effects and recovery scheduling.
 use super::BattleDice;
-use anyhow::{Result, ensure};
+use anyhow::Result;
 use serde::Serialize;
 
 /// The available displays and target are sampled before a failure is selected.
 #[derive(Debug, Clone, Copy)]
 pub struct BattleComputerFailureInput {
     pub parts_enabled: bool,
-    /// Zero uses the default quality five; extended catalogue indices retain their failure thresholds.
-    pub quality: u8,
+    /// Clan computers never fail the reliability roll; Inner Sphere computers fail one in ten.
+    pub clan: bool,
     pub has_target: bool,
     pub tactical_range: u8,
     pub long_range: u8,
@@ -44,17 +44,7 @@ fn select_with(
     if !input.parts_enabled {
         return Ok(None);
     }
-    let quality = if input.quality == 0 {
-        5
-    } else {
-        usize::from(input.quality)
-    };
-    let brand = (24 + quality - 1) * 5 / 6;
-    ensure!(
-        brand < 30,
-        "Computer quality has no failure catalogue entry"
-    );
-    let reliability = [80, 90, 95, 100, 101][brand % 5];
+    let reliability = if input.clan { 100 } else { 90 };
     if draw(5000)? != 42 || draw(100)? <= reliability {
         return Ok(None);
     }
@@ -84,7 +74,7 @@ mod tests {
 
     const INPUT: BattleComputerFailureInput = BattleComputerFailureInput {
         parts_enabled: true,
-        quality: 1,
+        clan: false,
         has_target: true,
         tactical_range: 20,
         long_range: 40,
@@ -128,28 +118,14 @@ mod tests {
         }
     }
 
-    /// Catalogue quality boundaries retain their integer-index mapping and one-time six reroll.
+    /// Technology base sets reliability; a failed roll draws one effect with a one-time six reroll.
     #[test]
-    fn selection_preserves_quality_and_draw_order() {
-        for (quality, reliability) in [
-            (0, 100),
-            (1, 80),
-            (2, 80),
-            (3, 90),
-            (4, 95),
-            (5, 100),
-            (6, 101),
-            (7, 80),
-            (8, 80),
-            (9, 90),
-            (10, 95),
-            (11, 100),
-            (12, 101),
-        ] {
-            for quality_roll in [80, 81, 90, 91, 95, 96, 100] {
+    fn selection_preserves_reliability_and_draw_order() {
+        for (clan, reliability) in [(false, 90), (true, 100)] {
+            for reliability_roll in [80, 81, 90, 91, 95, 96, 100] {
                 for selection in 1..=6 {
-                    let fails = quality_roll > reliability;
-                    let mut draws = vec![(5000, 42), (100, quality_roll)];
+                    let fails = reliability_roll > reliability;
+                    let mut draws = vec![(5000, 42), (100, reliability_roll)];
                     if fails {
                         draws.push((6, selection));
                         if selection == 6 {
@@ -164,7 +140,7 @@ mod tests {
                             assert_eq!(sides, expected_sides);
                             Ok(value)
                         },
-                        BattleComputerFailureInput { quality, ..INPUT },
+                        BattleComputerFailureInput { clan, ..INPUT },
                     )
                     .unwrap();
                     assert!(draws.next().is_none());
@@ -208,9 +184,9 @@ mod tests {
         );
     }
 
-    /// Disabled hardware and invalid catalogue ratings leave the private stream untouched.
+    /// Disabled hardware leaves the private stream untouched.
     #[test]
-    fn disabled_and_invalid_inputs_do_not_draw() {
+    fn disabled_inputs_do_not_draw() {
         let mut dice = BattleDice::seeded([7; 32]);
         let before = dice.clone();
         assert_eq!(
@@ -223,17 +199,6 @@ mod tests {
             )
             .unwrap(),
             None
-        );
-        assert_eq!(dice, before);
-        assert!(
-            select_computer_failure(
-                &mut dice,
-                BattleComputerFailureInput {
-                    quality: 255,
-                    ..INPUT
-                }
-            )
-            .is_err()
         );
         assert_eq!(dice, before);
     }

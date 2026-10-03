@@ -4,40 +4,38 @@ movement = "biped"
 tons = 65
 walk_mp = 6
 heat_sinks = 24
-computer = 4
 radio = 4
 
 [construction]
 engine = "xl"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 20
 slots = [
-    { at = 5, item = "IS.MediumLaser", brand = 3 },
-    { at = "6-7", item = "IS.LargeLaser", brand = 3 },
+    { at = 5, item = "IS.MediumLaser" },
+    { at = "6-7", item = "IS.LargeLaser" },
 ]
 
 [sections.right_arm]
 armor = 20
 slots = [
-    { at = 5, item = "IS.MediumLaser", brand = 3 },
-    { at = "6-7", item = "IS.LargeLaser", brand = 3 },
+    { at = 5, item = "IS.MediumLaser" },
+    { at = "6-7", item = "IS.LargeLaser" },
 ]
 
 [sections.left_torso]
 armor = 22
 rear = 8
 slots = [
-    { at = "4-9", item = "HeatSink", brand = 3 },
+    { at = "4-9", item = "HeatSink" },
 ]
 
 [sections.right_torso]
 armor = 22
 rear = 8
 slots = [
-    { at = "4-10", item = "IS.GaussRifle", brand = 3 },
+    { at = "4-10", item = "IS.GaussRifle" },
     { at = "11-12", item = "Ammo_IS.GaussRifle", rounds = 8 },
 ]
 

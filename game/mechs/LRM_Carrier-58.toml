@@ -16,13 +16,13 @@ armor = 12
 [sections.front_side]
 armor = 12
 slots = [
-    { at = "1-3", item = "IS.LRM-20", brand = 3 },
-    { at = "4-6", item = "ArtemisIV", brand = 3 },
+    { at = "1-3", item = "IS.LRM-20" },
+    { at = "4-6", item = "ArtemisIV" },
     { at = "7-12", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
 ]
 
 [sections.aft_side]
 armor = 12
 slots = [
-    { at = 1, item = "C3Slave", brand = 3 },
+    { at = 1, item = "C3Slave" },
 ]

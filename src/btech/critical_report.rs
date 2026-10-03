@@ -15,7 +15,6 @@ pub struct BattleCriticalInspection {
     pub ammunition_index: Option<usize>,
     pub ammunition_remaining: Option<u16>,
     pub ammunition_capacity: Option<u16>,
-    pub brand: Option<u8>,
     pub rear_mount: bool,
     pub one_shot: bool,
     pub spent: bool,
@@ -59,16 +58,10 @@ struct ConstructionNames {
     engine: BattleEngine,
     improved_jets: bool,
     small_cockpit: bool,
-    show_brands: bool,
 }
 
 /// Inspect a section by its cockpit alias, without changing authority, dice or saved equipment.
-pub fn critical_report(
-    world: &World,
-    id: ObjectId,
-    section: &str,
-    show_brands: bool,
-) -> Result<BattleCriticalReport> {
+pub fn critical_report(world: &World, id: ObjectId, section: &str) -> Result<BattleCriticalReport> {
     if let Some(unit) = world.btech.vehicles().get(&id) {
         let section = BattleVehicleSection::parse_location(section)
             .map_err(|_| anyhow::anyhow!("Invalid section!"))?;
@@ -92,7 +85,6 @@ pub fn critical_report(
             engine,
             improved_jets: false,
             small_cockpit: false,
-            show_brands,
         };
         let inventory = Inventory {
             definitions: &layout.criticals,
@@ -145,7 +137,6 @@ pub fn critical_report(
         small_cockpit: unit
             .definition()
             .has_technology(super::BattleTechnology::SmallCockpit),
-        show_brands,
     };
     let inventory = Inventory {
         definitions: &layout.criticals,
@@ -196,7 +187,6 @@ fn inspect<L: Copy + PartialEq>(
                 ammunition_index: None,
                 ammunition_remaining: None,
                 ammunition_capacity: None,
-                brand: None,
                 rear_mount: false,
                 one_shot: false,
                 spent: false,
@@ -252,14 +242,9 @@ fn inspect<L: Copy + PartialEq>(
                 } else {
                     BattleEquipmentCondition::Operational
                 };
-            row.brand = definition.brand;
             if let Some((index, mount)) = weapon {
                 row.weapon_index = Some(index);
-                row.brand = if proxy { mount.brand } else { definition.brand };
-                row.equipment = super::equipment_display::weapon_name(
-                    mount.weapon,
-                    row.brand.filter(|_| names.show_brands),
-                );
+                row.equipment = super::equipment_display::weapon_name(mount.weapon);
                 // Proxy slots carry their own flags, while their part identity comes from the parent.
                 row.one_shot = !proxy && definition.modes.iter().any(|mode| mode == "OneShot");
                 row.spent = !proxy
@@ -382,13 +367,8 @@ impl BattleCriticalInspection {
 }
 
 /// Render paired columns in physical slot order, without omitting uninstalled positions.
-pub fn critical_status(
-    world: &World,
-    id: ObjectId,
-    section: &str,
-    show_brands: bool,
-) -> Result<String> {
-    let report = critical_report(world, id, section, show_brands)?;
+pub fn critical_status(world: &World, id: ObjectId, section: &str) -> Result<String> {
+    let report = critical_report(world, id, section)?;
     let rows: Vec<_> = report
         .slots
         .iter()
@@ -416,6 +396,6 @@ pub(crate) fn command(
             .split_whitespace()
             .next()
             .context("You must specify a section to list the criticals for!")?;
-        critical_status(&world, id, section, ctx.config.battletech.parts != 0)
+        critical_status(&world, id, section)
     })())
 }

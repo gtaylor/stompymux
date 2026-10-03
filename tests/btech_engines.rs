@@ -292,7 +292,7 @@ async fn critical_report_mixed_engine_names() {
         let (_dir, config, mut world) = support::isolated_world().await;
         let id = world.create(&config, "Engine report".into(), Kind::Thing);
         create_battle_unit(&mut world, id, definition(center, left, right)).unwrap();
-        let report = battle_critical_report(&world, id, "ct", true).unwrap();
+        let report = battle_critical_report(&world, id, "ct").unwrap();
         assert_eq!(
             report
                 .slots

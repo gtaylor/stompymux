@@ -32,7 +32,7 @@ slots = [
 armor = 8
 rear = 4
 slots = [
-    { at = 11, item = "IS.MediumLaser", brand = 5 },
+    { at = 11, item = "IS.MediumLaser" },
 ]
 
 [sections.left_leg]

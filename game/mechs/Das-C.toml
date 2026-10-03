@@ -4,7 +4,6 @@ movement = "biped"
 tons = 20
 walk_mp = 15
 heat_sinks = 20
-computer = 4
 specials = ["CL_AMS", "Masc"]
 
 [construction]

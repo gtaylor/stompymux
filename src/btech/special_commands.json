@@ -1186,7 +1186,7 @@
     {
       "class_mask": 0,
       "syntax": "REPLACEGUN [<NUM> | <LOC> <POS>] [ITEM]",
-      "description": "Replaces the gun in the position (optionally with [ITEM], like Martell.MediumLaser)",
+      "description": "Replaces the gun in the position (optionally with [ITEM], like IS.MediumLaser)",
       "restricted": false,
       "category": false
     },

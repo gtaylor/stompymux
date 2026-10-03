@@ -5,49 +5,47 @@ tons = 50
 walk_mp = 6
 jump_mp = 4
 heat_sinks = 20
-computer = 4
 radio = 4
 
 [construction]
 engine = "xl"
 structure = "endo_steel"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 14
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-5", item = "HeatSink", brand = 3 },
-    { at = "6-10", item = "IS.UltraAC/5", brand = 3 },
-    { at = "11-12", item = "IS.MediumLaser", brand = 3 },
+    { at = "3-5", item = "HeatSink" },
+    { at = "6-10", item = "IS.UltraAC/5" },
+    { at = "11-12", item = "IS.MediumLaser" },
 ]
 
 [sections.right_arm]
 armor = 14
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-5", item = "HeatSink", brand = 3 },
-    { at = "6-10", item = "IS.UltraAC/5", brand = 3 },
-    { at = "11-12", item = "IS.MediumLaser", brand = 3 },
+    { at = "3-5", item = "HeatSink" },
+    { at = "6-10", item = "IS.UltraAC/5" },
+    { at = "11-12", item = "IS.MediumLaser" },
 ]
 
 [sections.left_torso]
 armor = 18
 rear = 6
 slots = [
-    { at = "4-5", item = "IS.MachineGun", brand = 3 },
+    { at = "4-5", item = "IS.MachineGun" },
     { at = 6, item = "Ammo_IS.UltraAC/5", rounds = 20 },
-    { at = "7-12", item = "EndoSteel", brand = 3 },
+    { at = "7-12", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 18
 rear = 6
 slots = [
-    { at = "4-5", item = "IS.MachineGun", brand = 3 },
+    { at = "4-5", item = "IS.MachineGun" },
     { at = 6, item = "Ammo_IS.UltraAC/5", rounds = 20 },
-    { at = "7-12", item = "EndoSteel", brand = 3 },
+    { at = "7-12", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
@@ -55,23 +53,23 @@ armor = 22
 rear = 9
 slots = [
     { at = 11, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
-    { at = 12, item = "EndoSteel", brand = 3 },
+    { at = 12, item = "EndoSteel" },
 ]
 
 [sections.left_leg]
 armor = 18
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 18
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "EndoSteel", brand = 3 },
+    { at = 4, item = "EndoSteel" },
 ]

@@ -32,7 +32,6 @@ movement = "biped"
 tons = 80
 walk_mp = 6
 heat_sinks = 34
-computer = 4
 radio = 4
 specials = ["SearchLight"]
 ```
@@ -47,7 +46,7 @@ specials = ["SearchLight"]
 | `max_speed`, `jump_speed` | number | Speeds in km/h, for the few units whose speed is not whole movement points. Give either the speed or its movement points, not both. |
 | `heat_sinks` | integer | Installed heat sinks. |
 | `hs_engine_override` | integer | Engine heat sink override. |
-| `computer`, `radio`, `radio_type`, `radio_range` | integer | Electronics. |
+| `radio`, `radio_type`, `radio_range` | integer | Electronics. |
 | `tac_range`, `lrs_range`, `scan_range` | integer | Sensor ranges. |
 | `si`, `fuel`, `cargo_space`, `max_suits`, `max_ton`, `carrier_maximum_tonnage` | integer | Class-specific capacities. |
 | `template_speed` | number | Movement baseline written when a saved unit's speed was edited. |
@@ -71,7 +70,6 @@ tech_base = "clan"
 engine = "xl"
 structure = "endo_steel"
 armor = "ferro_fibrous"
-brand = 3
 ```
 
 | Key | Choices |
@@ -84,7 +82,6 @@ brand = 3
 | `armor` | `standard`, `ferro_fibrous`, `light_ferro_fibrous`, `heavy_ferro_fibrous`, `stealth`, `hardened`, `laser_reflective`, `reactive` |
 | `heat_sinks` | `single`, `double`, `laser`, `compact`; Clan units default to and require doubles or better |
 | `myomer` | `standard`, `triple_strength` |
-| `brand` | Manufacturer brand number stamped on the fixed equipment construction places |
 
 Endo steel and ferro-fibrous slots are still listed in the sections: where
 they go is a design choice, not a consequence of the type.
@@ -103,9 +100,9 @@ rear = 6
 config = "Case"
 engine_at = 4
 slots = [
-    { at = "1-3", item = "HeatSink", brand = 3 },
-    { at = "10-11", item = "IS.ERLargeLaser", brand = 3 },
-    { at = 12, item = "IS.MediumPulseLaser", modes = ["RearMount"], brand = 3 },
+    { at = "1-3", item = "HeatSink" },
+    { at = "10-11", item = "IS.ERLargeLaser" },
+    { at = 12, item = "IS.MediumPulseLaser", modes = ["RearMount"] },
 ]
 ```
 
@@ -134,7 +131,6 @@ A section adjusts that with:
 | `omit` | Actuators the section lacks, in any combination: `shoulder`, `upper_actuator`, `lower_actuator`, and `hand_actuator` (biped arms) or `foot_actuator` (legs). The others keep their usual slots. |
 | `engine_at` | The side torso slot where the engine's slots begin. |
 | `engine_slots` | How many engine slots a torso holds when that differs from the engine type's count. Centre torso slots fill the three ahead of the gyro, then those after it. |
-| `brand` | Brand stamped on the section's fixed equipment instead of the construction `brand`. |
 | `explicit` | `true` when the section's layout is irregular: nothing is placed, and `slots` lists the fixed equipment too. |
 
 Listing a fixed item in a constructed section, or a slot that collides with
@@ -151,7 +147,6 @@ Each slot entry places one item in a run of consecutive critical slots:
 | `rounds` | Ammunition only: rounds in the bin. |
 | `link` | Non-ammunition only: the slot an Artemis IV or similar system controls. |
 | `modes` | Ammunition flags or weapon modes, such as `["RearMount"]` or `["Inferno"]`. |
-| `brand` | Manufacturer brand number. |
 
 A run fills every slot with the same item, so `{ at = "1-3", item = "HeatSink" }`
 is three single-slot heat sinks and `{ at = "4-6", item = "IS.ERPPC" }` is one
@@ -165,7 +160,6 @@ Split mounts are listed once, outside the sections:
 ```toml
 [[split_mounts]]
 item = "IS.AC/20"
-brand = 4
 placements = [
     { section = "center_torso", at = "11-12" },
     { section = "left_torso", at = "1-8" },
@@ -207,5 +201,4 @@ other files still convert, and the exit status is non-zero.
 MegaMek's vehicle body location has no counterpart, so body ammunition is
 placed beside a weapon it feeds and other body equipment in the first location
 with room. Vehicle heat sinks are set to cover energy weapon heat. Troop and
-cargo capacity is not converted. Manufacturer brands, computers and radios are
-left at their defaults.
+cargo capacity is not converted. Radios are left at their defaults.

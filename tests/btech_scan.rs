@@ -4093,7 +4093,7 @@ async fn probe_contacts_through_terrain_hide_identity_and_friendly_categories() 
     }
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["constructed"][source.0.to_string()]["definition"]["sections"]["LeftTorso"]["criticals"]
-        ["8"] = serde_json::json!({"equipment":"BeagleProbe","data":"-","modes":[],"brand":null});
+        ["8"] = serde_json::json!({"equipment":"BeagleProbe","data":"-","modes":[]});
     world.btech = serde_json::from_value(state).unwrap();
     assert!(
         battle_unit_terrain_los(&world, source, target)

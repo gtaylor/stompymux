@@ -5,7 +5,6 @@ tons = 40
 walk_mp = 12
 jump_mp = 8
 heat_sinks = 20
-computer = 4
 specials = ["CL_AMS"]
 
 [construction]

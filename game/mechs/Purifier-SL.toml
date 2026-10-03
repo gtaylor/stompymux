@@ -14,7 +14,7 @@ infantry_specials = ["Swarm_Attack_Tech", "Mount_Friends_Tech", "AntiLeg_Attack_
 armor = 6
 internals = 1
 slots = [
-    { at = 1, item = "IS.ERSmallLaser", brand = 3 },
+    { at = 1, item = "IS.ERSmallLaser" },
     { at = 2, item = "PurifierArmor" },
 ]
 
@@ -22,7 +22,7 @@ slots = [
 armor = 6
 internals = 1
 slots = [
-    { at = 1, item = "IS.ERSmallLaser", brand = 3 },
+    { at = 1, item = "IS.ERSmallLaser" },
     { at = 2, item = "PurifierArmor" },
 ]
 
@@ -31,7 +31,7 @@ armor = 6
 internals = 1
 rear = 6
 slots = [
-    { at = 1, item = "IS.ERSmallLaser", brand = 3 },
+    { at = 1, item = "IS.ERSmallLaser" },
     { at = 2, item = "PurifierArmor" },
 ]
 
@@ -40,6 +40,6 @@ armor = 6
 internals = 1
 rear = 6
 slots = [
-    { at = 1, item = "IS.ERSmallLaser", brand = 3 },
+    { at = 1, item = "IS.ERSmallLaser" },
     { at = 2, item = "PurifierArmor" },
 ]

@@ -81,7 +81,6 @@ fn launcher(source: &str, artillery: bool) -> BattleUnitTemplate {
         equipment: weapon.name().into(),
         data: "-".into(),
         modes: Vec::new(),
-        brand: None,
     };
     let bins = |section: &mut SectionDefinition| {
         for (slot, flag) in [None, Some("Smoke"), Some("Mine"), Some("Cluster")]
@@ -97,7 +96,6 @@ fn launcher(source: &str, artillery: bool) -> BattleUnitTemplate {
                     equipment: format!("Ammo_{}", weapon.name()),
                     data: weapon.profile().ammunition_per_ton.to_string(),
                     modes: flag.into_iter().map(str::to_owned).collect(),
-                    brand: None,
                 },
             );
         }

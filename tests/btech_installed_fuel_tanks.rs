@@ -25,7 +25,6 @@ fn aircraft(cargo_tech: bool) -> BattleVehicleTemplate {
                     equipment: "Fuel_Tank".into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
     }
@@ -66,7 +65,7 @@ async fn installed_and_carried_tanks_share_capacity_load_and_restart() {
             204 / divisor
         );
         assert_eq!(battle_inventory_mass(&world, id).unwrap(), 0);
-        set_battle_inventory_quantity(&mut world, ObjectId(1), id, 422, 5, 3).unwrap();
+        set_battle_inventory_quantity(&mut world, ObjectId(1), id, 422, 3).unwrap();
         let fuel = set_battle_vtol_fuel(&mut world, &config, ObjectId(1), id, 14000).unwrap();
         assert_eq!(
             (fuel.capacity, fuel.installed_tanks, fuel.auxiliary_tanks),
@@ -144,7 +143,6 @@ fn tank_equipment_uses_shared_identity_without_creating_ground_fuel_state() {
                 equipment: "Fuel_Tank".into(),
                 data: "-".into(),
                 modes: vec![],
-                brand: None,
             },
         );
     let vehicle = BattleVehicle::new(template).unwrap();

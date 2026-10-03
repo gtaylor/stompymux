@@ -4,47 +4,45 @@ movement = "biped"
 tons = 70
 walk_mp = 6
 heat_sinks = 36
-computer = 4
 radio = 4
 specials = ["SearchLight"]
 
 [construction]
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 20
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "IS.ERPPC", brand = 3 },
+    { at = "4-6", item = "IS.ERPPC" },
 ]
 
 [sections.right_arm]
 armor = 20
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "IS.ERPPC", brand = 3 },
-    { at = "7-9", item = "HeatSink", brand = 3 },
+    { at = "4-6", item = "IS.ERPPC" },
+    { at = "7-9", item = "HeatSink" },
 ]
 
 [sections.left_torso]
 armor = 17
 rear = 8
 slots = [
-    { at = 1, item = "IS.StreakSRM-2", brand = 3 },
-    { at = 2, item = "IS.MediumPulseLaser", brand = 3 },
-    { at = 3, item = "IS.SmallLaser", brand = 3 },
-    { at = "4-12", item = "HeatSink", brand = 3 },
+    { at = 1, item = "IS.StreakSRM-2" },
+    { at = 2, item = "IS.MediumPulseLaser" },
+    { at = 3, item = "IS.SmallLaser" },
+    { at = "4-12", item = "HeatSink" },
 ]
 
 [sections.right_torso]
 armor = 17
 rear = 8
 slots = [
-    { at = 1, item = "IS.StreakSRM-2", brand = 3 },
-    { at = 2, item = "IS.MediumPulseLaser", brand = 3 },
-    { at = 3, item = "IS.SmallLaser", brand = 3 },
-    { at = "4-12", item = "HeatSink", brand = 3 },
+    { at = 1, item = "IS.StreakSRM-2" },
+    { at = 2, item = "IS.MediumPulseLaser" },
+    { at = 3, item = "IS.SmallLaser" },
+    { at = "4-12", item = "HeatSink" },
 ]
 
 [sections.center_torso]

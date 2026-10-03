@@ -4,43 +4,41 @@ movement = "biped"
 tons = 50
 walk_mp = 6
 heat_sinks = 26
-computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 16
 slots = [
-    { at = "5-10", item = "HeatSink", brand = 3 },
-    { at = 11, item = "IS.MediumLaser", brand = 3 },
+    { at = "5-10", item = "HeatSink" },
+    { at = 11, item = "IS.MediumLaser" },
 ]
 
 [sections.right_arm]
 armor = 16
 slots = [
-    { at = "5-10", item = "HeatSink", brand = 3 },
-    { at = 11, item = "IS.MediumLaser", brand = 3 },
+    { at = "5-10", item = "HeatSink" },
+    { at = 11, item = "IS.MediumLaser" },
 ]
 
 [sections.left_torso]
 armor = 20
 rear = 4
 slots = [
-    { at = "1-3", item = "HeatSink", brand = 3 },
+    { at = "1-3", item = "HeatSink" },
     { at = 4, item = "Ammo_IS.AC/20", rounds = 5 },
-    { at = 5, item = "Case", brand = 3 },
+    { at = 5, item = "Case" },
 ]
 
 [sections.right_torso]
 armor = 20
 rear = 4
 slots = [
-    { at = "1-10", item = "IS.AC/20", brand = 3 },
+    { at = "1-10", item = "IS.AC/20" },
 ]
 
 [sections.center_torso]
@@ -56,5 +54,5 @@ armor = 20
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "IS.SmallPulseLaser", brand = 3 },
+    { at = 4, item = "IS.SmallPulseLaser" },
 ]

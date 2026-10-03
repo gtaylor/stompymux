@@ -7,10 +7,7 @@ pub(super) fn name(entry: &BattleInventoryEntry) -> String {
     let Some(part) = BattlePart::from_id(entry.part_id) else {
         return format!("Part #{}", entry.part_id);
     };
-    let weapon = super::BattleWeapon::from_part_id(entry.part_id);
-    let brand =
-        weapon.and_then(|weapon| super::equipment_display::weapon_brand(weapon, entry.brand_id));
-    brand.map_or(part.name.clone(), |brand| format!("{brand}.{}", part.name))
+    part.name
 }
 
 /// ASCII stock patterns support '*' and '?', with backslash escaping the next literal byte.
@@ -46,7 +43,7 @@ fn matches(pattern: &str, text: &str) -> bool {
     p == pattern.len()
 }
 
-/// Numeric identifiers select exact records; names and manufacturer labels share stock filtering.
+/// Numeric identifiers select exact records; full and short names share stock filtering.
 pub(super) fn selected(entry: &BattleInventoryEntry, pattern: &str) -> bool {
     if pattern.is_empty() {
         return true;
@@ -54,22 +51,10 @@ pub(super) fn selected(entry: &BattleInventoryEntry, pattern: &str) -> bool {
     if let Ok(id) = pattern.trim_start_matches('#').parse::<i32>() {
         return entry.part_id == id;
     }
-    let display = name(entry);
-    if matches(pattern, &display) {
-        return true;
-    }
     let Some(part) = BattlePart::from_id(entry.part_id) else {
         return false;
     };
-    if matches(pattern, &part.name) {
-        return true;
-    }
-    let short = short_name(&part.name);
-    if matches(pattern, &short) {
-        return true;
-    }
-    let manufacturer = display.strip_suffix(&part.name).unwrap_or("");
-    matches(pattern, &format!("{manufacturer}{short}"))
+    matches(pattern, &part.name) || matches(pattern, &short_name(&part.name))
 }
 
 /// Compact catalogue spelling retains capitals, digits and underscores.
@@ -100,11 +85,10 @@ fn short_name(name: &str) -> String {
     name.into()
 }
 
-/// The three catalogue spellings of one part/manufacturer identity.
+/// The three catalogue spellings of one part identity.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct BattlePartForm {
     pub part_id: i32,
-    pub brand_id: u8,
     pub short_name: String,
     pub long_name: String,
     pub very_long_name: String,
@@ -115,7 +99,6 @@ impl BattlePartForm {
     fn entry(&self) -> BattleInventoryEntry {
         BattleInventoryEntry {
             part_id: self.part_id,
-            brand_id: self.brand_id,
             quantity: 1,
         }
     }
@@ -131,26 +114,22 @@ pub fn part_forms(
         "Permission denied."
     );
     let mut forms = exact_names().forms.clone();
-    forms.sort_by(|a, b| {
-        (&a.short_name, a.brand_id, a.part_id).cmp(&(&b.short_name, b.brand_id, b.part_id))
-    });
+    forms.sort_by(|a, b| (&a.short_name, a.part_id).cmp(&(&b.short_name, b.part_id)));
     Ok(forms)
 }
 
 /// Enumerate the immutable catalogue without command authority checks.
 pub fn part_catalogue() -> Vec<BattlePartForm> {
     let mut forms = exact_names().forms.clone();
-    forms.sort_by(|a, b| {
-        (&a.short_name, a.brand_id, a.part_id).cmp(&(&b.short_name, b.brand_id, b.part_id))
-    });
+    forms.sort_by(|a, b| (&a.short_name, a.part_id).cmp(&(&b.short_name, b.part_id)));
     forms
 }
 
-/// Exact catalogue indexes choose the lowest brand and then part ID for colliding names.
+/// Exact catalogue indexes choose the lowest part ID for colliding names.
 #[derive(Default)]
 struct ExactNames {
-    abbreviations: BTreeMap<String, (i32, u8)>,
-    canonical: BTreeMap<String, (i32, u8)>,
+    abbreviations: BTreeMap<String, i32>,
+    canonical: BTreeMap<String, i32>,
     forms: Vec<BattlePartForm>,
 }
 
@@ -159,58 +138,38 @@ fn exact_names() -> &'static ExactNames {
     static NAMES: OnceLock<ExactNames> = OnceLock::new();
     NAMES.get_or_init(|| {
         let mut names = ExactNames::default();
-        for brand in 0..=5 {
-            for id in 1..super::PART_ID_LIMIT {
-                let Some(part) = BattlePart::from_id(id) else {
-                    continue;
-                };
-                let manufacturer = super::BattleWeapon::from_part_id(id)
-                    .and_then(|weapon| super::equipment_display::weapon_brand(weapon, brand));
-                if brand != 0 && manufacturer.is_none() {
-                    continue;
-                }
-                let alias = abbreviation(&short_name(&part.name));
-                let alias = manufacturer.map_or(alias.clone(), |maker| {
-                    format!("{}.{}", abbreviation(maker), alias)
-                });
-                let canonical = manufacturer
-                    .map_or(part.name.clone(), |maker| format!("{maker}.{}", part.name));
-                let long = manufacturer.map_or_else(
-                    || short_name(&part.name),
-                    |maker| format!("{maker}.{}", short_name(&part.name)),
-                );
-                names.forms.push(BattlePartForm {
-                    part_id: id,
-                    brand_id: brand,
-                    short_name: alias.clone(),
-                    long_name: long,
-                    very_long_name: canonical.clone(),
-                });
-                names
-                    .abbreviations
-                    .entry(alias.to_ascii_lowercase())
-                    .or_insert((id, brand));
-                names
-                    .canonical
-                    .entry(canonical.to_ascii_lowercase())
-                    .or_insert((id, brand));
-            }
+        for part in BattlePart::all() {
+            let alias = abbreviation(&short_name(&part.name));
+            names.forms.push(BattlePartForm {
+                part_id: part.part_id,
+                short_name: alias.clone(),
+                long_name: short_name(&part.name),
+                very_long_name: part.name.clone(),
+            });
+            names
+                .abbreviations
+                .entry(alias.to_ascii_lowercase())
+                .or_insert(part.part_id);
+            names
+                .canonical
+                .entry(part.name.to_ascii_lowercase())
+                .or_insert(part.part_id);
         }
         names
     })
 }
 
-/// DEBUG controls use exact very-long catalogue names, including manufacturer prefixes.
+/// DEBUG controls use exact very-long catalogue names.
 pub(super) fn canonical_part(name: &str) -> Option<i32> {
     exact_names()
         .canonical
         .get(&name.to_ascii_lowercase())
-        .map(|&(id, _)| id)
+        .copied()
 }
 
 /// Transfer matching resolves exact abbreviations and canonical names before wildcard stock filtering.
 pub(super) struct TransferSelector<'a> {
-    exact: Option<(i32, u8)>,
+    exact: Option<i32>,
     pattern: &'a str,
 }
 
@@ -241,18 +200,14 @@ impl<'a> TransferSelector<'a> {
     pub(super) fn first(&self) -> Option<BattleInventoryEntry> {
         self.catalogue().into_iter().min_by_key(|entry| {
             let part = BattlePart::from_id(entry.part_id).expect("catalogue stock identity");
-            let display = name(entry);
-            let prefix = display.strip_suffix(&part.name).unwrap_or("");
-            format!("{prefix}{}", short_name(&part.name))
+            short_name(&part.name)
         })
     }
 
-    /// Numeric identifiers and wildcard patterns retain explicit selection across manufacturers.
+    /// Exact names select one identity; numeric identifiers and wildcard patterns filter stock.
     pub(super) fn contains(&self, entry: &BattleInventoryEntry) -> bool {
-        self.exact.map_or_else(
-            || selected(entry, self.pattern),
-            |key| key == (entry.part_id, entry.brand_id),
-        )
+        self.exact
+            .map_or_else(|| selected(entry, self.pattern), |key| key == entry.part_id)
     }
 }
 
@@ -260,7 +215,7 @@ impl<'a> TransferSelector<'a> {
 mod tests {
     use super::*;
 
-    /// Abbreviations preserve equipment and manufacturer spelling rules, including collisions.
+    /// Abbreviations preserve equipment spelling rules, including collisions.
     #[test]
     fn stock_abbreviations_and_catalogue_priority() {
         for (name, expected) in [
@@ -271,23 +226,13 @@ mod tests {
             ("Fuel_Tank", "F_T"),
             ("Steel", "St"),
             ("Gold", "Gold"),
-            ("Magna", "Ma"),
-            ("Martell", "Ma"),
-            ("SperryBrowning", "SB"),
         ] {
             assert_eq!(abbreviation(name), expected);
         }
         let laser = super::super::BattleWeapon::MediumLaser.part_id();
-        assert_eq!(TransferSelector::new("mA.mL").exact, Some((laser, 3)));
-        assert_eq!(
-            TransferSelector::new("Magna.IS.MediumLaser").exact,
-            Some((laser, 4))
-        );
-        assert_eq!(
-            TransferSelector::new("IS.MediumLaser").exact,
-            Some((laser, 0))
-        );
-        assert_eq!(TransferSelector::new("Steel").exact, Some((535, 0)));
+        assert_eq!(TransferSelector::new("mL").exact, Some(laser));
+        assert_eq!(TransferSelector::new("IS.MediumLaser").exact, Some(laser));
+        assert_eq!(TransferSelector::new("Steel").exact, Some(535));
         assert_eq!(TransferSelector::new("#609").exact, None);
     }
 }

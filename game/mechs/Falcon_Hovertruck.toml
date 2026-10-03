@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "hover"
 tons = 15
 walk_mp = 14
-computer = 3
 specials = ["CargoTech"]
 
 [construction]

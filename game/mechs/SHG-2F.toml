@@ -5,69 +5,67 @@ tons = 85
 walk_mp = 5
 jump_mp = 3
 heat_sinks = 17
-computer = 4
 radio = 4
 
 [construction]
-brand = 3
 
 [sections.left_arm]
 armor = 22
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "IS.LRM-15", brand = 3 },
+    { at = "4-6", item = "IS.LRM-15" },
 ]
 
 [sections.right_arm]
 armor = 22
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "IS.LRM-15", brand = 3 },
+    { at = "4-6", item = "IS.LRM-15" },
 ]
 
 [sections.left_torso]
 armor = 28
 rear = 8
 slots = [
-    { at = "1-2", item = "HeatSink", brand = 3 },
-    { at = "3-4", item = "IS.SRM-6", brand = 3 },
+    { at = "1-2", item = "HeatSink" },
+    { at = "3-4", item = "IS.SRM-6" },
     { at = 5, item = "Ammo_IS.SRM-6", rounds = 15 },
     { at = 6, item = "Ammo_IS.LRM-15", rounds = 8 },
-    { at = 7, item = "Case", brand = 3 },
+    { at = 7, item = "Case" },
 ]
 
 [sections.right_torso]
 armor = 28
 rear = 8
 slots = [
-    { at = "1-2", item = "HeatSink", brand = 3 },
-    { at = "3-4", item = "IS.SRM-6", brand = 3 },
-    { at = "5-7", item = "IS.ERPPC", brand = 3 },
+    { at = "1-2", item = "HeatSink" },
+    { at = "3-4", item = "IS.SRM-6" },
+    { at = "5-7", item = "IS.ERPPC" },
     { at = 8, item = "Ammo_IS.SRM-6", rounds = 15 },
     { at = 9, item = "Ammo_IS.LRM-15", rounds = 8 },
-    { at = 10, item = "Case", brand = 3 },
+    { at = 10, item = "Case" },
 ]
 
 [sections.center_torso]
 armor = 40
 rear = 11
 slots = [
-    { at = 11, item = "HeatSink", brand = 3 },
-    { at = 12, item = "JumpJet", brand = 3 },
+    { at = 11, item = "HeatSink" },
+    { at = 12, item = "JumpJet" },
 ]
 
 [sections.left_leg]
 armor = 36
 slots = [
-    { at = 5, item = "HeatSink", brand = 3 },
-    { at = 6, item = "JumpJet", brand = 3 },
+    { at = 5, item = "HeatSink" },
+    { at = 6, item = "JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 36
 slots = [
-    { at = 5, item = "HeatSink", brand = 3 },
-    { at = 6, item = "JumpJet", brand = 3 },
+    { at = 5, item = "HeatSink" },
+    { at = 6, item = "JumpJet" },
 ]
 
 [sections.head]

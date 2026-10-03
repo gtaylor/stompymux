@@ -4,35 +4,33 @@ movement = "biped"
 tons = 90
 walk_mp = 6
 heat_sinks = 30
-computer = 4
 radio = 4
 cargo_space = 0
 
 [construction]
 engine = "xl"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 30
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-9", item = "IS.GaussRifle", brand = 3 },
+    { at = "3-9", item = "IS.GaussRifle" },
 ]
 
 [sections.right_arm]
 armor = 30
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-5", item = "HeatSink", brand = 3 },
-    { at = "6-8", item = "IS.ERPPC", brand = 3 },
+    { at = "3-5", item = "HeatSink" },
+    { at = "6-8", item = "IS.ERPPC" },
 ]
 
 [sections.left_torso]
 armor = 28
 rear = 10
 slots = [
-    { at = 4, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = 4, item = "IS.MediumPulseLaser" },
     { at = "5-6", item = "Ammo_IS.GaussRifle", rounds = 8 },
 ]
 
@@ -40,7 +38,7 @@ slots = [
 armor = 28
 rear = 10
 slots = [
-    { at = 4, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = 4, item = "IS.MediumPulseLaser" },
     { at = "5-6", item = "Ammo_IS.LRM-5", rounds = 24 },
 ]
 
@@ -48,7 +46,7 @@ slots = [
 armor = 41
 rear = 12
 slots = [
-    { at = "11-12", item = "IS.LRM-5", brand = 3 },
+    { at = "11-12", item = "IS.LRM-5" },
 ]
 
 [sections.left_leg]
@@ -60,5 +58,5 @@ armor = 33
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "IS.LRM-5", brand = 3 },
+    { at = 4, item = "IS.LRM-5" },
 ]

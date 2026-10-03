@@ -4,14 +4,12 @@ movement = "quad"
 tons = 70
 walk_mp = 8
 heat_sinks = 20
-computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
 heat_sinks = "double"
-brand = 3
 
 [sections.front_left_leg]
 armor = 29
@@ -24,7 +22,7 @@ armor = 22
 rear = 7
 engine_slots = 3
 slots = [
-    { at = "4-5", item = "IS.ERLargeLaser", brand = 3 },
+    { at = "4-5", item = "IS.ERLargeLaser" },
 ]
 
 [sections.right_torso]
@@ -32,7 +30,7 @@ armor = 22
 rear = 7
 engine_slots = 1
 slots = [
-    { at = "2-12", item = "IS.HeavyGaussRifle", brand = 3 },
+    { at = "2-12", item = "IS.HeavyGaussRifle" },
 ]
 
 [sections.center_torso]

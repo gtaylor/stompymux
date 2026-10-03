@@ -117,7 +117,6 @@ async fn double_sinks_count_complete_installations_and_two_points_per_internal_s
                         equipment: "HeatSink".into(),
                         data: "-".into(),
                         modes: Vec::new(),
-                        brand: None,
                     },
                 );
         }

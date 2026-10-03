@@ -9,14 +9,14 @@ jump_mp = 4
 armor = 13
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-7", item = "IS.LRM-20", brand = 4 },
+    { at = "3-7", item = "IS.LRM-20" },
 ]
 
 [sections.right_arm]
 armor = 13
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-7", item = "IS.LRM-20", brand = 4 },
+    { at = "3-7", item = "IS.LRM-20" },
 ]
 
 [sections.left_torso]
@@ -39,7 +39,7 @@ slots = [
 armor = 24
 rear = 11
 slots = [
-    { at = "11-12", item = "IS.SmallLaser", brand = 4 },
+    { at = "11-12", item = "IS.SmallLaser" },
 ]
 
 [sections.left_leg]

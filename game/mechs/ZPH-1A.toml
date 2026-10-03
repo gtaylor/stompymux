@@ -5,60 +5,58 @@ tons = 25
 walk_mp = 12
 jump_mp = 8
 heat_sinks = 20
-computer = 4
 radio = 4
 
 [construction]
 engine = "xl"
 heat_sinks = "double"
-brand = 3
 
 [sections.front_left_leg]
 armor = 7
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.front_right_leg]
 armor = 7
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.left_torso]
 armor = 7
 rear = 4
 slots = [
-    { at = "4-6", item = "HeatSink", brand = 3 },
-    { at = 7, item = "IS.MediumLaser", brand = 3 },
+    { at = "4-6", item = "HeatSink" },
+    { at = 7, item = "IS.MediumLaser" },
 ]
 
 [sections.right_torso]
 armor = 7
 rear = 4
 slots = [
-    { at = "4-6", item = "HeatSink", brand = 3 },
-    { at = 7, item = "IS.MediumLaser", brand = 3 },
+    { at = "4-6", item = "HeatSink" },
+    { at = 7, item = "IS.MediumLaser" },
 ]
 
 [sections.center_torso]
 armor = 10
 rear = 6
 slots = [
-    { at = 11, item = "IS.StreakSRM-2", brand = 3 },
+    { at = 11, item = "IS.StreakSRM-2" },
     { at = 12, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
 ]
 
 [sections.rear_left_leg]
 armor = 7
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.rear_right_leg]
 armor = 7
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.head]

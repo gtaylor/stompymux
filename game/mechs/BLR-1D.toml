@@ -4,14 +4,13 @@ movement = "biped"
 tons = 85
 walk_mp = 6
 heat_sinks = 24
-computer = 4
 radio = 4
 specials = ["SearchLight"]
 
 [sections.left_arm]
 armor = 26
 slots = [
-    { at = "5-7", item = "IS.PPC", brand = 4 },
+    { at = "5-7", item = "IS.PPC" },
 ]
 
 [sections.right_arm]
@@ -24,7 +23,7 @@ slots = [
 armor = 26
 rear = 8
 slots = [
-    { at = "1-2", item = "IS.MediumLaser", brand = 4 },
+    { at = "1-2", item = "IS.MediumLaser" },
     { at = "3-5", item = "HeatSink" },
 ]
 
@@ -32,7 +31,7 @@ slots = [
 armor = 26
 rear = 8
 slots = [
-    { at = "1-2", item = "IS.MediumLaser", brand = 4 },
+    { at = "1-2", item = "IS.MediumLaser" },
     { at = 3, item = "Ammo_IS.MachineGun", rounds = 200 },
     { at = "4-5", item = "HeatSink" },
 ]

@@ -3,7 +3,6 @@ class = "aerofighter"
 movement = "fly"
 tons = 35
 walk_mp = 9
-computer = 3
 fuel = 750
 
 [sections.nose]

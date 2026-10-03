@@ -28,14 +28,11 @@ fn structural_placeholder(id: i32) -> bool {
     matches!(id, 406 | 407 | 408 | 428 | 432 | 433 | 443 | 444 | 454)
 }
 
-/// Rebuild ordered positive stock, retaining manufacturer identities and rejecting quantity overflow.
+/// Rebuild ordered positive stock, rejecting quantity overflow.
 fn normalized(entries: &[BattleInventoryEntry]) -> Result<Vec<BattleInventoryEntry>> {
-    let mut quantities = BTreeMap::<(i32, u8), i64>::new();
+    let mut quantities = BTreeMap::<i32, i64>::new();
     for entry in entries {
-        if entry.brand_id > 5
-            || structural_placeholder(entry.part_id)
-            || BattlePart::from_id(entry.part_id).is_none()
-        {
+        if structural_placeholder(entry.part_id) || BattlePart::from_id(entry.part_id).is_none() {
             continue;
         }
         let quantity = quantities.entry(entry.key()).or_default();
@@ -46,10 +43,9 @@ fn normalized(entries: &[BattleInventoryEntry]) -> Result<Vec<BattleInventoryEnt
     quantities
         .into_iter()
         .filter(|(_, quantity)| *quantity > 0)
-        .map(|((part_id, brand_id), quantity)| {
+        .map(|(part_id, quantity)| {
             Ok(BattleInventoryEntry {
                 part_id,
-                brand_id,
                 quantity: i32::try_from(quantity).context("Inventory quantity overflow")?,
             })
         })
@@ -141,33 +137,25 @@ pub(crate) fn command(
 mod tests {
     use super::*;
 
-    /// Cleanup sums signed duplicate rows, discards placeholders and unknowns, and preserves brands.
+    /// Cleanup sums signed duplicate rows and discards placeholders and unknowns.
     #[test]
-    fn normalizes_stock_without_changing_part_or_brand_identity() {
-        let row = |part_id, brand_id, quantity| BattleInventoryEntry {
-            part_id,
-            brand_id,
-            quantity,
-        };
+    fn normalizes_stock_without_changing_part_identity() {
+        let row = |part_id, quantity| BattleInventoryEntry { part_id, quantity };
         let mut entries = vec![
-            row(528, 0, 9),
-            row(528, 0, -4),
-            row(528, 1, 3),
-            row(528, 6, 8),
-            row(-1, 0, 1),
-            row(i32::MAX, 0, 1),
-            row(529, 0, -1),
-            row(530, 0, 0),
+            row(528, 9),
+            row(528, -4),
+            row(528, 3),
+            row(-1, 1),
+            row(i32::MAX, 1),
+            row(529, -1),
+            row(530, 0),
         ];
         entries.extend(
             [406, 407, 408, 428, 432, 433, 443, 444]
                 .into_iter()
-                .map(|id| row(id, 0, 5)),
+                .map(|id| row(id, 5)),
         );
-        assert_eq!(
-            normalized(&entries).unwrap(),
-            vec![row(528, 0, 5), row(528, 1, 3)]
-        );
-        assert!(normalized(&[row(528, 0, i32::MAX), row(528, 0, 1)]).is_err());
+        assert_eq!(normalized(&entries).unwrap(), vec![row(528, 8)]);
+        assert!(normalized(&[row(528, i32::MAX), row(528, 1)]).is_err());
     }
 }

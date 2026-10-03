@@ -217,7 +217,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         error::wrap(lua, mass, "btech.operation.failed")?,
     )?;
     let named = lua.create_function(
-        |lua, (actor, object, name, brand, quantity): (i64, i64, String, u8, i32)| {
+        |lua, (actor, object, name, quantity): (i64, i64, String, i32)| {
             crate::lua::transactions::require(lua)?;
             let scripts = crate::Scripts::services(lua)?;
             crate::lua::transactions::run(lua, &scripts.world, || {
@@ -228,7 +228,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     ObjectId(actor),
                     ObjectId(object),
                     part.part_id,
-                    brand,
                     quantity,
                 )
                 .map_err(mlua::Error::external)
@@ -253,7 +252,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         error::wrap(lua, inventory, "btech.operation.failed")?,
     )?;
     let inventory_set = lua.create_function(
-        |lua, (actor, object, part, brand, quantity): (i64, i64, i32, u8, i32)| {
+        |lua, (actor, object, part, quantity): (i64, i64, i32, i32)| {
             crate::lua::transactions::require(lua)?;
             let scripts = crate::Scripts::services(lua)?;
             crate::lua::transactions::run(lua, &scripts.world, || {
@@ -263,7 +262,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     ObjectId(actor),
                     ObjectId(object),
                     part,
-                    brand,
                     quantity,
                 )
                 .map_err(mlua::Error::external)

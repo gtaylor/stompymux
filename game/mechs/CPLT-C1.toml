@@ -10,14 +10,14 @@ heat_sinks = 15
 armor = 13
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-5", item = "IS.LRM-15", brand = 4 },
+    { at = "3-5", item = "IS.LRM-15" },
 ]
 
 [sections.right_arm]
 armor = 13
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-5", item = "IS.LRM-15", brand = 4 },
+    { at = "3-5", item = "IS.LRM-15" },
 ]
 
 [sections.left_torso]

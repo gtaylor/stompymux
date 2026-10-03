@@ -447,7 +447,7 @@ async fn vacuum_penetration_disables_equipment_and_survives_environment_change_a
         let before = world.btech.clone();
         assert!(reserve_battle_vehicle_weapon(&mut world, id, ObjectId(1), 0, true).is_err());
         assert_eq!(world.btech, before);
-        let criticals = battle_critical_report(&world, id, section.name(), false).unwrap();
+        let criticals = battle_critical_report(&world, id, section.name()).unwrap();
         assert!(
             criticals
                 .slots

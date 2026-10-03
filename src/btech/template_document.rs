@@ -18,13 +18,12 @@
 //! [construction]
 //! engine = "xl"
 //! heat_sinks = "double"
-//! brand = 3
 //!
 //! [sections.left_arm]
 //! armor = 22
 //! omit = ["hand_actuator"]
 //! slots = [
-//!     { at = "4-6", item = "IS.ERPPC", brand = 3 },
+//!     { at = "4-6", item = "IS.ERPPC" },
 //! ]
 //!
 //! [[split_mounts]]
@@ -77,7 +76,6 @@ const FIELDS: &[(&str, &str, Kind)] = &[
     ("template_speed", "template_speed", Kind::Float),
     ("heat_sinks", "heat_sinks", Kind::Integer),
     ("hs_engine_override", "hsengoverride", Kind::Integer),
-    ("computer", "computer", Kind::Integer),
     ("radio", "radio", Kind::Integer),
     ("radio_type", "radiotype", Kind::Integer),
     ("radio_range", "radio_range", Kind::Integer),
@@ -129,8 +127,6 @@ struct SectionDocument {
     omit: Vec<String>,
     engine_at: Option<i64>,
     engine_slots: Option<i64>,
-    /// Brand stamped on this section's fixed equipment instead of the construction brand.
-    brand: Option<i64>,
     #[serde(default)]
     slots: Vec<SlotDocument>,
 }
@@ -145,7 +141,6 @@ struct SlotDocument {
     link: Option<i32>,
     #[serde(default)]
     modes: Vec<String>,
-    brand: Option<u8>,
 }
 
 /// A weapon whose slots continue from its primary section into one adjacent section.
@@ -155,7 +150,6 @@ struct SplitMountDocument {
     item: String,
     #[serde(default)]
     modes: Vec<String>,
-    brand: Option<u8>,
     placements: Vec<PlacementDocument>,
 }
 
@@ -354,9 +348,8 @@ impl ParsedTemplate {
             constructed
                 || (section.omit.is_empty()
                     && section.engine_at.is_none()
-                    && section.engine_slots.is_none()
-                    && section.brand.is_none()),
-            "omit, engine_at, engine_slots and brand need constructed mech equipment"
+                    && section.engine_slots.is_none()),
+            "omit, engine_at and engine_slots need constructed mech equipment"
         );
         let internal = match section.internals {
             Some(internal) => internal,
@@ -400,10 +393,6 @@ impl ParsedTemplate {
                     Ok(count as u8)
                 })
                 .transpose()?;
-            let brand = match section.brand {
-                Some(brand) => Some(u8::try_from(brand).context("brand must be from 0 to 255")?),
-                None => unit.construction.brand,
-            };
             let plan = SectionPlan {
                 omit: &omit,
                 engine_at,
@@ -414,7 +403,6 @@ impl ParsedTemplate {
                     equipment: item.into(),
                     data: "-".into(),
                     modes: Vec::new(),
-                    brand,
                 };
                 occupy(&mut layout, slot, slot, &critical)?;
             }
@@ -462,13 +450,11 @@ impl ParsedTemplate {
             equipment: mount.item,
             data: "-".into(),
             modes: mount.modes,
-            brand: mount.brand,
         };
         let proxy = CriticalDefinition {
             equipment: split_proxy_name(primary_section, extension_section).into(),
             data: split_link_data(primary_section, first),
             modes: Vec::new(),
-            brand: weapon.brand,
         };
         let layout = self
             .sections
@@ -607,7 +593,6 @@ fn slot_critical(slot: SlotDocument) -> Result<CriticalDefinition> {
         equipment: slot.item,
         data,
         modes: slot.modes,
-        brand: slot.brand,
     })
 }
 
@@ -707,7 +692,7 @@ pub(super) fn render(
                 .collect()
         })
         .unwrap_or_default();
-    let (mut construction, specials) = Construction::from_flags(&flags)?;
+    let (construction, specials) = Construction::from_flags(&flags)?;
     let class = attributes
         .get("type")
         .map(|class| RawUnitClass::parse(class))
@@ -718,9 +703,6 @@ pub(super) fn render(
             .and_then(|movement| BattleMechChassis::parse(movement).ok()),
         _ => None,
     };
-    if chassis.is_some() {
-        construction.brand = fixed_brand(sections);
-    }
     let unit = Unit {
         class,
         chassis,
@@ -792,34 +774,15 @@ pub(super) fn render(
     Ok(output)
 }
 
-/// The brand most of a mech's fixed equipment carries.
-fn fixed_brand(sections: &[RenderSection<'_>]) -> Option<u8> {
-    let mut counts: BTreeMap<Option<u8>, usize> = BTreeMap::new();
-    for critical in sections
-        .iter()
-        .filter(|section| section.mech.is_some())
-        .flat_map(|section| section.layout.criticals.values())
-        .filter(|critical| is_fixed_item(&critical.equipment))
-    {
-        *counts.entry(critical.brand).or_default() += 1;
-    }
-    counts
-        .into_iter()
-        .max_by_key(|(brand, count)| (*count, std::cmp::Reverse(*brand)))
-        .and_then(|(brand, _)| brand)
-}
-
 /// How construction reproduces a section's fixed equipment, if it can.
 struct SectionFit {
     omit: Vec<Omission>,
     engine_at: Option<u8>,
     engine_slots: Option<u8>,
-    /// The section's fixed-equipment brand, when it differs from the construction brand.
-    brand: Option<u8>,
     placed: BTreeMap<u8, &'static str>,
 }
 
-/// Find the omissions, engine placement and brand under which construction places exactly
+/// Find the omissions and engine placement under which construction places exactly
 /// the fixed equipment a mech section holds; `None` means the section must be explicit.
 fn fit_section(
     unit: &Unit,
@@ -866,14 +829,6 @@ fn fit_section(
         LeftTorso | RightTorso | CenterTorso => &[None, Some(engines as u8)],
         _ => &[None],
     };
-    let brand = layout
-        .criticals
-        .values()
-        .find(|critical| is_fixed_item(&critical.equipment))
-        .map_or(unit.construction.brand, |critical| critical.brand);
-    if brand.is_none() && unit.construction.brand.is_some() {
-        return None;
-    }
     omissions.iter().find_map(|omit| {
         engine_counts.iter().find_map(|&engine_slots| {
             let plan = SectionPlan {
@@ -884,10 +839,7 @@ fn fit_section(
             let placed = fixed_equipment(&unit.construction, chassis, section, plan).ok()?;
             let reproduced = placed.iter().all(|(slot, item)| {
                 layout.criticals.get(slot).is_some_and(|critical| {
-                    critical.equipment == *item
-                        && critical.data == "-"
-                        && critical.modes.is_empty()
-                        && critical.brand == brand
+                    critical.equipment == *item && critical.data == "-" && critical.modes.is_empty()
                 })
             }) && layout.criticals.iter().all(|(slot, critical)| {
                 !is_fixed_item(&critical.equipment) || placed.contains_key(slot)
@@ -896,7 +848,6 @@ fn fit_section(
                 omit: omit.clone(),
                 engine_at,
                 engine_slots,
-                brand: brand.filter(|_| brand != unit.construction.brand),
                 placed,
             })
         })
@@ -968,9 +919,7 @@ fn primary_slot_count(
     primary: BattleSection,
     first: u8,
 ) -> Option<u8> {
-    let name =
-        super::loadout::unbranded_weapon_name(&weapon.equipment).unwrap_or(&weapon.equipment);
-    let total = super::BattleWeapon::parse(name)
+    let total = super::BattleWeapon::parse(&weapon.equipment)
         .ok()?
         .profile()
         .critical_slots;
@@ -1036,9 +985,6 @@ fn render_section(
         }
         if let Some(count) = fit.engine_slots {
             writeln!(output, "engine_slots = {count}")?;
-        }
-        if let Some(brand) = fit.brand {
-            writeln!(output, "brand = {brand}")?;
         }
     }
     let in_mount = |slot: u8| {
@@ -1121,9 +1067,6 @@ fn render_split_mount(
     if !weapon.modes.is_empty() {
         writeln!(output, "modes = {}", quoted_list(&weapon.modes))?;
     }
-    if let Some(brand) = weapon.brand {
-        writeln!(output, "brand = {brand}")?;
-    }
     writeln!(output, "placements = [")?;
     writeln!(
         output,
@@ -1141,13 +1084,10 @@ fn render_split_mount(
     Ok(())
 }
 
-/// Append modes and brand to an inline slot entry.
+/// Append modes to an inline slot entry.
 fn push_metadata(entry: &mut String, critical: &CriticalDefinition) {
     if !critical.modes.is_empty() {
         let _ = write!(entry, ", modes = {}", quoted_list(&critical.modes));
-    }
-    if let Some(brand) = critical.brand {
-        let _ = write!(entry, ", brand = {brand}");
     }
 }
 
@@ -1187,13 +1127,12 @@ specials = ["searchlight"]
 [construction]
 engine = "xl"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 22
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "IS.ERPPC", modes = ["OnTC"], brand = 3 },
+    { at = "4-6", item = "IS.ERPPC", modes = ["OnTC"] },
 ]
 
 [sections.right_arm]
@@ -1243,7 +1182,6 @@ armor = 9
         assert_eq!(arm.criticals[&2].equipment, "LowerActuator");
         assert_eq!(arm.criticals[&3].equipment, "IS.ERPPC");
         assert_eq!(arm.criticals[&4].modes, ["OnTC"]);
-        assert_eq!(arm.criticals[&0].brand, Some(3));
         let torso = &parsed.sections["left_torso"];
         assert_eq!(torso.criticals[&0].data, "8");
         assert_eq!(torso.criticals[&1].data, "2");
@@ -1301,7 +1239,6 @@ armor = 9
             "class = \"mech\"\nmovement = \"biped\"\ntons = 20\n[sections.left_torso]\nengine_at = 3",
             "class = \"mech\"\nmovement = \"biped\"\ntons = 20\n[sections.left_arm]\nengine_slots = 2",
             "class = \"mech\"\nmovement = \"biped\"\ntons = 20\n[sections.center_torso]\nengine_slots = 9",
-            "class = \"mech\"\nmovement = \"biped\"\ntons = 20\n[sections.head]\nexplicit = true\nbrand = 3",
             "class = \"mech\"\nmovement = \"biped\"\ntons = 22\n[sections.head]",
             "class = \"vehicle\"\nmovement = \"track\"\ntons = 20\n[sections.turret]\nexplicit = true",
         ] {
@@ -1318,7 +1255,6 @@ armor = 9
         let parsed = ParsedTemplate::parse("ZEU-9S", &source).unwrap();
         let head = &parsed.sections["head"];
         assert_eq!(head.criticals.len(), 1);
-        assert_eq!(head.criticals[&0].brand, None);
     }
 
     #[test]
@@ -1352,7 +1288,6 @@ tons = 50
 [sections.left_arm]
 [[split_mounts]]
 item = "IS.AC/20"
-brand = 4
 placements = [
     { section = "center_torso", at = "11-12" },
     { section = "left_torso", at = "1-8" },
@@ -1361,7 +1296,6 @@ placements = [
         let parsed = ParsedTemplate::parse("X", source).unwrap();
         let center = &parsed.sections["center_torso"];
         assert_eq!(center.criticals[&10].equipment, "IS.AC/20");
-        assert_eq!(center.criticals[&11].brand, Some(4));
         let torso = &parsed.sections["left_torso"];
         assert_eq!(torso.criticals.len(), 8);
         assert_eq!(torso.criticals[&0].equipment, SPLIT_LEFT);
@@ -1369,7 +1303,6 @@ placements = [
             parse_split_link(&torso.criticals[&0].data).unwrap(),
             (BattleSection::CenterTorso, 10)
         );
-        assert_eq!(torso.criticals[&0].brand, Some(4));
 
         for (placements, class) in [
             (
@@ -1422,10 +1355,7 @@ placements = [
         let rendered = render_mech(&parsed);
         assert!(rendered.contains("walk_mp = 6\n"));
         assert!(rendered.contains("specials = [\"SearchLight\"]\n"));
-        assert!(
-            rendered
-                .contains("[construction]\nengine = \"xl\"\nheat_sinks = \"double\"\nbrand = 3\n")
-        );
+        assert!(rendered.contains("[construction]\nengine = \"xl\"\nheat_sinks = \"double\"\n"));
         assert!(rendered.contains("omit = [\"hand_actuator\"]"));
         assert!(rendered.contains("engine_at = 4"));
         assert!(!rendered.contains("internals"));
@@ -1437,7 +1367,7 @@ placements = [
 
         let mut irregular = ParsedTemplate::parse("ZEU-9S", ZEUS).unwrap();
         let head = irregular.sections.get_mut("head").unwrap();
-        head.criticals.get_mut(&1).unwrap().brand = Some(5);
+        head.criticals.get_mut(&1).unwrap().modes = vec!["Destroyed".into()];
         head.internal = 4;
         let rendered = render_mech(&irregular);
         assert!(rendered.contains("[sections.head]\narmor = 9\ninternals = 4\nexplicit = true\n"));
@@ -1458,7 +1388,7 @@ placements = [
             )
             .replace(
                 "[sections.right_torso]\narmor = 25\nrear = 6\n",
-                "[sections.right_torso]\narmor = 25\nrear = 6\nengine_slots = 1\nbrand = 5\n",
+                "[sections.right_torso]\narmor = 25\nrear = 6\nengine_slots = 1\n",
             )
             .replace(
                 "[sections.center_torso]\narmor = 26\nrear = 8\n",
@@ -1471,7 +1401,6 @@ placements = [
         assert_eq!(leg.criticals[&3].equipment, "HandOrFootActuator");
         let torso = &parsed.sections["right_torso"];
         assert_eq!(torso.criticals.len(), 1);
-        assert_eq!(torso.criticals[&0].brand, Some(5));
         let center = &parsed.sections["center_torso"];
         let engines = center
             .criticals
@@ -1485,7 +1414,7 @@ placements = [
         for line in [
             "omit = [\"shoulder\", \"upper_actuator\", \"lower_actuator\", \"hand_actuator\"]\n",
             "omit = [\"lower_actuator\"]\n",
-            "engine_slots = 1\nbrand = 5\n",
+            "engine_slots = 1\n",
             "engine_slots = 8\n",
         ] {
             assert!(rendered.contains(line), "{line}");
@@ -1526,7 +1455,6 @@ armor = 6
 
 [[split_mounts]]
 item = "IS.AC/20"
-brand = 3
 placements = [
     { section = "center_torso", at = "11-12" },
     { section = "left_torso", at = "4-11" },

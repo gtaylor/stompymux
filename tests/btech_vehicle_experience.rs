@@ -569,7 +569,6 @@ async fn experience_load_queries_honor_hot_myomer_configuration() {
                     equipment: "TripleStrengthMyomer".into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
             remaining -= 1;

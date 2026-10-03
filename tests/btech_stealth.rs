@@ -21,7 +21,6 @@ fn template() -> BattleTemplate {
                         equipment: "StealthArmor".into(),
                         data: "-".into(),
                         modes: vec![],
-                        brand: None,
                     },
                 );
         }
@@ -38,7 +37,6 @@ fn template() -> BattleTemplate {
                     equipment: "Ecm".into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
     }

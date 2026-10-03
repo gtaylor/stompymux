@@ -4,7 +4,6 @@ movement = "hover"
 tons = 50
 walk_mp = 11
 heat_sinks = 20
-computer = 3
 tac_range = 30
 lrs_range = 60
 scan_range = 30

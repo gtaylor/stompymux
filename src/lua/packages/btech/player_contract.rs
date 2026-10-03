@@ -150,7 +150,7 @@ fn equipment(
     }
     let weapon = catalogue
         .iter()
-        .find(|form| form.part_id == part.id && form.brand_id == 0)
+        .find(|form| form.part_id == part.id)
         .ok_or_else(|| error::failure("mux.internal", "part catalogue mismatch"))?
         .very_long_name
         .clone();
@@ -211,10 +211,7 @@ fn push_loadout(
                 lua,
                 world,
                 catalogue,
-                parts_contract::PartReference {
-                    id: form.part_id,
-                    brand: 0,
-                },
+                parts_contract::PartReference { id: form.part_id },
             )?,
         )?;
         if let Some(ammunition) = equipment.ammunition {
@@ -275,8 +272,6 @@ fn preferences_table(
 }
 
 pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::Result<()> {
-    // C resolves loadout weapons through the manufacturer-qualified part
-    // registry, where unbranded personal-combat names do not resolve.
     let catalogue = Arc::new(parts_contract::registered_catalogue());
     let shared = world.clone();
     contract::bind(

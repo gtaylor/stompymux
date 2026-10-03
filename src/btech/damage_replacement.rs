@@ -302,7 +302,6 @@ mod tests {
                             equipment: equipment.into(),
                             data: "-".into(),
                             modes: Vec::new(),
-                            brand: None,
                         },
                     )
                 })

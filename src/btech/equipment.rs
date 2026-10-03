@@ -30,25 +30,6 @@ pub struct WeaponProfile {
 }
 
 impl BattleWeapon {
-    /// Resolve an exact canonical or manufacturer-qualified operator name, ignoring ASCII case.
-    /// A manufacturer selects the weapon identity; settings apply to all its installations.
-    pub fn parse_operator_name(name: &str) -> Result<Self> {
-        if let Ok(weapon) = Self::parse(name) {
-            return Ok(weapon);
-        }
-        let Some((brand, canonical)) = name.split_once('.') else {
-            bail!("Unsupported weapon {name}");
-        };
-        let weapon = Self::parse(canonical)?;
-        if (1..=5).any(|quality| {
-            super::equipment_display::weapon_brand(weapon, quality)
-                .is_some_and(|candidate| candidate.eq_ignore_ascii_case(brand))
-        }) {
-            return Ok(weapon);
-        }
-        bail!("Unsupported manufacturer for weapon {name}")
-    }
-
     /// Effective range in hexes, including artillery map-sheet units and optional extreme range.
     pub fn effective_range(self, extended: bool) -> u16 {
         self.effective_range_for_ammunition(extended, super::BattleAmmunitionMode::Normal)

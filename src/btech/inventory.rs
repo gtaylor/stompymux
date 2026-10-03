@@ -4,28 +4,23 @@ use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-/// Stable game-directory part and manufacturer identifiers with a positive stored quantity.
+/// Stable game-directory part identifier with a positive stored quantity.
 /// These identify loose inventory; they never create or modify an installed critical slot.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BattleInventoryEntry {
     pub part_id: i32,
-    pub brand_id: u8,
     pub quantity: i32,
 }
 
 impl BattleInventoryEntry {
     /// Stable ordering keeps snapshots and persisted manifests deterministic.
-    pub(crate) fn key(self) -> (i32, u8) {
-        (self.part_id, self.brand_id)
+    pub(crate) fn key(self) -> i32 {
+        self.part_id
     }
 
     /// Validate storage independently of the eventual name and mass catalogue.
     pub(crate) fn validate(self) -> Result<()> {
         ensure!(self.part_id >= 0, "Invalid inventory part identifier");
-        ensure!(
-            self.brand_id <= 5,
-            "Invalid inventory manufacturer identifier"
-        );
         ensure!(self.quantity > 0, "Inventory quantity must be positive");
         Ok(())
     }
@@ -53,14 +48,13 @@ pub fn set_inventory_quantity(
     actor: ObjectId,
     object: ObjectId,
     part_id: i32,
-    brand_id: u8,
     quantity: i32,
 ) -> Result<()> {
     ensure!(
         crate::authority::is_wizard(world, actor),
         "Permission denied."
     );
-    edit_quantity(world, object, part_id, brand_id, quantity)
+    edit_quantity(world, object, part_id, quantity)
 }
 
 /// Set a stock row after the caller has established authority; zero removes it.
@@ -68,10 +62,9 @@ pub fn set_part_store_quantity(
     world: &mut World,
     object: ObjectId,
     part_id: i32,
-    brand_id: u8,
     quantity: i32,
 ) -> Result<()> {
-    edit_quantity(world, object, part_id, brand_id, quantity)
+    edit_quantity(world, object, part_id, quantity)
 }
 
 pub fn part_cost(world: &World, part_id: i32) -> Result<u64> {
@@ -103,21 +96,13 @@ pub fn set_inventory_quantity_action(
     actor: ObjectId,
     object: ObjectId,
     part_id: i32,
-    brand_id: u8,
     quantity: i32,
 ) -> Result<()> {
     scripts.atomic(|before| {
-        set_inventory_quantity(
-            &mut scripts.world_mut(),
-            actor,
-            object,
-            part_id,
-            brand_id,
-            quantity,
-        )?;
+        set_inventory_quantity(&mut scripts.world_mut(), actor, object, part_id, quantity)?;
         let previous = inventory(before, object)?
             .iter()
-            .find(|row| row.key() == (part_id, brand_id))
+            .find(|row| row.key() == part_id)
             .map_or(0, |row| row.quantity);
         let change = quantity - previous;
         if change == 0 {
@@ -134,7 +119,6 @@ pub fn set_inventory_quantity_action(
         }
         let name = super::stock_selection::name(&BattleInventoryEntry {
             part_id,
-            brand_id,
             quantity: 1,
         });
         let message = super::channels::stock_message(actor, object, &name, change);
@@ -149,14 +133,12 @@ pub(super) fn edit_quantity(
     world: &mut World,
     object: ObjectId,
     part_id: i32,
-    brand_id: u8,
     quantity: i32,
 ) -> Result<()> {
     inventory(world, object)?;
     ensure!(quantity >= 0, "Inventory quantity cannot be negative");
     let entry = BattleInventoryEntry {
         part_id,
-        brand_id,
         quantity: quantity.max(1),
     };
     entry.validate()?;
@@ -199,17 +181,16 @@ pub(super) fn change_quantity(
         .context("Inventory quantity overflow")?
         .max(0);
     if !(394..=397).contains(&entry.part_id) || next == 0 {
-        return edit_quantity(world, object, entry.part_id, entry.brand_id, next);
+        return edit_quantity(world, object, entry.part_id, next);
     }
     let generic = inventory(world, object)?
         .iter()
-        .find(|row| row.key() == (548, entry.brand_id))
+        .find(|row| row.key() == 548)
         .map_or(0, |row| row.quantity);
     edit_quantity(
         world,
         object,
         548,
-        entry.brand_id,
         generic
             .checked_add(next)
             .context("Inventory quantity overflow")?,

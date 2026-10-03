@@ -23,8 +23,8 @@ slots = [
 [sections.front_side]
 armor = 12
 slots = [
-    { at = 1, item = "IS.NarcBeacon", brand = 3 },
-    { at = "2-10", item = "IS.SRM-6", brand = 3 },
+    { at = 1, item = "IS.NarcBeacon" },
+    { at = "2-10", item = "IS.SRM-6" },
     { at = 11, item = "Ammo_IS.NarcBeacon", rounds = 6 },
     { at = 12, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Narc/Smoke"] },
 ]

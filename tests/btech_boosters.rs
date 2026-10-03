@@ -40,7 +40,6 @@ fn with_masc(count: usize, clan: bool) -> (BattleTemplate, Vec<CriticalLocation>
                     equipment: "Masc".into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
             locations.push(CriticalLocation { section, slot });
@@ -384,7 +383,6 @@ fn with_supercharger() -> (BattleTemplate, CriticalLocation) {
             equipment: "SuperCharger".into(),
             data: "-".into(),
             modes: vec![],
-            brand: None,
         },
     );
     (template, CriticalLocation { section, slot })
@@ -604,7 +602,6 @@ fn myomer_booster_design() -> BattleTemplate {
                     equipment: name.into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
         }

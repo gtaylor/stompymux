@@ -7,21 +7,21 @@ walk_mp = 11
 [sections.left_side]
 armor = 18
 slots = [
-    { at = 1, item = "IS.MediumLaser", brand = 3 },
-    { at = "6-12", item = "FerroFibrous", brand = 3 },
+    { at = 1, item = "IS.MediumLaser" },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.right_side]
 armor = 18
 slots = [
-    { at = 1, item = "IS.MediumLaser", brand = 3 },
-    { at = "6-12", item = "FerroFibrous", brand = 3 },
+    { at = 1, item = "IS.MediumLaser" },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.front_side]
 armor = 25
 slots = [
-    { at = 1, item = "BeagleProbe", brand = 3 },
+    { at = 1, item = "BeagleProbe" },
 ]
 
 [sections.aft_side]
@@ -30,5 +30,5 @@ armor = 19
 [sections.turret]
 armor = 28
 slots = [
-    { at = 1, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = 1, item = "IS.MediumPulseLaser" },
 ]

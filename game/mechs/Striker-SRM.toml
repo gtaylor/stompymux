@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "wheel"
 tons = 35
 walk_mp = 8
-computer = 3
 
 [construction]
 engine = "ice"

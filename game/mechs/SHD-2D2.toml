@@ -11,26 +11,25 @@ max_suits = 0
 specials = ["SearchLight"]
 
 [construction]
-brand = 3
 
 [sections.left_arm]
 armor = 10
 slots = [
-    { at = 5, item = "IS.MediumLaser", brand = 3 },
+    { at = 5, item = "IS.MediumLaser" },
 ]
 
 [sections.right_arm]
 armor = 10
 slots = [
-    { at = 5, item = "IS.MediumLaser", brand = 3 },
+    { at = 5, item = "IS.MediumLaser" },
 ]
 
 [sections.left_torso]
 armor = 13
 rear = 5
 slots = [
-    { at = 1, item = "JumpJet", brand = 3 },
-    { at = "2-5", item = "IS.AC/5", brand = 3 },
+    { at = 1, item = "JumpJet" },
+    { at = "2-5", item = "IS.AC/5" },
     { at = 6, item = "Ammo_IS.AC/5", rounds = 20 },
 ]
 
@@ -38,9 +37,9 @@ slots = [
 armor = 13
 rear = 5
 slots = [
-    { at = 1, item = "JumpJet", brand = 3 },
-    { at = 2, item = "HeatSink", brand = 3 },
-    { at = 3, item = "IS.LRM-5", brand = 3 },
+    { at = 1, item = "JumpJet" },
+    { at = 2, item = "HeatSink" },
+    { at = 3, item = "IS.LRM-5" },
     { at = 4, item = "Ammo_IS.LRM-5", rounds = 24 },
     { at = 5, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
 ]
@@ -49,8 +48,8 @@ slots = [
 armor = 16
 rear = 6
 slots = [
-    { at = 11, item = "JumpJet", brand = 3 },
-    { at = 12, item = "IS.StreakSRM-2", brand = 3 },
+    { at = 11, item = "JumpJet" },
+    { at = 12, item = "IS.StreakSRM-2" },
 ]
 
 [sections.left_leg]
@@ -62,5 +61,5 @@ armor = 10
 [sections.head]
 armor = 6
 slots = [
-    { at = 4, item = "IS.StreakSRM-2", brand = 3 },
+    { at = 4, item = "IS.StreakSRM-2" },
 ]

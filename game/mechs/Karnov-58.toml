@@ -12,13 +12,13 @@ engine = "ice"
 [sections.left_side]
 armor = 6
 slots = [
-    { at = 1, item = "IS.MachineGun", brand = 3 },
+    { at = 1, item = "IS.MachineGun" },
 ]
 
 [sections.right_side]
 armor = 6
 slots = [
-    { at = 1, item = "IS.MachineGun", brand = 3 },
+    { at = 1, item = "IS.MachineGun" },
 ]
 
 [sections.front_side]

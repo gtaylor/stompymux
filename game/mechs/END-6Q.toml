@@ -4,38 +4,36 @@ movement = "biped"
 tons = 50
 walk_mp = 8
 heat_sinks = 22
-computer = 4
 radio = 4
 
 [construction]
 engine = "xl"
 structure = "endo_steel"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 16
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "IS.LargePulseLaser", brand = 3 },
-    { at = 6, item = "IS.MediumLaser", brand = 3 },
-    { at = "7-9", item = "EndoSteel", brand = 3 },
+    { at = "4-5", item = "IS.LargePulseLaser" },
+    { at = 6, item = "IS.MediumLaser" },
+    { at = "7-9", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 16
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-9", item = "IS.LB10-XAC", brand = 3 },
-    { at = "10-12", item = "EndoSteel", brand = 3 },
+    { at = "4-9", item = "IS.LB10-XAC" },
+    { at = "10-12", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
 armor = 20
 rear = 4
 slots = [
-    { at = "4-6", item = "HeatSink", brand = 3 },
-    { at = "7-9", item = "EndoSteel", brand = 3 },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-9", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
@@ -44,28 +42,28 @@ rear = 4
 slots = [
     { at = 4, item = "Ammo_IS.LB10-XAC", rounds = 10 },
     { at = 5, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
-    { at = "6-9", item = "EndoSteel", brand = 3 },
-    { at = 10, item = "Case", brand = 3 },
+    { at = "6-9", item = "EndoSteel" },
+    { at = 10, item = "Case" },
 ]
 
 [sections.center_torso]
 armor = 26
 rear = 6
 slots = [
-    { at = 11, item = "IS.MediumLaser", brand = 3 },
-    { at = 12, item = "IS.SmallLaser", brand = 3 },
+    { at = 11, item = "IS.MediumLaser" },
+    { at = 12, item = "IS.SmallLaser" },
 ]
 
 [sections.left_leg]
 armor = 24
 slots = [
-    { at = 5, item = "EndoSteel", brand = 3 },
+    { at = 5, item = "EndoSteel" },
 ]
 
 [sections.right_leg]
 armor = 24
 slots = [
-    { at = 5, item = "EndoSteel", brand = 3 },
+    { at = 5, item = "EndoSteel" },
 ]
 
 [sections.head]

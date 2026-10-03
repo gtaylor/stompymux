@@ -5,7 +5,7 @@ linkTitle: "settings"
 manualLinkTitle: "settings"
 ---
 
-Read detached effective values using a canonical or manufacturer-qualified weapon name.
+Read detached effective values using a canonical weapon name.
 Examples: IS.MediumLaser or Magna.IS.MediumLaser; exact names ignore ASCII case.
 
 ## Signature

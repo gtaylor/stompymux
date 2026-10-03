@@ -14,10 +14,9 @@ pub(super) async fn load(
         .await?;
     ensure!(count <= 1_000_000, "Too many inventory entries");
     let mut inventories = BTreeMap::<ObjectId, Vec<BattleInventoryEntry>>::new();
-    for row in sqlx::query("SELECT object_dbref,part_id,brand_id,quantity FROM btech_economy_parts ORDER BY object_dbref,part_id,brand_id").fetch_all(c).await? {
+    for row in sqlx::query("SELECT object_dbref,part_id,quantity FROM btech_economy_parts ORDER BY object_dbref,part_id").fetch_all(c).await? {
         let entry = BattleInventoryEntry {
             part_id: i32::try_from(row.try_get::<i64, _>("part_id")?)?,
-            brand_id: u8::try_from(row.try_get::<i64, _>("brand_id")?)?,
             quantity: i32::try_from(row.try_get::<i64, _>("quantity")?)?,
         };
         entry.validate()?;
@@ -40,8 +39,11 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
                     .is_ok()
             });
             if !retained {
-                sqlx::query("DELETE FROM btech_economy_parts WHERE object_dbref=? AND part_id=? AND brand_id=?")
-                    .bind(object.0).bind(entry.part_id).bind(entry.brand_id).execute(&mut *c).await?;
+                sqlx::query("DELETE FROM btech_economy_parts WHERE object_dbref=? AND part_id=?")
+                    .bind(object.0)
+                    .bind(entry.part_id)
+                    .execute(&mut *c)
+                    .await?;
             }
         }
     }
@@ -64,7 +66,6 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
                 Fields::from([
                     ("object_dbref", Cell::Integer(object.0)),
                     ("part_id", Cell::Integer(i64::from(entry.part_id))),
-                    ("brand_id", Cell::Integer(i64::from(entry.brand_id))),
                 ]),
                 previous.as_ref(),
                 &Fields::from([("quantity", Cell::Integer(i64::from(entry.quantity)))]),

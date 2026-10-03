@@ -4,69 +4,67 @@ movement = "biped"
 tons = 20
 walk_mp = 9
 jump_mp = 6
-computer = 4
 radio = 4
 
 [construction]
 structure = "endo_steel"
 armor = "ferro_fibrous"
-brand = 3
 
 [sections.left_arm]
 armor = 4
 slots = [
-    { at = "5-10", item = "FerroFibrous", brand = 3 },
+    { at = "5-10", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 4
 omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "IS.MediumPulseLaser", brand = 3 },
-    { at = "5-10", item = "FerroFibrous", brand = 3 },
+    { at = 4, item = "IS.MediumPulseLaser" },
+    { at = "5-10", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 5
 rear = 2
 slots = [
-    { at = "1-3", item = "HeatSink", brand = 3 },
+    { at = "1-3", item = "HeatSink" },
     { at = 4, item = "Ammo_IS.SRM-2", rounds = 50 },
-    { at = 5, item = "Case", brand = 3 },
-    { at = "6-12", item = "EndoSteel", brand = 3 },
+    { at = 5, item = "Case" },
+    { at = "6-12", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 5
 rear = 2
 slots = [
-    { at = "1-3", item = "HeatSink", brand = 3 },
-    { at = 4, item = "IS.SRM-2", brand = 3 },
-    { at = "5-11", item = "EndoSteel", brand = 3 },
-    { at = 12, item = "FerroFibrous", brand = 3 },
+    { at = "1-3", item = "HeatSink" },
+    { at = 4, item = "IS.SRM-2" },
+    { at = "5-11", item = "EndoSteel" },
+    { at = 12, item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 6
 rear = 3
 slots = [
-    { at = "11-12", item = "JumpJet", brand = 3 },
+    { at = "11-12", item = "JumpJet" },
 ]
 
 [sections.left_leg]
 armor = 5
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 5
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.head]
 armor = 4
 slots = [
-    { at = 4, item = "FerroFibrous", brand = 3 },
+    { at = 4, item = "FerroFibrous" },
 ]

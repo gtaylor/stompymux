@@ -4,7 +4,6 @@ movement = "fly"
 tons = 100
 walk_mp = 8
 heat_sinks = 30
-computer = 3
 fuel = 750
 
 [sections.nose]
@@ -36,11 +35,11 @@ slots = [
 armor = 16
 internals = 10
 slots = [
-    { at = 1, item = "LifeSupport", brand = 3 },
-    { at = 2, item = "Sensors", brand = 0 },
-    { at = 3, item = "Cockpit", brand = 0 },
-    { at = 4, item = "Sensors", brand = 0 },
-    { at = 5, item = "LifeSupport", brand = 0 },
+    { at = 1, item = "LifeSupport" },
+    { at = 2, item = "Sensors" },
+    { at = 3, item = "Cockpit" },
+    { at = 4, item = "Sensors" },
+    { at = 5, item = "LifeSupport" },
 ]
 
 [sections.engine]

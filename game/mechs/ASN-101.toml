@@ -19,25 +19,25 @@ slots = [
 armor = 9
 rear = 2
 slots = [
-    { at = 1, item = "IS.SRM-2", brand = 1 },
+    { at = 1, item = "IS.SRM-2" },
     { at = 2, item = "Ammo_IS.SRM-2", rounds = 50 },
-    { at = "3-4", item = "JumpJet", brand = 1 },
+    { at = "3-4", item = "JumpJet" },
 ]
 
 [sections.right_torso]
 armor = 9
 rear = 2
 slots = [
-    { at = 1, item = "IS.LRM-5", brand = 1 },
+    { at = 1, item = "IS.LRM-5" },
     { at = 2, item = "Ammo_IS.LRM-5", rounds = 24 },
-    { at = "3-4", item = "JumpJet", brand = 1 },
+    { at = "3-4", item = "JumpJet" },
 ]
 
 [sections.center_torso]
 armor = 11
 rear = 4
 slots = [
-    { at = 11, item = "JumpJet", brand = 1 },
+    { at = 11, item = "JumpJet" },
 ]
 
 [sections.left_leg]

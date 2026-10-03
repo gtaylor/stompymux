@@ -5,7 +5,6 @@ tons = 60
 walk_mp = 6
 jump_mp = 4
 heat_sinks = 22
-computer = 4
 radio = 4
 specials = ["AntiAircraft", "SearchLight"]
 

@@ -25,7 +25,6 @@ fn installed(name: &str, slots: u8, clan: bool) -> BattleUnit {
                 equipment: name.into(),
                 data: "-".into(),
                 modes: vec![],
-                brand: None,
             },
         );
     }

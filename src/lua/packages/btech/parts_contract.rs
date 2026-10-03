@@ -7,14 +7,12 @@ use std::sync::Arc;
 
 const GROUP: &str = "parts";
 const ITEM_COUNT: i64 = crate::btech::PART_ID_LIMIT as i64;
-const BRAND_COUNT: i64 = 5;
 const LUA_SAFE_INTEGER_MAX: i64 = 9_007_199_254_740_991;
 
-/// Stable native part and manufacturer identity shared by all BattleTech projections.
+/// Stable native part identity shared by all BattleTech projections.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct PartReference {
     pub id: i32,
-    pub brand: u8,
 }
 
 fn argument_failure(argument: usize, code: &'static str, message: impl ToString) -> mlua::Error {
@@ -26,9 +24,7 @@ fn value(arguments: &MultiValue, index: usize) -> Value {
 }
 
 fn form_for(catalogue: &[BattlePartForm], part: PartReference) -> Option<&BattlePartForm> {
-    catalogue
-        .iter()
-        .find(|form| form.part_id == part.id && form.brand_id == part.brand)
+    catalogue.iter().find(|form| form.part_id == part.id)
 }
 
 fn bytes_equal_case_insensitive(left: &[u8], right: &str) -> bool {
@@ -44,50 +40,32 @@ fn c_bytes(value: &LuaString) -> Vec<u8> {
     bytes[..length].to_vec()
 }
 
-/// Decode a packed ID, exact catalogue name, or record without rejecting projection fields.
+/// Decode a part ID, exact catalogue name, or record without rejecting projection fields.
 pub(super) fn check_part(
     value: Value,
     argument: usize,
     catalogue: &[BattlePartForm],
 ) -> mlua::Result<Option<PartReference>> {
     let part = match value {
-        Value::Integer(packed) => {
-            if !(0..=i32::MAX as i64).contains(&packed) {
+        Value::Integer(id) => {
+            if !(0..=i32::MAX as i64).contains(&id) {
                 return Err(argument_failure(
                     argument,
                     "mux.arg.invalid",
-                    "packed part ID must be a nonnegative integer",
+                    "part ID must be a nonnegative integer",
                 ));
             }
-            let brand = packed / ITEM_COUNT;
-            if brand > BRAND_COUNT {
-                return Ok(None);
-            }
-            PartReference {
-                id: (packed % ITEM_COUNT) as i32,
-                brand: brand as u8,
-            }
+            PartReference { id: id as i32 }
         }
-        Value::Number(packed) => {
-            if !packed.is_finite()
-                || packed.fract() != 0.0
-                || !(0.0..=i32::MAX as f64).contains(&packed)
-            {
+        Value::Number(id) => {
+            if !id.is_finite() || id.fract() != 0.0 || !(0.0..=i32::MAX as f64).contains(&id) {
                 return Err(argument_failure(
                     argument,
                     "mux.arg.invalid",
-                    "packed part ID must be a nonnegative integer",
+                    "part ID must be a nonnegative integer",
                 ));
             }
-            let packed = packed as i64;
-            let brand = packed / ITEM_COUNT;
-            if brand > BRAND_COUNT {
-                return Ok(None);
-            }
-            PartReference {
-                id: (packed % ITEM_COUNT) as i32,
-                brand: brand as u8,
-            }
+            PartReference { id: id as i32 }
         }
         Value::String(name) => {
             let name = c_bytes(&name);
@@ -97,10 +75,7 @@ pub(super) fn check_part(
                     || bytes_equal_case_insensitive(&name, &form.long_name)
                     || bytes_equal_case_insensitive(&name, &form.very_long_name)
             }) {
-                let candidate = PartReference {
-                    id: form.part_id,
-                    brand: form.brand_id,
-                };
+                let candidate = PartReference { id: form.part_id };
                 if found.is_some_and(|found| found != candidate) {
                     return Err(argument_failure(
                         argument,
@@ -114,13 +89,12 @@ pub(super) fn check_part(
         }
         Value::Table(record) => PartReference {
             id: contract::integer_field(&record, "id", 0, ITEM_COUNT - 1, argument)? as i32,
-            brand: contract::integer_field(&record, "brand", 0, BRAND_COUNT, argument)? as u8,
         },
         _ => {
             return Err(argument_failure(
                 argument,
                 "mux.arg.invalid",
-                "part must be a packed ID, name, or part record",
+                "part must be a part ID, name, or part record",
             ));
         }
     };
@@ -157,24 +131,10 @@ pub(super) fn weapon_critical_slots(id: i32) -> Option<u8> {
     weapon_contract(id).and_then(|weapon| u8::try_from(weapon.slots).ok())
 }
 
-/// Fully qualified spelling used by C template files for a registered form.
-pub(super) fn part_equipment_name(part: PartReference) -> Option<String> {
-    form_for(&registered_catalogue(), part).map(|form| form.very_long_name.clone())
-}
-
-/// Every part name a template may use. Templates name most parts without a manufacturer and
-/// keep the brand in its own field, so unbranded names count alongside the
-/// manufacturer-qualified registry.
-fn known_catalogue() -> Vec<BattlePartForm> {
-    let mut catalogue = crate::btech::part_catalogue();
-    catalogue.extend(c_infantry_forms());
-    catalogue
-}
-
 /// Resolve every authored critical to its part, rejecting the whole template when one names
-/// no known part. A manufacturer-qualified name supplies the brand when the slot has none.
+/// no known part.
 pub(super) fn normalize_raw_template_parts(template: &mut crate::RawTemplate) -> bool {
-    let catalogue = known_catalogue();
+    let catalogue = crate::btech::part_catalogue();
     for critical in template
         .sections
         .values_mut()
@@ -188,16 +148,13 @@ pub(super) fn normalize_raw_template_parts(template: &mut crate::RawTemplate) ->
         };
         critical.equipment = crate::btech::BattlePart::from_id(form.part_id)
             .map_or_else(|| critical.equipment.clone(), |part| part.name);
-        if form.brand_id != 0 && critical.brand.unwrap_or_default() == 0 {
-            critical.brand = Some(form.brand_id);
-        }
     }
     true
 }
 
 /// Whether every critical names a known part, rejecting the whole template when one does not.
 pub(super) fn unit_template_parts_known(template: &crate::BattleUnitTemplate) -> bool {
-    let catalogue = known_catalogue();
+    let catalogue = crate::btech::part_catalogue();
     let known = |critical: &crate::CriticalDefinition| {
         catalogue.iter().any(|form| {
             form.very_long_name
@@ -522,9 +479,7 @@ pub(super) fn push_part(
     catalogue: &[BattlePartForm],
     part: PartReference,
 ) -> mlua::Result<Table> {
-    let form = (part.brand != 0)
-        .then(|| form_for(catalogue, part))
-        .flatten();
+    let form = form_for(catalogue, part);
     let native = BattlePart::from_id(part.id)
         .ok_or_else(|| error::failure("mux.internal", "part catalogue mismatch"))?;
     let cost = crate::btech::part_cost(world, part.id)
@@ -537,11 +492,6 @@ pub(super) fn push_part(
     }
     let result = lua.create_table()?;
     result.raw_set("id", part.id)?;
-    result.raw_set("brand", part.brand)?;
-    result.raw_set(
-        "packed_id",
-        i64::from(part.brand) * ITEM_COUNT + i64::from(part.id),
-    )?;
     if let Some(form) = form {
         result.raw_set("short_name", form.short_name.as_str())?;
         result.raw_set("long_name", form.long_name.as_str())?;
@@ -578,325 +528,13 @@ fn categories(lua: &Lua) -> mlua::Result<Table> {
     Ok(result)
 }
 
-fn c_infantry_forms() -> Vec<BattlePartForm> {
-    const ROWS: &[(i32, u8, &str, &str, &str)] = &[
-        (
-            175,
-            5,
-            "Agra.IL",
-            "Agra.InfantryLaser",
-            "Agra.IS.InfantryLaser",
-        ),
-        (
-            173,
-            5,
-            "Ar.HIR",
-            "Armstrong.HeavyInfantryRifle",
-            "Armstrong.IS.HeavyInfantryRifle",
-        ),
-        (
-            174,
-            5,
-            "Ar.IMG",
-            "Armstrong.InfantryMachineGun",
-            "Armstrong.IS.InfantryMachineGun",
-        ),
-        (
-            172,
-            5,
-            "Ar.IR",
-            "Armstrong.InfantryRifle",
-            "Armstrong.IS.InfantryRifle",
-        ),
-        (
-            171,
-            5,
-            "Ar.LIR",
-            "Armstrong.LightInfantryRifle",
-            "Armstrong.IS.LightInfantryRifle",
-        ),
-        (
-            178,
-            3,
-            "Bi.ILRM",
-            "Bical.InfantryLRM",
-            "Bical.IS.InfantryLRM",
-        ),
-        (
-            177,
-            3,
-            "Bi.ISRM",
-            "Bical.InfantrySRM",
-            "Bical.IS.InfantrySRM",
-        ),
-        (
-            178,
-            1,
-            "Co.ILRM",
-            "Coventry.InfantryLRM",
-            "Coventry.IS.InfantryLRM",
-        ),
-        (
-            177,
-            1,
-            "Co.ISRM",
-            "Coventry.InfantrySRM",
-            "Coventry.IS.InfantrySRM",
-        ),
-        (
-            173,
-            4,
-            "De.HIR",
-            "Deprus.HeavyInfantryRifle",
-            "Deprus.IS.HeavyInfantryRifle",
-        ),
-        (
-            174,
-            4,
-            "De.IMG",
-            "Deprus.InfantryMachineGun",
-            "Deprus.IS.InfantryMachineGun",
-        ),
-        (
-            172,
-            4,
-            "De.IR",
-            "Deprus.InfantryRifle",
-            "Deprus.IS.InfantryRifle",
-        ),
-        (
-            171,
-            4,
-            "De.LIR",
-            "Deprus.LightInfantryRifle",
-            "Deprus.IS.LightInfantryRifle",
-        ),
-        (
-            176,
-            3,
-            "Fi.IF",
-            "Firestorm.InfantryFlamer",
-            "Firestorm.IS.InfantryFlamer",
-        ),
-        (
-            175,
-            2,
-            "He.IL",
-            "Hesperus.InfantryLaser",
-            "Hesperus.IS.InfantryLaser",
-        ),
-        (
-            176,
-            2,
-            "Ho.IF",
-            "Hotshot.InfantryFlamer",
-            "Hotshot.IS.InfantryFlamer",
-        ),
-        (
-            178,
-            4,
-            "Ho.ILRM",
-            "Holly.InfantryLRM",
-            "Holly.IS.InfantryLRM",
-        ),
-        (
-            177,
-            4,
-            "Ho.ISRM",
-            "Holly.InfantrySRM",
-            "Holly.IS.InfantrySRM",
-        ),
-        (
-            175,
-            1,
-            "Lo.IL",
-            "Lords.InfantryLaser",
-            "Lords.IS.InfantryLaser",
-        ),
-        (
-            173,
-            1,
-            "Lu.HIR",
-            "Luxor.HeavyInfantryRifle",
-            "Luxor.IS.HeavyInfantryRifle",
-        ),
-        (
-            174,
-            1,
-            "Lu.IMG",
-            "Luxor.InfantryMachineGun",
-            "Luxor.IS.InfantryMachineGun",
-        ),
-        (
-            172,
-            1,
-            "Lu.IR",
-            "Luxor.InfantryRifle",
-            "Luxor.IS.InfantryRifle",
-        ),
-        (
-            171,
-            1,
-            "Lu.LIR",
-            "Luxor.LightInfantryRifle",
-            "Luxor.IS.LightInfantryRifle",
-        ),
-        (
-            175,
-            3,
-            "Ma.IL",
-            "Martell.InfantryLaser",
-            "Martell.IS.InfantryLaser",
-        ),
-        (
-            175,
-            4,
-            "Ma.IL",
-            "Magna.InfantryLaser",
-            "Magna.IS.InfantryLaser",
-        ),
-        (
-            173,
-            3,
-            "Or.HIR",
-            "Oriente.HeavyInfantryRifle",
-            "Oriente.IS.HeavyInfantryRifle",
-        ),
-        (
-            174,
-            3,
-            "Or.IMG",
-            "Oriente.InfantryMachineGun",
-            "Oriente.IS.InfantryMachineGun",
-        ),
-        (
-            172,
-            3,
-            "Or.IR",
-            "Oriente.InfantryRifle",
-            "Oriente.IS.InfantryRifle",
-        ),
-        (
-            171,
-            3,
-            "Or.LIR",
-            "Oriente.LightInfantryRifle",
-            "Oriente.IS.LightInfantryRifle",
-        ),
-        (
-            176,
-            4,
-            "Pu.IF",
-            "Purity.InfantryFlamer",
-            "Purity.IS.InfantryFlamer",
-        ),
-        (
-            176,
-            1,
-            "Py.IF",
-            "Pynes.InfantryFlamer",
-            "Pynes.IS.InfantryFlamer",
-        ),
-        (
-            173,
-            2,
-            "SB.HIR",
-            "SperryBrowning.HeavyInfantryRifle",
-            "SperryBrowning.IS.HeavyInfantryRifle",
-        ),
-        (
-            174,
-            2,
-            "SB.IMG",
-            "SperryBrowning.InfantryMachineGun",
-            "SperryBrowning.IS.InfantryMachineGun",
-        ),
-        (
-            172,
-            2,
-            "SB.IR",
-            "SperryBrowning.InfantryRifle",
-            "SperryBrowning.IS.InfantryRifle",
-        ),
-        (
-            171,
-            2,
-            "SB.LIR",
-            "SperryBrowning.LightInfantryRifle",
-            "SperryBrowning.IS.LightInfantryRifle",
-        ),
-        (
-            178,
-            2,
-            "Sh.ILRM",
-            "Shannon.InfantryLRM",
-            "Shannon.IS.InfantryLRM",
-        ),
-        (
-            177,
-            2,
-            "Sh.ISRM",
-            "Shannon.InfantrySRM",
-            "Shannon.IS.InfantrySRM",
-        ),
-        (
-            178,
-            5,
-            "Te.ILRM",
-            "Telos.InfantryLRM",
-            "Telos.IS.InfantryLRM",
-        ),
-        (
-            177,
-            5,
-            "Te.ISRM",
-            "Telos.InfantrySRM",
-            "Telos.IS.InfantrySRM",
-        ),
-        (
-            176,
-            5,
-            "Ve.IF",
-            "Ventra.InfantryFlamer",
-            "Ventra.IS.InfantryFlamer",
-        ),
-    ];
-    ROWS.iter()
-        .map(
-            |&(part_id, brand_id, short, long, very_long)| BattlePartForm {
-                part_id,
-                brand_id,
-                short_name: short.into(),
-                long_name: long.into(),
-                very_long_name: very_long.into(),
-            },
-        )
-        .collect()
-}
-
-/// Exact C part-name registry, excluding unregistered brand-zero identities.
+/// The part-name registry Lua resolves names against.
 pub(super) fn registered_catalogue() -> Vec<BattlePartForm> {
-    let mut catalogue = crate::btech::part_catalogue()
-        .into_iter()
-        .filter(|form| form.brand_id != 0)
-        .collect::<Vec<_>>();
-    catalogue.extend(c_infantry_forms());
-    catalogue.sort_by(|left, right| {
-        (&left.short_name, left.brand_id, left.part_id).cmp(&(
-            &right.short_name,
-            right.brand_id,
-            right.part_id,
-        ))
-    });
-    catalogue
+    crate::btech::part_catalogue()
 }
 
 /// Register all eight C-native `btech.parts` operations.
 pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::Result<()> {
-    // The native registry currently contains only manufacturer-qualified rows:
-    // create_brandname rejects brand zero before formatting any component or
-    // commodity name. Raw installed-part projection remains separate and may
-    // still describe unregistered brand-zero identities.
     let catalogue = Arc::new(registered_catalogue());
     contract::bind(
         lua,
@@ -925,15 +563,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             })) {
                 result.raw_set(
                     output,
-                    push_part(
-                        lua,
-                        &world,
-                        &records,
-                        PartReference {
-                            id: form.part_id,
-                            brand: form.brand_id,
-                        },
-                    )?,
+                    push_part(lua, &world, &records, PartReference { id: form.part_id })?,
                 )?;
             }
             Ok(result)
@@ -974,15 +604,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             })) {
                 result.raw_set(
                     output,
-                    push_part(
-                        lua,
-                        &world,
-                        &records,
-                        PartReference {
-                            id: form.part_id,
-                            brand: form.brand_id,
-                        },
-                    )?,
+                    push_part(lua, &world, &records, PartReference { id: form.part_id })?,
                 )?;
             }
             Ok(result)
@@ -1023,10 +645,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             for entry in crate::btech::inventory(&world, object)
                 .map_err(|failure| error::failure("btech.operation.failed", failure))?
             {
-                let part = PartReference {
-                    id: entry.part_id,
-                    brand: entry.brand_id,
-                };
+                let part = PartReference { id: entry.part_id };
                 if entry.quantity <= 0 || form_for(&records, part).is_none() {
                     continue;
                 }
@@ -1056,7 +675,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             Ok(crate::btech::inventory(&world, object)
                 .map_err(|failure| error::failure("btech.operation.failed", failure))?
                 .iter()
-                .find(|entry| entry.part_id == part.id && entry.brand_id == part.brand)
+                .find(|entry| entry.part_id == part.id)
                 .map_or(0, |entry| entry.quantity))
         })?,
     )?;
@@ -1107,7 +726,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             let current = crate::btech::inventory(&world, object)
                 .map_err(|failure| contract::operation_failure("store_commit_failed", failure))?
                 .iter()
-                .find(|entry| entry.part_id == part.id && entry.brand_id == part.brand)
+                .find(|entry| entry.part_id == part.id)
                 .map_or(0, |entry| entry.quantity);
             let Some(updated) = i64::from(current)
                 .checked_add(delta)
@@ -1118,19 +737,13 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     "store adjustment would exceed capacity",
                 ));
             };
-            crate::btech::set_part_store_quantity(
-                &mut world,
-                object,
-                part.id,
-                part.brand,
-                updated as i32,
-            )
-            .map_err(|_| {
-                contract::operation_failure(
-                    "store_commit_failed",
-                    "store adjustment could not be committed",
-                )
-            })?;
+            crate::btech::set_part_store_quantity(&mut world, object, part.id, updated as i32)
+                .map_err(|_| {
+                    contract::operation_failure(
+                        "store_commit_failed",
+                        "store adjustment could not be committed",
+                    )
+                })?;
             Ok(MultiValue::new())
         })?,
     )?;

@@ -5,7 +5,6 @@ tons = 35
 walk_mp = 12
 jump_mp = 8
 heat_sinks = 10
-computer = 4
 radio = 4
 specials = ["ECM", "BeagleProbe"]
 

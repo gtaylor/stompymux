@@ -65,11 +65,6 @@ pub fn small_cockpit(template: &mut stompymux_rs::BattleTemplate, flag: &str) {
     specials.push_str(flag);
     let head = template.sections.get_mut(&BattleSection::Head).unwrap();
     let fixed = ["LifeSupport", "Sensors", "Cockpit"];
-    let brand = head
-        .criticals
-        .values()
-        .find(|critical| fixed.contains(&critical.equipment.as_str()))
-        .and_then(|critical| critical.brand);
     let others: Vec<_> = head
         .criticals
         .values()
@@ -85,7 +80,6 @@ pub fn small_cockpit(template: &mut stompymux_rs::BattleTemplate, flag: &str) {
             equipment: item.into(),
             data: "-".into(),
             modes: Vec::new(),
-            brand,
         };
         head.criticals.insert(slot as u8, critical);
     }

@@ -4,71 +4,69 @@ movement = "biped"
 tons = 75
 walk_mp = 6
 heat_sinks = 30
-computer = 4
 radio = 4
 
 [construction]
 engine = "xl"
 armor = "ferro_fibrous"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 24
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "HeatSink", brand = 3 },
-    { at = "7-9", item = "IS.ERPPC", brand = 3 },
-    { at = "10-12", item = "FerroFibrous", brand = 3 },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-9", item = "IS.ERPPC" },
+    { at = "10-12", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 24
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "HeatSink", brand = 3 },
-    { at = "7-10", item = "IS.LargeLaser", brand = 3 },
-    { at = "11-12", item = "FerroFibrous", brand = 3 },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-10", item = "IS.LargeLaser" },
+    { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 24
 rear = 8
 slots = [
-    { at = "4-8", item = "IS.MRM-30", brand = 3 },
+    { at = "4-8", item = "IS.MRM-30" },
     { at = "9-10", item = "Ammo_IS.MRM-30", rounds = 8 },
-    { at = "11-12", item = "FerroFibrous", brand = 3 },
+    { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 24
 rear = 8
 slots = [
-    { at = "4-6", item = "HeatSink", brand = 3 },
-    { at = "7-11", item = "C3Master", brand = 3 },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-11", item = "C3Master" },
 ]
 
 [sections.center_torso]
 armor = 35
 rear = 11
 slots = [
-    { at = "11-12", item = "FerroFibrous", brand = 3 },
+    { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.left_leg]
 armor = 32
 slots = [
-    { at = "5-6", item = "FerroFibrous", brand = 3 },
+    { at = "5-6", item = "FerroFibrous" },
 ]
 
 [sections.right_leg]
 armor = 32
 slots = [
-    { at = "5-6", item = "FerroFibrous", brand = 3 },
+    { at = "5-6", item = "FerroFibrous" },
 ]
 
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "FerroFibrous", brand = 3 },
+    { at = 4, item = "FerroFibrous" },
 ]

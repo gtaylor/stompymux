@@ -94,8 +94,8 @@ async fn stock_loads_existing_rows_and_selectively_persists_corrections() {
         7
     );
     for &holder in &holders {
-        set_battle_inventory_quantity(&mut world, ObjectId(1), holder, 50, 3, 9).unwrap();
-        set_battle_inventory_quantity(&mut world, ObjectId(1), holder, 51, 0, i32::MAX).unwrap();
+        set_battle_inventory_quantity(&mut world, ObjectId(1), holder, 50, 9).unwrap();
+        set_battle_inventory_quantity(&mut world, ObjectId(1), holder, 51, i32::MAX).unwrap();
     }
     world.validate(&config).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
@@ -109,8 +109,8 @@ async fn stock_loads_existing_rows_and_selectively_persists_corrections() {
     .unwrap();
     assert_eq!(annotation, "keep");
     for &holder in &holders {
-        set_battle_inventory_quantity(&mut world, ObjectId(1), holder, 50, 3, 0).unwrap();
-        set_battle_inventory_quantity(&mut world, ObjectId(1), holder, 51, 0, 0).unwrap();
+        set_battle_inventory_quantity(&mut world, ObjectId(1), holder, 50, 0).unwrap();
+        set_battle_inventory_quantity(&mut world, ObjectId(1), holder, 51, 0).unwrap();
         assert!(battle_inventory(&world, holder).unwrap().is_empty());
     }
     persistence::save(&config.database(), &world).await.unwrap();
@@ -132,7 +132,7 @@ async fn stock_loads_existing_rows_and_selectively_persists_corrections() {
 async fn malformed_stock_snapshots_and_purged_owners_are_checked() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let holder = world.create(&config, "Stock crate".into(), Kind::Thing);
-    set_battle_inventory_quantity(&mut world, ObjectId(1), holder, 50, 3, 9).unwrap();
+    set_battle_inventory_quantity(&mut world, ObjectId(1), holder, 50, 9).unwrap();
     let original = serde_json::to_value(&world.btech).unwrap();
     for rows in [
         serde_json::json!([]),
@@ -179,7 +179,7 @@ async fn stock_database_failure_rolls_back_the_entire_change() {
     use sqlx::Connection;
     let (_dir, config, mut world) = support::isolated_world().await;
     for part in [50, 51] {
-        set_battle_inventory_quantity(&mut world, ObjectId(1), ObjectId(0), part, 3, 7).unwrap();
+        set_battle_inventory_quantity(&mut world, ObjectId(1), ObjectId(0), part, 7).unwrap();
     }
     persistence::save(&config.database(), &world).await.unwrap();
     let baseline = persistence::load(&config.database()).await.unwrap();
@@ -189,8 +189,8 @@ async fn stock_database_failure_rolls_back_the_entire_change() {
     .await
     .unwrap();
     sqlx::raw_sql("CREATE TRIGGER reject_inventory BEFORE UPDATE ON btech_economy_parts WHEN NEW.quantity=99 BEGIN SELECT RAISE(ABORT,'stock rejected'); END;").execute(&mut db).await.unwrap();
-    set_battle_inventory_quantity(&mut world, ObjectId(1), ObjectId(0), 50, 3, 8).unwrap();
-    set_battle_inventory_quantity(&mut world, ObjectId(1), ObjectId(0), 51, 3, 99).unwrap();
+    set_battle_inventory_quantity(&mut world, ObjectId(1), ObjectId(0), 50, 8).unwrap();
+    set_battle_inventory_quantity(&mut world, ObjectId(1), ObjectId(0), 51, 99).unwrap();
     assert!(persistence::save(&config.database(), &world).await.is_err());
     assert_eq!(
         persistence::load(&config.database()).await.unwrap().btech,

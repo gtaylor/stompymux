@@ -4,7 +4,6 @@ movement = "biped"
 tons = 65
 walk_mp = 9
 heat_sinks = 24
-computer = 4
 radio = 4
 specials = ["C3SlaveTech"]
 

@@ -3,7 +3,6 @@ class = "vtol"
 movement = "none"
 tons = 20
 walk_mp = 0
-computer = 3
 radio_range = 1000
 tac_range = 127
 lrs_range = 127

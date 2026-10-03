@@ -1803,7 +1803,7 @@
       "contract": "Requires a live object, registered part, and nonzero integral C-int delta; returns zero values. Applies one atomic stock edit, removes zero rows, and reports capacity under/overflow as btech.operation.failed with reason store_capacity_exceeded.",
       "status": "verified",
       "prerequisite": "",
-      "rust_evidence": "tests/lua_btech_parts_contracts.rs; tests/btech_part_cost_persistence.rs; tests/fixtures/lua-probes/parts_catalog.lua via tools/lua_parity_probe.py (490 complete ordered records, 0 failures/0 permitted)",
+      "rust_evidence": "tests/lua_btech_parts_contracts.rs; tests/btech_part_cost_persistence.rs; tests/fixtures/lua-probes/parts_catalog.lua via tools/lua_parity_probe.py (complete ordered records, 0 failures/0 permitted)",
       "acceptance": "zero return count, positive/negative/zero/boundary deltas, rollback, row removal and structured errors",
       "accepted_difference_ids": []
     },
@@ -1819,7 +1819,7 @@
       "contract": "Ignores extra arguments and returns exactly six detached {code,name} rows in canonical C order.",
       "status": "verified",
       "prerequisite": "",
-      "rust_evidence": "tests/lua_btech_parts_contracts.rs; tests/btech_part_cost_persistence.rs; tests/fixtures/lua-probes/parts_catalog.lua via tools/lua_parity_probe.py (490 complete ordered records, 0 failures/0 permitted)",
+      "rust_evidence": "tests/lua_btech_parts_contracts.rs; tests/btech_part_cost_persistence.rs; tests/fixtures/lua-probes/parts_catalog.lua via tools/lua_parity_probe.py (complete ordered records, 0 failures/0 permitted)",
       "acceptance": "return arity, complete ordered category records, checking-mode precedence",
       "accepted_difference_ids": []
     },
@@ -1832,11 +1832,11 @@
         "BtechPart[] parts"
       ],
       "reference": "src/mux/lua/packages/btech/parts/btech_parts_bindings.c",
-      "contract": "Nil or omission lists all 490 registered branded forms; a case-insensitive category filters them. Returns complete catalogue-ordered detached part tables including exact weapon numeric fields; unknown or nonstring categories raise mux.arg.invalid at argument 1.",
+      "contract": "Nil or omission lists every registered part; a case-insensitive category filters them. Returns complete catalogue-ordered detached part tables including exact weapon numeric fields; unknown or nonstring categories raise mux.arg.invalid at argument 1.",
       "status": "verified",
       "prerequisite": "",
-      "rust_evidence": "tests/lua_btech_parts_contracts.rs; tests/btech_part_cost_persistence.rs; tests/fixtures/lua-probes/parts_catalog.lua via tools/lua_parity_probe.py (490 complete ordered records, 0 failures/0 permitted)",
-      "acceptance": "nil/omitted/category cases, complete 490-row order and fields, invalid category errors",
+      "rust_evidence": "tests/lua_btech_parts_contracts.rs; tests/btech_part_cost_persistence.rs; tests/fixtures/lua-probes/parts_catalog.lua via tools/lua_parity_probe.py (complete ordered records, 0 failures/0 permitted)",
+      "acceptance": "nil/omitted/category cases, complete row order and fields, invalid category errors",
       "accepted_difference_ids": []
     },
     {
@@ -1848,10 +1848,10 @@
         "BtechPart|nil part"
       ],
       "reference": "src/mux/lua/packages/btech/parts/btech_parts_bindings.c",
-      "contract": "Accepts an integral packed ID from 0 through INT_MAX, an ASCII-case-insensitive short/long/very-long name using the prefix before NUL, or a table with numeric id and brand. Returns one detached part table or nil; malformed input raises mux.arg.invalid and ambiguous names raise btech.part.ambiguous.",
+      "contract": "Accepts an integral part ID from 0 through INT_MAX, an ASCII-case-insensitive short/long/very-long name using the prefix before NUL, or a table with numeric id. Returns one detached part table or nil; malformed input raises mux.arg.invalid and ambiguous names raise btech.part.ambiguous.",
       "status": "verified",
       "prerequisite": "",
-      "rust_evidence": "tests/lua_btech_parts_contracts.rs; tests/btech_part_cost_persistence.rs; tests/fixtures/lua-probes/parts_catalog.lua via tools/lua_parity_probe.py (490 complete ordered records, 0 failures/0 permitted)",
+      "rust_evidence": "tests/lua_btech_parts_contracts.rs; tests/btech_part_cost_persistence.rs; tests/fixtures/lua-probes/parts_catalog.lua via tools/lua_parity_probe.py (complete ordered records, 0 failures/0 permitted)",
       "acceptance": "numeric/string/table coercion and bounds, NUL prefix, nil/ambiguous outcomes, exact records",
       "accepted_difference_ids": []
     },
@@ -1867,7 +1867,7 @@
       "contract": "Requires a nonempty byte string query and applies C quick-wild matching with *, ?, and backslash escaping. Returns catalogue-ordered detached part tables; missing, nonstring, or NUL-leading input raises mux.arg.invalid at argument 1.",
       "status": "verified",
       "prerequisite": "",
-      "rust_evidence": "tests/lua_btech_parts_contracts.rs; tests/btech_part_cost_persistence.rs; tests/fixtures/lua-probes/parts_catalog.lua via tools/lua_parity_probe.py (490 complete ordered records, 0 failures/0 permitted)",
+      "rust_evidence": "tests/lua_btech_parts_contracts.rs; tests/btech_part_cost_persistence.rs; tests/fixtures/lua-probes/parts_catalog.lua via tools/lua_parity_probe.py (complete ordered records, 0 failures/0 permitted)",
       "acceptance": "wildcards/escaping/NUL/errors, complete returned records and order",
       "accepted_difference_ids": []
     },
@@ -1878,11 +1878,11 @@
       "arguments": "part, cost",
       "returns": [],
       "reference": "src/mux/lua/packages/btech/parts/btech_parts_bindings.c",
-      "contract": "Requires a registered part and integral cost from 0 through 2^53-1; returns zero values. Updates the cost shared by all brands and persists it by the canonical C item name while preserving unknown economy rows.",
+      "contract": "Requires a registered part and integral cost from 0 through 2^53-1; returns zero values. Updates the part cost and persists it by the canonical C item name while preserving unknown economy rows.",
       "status": "verified",
       "prerequisite": "",
-      "rust_evidence": "tests/lua_btech_parts_contracts.rs; tests/btech_part_cost_persistence.rs; tests/fixtures/lua-probes/parts_catalog.lua via tools/lua_parity_probe.py (490 complete ordered records, 0 failures/0 permitted)",
-      "acceptance": "safe-integer bounds, zero return, brand-shared projection, C-format named-row save/reload and checking mode",
+      "rust_evidence": "tests/lua_btech_parts_contracts.rs; tests/btech_part_cost_persistence.rs; tests/fixtures/lua-probes/parts_catalog.lua via tools/lua_parity_probe.py (complete ordered records, 0 failures/0 permitted)",
+      "acceptance": "safe-integer bounds, zero return, projected cost, C-format named-row save/reload and checking mode",
       "accepted_difference_ids": []
     },
     {
@@ -1897,7 +1897,7 @@
       "contract": "Requires a live non-GOING object and registered part reference, returning its integer quantity or zero when absent; missing parts raise btech.part.not_found at argument 2.",
       "status": "verified",
       "prerequisite": "",
-      "rust_evidence": "tests/lua_btech_parts_contracts.rs; tests/btech_part_cost_persistence.rs; tests/fixtures/lua-probes/parts_catalog.lua via tools/lua_parity_probe.py (490 complete ordered records, 0 failures/0 permitted)",
+      "rust_evidence": "tests/lua_btech_parts_contracts.rs; tests/btech_part_cost_persistence.rs; tests/fixtures/lua-probes/parts_catalog.lua via tools/lua_parity_probe.py (complete ordered records, 0 failures/0 permitted)",
       "acceptance": "zero/present quantities, accepted references, object/part errors and checking mode",
       "accepted_difference_ids": []
     },
@@ -1913,7 +1913,7 @@
       "contract": "Requires a live non-GOING object and returns positive registered stock rows {part,quantity} in native inventory order, omitting zero and unknown rows.",
       "status": "verified",
       "prerequisite": "",
-      "rust_evidence": "tests/lua_btech_parts_contracts.rs; tests/btech_part_cost_persistence.rs; tests/fixtures/lua-probes/parts_catalog.lua via tools/lua_parity_probe.py (490 complete ordered records, 0 failures/0 permitted)",
+      "rust_evidence": "tests/lua_btech_parts_contracts.rs; tests/btech_part_cost_persistence.rs; tests/fixtures/lua-probes/parts_catalog.lua via tools/lua_parity_probe.py (complete ordered records, 0 failures/0 permitted)",
       "acceptance": "object validation, complete row shape/order, mutation effects and checking mode",
       "accepted_difference_ids": []
     },
@@ -2130,7 +2130,7 @@
       "status": "verified",
       "prerequisite": "",
       "rust_evidence": "tests/lua_btech_template_contracts.rs; tests/fixtures/lua-probes/template_catalog.lua and template_inspection.lua paired C/Rust oracle",
-      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting brand-zero shipped templates, error codes/messages",
+      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting templates with unknown parts, error codes/messages",
       "accepted_difference_ids": []
     },
     {
@@ -2146,7 +2146,7 @@
       "status": "verified",
       "prerequisite": "",
       "rust_evidence": "tests/lua_btech_template_contracts.rs; tests/fixtures/lua-probes/template_catalog.lua and template_inspection.lua paired C/Rust oracle",
-      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting brand-zero shipped templates, error codes/messages",
+      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting templates with unknown parts, error codes/messages",
       "accepted_difference_ids": []
     },
     {
@@ -2162,7 +2162,7 @@
       "status": "verified",
       "prerequisite": "",
       "rust_evidence": "tests/lua_btech_template_contracts.rs; tests/fixtures/lua-probes/template_catalog.lua and template_inspection.lua paired C/Rust oracle",
-      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting brand-zero shipped templates, error codes/messages",
+      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting templates with unknown parts, error codes/messages",
       "accepted_difference_ids": []
     },
     {
@@ -2178,7 +2178,7 @@
       "status": "verified",
       "prerequisite": "",
       "rust_evidence": "tests/lua_btech_template_contracts.rs; tests/fixtures/lua-probes/template_catalog.lua and template_inspection.lua paired C/Rust oracle",
-      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting brand-zero shipped templates, error codes/messages",
+      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting templates with unknown parts, error codes/messages",
       "accepted_difference_ids": []
     },
     {
@@ -2194,7 +2194,7 @@
       "status": "verified",
       "prerequisite": "",
       "rust_evidence": "tests/lua_btech_template_contracts.rs; tests/fixtures/lua-probes/template_catalog.lua and template_inspection.lua paired C/Rust oracle",
-      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting brand-zero shipped templates, error codes/messages",
+      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting templates with unknown parts, error codes/messages",
       "accepted_difference_ids": []
     },
     {
@@ -2210,7 +2210,7 @@
       "status": "verified",
       "prerequisite": "",
       "rust_evidence": "tests/lua_btech_template_contracts.rs; tests/fixtures/lua-probes/template_catalog.lua and template_inspection.lua paired C/Rust oracle",
-      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting brand-zero shipped templates, error codes/messages",
+      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting templates with unknown parts, error codes/messages",
       "accepted_difference_ids": []
     },
     {
@@ -2226,7 +2226,7 @@
       "status": "verified",
       "prerequisite": "",
       "rust_evidence": "tests/lua_btech_template_contracts.rs; tests/fixtures/lua-probes/template_catalog.lua and template_inspection.lua paired C/Rust oracle",
-      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting brand-zero shipped templates, error codes/messages",
+      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting templates with unknown parts, error codes/messages",
       "accepted_difference_ids": []
     },
     {
@@ -2242,7 +2242,7 @@
       "status": "verified",
       "prerequisite": "",
       "rust_evidence": "tests/lua_btech_template_contracts.rs; tests/fixtures/lua-probes/template_catalog.lua and template_inspection.lua paired C/Rust oracle",
-      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting brand-zero shipped templates, error codes/messages",
+      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting templates with unknown parts, error codes/messages",
       "accepted_difference_ids": []
     },
     {
@@ -2256,7 +2256,7 @@
       "status": "verified",
       "prerequisite": "",
       "rust_evidence": "tests/lua_btech_template_contracts.rs; tests/fixtures/lua-probes/template_catalog.lua and template_inspection.lua paired C/Rust oracle",
-      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting brand-zero shipped templates, error codes/messages",
+      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting templates with unknown parts, error codes/messages",
       "accepted_difference_ids": []
     },
     {
@@ -2270,7 +2270,7 @@
       "status": "verified",
       "prerequisite": "",
       "rust_evidence": "tests/lua_btech_template_contracts.rs; tests/fixtures/lua-probes/template_catalog.lua and template_inspection.lua paired C/Rust oracle",
-      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting brand-zero shipped templates, error codes/messages",
+      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting templates with unknown parts, error codes/messages",
       "accepted_difference_ids": []
     },
     {
@@ -2284,7 +2284,7 @@
       "status": "verified",
       "prerequisite": "",
       "rust_evidence": "tests/lua_btech_template_contracts.rs; tests/fixtures/lua-probes/template_catalog.lua and template_inspection.lua paired C/Rust oracle",
-      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting brand-zero shipped templates, error codes/messages",
+      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting templates with unknown parts, error codes/messages",
       "accepted_difference_ids": []
     },
     {
@@ -2300,7 +2300,7 @@
       "status": "verified",
       "prerequisite": "",
       "rust_evidence": "tests/lua_btech_template_contracts.rs; tests/fixtures/lua-probes/template_catalog.lua and template_inspection.lua paired C/Rust oracle",
-      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting brand-zero shipped templates, error codes/messages",
+      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting templates with unknown parts, error codes/messages",
       "accepted_difference_ids": []
     },
     {
@@ -2316,7 +2316,7 @@
       "status": "verified",
       "prerequisite": "",
       "rust_evidence": "tests/lua_btech_template_contracts.rs; tests/fixtures/lua-probes/template_catalog.lua and template_inspection.lua paired C/Rust oracle",
-      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting brand-zero shipped templates, error codes/messages",
+      "acceptance": "C-contract audit: arguments, coercions, exact returns, registry gate rejecting templates with unknown parts, error codes/messages",
       "accepted_difference_ids": []
     },
     {

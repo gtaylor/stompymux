@@ -5,41 +5,39 @@ tons = 85
 walk_mp = 5
 jump_mp = 3
 heat_sinks = 20
-computer = 4
 radio = 4
 
 [construction]
-brand = 3
 
 [sections.left_arm]
 armor = 19
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "IS.LargeLaser", brand = 3 },
+    { at = "4-5", item = "IS.LargeLaser" },
 ]
 
 [sections.right_arm]
 armor = 19
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "IS.LargeLaser", brand = 3 },
+    { at = "4-5", item = "IS.LargeLaser" },
 ]
 
 [sections.left_torso]
 armor = 23
 rear = 8
 slots = [
-    { at = "1-4", item = "HeatSink", brand = 3 },
-    { at = "5-6", item = "IS.SRM-6", brand = 3 },
-    { at = "7-12", item = "IS.LB10-XAC", brand = 3 },
+    { at = "1-4", item = "HeatSink" },
+    { at = "5-6", item = "IS.SRM-6" },
+    { at = "7-12", item = "IS.LB10-XAC" },
 ]
 
 [sections.right_torso]
 armor = 23
 rear = 8
 slots = [
-    { at = "1-4", item = "HeatSink", brand = 3 },
-    { at = "5-9", item = "C3Master", brand = 3 },
+    { at = "1-4", item = "HeatSink" },
+    { at = "5-9", item = "C3Master" },
     { at = 10, item = "Ammo_IS.SRM-6", rounds = 15 },
     { at = 11, item = "Ammo_IS.LB10-XAC", rounds = 10 },
     { at = 12, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
@@ -49,21 +47,21 @@ slots = [
 armor = 31
 rear = 12
 slots = [
-    { at = 11, item = "JumpJet", brand = 3 },
+    { at = 11, item = "JumpJet" },
 ]
 
 [sections.left_leg]
 armor = 24
 slots = [
-    { at = 5, item = "HeatSink", brand = 3 },
-    { at = 6, item = "JumpJet", brand = 3 },
+    { at = 5, item = "HeatSink" },
+    { at = 6, item = "JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 24
 slots = [
-    { at = 5, item = "HeatSink", brand = 3 },
-    { at = 6, item = "JumpJet", brand = 3 },
+    { at = 5, item = "HeatSink" },
+    { at = 6, item = "JumpJet" },
 ]
 
 [sections.head]

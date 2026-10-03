@@ -14,10 +14,10 @@ max_suits = 0
 armor = 127
 internals = 97
 slots = [
-    { at = 1, item = "IS.PPC", brand = 3 },
-    { at = 2, item = "IS.AC/5", brand = 3 },
-    { at = 3, item = "IS.LargeLaser", brand = 3 },
-    { at = "4-5", item = "IS.MediumLaser", brand = 3 },
+    { at = 1, item = "IS.PPC" },
+    { at = 2, item = "IS.AC/5" },
+    { at = 3, item = "IS.LargeLaser" },
+    { at = "4-5", item = "IS.MediumLaser" },
     { at = "6-8", item = "Ammo_IS.AC/5", rounds = 20 },
     { at = "9-12", item = "Ammo_IS.LRM-20", rounds = 6 },
 ]
@@ -26,10 +26,10 @@ slots = [
 armor = 127
 internals = 97
 slots = [
-    { at = 1, item = "IS.PPC", brand = 3 },
-    { at = 2, item = "IS.AC/5", brand = 3 },
-    { at = 3, item = "IS.LargeLaser", brand = 3 },
-    { at = "4-5", item = "IS.MediumLaser", brand = 3 },
+    { at = 1, item = "IS.PPC" },
+    { at = 2, item = "IS.AC/5" },
+    { at = 3, item = "IS.LargeLaser" },
+    { at = "4-5", item = "IS.MediumLaser" },
     { at = "6-8", item = "Ammo_IS.AC/5", rounds = 20 },
     { at = "9-12", item = "Ammo_IS.LRM-20", rounds = 6 },
 ]
@@ -38,11 +38,11 @@ slots = [
 armor = 127
 internals = 97
 slots = [
-    { at = 1, item = "IS.PPC", brand = 3 },
-    { at = 2, item = "DSMechDoor", brand = 0 },
-    { at = 3, item = "IS.LargeLaser", brand = 3 },
-    { at = 5, item = "IS.MediumLaser", brand = 3 },
-    { at = 8, item = "IS.MediumLaser", brand = 3 },
+    { at = 1, item = "IS.PPC" },
+    { at = 2, item = "DSMechDoor" },
+    { at = 3, item = "IS.LargeLaser" },
+    { at = 5, item = "IS.MediumLaser" },
+    { at = 8, item = "IS.MediumLaser" },
     { at = "9-10", item = "Ammo_IS.AC/20", rounds = 5 },
     { at = 12, item = "Ammo_IS.LRM-20", rounds = 6 },
 ]
@@ -51,11 +51,11 @@ slots = [
 armor = 127
 internals = 97
 slots = [
-    { at = 1, item = "IS.PPC", brand = 3 },
-    { at = 2, item = "DSMechDoor", brand = 0 },
-    { at = 3, item = "IS.LargeLaser", brand = 3 },
-    { at = 5, item = "IS.MediumLaser", brand = 3 },
-    { at = 8, item = "IS.MediumLaser", brand = 3 },
+    { at = 1, item = "IS.PPC" },
+    { at = 2, item = "DSMechDoor" },
+    { at = 3, item = "IS.LargeLaser" },
+    { at = 5, item = "IS.MediumLaser" },
+    { at = 8, item = "IS.MediumLaser" },
     { at = 11, item = "Ammo_IS.AC/5", rounds = 20 },
     { at = 12, item = "Ammo_IS.LRM-20", rounds = 6 },
 ]
@@ -64,10 +64,10 @@ slots = [
 armor = 80
 internals = 80
 slots = [
-    { at = "1-2", item = "IS.AC/5", brand = 3 },
-    { at = 3, item = "IS.LRM-20", brand = 3 },
-    { at = "4-5", item = "IS.LargeLaser", brand = 3 },
-    { at = "6-7", item = "IS.MediumLaser", brand = 3 },
+    { at = "1-2", item = "IS.AC/5" },
+    { at = 3, item = "IS.LRM-20" },
+    { at = "4-5", item = "IS.LargeLaser" },
+    { at = "6-7", item = "IS.MediumLaser" },
     { at = "8-10", item = "Ammo_IS.AC/20", rounds = 5 },
     { at = 11, item = "Ammo_IS.AC/5", rounds = 20 },
     { at = 12, item = "Ammo_IS.LRM-20", rounds = 6 },
@@ -77,10 +77,10 @@ slots = [
 armor = 127
 internals = 97
 slots = [
-    { at = 1, item = "DSMechDoor", brand = 0 },
-    { at = "4-5", item = "IS.PPC", brand = 3 },
-    { at = "6-7", item = "IS.AC/5", brand = 3 },
-    { at = "8-9", item = "IS.AC/20", brand = 3 },
-    { at = "10-11", item = "IS.MediumLaser", brand = 3 },
+    { at = 1, item = "DSMechDoor" },
+    { at = "4-5", item = "IS.PPC" },
+    { at = "6-7", item = "IS.AC/5" },
+    { at = "8-9", item = "IS.AC/20" },
+    { at = "10-11", item = "IS.MediumLaser" },
     { at = 12, item = "Ammo_IS.AC/20", rounds = 5 },
 ]

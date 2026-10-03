@@ -75,7 +75,7 @@ end
 local function identities(rows)
   local result = {}
   for _, row in ipairs(rows) do
-    result[#result + 1] = row.id .. ':' .. row.brand .. ':' .. row.very_long_name
+    result[#result + 1] = row.id .. ':' .. row.very_long_name
   end
   return result
 end
@@ -97,22 +97,19 @@ local function run()
     __next_commands = {'luaparity2', 'luaparity3', 'luaparity4', 'luaparity5'},
     identities = identities(all_parts),
     category_counts = category_counts,
-    exact_search = first_and_count(btech.parts.search('Agra.IS.PPC')),
+    exact_search = first_and_count(btech.parts.search('IS.PPC')),
     wildcard_search = first_and_count(btech.parts.search('*PPC*')),
     resolve = {
       bare = capture(function() return btech.parts.resolve('IS.PPC') end),
-      branded = capture(function() return btech.parts.resolve('Agra.IS.PPC') end),
-      packed_brand_five = capture(function() return btech.parts.resolve(5197) end),
-      record_brand_five = capture(function() return btech.parts.resolve({ id = 77, brand = 5 }) end),
-      record_brand_zero = capture(function() return btech.parts.resolve({ id = 77, brand = 0 }) end),
+      record = capture(function() return btech.parts.resolve({ id = 77 }) end),
       numeric_zero = capture(function() return btech.parts.resolve(77) end),
-      numeric_string = capture(function() return btech.parts.resolve('5197') end),
+      numeric_string = capture(function() return btech.parts.resolve('77') end),
       missing = capture(function() return btech.parts.resolve('does-not-exist') end),
       nil_value = capture(function() return btech.parts.resolve(nil) end),
       false_value = capture(function() return btech.parts.resolve(false) end),
       fractional = capture(function() return btech.parts.resolve(1.5) end),
-      bad_record = capture(function() return btech.parts.resolve({ id = 77 }) end),
-      extra_args = capture(function() return btech.parts.resolve('Agra.IS.PPC', 'ignored') end),
+      bad_record = capture(function() return btech.parts.resolve({ id = -1 }) end),
+      extra_args = capture(function() return btech.parts.resolve('IS.PPC', 'ignored') end),
     },
     list_inputs = {
       omitted = returns(true, #all_parts),
@@ -126,7 +123,7 @@ local function run()
       omitted = capture(function() return btech.parts.search() end),
       empty = capture(function() return btech.parts.search('') end),
       false_value = capture(function() return btech.parts.search(false) end),
-      exact = capture(function() return #btech.parts.search('Agra.IS.PPC') end),
+      exact = capture(function() return #btech.parts.search('IS.PPC') end),
       extra_args = capture(function() return #btech.parts.search('*PPC*', 'ignored') end),
     },
   })

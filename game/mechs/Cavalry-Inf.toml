@@ -15,20 +15,20 @@ engine = "ice"
 [sections.left_side]
 armor = 20
 slots = [
-    { at = "6-12", item = "FerroFibrous", brand = 3 },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.right_side]
 armor = 20
 slots = [
-    { at = "6-12", item = "FerroFibrous", brand = 3 },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.front_side]
 armor = 26
 slots = [
-    { at = "1-3", item = "IS.MediumLaser", brand = 3 },
-    { at = "4-6", item = "IS.MachineGun", brand = 3 },
+    { at = "1-3", item = "IS.MediumLaser" },
+    { at = "4-6", item = "IS.MachineGun" },
     { at = 7, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
 ]
 

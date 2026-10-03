@@ -76,7 +76,7 @@ async fn section_reports_preserve_all_supported_chassis() {
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let before = scripts.world().btech.clone();
         for (section, count) in &sections {
-            let report = battle_critical_report(&scripts.world(), id, section, true).unwrap();
+            let report = battle_critical_report(&scripts.world(), id, section).unwrap();
             assert_eq!(report.slots.len(), usize::from(*count));
             assert_eq!(
                 report
@@ -99,7 +99,7 @@ async fn section_reports_preserve_all_supported_chassis() {
             let mut expected = serde_json::to_value(&report).unwrap();
             without_nulls(&mut expected);
             assert_eq!(serde_json::to_value(lua).unwrap(), expected);
-            let rendered = battle_critical_status(&scripts.world(), id, section, true).unwrap();
+            let rendered = battle_critical_status(&scripts.world(), id, section).unwrap();
             let native = support::run_text(
                 &scripts,
                 &config,
@@ -122,7 +122,7 @@ async fn section_reports_preserve_all_supported_chassis() {
                     .is_err()
             );
             assert_eq!(
-                battle_critical_report(&scripts.world(), id, section, true).unwrap(),
+                battle_critical_report(&scripts.world(), id, section).unwrap(),
                 report
             );
         }
@@ -132,8 +132,8 @@ async fn section_reports_preserve_all_supported_chassis() {
         let loaded = persistence::load(&config.database()).await.unwrap();
         for (section, _) in sections {
             assert_eq!(
-                battle_critical_report(&saved, id, &section, true).unwrap(),
-                battle_critical_report(&loaded, id, &section, true).unwrap()
+                battle_critical_report(&saved, id, &section).unwrap(),
+                battle_critical_report(&loaded, id, &section).unwrap()
             );
         }
     }
@@ -195,12 +195,12 @@ async fn critical_report_native_access_and_anatomy() {
         BattleUnitTemplate::parse("GOL-1H", include_str!("../game/mechs/GOL-1H.toml")).unwrap(),
     )
     .await;
-    let front = battle_critical_report(&world, id, "fll", true).unwrap();
+    let front = battle_critical_report(&world, id, "fll").unwrap();
     assert_eq!(front.slots.len(), 6);
     assert_eq!(front.slots[0].equipment, "Hip");
     assert_eq!(front.slots[3].equipment, "Foot Actuator");
-    assert!(battle_critical_report(&world, id, "la", true).is_err());
-    assert!(battle_critical_report(&world, id, "turret", true).is_err());
+    assert!(battle_critical_report(&world, id, "la").is_err());
+    assert!(battle_critical_report(&world, id, "turret").is_err());
 }
 
 /// Slot damage, flood disabling and section loss remain distinct without hiding empty positions.
@@ -229,10 +229,8 @@ async fn critical_report_material_conditions() {
     world.btech = serde_json::from_value(state).unwrap();
     world.validate(&config).unwrap();
     assert_eq!(
-        battle_critical_report(&world, id, section, true)
-            .unwrap()
-            .slots[usize::from(location.slot)]
-        .condition,
+        battle_critical_report(&world, id, section).unwrap().slots[usize::from(location.slot)]
+            .condition,
         BattleEquipmentCondition::Damaged
     );
     let mut flooded = world.clone();
@@ -241,14 +239,12 @@ async fn critical_report_material_conditions() {
         serde_json::json!([location.section]);
     flooded.btech = serde_json::from_value(state).unwrap();
     assert_eq!(
-        battle_critical_report(&flooded, id, section, true)
-            .unwrap()
-            .slots[usize::from(location.slot)]
-        .condition,
+        battle_critical_report(&flooded, id, section).unwrap().slots[usize::from(location.slot)]
+            .condition,
         BattleEquipmentCondition::Disabled
     );
     destroy_battle_critical(&mut world, id, location).unwrap();
-    let report = battle_critical_report(&world, id, section, true).unwrap();
+    let report = battle_critical_report(&world, id, section).unwrap();
     assert_eq!(
         report.slots[usize::from(location.slot)].condition,
         BattleEquipmentCondition::Destroyed
@@ -265,7 +261,7 @@ async fn critical_report_material_conditions() {
         BattleDamagePhase::Internal,
     )
     .unwrap();
-    let report = battle_critical_report(&world, id, section, true).unwrap();
+    let report = battle_critical_report(&world, id, section).unwrap();
     assert_eq!(report.slots.len(), 12);
     assert!(report.slots.iter().all(|row| matches!(
         row.condition,
@@ -279,15 +275,15 @@ async fn critical_report_material_conditions() {
     )
     .await;
     let bin = world.btech.vehicles()[&id].loadout().unwrap().ammunition[0].clone();
-    let text = battle_critical_status(&world, id, bin.location.section.name(), true).unwrap();
+    let text = battle_critical_status(&world, id, bin.location.section.name()).unwrap();
     assert!(text.contains("[005/005]"));
     destroy_battle_vehicle_critical(&mut world, id, bin.location).unwrap();
-    let row = &battle_critical_report(&world, id, bin.location.section.name(), true)
+    let row = &battle_critical_report(&world, id, bin.location.section.name())
         .unwrap()
         .slots[usize::from(bin.location.slot)];
     assert_eq!(row.condition, BattleEquipmentCondition::Destroyed);
     assert_eq!(row.ammunition_remaining, Some(0));
-    let text = battle_critical_status(&world, id, bin.location.section.name(), true).unwrap();
+    let text = battle_critical_status(&world, id, bin.location.section.name()).unwrap();
     let line = text
         .lines()
         .find(|line| line.contains("Destroyed"))
@@ -297,7 +293,7 @@ async fn critical_report_material_conditions() {
 
 /// Live one-shot state, bin capacities, Artemis links and construction names survive formatting.
 #[tokio::test]
-async fn critical_equipment_labels_and_brand_configuration() {
+async fn critical_equipment_labels() {
     let mut template =
         BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap();
     support::templates::small_cockpit(&mut template, "SMCPIT");
@@ -309,7 +305,6 @@ async fn critical_equipment_labels_and_brand_configuration() {
         .get_mut(&10)
         .unwrap();
     missile.modes = vec!["OneShot".into(), "OneShot_Used".into(), "RearMount".into()];
-    missile.brand = Some(4);
     template
         .sections
         .get_mut(&BattleSection::Head)
@@ -321,7 +316,6 @@ async fn critical_equipment_labels_and_brand_configuration() {
                 equipment: "ArtemisIV".into(),
                 data: "11".into(),
                 modes: vec![],
-                brand: None,
             },
         );
     template
@@ -335,46 +329,30 @@ async fn critical_equipment_labels_and_brand_configuration() {
     let (_dir, config, mut world, id) = fixture(BattleUnitTemplate::Mech(template)).await;
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
     assert!(
-        battle_critical_status(&world, id, "rt", true)
+        battle_critical_status(&world, id, "rt")
             .unwrap()
             .contains("SRM-4 Inferno Ammo [012/012]")
     );
     assert!(
-        battle_critical_status(&world, id, "h", true)
+        battle_critical_status(&world, id, "h")
             .unwrap()
             .contains("Small Cockpit")
     );
     assert!(
-        battle_critical_status(&world, id, "h", true)
+        battle_critical_status(&world, id, "h")
             .unwrap()
             .contains("[Controls Slot 11]")
     );
-    for parts in [0, 1] {
-        let path = config.root.join("stompymux.toml");
-        let mut settings: toml::Value =
-            toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-        settings["battletech"]
-            .as_table_mut()
-            .unwrap()
-            .insert("parts".into(), parts.into());
-        std::fs::write(path, toml::to_string(&settings).unwrap()).unwrap();
-        let config = Config::load(&config.root).unwrap();
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let expected = if parts == 1 {
-            "OS Holly SRM-4 (Empty) (R)"
-        } else {
-            "OS SRM-4 (Empty) (R)"
-        };
-        let text = support::run_text(&scripts, &config, ObjectId(1), 1, "critstatus ct");
-        assert!(text.contains(expected), "{text}");
-        let lua: String = scripts
-            .eval_callback(&format!(
-                "return btech.unit.criticals({}, 'ct').slots[11].equipment",
-                id.0
-            ))
-            .unwrap();
-        assert_eq!(lua, if parts == 1 { "Holly SRM-4" } else { "SRM-4" });
-    }
+    let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
+    let text = support::run_text(&scripts, &config, ObjectId(1), 1, "critstatus ct");
+    assert!(text.contains("OS SRM-4 (Empty) (R)"), "{text}");
+    let lua: String = scripts
+        .eval_callback(&format!(
+            "return btech.unit.criticals({}, 'ct').slots[11].equipment",
+            id.0
+        ))
+        .unwrap();
+    assert_eq!(lua, "SRM-4");
     destroy_battle_critical(
         &mut world,
         id,
@@ -384,7 +362,7 @@ async fn critical_equipment_labels_and_brand_configuration() {
         },
     )
     .unwrap();
-    let text = battle_critical_status(&world, id, "h", true).unwrap();
+    let text = battle_critical_status(&world, id, "h").unwrap();
     assert!(text.contains("ArtemisIV (Destroyed)"));
     assert!(!text.contains("Controls Slot"));
 
@@ -393,17 +371,17 @@ async fn critical_equipment_labels_and_brand_configuration() {
     )
     .await;
     assert!(
-        battle_critical_status(&world, id, "ll", true)
+        battle_critical_status(&world, id, "ll")
             .unwrap()
             .contains("Double Heatsink")
     );
     assert!(
-        battle_critical_status(&world, id, "ct", true)
+        battle_critical_status(&world, id, "ct")
             .unwrap()
             .contains("Engine (XL)")
     );
     assert!(
-        battle_critical_status(&world, id, "la", true)
+        battle_critical_status(&world, id, "la")
             .unwrap()
             .contains("CL GaussRifle")
     );

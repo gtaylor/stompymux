@@ -10,7 +10,7 @@ heat_sinks = 17
 armor = 11
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "IS.LargeLaser", brand = 2 },
+    { at = "3-4", item = "IS.LargeLaser" },
     { at = 5, item = "IS.MediumLaser" },
 ]
 
@@ -18,7 +18,7 @@ slots = [
 armor = 11
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "IS.LargeLaser", brand = 2 },
+    { at = "3-4", item = "IS.LargeLaser" },
     { at = 5, item = "IS.MediumLaser" },
 ]
 

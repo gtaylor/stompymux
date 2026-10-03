@@ -21,7 +21,6 @@ async fn fixture(weapon: BattleWeapon) -> (tempfile::TempDir, Config, World, Obj
                 equipment: weapon.name().into(),
                 data: "-".into(),
                 modes: vec![],
-                brand: None,
             },
         );
     }
@@ -244,7 +243,6 @@ async fn critical_launch_failures_are_atomic_and_distinguish_permanent_jams() {
                         equipment: format!("Ammo_{}", weapon.name()),
                         data: weapon.profile().ammunition_per_ton.to_string(),
                         modes: vec![],
-                        brand: None,
                     },
                 );
         }

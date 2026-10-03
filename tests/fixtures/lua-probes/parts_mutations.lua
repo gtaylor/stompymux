@@ -70,12 +70,7 @@ end
 
 local function run()
   local store = mux.world.object(1)
-  local part = assert(btech.parts.resolve('Agra.IS.PPC'))
-  local sibling
-  for _, candidate in ipairs(btech.parts.list('weapon')) do
-    if candidate.id == part.id and candidate.brand ~= part.brand then sibling = candidate; break end
-  end
-  assert(sibling)
+  local part = assert(btech.parts.resolve('IS.PPC'))
   local result = {
     initial = btech.parts.store_quantity(store, part),
     add = capture(btech.parts.adjust_stores, store, part, 3),
@@ -103,8 +98,8 @@ local function run()
   }
   result.set_cost = capture(btech.parts.set_cost, part, 123456)
   result.same_cost = btech.parts.resolve(part).cost
-  result.sibling_cost = btech.parts.resolve(sibling).cost
-  result.zero_cost = capture(btech.parts.set_cost, sibling, 0)
+  result.resolved_cost = btech.parts.resolve(part).cost
+  result.zero_cost = capture(btech.parts.set_cost, part, 0)
   result.final_cost = btech.parts.resolve(part).cost
   result.cost_inputs = {
     omitted = capture(btech.parts.set_cost, part),

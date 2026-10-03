@@ -11,19 +11,19 @@ engine = "ice"
 [sections.left_side]
 armor = 15
 slots = [
-    { at = "6-12", item = "FerroFibrous", brand = 3 },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.right_side]
 armor = 15
 slots = [
-    { at = "6-12", item = "FerroFibrous", brand = 3 },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.front_side]
 armor = 24
 slots = [
-    { at = 1, item = "IS.MachineGun", brand = 3 },
+    { at = 1, item = "IS.MachineGun" },
     { at = 2, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
 ]
 
@@ -33,6 +33,6 @@ armor = 20
 [sections.turret]
 armor = 21
 slots = [
-    { at = 1, item = "IS.UltraAC/5", brand = 3 },
+    { at = 1, item = "IS.UltraAC/5" },
     { at = 2, item = "Ammo_IS.UltraAC/5", rounds = 20 },
 ]

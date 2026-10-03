@@ -4,7 +4,6 @@ movement = "biped"
 tons = 35
 walk_mp = 8
 heat_sinks = 32
-computer = 4
 radio = 5
 
 [construction]
@@ -12,50 +11,49 @@ tech_base = "clan"
 engine = "xl"
 structure = "endo_steel"
 armor = "ferro_fibrous"
-brand = 5
 
 [sections.left_arm]
 armor = 11
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "CL.ERPPC", brand = 5 },
-    { at = "6-9", item = "HeatSink", brand = 5 },
-    { at = "10-12", item = "EndoSteel", brand = 5 },
+    { at = "3-4", item = "CL.ERPPC" },
+    { at = "6-9", item = "HeatSink" },
+    { at = "10-12", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 11
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "CL.ERPPC", brand = 5 },
-    { at = "6-9", item = "HeatSink", brand = 5 },
-    { at = "10-12", item = "EndoSteel", brand = 5 },
+    { at = "3-4", item = "CL.ERPPC" },
+    { at = "6-9", item = "HeatSink" },
+    { at = "10-12", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
 armor = 12
 rear = 4
 slots = [
-    { at = "3-4", item = "HeatSink", brand = 5 },
-    { at = "8-9", item = "HeatSink", brand = 5 },
-    { at = "10-12", item = "FerroFibrous", brand = 5 },
+    { at = "3-4", item = "HeatSink" },
+    { at = "8-9", item = "HeatSink" },
+    { at = "10-12", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 12
 rear = 4
 slots = [
-    { at = "3-6", item = "HeatSink", brand = 5 },
-    { at = "8-9", item = "HeatSink", brand = 5 },
-    { at = "10-12", item = "FerroFibrous", brand = 5 },
+    { at = "3-6", item = "HeatSink" },
+    { at = "8-9", item = "HeatSink" },
+    { at = "10-12", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 14
 rear = 6
 slots = [
-    { at = 11, item = "EndoSteel", brand = 5 },
-    { at = 12, item = "FerroFibrous", brand = 5 },
+    { at = 11, item = "EndoSteel" },
+    { at = 12, item = "FerroFibrous" },
 ]
 
 [sections.left_leg]
@@ -67,5 +65,5 @@ armor = 12
 [sections.head]
 armor = 8
 slots = [
-    { at = 4, item = "CL.ERMediumLaser", brand = 5 },
+    { at = 4, item = "CL.ERMediumLaser" },
 ]

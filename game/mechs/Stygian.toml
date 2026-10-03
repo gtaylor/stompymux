@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "hover"
 tons = 40
 walk_mp = 14
-computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0
@@ -18,7 +17,7 @@ armor = 18
 [sections.front_side]
 armor = 18
 slots = [
-    { at = "1-2", item = "IS.ERMediumLaser", brand = 0 },
+    { at = "1-2", item = "IS.ERMediumLaser" },
 ]
 
 [sections.aft_side]
@@ -30,5 +29,5 @@ slots = [
 [sections.turret]
 armor = 16
 slots = [
-    { at = 1, item = "IS.LRM-15", brand = 0 },
+    { at = 1, item = "IS.LRM-15" },
 ]

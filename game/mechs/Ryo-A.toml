@@ -4,7 +4,6 @@ movement = "biped"
 tons = 55
 walk_mp = 9
 heat_sinks = 20
-computer = 4
 
 [construction]
 tech_base = "clan"

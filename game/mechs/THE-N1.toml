@@ -4,7 +4,6 @@ movement = "biped"
 tons = 20
 walk_mp = 9
 heat_sinks = 20
-computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0
@@ -13,36 +12,35 @@ max_suits = 0
 engine = "xl"
 structure = "endo_steel"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 6
 slots = [
-    { at = "5-10", item = "HeatSink", brand = 3 },
+    { at = "5-10", item = "HeatSink" },
 ]
 
 [sections.right_arm]
 armor = 6
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-5", item = "IS.ERPPC", brand = 3 },
-    { at = "6-11", item = "HeatSink", brand = 3 },
+    { at = "3-5", item = "IS.ERPPC" },
+    { at = "6-11", item = "HeatSink" },
 ]
 
 [sections.left_torso]
 armor = 6
 rear = 4
 slots = [
-    { at = "4-6", item = "HeatSink", brand = 3 },
-    { at = "7-12", item = "EndoSteel", brand = 3 },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-12", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 6
 rear = 4
 slots = [
-    { at = "4-6", item = "HeatSink", brand = 3 },
-    { at = "7-12", item = "EndoSteel", brand = 3 },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-12", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
@@ -52,17 +50,17 @@ rear = 4
 [sections.left_leg]
 armor = 8
 slots = [
-    { at = 5, item = "EndoSteel", brand = 3 },
+    { at = 5, item = "EndoSteel" },
 ]
 
 [sections.right_leg]
 armor = 8
 slots = [
-    { at = 5, item = "EndoSteel", brand = 3 },
+    { at = 5, item = "EndoSteel" },
 ]
 
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "IS.SmallLaser", brand = 3 },
+    { at = 4, item = "IS.SmallLaser" },
 ]

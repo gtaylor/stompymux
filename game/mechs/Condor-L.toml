@@ -4,7 +4,6 @@ movement = "hover"
 tons = 50
 walk_mp = 12
 heat_sinks = 12
-computer = 3
 
 [construction]
 engine = "ice"
@@ -24,5 +23,5 @@ armor = 22
 [sections.turret]
 armor = 30
 slots = [
-    { at = "1-4", item = "IS.MediumLaser", brand = 3 },
+    { at = "1-4", item = "IS.MediumLaser" },
 ]

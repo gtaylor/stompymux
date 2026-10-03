@@ -17,7 +17,7 @@ fn stream(effect: BattleComputerFailure) -> BattleDice {
                     &mut dice,
                     BattleComputerFailureInput {
                         parts_enabled: true,
-                        quality: 1,
+                        clan: false,
                         has_target: true,
                         tactical_range: 20,
                         long_range: 40,
@@ -492,7 +492,7 @@ async fn forced_shutdown_preserves_moving_and_airborne_consequences() {
                 &mut dice,
                 BattleComputerFailureInput {
                     parts_enabled: true,
-                    quality: 1,
+                    clan: false,
                     has_target: true,
                     tactical_range: 16,
                     long_range: 32,

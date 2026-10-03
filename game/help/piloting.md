@@ -1311,7 +1311,7 @@ empty slots. Use a section abbreviation such as `la`, `ct` or `h`; quads use
 disabled and damaged equipment, ammunition quantities and capacities, spent
 one-shot launchers, rear mounts and Artemis links. Split slots identify their
 linked weapon. You must be the conscious assigned pilot, but the unit may be
-shut down or off-map. Manufacturer labels follow the server's parts setting.
+shut down or off-map.
 
 `melee [left|right|both] [#unit]` swings the physical weapon installed in each
 selected arm. Arms default to both, and each arm uses its own weapon, so a Mech

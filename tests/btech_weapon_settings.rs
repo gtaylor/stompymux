@@ -39,13 +39,13 @@ async fn runtime_weapon_controls_share_authority_and_callback_rollback() {
     let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     for (command, callback, fragment) in [
         (
-            "@btech setvrt Magna.IS.SmallLaser 127",
+            "@btech setvrt IS.SmallLaser 127",
             "btech.weapon.set_recycle(1,'IS.SmallLaser',127)",
             "VRT for IS.SmallLaser set to 127.",
         ),
         (
-            "@btech setwbv Lords.IS.SmallLaser=2147483647",
-            "btech.weapon.set_battle_value(1,'agra.is.smalllaser',2147483647)",
+            "@btech setwbv IS.SmallLaser=2147483647",
+            "btech.weapon.set_battle_value(1,'is.smalllaser',2147483647)",
             "BV for IS.SmallLaser set to 2147483647.",
         ),
     ] {
@@ -71,8 +71,6 @@ async fn runtime_weapon_controls_share_authority_and_callback_rollback() {
         "btech.weapon.set_battle_value(1,'IS.SmallLaser',-1)",
         "btech.weapon.set_battle_value(1,'IS.SmallLaser',2147483648)",
         "btech.weapon.set_recycle(1,'Gyro',1)",
-        "btech.weapon.set_recycle(1,'Holly.IS.SmallLaser',1)",
-        "btech.weapon.set_recycle(1,'Magna.CL.ERMediumLaser',1)",
         "btech.weapon.set_recycle(1,'*.IS.SmallLaser',1)",
     ] {
         assert!(lua.eval_callback::<()>(callback).is_err(), "{callback}");
@@ -371,37 +369,6 @@ async fn offensive_value_and_experience_follow_runtime_overrides() {
     }
 }
 
-/// Manufacturer families are exact and cannot disguise unknown equipment or Clan weapons.
-#[test]
-fn operator_weapon_names_use_the_equipment_manufacturer_family() {
-    for (name, canonical) in [
-        ("mAgNa.IS.MediumLaser", "IS.MediumLaser"),
-        ("Lords.IS.SmallLaser", "IS.SmallLaser"),
-        ("SperryBrowning.IS.AC/5", "IS.AC/5"),
-        ("Holly.IS.LRM-20", "IS.LRM-20"),
-        ("Ventra.IS.Flamer", "IS.Flamer"),
-        ("CL.LRM-20", "CL.LRM-20"),
-    ] {
-        assert_eq!(
-            BattleWeapon::parse_operator_name(name).unwrap(),
-            BattleWeapon::parse(canonical).unwrap(),
-        );
-    }
-    for name in [
-        "Magna.IS.LRM-20",
-        "Holly.IS.MediumLaser",
-        "Magna.CL.ERMediumLaser",
-        "Magna.IS.Unknown",
-        "Magna.MediumLaser",
-        "*.IS.MediumLaser",
-        "IS.Medium*",
-        "Magna.IS.MediumLaser.extra",
-    ] {
-        assert!(BattleWeapon::parse_operator_name(name).is_err(), "{name}");
-    }
-    assert!(BattleWeapon::parse("Magna.IS.MediumLaser").is_err());
-}
-
 /// Standalone debug commands share the established controls, while retaining two-argument syntax.
 #[tokio::test]
 async fn standalone_weapon_commands_match_existing_native_and_lua_controls() {
@@ -415,7 +382,7 @@ async fn standalone_weapon_commands_match_existing_native_and_lua_controls() {
         ("setvrt", 1, "set_recycle"),
         ("setwbv", 0, "set_battle_value"),
     ] {
-        let text = format!("{command} Magna.IS.SmallLaser {value}");
+        let text = format!("{command} IS.SmallLaser {value}");
         let output = support::run_text(&direct, &config, ObjectId(1), 1, &text);
         assert!(
             output.contains(&format!("IS.SmallLaser set to {value}.")),

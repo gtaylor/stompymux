@@ -4,7 +4,6 @@ movement = "track"
 tons = 50
 walk_mp = 6
 heat_sinks = 10
-computer = 3
 
 [sections.left_side]
 armor = 18

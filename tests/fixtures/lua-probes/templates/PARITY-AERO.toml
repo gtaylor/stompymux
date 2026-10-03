@@ -8,7 +8,7 @@ walk_mp = 9
 armor = 31
 internals = 7
 slots = [
-    { at = 1, item = "Agra.IS.PPC", brand = 5 },
+    { at = 1, item = "IS.PPC" },
 ]
 
 [sections.left_wing]

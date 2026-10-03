@@ -4,13 +4,11 @@ movement = "biped"
 tons = 35
 walk_mp = 12
 jump_mp = 8
-computer = 5
 radio = 5
 cargo_space = 0
 max_suits = 0
 
 [construction]
-brand = 3
 
 [sections.left_arm]
 armor = 6
@@ -22,21 +20,21 @@ armor = 6
 armor = 9
 rear = 2
 slots = [
-    { at = "1-4", item = "JumpJet", brand = 3 },
+    { at = "1-4", item = "JumpJet" },
 ]
 
 [sections.right_torso]
 armor = 9
 rear = 2
 slots = [
-    { at = "1-4", item = "JumpJet", brand = 3 },
+    { at = "1-4", item = "JumpJet" },
 ]
 
 [sections.center_torso]
 armor = 12
 rear = 4
 slots = [
-    { at = 11, item = "TAG", brand = 3 },
+    { at = 11, item = "TAG" },
 ]
 
 [sections.left_leg]

@@ -4,7 +4,6 @@ movement = "track"
 tons = 75
 walk_mp = 3
 heat_sinks = 30
-computer = 3
 
 [construction]
 armor = "ferro_fibrous"

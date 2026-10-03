@@ -4,7 +4,6 @@ movement = "fly"
 tons = 5000
 walk_mp = 8
 heat_sinks = 90
-computer = 3
 tac_range = 30
 lrs_range = 60
 scan_range = 30
@@ -31,13 +30,13 @@ internals = 15
 armor = 200
 internals = 15
 slots = [
-    { at = "1-2", item = "IS.MediumLaser", brand = 0 },
+    { at = "1-2", item = "IS.MediumLaser" },
 ]
 
 [sections.nose]
 armor = 200
 internals = 15
 slots = [
-    { at = 1, item = "DSMechDoor", brand = 3 },
-    { at = 2, item = "IS.LargeLaser", brand = 0 },
+    { at = 1, item = "DSMechDoor" },
+    { at = 2, item = "IS.LargeLaser" },
 ]

@@ -16,11 +16,11 @@ armor = 12
 [sections.front_side]
 armor = 16
 slots = [
-    { at = "1-2", item = "IS.StreakSRM-2", brand = 3 },
+    { at = "1-2", item = "IS.StreakSRM-2" },
     { at = 3, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
-    { at = 4, item = "IS.MachineGun", brand = 3 },
+    { at = 4, item = "IS.MachineGun" },
     { at = 5, item = "Ammo_IS.MachineGun", rounds = 100 },
-    { at = 6, item = "BeagleProbe", brand = 0 },
+    { at = 6, item = "BeagleProbe" },
 ]
 
 [sections.aft_side]
@@ -29,5 +29,5 @@ armor = 10
 [sections.turret]
 armor = 14
 slots = [
-    { at = 1, item = "IS.ERLargeLaser", brand = 3 },
+    { at = 1, item = "IS.ERLargeLaser" },
 ]

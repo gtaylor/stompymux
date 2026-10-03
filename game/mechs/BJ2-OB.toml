@@ -5,30 +5,28 @@ tons = 50
 walk_mp = 6
 jump_mp = 4
 heat_sinks = 20
-computer = 4
 radio = 4
 
 [construction]
 engine = "xl"
 structure = "endo_steel"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 14
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-5", item = "HeatSink", brand = 3 },
-    { at = "6-12", item = "IS.GaussRifle", brand = 3 },
+    { at = "3-5", item = "HeatSink" },
+    { at = "6-12", item = "IS.GaussRifle" },
 ]
 
 [sections.right_arm]
 armor = 14
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-5", item = "HeatSink", brand = 3 },
-    { at = "6-7", item = "IS.LRM-10", brand = 3 },
-    { at = 8, item = "ArtemisIV", brand = 3 },
+    { at = "3-5", item = "HeatSink" },
+    { at = "6-7", item = "IS.LRM-10" },
+    { at = 8, item = "ArtemisIV" },
     { at = "9-10", item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
 ]
 
@@ -37,39 +35,39 @@ armor = 18
 rear = 6
 slots = [
     { at = "4-5", item = "Ammo_IS.GaussRifle", rounds = 8 },
-    { at = "6-11", item = "EndoSteel", brand = 3 },
+    { at = "6-11", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 18
 rear = 6
 slots = [
-    { at = 4, item = "IS.SmallLaser", brand = 3 },
-    { at = "5-10", item = "EndoSteel", brand = 3 },
+    { at = 4, item = "IS.SmallLaser" },
+    { at = "5-10", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 22
 rear = 9
 slots = [
-    { at = 11, item = "C3Slave", brand = 3 },
-    { at = 12, item = "EndoSteel", brand = 3 },
+    { at = 11, item = "C3Slave" },
+    { at = 12, item = "EndoSteel" },
 ]
 
 [sections.left_leg]
 armor = 18
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 18
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "EndoSteel", brand = 3 },
+    { at = 4, item = "EndoSteel" },
 ]

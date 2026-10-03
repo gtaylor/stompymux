@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "wheel"
 tons = 35
 walk_mp = 8
-computer = 3
 specials = ["SearchLight"]
 
 [construction]
@@ -24,8 +23,8 @@ armor = 18
 [sections.turret]
 armor = 22
 slots = [
-    { at = 1, item = "IS.SRM-6", brand = 3 },
-    { at = 2, item = "IS.LRM-10", brand = 3 },
+    { at = 1, item = "IS.SRM-6" },
+    { at = 2, item = "IS.LRM-10" },
     { at = "3-4", item = "Ammo_IS.SRM-6", rounds = 15 },
     { at = 5, item = "Ammo_IS.LRM-10", rounds = 12 },
 ]

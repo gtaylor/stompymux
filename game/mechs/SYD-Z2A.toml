@@ -4,7 +4,6 @@ movement = "fly"
 tons = 20
 walk_mp = 20
 heat_sinks = 20
-computer = 3
 fuel = 450
 
 [construction]

@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "track"
 tons = 65
 walk_mp = 6
-computer = 3
 
 [construction]
 armor = "ferro_fibrous"

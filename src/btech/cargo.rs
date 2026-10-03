@@ -19,7 +19,6 @@ pub enum BattleCargoOperation {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BattleCargoRow {
     pub part_id: i32,
-    pub brand_id: u8,
     pub quantity: i32,
     pub name: String,
 }
@@ -136,7 +135,6 @@ pub fn cargo_manifest(
         .filter(|entry| selected(entry, pattern))
         .map(|entry| BattleCargoRow {
             part_id: entry.part_id,
-            brand_id: entry.brand_id,
             quantity: entry.quantity,
             name: name(entry),
         })
@@ -189,23 +187,10 @@ pub fn transfer_cargo(
             let next = existing
                 .checked_add(count)
                 .context("Destination inventory quantity overflow")?;
-            super::inventory::edit_quantity(
-                world,
-                source,
-                entry.part_id,
-                entry.brand_id,
-                entry.quantity - count,
-            )?;
-            super::inventory::edit_quantity(
-                world,
-                destination,
-                entry.part_id,
-                entry.brand_id,
-                next,
-            )?;
+            super::inventory::edit_quantity(world, source, entry.part_id, entry.quantity - count)?;
+            super::inventory::edit_quantity(world, destination, entry.part_id, next)?;
             moved.push(BattleCargoRow {
                 part_id: entry.part_id,
-                brand_id: entry.brand_id,
                 quantity: count,
                 name: name(&entry),
             });

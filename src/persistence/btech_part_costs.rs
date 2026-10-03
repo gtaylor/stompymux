@@ -15,7 +15,7 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BTreeMap<i32, u64>>
         let name: String = row.try_get("item_name")?;
         let Some(id) = catalogue
             .iter()
-            .find(|form| form.brand_id == 0 && form.very_long_name == name)
+            .find(|form| form.very_long_name == name)
             .map(|form| form.part_id)
         else {
             continue;

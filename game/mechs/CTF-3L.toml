@@ -4,45 +4,43 @@ movement = "biped"
 tons = 70
 walk_mp = 6
 heat_sinks = 32
-computer = 4
 radio = 4
 
 [construction]
 engine = "xl"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 22
 slots = [
-    { at = 5, item = "IS.MediumPulseLaser", brand = 3 },
-    { at = "6-11", item = "HeatSink", brand = 3 },
+    { at = 5, item = "IS.MediumPulseLaser" },
+    { at = "6-11", item = "HeatSink" },
 ]
 
 [sections.right_arm]
 armor = 22
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-8", item = "HeatSink", brand = 3 },
-    { at = "9-11", item = "IS.ERPPC", brand = 3 },
-    { at = 12, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = "3-8", item = "HeatSink" },
+    { at = "9-11", item = "IS.ERPPC" },
+    { at = 12, item = "IS.MediumPulseLaser" },
 ]
 
 [sections.left_torso]
 armor = 16
 rear = 9
 slots = [
-    { at = "4-6", item = "HeatSink", brand = 3 },
-    { at = "7-10", item = "Masc", brand = 3 },
-    { at = 11, item = "IS.MediumPulseLaser", modes = ["RearMount"], brand = 3 },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-10", item = "Masc" },
+    { at = 11, item = "IS.MediumPulseLaser", modes = ["RearMount"] },
 ]
 
 [sections.right_torso]
 armor = 16
 rear = 9
 slots = [
-    { at = "4-9", item = "IS.LB10-XAC", brand = 3 },
-    { at = 10, item = "IS.MediumPulseLaser", modes = ["RearMount"], brand = 3 },
+    { at = "4-9", item = "IS.LB10-XAC" },
+    { at = 10, item = "IS.MediumPulseLaser", modes = ["RearMount"] },
     { at = 11, item = "Ammo_IS.LB10-XAC", rounds = 10 },
     { at = 12, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
 ]

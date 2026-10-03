@@ -4,7 +4,6 @@ movement = "quad"
 tons = 95
 walk_mp = 5
 heat_sinks = 24
-computer = 5
 radio = 5
 cargo_space = 0
 max_suits = 0

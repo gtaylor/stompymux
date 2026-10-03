@@ -4,7 +4,6 @@ movement = "biped"
 tons = 55
 walk_mp = 11
 heat_sinks = 20
-computer = 4
 radio = 5
 
 [construction]
@@ -12,65 +11,62 @@ tech_base = "clan"
 engine = "xl"
 structure = "endo_steel"
 armor = "ferro_fibrous"
-brand = 5
 
 [sections.left_arm]
 armor = 13
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "CL.ERMediumLaser", brand = 5 },
-    { at = "11-12", item = "FerroFibrous", brand = 5 },
+    { at = "3-4", item = "CL.ERMediumLaser" },
+    { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 13
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 3, item = "CL.ERLargeLaser", brand = 5 },
-    { at = "11-12", item = "EndoSteel", brand = 5 },
+    { at = 3, item = "CL.ERLargeLaser" },
+    { at = "11-12", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
 armor = 16
 rear = 5
-brand = 3
 slots = [
-    { at = 3, item = "CL.LRM-10", brand = 5 },
+    { at = 3, item = "CL.LRM-10" },
     { at = 4, item = "Ammo_CL.LRM-10", rounds = 12 },
-    { at = "10-12", item = "FerroFibrous", brand = 5 },
+    { at = "10-12", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 16
 rear = 5
-brand = 3
 slots = [
-    { at = 3, item = "CL.SRM-6", brand = 5 },
+    { at = 3, item = "CL.SRM-6" },
     { at = 4, item = "Ammo_CL.SRM-6", rounds = 15 },
-    { at = "10-12", item = "EndoSteel", brand = 5 },
+    { at = "10-12", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 26
 rear = 7
 slots = [
-    { at = "11-12", item = "Masc", brand = 5 },
+    { at = "11-12", item = "Masc" },
 ]
 
 [sections.left_leg]
 armor = 22
 slots = [
-    { at = "5-6", item = "FerroFibrous", brand = 5 },
+    { at = "5-6", item = "FerroFibrous" },
 ]
 
 [sections.right_leg]
 armor = 22
 slots = [
-    { at = "5-6", item = "EndoSteel", brand = 5 },
+    { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "Ecm", brand = 0 },
+    { at = 4, item = "Ecm" },
 ]

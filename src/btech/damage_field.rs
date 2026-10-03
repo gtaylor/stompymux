@@ -282,7 +282,6 @@ mod tests {
                             equipment: equipment.into(),
                             data: "-".into(),
                             modes: vec![],
-                            brand: None,
                         },
                     )
                 })

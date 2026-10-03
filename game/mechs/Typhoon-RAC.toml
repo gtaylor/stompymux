@@ -13,33 +13,33 @@ specials = ["SearchLight"]
 [sections.left_side]
 armor = 40
 slots = [
-    { at = "6-12", item = "FerroFibrous", brand = 3 },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.right_side]
 armor = 40
 slots = [
-    { at = "6-12", item = "FerroFibrous", brand = 3 },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.front_side]
 armor = 43
 slots = [
-    { at = "1-2", item = "IS.StreakSRM-2", brand = 3 },
+    { at = "1-2", item = "IS.StreakSRM-2" },
     { at = 3, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
 ]
 
 [sections.aft_side]
 armor = 32
 slots = [
-    { at = 1, item = "BeagleProbe", brand = 3 },
+    { at = 1, item = "BeagleProbe" },
 ]
 
 [sections.turret]
 armor = 42
 slots = [
-    { at = "1-2", item = "IS.RotaryAC/5", brand = 3 },
-    { at = "3-4", item = "IS.ERMediumLaser", brand = 3 },
-    { at = "5-6", item = "IS.StreakSRM-2", brand = 3 },
+    { at = "1-2", item = "IS.RotaryAC/5" },
+    { at = "3-4", item = "IS.ERMediumLaser" },
+    { at = "5-6", item = "IS.StreakSRM-2" },
     { at = "7-10", item = "Ammo_IS.RotaryAC/5", rounds = 20 },
 ]

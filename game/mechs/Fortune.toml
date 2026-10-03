@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "wheel"
 tons = 80
 walk_mp = 5
-computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0
@@ -26,5 +25,5 @@ slots = [
 [sections.turret]
 armor = 49
 slots = [
-    { at = "1-2", item = "IS.LB20-XAC", brand = 3 },
+    { at = "1-2", item = "IS.LB20-XAC" },
 ]

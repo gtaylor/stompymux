@@ -49,10 +49,7 @@ async fn conditions_preserve_material_and_recover_only_from_existing_clocks() {
                 "Front"
             };
             assert_eq!(
-                battle_critical_report(&world, id, section, false)
-                    .unwrap()
-                    .slots[0]
-                    .condition,
+                battle_critical_report(&world, id, section).unwrap().slots[0].condition,
                 expected
             );
 

@@ -8,7 +8,7 @@ walk_mp = 1
 armor = 1
 internals = 1
 slots = [
-    { at = 1, item = "Agra.IS.PPC", brand = 5 },
+    { at = 1, item = "IS.PPC" },
 ]
 
 [sections.right_arm]

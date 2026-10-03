@@ -11,14 +11,14 @@ armor = 16
 armor = 16
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-12", item = "IS.AC/20", brand = 2 },
+    { at = "3-12", item = "IS.AC/20" },
 ]
 
 [sections.left_torso]
 armor = 13
 rear = 6
 slots = [
-    { at = "1-2", item = "IS.LRM-10", brand = 4 },
+    { at = "1-2", item = "IS.LRM-10" },
     { at = "3-4", item = "Ammo_IS.LRM-10", rounds = 12 },
 ]
 

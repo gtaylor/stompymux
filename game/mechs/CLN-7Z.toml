@@ -5,38 +5,36 @@ tons = 50
 walk_mp = 9
 jump_mp = 6
 heat_sinks = 22
-computer = 4
 radio = 4
 
 [construction]
 engine = "xl"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 16
 slots = [
-    { at = "5-6", item = "IS.ERLargeLaser", brand = 3 },
+    { at = "5-6", item = "IS.ERLargeLaser" },
 ]
 
 [sections.right_arm]
 armor = 16
 slots = [
-    { at = "5-8", item = "IS.LargeLaser", brand = 3 },
+    { at = "5-8", item = "IS.LargeLaser" },
 ]
 
 [sections.left_torso]
 armor = 16
 rear = 8
 slots = [
-    { at = 4, item = "JumpJet", brand = 3 },
+    { at = 4, item = "JumpJet" },
 ]
 
 [sections.right_torso]
 armor = 16
 rear = 8
 slots = [
-    { at = 4, item = "JumpJet", brand = 3 },
+    { at = 4, item = "JumpJet" },
 ]
 
 [sections.center_torso]
@@ -46,13 +44,13 @@ rear = 9
 [sections.left_leg]
 armor = 24
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 24
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.head]

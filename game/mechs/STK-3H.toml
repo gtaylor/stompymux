@@ -4,7 +4,6 @@ movement = "biped"
 tons = 85
 walk_mp = 5
 heat_sinks = 20
-computer = 4
 
 [sections.left_arm]
 armor = 23
@@ -12,7 +11,7 @@ omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-7", item = "IS.LRM-20" },
     { at = 8, item = "Ammo_IS.LRM-20", rounds = 6 },
-    { at = "9-10", item = "IS.MediumLaser", brand = 4 },
+    { at = "9-10", item = "IS.MediumLaser" },
     { at = 11, item = "HeatSink" },
 ]
 
@@ -22,7 +21,7 @@ omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-7", item = "IS.LRM-20" },
     { at = 8, item = "Ammo_IS.LRM-20", rounds = 6 },
-    { at = "9-10", item = "IS.MediumLaser", brand = 4 },
+    { at = "9-10", item = "IS.MediumLaser" },
     { at = 11, item = "HeatSink" },
 ]
 

@@ -5,68 +5,66 @@ tons = 45
 walk_mp = 6
 jump_mp = 4
 heat_sinks = 20
-computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 14
 slots = [
-    { at = "5-7", item = "Sword", brand = 3 },
+    { at = "5-7", item = "Sword" },
 ]
 
 [sections.right_arm]
 armor = 14
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "IS.ERPPC", brand = 3 },
-    { at = "7-9", item = "HeatSink", brand = 3 },
+    { at = "4-6", item = "IS.ERPPC" },
+    { at = "7-9", item = "HeatSink" },
 ]
 
 [sections.left_torso]
 armor = 16
 rear = 6
 slots = [
-    { at = "1-3", item = "HeatSink", brand = 3 },
-    { at = 4, item = "IS.ERMediumLaser", brand = 3 },
-    { at = 5, item = "IS.MediumPulseLaser", brand = 3 },
-    { at = 6, item = "IS.SmallLaser", brand = 3 },
-    { at = "7-9", item = "TripleStrengthMyomer", brand = 3 },
+    { at = "1-3", item = "HeatSink" },
+    { at = 4, item = "IS.ERMediumLaser" },
+    { at = 5, item = "IS.MediumPulseLaser" },
+    { at = 6, item = "IS.SmallLaser" },
+    { at = "7-9", item = "TripleStrengthMyomer" },
 ]
 
 [sections.right_torso]
 armor = 16
 rear = 6
 slots = [
-    { at = "1-3", item = "HeatSink", brand = 3 },
-    { at = 4, item = "IS.ERMediumLaser", brand = 3 },
-    { at = 5, item = "IS.MediumPulseLaser", brand = 3 },
-    { at = 6, item = "IS.SmallPulseLaser", brand = 3 },
-    { at = "7-9", item = "TripleStrengthMyomer", brand = 3 },
+    { at = "1-3", item = "HeatSink" },
+    { at = 4, item = "IS.ERMediumLaser" },
+    { at = 5, item = "IS.MediumPulseLaser" },
+    { at = 6, item = "IS.SmallPulseLaser" },
+    { at = "7-9", item = "TripleStrengthMyomer" },
 ]
 
 [sections.center_torso]
 armor = 20
 rear = 7
 slots = [
-    { at = "11-12", item = "JumpJet", brand = 3 },
+    { at = "11-12", item = "JumpJet" },
 ]
 
 [sections.left_leg]
 armor = 22
 slots = [
-    { at = 5, item = "JumpJet", brand = 3 },
+    { at = 5, item = "JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 22
 slots = [
-    { at = 5, item = "JumpJet", brand = 3 },
+    { at = 5, item = "JumpJet" },
 ]
 
 [sections.head]

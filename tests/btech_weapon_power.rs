@@ -77,7 +77,7 @@ async fn gauss_power_down_adapters_state_and_restart() {
                 BattleEquipmentCondition::Disabled
             );
             let section = if group == "vehicles" { "front" } else { "lt" };
-            let report = battle_critical_report(&native.world(), id, section, false).unwrap();
+            let report = battle_critical_report(&native.world(), id, section).unwrap();
             assert!(
                 report
                     .slots

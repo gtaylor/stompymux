@@ -391,7 +391,6 @@ async fn hot_myomer_tow_discount_requires_hardware_heat_and_configuration() {
                     equipment: "TripleStrengthMyomer".into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
             remaining -= 1;

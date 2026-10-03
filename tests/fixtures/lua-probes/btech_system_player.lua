@@ -171,7 +171,7 @@ local function run()
       set_loadout_ammo_weapon = call(btech.player.set_loadout, god,
         { armor = loadout.armor, right = { weapon = 'Ammo_IS.SRM-4' } }),
       set_loadout_registry_weapon = call(btech.player.set_loadout, god,
-        { armor = loadout.armor, right = { weapon = 'Agra.IS.PPC' } }),
+        { armor = loadout.armor, right = { weapon = 'IS.PPC' } }),
       set_loadout_personal_weapon = call(btech.player.set_loadout, god,
         { armor = loadout.armor, right = { weapon = 'PC.Blazer' } }),
       set_loadout_bad_ammunition = call(btech.player.set_loadout, god,

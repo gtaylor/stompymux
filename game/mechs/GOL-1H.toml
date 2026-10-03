@@ -21,7 +21,7 @@ slots = [
 armor = 20
 rear = 13
 slots = [
-    { at = "1-2", item = "IS.LRM-10", brand = 4 },
+    { at = "1-2", item = "IS.LRM-10" },
     { at = 3, item = "IS.MachineGun" },
     { at = 4, item = "Ammo_IS.MachineGun", rounds = 200 },
 ]
@@ -30,8 +30,8 @@ slots = [
 armor = 20
 rear = 13
 slots = [
-    { at = "1-3", item = "IS.PPC", brand = 4 },
-    { at = "4-5", item = "IS.LRM-10", brand = 4 },
+    { at = "1-3", item = "IS.PPC" },
+    { at = "4-5", item = "IS.LRM-10" },
     { at = 6, item = "IS.MachineGun" },
 ]
 

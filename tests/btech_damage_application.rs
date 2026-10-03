@@ -467,7 +467,7 @@ async fn material_replacement_preserves_light_probe_conditions_across_chassis() 
                 let section = if mech { "LeftTorso" } else { "front" };
                 for slot in [10, 11] {
                     unit["definition"]["sections"][section]["criticals"][slot.to_string()] = serde_json::json!({
-                        "equipment":"Light_BAP","data":"-","modes":[],"brand":null
+                        "equipment":"Light_BAP","data":"-","modes":[]
                     });
                 }
             });
@@ -594,7 +594,7 @@ async fn replacement_retains_exposure_and_keeps_breached_equipment_unavailable()
         firing::edit(&mut world, id, |unit| {
             let section = if mech { "LeftTorso" } else { "front" };
             unit["definition"]["sections"][section]["criticals"]["11"] = serde_json::json!({
-                "equipment":"CASE","data":"-","modes":[],"brand":null
+                "equipment":"CASE","data":"-","modes":[]
             });
             unit["breached_sections"] = serde_json::json!([section]);
             for &bin in &bins {

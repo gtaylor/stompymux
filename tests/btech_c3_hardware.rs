@@ -29,7 +29,6 @@ fn design(parts: &[(BattleSection, u8, &str)]) -> BattleUnit {
                     equipment: equipment.into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
     }

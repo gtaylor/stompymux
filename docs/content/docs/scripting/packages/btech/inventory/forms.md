@@ -5,7 +5,7 @@ linkTitle: "forms"
 manualLinkTitle: "forms"
 ---
 
-Return all part/manufacturer forms in short-name order, without requiring live stock.
+Return all part forms in short-name order, without requiring live stock.
 
 ## Signature
 
@@ -21,4 +21,4 @@ btech.inventory.forms(actor)
 
 ## Returns
 
-- `table[] forms Part ID, brand ID, short_name, long_name and very_long_name.`
+- `table[] forms Part ID, short_name, long_name and very_long_name.`

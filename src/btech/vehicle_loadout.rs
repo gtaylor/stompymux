@@ -71,12 +71,7 @@ impl BattleVehicleLoadout {
                         "Unsupported critical data {}",
                         critical.data
                     );
-                    // Manufacturer-qualified spellings (for example "Agra.IS.PPC") name the
-                    // same weapon as their technology-prefixed form; the brand column
-                    // already carries the manufacturer identity.
-                    let equipment = super::loadout::unbranded_weapon_name(&critical.equipment)
-                        .map(str::to_owned)
-                        .unwrap_or_else(|| critical.equipment.clone());
+                    let equipment = critical.equipment.clone();
                     if super::equipment::strip_name_prefix(&equipment, "IS.").is_some()
                         || super::equipment::strip_name_prefix(&equipment, "CL.").is_some()
                     {
@@ -116,11 +111,7 @@ impl BattleVehicleLoadout {
                         Err(error) => return Err(error),
                     };
                     ensure!(critical.modes.is_empty(), "Unsupported system mode");
-                    loadout.systems.push(SystemCritical {
-                        location,
-                        system,
-                        brand: critical.brand,
-                    });
+                    loadout.systems.push(SystemCritical { location, system });
                     Ok(())
                 })()
                 .with_context(|| {

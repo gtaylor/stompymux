@@ -9,7 +9,6 @@ fn critical(equipment: &str) -> CriticalDefinition {
         equipment: equipment.into(),
         data: "-".into(),
         modes: Vec::new(),
-        brand: None,
     }
 }
 

@@ -110,7 +110,7 @@ async fn critical_weapon_ammunition_modes_and_special_edits_are_strict() {
         assert(not ok and err.code=='mux.arg.invalid' and err.message:find("bad argument #2 to '?' (unknown field 'extra')",1,true) and err.detail.argument==2)
         assert(select('#',btech.unit.reset_critical_slots(unit))==0)
         assert(#btech.unit.weapons(unit)==0)
-        assert(select('#',btech.unit.install_weapon(unit,{part='Agra.IS.MediumLaser',section=btech.unit.sections.LEFT_TORSO,slots={1},rear_facing=true}))==0)
+        assert(select('#',btech.unit.install_weapon(unit,{part='IS.MediumLaser',section=btech.unit.sections.LEFT_TORSO,slots={1},rear_facing=true}))==0)
         local weapons=btech.unit.weapons(unit); assert(#weapons==1 and weapons[1].first_slot==1)
         local fire={
           btech.unit.fire_modes.DESTROYED,btech.unit.fire_modes.DISABLED,btech.unit.fire_modes.BROKEN,
@@ -135,21 +135,21 @@ async fn critical_weapon_ammunition_modes_and_special_edits_are_strict() {
         assert(select('#',btech.unit.set_weapon_modes(unit,0,{fire_modes=fire,ammunition_modes=ammo}))==0)
         local first=btech.unit.critical_slots(unit,btech.unit.sections.LEFT_TORSO)[1]
         assert(#first.fire_modes==21 and #first.ammunition_modes==23 and not first.operational)
-        assert(select('#',btech.unit.configure_ammunition(unit,{weapon='Telos.IS.SRM-4',section=btech.unit.sections.RIGHT_TORSO,slot=1,half_ton=true,ammunition_modes={btech.unit.ammunition_modes.INFERNO}}))==0)
+        assert(select('#',btech.unit.configure_ammunition(unit,{weapon='IS.SRM-4',section=btech.unit.sections.RIGHT_TORSO,slot=1,half_ton=true,ammunition_modes={btech.unit.ammunition_modes.INFERNO}}))==0)
         assert(select('#',btech.unit.restock_ammunition(unit,btech.unit.sections.RIGHT_TORSO,1))==0)
         assert(select('#',btech.unit.install_special(unit,{section=btech.unit.sections.HEAD,slot=4}))==0)
         first=btech.unit.critical_slots(unit,btech.unit.sections.LEFT_TORSO)[1]
         assert(#first.fire_modes==21 and #first.ammunition_modes==23)
         assert(select('#',btech.unit.save_template(unit,'mode-contract'))==0)
-        ok,err=mux.error.pcall(btech.unit.install_weapon,unit,{part={id=193,brand=1},section=btech.unit.sections.LEFT_TORSO,slots={1}})
+        ok,err=mux.error.pcall(btech.unit.install_weapon,unit,{part={id=2047},section=btech.unit.sections.LEFT_TORSO,slots={1}})
         assert(not ok and err.code=='btech.part.not_found' and err.message:find("bad argument #2 to '?' (part was not found)",1,true) and err.detail.argument==2)
-        ok,err=mux.error.pcall(btech.unit.install_weapon,unit,{part='Agra.IS.MediumLaser',section=btech.unit.sections.LEFT_TORSO,slots={1,1}})
+        ok,err=mux.error.pcall(btech.unit.install_weapon,unit,{part='IS.MediumLaser',section=btech.unit.sections.LEFT_TORSO,slots={1,1}})
         assert(not ok and err.code=='mux.arg.invalid' and err.message:find("bad argument #2 to '?' (slots must contain the required critical slots)",1,true))
         ok,err=mux.error.pcall(btech.unit.set_weapon_modes,unit,9,{})
         assert(not ok and err.code=='mux.arg.invalid' and err.message:find("bad argument #2 to '?' (weapon number is not mounted)",1,true) and err.detail.argument==2)
-        ok,err=mux.error.pcall(btech.unit.configure_ammunition,unit,{weapon='Agra.IS.MediumLaser',section=btech.unit.sections.RIGHT_TORSO,slot=1})
+        ok,err=mux.error.pcall(btech.unit.configure_ammunition,unit,{weapon='IS.MediumLaser',section=btech.unit.sections.RIGHT_TORSO,slot=1})
         assert(not ok and err.code=='mux.arg.invalid' and err.message:find("bad argument #2 to '?' (weapon does not use ammunition)",1,true))
-        ok,err=mux.error.pcall(btech.unit.install_special,unit,{part='Agra.IS.MediumLaser',section=btech.unit.sections.HEAD,slot=4})
+        ok,err=mux.error.pcall(btech.unit.install_special,unit,{part='IS.MediumLaser',section=btech.unit.sections.HEAD,slot=4})
         assert(not ok and err.code=='btech.part.wrong_kind' and err.message:find("bad argument #2 to '?' (part must be special equipment)",1,true))
     "#).unwrap();
     let saved = BattleUnitTemplate::parse(
@@ -284,10 +284,10 @@ async fn vehicle_operations_cover_live_damage_falls_templates_and_equipment() {
         assert(select('#',btech.unit.restore(unit))==0)
         assert(select('#',btech.unit.reset_critical_slots(unit))==0)
         assert(#btech.unit.weapons(unit)==0)
-        assert(select('#',btech.unit.install_weapon(unit,{part='Agra.IS.MediumLaser',section=btech.unit.sections.FRONT_SIDE,slots={1}}))==0)
+        assert(select('#',btech.unit.install_weapon(unit,{part='IS.MediumLaser',section=btech.unit.sections.FRONT_SIDE,slots={1}}))==0)
         assert(#btech.unit.weapons(unit)==1)
         assert(select('#',btech.unit.set_weapon_modes(unit,0,{fire_modes={btech.unit.fire_modes.HEAT}}))==0)
-        assert(select('#',btech.unit.configure_ammunition(unit,{weapon='Telos.IS.SRM-4',section=btech.unit.sections.AFT_SIDE,slot=1,half_ton=true}))==0)
+        assert(select('#',btech.unit.configure_ammunition(unit,{weapon='IS.SRM-4',section=btech.unit.sections.AFT_SIDE,slot=1,half_ton=true}))==0)
         assert(select('#',btech.unit.restock_ammunition(unit,btech.unit.sections.AFT_SIDE,1))==0)
         assert(select('#',btech.unit.install_special(unit,{section=btech.unit.sections.RIGHT_SIDE,slot=1}))==0)
     "#,
@@ -385,7 +385,7 @@ async fn editing_one_slot_preserves_unrelated_live_weapon_and_ammunition_state()
         .eval_callback::<()>(
             r#"
         local unit=mux.world.object(unit_id)
-        assert(select('#',btech.unit.install_weapon(unit,{part='Agra.IS.MediumLaser',section=btech.unit.sections.LEFT_SIDE,slots={12}}))==0)
+        assert(select('#',btech.unit.install_weapon(unit,{part='IS.MediumLaser',section=btech.unit.sections.LEFT_SIDE,slots={12}}))==0)
     "#,
         )
         .unwrap();
@@ -424,7 +424,7 @@ async fn mech_slot_edit_preserves_unrelated_live_weapon_and_ammunition_state() {
         .eval_callback::<()>(
             r#"
         local unit=mux.world.object(unit_id)
-        assert(select('#',btech.unit.install_weapon(unit,{part='Agra.IS.MediumLaser',section=btech.unit.sections.HEAD,slots={4}}))==0)
+        assert(select('#',btech.unit.install_weapon(unit,{part='IS.MediumLaser',section=btech.unit.sections.HEAD,slots={4}}))==0)
     "#,
         )
         .unwrap();
@@ -517,7 +517,7 @@ async fn signed_integer_boundaries_and_array_holes_follow_c_contracts() {
         assert(before-after==10,'off-map fall uses administrative tonnage')
         assert(btech.unit.piloting_check(unit,{roll_modifier=-2147483648,damage_modifier=0})==true,'min roll')
         local slots={[1]=1,[3]=3}
-        local ok,err=mux.error.pcall(btech.unit.install_weapon,unit,{part='Agra.IS.MediumLaser',section=btech.unit.sections.LEFT_TORSO,slots=slots})
+        local ok,err=mux.error.pcall(btech.unit.install_weapon,unit,{part='IS.MediumLaser',section=btech.unit.sections.LEFT_TORSO,slots=slots})
         assert(ok and err==nil,'slot raw length')
         ok,err=mux.error.pcall(btech.unit.set_weapon_modes,unit,0,{fire_modes={[1]=btech.unit.fire_modes.HEAT,[3]=btech.unit.fire_modes.ULTRA}})
         assert(ok and err==nil,'mode raw length')
@@ -531,7 +531,7 @@ async fn signed_integer_boundaries_and_array_holes_follow_c_contracts() {
 }
 
 #[tokio::test]
-async fn weapon_install_accepts_native_slot_layouts_and_discards_the_input_brand() {
+async fn weapon_install_accepts_native_slot_layouts() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Unit".into(), Kind::Thing);
     create_battle_unit(
@@ -540,24 +540,22 @@ async fn weapon_install_accepts_native_slot_layouts_and_discards_the_input_brand
         BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
-    let branded = stompymux_rs::btech::part_catalogue()
+    let paired = stompymux_rs::btech::part_catalogue()
         .into_iter()
         .find(|part| {
-            part.brand_id > 0
-                && BattleWeapon::from_part_id(part.part_id)
-                    .is_some_and(|weapon| weapon.profile().critical_slots == 2)
+            BattleWeapon::from_part_id(part.part_id)
+                .is_some_and(|weapon| weapon.profile().critical_slots == 2)
         })
         .unwrap();
-    let branded_slots = BattleWeapon::from_part_id(branded.part_id)
+    let paired_slots = BattleWeapon::from_part_id(paired.part_id)
         .unwrap()
         .profile()
         .critical_slots;
     let partial = stompymux_rs::btech::part_catalogue()
         .into_iter()
         .find(|part| {
-            part.brand_id > 0
-                && BattleWeapon::from_part_id(part.part_id)
-                    .is_some_and(|weapon| weapon.profile().critical_slots >= 9)
+            BattleWeapon::from_part_id(part.part_id)
+                .is_some_and(|weapon| weapon.profile().critical_slots >= 9)
         })
         .unwrap();
     let partial_slots = BattleWeapon::from_part_id(partial.part_id)
@@ -573,27 +571,17 @@ async fn weapon_install_accepts_native_slot_layouts_and_discards_the_input_brand
     scripts
         .inspect_lua()
         .globals()
-        .set("branded_id", branded.part_id)
+        .set("paired_id", paired.part_id)
         .unwrap();
     scripts
         .inspect_lua()
         .globals()
-        .set("branded_brand", branded.brand_id)
-        .unwrap();
-    scripts
-        .inspect_lua()
-        .globals()
-        .set("branded_slot_count", branded_slots)
+        .set("paired_slot_count", paired_slots)
         .unwrap();
     scripts
         .inspect_lua()
         .globals()
         .set("partial_id", partial.part_id)
-        .unwrap();
-    scripts
-        .inspect_lua()
-        .globals()
-        .set("partial_brand", partial.brand_id)
         .unwrap();
     scripts
         .inspect_lua()
@@ -605,25 +593,25 @@ async fn weapon_install_accepts_native_slot_layouts_and_discards_the_input_brand
             r#"
         local unit=mux.world.object(unit_id)
         btech.unit.reset_critical_slots(unit)
-        btech.unit.install_weapon(unit,{part={id=branded_id,brand=branded_brand},section=btech.unit.sections.LEFT_TORSO,slots={2,8}})
+        btech.unit.install_weapon(unit,{part={id=paired_id},section=btech.unit.sections.LEFT_TORSO,slots={2,8}})
         local weapons=btech.unit.weapons(unit)
         assert(#weapons==1 and weapons[1].slot_count==2 and weapons[1].first_slot==2)
         btech.unit.reset_critical_slots(unit)
-        local branded_slots={}
-        for i=1,branded_slot_count do branded_slots[i]=i end
-        btech.unit.install_weapon(unit,{part={id=branded_id,brand=branded_brand},section=btech.unit.sections.LEFT_TORSO,slots=branded_slots})
+        local paired_slots={}
+        for i=1,paired_slot_count do paired_slots[i]=i end
+        btech.unit.install_weapon(unit,{part={id=paired_id},section=btech.unit.sections.LEFT_TORSO,slots=paired_slots})
         local slots=btech.unit.critical_slots(unit,btech.unit.sections.LEFT_TORSO)
-        assert(slots[1].part.brand==0)
+        assert(slots[1].part.id==paired_id)
         btech.unit.reset_critical_slots(unit)
-        local partial={id=partial_id,brand=partial_brand}
+        local partial={id=partial_id}
         btech.unit.install_weapon(unit,{part=partial,section=btech.unit.sections.LEFT_TORSO,slots={3,10}})
         weapons=btech.unit.weapons(unit)
         assert(#weapons==1 and weapons[1].slot_count==partial_slots and weapons[1].first_slot==3)
         slots=btech.unit.critical_slots(unit,btech.unit.sections.LEFT_TORSO)
-        assert(slots[3].part.brand==0 and slots[10].part.brand==0)
+        assert(slots[3].part.id==partial_id and slots[10].part.id==partial_id)
         local ok,err=mux.error.pcall(btech.unit.install_weapon,unit,{part=115,section=btech.unit.sections.LEFT_TORSO,slots={1}})
         assert(not ok and err.code=='btech.part.not_found')
-        ok,err=mux.error.pcall(btech.unit.install_weapon,unit,{part={id=115,brand=0},section=btech.unit.sections.LEFT_TORSO,slots={1}})
+        ok,err=mux.error.pcall(btech.unit.install_weapon,unit,{part={id=115},section=btech.unit.sections.LEFT_TORSO,slots={1}})
         assert(not ok and err.code=='btech.part.not_found')
     "#,
         )
@@ -631,7 +619,7 @@ async fn weapon_install_accepts_native_slot_layouts_and_discards_the_input_brand
 }
 
 #[tokio::test]
-async fn raw_registered_criticals_and_temporary_failure_bits_survive_restart() {
+async fn raw_registered_criticals_survive_restart() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Raw unit".into(), Kind::Thing);
     create_battle_unit(
@@ -653,21 +641,16 @@ async fn raw_registered_criticals_and_temporary_failure_bits_survive_restart() {
         btech.unit.reset_critical_slots(unit)
         local rawpart; for _,p in ipairs(btech.parts.list('weapon')) do if p.id==171 then rawpart=p break end end
         btech.unit.install_weapon(unit,{part=rawpart,section=btech.unit.sections.LEFT_TORSO,slots={1}})
-        btech.unit.configure_ammunition(unit,{weapon='Telos.IS.SRM-4',section=btech.unit.sections.RIGHT_TORSO,slot=1})
+        btech.unit.configure_ammunition(unit,{weapon='IS.SRM-4',section=btech.unit.sections.RIGHT_TORSO,slot=1})
         local raw=btech.unit.critical_slots(unit,btech.unit.sections.LEFT_TORSO)[1]
-        assert(raw.kind=='weapon' and raw.part.id==171 and raw.part.brand==0)
+        assert(raw.kind=='weapon' and raw.part.id==171)
     "#,
         )
         .unwrap();
 
-    let mut value = serde_json::to_value(scripts.world().btech.clone()).unwrap();
-    let definition = &mut value["constructed"][id.0.to_string()]["definition"];
-    definition["sections"]["LeftTorso"]["criticals"]["0"]["brand"] = serde_json::json!(17);
-    definition["sections"]["RightTorso"]["criticals"]["0"]["brand"] = serde_json::json!(18);
-    definition["sections"]["Head"]["criticals"]["0"]["brand"] = serde_json::json!(19);
-    let mut saved = scripts.world().clone();
-    saved.btech = serde_json::from_value(value).unwrap();
-    persistence::save(&config.database(), &saved).await.unwrap();
+    persistence::save(&config.database(), &scripts.world())
+        .await
+        .unwrap();
     let loaded = persistence::load(&config.database()).await.unwrap();
     let restarted = Scripts::new(&config, Rc::new(RefCell::new(loaded))).unwrap();
     restarted
@@ -682,9 +665,9 @@ async fn raw_registered_criticals_and_temporary_failure_bits_survive_restart() {
         local weapon=btech.unit.critical_slots(unit,btech.unit.sections.LEFT_TORSO)[1]
         local ammo=btech.unit.critical_slots(unit,btech.unit.sections.RIGHT_TORSO)[1]
         local special=btech.unit.critical_slots(unit,btech.unit.sections.HEAD)[1]
-        assert(weapon.kind=='weapon' and weapon.part.id==171 and weapon.part.brand==1 and weapon.temporary_failure)
-        assert(ammo.kind=='ammunition' and ammo.part.brand==2 and ammo.temporary_failure)
-        assert(special.kind=='special' and special.part.brand==3 and special.temporary_failure)
+        assert(weapon.kind=='weapon' and weapon.part.id==171 and not weapon.temporary_failure)
+        assert(ammo.kind=='ammunition' and not ammo.temporary_failure)
+        assert(special.kind=='special' and not special.temporary_failure)
     "#,
         )
         .unwrap();
@@ -726,7 +709,7 @@ async fn load_template_initializes_a_registered_unit_without_runtime_constructio
         local unit=mux.world.object(unit_id)
         assert(select('#',btech.unit.reset_critical_slots(unit))==0)
         assert(#btech.unit.weapons(unit)==0)
-        assert(select('#',btech.unit.install_weapon(unit,{part='Agra.IS.MediumLaser',section=btech.unit.sections.LEFT_TORSO,slots={1}}))==0)
+        assert(select('#',btech.unit.install_weapon(unit,{part='IS.MediumLaser',section=btech.unit.sections.LEFT_TORSO,slots={1}}))==0)
         assert(#btech.unit.weapons(unit)==1)
         assert(select('#',btech.unit.load_template(unit,'PARITY'))==0)
         assert(btech.unit.armor(unit,btech.unit.sections.LEFT_ARM).armor.current==10)
@@ -735,10 +718,10 @@ async fn load_template_initializes_a_registered_unit_without_runtime_constructio
         .unwrap();
 }
 
-/// Stock templates name their parts without a manufacturer; loading and restoring accept
-/// them, while a part no catalogue knows still rejects the whole template.
+/// Loading and restoring accept stock templates, while a part no catalogue knows still
+/// rejects the whole template.
 #[tokio::test]
-async fn load_template_accepts_unbranded_stock_parts() {
+async fn load_template_accepts_stock_parts() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Stock unit".into(), Kind::Thing);
     let mut btech = serde_json::to_value(&world.btech).unwrap();
@@ -772,7 +755,7 @@ async fn load_template_accepts_unbranded_stock_parts() {
     assert!(scripts.world().btech.constructed_units().contains_key(&id));
 }
 
-/// Registered raw unit on a branded template exercising argument coercion,
+/// Registered raw unit on a parity template exercising argument coercion,
 /// option-field edges, extra-argument tolerance, and rollback of the lazy
 /// runtime materialization when a mutation rejects.
 #[tokio::test]
@@ -828,7 +811,7 @@ async fn option_field_edges_extra_arguments_and_rollback_match_c_shapes() {
         assert(select('#',btech.unit.apply_damage(unit,{amount=1,cluster_size=1,direction_code=0,force_critical=false}))==0)
         -- Extra positional arguments are ignored: the handlers read fixed slots.
         assert(select('#',btech.unit.load_template(unit,'PARITY','extra','more'))==0,'load extras')
-        assert(select('#',btech.unit.configure_ammunition(unit,{weapon='Telos.IS.SRM-4',section=btech.unit.sections.RIGHT_TORSO,slot=1},'extra'))==0,'configure extras')
+        assert(select('#',btech.unit.configure_ammunition(unit,{weapon='IS.SRM-4',section=btech.unit.sections.RIGHT_TORSO,slot=1},'extra'))==0,'configure extras')
         assert(select('#',btech.unit.restock_ammunition(unit,btech.unit.sections.RIGHT_TORSO,1,'extra'))==0,'restock extras')
         assert(select('#',btech.unit.set_weapon_modes(unit,0,{},'extra'))==0)
         -- Wrong-kind handles fail on argument one before request validation.
@@ -836,8 +819,8 @@ async fn option_field_edges_extra_arguments_and_rollback_match_c_shapes() {
         check(fails(btech.unit.restore,room),'mux.object.invalid',nil,1)
         check(fails(btech.unit.install_weapon,42,false),'mux.object.invalid')
         -- Slot-value type and range shapes follow require_integer_at.
-        check(fails(btech.unit.install_weapon,unit,{part='Agra.IS.PPC',section=btech.unit.sections.LEFT_TORSO,slots={'2',3,4}}),'mux.arg.invalid','slot must be an integer')
-        check(fails(btech.unit.install_weapon,unit,{part='Agra.IS.PPC',section=btech.unit.sections.LEFT_TORSO,slots={1.5,3,4}}),'mux.arg.invalid','slot is outside its valid range')
+        check(fails(btech.unit.install_weapon,unit,{part='IS.PPC',section=btech.unit.sections.LEFT_TORSO,slots={'2',3,4}}),'mux.arg.invalid','slot must be an integer')
+        check(fails(btech.unit.install_weapon,unit,{part='IS.PPC',section=btech.unit.sections.LEFT_TORSO,slots={1.5,3,4}}),'mux.arg.invalid','slot is outside its valid range')
         check(fails(btech.unit.restock_ammunition,unit,btech.unit.sections.HEAD,0),'mux.arg.invalid','slot is outside its valid range',3)
         check(fails(btech.unit.set_weapon_modes,unit,-1,{}),'mux.arg.invalid','weapon_number is outside its valid range',2)
         check(fails(btech.unit.set_weapon_modes,unit,1.5,{}),'mux.arg.invalid','weapon_number is outside its valid range')
@@ -927,8 +910,8 @@ async fn every_unit_operation_is_unavailable_while_checking() {
           {btech.unit.reset_critical_slots,unit},
           {btech.unit.apply_damage,unit,{amount=1,cluster_size=1,direction_code=0}},
           {btech.unit.piloting_check,unit,{roll_modifier=0,damage_modifier=0}},
-          {btech.unit.install_weapon,unit,{part='Agra.IS.MediumLaser',section=section,slots={1}}},
-          {btech.unit.configure_ammunition,unit,{weapon='Telos.IS.SRM-4',section=section,slot=1}},
+          {btech.unit.install_weapon,unit,{part='IS.MediumLaser',section=section,slots={1}}},
+          {btech.unit.configure_ammunition,unit,{weapon='IS.SRM-4',section=section,slot=1}},
           {btech.unit.restock_ammunition,unit,section,1},
           {btech.unit.set_weapon_modes,unit,0,{}},
           {btech.unit.install_special,unit,{section=section,slot=1}},

@@ -5,7 +5,6 @@ tons = 50
 walk_mp = 6
 jump_mp = 4
 heat_sinks = 20
-computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0
@@ -13,22 +12,21 @@ max_suits = 0
 [construction]
 structure = "endo_steel"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 16
 slots = [
-    { at = "5-7", item = "HeatSink", brand = 3 },
-    { at = 8, item = "IS.MediumPulseLaser", brand = 3 },
-    { at = "9-12", item = "EndoSteel", brand = 3 },
+    { at = "5-7", item = "HeatSink" },
+    { at = 8, item = "IS.MediumPulseLaser" },
+    { at = "9-12", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 16
 slots = [
-    { at = "5-7", item = "HeatSink", brand = 3 },
-    { at = 8, item = "IS.MediumPulseLaser", brand = 3 },
-    { at = "9-12", item = "EndoSteel", brand = 3 },
+    { at = "5-7", item = "HeatSink" },
+    { at = 8, item = "IS.MediumPulseLaser" },
+    { at = "9-12", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
@@ -38,8 +36,8 @@ engine_slots = 2
 slots = [
     { at = "3-4", item = "Ammo_IS.LB20-XAC", rounds = 5 },
     { at = "5-6", item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
-    { at = 7, item = "Case", brand = 3 },
-    { at = "8-12", item = "EndoSteel", brand = 3 },
+    { at = 7, item = "Case" },
+    { at = "8-12", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
@@ -47,7 +45,7 @@ armor = 18
 rear = 6
 engine_slots = 1
 slots = [
-    { at = "2-12", item = "IS.LB20-XAC", brand = 3 },
+    { at = "2-12", item = "IS.LB20-XAC" },
 ]
 
 [sections.center_torso]
@@ -55,23 +53,23 @@ armor = 24
 rear = 8
 engine_slots = 7
 slots = [
-    { at = 12, item = "EndoSteel", brand = 3 },
+    { at = 12, item = "EndoSteel" },
 ]
 
 [sections.left_leg]
 armor = 24
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 24
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "IS.SmallLaser", brand = 3 },
+    { at = 4, item = "IS.SmallLaser" },
 ]

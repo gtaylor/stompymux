@@ -12,7 +12,7 @@ async fn component_failures_round_trip_without_changing_gameplay_on_any_chassis(
         let section = if mech { "LeftTorso" } else { "front" };
         firing::edit(&mut world, id, |state| {
             state["definition"]["sections"][section]["criticals"]["11"] = serde_json::json!({
-                "equipment":"CASE","data":"-","modes":[],"brand":null
+                "equipment":"CASE","data":"-","modes":[]
             });
         });
         world.validate(&config).unwrap();
@@ -32,8 +32,7 @@ async fn component_failures_round_trip_without_changing_gameplay_on_any_chassis(
                 let field = battle_unit_damage_field(&world, id).unwrap();
                 assert!(field.contains(&value), "{field}");
                 let report =
-                    battle_critical_report(&world, id, if mech { "LT" } else { "Front" }, false)
-                        .unwrap();
+                    battle_critical_report(&world, id, if mech { "LT" } else { "Front" }).unwrap();
                 let expected = match code {
                     1 => BattleEquipmentCondition::Jammed,
                     2 => BattleEquipmentCondition::Shorted,
@@ -113,13 +112,9 @@ async fn component_failures_round_trip_without_changing_gameplay_on_any_chassis(
             "G:2/11(6),C:2/11",
         )
         .unwrap();
-        let report = battle_critical_report(
-            &scripts.world(),
-            id,
-            if mech { "LT" } else { "Front" },
-            false,
-        )
-        .unwrap();
+        let report =
+            battle_critical_report(&scripts.world(), id, if mech { "LT" } else { "Front" })
+                .unwrap();
         assert_eq!(
             report.slots[11].condition,
             BattleEquipmentCondition::Destroyed

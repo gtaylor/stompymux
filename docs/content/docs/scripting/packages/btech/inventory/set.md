@@ -12,7 +12,7 @@ Unchanged quantities emit no record. Does not install equipment or perform cargo
 ## Signature
 
 ```lua
-btech.inventory.set(actor, object, part, brand, quantity)
+btech.inventory.set(actor, object, part, quantity)
 ```
 
 ## Parameters
@@ -22,7 +22,6 @@ btech.inventory.set(actor, object, part, brand, quantity)
 | `actor` | `integer` |  |
 | `object` | `integer` |  |
 | `part` | `integer` | Nonnegative signed-32-bit identifier. |
-| `brand` | `integer` | From zero through five. |
 | `quantity` | `integer` | From zero through 2147483647. |
 
 ## Returns

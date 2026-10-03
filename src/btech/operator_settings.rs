@@ -31,7 +31,7 @@ pub fn edit_weapon_settings(
         super::set_weapon_battle_value(&mut candidate, actor, name, value)?
     };
     if recycle {
-        let weapon = super::BattleWeapon::parse_operator_name(name)?;
+        let weapon = super::BattleWeapon::parse(name)?;
         audit(
             scripts,
             config,

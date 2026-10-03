@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "hover"
 tons = 35
 walk_mp = 12
-computer = 3
 
 [construction]
 engine = "ice"
@@ -23,8 +22,8 @@ armor = 24
 [sections.turret]
 armor = 24
 slots = [
-    { at = 1, item = "IS.LRM-10", brand = 3 },
-    { at = "2-4", item = "IS.SRM-2", brand = 3 },
+    { at = 1, item = "IS.LRM-10" },
+    { at = "2-4", item = "IS.SRM-2" },
     { at = "5-6", item = "Ammo_IS.LRM-10", rounds = 12 },
     { at = 7, item = "Ammo_IS.SRM-2", rounds = 50 },
 ]

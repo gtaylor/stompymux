@@ -37,7 +37,6 @@ fn launcher() -> BattleUnitTemplate {
                 equipment: weapon.name().into(),
                 data: "-".into(),
                 modes: Vec::new(),
-                brand: None,
             },
         );
     }
@@ -50,7 +49,6 @@ fn launcher() -> BattleUnitTemplate {
                 equipment: format!("Ammo_{}", weapon.name()),
                 data: weapon.profile().ammunition_per_ton.to_string(),
                 modes: Vec::new(),
-                brand: None,
             },
         );
     }

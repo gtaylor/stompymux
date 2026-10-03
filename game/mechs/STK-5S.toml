@@ -4,19 +4,17 @@ movement = "biped"
 tons = 85
 walk_mp = 5
 heat_sinks = 20
-computer = 4
 radio = 4
 
 [construction]
 engine = "xl"
-brand = 3
 
 [sections.left_arm]
 armor = 23
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "IS.LRM-10", brand = 3 },
-    { at = "5-6", item = "IS.MediumLaser", brand = 3 },
+    { at = "3-4", item = "IS.LRM-10" },
+    { at = "5-6", item = "IS.MediumLaser" },
     { at = 7, item = "Ammo_IS.LRM-10", rounds = 12 },
 ]
 
@@ -24,8 +22,8 @@ slots = [
 armor = 23
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "IS.LRM-10", brand = 3 },
-    { at = "5-6", item = "IS.MediumLaser", brand = 3 },
+    { at = "3-4", item = "IS.LRM-10" },
+    { at = "5-6", item = "IS.MediumLaser" },
     { at = 7, item = "Ammo_IS.LRM-10", rounds = 12 },
 ]
 
@@ -33,43 +31,43 @@ slots = [
 armor = 25
 rear = 7
 slots = [
-    { at = 4, item = "HeatSink", brand = 3 },
-    { at = "5-6", item = "IS.LargePulseLaser", brand = 3 },
-    { at = "7-8", item = "IS.SRM-6", brand = 3 },
-    { at = 9, item = "IS.Anti-MissileSystem", brand = 3 },
+    { at = 4, item = "HeatSink" },
+    { at = "5-6", item = "IS.LargePulseLaser" },
+    { at = "7-8", item = "IS.SRM-6" },
+    { at = 9, item = "IS.Anti-MissileSystem" },
     { at = 10, item = "Ammo_IS.SRM-6", rounds = 15 },
     { at = 11, item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
-    { at = 12, item = "Case", brand = 3 },
+    { at = 12, item = "Case" },
 ]
 
 [sections.right_torso]
 armor = 25
 rear = 7
 slots = [
-    { at = "4-6", item = "HeatSink", brand = 3 },
-    { at = "7-8", item = "IS.LargePulseLaser", brand = 3 },
-    { at = "9-10", item = "IS.SRM-6", brand = 3 },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-8", item = "IS.LargePulseLaser" },
+    { at = "9-10", item = "IS.SRM-6" },
     { at = 11, item = "Ammo_IS.SRM-6", rounds = 15 },
-    { at = 12, item = "Case", brand = 3 },
+    { at = 12, item = "Case" },
 ]
 
 [sections.center_torso]
 armor = 36
 rear = 11
 slots = [
-    { at = "11-12", item = "HeatSink", brand = 3 },
+    { at = "11-12", item = "HeatSink" },
 ]
 
 [sections.left_leg]
 armor = 25
 slots = [
-    { at = "5-6", item = "HeatSink", brand = 3 },
+    { at = "5-6", item = "HeatSink" },
 ]
 
 [sections.right_leg]
 armor = 25
 slots = [
-    { at = "5-6", item = "HeatSink", brand = 3 },
+    { at = "5-6", item = "HeatSink" },
 ]
 
 [sections.head]

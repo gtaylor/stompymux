@@ -9,38 +9,37 @@ cargo_space = 0
 max_suits = 0
 
 [construction]
-brand = 3
 
 [sections.left_arm]
 armor = 16
 omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "IS.MediumLaser", brand = 3 },
+    { at = 4, item = "IS.MediumLaser" },
 ]
 
 [sections.right_arm]
 armor = 16
 omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "IS.MediumLaser", brand = 3 },
+    { at = 4, item = "IS.MediumLaser" },
 ]
 
 [sections.left_torso]
 armor = 18
 rear = 8
 slots = [
-    { at = "1-5", item = "HeatSink", brand = 3 },
-    { at = 6, item = "IS.MachineGun", brand = 3 },
-    { at = 7, item = "IS.Flamer", brand = 3 },
+    { at = "1-5", item = "HeatSink" },
+    { at = 6, item = "IS.MachineGun" },
+    { at = 7, item = "IS.Flamer" },
 ]
 
 [sections.right_torso]
 armor = 18
 rear = 8
 slots = [
-    { at = "1-4", item = "HeatSink", brand = 3 },
-    { at = "5-7", item = "IS.PPC", brand = 3 },
-    { at = 8, item = "IS.LRM-5", brand = 3 },
+    { at = "1-4", item = "HeatSink" },
+    { at = "5-7", item = "IS.PPC" },
+    { at = 8, item = "IS.LRM-5" },
 ]
 
 [sections.center_torso]
@@ -54,13 +53,13 @@ slots = [
 [sections.left_leg]
 armor = 19
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 19
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.head]

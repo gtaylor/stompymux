@@ -7,13 +7,13 @@ walk_mp = 14
 [sections.left_side]
 armor = 16
 slots = [
-    { at = "6-12", item = "FerroFibrous", brand = 3 },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.right_side]
 armor = 16
 slots = [
-    { at = "6-12", item = "FerroFibrous", brand = 3 },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.front_side]
@@ -25,6 +25,6 @@ armor = 16
 [sections.turret]
 armor = 30
 slots = [
-    { at = 1, item = "IS.GaussRifle", brand = 3 },
+    { at = 1, item = "IS.GaussRifle" },
     { at = "2-3", item = "Ammo_IS.GaussRifle", rounds = 8 },
 ]

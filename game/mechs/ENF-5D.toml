@@ -5,67 +5,65 @@ tons = 50
 walk_mp = 8
 jump_mp = 5
 heat_sinks = 12
-computer = 4
 radio = 4
 
 [construction]
 engine = "xl"
 armor = "ferro_fibrous"
-brand = 3
 
 [sections.left_arm]
 armor = 16
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "IS.ERLargeLaser", brand = 3 },
-    { at = 6, item = "FerroFibrous", brand = 3 },
+    { at = "4-5", item = "IS.ERLargeLaser" },
+    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 16
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-9", item = "IS.LB10-XAC", brand = 3 },
-    { at = "10-12", item = "FerroFibrous", brand = 3 },
+    { at = "4-9", item = "IS.LB10-XAC" },
+    { at = "10-12", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 19
 rear = 5
 slots = [
-    { at = "4-5", item = "JumpJet", brand = 3 },
-    { at = 6, item = "IS.SmallLaser", brand = 3 },
-    { at = "7-12", item = "FerroFibrous", brand = 3 },
+    { at = "4-5", item = "JumpJet" },
+    { at = 6, item = "IS.SmallLaser" },
+    { at = "7-12", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 19
 rear = 5
 slots = [
-    { at = "4-5", item = "JumpJet", brand = 3 },
+    { at = "4-5", item = "JumpJet" },
     { at = 6, item = "Ammo_IS.LB10-XAC", rounds = 10 },
     { at = 7, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
-    { at = 8, item = "Case", brand = 3 },
-    { at = "9-12", item = "FerroFibrous", brand = 3 },
+    { at = 8, item = "Case" },
+    { at = "9-12", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 23
 rear = 7
 slots = [
-    { at = 11, item = "JumpJet", brand = 3 },
+    { at = 11, item = "JumpJet" },
 ]
 
 [sections.left_leg]
 armor = 21
 slots = [
-    { at = 5, item = "HeatSink", brand = 3 },
+    { at = 5, item = "HeatSink" },
 ]
 
 [sections.right_leg]
 armor = 21
 slots = [
-    { at = 5, item = "HeatSink", brand = 3 },
+    { at = 5, item = "HeatSink" },
 ]
 
 [sections.head]

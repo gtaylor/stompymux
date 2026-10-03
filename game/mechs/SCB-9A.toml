@@ -3,70 +3,68 @@ class = "mech"
 movement = "biped"
 tons = 30
 walk_mp = 15
-computer = 4
 radio = 4
 
 [construction]
 engine = "xl"
 structure = "endo_steel"
 armor = "ferro_fibrous"
-brand = 3
 
 [sections.left_arm]
 armor = 9
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "IS.MediumLaser", brand = 3 },
-    { at = "6-7", item = "IS.SmallLaser", brand = 3 },
-    { at = "8-11", item = "FerroFibrous", brand = 3 },
-    { at = 12, item = "EndoSteel", brand = 3 },
+    { at = "4-5", item = "IS.MediumLaser" },
+    { at = "6-7", item = "IS.SmallLaser" },
+    { at = "8-11", item = "FerroFibrous" },
+    { at = 12, item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 9
 slots = [
-    { at = "5-6", item = "Axe", brand = 3 },
-    { at = "7-10", item = "FerroFibrous", brand = 3 },
-    { at = 11, item = "EndoSteel", brand = 3 },
+    { at = "5-6", item = "Axe" },
+    { at = "7-10", item = "FerroFibrous" },
+    { at = 11, item = "EndoSteel" },
 ]
 
 [sections.left_torso]
 armor = 10
 rear = 4
 slots = [
-    { at = "4-6", item = "FerroFibrous", brand = 3 },
-    { at = "7-10", item = "EndoSteel", brand = 3 },
+    { at = "4-6", item = "FerroFibrous" },
+    { at = "7-10", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 10
 rear = 4
 slots = [
-    { at = "4-6", item = "FerroFibrous", brand = 3 },
-    { at = "7-10", item = "EndoSteel", brand = 3 },
+    { at = "4-6", item = "FerroFibrous" },
+    { at = "7-10", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 12
 rear = 6
 slots = [
-    { at = "11-12", item = "Ecm", brand = 3 },
+    { at = "11-12", item = "Ecm" },
 ]
 
 [sections.left_leg]
 armor = 13
 slots = [
-    { at = "5-6", item = "EndoSteel", brand = 3 },
+    { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.right_leg]
 armor = 13
 slots = [
-    { at = "5-6", item = "EndoSteel", brand = 3 },
+    { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "TAG", brand = 3 },
+    { at = 4, item = "TAG" },
 ]

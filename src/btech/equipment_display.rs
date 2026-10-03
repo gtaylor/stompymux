@@ -1,36 +1,13 @@
 //! Equipment labels for cockpit inventory displays, separate from template identifiers.
 use super::{BattleAmmunitionMode as A, BattleWeapon};
 
-/// Installed weapon names retain Clan identity and supported manufacturer labels.
-pub(super) fn weapon_name(weapon: BattleWeapon, brand: Option<u8>) -> String {
-    let name = weapon
+/// Installed weapon names retain Clan identity without the Inner Sphere namespace.
+pub(super) fn weapon_name(weapon: BattleWeapon) -> String {
+    weapon
         .name()
         .strip_prefix("IS.")
         .unwrap_or(weapon.name())
-        .replace(['_', '.'], " ");
-    let Some(brand) = brand.and_then(|quality| weapon_brand(weapon, quality)) else {
-        return name;
-    };
-    format!("{brand} {name}")
-}
-
-/// Manufacturer names shared by installed labels and operator weapon selection.
-pub(super) fn weapon_brand(weapon: BattleWeapon, quality: u8) -> Option<&'static str> {
-    if weapon.name().starts_with("CL.") || !(1..=5).contains(&quality) {
-        return None;
-    }
-    let brands = if weapon.is_flamer() {
-        ["Pynes", "Hotshot", "Firestorm", "Purity", "Ventra"]
-    } else if weapon.gunnery_skill(true) == "Gunnery-Laser" {
-        ["Lords", "Hesperus", "Martell", "Magna", "Agra"]
-    } else if weapon.gunnery_skill(true) == "Gunnery-Missile" {
-        ["Coventry", "Shannon", "Bical", "Holly", "Telos"]
-    } else if !weapon.is_artillery() {
-        ["Luxor", "SperryBrowning", "Oriente", "Deprus", "Armstrong"]
-    } else {
-        return None;
-    };
-    Some(brands[usize::from(quality - 1)])
+        .replace(['_', '.'], " ")
 }
 
 /// Ammunition labels describe the typed bin mode without exposing template flag spellings.

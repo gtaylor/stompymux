@@ -16,14 +16,14 @@
 // lua-types-end
 
 // lua-types-begin btech 00527
-//|---List registered branded forms in catalogue order; a case-insensitive category filters them.
+//|---List registered parts in catalogue order; a case-insensitive category filters them.
 //|---@param category? string
 //|---@return BattlePartDefinition[] parts
 //|function btech_parts.list(category) end
 // lua-types-end
 
 // lua-types-begin btech 00528
-//|---Resolve one registered part by packed ID, case-insensitive name or {id, brand} record.
+//|---Resolve one registered part by ID, case-insensitive name or {id} record.
 //|---@param part BattlePartRef
 //|---@return BattlePartDefinition|nil part
 //|function btech_parts.resolve(part) end
@@ -37,7 +37,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00530
-//|---Set the cost shared by every brand of one registered part.
+//|---Set the cost of one registered part.
 //|---@param part BattlePartRef
 //|---@param cost integer From 0 through 2^53-1.
 //|function btech_parts.set_cost(part, cost) end

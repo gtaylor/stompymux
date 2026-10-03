@@ -8,19 +8,19 @@ cargo_space = 0
 [sections.left_side]
 armor = 10
 slots = [
-    { at = "6-12", item = "FerroFibrous", brand = 3 },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.right_side]
 armor = 10
 slots = [
-    { at = "6-12", item = "FerroFibrous", brand = 3 },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.front_side]
 armor = 15
 slots = [
-    { at = 1, item = "IS.LightGaussRifle", brand = 3 },
+    { at = 1, item = "IS.LightGaussRifle" },
     { at = 2, item = "Ammo_IS.LightGaussRifle", rounds = 16 },
 ]
 

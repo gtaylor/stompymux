@@ -12,7 +12,7 @@ infantry_specials = ["Swarm_Attack_Tech", "Mount_Friends_Tech", "AntiLeg_Attack_
 armor = 6
 internals = 1
 slots = [
-    { at = 1, item = "IS.Flamer", brand = 3 },
+    { at = 1, item = "IS.Flamer" },
     { at = 2, item = "AchileusStealthUnit" },
 ]
 
@@ -20,7 +20,7 @@ slots = [
 armor = 6
 internals = 1
 slots = [
-    { at = 1, item = "IS.Flamer", brand = 3 },
+    { at = 1, item = "IS.Flamer" },
     { at = 2, item = "AchileusStealthUnit" },
 ]
 
@@ -28,7 +28,7 @@ slots = [
 armor = 6
 internals = 1
 slots = [
-    { at = 1, item = "IS.Flamer", brand = 3 },
+    { at = 1, item = "IS.Flamer" },
     { at = 2, item = "AchileusStealthUnit" },
 ]
 
@@ -36,6 +36,6 @@ slots = [
 armor = 6
 internals = 1
 slots = [
-    { at = 1, item = "IS.Flamer", brand = 3 },
+    { at = 1, item = "IS.Flamer" },
     { at = 2, item = "AchileusStealthUnit" },
 ]

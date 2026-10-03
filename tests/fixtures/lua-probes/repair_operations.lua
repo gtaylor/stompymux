@@ -3,7 +3,7 @@
 -- Live units require a BTech special registration, which only the native
 -- @btech command performs. The setup prelude below creates two fixture things
 -- and registers both as MECH before any measured page runs: one loads the
--- branded PARITY-PROBE template inside page one, the other stays pristine for
+-- PARITY-PROBE template inside page one, the other stays pristine for
 -- the raw-unit page.
 -- PARITY_SETUP: luaparity0
 -- PARITY_SETUP: @btech/register Parity Repair Unit=MECH

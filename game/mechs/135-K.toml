@@ -22,5 +22,5 @@ armor = 20
 [sections.turret]
 armor = 12
 slots = [
-    { at = "1-2", item = "IS.Flamer", brand = 5 },
+    { at = "1-2", item = "IS.Flamer" },
 ]

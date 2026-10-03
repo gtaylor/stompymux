@@ -3,43 +3,41 @@ class = "mech"
 movement = "biped"
 tons = 30
 walk_mp = 14
-computer = 4
 radio = 4
 
 [construction]
 structure = "endo_steel"
 armor = "ferro_fibrous"
-brand = 3
 
 [sections.left_arm]
 armor = 4
 omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "IS.MediumLaser", brand = 3 },
-    { at = "5-11", item = "FerroFibrous", brand = 3 },
+    { at = 4, item = "IS.MediumLaser" },
+    { at = "5-11", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 4
 slots = [
-    { at = 5, item = "IS.MediumLaser", brand = 3 },
-    { at = "6-12", item = "FerroFibrous", brand = 3 },
+    { at = 5, item = "IS.MediumLaser" },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 6
 rear = 2
 slots = [
-    { at = "1-2", item = "Masc", brand = 3 },
-    { at = "3-9", item = "EndoSteel", brand = 3 },
+    { at = "1-2", item = "Masc" },
+    { at = "3-9", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 6
 rear = 2
 slots = [
-    { at = "1-2", item = "BeagleProbe", brand = 3 },
-    { at = "3-9", item = "EndoSteel", brand = 3 },
+    { at = "1-2", item = "BeagleProbe" },
+    { at = "3-9", item = "EndoSteel" },
 ]
 
 [sections.center_torso]

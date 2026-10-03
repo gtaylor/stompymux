@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "hover"
 tons = 15
 walk_mp = 18
-computer = 3
 cargo_space = 0
 max_suits = 0
 

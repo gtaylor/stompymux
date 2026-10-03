@@ -54,7 +54,6 @@ fn apod_mass_and_battle_value() {
                     equipment: weapon.name().into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
         let unit = BattleUnit::from_template(template.clone()).unwrap();

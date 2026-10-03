@@ -4,20 +4,19 @@ movement = "biped"
 tons = 50
 walk_mp = 8
 heat_sinks = 16
-computer = 4
 radio = 4
 
 [sections.left_arm]
 armor = 14
 slots = [
-    { at = "5-6", item = "IS.LargeLaser", brand = 4 },
+    { at = "5-6", item = "IS.LargeLaser" },
 ]
 
 [sections.right_arm]
 armor = 14
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "IS.LargeLaser", brand = 4 },
+    { at = "4-5", item = "IS.LargeLaser" },
 ]
 
 [sections.left_torso]
@@ -38,7 +37,7 @@ slots = [
 armor = 18
 rear = 7
 slots = [
-    { at = 11, item = "IS.MediumLaser", brand = 4 },
+    { at = 11, item = "IS.MediumLaser" },
 ]
 
 [sections.left_leg]
@@ -56,5 +55,5 @@ slots = [
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "IS.SmallLaser", brand = 4 },
+    { at = 4, item = "IS.SmallLaser" },
 ]

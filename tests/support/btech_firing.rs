@@ -117,7 +117,6 @@ pub fn supply_fixture_on(
                     } else {
                         vec![]
                     },
-                    brand: None,
                 },
             );
         }
@@ -129,7 +128,6 @@ pub fn supply_fixture_on(
                     data: weapon.profile().ammunition_per_ton.to_string(),
                     // Whitespace separates combined flags, such as an MML family plus a special round.
                     modes: flag.split_whitespace().map(Into::into).collect(),
-                    brand: None,
                 },
             );
         }
@@ -140,7 +138,6 @@ pub fn supply_fixture_on(
                     equipment: "TargetingComputer".into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
         }

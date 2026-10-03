@@ -4,7 +4,6 @@ movement = "quad"
 tons = 80
 walk_mp = 6
 heat_sinks = 20
-computer = 4
 radio = 4
 specials = ["ArtemisIV"]
 

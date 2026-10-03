@@ -93,31 +93,25 @@ pub(crate) fn pending(world: &World, config: &Config) -> bool {
             && world.btech.vehicles().keys().any(|&id| eligible(world, id))
 }
 
-/// Sample the owned quality, ranges and unit target without refreshing contacts.
+/// Sample the technology base, ranges and unit target without refreshing contacts.
 fn input(world: &World, id: ObjectId) -> super::BattleComputerFailureInput {
-    let (ranges, quality, target) = if let Some(unit) = world.btech.constructed_units().get(&id) {
+    let (ranges, clan, target) = if let Some(unit) = world.btech.constructed_units().get(&id) {
         (
             unit.sensor_ranges(),
-            super::scan::computer_quality(
-                &unit.definition().attributes,
-                unit.definition().has_special("Clan"),
-            ),
+            unit.definition().has_special("Clan"),
             unit.target_lock(),
         )
     } else {
         let unit = &world.btech.vehicles()[&id];
         (
             unit.sensor_ranges(),
-            super::scan::computer_quality(
-                &unit.definition().attributes,
-                unit.definition().has_special("Clan"),
-            ),
+            unit.definition().has_special("Clan"),
             unit.target_lock(),
         )
     };
     super::BattleComputerFailureInput {
         parts_enabled: true,
-        quality,
+        clan,
         has_target: target.is_some_and(|t| t.target.0 > 0),
         tactical_range: ranges.tactical,
         long_range: ranges.long_range,

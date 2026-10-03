@@ -12,29 +12,28 @@ max_suits = 0
 
 [construction]
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 32
 slots = [
-    { at = 5, item = "IS.MediumPulseLaser", brand = 3 },
-    { at = "6-8", item = "HeatSink", brand = 3 },
+    { at = 5, item = "IS.MediumPulseLaser" },
+    { at = "6-8", item = "HeatSink" },
 ]
 
 [sections.right_arm]
 armor = 32
 slots = [
-    { at = "5-6", item = "IS.ERMediumLaser", brand = 3 },
-    { at = "7-9", item = "HeatSink", brand = 3 },
+    { at = "5-6", item = "IS.ERMediumLaser" },
+    { at = "7-9", item = "HeatSink" },
 ]
 
 [sections.left_torso]
 armor = 30
 rear = 10
 slots = [
-    { at = "1-5", item = "IS.LRM-20", brand = 3 },
-    { at = 6, item = "ArtemisIV", brand = 3 },
-    { at = "7-8", item = "Ecm", brand = 3 },
+    { at = "1-5", item = "IS.LRM-20" },
+    { at = 6, item = "ArtemisIV" },
+    { at = "7-8", item = "Ecm" },
     { at = "9-12", item = "Ammo_IS.HeavyGaussRifle", rounds = 4 },
 ]
 
@@ -42,8 +41,8 @@ slots = [
 armor = 30
 rear = 10
 slots = [
-    { at = "1-11", item = "IS.HeavyGaussRifle", brand = 3 },
-    { at = 12, item = "Case", brand = 3 },
+    { at = "1-11", item = "IS.HeavyGaussRifle" },
+    { at = 12, item = "Case" },
 ]
 
 [sections.center_torso]
@@ -62,5 +61,5 @@ armor = 40
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "IS.ERSmallLaser", brand = 3 },
+    { at = 4, item = "IS.ERSmallLaser" },
 ]

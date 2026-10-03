@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "wheel"
 tons = 5
 max_speed = 121.0
-computer = 3
 radio_range = 80
 tac_range = 18
 lrs_range = 31
