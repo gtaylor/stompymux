@@ -1754,7 +1754,7 @@ function btech_unit.hide(dbref, pilot) end
 local btech_weapon = {}
 
 ---Read detached effective values using a canonical weapon name.
----Examples: IS.MediumLaser or Magna.IS.MediumLaser; exact names ignore ASCII case.
+---Examples: IS.MediumLaser or CL.LRM-20; exact names ignore ASCII case.
 ---@param name string
 ---@return BattleWeaponValues
 function btech_weapon.settings(name) end

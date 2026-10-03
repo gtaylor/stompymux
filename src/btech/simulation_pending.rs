@@ -4,7 +4,6 @@ use crate::{Config, World};
 /// Decide whether a tick has work, reusing already collected scanners in the server path.
 pub(crate) fn pending(world: &World, config: &Config, has_scanner_observers: bool) -> bool {
     super::autopilot::runtime::pending(world)
-        || super::computer_runtime::pending(world, config)
         || super::sixth_sense::pending(world)
         || world.btech.vehicles().values().any(|unit| {
             (unit.detached && unit.power() != crate::BattlePower::Off)

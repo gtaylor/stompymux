@@ -116,14 +116,14 @@ from older builds.
 
 Saved BattleTech state uses typed columns with `CHECK` constraints, and newer
 tables are `STRICT`. Collections such as artillery queues, map-object
-traversal order, computer recovery events and autopilot orders and feedback
+traversal order and autopilot orders and feedback
 are stored one row per entry, so a save touches only the entries that changed.
 Enums are stored as integer codes documented beside each table. Dice streams
 are stored as their generator key, stream, block and word columns.
 
 Countdowns in those tables are stored as deadlines on the simulation clock
 (`btech_simulation_clock`) rather than as seconds remaining: artillery
-arrivals, computer and consciousness recovery, building repair, fire
+arrivals, consciousness recovery, building repair, fire
 spread and burnout, smoke expiry and the reactor startup window.
 A timer counting down in step with the clock keeps the same deadline, so its row
 is written only when it starts, is rescheduled or finishes. Loading subtracts

@@ -376,9 +376,6 @@ pub struct BtechState {
     /// teardown from accidental state loss. Cleared when a save commits.
     #[serde(skip)]
     pub(crate) retire_sanctions: Arc<std::cell::RefCell<BTreeSet<ObjectId>>>,
-    /// Independent, insertion-ordered computer display recovery events.
-    #[serde(default)]
-    pub(crate) sensor_recoveries: Arc<Vec<super::computer_runtime::SensorRecovery>>,
     /// Shared committed phase for turn-boundary rules.
     #[serde(default)]
     pub(crate) turn_clock: super::turn_clock::TurnClock,
@@ -593,9 +590,6 @@ impl BtechState {
                     && !name.contains('\0')),
                 "Invalid character value name"
             );
-        }
-        for event in self.sensor_recoveries.iter() {
-            event.validate(self)?;
         }
         for (id, recovery) in self.recoveries.iter() {
             recovery.validate()?;
@@ -980,7 +974,6 @@ impl BtechState {
         self.characters.retain(|id, _| !ids.contains(id));
         Arc::make_mut(&mut self.wrecks).retain(|id, _| !ids.contains(id));
         self.recoveries.retain(|id, _| !ids.contains(id));
-        Arc::make_mut(&mut self.sensor_recoveries).retain(|event| !ids.contains(&event.unit()));
         for &id in ids {
             super::map_slots::depart(self, id);
             self.constructed.remove(&id);

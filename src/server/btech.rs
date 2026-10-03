@@ -580,25 +580,6 @@ impl Server {
                 return;
             }
         }
-        if let Err(error) =
-            crate::advance_battle_computer_failures_action(&self.scripts, &self.config)
-        {
-            self.config.log(
-                &[crate::logging::Category::Problems],
-                "BTECH",
-                "COMPUTER",
-                error.to_string(),
-            );
-            *self.scripts.world.borrow_mut() = before;
-            self.scripts
-                .world
-                .borrow_mut()
-                .btech
-                .autopilot_plans
-                .clear();
-            self.scripts.effects.rollback();
-            return;
-        }
         let electronic_changes =
             crate::refresh_battle_electronic_fields(&mut self.scripts.world.borrow_mut());
         match electronic_changes {

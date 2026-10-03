@@ -20,9 +20,6 @@ mod btech_catalogue;
 #[path = "../btech_character_clear.rs"]
 mod btech_character_clear;
 
-#[path = "../btech_computer_failures.rs"]
-mod btech_computer_failures;
-
 #[path = "../btech_empty_crew.rs"]
 mod btech_empty_crew;
 

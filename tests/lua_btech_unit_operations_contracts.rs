@@ -648,9 +648,8 @@ async fn raw_registered_criticals_survive_restart() {
         )
         .unwrap();
 
-    persistence::save(&config.database(), &scripts.world())
-        .await
-        .unwrap();
+    let saved = scripts.world().clone();
+    persistence::save(&config.database(), &saved).await.unwrap();
     let loaded = persistence::load(&config.database()).await.unwrap();
     let restarted = Scripts::new(&config, Rc::new(RefCell::new(loaded))).unwrap();
     restarted

@@ -192,16 +192,6 @@ CREATE TABLE btech_character_recovery (
     CHECK (mode <> 0 OR recovers_at IS NULL)
 ) STRICT;
 
--- btech_sensor_recovery.rs: ordered computer recovery events. `display` is 0 (tactical),
--- 1 (long range) or 2 (scanner).
-CREATE TABLE btech_sensor_recovery (
-    position INTEGER PRIMARY KEY CHECK (position >= 0),
-    unit_dbref INTEGER NOT NULL REFERENCES objects(dbref) ON DELETE CASCADE,
-    display INTEGER NOT NULL CHECK (display BETWEEN 0 AND 2),
-    value INTEGER NOT NULL CHECK (value BETWEEN 0 AND 127),
-    recovers_at INTEGER NOT NULL CHECK (recovers_at > 0)
-) STRICT;
-
 -- btech_reactor.rs: the initial reactor instability window. `closes_at` is the
 -- simulation second the startup window closes, or NULL once it has closed.
 CREATE TABLE btech_reactor_clock (

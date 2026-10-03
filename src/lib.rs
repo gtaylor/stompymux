@@ -1230,10 +1230,7 @@ pub use btech::{BattleSpotterEvents, advance_spotter_links as advance_battle_spo
 
 pub use btech::BattleRollStatistics;
 
-pub use btech::{BattleComputerFailure, BattleComputerFailureInput, select_computer_failure};
-
 pub use btech::BattleEventTelemetry;
-pub use btech::advance_battle_computer_failures_action;
 
 pub use btech::{
     MAX_TACTICAL_UNITS, TacticalContact, TacticalIntention, TacticalSighting, TacticalSnapshot,
