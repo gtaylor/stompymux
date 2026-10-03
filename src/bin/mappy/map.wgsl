@@ -156,24 +156,42 @@ fn digit_distance(p: vec2<f32>, digit: u32) -> f32 {
     return d;
 }
 
-// Distance to a one- or two-digit number centered on the origin, in digit units.
-fn number_distance(p: vec2<f32>, value: u32) -> f32 {
-    if value < 10u {
-        return digit_distance(p, value);
+// Glyphs in a number of up to two digits, counting a leading minus sign.
+fn glyph_count(value: u32, negative: bool) -> u32 {
+    return select(1u, 2u, value >= 10u) + select(0u, 1u, negative);
+}
+
+// Distance to a number of up to two digits, with a leading minus sign when `negative`,
+// centered on the origin, in digit units.
+fn number_distance(p: vec2<f32>, value: u32, negative: bool) -> f32 {
+    let count = glyph_count(value, negative);
+    // Glyph centers are 1.7 digit units apart, the first at the left.
+    let first = -0.85 * f32(count - 1u);
+    var d = digit_distance(p - vec2<f32>(first + 1.7 * f32(count - 1u), 0.0), value % 10u);
+    if value >= 10u {
+        d = min(d, digit_distance(p - vec2<f32>(first + 1.7 * f32(count - 2u), 0.0), (value / 10u) % 10u));
     }
-    return min(
-        digit_distance(p + vec2<f32>(0.85, 0.0), (value / 10u) % 10u),
-        digit_distance(p - vec2<f32>(0.85, 0.0), value % 10u),
-    );
+    if negative {
+        d = min(d, segment(p - vec2<f32>(first, 0.0), vec2<f32>(-0.4, 0.0), vec2<f32>(0.4, 0.0)));
+    }
+    return d;
 }
 
 // `color` with `value` written over it in black or white, whichever contrasts, centered
-// `y` map units below the hex center. `size` is the half height of a single digit in map
-// units; two-digit numbers are drawn a little smaller to fit.
-fn ink_number(color: vec3<f32>, local: vec2<f32>, y: f32, size: f32, value: u32) -> vec3<f32> {
-    let half_height = u.radius * size * select(1.0, 0.8, value >= 10u);
+// `y` map units below the hex center, with a minus sign when `negative`. `size` is the half
+// height of a lone digit in map units; longer numbers are drawn smaller to fit.
+fn ink_number(
+    color: vec3<f32>,
+    local: vec2<f32>,
+    y: f32,
+    size: f32,
+    value: u32,
+    negative: bool,
+) -> vec3<f32> {
+    var scales = array<f32, 3>(1.0, 0.8, 0.65);
+    let half_height = u.radius * size * scales[glyph_count(value, negative) - 1u];
     let p = (local - vec2<f32>(0.0, y)) * u.radius / half_height;
-    let stroke = (number_distance(p, value) - 0.16) * half_height;
+    let stroke = (number_distance(p, value, negative) - 0.16) * half_height;
     let luminance = dot(color, vec3<f32>(0.299, 0.587, 0.114));
     let ink = select(vec3<f32>(1.0), vec3<f32>(0.0), luminance > palette[INK_THRESHOLD].r);
     return mix(color, ink, clamp(0.5 - stroke, 0.0, 1.0));
@@ -248,20 +266,20 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     if mode == LABEL_ALL {
         // Fixed rows, so a lone number still says which layer it belongs to.
         if has_structure {
-            color = ink_number(color, local, -ROW_OFFSET, ROW_SIZE, top);
+            color = ink_number(color, local, -ROW_OFFSET, ROW_SIZE, top, false);
         }
         if level != 0u || has_water || has_structure {
-            color = ink_number(color, local, 0.0, ROW_SIZE, level);
+            color = ink_number(color, local, 0.0, ROW_SIZE, level, false);
         }
         if has_water {
-            color = ink_number(color, local, ROW_OFFSET, ROW_SIZE, depth);
+            color = ink_number(color, local, ROW_OFFSET, ROW_SIZE, depth, depth != 0u);
         }
     } else if mode == LABEL_LEVEL && level != 0u {
-        color = ink_number(color, local, 0.0, SINGLE_SIZE, level);
+        color = ink_number(color, local, 0.0, SINGLE_SIZE, level, false);
     } else if mode == LABEL_DEPTH && has_water {
-        color = ink_number(color, local, 0.0, SINGLE_SIZE, depth);
+        color = ink_number(color, local, 0.0, SINGLE_SIZE, depth, depth != 0u);
     } else if mode == LABEL_TOP && has_structure {
-        color = ink_number(color, local, 0.0, SINGLE_SIZE, top);
+        color = ink_number(color, local, 0.0, SINGLE_SIZE, top, false);
     }
 
     if u.brush >= 0.0 && hex_distance(hex, vec2<i32>(u.hover)) <= i32(u.brush) {
