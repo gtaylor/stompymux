@@ -32,14 +32,13 @@ pub struct Uniforms {
     pub label: f32,
 }
 
-/// What is written on each hex when zoomed in. Water depth and a bridge deck are measured from
-/// the water surface and signed to say which way: depth as a negative number below it (-2),
-/// the deck as a positive one above it (+2), so neither can be mistaken for a ground level. A
-/// building's or wall's top is an elevation, its hex's level plus its height, so it compares
-/// directly with the ground level of the hexes around it.
+/// What is written on each hex when zoomed in. Ground level is the one elevation; every other
+/// layer is an offset from it, signed to say which way: water depth as a negative number below
+/// the surface (-2), which sits at ground level, and a bridge deck, building or wall as a
+/// positive one above it (+2). A layer's own elevation is ground level plus its offset.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Label {
-    /// Every layer in fixed rows: deck height or structure top above, ground level in the
+    /// Every layer in fixed rows: deck, building or wall height above, ground level in the
     /// middle, water depth below. Ground level is left off bare level-zero hexes.
     #[default]
     All,
@@ -47,12 +46,12 @@ pub enum Label {
     Level,
     /// Water depth below the surface, on water and ice.
     Depth,
-    /// Bridge deck height above the water, or building or wall top.
-    Top,
+    /// Bridge deck, building or wall height above the ground or water.
+    Height,
 }
 
 impl Label {
-    pub const ALL: [Self; 4] = [Self::All, Self::Level, Self::Depth, Self::Top];
+    pub const ALL: [Self; 4] = [Self::All, Self::Level, Self::Depth, Self::Height];
 
     /// Name shown on the label selector.
     pub fn name(self) -> &'static str {
@@ -60,7 +59,7 @@ impl Label {
             Self::All => "All layers",
             Self::Level => "Level",
             Self::Depth => "Depth",
-            Self::Top => "Top",
+            Self::Height => "Height",
         }
     }
 
@@ -68,12 +67,12 @@ impl Label {
     pub fn legend(self) -> &'static str {
         match self {
             Self::All => {
-                "top: +deck above the water, or structure top · middle: ground level · \
+                "top: +deck, building or wall height · middle: ground level · \
                  bottom: -depth below the water"
             }
             Self::Level => "ground level",
             Self::Depth => "-depth below the water surface",
-            Self::Top => "+deck above the water, or building/wall top (level + height)",
+            Self::Height => "+deck, building or wall height above the ground or water",
         }
     }
 
@@ -82,7 +81,7 @@ impl Label {
     pub fn min_radius(self) -> f32 {
         match self {
             Self::All => 20.0,
-            Self::Level | Self::Depth | Self::Top => 12.0,
+            Self::Level | Self::Depth | Self::Height => 12.0,
         }
     }
 
@@ -795,12 +794,12 @@ mod tests {
         assert_eq!(rows(water, Label::All), [false, true, true]);
         assert_eq!(rows(building, Label::All), [true, true, false]);
         assert_eq!(rows(bare, Label::All), [false, false, false]);
-        assert!(rows(bridge, Label::Top)[1]);
+        assert!(rows(bridge, Label::Height)[1]);
         assert_eq!(rows(bare, Label::Level), [false, false, false]);
     }
 
-    /// Depth is written with a minus sign and a bridge deck with a plus sign, each to the left
-    /// of its digit, and neither sign appears on a zero.
+    /// Depth is written with a minus sign and a bridge deck, building or wall height with a plus
+    /// sign, each to the left of its digit, and neither sign appears on a zero.
     #[test]
     fn depth_and_deck_labels_are_signed() {
         let Some((device, queue)) = device() else {
@@ -816,11 +815,13 @@ mod tests {
         let still = BattleHex::new(Terrain::Water, 0);
         let bridge = BattleHex::new(Terrain::Bridge, 3).with_level(4);
         let flush = BattleHex::new(Terrain::Bridge, 0);
+        let building = BattleHex::new(Terrain::Building, 3).with_level(5);
         assert!(inked(deep, Label::Depth, bar.0, bar.1));
         assert!(!inked(deep, Label::Depth, stem.0, stem.1));
         assert!(!inked(still, Label::Depth, bar.0, bar.1));
-        assert!(inked(bridge, Label::Top, bar.0, bar.1));
-        assert!(inked(bridge, Label::Top, stem.0, stem.1));
-        assert!(!inked(flush, Label::Top, bar.0, bar.1));
+        assert!(inked(bridge, Label::Height, bar.0, bar.1));
+        assert!(inked(bridge, Label::Height, stem.0, stem.1));
+        assert!(!inked(flush, Label::Height, bar.0, bar.1));
+        assert!(inked(building, Label::Height, stem.0, stem.1));
     }
 }

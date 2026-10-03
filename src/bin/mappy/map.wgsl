@@ -51,7 +51,7 @@ const STRUCTURE_BRIDGE: u32 = 3u;
 const LABEL_ALL: i32 = 0;
 const LABEL_LEVEL: i32 = 1;
 const LABEL_DEPTH: i32 = 2;
-const LABEL_TOP: i32 = 3;
+const LABEL_HEIGHT: i32 = 3;
 
 // Digit half heights in map units for one centered number and for the stacked rows of
 // LABEL_ALL, and how far the top and bottom rows sit from the hex center.
@@ -272,16 +272,15 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         color = mix(color, vec3<f32>(0.85, 0.05, 0.05), select(0.0, 0.75, stripe < 0.4));
     }
 
-    // Labels. Water depth and a bridge deck are measured from the water surface, below and
-    // above it, and signed to say so; a building or wall top is an elevation, comparable with
-    // ground levels.
+    // Labels. Ground level is the one elevation; every other layer is an offset from it,
+    // signed to say which way: water depth below the surface (which sits at ground level),
+    // and a bridge deck, building or wall above.
     let mode = i32(u.label);
     let has_water = water != 0u;
     let has_structure = structure != 0u;
     let depth = water - 1u;
-    let is_bridge = structure == STRUCTURE_BRIDGE;
-    let top = select(level + structure_height, structure_height, is_bridge);
-    let top_sign = select(SIGN_NONE, sign_for(top, SIGN_PLUS), is_bridge);
+    let top = structure_height;
+    let top_sign = sign_for(top, SIGN_PLUS);
     let depth_sign = sign_for(depth, SIGN_MINUS);
     if mode == LABEL_ALL {
         // Fixed rows, so a lone number still says which layer it belongs to.
@@ -298,7 +297,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         color = ink_number(color, local, 0.0, SINGLE_SIZE, level, SIGN_NONE);
     } else if mode == LABEL_DEPTH && has_water {
         color = ink_number(color, local, 0.0, SINGLE_SIZE, depth, depth_sign);
-    } else if mode == LABEL_TOP && has_structure {
+    } else if mode == LABEL_HEIGHT && has_structure {
         color = ink_number(color, local, 0.0, SINGLE_SIZE, top, top_sign);
     }
 
