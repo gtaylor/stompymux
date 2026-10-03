@@ -13,7 +13,11 @@ struct Fixture {
 }
 
 fn palette() -> Palette {
-    Palette::from_config(&stompymux_rs::Config::load("tests/fixtures/game").unwrap()).unwrap()
+    Palette::from_config(
+        &stompymux_rs::Config::load(crate::support::repository_root().join("tests/fixtures/game"))
+            .unwrap(),
+    )
+    .unwrap()
 }
 
 #[test]
@@ -228,7 +232,9 @@ fn preset_merging_capability_fallback_and_escaping() {
 #[tokio::test]
 async fn lua_documents_are_immutable_bounded_and_palette_aware() {
     use std::{cell::RefCell, rc::Rc};
-    let c = stompymux_rs::Config::load("tests/fixtures/game").unwrap();
+    let c =
+        stompymux_rs::Config::load(crate::support::repository_root().join("tests/fixtures/game"))
+            .unwrap();
     let world = stompymux_rs::persistence::load(&c.database())
         .await
         .unwrap();
@@ -330,7 +336,10 @@ async fn rendered_unicode_survives_mccp2_streaming() {
 #[test]
 fn help_index_visibility_order_and_relative_topics() {
     let temp = tempfile::tempdir().unwrap();
-    let source = std::fs::canonicalize("tests/fixtures/game/stompymux.toml").unwrap();
+    let source = std::fs::canonicalize(
+        crate::support::repository_root().join("tests/fixtures/game/stompymux.toml"),
+    )
+    .unwrap();
     std::fs::write(
         temp.path().join("stompymux.toml"),
         format!("include=[{:?}]\n", source.to_str().unwrap()),

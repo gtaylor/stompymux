@@ -1,13 +1,13 @@
 use crate::support;
 use sqlx::{Connection, sqlite::SqliteConnectOptions};
-use std::{cell::RefCell, path::Path, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 use support::{copy, isolated_scripts};
 
 #[tokio::test(flavor = "current_thread")]
 async fn player_preferences_and_loadout_are_atomic_and_resettable() {
     let (directory, config, s) = isolated_scripts().await;
     copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/btech/mechs"),
+        &support::repository_root().join("tests/fixtures/btech/mechs"),
         &directory.path().join("mechs"),
     );
     s.eval_callback::<()>(r#"
@@ -71,7 +71,7 @@ async fn player_preferences_and_loadout_are_atomic_and_resettable() {
 async fn player_configuration_errors_match_the_c_argument_shapes() {
     let (directory, _config, s) = isolated_scripts().await;
     copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/btech/mechs"),
+        &support::repository_root().join("tests/fixtures/btech/mechs"),
         &directory.path().join("mechs"),
     );
     std::fs::write(

@@ -406,7 +406,7 @@ fn vehicle_battle_value_applies_each_ground_movement_discount() {
 fn shipped_vehicles_and_vtols_have_finite_battle_values() {
     let mut count = 0;
     let mut rotorcraft = 0;
-    for entry in std::fs::read_dir("game/mechs").unwrap() {
+    for entry in std::fs::read_dir(support::repository_root().join("game/mechs")).unwrap() {
         let path = entry.unwrap().path();
         if !path.is_file() {
             continue;

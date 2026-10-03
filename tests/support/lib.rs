@@ -1,7 +1,7 @@
 //! Shared integration-test infrastructure; scenarios own their world edits and fault injection.
 //!
-//! Built as a dev-dependency library so every integration suite links one copy and uses
-//! whichever subset of helpers its scenarios need.
+//! Built as a library that every suite in the `stompymux-suites` package links, so each
+//! suite uses whichever subset of helpers its scenarios need.
 
 pub mod autopilot;
 pub mod btech_defense;
@@ -18,7 +18,9 @@ pub mod templates;
 pub use client::Client;
 pub use commands::{run_text, run_text_for_player};
 pub use database::{stable_world, store_unit_record, unit_record};
-pub use fixtures::{copy, isolated_scripts, isolated_world, with_clock_save_interval};
+pub use fixtures::{
+    copy, isolated_scripts, isolated_world, repository_root, with_clock_save_interval,
+};
 pub use logging::init_logging;
 pub use reuse::{attempt_heartbeat, install, restore_database, snapshot_database};
 pub use server::start;

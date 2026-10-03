@@ -10,8 +10,7 @@ async fn fixture() -> (tempfile::TempDir, std::path::PathBuf, World) {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("stompymux.db");
     std::fs::copy(
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("tests/fixtures/game/data/stompymux.db"),
+        crate::support::repository_root().join("tests/fixtures/game/data/stompymux.db"),
         &path,
     )
     .unwrap();
@@ -309,36 +308,4 @@ async fn history_capacity_order_and_extra_required_columns() {
     let error = format!("{:#}", persistence::save(&path, &w).await.unwrap_err());
     assert!(error.contains("extension"), "{error}");
     assert_eq!(before, std::fs::read(&path).unwrap());
-}
-#[tokio::test(flavor = "current_thread")]
-async fn removed_cli_commands_and_invalid_files_are_nonmutating() {
-    let (dir, path, _) = fixture().await;
-    std::fs::write(
-        dir.path().join("stompymux.toml"),
-        "database.game_database='stompymux.db'",
-    )
-    .unwrap();
-    let before = std::fs::read(&path).unwrap();
-    for command in ["check", "import-legacy"] {
-        let output = std::process::Command::new(env!("CARGO_BIN_EXE_stompymux-rs"))
-            .arg(command)
-            .arg("--game-dir")
-            .arg(dir.path())
-            .output()
-            .unwrap();
-        assert!(!output.status.success());
-        assert!(String::from_utf8_lossy(&output.stderr).contains("unrecognized subcommand"));
-        assert_eq!(before, std::fs::read(&path).unwrap());
-    }
-    let empty = dir.path().join("empty.db");
-    std::fs::write(&empty, []).unwrap();
-    assert!(persistence::save(&empty, &World::default()).await.is_err());
-    assert!(std::fs::read(empty).unwrap().is_empty());
-    let missing = dir.path().join("missing.db");
-    assert!(
-        persistence::save(&missing, &World::default())
-            .await
-            .is_err()
-    );
-    assert!(!missing.exists());
 }

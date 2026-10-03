@@ -2,7 +2,6 @@
 use crate::support;
 use std::{
     cell::{Cell, RefCell},
-    path::Path,
     rc::Rc,
     time::Duration,
 };
@@ -15,7 +14,7 @@ use tokio::{io::AsyncReadExt, net::TcpStream};
 async fn fixture(retries: i64, zone: i64) -> (tempfile::TempDir, Config) {
     let d = tempfile::tempdir().unwrap();
     copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
+        &support::repository_root().join("tests/fixtures/game"),
         d.path(),
     );
     let path = d.path().join("stompymux.toml");

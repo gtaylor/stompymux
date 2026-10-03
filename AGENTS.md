@@ -12,7 +12,10 @@ stompymux-rs is a Rust rewrite of stompymux, a C-based MUD server that includes 
 - `src/btech`: Battletech extensions that layer on top of the base MUX game server.
 - `crates/mapgen`: Standalone map generation library and `mapgen` CLI. Keep it free of dependencies on the server crate so map editors can embed it.
 - `crates/lua-tools`: `lua-type-updater` and `lua-doc-updater`, which read Rust sources as text. Keep them free of the server crate so they build in seconds.
-- `tests`: Integration tests.
+- `tests`: Integration scenario files (`tests/*.rs`) and fixtures (`tests/fixtures`).
+- `tests/suites`: The `stompymux-suites` package. Each suite binary compiles a group of scenario files from `tests/`.
+- `tests/support`: The `stompymux-test-support` helper library the suites share. Never make it a dev-dependency of the server package: the server library's unit-test build would then wait for the library to finish compiling.
+- `tests/cli`: The server package's one integration target, `cli`, for tests that run its executables through `CARGO_BIN_EXE_*`. It does not use `stompymux-test-support`.
 
 ## Principals
 
@@ -25,8 +28,8 @@ stompymux-rs is a Rust rewrite of stompymux, a C-based MUD server that includes 
 1. While iterating, build and run only what your change touches. Tests run under cargo-nextest.
    - `just check` type-checks every target without codegen (fastest feedback on compile errors).
    - `just test-unit <filter>` runs unit tests in `src/`; only the library's unit-test binary is built.
-   - `just test-scenario <name>` runs one scenario file from `tests/` (for example `just test-scenario btech_status`); only its suite binary is built. `just list-scenarios` shows which suite includes which scenario.
-   - `just test-suite <suite> [filter]` runs one suite from `tests/suites/`.
+   - `just test-scenario <name>` runs one scenario file from `tests/` or `tests/cli/` (for example `just test-scenario btech_status`); only the suite binaries that include it are built. `just list-scenarios` shows which suite includes which scenario.
+   - `just test-suite <suite> [filter]` runs one suite from `tests/suites/`, or the `cli` target.
 1. Run `cargo fmt`, `just lint`, and `just test` before handing back to the human. CI also checks generated Lua types and docs, maps, and fails on any clippy warning.
 1. Keep the `dev` and `test` Cargo profiles identical, and do not enable dependency features only under `[dev-dependencies]`. Either one makes `cargo build`, `cargo run`, and `cargo test` compile separate copies of the 200k-line server crate.
 

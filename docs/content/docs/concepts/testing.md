@@ -16,7 +16,9 @@ Lua formatting, generated Lua type and API documentation checks, and the test
 suite. A bare test-name filter such as `cargo test btech_los` still builds
 every test binary before filtering, so prefer selecting the target as well.
 The scenario files under `tests/` are grouped into suite binaries under
-`tests/suites/`; `just test-scenario` locates the right suite for you:
+`tests/suites/`, and tests that run the server executable live in the `cli`
+target under `tests/cli/`; `just test-scenario` locates the right suite for
+you:
 
 ```sh
 just test-unit btech::los             # unit tests in src/ matching a name

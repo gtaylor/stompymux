@@ -89,7 +89,9 @@ fn targeting_computer_slots_mass_damage_and_flooding() {
 /// Existing explicitly linked weapons and a six-slot computer load without changing the Black Knight asset.
 #[test]
 fn targeting_computer_black_knight_constructs_unchanged() {
-    let source = std::fs::read_to_string("game/mechs/BL12-KNT.toml").unwrap();
+    let source =
+        std::fs::read_to_string(crate::support::repository_root().join("game/mechs/BL12-KNT.toml"))
+            .unwrap();
     let unit = BattleUnit::from_template(BattleTemplate::parse("test", &source).unwrap()).unwrap();
     assert!(unit.targeting_computer_operational().unwrap());
     assert_eq!(

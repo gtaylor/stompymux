@@ -3891,7 +3891,6 @@ dependencies = [
  "sha2 0.11.0",
  "sqlx",
  "stompymux-mapgen",
- "stompymux-test-support",
  "tempfile",
  "tokio",
  "toml",
@@ -3901,6 +3900,26 @@ dependencies = [
  "unicode-segmentation",
  "unicode-width",
  "zeroize",
+]
+
+[[package]]
+name = "stompymux-suites"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "flate2",
+ "mlua",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "stompymux-rs",
+ "stompymux-test-support",
+ "tempfile",
+ "tokio",
+ "toml",
+ "tracing",
+ "unicode-width",
 ]
 
 [[package]]

@@ -5,7 +5,9 @@ use stompymux_rs::*;
 #[test]
 fn apod_assets_construct_and_round_trip() {
     for asset in ["FireScorpion-1", "FireScorpion-2", "SRC-3C", "SRC-5C"] {
-        let template = read_battle_template(std::path::Path::new("game/mechs"), asset).unwrap();
+        let template =
+            read_battle_template(&crate::support::repository_root().join("game/mechs"), asset)
+                .unwrap();
         let unit = BattleUnit::from_template(template).unwrap();
         let loadout = unit.loadout().unwrap();
         let pods: Vec<_> = loadout

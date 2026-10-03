@@ -10,7 +10,7 @@ use stompymux_rs::{
 /// Install only isolated BattleTech fixture assets into a temporary game directory.
 fn assets(root: &Path) {
     support::copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/btech"),
+        &support::repository_root().join("tests/fixtures/btech"),
         root,
     );
 }

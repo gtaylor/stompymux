@@ -3,9 +3,9 @@
 /// Every top-level scenario must be compiled by exactly one explicit suite.
 #[test]
 fn every_scenario_is_in_one_suite() {
-    use std::{fs, path::Path};
+    use std::fs;
 
-    let tests = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests");
+    let tests = support::repository_root().join("tests");
     let mut scenarios: Vec<_> = fs::read_dir(&tests)
         .unwrap()
         .map(|entry| entry.unwrap().path())

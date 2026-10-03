@@ -2,7 +2,6 @@
 use sqlx::Connection;
 use std::{
     cell::{Cell, RefCell},
-    path::Path,
     rc::Rc,
     time::Duration,
 };
@@ -25,7 +24,7 @@ use support::{Client, copy, stable_world, start};
 async fn fixture() -> (tempfile::TempDir, Config) {
     let d = tempfile::tempdir().unwrap();
     copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
+        &support::repository_root().join("tests/fixtures/game"),
         d.path(),
     );
     let path = d.path().join("stompymux.toml");

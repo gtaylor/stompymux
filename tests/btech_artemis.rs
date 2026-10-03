@@ -194,7 +194,9 @@ fn artemis_missile_tables_and_existing_archer() {
             .damage_groups_for_ammunition(BattleAmmunitionMode::Artemis, None, 1.0)
             .is_err()
     );
-    let source = std::fs::read_to_string("game/mechs/ARC-5R.toml").unwrap();
+    let source =
+        std::fs::read_to_string(crate::support::repository_root().join("game/mechs/ARC-5R.toml"))
+            .unwrap();
     let unit = BattleUnit::from_template(BattleTemplate::parse("test", &source).unwrap()).unwrap();
     for (index, mount) in unit.loadout().unwrap().weapons.iter().enumerate() {
         if mount.weapon == BattleWeapon::Lrm15 {

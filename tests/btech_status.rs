@@ -581,8 +581,8 @@ async fn status_layout_snapshots_cover_every_diagram() {
         let before = world.btech.clone();
         let rendered = battle_unit_status(&world, id, "").unwrap();
         let plain = text::plain(&rendered).replace("\r\n", "\n");
-        let file = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join(format!("tests/fixtures/btech/status/{name}.txt"));
+        let file =
+            support::repository_root().join(format!("tests/fixtures/btech/status/{name}.txt"));
         if std::env::var_os("UPDATE_STATUS_SNAPSHOTS").is_some() {
             std::fs::create_dir_all(file.parent().unwrap()).unwrap();
             std::fs::write(&file, &plain).unwrap();

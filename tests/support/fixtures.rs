@@ -1,6 +1,19 @@
 //! Isolated fixture copying for tests that edit game configuration, Lua, or SQLite.
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use stompymux_rs::{Config, Scripts, World, persistence};
+
+/// The repository root, which holds `game/` and `tests/fixtures/`.
+///
+/// Integration suites build in their own package, so their `CARGO_MANIFEST_DIR` is not the
+/// repository root; resolve every repository path from here instead.
+pub fn repository_root() -> PathBuf {
+    let support = Path::new(env!("CARGO_MANIFEST_DIR"));
+    support
+        .parent()
+        .and_then(Path::parent)
+        .expect("tests/support sits two levels below the repository root")
+        .to_path_buf()
+}
 
 /// Recursively copy fixture contents into an isolated directory.
 pub fn copy(source: &Path, target: &Path) {
@@ -21,7 +34,7 @@ pub async fn isolated_world() -> (tempfile::TempDir, Config, World) {
     crate::init_logging();
     let directory = tempfile::tempdir().unwrap();
     copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("../fixtures/game"),
+        &repository_root().join("tests/fixtures/game"),
         directory.path(),
     );
     let config = Config::load(directory.path()).unwrap();

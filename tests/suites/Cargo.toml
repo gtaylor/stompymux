@@ -1,0 +1,101 @@
+# Integration suites for the server. Each suite compiles a group of scenario files from
+# `tests/` into one test binary. They build in this package rather than the server's so
+# that `stompymux-test-support`, which depends on the server library, is not a
+# dev-dependency of the server: that would hold the library's unit-test build until the
+# library itself finished compiling.
+#
+# Dependency versions and features match the root manifest; a differing feature set would
+# compile a second copy of the server crate.
+[package]
+name = "stompymux-suites"
+version = "0.1.0"
+edition = "2024"
+publish = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+
+[dependencies]
+stompymux-rs = { path = "../.." }
+stompymux-test-support = { path = "../support" }
+anyhow = "1.0.104"
+chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
+flate2 = { version = "1.1.10", default-features = false, features = ["rust_backend"] }
+mlua = { version = "0.12.1", features = ["luajit", "vendored", "serialize"] }
+serde = { version = "1.0.229", features = ["derive", "rc"] }
+serde_json = { version = "1.0.151", features = ["float_roundtrip"] }
+sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "sqlite"] }
+tempfile = "3.27.0"
+tokio = { version = "1.53.1", features = ["full", "test-util"] }
+toml = { version = "1.1.5", features = ["preserve_order"] }
+tracing = "0.1.44"
+unicode-width = "0.2.2"
+
+# Scenario helpers pass world, unit, and tuning state explicitly, as the server crate does.
+[lints.clippy]
+too_many_arguments = "allow"
+
+[[test]]
+name = "btech_01"
+path = "btech_01.rs"
+
+[[test]]
+name = "btech_02"
+path = "btech_02.rs"
+
+[[test]]
+name = "btech_03"
+path = "btech_03.rs"
+
+[[test]]
+name = "btech_04"
+path = "btech_04.rs"
+
+[[test]]
+name = "btech_05"
+path = "btech_05.rs"
+
+[[test]]
+name = "btech_06"
+path = "btech_06.rs"
+
+[[test]]
+name = "btech_07"
+path = "btech_07.rs"
+
+[[test]]
+name = "btech_08"
+path = "btech_08.rs"
+
+[[test]]
+name = "btech_09"
+path = "btech_09.rs"
+
+[[test]]
+name = "btech_10"
+path = "btech_10.rs"
+
+[[test]]
+name = "btech_11"
+path = "btech_11.rs"
+
+[[test]]
+name = "btech_12"
+path = "btech_12.rs"
+
+[[test]]
+name = "btech_motion"
+path = "btech_motion.rs"
+
+[[test]]
+name = "core_01"
+path = "core_01.rs"
+
+[[test]]
+name = "core_02"
+path = "core_02.rs"
+
+[[test]]
+name = "core_03"
+path = "core_03.rs"

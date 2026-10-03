@@ -1,5 +1,5 @@
 //! Live-runtime characterizations of unresolved lock/message parity findings.
-use std::{cell::RefCell, path::Path, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::{
     Config, Flag, Kind, ObjectId, Scripts,
     commands::{self, Action},
@@ -310,7 +310,7 @@ fn paired_wire_supports_findings_and_controls() {
         serde_json::from_str(include_str!("fixtures/lock-message-audit.json")).unwrap();
     let matrix: serde_json::Value =
         serde_json::from_str(include_str!("fixtures/behavioral-parity.json")).unwrap();
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let root = support::repository_root();
     assert_eq!(audit["findings"].as_array().unwrap().len(), 4);
     for finding in audit["findings"].as_array().unwrap() {
         assert!(

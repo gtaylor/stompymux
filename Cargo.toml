@@ -5,8 +5,8 @@ edition = "2024"
 autotests = false
 
 [workspace]
-members = ["crates/lua-tools", "crates/mapgen", "tests/support"]
-default-members = [".", "crates/lua-tools", "crates/mapgen"]
+members = ["crates/lua-tools", "crates/mapgen", "tests/suites", "tests/support"]
+default-members = [".", "crates/lua-tools", "crates/mapgen", "tests/suites"]
 
 [features]
 mappy = ["dep:iced"]
@@ -53,9 +53,11 @@ tracing-subscriber = { version = "0.3.23", default-features = false, features = 
 tracing-appender = "0.2.5"
 iced = { version = "0.14.0", optional = true }
 
+# Keep `stompymux-test-support` out of this list. It depends on this library, so as a
+# dev-dependency it would hold the library's unit-test build until the library finished
+# compiling; the integration suites that use it live in `tests/suites` instead.
 [dev-dependencies]
 stompymux-mapgen = { path = "crates/mapgen", default-features = false }
-stompymux-test-support = { path = "tests/support" }
 
 # Autopilot and contract helpers pass world, unit, and tuning state explicitly
 # rather than bundling them into single-use structs.
@@ -91,67 +93,9 @@ opt-level = 1
 [profile.mappy.package."*"]
 opt-level = 3
 
-# Consolidated integration suites; scenario files stay in tests/ for fixture paths.
+# Tests that run this package's own binaries through `CARGO_BIN_EXE_*`, which cargo only
+# defines for integration tests in the package that builds them. Every other scenario runs
+# from the `stompymux-suites` package in `tests/suites`.
 [[test]]
-name = "btech_01"
-path = "tests/suites/btech_01.rs"
-
-[[test]]
-name = "btech_02"
-path = "tests/suites/btech_02.rs"
-
-[[test]]
-name = "btech_03"
-path = "tests/suites/btech_03.rs"
-
-[[test]]
-name = "btech_04"
-path = "tests/suites/btech_04.rs"
-
-[[test]]
-name = "btech_05"
-path = "tests/suites/btech_05.rs"
-
-[[test]]
-name = "btech_06"
-path = "tests/suites/btech_06.rs"
-
-[[test]]
-name = "btech_07"
-path = "tests/suites/btech_07.rs"
-
-[[test]]
-name = "btech_08"
-path = "tests/suites/btech_08.rs"
-
-[[test]]
-name = "btech_09"
-path = "tests/suites/btech_09.rs"
-
-[[test]]
-name = "btech_10"
-path = "tests/suites/btech_10.rs"
-
-[[test]]
-name = "btech_11"
-path = "tests/suites/btech_11.rs"
-
-[[test]]
-name = "btech_12"
-path = "tests/suites/btech_12.rs"
-
-[[test]]
-name = "core_01"
-path = "tests/suites/core_01.rs"
-
-[[test]]
-name = "core_02"
-path = "tests/suites/core_02.rs"
-
-[[test]]
-name = "core_03"
-path = "tests/suites/core_03.rs"
-
-[[test]]
-name = "btech_motion"
-path = "tests/suites/btech_motion.rs"
+name = "cli"
+path = "tests/cli/main.rs"
