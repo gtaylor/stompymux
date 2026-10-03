@@ -125,18 +125,14 @@ pub fn extinguish_inferno_in_water(world: &mut World, id: ObjectId) -> Result<Ve
             .get_mut(&id)
             .unwrap()
             .inferno_remaining = 0;
-        super::set_map_decoration(
+        super::decorations::raise_smoke(
             world,
             position.map,
             super::BattleHexCoordinate {
                 x: i32::from(position.x),
                 y: i32::from(position.y),
             },
-            Some(super::BattleDecoration::new(
-                super::BattleDecorationKind::Smoke,
-                120,
-                None,
-            )),
+            120,
         )?;
         world.btech.validate_action(world)?;
         Ok(notices)

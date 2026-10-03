@@ -536,7 +536,8 @@ numbers in map-slot order. The actor must be a wizard.
 
 `SETMAPSIZE <width> <height>` resizes your current map to dimensions from 1 through
 1000. It copies overlapping terrain and fills new cells with level grass.
-Map objects, fire and smoke, wrapping and building return links are cleared. Units keep their coordinates; a resize that would leave a unit or active
+Fire, smoke and decorations on hexes that remain stay where they are. Other map objects,
+wrapping and building return links are cleared. Units keep their coordinates; a resize that would leave a unit or active
 map event outside the new bounds fails without changes. Clear or move units first
 when shrinking past them. Lua uses `btech.map.resize(actor, map, width, height)`.
 

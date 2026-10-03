@@ -110,7 +110,7 @@ pub(super) fn land_in_candidate(
         .maps()
         .get(&position.map)
         .context("Aircraft map is unavailable")?
-        .base_hex(i64::from(position.x), i64::from(position.y))?;
+        .hex(i64::from(position.x), i64::from(position.y))?;
     world.attempt(|world| {
         let outcome = world
             .btech

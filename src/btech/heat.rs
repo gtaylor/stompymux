@@ -151,13 +151,10 @@ impl BattleUnit {
         let tile = map
             .hex(i64::from(position.x), i64::from(position.y))
             .expect("validated placed unit terrain");
-        if tile.is_burning() {
+        let elevation = self.elevation_level(tile);
+        if tile.is_burning() && self.reaches_flames(tile, elevation) {
             rates.production += 5.0;
         }
-        let tile = map
-            .base_hex(i64::from(position.x), i64::from(position.y))
-            .expect("validated placed unit terrain");
-        let elevation = self.elevation_level(tile);
         if tile.immerses(elevation) {
             let wading = elevation == i32::from(tile.water_line()) - 1;
             let bonus = if wading && self.posture() != super::BattlePosture::Prone {
@@ -188,6 +185,19 @@ impl BattleUnit {
             };
         }
         rates
+    }
+
+    /// Whether a Mech at `elevation` in a burning hex stands in the flames, which burn on the
+    /// hex's topmost surface: water, a bridge deck, a roof or the ground. A Mech under the
+    /// water, beneath a bridge deck or flying above the flames is clear of them.
+    fn reaches_flames(&self, tile: super::BattleHex, elevation: i32) -> bool {
+        let surface = i32::from(tile.top_height());
+        let height = if self.posture() == super::BattlePosture::Prone {
+            1
+        } else {
+            2
+        };
+        elevation <= surface && elevation + height > surface
     }
 
     /// Predict a committed thermal sample without mutating inspection state or consuming dice.

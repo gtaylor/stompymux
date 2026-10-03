@@ -1,9 +1,11 @@
-//! Transactional map resizing preserves overlapping visible terrain and removes map objects.
+//! Transactional map resizing preserves overlapping visible terrain, fire, smoke and
+//! decorations, and removes other map objects.
 use crate::{Config, ObjectId, Scripts};
 use anyhow::{Context, Result, ensure};
 use std::sync::Arc;
 
-/// Resize a wizard's map, retaining valid unit positions and clearing reference map-object state.
+/// Resize a wizard's map, retaining valid unit positions and the fire, smoke and decorations
+/// still on it, and clearing other map-object state.
 /// Cropping an occupied coordinate or active event is rejected by world validation, atomically.
 pub fn resize_map_action(
     scripts: &Scripts,
@@ -40,13 +42,39 @@ pub fn resize_map_action(
                 tiles[(y * width + x) as usize] = old.base_hex(x, y)?;
             }
         }
+        // Fire, smoke and decorations stay where they are if their hex is still on the map.
+        let inside = |x: i64, y: i64| x < width && y < height;
+        let decorations: std::collections::BTreeMap<_, _> = old
+            .decorations
+            .iter()
+            .filter_map(|(&index, &effect)| {
+                let (x, y) = (i64::from(index) % old.width, i64::from(index) / old.width);
+                inside(x, y).then(|| ((y * width + x) as u32, effect))
+            })
+            .collect();
+        let static_decorations = old.static_decorations.clone().map(|records| {
+            Arc::new(
+                records
+                    .iter()
+                    .filter(|(_, record)| {
+                        inside(
+                            i64::from(record.coordinate.x),
+                            i64::from(record.coordinate.y),
+                        )
+                    })
+                    .map(|(&ordinal, &record)| (ordinal, record))
+                    .collect(),
+            )
+        });
         {
             let mut world = scripts.world_mut();
+            super::map_objects::clear(&mut world, id)?;
             let map = world.btech.maps.get_mut(&id).unwrap();
             map.width = width;
             map.height = height;
             map.terrain = Some(Arc::new(tiles));
-            super::map_objects::clear(&mut world, id)?;
+            map.decorations = Arc::new(decorations);
+            map.static_decorations = static_decorations;
             world.validate(config)?;
         }
         super::notify_message(

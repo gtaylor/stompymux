@@ -4,7 +4,7 @@ use sqlx::Connection;
 use stompymux_rs::*;
 
 #[tokio::test]
-async fn generic_decoration_records_survive_reload_and_clear_on_resize() {
+async fn generic_decoration_records_survive_reload_and_resizes_that_keep_their_hex() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Generic decorations".into(), Kind::Room);
     create_battle_map(
@@ -99,14 +99,15 @@ async fn generic_decoration_records_survive_reload_and_clear_on_resize() {
         2
     );
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
-    let response = support::run_text(&scripts, &config, ObjectId(1), 1, "setmapsize 2 2");
+    // Narrowing the map cuts off the record at 1,1 and keeps the one at 0,1.
+    let response = support::run_text(&scripts, &config, ObjectId(1), 1, "setmapsize 1 2");
     let saved = scripts.world().clone();
-    assert!(
-        saved.btech.maps()[&map]
-            .static_decorations(BattleStaticDecorationKind::Decoration)
-            .is_empty(),
-        "{response}"
-    );
+    let kept: Vec<_> = saved.btech.maps()[&map]
+        .static_decorations(BattleStaticDecorationKind::Decoration)
+        .values()
+        .map(|record| record.coordinate)
+        .collect();
+    assert_eq!(kept, [BattleHexCoordinate { x: 0, y: 1 }], "{response}");
     assert_eq!(
         saved.btech.maps()[&map].hex(0, 1).unwrap().terrain(),
         Terrain::Ice
@@ -123,7 +124,7 @@ async fn generic_decoration_records_survive_reload_and_clear_on_resize() {
     .fetch_one(&mut sql)
     .await
     .unwrap();
-    assert_eq!(count, 0);
+    assert_eq!(count, 1);
     for (x, y, terrain) in [(-1, 0, 32), (2, 0, 32), (0, 0, 0), (0, 0, 256)] {
         sqlx::query("DELETE FROM btech_map_objects WHERE map_dbref=? AND object_type=2")
             .bind(map.0)

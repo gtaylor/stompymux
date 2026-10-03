@@ -76,7 +76,30 @@ impl BattleVehicle {
     }
 }
 
-/// Both deliberate and emergency landings require a supported surface.
+/// Both deliberate and emergency landings require a supported surface: open ground or a
+/// building roof, with no fire or smoke over it.
 pub(super) fn supported_surface(hex: BattleHex) -> bool {
-    hex.is_open_ground() || matches!(hex.structure(), Some(Structure::Building { .. }))
+    hex.is_open_ground()
+        || (hex.overlay().is_none() && matches!(hex.structure(), Some(Structure::Building { .. })))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::btech::{BattleDecorationKind, Terrain};
+
+    #[test]
+    fn aircraft_land_on_open_ground_or_roofs_clear_of_fire_and_smoke() {
+        for terrain in [Terrain::Grassland, Terrain::Road, Terrain::Building] {
+            let hex = BattleHex::new(terrain, 1);
+            assert!(supported_surface(hex), "{terrain:?}");
+            for kind in [BattleDecorationKind::Fire, BattleDecorationKind::Smoke] {
+                assert!(
+                    !supported_surface(hex.with_overlay(Some(kind))),
+                    "{terrain:?}"
+                );
+            }
+        }
+        assert!(!supported_surface(BattleHex::new(Terrain::LightForest, 0)));
+    }
 }

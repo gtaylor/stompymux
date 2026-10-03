@@ -38,11 +38,13 @@ impl BattleHex {
         self.water().is_some()
     }
 
-    /// Divisor this hex applies to a ground unit's desired speed: the slower of its woods and
-    /// its ground. Water and structures are governed by their own movement rules.
+    /// Divisor this hex applies to a ground unit's desired speed: the slowest of its woods, its
+    /// ground and any fire or smoke over it, which slow units as much as rough ground. Water
+    /// and structures are otherwise governed by their own movement rules.
     pub fn ground_speed_divisor(self, wheeled: bool) -> f64 {
+        let overlay = if self.overlay().is_some() { 2.0 } else { 1.0 };
         if self.water().is_some() || self.structure().is_some() {
-            return 1.0;
+            return overlay;
         }
         let woods = match self.woods() {
             Some(Woods::Light) => 2.0,
@@ -55,7 +57,7 @@ impl BattleHex {
             Ground::Sand if wheeled => 2.0,
             _ => 1.0,
         };
-        f64::max(woods, ground)
+        f64::max(woods, ground).max(overlay)
     }
 
     /// Whether a unit standing at `level` relative to this hex is in water: below the
@@ -95,6 +97,27 @@ mod tests {
             assert_eq!(divisor(Terrain::Mountains, wheeled), 3.0);
             assert_eq!(divisor(Terrain::Road, wheeled), 1.0);
             assert_eq!(divisor(Terrain::Bridge, wheeled), 1.0);
+        }
+    }
+
+    #[test]
+    fn fire_and_smoke_slow_units_like_rough_ground() {
+        use crate::btech::BattleDecorationKind::{Fire, Smoke};
+        for kind in [Fire, Smoke] {
+            let covered = |terrain| BattleHex::new(terrain, 1).with_overlay(Some(kind));
+            for wheeled in [false, true] {
+                assert_eq!(
+                    covered(Terrain::Grassland).ground_speed_divisor(wheeled),
+                    2.0
+                );
+                assert_eq!(covered(Terrain::Road).ground_speed_divisor(wheeled), 2.0);
+                assert_eq!(covered(Terrain::Water).ground_speed_divisor(wheeled), 2.0);
+                assert_eq!(covered(Terrain::Bridge).ground_speed_divisor(wheeled), 2.0);
+                assert_eq!(
+                    covered(Terrain::HeavyForest).ground_speed_divisor(wheeled),
+                    3.0
+                );
+            }
         }
     }
 

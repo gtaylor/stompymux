@@ -43,13 +43,14 @@ impl StoredBattleMap {
     }
 
     /// Check strict terrain rules and team exclusions without acquiring contacts or consuming dice.
-    /// Grass/road/sand require six on-map neighbors of equal elevation; neighbor terrain is unrestricted.
+    /// Grass/road/sand clear of fire and smoke require six on-map neighbors of equal elevation;
+    /// neighbor terrain is unrestricted.
     pub fn landing_suitability(
         &self,
         coordinate: BattleHexCoordinate,
         team: i32,
     ) -> Result<BattleLandingSuitability> {
-        let tile = self.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
+        let tile = self.hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
         if !tile.is_open_ground() {
             return Ok(BattleLandingSuitability::ImproperTerrain);
         }

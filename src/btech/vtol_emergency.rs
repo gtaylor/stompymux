@@ -20,7 +20,7 @@ pub(super) fn engine_landing(
         .maps()
         .get(&position.map)
         .context("Aircraft emergency landing map is unavailable")?
-        .base_hex(i64::from(position.x), i64::from(position.y))?;
+        .hex(i64::from(position.x), i64::from(position.y))?;
     let height = tile.surface_height();
     let check = if super::vtol_landing::supported_surface(tile) {
         let modifier = i16::try_from(unit.elevation_level(tile) - i32::from(height))
