@@ -1753,7 +1753,7 @@ async fn shutdown_vehicle_pod_expiry_retries_failed_server_commit() {
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER deny_pods BEFORE UPDATE ON btech_vehicles BEGIN SELECT RAISE(ABORT,'pod removal failure'); END;").execute(&mut sql).await.unwrap();
         let (_address, shutdown, server, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        tokio::time::sleep(std::time::Duration::from_millis(1200)).await;
+        support::attempt_heartbeat().await;
         let saved = persistence::load(&config.database()).await.unwrap();
         assert_eq!(saved.btech.vehicles()[&shooter].pod_removal(), Some(1));
         assert!(saved.btech.vehicles()[&shooter].has_beacon(BattleBeaconKind::Ecm));

@@ -243,7 +243,7 @@ fn parts_disabled(dir: &std::path::Path) -> Config {
 #[tokio::test(flavor = "current_thread")]
 async fn server_failure_and_recovery_queue_commit_together() {
     use sqlx::{Connection, SqliteConnection};
-    use std::{cell::Cell, time::Duration};
+    use std::cell::Cell;
     tokio::task::LocalSet::new().run_until(async {
         let template = &firing::templates()[2];
         let (_dir, config, mut world, unit, _, _) = firing::fixture_with_target(template, None, template).await;
@@ -263,7 +263,7 @@ async fn server_failure_and_recovery_queue_commit_together() {
         client.until("Password: ").await;
         client.send("secret").await;
         client.until("Sighter").await;
-        tokio::time::sleep(Duration::from_millis(1200)).await;
+        support::attempt_heartbeat().await;
         let loaded = persistence::load(&config.database()).await.unwrap();
         assert_eq!(&loaded.btech.vehicles()[&unit], &before);
         assert!(serde_json::to_value(&loaded.btech).unwrap()["sensor_recoveries"].as_array().unwrap().is_empty());

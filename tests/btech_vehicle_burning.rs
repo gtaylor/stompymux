@@ -419,7 +419,7 @@ async fn shutdown_vehicle_fire_retries_failed_server_commit() {
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER deny_fire BEFORE UPDATE ON btech_vehicles BEGIN SELECT RAISE(ABORT,'vehicle fire failure'); END;").execute(&mut sql).await.unwrap();
         let (_address, shutdown, server, _lua) = support::start(&config, Rc::new(std::cell::Cell::new(1))).await;
-        tokio::time::sleep(std::time::Duration::from_millis(1200)).await;
+        support::attempt_heartbeat().await;
         let failed = persistence::load(&config.database()).await.unwrap();
         assert_eq!(failed.btech.vehicles()[&id], world.btech.vehicles()[&id]);
         sqlx::raw_sql("DROP TRIGGER deny_fire;").execute(&mut sql).await.unwrap();

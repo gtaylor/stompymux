@@ -293,7 +293,7 @@ async fn tcp_jump_retries_failed_launch_and_flight_saves_then_resumes_after_rest
         client.send("jump 0 2").await;
         client.until("You engage your jump jets.").await;
         let launched = persistence::load(&config.database()).await.unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(1200)).await;
+        support::attempt_heartbeat().await;
         let failed = persistence::load(&config.database()).await.unwrap();
         assert_eq!(failed.btech.constructed_units()[&id], launched.btech.constructed_units()[&id]);
         sqlx::query("DROP TRIGGER reject_flight").execute(&mut sql).await.unwrap();
@@ -3076,7 +3076,7 @@ async fn tcp_free_fall_retries_shutdown_and_impact_saves_across_restart() {
             saved = jump_tick(&config, id).await;
         }
         let before = saved.btech.constructed_units()[&id].clone();
-        tokio::time::sleep(std::time::Duration::from_millis(1200)).await;
+        support::attempt_heartbeat().await;
         client.send("say impact-fence").await;
         let output = client.until("You say \"impact-fence\"").await;
         assert!(!output.contains("You hit the ground!"), "{output}");

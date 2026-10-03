@@ -323,7 +323,7 @@ async fn idle_vehicle_lock_countdown_retries_failed_server_commits() {
         // A settling lock keeps its timer row still; refuse the commit at the snapshot stamp.
         sqlx::raw_sql("CREATE TRIGGER deny_lock BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(ABORT,'lock failure'); END;").execute(&mut sql).await.unwrap();
         let (_address, shutdown, server, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        tokio::time::sleep(std::time::Duration::from_millis(1200)).await;
+        support::attempt_heartbeat().await;
         let saved = persistence::load(&config.database()).await.unwrap();
         assert_eq!(saved.btech.vehicles()[&observer].hex_lock().unwrap().remaining, 8);
         sqlx::raw_sql("DROP TRIGGER deny_lock").execute(&mut sql).await.unwrap();

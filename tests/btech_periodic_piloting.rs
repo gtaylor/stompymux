@@ -360,7 +360,7 @@ async fn hot_myomer_turn_threshold_and_shutdown_crew_gates() {
 #[tokio::test(flavor = "current_thread")]
 async fn server_clock_and_fall_retry_are_one_transaction() {
     use sqlx::{Connection, SqliteConnection};
-    use std::{cell::Cell, rc::Rc, time::Duration};
+    use std::{cell::Cell, rc::Rc};
     tokio::task::LocalSet::new().run_until(async {
         let template = include_str!("../game/mechs/JR7-D.toml");
         let (_dir,config,mut world,unit,_,_) = firing::fixture_with_target(template,None,template).await;
@@ -374,7 +374,7 @@ async fn server_clock_and_fall_retry_are_one_transaction() {
         let (addr,shutdown,task,_) = support::start(&config,Rc::new(Cell::new(1))).await;
         let mut client = support::Client {socket:tokio::net::TcpStream::connect(addr).await.unwrap(),pending:Vec::new()};
         client.until("Who are you? ").await; client.send("#1").await; client.until("Password: ").await; client.send("secret").await; client.until("Sighter").await;
-        tokio::time::sleep(Duration::from_millis(1200)).await;
+        support::attempt_heartbeat().await;
         let loaded = persistence::load(&config.database()).await.unwrap();
         assert_eq!(serde_json::to_value(&loaded.btech).unwrap()["turn_clock"],28);
         assert_eq!(&loaded.btech.constructed_units()[&unit],&before);
@@ -513,6 +513,8 @@ async fn idle_clock_wraps_is_stored_at_shutdown_and_resumes_from_saved_phase() {
                 .await
                 .unwrap();
             let (_, shutdown, task, _) = support::start(&config, Rc::new(Cell::new(1))).await;
+            // The stored idle clock follows elapsed real time, so this waits out
+            // two real heartbeats rather than advancing a paused clock.
             tokio::time::sleep(Duration::from_millis(2200)).await;
             let current: i64 = sqlx::query_scalar("PRAGMA data_version")
                 .fetch_one(&mut sql)

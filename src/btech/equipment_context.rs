@@ -1,8 +1,12 @@
-//! Bounded memoization of pure template-to-equipment resolution during combat.
+//! Bounded memoization of pure template-to-equipment resolution.
 //!
 //! Keys are complete owned parser inputs, including contract mode. Live unit
 //! state is never cached here: damage, ammunition, heat and readiness still use
 //! their ordinary rules. No hash or unit identity is treated as an equality proof.
+//!
+//! Combat opens a [`Scope`] sized to the battlefield. Outside one, a small
+//! ambient cache still serves repeat resolutions, since validation and status
+//! reads resolve the same few templates over and over.
 use super::{
     BattleLoadout, BattleTemplate, BattleVehicleLoadout, BattleVehicleTemplate, BtechState,
 };
@@ -43,6 +47,16 @@ struct Cache {
     vehicles: Projections<BattleVehicleTemplate, BattleVehicleLoadout>,
 }
 thread_local! { static ACTIVE: RefCell<Option<Cache>> = const { RefCell::new(None) }; }
+
+/// Templates the ambient cache retains per kind when no combat scope is open.
+const AMBIENT_LIMIT: usize = 16;
+
+thread_local! {
+    static AMBIENT: RefCell<Cache> = RefCell::new(Cache {
+        mechs: Projections::new(AMBIENT_LIMIT),
+        vehicles: Projections::new(AMBIENT_LIMIT),
+    });
+}
 
 /// Synchronous scope with at most one record per starting chassis of each kind.
 /// Distinct definitions share records; FIFO eviction bounds critical-damage churn.
@@ -89,12 +103,32 @@ pub(super) fn invalidate() {
     });
 }
 
+/// Look up a projection in the open scope, or in the ambient cache when no
+/// scope is open. Returns `None` on a miss; the flag reports a scoped hit.
+fn cached<L>(read: impl Fn(&Cache) -> Option<L>) -> Option<(L, bool)> {
+    let scoped = ACTIVE.with(|active| active.borrow().as_ref().map(&read));
+    match scoped {
+        Some(hit) => hit.map(|loadout| (loadout, true)),
+        None => AMBIENT
+            .with(|ambient| read(&ambient.borrow()))
+            .map(|loadout| (loadout, false)),
+    }
+}
+
+/// Remember a resolution in the open scope, or in the ambient cache.
+fn remember(write: impl Fn(&mut Cache)) {
+    let scoped = ACTIVE.with(|active| active.borrow_mut().as_mut().map(&write).is_some());
+    if !scoped {
+        AMBIENT.with(|ambient| write(&mut ambient.borrow_mut()));
+    }
+}
+
 /// Resolve exactly the same Mech parser inputs as BattleUnit::loadout.
 pub(super) fn mech(definition: &BattleTemplate, contract: bool) -> Result<BattleLoadout> {
-    if let Some(loadout) =
-        ACTIVE.with(|active| active.borrow().as_ref()?.mechs.get(definition, contract))
-    {
-        super::autopilot::diagnostics::count("equipment_projection_reused");
+    if let Some((loadout, scoped)) = cached(|cache| cache.mechs.get(definition, contract)) {
+        if scoped {
+            super::autopilot::diagnostics::count("equipment_projection_reused");
+        }
         return Ok(loadout);
     }
     let _measurement = super::autopilot::diagnostics::combat("equipment_resolution");
@@ -103,11 +137,7 @@ pub(super) fn mech(definition: &BattleTemplate, contract: bool) -> Result<Battle
     } else {
         BattleLoadout::resolve(definition)
     }?;
-    ACTIVE.with(|active| {
-        if let Some(cache) = active.borrow_mut().as_mut() {
-            cache.mechs.insert(definition, contract, &loadout);
-        }
-    });
+    remember(|cache| cache.mechs.insert(definition, contract, &loadout));
     Ok(loadout)
 }
 
@@ -116,10 +146,10 @@ pub(super) fn vehicle(
     definition: &BattleVehicleTemplate,
     contract: bool,
 ) -> Result<BattleVehicleLoadout> {
-    if let Some(loadout) =
-        ACTIVE.with(|active| active.borrow().as_ref()?.vehicles.get(definition, contract))
-    {
-        super::autopilot::diagnostics::count("equipment_projection_reused");
+    if let Some((loadout, scoped)) = cached(|cache| cache.vehicles.get(definition, contract)) {
+        if scoped {
+            super::autopilot::diagnostics::count("equipment_projection_reused");
+        }
         return Ok(loadout);
     }
     let _measurement = super::autopilot::diagnostics::combat("equipment_resolution");
@@ -128,11 +158,7 @@ pub(super) fn vehicle(
     } else {
         BattleVehicleLoadout::resolve(definition)
     }?;
-    ACTIVE.with(|active| {
-        if let Some(cache) = active.borrow_mut().as_mut() {
-            cache.vehicles.insert(definition, contract, &loadout);
-        }
-    });
+    remember(|cache| cache.vehicles.insert(definition, contract, &loadout));
     Ok(loadout)
 }
 

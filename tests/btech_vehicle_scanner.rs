@@ -254,7 +254,7 @@ async fn failed_server_saves_retry_the_entire_mixed_contact_update() {
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER deny_scanner BEFORE UPDATE ON btech_vehicles BEGIN SELECT RAISE(ABORT,'scanner failure'); END;").execute(&mut sql).await.unwrap();
         let (_address, shutdown, server, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        tokio::time::sleep(std::time::Duration::from_millis(1200)).await;
+        support::attempt_heartbeat().await;
         let saved = persistence::load(&config.database()).await.unwrap();
         assert!(saved.btech.vehicles().values().all(|v| v.contacts().is_empty()));
         assert!(saved.btech.constructed_units().values().all(|v| v.contacts().is_empty()));

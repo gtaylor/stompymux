@@ -895,7 +895,7 @@ async fn vehicle_mine_movement_retries_a_failed_server_save() {
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER deny_vehicle_mine_delete BEFORE DELETE ON btech_map_objects WHEN OLD.object_type=3 BEGIN SELECT RAISE(ABORT,'vehicle mine save failure'); END;").execute(&mut sql).await.unwrap();
         let (_address, shutdown, server, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        tokio::time::sleep(std::time::Duration::from_millis(1200)).await;
+        support::attempt_heartbeat().await;
         let failed = persistence::load(&config.database()).await.unwrap();
         assert_eq!(failed.btech.vehicles()[&id], world.btech.vehicles()[&id]);
         assert_eq!(failed.btech.maps()[&map].minefields(), world.btech.maps()[&map].minefields());
