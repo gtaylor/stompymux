@@ -52,7 +52,7 @@ pub(super) fn selected(entry: &BattleInventoryEntry, pattern: &str) -> bool {
         return entry.part_id == id;
     }
     let Some(part) = BattlePart::from_id(entry.part_id) else {
-        return false;
+        return matches(pattern, &name(entry));
     };
     matches(pattern, &part.name) || matches(pattern, &short_name(&part.name))
 }

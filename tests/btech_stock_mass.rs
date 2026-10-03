@@ -184,8 +184,8 @@ async fn named_stock_controls_and_inspection_agree() {
         fixture(include_str!("../game/mechs/JR7-D.toml"), false).await;
     let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
     let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-    let command = format!("@btech inventory-set #{} Gold 0 2", id.0);
-    let callback = format!("btech.inventory.set_named(1,{},'gOlD',0,2)", id.0);
+    let command = format!("@btech inventory-set #{} Gold 2", id.0);
+    let callback = format!("btech.inventory.set_named(1,{},'gOlD',2)", id.0);
     let before = lua.world().btech.clone();
     assert!(
         lua.eval_callback::<()>(&format!("{callback}; error('abort')"))
@@ -212,8 +212,8 @@ async fn named_stock_controls_and_inspection_agree() {
     );
     let before = lua.world().btech.clone();
     for code in [
-        format!("btech.inventory.set_named(4,{},'Gold',0,3)", id.0),
-        format!("btech.inventory.set_named(1,{},'Unknown',0,3)", id.0),
+        format!("btech.inventory.set_named(4,{},'Gold',3)", id.0),
+        format!("btech.inventory.set_named(1,{},'Unknown',3)", id.0),
     ] {
         assert!(lua.eval_callback::<()>(&code).is_err());
         assert_eq!(lua.world().btech, before);

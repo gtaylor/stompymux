@@ -54,7 +54,7 @@ async fn damage_piloting_and_template_lifecycle_match_zero_return_contracts() {
         assert(select('#',btech.unit.load_template(unit,'parity'))==0)
         assert(btech.unit.armor(unit,btech.unit.sections.LEFT_ARM).armor.current==10)
         assert(btech.unit.radio_channels(unit)[1].frequency==0)
-        -- Saved templates carry the C brand-zero part spellings and are not reloadable.
+        -- The saved mech, retyped as a wheeled vehicle, is not a loadable template.
         local ok,err=mux.error.pcall(btech.template.exists,'saved-contract')
         assert(not ok and err.code=='btech.template.invalid' and err.detail.argument==1)
     "#,
@@ -609,9 +609,9 @@ async fn weapon_install_accepts_native_slot_layouts() {
         assert(#weapons==1 and weapons[1].slot_count==partial_slots and weapons[1].first_slot==3)
         slots=btech.unit.critical_slots(unit,btech.unit.sections.LEFT_TORSO)
         assert(slots[3].part.id==partial_id and slots[10].part.id==partial_id)
-        local ok,err=mux.error.pcall(btech.unit.install_weapon,unit,{part=115,section=btech.unit.sections.LEFT_TORSO,slots={1}})
+        local ok,err=mux.error.pcall(btech.unit.install_weapon,unit,{part=2047,section=btech.unit.sections.LEFT_TORSO,slots={1}})
         assert(not ok and err.code=='btech.part.not_found')
-        ok,err=mux.error.pcall(btech.unit.install_weapon,unit,{part={id=115},section=btech.unit.sections.LEFT_TORSO,slots={1}})
+        ok,err=mux.error.pcall(btech.unit.install_weapon,unit,{part={id=2047},section=btech.unit.sections.LEFT_TORSO,slots={1}})
         assert(not ok and err.code=='btech.part.not_found')
     "#,
         )

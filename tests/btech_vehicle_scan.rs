@@ -194,10 +194,8 @@ async fn vehicle_scan_ranges_and_observer_disclosure_follow_current_state() {
     assert!(report_battle_unit(&world, c, ObjectId(1), d).is_ok());
     assert_eq!(world.btech, before);
     let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][c.0.to_string()]["definition"]["attributes"]["scan_range"] =
-        serde_json::json!("0");
-    saved["vehicles"][c.0.to_string()]["definition"]["attributes"]["computer"] =
-        serde_json::json!("6");
+    saved["vehicles"][c.0.to_string()]["hardware"]["scan"] =
+        serde_json::json!({"value": 0, "sensor_hits": 0});
     world.btech = serde_json::from_value(saved).unwrap();
     assert_eq!(world.btech.vehicles()[&c].sensor_ranges().scan, 0);
     assert!(

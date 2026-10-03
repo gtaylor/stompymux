@@ -51,13 +51,7 @@ async fn debug_weapon_permissions_diagnostics_and_restart() {
             assert_eq!(scripts.world().btech, before);
         }
         assert_eq!(
-            support::run_text(
-                &scripts,
-                &config,
-                actor,
-                1,
-                "sEtWbV magna.is.smalllaser 314"
-            ),
+            support::run_text(&scripts, &config, actor, 1, "sEtWbV is.smalllaser 314"),
             "BV for IS.SmallLaser set to 314."
         );
         assert_eq!(scripts.world().objects[&actor].location, Some(ObjectId(0)));

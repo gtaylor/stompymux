@@ -14,8 +14,8 @@ async fn data_version(db: &mut sqlx::SqliteConnection) -> i64 {
 
 /// Running units standing still, one settling a target lock and one recycling a weapon,
 /// reach a steady state in which heartbeats commit without touching the database, then
-/// reload exactly. The only writes left are the turn-boundary ticks, whose periodic
-/// checks roll dice.
+/// reload exactly. The only writes left are turn-boundary ticks, whose periodic checks
+/// can roll dice, and the periodic simulation clock save.
 #[tokio::test(flavor = "current_thread")]
 async fn running_units_standing_still_write_nothing_per_tick() {
     let templates = firing::templates();
@@ -40,6 +40,7 @@ async fn running_units_standing_still_write_nothing_per_tick() {
         for second in 1..=35 {
             assert!(harness.step(second).await.committed);
         }
+        let mut clock_save: Option<i64> = None;
         for second in 36..=100 {
             let before = data_version(&mut db).await;
             assert!(harness.step(second).await.committed);
@@ -49,10 +50,14 @@ async fn running_units_standing_still_write_nothing_per_tick() {
             let phase = serde_json::to_value(&harness.world().btech).unwrap()["turn_clock"]
                 .as_i64()
                 .unwrap();
+            if phase == 29 || phase == 0 {
+                continue;
+            }
             assert!(
-                phase == 29 || phase == 0,
+                clock_save.is_none_or(|previous| second - previous >= 60),
                 "heartbeat at second {second} (turn phase {phase}) wrote to the database"
             );
+            clock_save = Some(second);
         }
         // A forced save stores the current clock, and loading rebuilds every count.
         let current = harness.world();

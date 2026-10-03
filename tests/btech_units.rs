@@ -41,7 +41,7 @@ fn construction_sets_original_protection_and_independent_ammunition() {
                 .is_err()
         );
     }
-    let unknown_field = JENNER.replace("computer = 2", "unknown_field = 2");
+    let unknown_field = JENNER.replace("radio = 2", "unknown_field = 2");
     assert_ne!(unknown_field, JENNER);
     assert!(BattleTemplate::parse("JR7-D", &unknown_field).is_err());
 }

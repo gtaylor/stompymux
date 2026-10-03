@@ -77,7 +77,7 @@ async fn runtime_weapon_controls_share_authority_and_callback_rollback() {
         assert_eq!(lua.world().btech, before);
     }
     let detached: mlua::Table = lua
-        .eval_callback("return btech.weapon.settings('martell.is.smalllaser')")
+        .eval_callback("return btech.weapon.settings('is.smalllaser')")
         .unwrap();
     detached.set("recycle_seconds", 0).unwrap();
     assert_eq!(lua.world().btech, before);

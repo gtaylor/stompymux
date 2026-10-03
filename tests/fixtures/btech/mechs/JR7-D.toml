@@ -5,6 +5,9 @@ tons = 35
 walk_mp = 11
 jump_mp = 5
 radio = 2
+tac_range = 20
+lrs_range = 40
+scan_range = 20
 
 [sections.left_arm]
 armor = 4

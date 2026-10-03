@@ -71,7 +71,7 @@ async fn purges_all_types_evacuates_contents_and_preserves_unknown_data() {
         None
     );
     sqlx::raw_sql("ALTER TABLE objects ADD COLUMN unknown_flag INTEGER DEFAULT 7; CREATE TABLE future_data (value BLOB); INSERT INTO future_data VALUES(x'001234');").execute(&mut sql).await.unwrap();
-    sqlx::query("INSERT INTO btech_economy_parts VALUES(?,1,1,5)")
+    sqlx::query("INSERT INTO btech_economy_parts VALUES(?,1,5)")
         .bind(thing.0)
         .execute(&mut sql)
         .await

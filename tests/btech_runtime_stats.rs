@@ -110,22 +110,6 @@ async fn digging_alone_keeps_simulation_pending_until_completion() {
             advance_battle_units(&mut world, 0);
         }
         assert!(battle_contact_observers(&world).is_empty());
-        // Running vehicle computers need ticks independently of digging when parts are enabled.
-        assert!(
-            battle_runtime_stats(&world, &config, ObjectId(1))
-                .unwrap()
-                .simulation_pending
-        );
-        let path = _dir.path().join("stompymux.toml");
-        let mut table: toml::Table = std::fs::read_to_string(&path).unwrap().parse().unwrap();
-        table
-            .entry("battletech")
-            .or_insert(toml::Value::Table(toml::Table::new()))
-            .as_table_mut()
-            .unwrap()
-            .insert("parts".into(), 0.into());
-        std::fs::write(path, toml::to_string(&table).unwrap()).unwrap();
-        let config = Config::load(_dir.path()).unwrap();
         assert!(
             !battle_runtime_stats(&world, &config, ObjectId(1))
                 .unwrap()

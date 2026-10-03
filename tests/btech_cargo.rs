@@ -699,7 +699,7 @@ async fn wizard_stock_actions_share_audits_and_immediate_load_limits() {
             &config,
             ObjectId(1),
             1,
-            &format!("@btech inventory-set #{} Gold 0 50000", unit.0),
+            &format!("@btech inventory-set #{} Gold 50000", unit.0),
         );
         assert!(output.contains("added 50000 Gold"), "{output}");
         let encoded = serde_json::to_value(&scripts.world().btech).unwrap();
@@ -712,17 +712,14 @@ async fn wizard_stock_actions_share_audits_and_immediate_load_limits() {
             0.0
         );
         scripts
-            .eval_callback::<()>(&format!(
-                "btech.inventory.set_named(1,{},'Gold',0,2)",
-                unit.0
-            ))
+            .eval_callback::<()>(&format!("btech.inventory.set_named(1,{},'Gold',2)", unit.0))
             .unwrap();
         scripts
-            .eval_callback::<()>(&format!("btech.inventory.set(1,{},528,0,2)", unit.0))
+            .eval_callback::<()>(&format!("btech.inventory.set(1,{},528,2)", unit.0))
             .unwrap();
         assert_eq!(scripts.world().channels["MechEconInfo"].messages, 2);
         scripts
-            .eval_callback::<()>(&format!("btech.inventory.set(1,{},528,0,0)", unit.0))
+            .eval_callback::<()>(&format!("btech.inventory.set(1,{},528,0)", unit.0))
             .unwrap();
         let channel = scripts.world().channels["MechEconInfo"].clone();
         assert_eq!(channel.messages, 3);
@@ -737,7 +734,7 @@ async fn wizard_stock_actions_share_audits_and_immediate_load_limits() {
         assert!(
             scripts
                 .eval_callback::<()>(&format!(
-                    "btech.inventory.set_named(1,{},'Gold',0,50000); error('abort stock')",
+                    "btech.inventory.set_named(1,{},'Gold',50000); error('abort stock')",
                     unit.0
                 ))
                 .is_err()
@@ -771,10 +768,10 @@ async fn wizard_stock_publication_failure_restores_both_adapters() {
             &config,
             ObjectId(1),
             1,
-            &format!("@btech inventory-set #{} Gold 0 50000", unit.0),
+            &format!("@btech inventory-set #{} Gold 50000", unit.0),
         );
         assert!(!output.contains("quantity 50000."), "{output}");
-        let code: String = scripts.eval_callback(&format!("local ok,e=pcall(btech.inventory.set_named,1,{},'Gold',0,50000); assert(not ok); return e.code",unit.0)).unwrap();
+        let code: String = scripts.eval_callback(&format!("local ok,e=pcall(btech.inventory.set_named,1,{},'Gold',50000); assert(not ok); return e.code",unit.0)).unwrap();
         assert_eq!(code, "btech.operation.failed");
         assert_eq!(scripts.world().btech, before.btech);
         assert_eq!(
@@ -909,7 +906,7 @@ async fn operator_stock_limits_and_batch_rollback_are_shared() {
         .channels
         .get_mut("MechEconInfo")
         .unwrap()
-        .messages = i64::MAX - 1;
+        .messages = i64::MAX;
     let before = scripts.world().clone();
     assert!(
         scripts
@@ -972,7 +969,7 @@ async fn scripted_add_stores_uses_first_match_signed_counts_and_atomic_logging()
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let added: bool = scripts
             .eval_callback(&format!(
-                "return btech.inventory.add_stores(1,{},'*.MediumLas?r',2147483647)",
+                "return btech.inventory.add_stores(1,{},'IS.MediumLas?r',2147483647)",
                 unit.0
             ))
             .unwrap();
@@ -1100,7 +1097,7 @@ async fn inventory_cleanup_preserves_installed_units_and_stock() {
             set_battle_inventory_quantity(&mut world, ObjectId(1), unit, part, 2).unwrap();
         }
         set_battle_inventory_named(&mut world, ObjectId(1), unit, "Gold", 7).unwrap();
-        set_battle_inventory_named(&mut world, ObjectId(1), unit, "Steel", 3).unwrap();
+        set_battle_inventory_quantity(&mut world, ObjectId(1), unit, 535, 3).unwrap();
         let installed = battle_weapon_specifications(&world, unit, true).unwrap();
         let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

@@ -44,7 +44,8 @@ async fn registered_unit_defaults_are_inspectable_without_constructed_runtime() 
       assert(head[1].operational and head[2].operational and head[3].operational,'operational')
       assert(head[1].fire_modes[1]==nil and not head[1].temporary_failure,'modes')
       assert(#btech.unit.weapons(unit)==0,'weapons')
-      assert(#btech.unit.installed_parts(unit)==0 and #btech.unit.payload(unit)==0,'inventory')
+      for _,row in ipairs(btech.unit.installed_parts(unit)) do assert(row.part.category=='special','installed') end
+      assert(#btech.unit.payload(unit)==0,'payload')
       -- C projects no channels while the radio configuration is zeroed
       -- (btech_unit_bindings.c:300-317 with mech_radio_state.c:46-48).
       assert(#btech.unit.radio_channels(unit)==0,'radio')
@@ -88,7 +89,7 @@ async fn mech_inspection_projects_exact_record_shapes_and_keeps_the_old_report()
       local slots=btech.unit.critical_slots(unit,btech.unit.sections.HEAD)
       assert(#slots==12 and slots[1].slot==1 and slots[1].section==btech.unit.sections.HEAD)
       assert(slots[1].kind=='special' and slots[1].part.id>0 and slots[7].kind=='empty')
-      assert(slots[1].part.short_name==nil and slots[1].part.long_name==nil and slots[1].part.very_long_name==nil)
+      assert(type(slots[1].part.short_name)=='string' and type(slots[1].part.very_long_name)=='string')
       assert(type(slots[1].operational)=='boolean' and type(slots[1].temporary_failure)=='boolean')
       btech.unit.set_armor(unit,btech.unit.sections.HEAD,{internal=0})
       local zero_internal=btech.unit.critical_slots(unit,btech.unit.sections.HEAD)
@@ -109,13 +110,13 @@ async fn mech_inspection_projects_exact_record_shapes_and_keeps_the_old_report()
       for _,row in ipairs(installed) do
         if row.part.id==79 then medium_lasers=row.quantity end
         if row.part.id==135 then srm=row.quantity end
-        if row.part.id==327 then ammo=row.quantity end
+        if row.part.id==135+1024 then ammo=row.quantity end
       end
-      assert(medium_lasers==0 and srm==0 and ammo==0 and #installed==0)
+      assert(medium_lasers==4 and srm==1 and ammo==1,'installed '..medium_lasers..' '..srm..' '..ammo)
       local payload=btech.unit.payload(unit)
       local payload_lasers=0
       for _,row in ipairs(payload) do if row.part.id==79 then payload_lasers=row.quantity end end
-      assert(payload_lasers==0 and #payload==0)
+      assert(payload_lasers==4 and #payload==3,'payload '..payload_lasers..' '..#payload)
       local technologies=btech.unit.technologies(unit)
       local flip=false; for _,row in ipairs(technologies) do if row.code==btech.unit.technology.FLIPPABLE_ARMS then flip=true end end; assert(flip)
       assert(btech.unit.section_condition(unit,btech.unit.sections.HEAD)=='operational')
@@ -149,10 +150,6 @@ async fn template_lookup_is_case_insensitive_bounded_and_registry_gated() {
     .unwrap();
     let modes = include_str!("fixtures/btech/mechs/JR7-D.toml")
         .replace(
-            "item = \"LifeSupport\" }",
-            "item = \"LifeSupport\", brand = 20 }",
-        )
-        .replace(
             "item = \"Ammo_IS.SRM-4\", rounds = 25",
             "item = \"Ammo_IS.SRM-4\", rounds = 25, modes = [\"Destroyed\", \"Disabled\", \"Broken\", \"Damaged\", \"BackPack\", \"Jettisoned\", \"OmniBase\", \"RocketFired\", \"Inferno\", \"Precision\"]",
         );
@@ -175,8 +172,7 @@ async fn template_lookup_is_case_insensitive_bounded_and_registry_gated() {
         local ok,e=mux.error.pcall(f,...)
         return ok and 'ok' or (e.code..' | '..e.message)
       end
-      -- Stock templates name parts without a manufacturer and keep the brand in its own
-      -- field; they inspect like branded ones.
+      -- Stock templates inspect like any other.
       assert(btech.template.exists('jr7-d'),'jr7-d')
       assert(btech.template.exists('modes'),'modes')
       local engine=btech.template.engine('jr7-d')
@@ -193,7 +189,7 @@ async fn template_lookup_is_case_insensitive_bounded_and_registry_gated() {
       -- A part no catalogue knows still rejects the whole template.
       assert(fails(btech.template.exists,'unknown')=='btech.template.invalid | bad argument #1 to \'?\' (existing template is malformed)','unknown')
       assert(fails(btech.template.engine,'unknown')=='btech.template.invalid | bad argument #1 to \'?\' (template is malformed)','unknown engine')
-      -- Branded templates stay loadable and case-insensitive.
+      -- Templates stay loadable and case-insensitive.
       assert(btech.template.exists('parity'))
       assert(not btech.template.exists('definitely-missing-template'))
       assert(not btech.template.exists(string.char(255)))
@@ -231,7 +227,6 @@ async fn vehicle_inspection_uses_vehicle_sections_and_raw_slot_inventory() {
     let root = config.path(&config.database.mech_database);
     std::fs::create_dir_all(&root).unwrap();
     std::fs::write(root.join("Demolisher.toml"), source).unwrap();
-    // The shipped Demolisher names unbranded criticals, which the template surface accepts.
     scripts
         .eval_callback::<()>(
             r#"
@@ -260,9 +255,9 @@ async fn vehicle_inspection_uses_vehicle_sections_and_raw_slot_inventory() {
       local ac20,ammo=0,0
       for _,row in ipairs(installed) do
         if row.part.id==98 then ac20=row.quantity end
-        if row.part.id==290 then ammo=row.quantity end
+        if row.part.id==98+1024 then ammo=row.quantity end
       end
-      assert(ac20==0 and ammo==0 and #installed==0,'installed '..#installed..' '..ac20..' '..ammo)
+      assert(ac20==1 and ammo>0 and #installed==2,'installed '..#installed..' '..ac20..' '..ammo)
       local slots=btech.unit.critical_slots(unit,btech.unit.sections.TURRET)
       assert(#slots==12 and slots[1].kind=='weapon' and slots[3].kind=='ammunition')
       assert(slots[3].ammunition.rounds==5 and slots[3].ammunition.capacity==5)
@@ -513,7 +508,7 @@ async fn parity_probe_vehicle_templates_load_and_project() {
       local vtol=mux.world.object(15)
       btech.unit.load_template(ground,'PARITY-GROUND')
       btech.unit.load_template(vtol,'PARITY-VTOL')
-      -- Manufacturer-qualified criticals (Agra.IS.PPC) load on both classes in C.
+      -- Weapon criticals (IS.PPC) load on both classes.
       local turret=btech.unit.armor(ground,btech.unit.sections.TURRET)
       assert(turret.armor.current==30 and turret.internal.current==6,'ground turret')
       assert(#btech.unit.weapons(ground)==1 and btech.unit.weapons(ground)[1].part.id==77,'ground weapon')

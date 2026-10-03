@@ -20,10 +20,10 @@ async fn player_preferences_and_loadout_are_atomic_and_resettable() {
  assert(btech.player.mechwarrior_template(p)=='PARITY','template')
  local arity=select('#',btech.player.set_loadout(p,l));if arity~=0 then error('set loadout arity '..arity) end
  local got=btech.player.loadout(p);if not (got.armor.head==2 and got.armor.torso==8 and got.right==nil and got.left==nil) then error('loadout projection') end
- -- The pinned C registry has no manufacturer-qualified personal-combat rows,
- -- so weapon equipment is rejected before any kind or ammunition check.
- local ok,e=mux.error.pcall(function() btech.player.set_loadout(p,{armor=l.armor,right={weapon='PC.Blazer'}}) end);assert(not ok and e.code=='btech.part.not_found' and btech.player.loadout(p).right==nil,'personal weapon: '..tostring(e))
- local ok2,e2=mux.error.pcall(function() btech.player.set_loadout(p,{armor=l.armor,right={weapon='Agra.IS.PPC'}}) end);assert(not ok2 and e2.code=='btech.part.wrong_kind' and btech.player.loadout(p).right==nil,'wrong kind: '..tostring(e2))
+ assert(select('#',btech.player.set_loadout(p,{armor=l.armor,right={weapon='PC.Blazer',ammunition=3}}))==0,'personal weapon')
+ local armed=btech.player.loadout(p).right;assert(armed.weapon.id==6 and armed.ammunition==3,'personal weapon projection')
+ assert(select('#',btech.player.set_loadout(p,l))==0 and btech.player.loadout(p).right==nil,'unarm')
+ local ok2,e2=mux.error.pcall(function() btech.player.set_loadout(p,{armor=l.armor,right={weapon='IS.PPC'}}) end);assert(not ok2 and e2.code=='btech.part.wrong_kind' and btech.player.loadout(p).right==nil,'wrong kind: '..tostring(e2))
  local ok3,e3=mux.error.pcall(function() btech.player.set_mechwarrior_template(p,'missing') end);assert(not ok3 and e3.code=='btech.template.not_found' and btech.player.mechwarrior_template(p)=='PARITY','missing template: '..tostring(e3))
  -- Stock templates name parts without a manufacturer and are accepted.
  assert(select('#',btech.player.set_mechwarrior_template(p,'JR7-D'))==0 and btech.player.mechwarrior_template(p)=='JR7-D','stock template')
@@ -135,9 +135,7 @@ async fn player_configuration_errors_match_the_c_argument_shapes() {
       record(btech.player.set_ui_preferences,p,with{buildings=string.rep('i',13)})
       -- C validates booleans before the buildings mode.
       record(btech.player.set_ui_preferences,p,with{include_dead='x',buildings='bogus-mode!'})
-      -- Loadout validation. Personal-combat names never resolve in the
-      -- manufacturer-qualified registry, so weapon records fail as not found
-      -- before any kind, ammunition, or per-ton check can run.
+      -- Loadout validation.
       local armor={head=2,torso=8,hands=1,feet=2}
       record(btech.player.set_loadout,p,{armor=42})
       record(btech.player.set_loadout,p,{armor={head=9,torso=8,hands=1,feet=2}})
@@ -145,8 +143,7 @@ async fn player_configuration_errors_match_the_c_argument_shapes() {
       record(btech.player.set_loadout,p,{armor=armor,right=42})
       record(btech.player.set_loadout,p,{armor=armor,right={weapon='Missing.Weapon'}})
       record(btech.player.set_loadout,p,{armor=armor,right={weapon='Ammo_IS.SRM-4'}})
-      record(btech.player.set_loadout,p,{armor=armor,right={weapon='Agra.IS.PPC'}})
-      record(btech.player.set_loadout,p,{armor=armor,right={weapon='PC.Blazer'}})
+      record(btech.player.set_loadout,p,{armor=armor,right={weapon='IS.PPC'}})
       record(btech.player.set_loadout,p,{armor=armor,right={weapon='PC.Blazer',ammunition=256}})
       record(btech.player.set_loadout,p,{armor=armor,right={weapon='PC.Sword',ammunition=1}})
       record(btech.player.set_loadout,p,{armor=armor,right={ammo=1}})
@@ -191,11 +188,10 @@ async fn player_configuration_errors_match_the_c_argument_shapes() {
         "mux.arg.invalid | bad argument #2 to '?' (head must be an integer)",
         "mux.arg.invalid | bad argument #2 to '?' (right must be a table or nil)",
         "btech.part.not_found | bad argument #2 to '?' (right.weapon was not found)",
-        "btech.part.not_found | bad argument #2 to '?' (right.weapon was not found)",
+        "btech.part.wrong_kind | bad argument #2 to '?' (right.weapon is not a weapon)",
         "btech.part.wrong_kind | bad argument #2 to '?' (right.weapon is not a personal-combat weapon)",
-        "btech.part.not_found | bad argument #2 to '?' (right.weapon was not found)",
-        "btech.part.not_found | bad argument #2 to '?' (right.weapon was not found)",
-        "btech.part.not_found | bad argument #2 to '?' (right.weapon was not found)",
+        "mux.arg.invalid | bad argument #2 to '?' (ammunition must be an integer from 0 to 255)",
+        "mux.arg.invalid | bad argument #2 to '?' (right.ammunition is invalid for this weapon)",
         "mux.arg.invalid | bad argument #2 to '?' (unknown field 'ammo')",
         "mux.object.invalid | bad argument #1 to '?' (object is not a live player)",
         "mux.object.invalid | bad argument #1 to '?' (object must be a dbref or Object)",
