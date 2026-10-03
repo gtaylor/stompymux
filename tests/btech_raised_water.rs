@@ -246,3 +246,193 @@ async fn lifting_a_map_lifts_vehicles_without_changing_what_happens() {
         );
     }
 }
+
+/// Standard shooting rules for comparing combat at either height.
+fn shot_rules() -> BattleShotRules {
+    BattleShotRules {
+        range_damage: false,
+        tsm_tow_bonus: true,
+        vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
+        stacking: stompymux_rs::BattleStackingRules::STANDARD,
+        stagger: BattleStaggerMode::Retain,
+        glancing: BattleGlancingMode::Disabled,
+        aim: BattleAimRules {
+            woods_damage: false,
+            dig_bonus: 3,
+            dig_only_front: false,
+            hit_arc_mode: 0,
+            fasa_turning: false,
+            extended_movement: false,
+            extended_ranges: false,
+            hotload_half_minimum: false,
+            override_weapon_arcs: true,
+        },
+        hit: BattleHitRules {
+            inferno_penalty: false,
+            exile_stun_mode: 0,
+        },
+        hit_arc_mode: 0,
+        extended_gunnery: false,
+        extended_piloting: false,
+        target_toughness: false,
+    }
+}
+
+/// A shooter and a target placed at fixed hexes and postures on `asset`.
+async fn duel(
+    asset: BattleMapAsset,
+    placements: [(i64, i64, bool); 2],
+) -> (tempfile::TempDir, World, [ObjectId; 2]) {
+    let (dir, config, mut world) = support::isolated_world().await;
+    let map = world.create(&config, "Raised duel".into(), Kind::Room);
+    create_battle_map(&mut world, map, "duel.map", asset).unwrap();
+    let mut units = Vec::new();
+    for (pilot, (x, y, prone)) in [ObjectId(1), ObjectId(2)].into_iter().zip(placements) {
+        let id = world.create(&config, format!("Duelist {}", pilot.0), Kind::Thing);
+        world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
+        create_battle_unit(
+            &mut world,
+            id,
+            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                .unwrap(),
+        )
+        .unwrap();
+        place_battle_unit(&mut world, id, map, x, y).unwrap();
+        world.objects.get_mut(&pilot).unwrap().location = Some(id);
+        assign_battle_pilot(&mut world, id, pilot).unwrap();
+        start_battle_unit(&mut world, id, pilot, true).unwrap();
+        for _ in 0..5 {
+            advance_battle_units(&mut world, 0);
+        }
+        let mut state = serde_json::to_value(&world.btech).unwrap();
+        let unit = &mut state["constructed"][id.0.to_string()];
+        unit["dice"] = serde_json::to_value(BattleDice::seeded([31; 32])).unwrap();
+        unit["crew_recovery"]["dice"] = serde_json::to_value(BattleDice::seeded([13; 32])).unwrap();
+        if prone {
+            unit["posture"] = serde_json::json!("prone");
+        }
+        state["recoveries"][pilot.0.to_string()]["dice"] =
+            serde_json::to_value(BattleDice::seeded([11; 32])).unwrap();
+        world.btech = serde_json::from_value(state).unwrap();
+        units.push(id);
+    }
+    (dir, world, [units[0], units[1]])
+}
+
+/// Aiming, firing, heat, inferno and flooding in and around raised water give the same results
+/// as the same fight at level 0.
+#[tokio::test]
+async fn lifting_a_map_keeps_combat_in_water_unchanged() {
+    let lane = BattleMapAsset::from_cells("3 5\n.0.0.0\n~1~1~1\n~2~2~2\n.0.0.0\n.0.0.0\n").unwrap();
+    // (x, y, prone) for the shooter and then the target.
+    let mut fired = false;
+    for placements in [
+        [(1, 0, false), (1, 2, false)],
+        [(1, 1, false), (1, 2, false)],
+        [(1, 2, false), (1, 1, false)],
+        [(1, 3, false), (1, 1, true)],
+        [(1, 4, false), (1, 1, false)],
+        [(0, 1, false), (2, 1, false)],
+    ] {
+        let (_low_dir, mut low, units) = duel(lane.clone(), placements).await;
+        let (_high_dir, mut high, _) = duel(lifted(&lane), placements).await;
+        let [shooter, target] = units;
+        let context = format!("{placements:?}");
+        let rules = shot_rules();
+        assert_eq!(
+            format!("{:?}", refresh_battle_contacts(&mut low, &[shooter])),
+            format!("{:?}", refresh_battle_contacts(&mut high, &[shooter])),
+            "{context}"
+        );
+        let weapons = low.btech.constructed_units()[&shooter]
+            .loadout()
+            .unwrap()
+            .weapons
+            .len();
+        for index in 0..weapons {
+            assert_eq!(
+                format!(
+                    "{:?}",
+                    battle_aim_modifiers(&low, shooter, target, index, 4, rules.aim)
+                ),
+                format!(
+                    "{:?}",
+                    battle_aim_modifiers(&high, shooter, target, index, 4, rules.aim)
+                ),
+                "{context} weapon {index}"
+            );
+        }
+        for id in units {
+            assert_eq!(
+                format!("{:?}", low.btech.constructed_units()[&id].heat_rates(&low)),
+                format!(
+                    "{:?}",
+                    high.btech.constructed_units()[&id].heat_rates(&high)
+                ),
+                "{context}"
+            );
+        }
+        for index in 0..weapons {
+            let low_shot =
+                resolve_battle_shot(&mut low, shooter, ObjectId(1), target, index, rules);
+            let high_shot =
+                resolve_battle_shot(&mut high, shooter, ObjectId(1), target, index, rules);
+            fired |= low_shot.is_ok();
+            assert_eq!(
+                format!("{low_shot:?}"),
+                format!("{high_shot:?}"),
+                "{context} weapon {index}"
+            );
+        }
+        for id in units {
+            apply_inferno_burn(&mut low, id, 30).unwrap();
+            apply_inferno_burn(&mut high, id, 30).unwrap();
+            assert_eq!(
+                format!("{:?}", extinguish_inferno_in_water(&mut low, id)),
+                format!("{:?}", extinguish_inferno_in_water(&mut high, id)),
+                "{context}"
+            );
+        }
+        // Strip the target's armor so any submerged section floods.
+        for world in [&mut low, &mut high] {
+            let mut state = serde_json::to_value(&world.btech).unwrap();
+            let sections = state["constructed"][target.0.to_string()]["sections"]
+                .as_object_mut()
+                .unwrap();
+            for section in sections.values_mut() {
+                section["armor"] = 0.into();
+                section["rear"] = 0.into();
+            }
+            world.btech = serde_json::from_value(state).unwrap();
+        }
+        assert_eq!(
+            format!("{:?}", flood_battle_unit(&mut low, target, rules_fall())),
+            format!("{:?}", flood_battle_unit(&mut high, target, rules_fall())),
+            "{context}"
+        );
+        for _ in 0..30 {
+            advance_battle_units(&mut low, 0);
+            advance_battle_units(&mut high, 0);
+        }
+        for id in units {
+            let differing = differing(&outcome(&low, id), &outcome(&high, id));
+            assert!(differing.is_empty(), "{context}: {differing:#?}");
+        }
+    }
+    assert!(fired, "no shot was ever taken");
+}
+
+/// Ordinary fall rules for flooding.
+fn rules_fall() -> BattleFallRules {
+    BattleFallRules {
+        vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
+        stacking: stompymux_rs::BattleStackingRules::STANDARD,
+        stagger: BattleStaggerMode::Retain,
+        hit: BattleHitRules {
+            inferno_penalty: false,
+            exile_stun_mode: 0,
+        },
+        extended_piloting: true,
+        toughness: false,
+    }
+}

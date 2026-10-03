@@ -1440,7 +1440,7 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@class BattleWoodlandImpact
 ---@field map integer
 ---@field coordinate BattleHexCoordinate
----@field effect table Ignition duration, replacement terrain, or no effect.
+---@field effect {effect: "none"}|{effect: "ignite", seconds: integer}|{effect: "clear", clearing: "thin_to_light"|"cut_to_clear"|"cut_to_rough"} What the attack did to the woods.
 ---@field notices BattleNotice[]
 
 ---@class BattleWoodsAbsorption

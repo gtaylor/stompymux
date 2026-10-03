@@ -29,7 +29,7 @@ async fn generic_decoration_records_survive_reload_and_clear_on_resize() {
     world = persistence::load(&config.database()).await.unwrap();
     let definition =
         world.btech.maps()[&map].static_decorations(BattleStaticDecorationKind::Decoration)[&5];
-    assert_eq!(definition.restored_terrain, Terrain::Water);
+    assert_eq!(definition.restored_terrain, Some(Terrain::Water));
     assert_eq!(definition.object, ObjectId(1));
     assert_eq!(definition.duration, 123);
     assert_eq!(definition.scalar, 456);
@@ -61,7 +61,7 @@ async fn generic_decoration_records_survive_reload_and_clear_on_resize() {
         5,
         Some(BattleStaticDecoration {
             coordinate: BattleHexCoordinate { x: 0, y: 1 },
-            restored_terrain: Terrain::Grassland,
+            restored_terrain: Some(Terrain::Grassland),
             ..definition
         }),
     )

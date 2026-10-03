@@ -822,7 +822,7 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 
 - `map`: `integer`
 - `coordinate`: `BattleHexCoordinate`
-- `effect`: `table` — Ignition duration, replacement terrain, or no effect.
+- `effect`: `{effect: "none"}|{effect: "ignite", seconds: integer}|{effect: "clear", clearing: "thin_to_light"|"cut_to_clear"|"cut_to_rough"}` — What the attack did to the woods.
 - `notices`: `BattleNotice[]`
 
 ## BattleWoodsAbsorption

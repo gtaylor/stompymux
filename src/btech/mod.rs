@@ -625,7 +625,9 @@ mod launch_roll;
 mod weapon_launch;
 
 mod woodland;
-pub use woodland::{BattleWoodlandEffect, BattleWoodlandIntent, resolve_woodland_effect};
+pub use woodland::{
+    BattleWoodlandClearing, BattleWoodlandEffect, BattleWoodlandIntent, resolve_woodland_effect,
+};
 
 mod woodland_map;
 pub use woodland_map::{BattleWoodlandChange, apply_woodland_clearing};

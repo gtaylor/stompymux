@@ -93,8 +93,8 @@ pub(super) fn break_ice_in_action(
     )
 }
 
-/// Collapse a bridge into depth-one water. The replacement depth selects occupants one level
-/// above its surface for a two-level fall; other occupants retain their altitude.
+/// Collapse a bridge into the water beneath it. Occupants standing on the deck fall to the
+/// river bed; other occupants retain their altitude.
 /// Weapon/environmental trigger probability and authority belong to the caller.
 pub fn break_bridge(
     world: &mut World,
@@ -229,8 +229,12 @@ fn break_surface(
         "Tile is not the requested breakable surface"
     );
     let bridge = expected == BattleSurface::Bridge;
-    let surface_height = i32::from(tile.water_line()) + if bridge { 1 } else { 0 };
-    let fall_levels = if bridge { 2 } else { tile.water_depth() };
+    // Occupants stand on the deck or the ice. A collapsing deck drops them to the river bed.
+    let surface_height = i32::from(tile.deck_height().unwrap_or(tile.water_line()));
+    let fall_levels = match tile.deck_clearance() {
+        Some(deck) => deck + tile.water_depth(),
+        None => tile.water_depth(),
+    };
     let replacement = tile.with_surface_broken();
     let on_tile = |id| {
         super::scanner::scanner_unit(world, id)

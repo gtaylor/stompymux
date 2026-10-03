@@ -145,11 +145,25 @@ fn terrain_argument(value: &str) -> Result<Terrain> {
     }
 }
 
-/// Parse one coordinate, symbol and signed magnitude before authorizing an edit.
-/// The magnitude's absolute value is the notation's height, capped by [`height_cap`].
-fn parse(arguments: &str) -> Result<(BattleHexCoordinate, Terrain, i32)> {
-    let args: Vec<_> = arguments.split_whitespace().take(5).collect();
-    ensure!(args.len() == 4, "Expected x y terrain elevation");
+/// Parsed ADDHEX arguments: where, what, its signed height and an optional ground level.
+type HexArguments = (BattleHexCoordinate, Terrain, i32, Option<u8>);
+
+/// Parse one coordinate, symbol, signed magnitude and optional ground level before
+/// authorizing an edit.
+fn parse(arguments: &str) -> Result<HexArguments> {
+    let args: Vec<_> = arguments.split_whitespace().take(6).collect();
+    ensure!(
+        matches!(args.len(), 4 | 5),
+        "Expected x y terrain elevation [level]"
+    );
+    let level = match args.get(4) {
+        Some(level) => {
+            let level: u8 = level.parse().context("Invalid level")?;
+            ensure!(level <= super::hex::MAX_HEIGHT, "Invalid level");
+            Some(level)
+        }
+        None => None,
+    };
     Ok((
         BattleHexCoordinate {
             x: args[0].parse().context("Invalid x coordinate")?,
@@ -157,7 +171,33 @@ fn parse(arguments: &str) -> Result<(BattleHexCoordinate, Terrain, i32)> {
         },
         terrain_argument(args[2])?,
         args[3].parse().context("Invalid elevation")?,
+        level,
     ))
+}
+
+/// Build the hex ADDHEX describes. The magnitude's absolute value is the notation's height,
+/// capped by [`height_cap`]. Water, ice, bridges, buildings and walls may stand on ground at
+/// `level`; other terrain takes its level from the height itself.
+fn hex_argument(terrain: Terrain, elevation: i32, level: Option<u8>) -> Result<BattleHex> {
+    ensure!(
+        !matches!(terrain, Terrain::Fire | Terrain::Smoke),
+        "Fire and smoke are not terrain; use ADDFIRE or ADDSMOKE"
+    );
+    let hex = BattleHex::new(
+        terrain,
+        elevation.unsigned_abs().min(u32::from(height_cap(terrain))) as u8,
+    );
+    let Some(level) = level else {
+        return Ok(hex);
+    };
+    ensure!(
+        matches!(
+            terrain,
+            Terrain::Water | Terrain::Ice | Terrain::Bridge | Terrain::Building | Terrain::Wall
+        ),
+        "Only water, ice, bridges, buildings and walls take a separate level"
+    );
+    Ok(hex.with_level(level))
 }
 
 /// The largest height ADDHEX gives a terrain: water and ice depth, otherwise a ground height,
@@ -175,23 +215,10 @@ pub(crate) fn command(
     input: &crate::CommandInput,
 ) -> Result<crate::CommandAction> {
     let result = (|| -> Result<()> {
-        let (coordinate, terrain, elevation) = parse(&input.args)?;
+        let (coordinate, terrain, elevation, level) = parse(&input.args)?;
+        let hex = hex_argument(terrain, elevation, level)?;
         let map = super::special_dispatch::object(ctx)?;
-        ensure!(
-            !matches!(terrain, Terrain::Fire | Terrain::Smoke),
-            "Fire and smoke are not terrain; use ADDFIRE or ADDSMOKE"
-        );
-        set_map_hex_action(
-            ctx.scripts,
-            ctx.config,
-            ctx.player,
-            map,
-            coordinate,
-            BattleHex::new(
-                terrain,
-                elevation.unsigned_abs().min(u32::from(height_cap(terrain))) as u8,
-            ),
-        )?;
+        set_map_hex_action(ctx.scripts, ctx.config, ctx.player, map, coordinate, hex)?;
         Ok(())
     })();
     Ok(match result {
@@ -233,14 +260,18 @@ mod tests {
             };
             assert_eq!(
                 parse(&format!("1 2 {symbol} -9")).unwrap(),
-                (BattleHexCoordinate { x: 1, y: 2 }, terrain, -9)
+                (BattleHexCoordinate { x: 1, y: 2 }, terrain, -9, None)
             );
         }
         assert_eq!(parse("0 0 .ignored -2147483648").unwrap().2, i32::MIN);
+        assert_eq!(parse("0 0 ~ 2 3").unwrap().3, Some(3));
         for args in [
             "",
             "0 0 .",
             "0 0 . 1 extra",
+            "0 0 ~ 2 36",
+            "0 0 ~ 2 -1",
+            "0 0 ~ 2 3 4",
             "x 0 . 1",
             "0 y . 1",
             "0 0 X 1",
@@ -248,6 +279,23 @@ mod tests {
         ] {
             assert!(parse(args).is_err(), "{args}");
         }
+    }
+
+    /// A level raises water, bridges and structures; ground terrain takes its level as height.
+    #[test]
+    fn terrain_edit_levels() {
+        let lake = hex_argument(Terrain::Water, 2, Some(4)).unwrap();
+        assert_eq!((lake.water_line(), lake.water_depth()), (4, 2));
+        let bridge = hex_argument(Terrain::Bridge, -3, Some(5)).unwrap();
+        assert_eq!(bridge.deck_height(), Some(8));
+        let tower = hex_argument(Terrain::Building, 30, Some(5)).unwrap();
+        assert_eq!(tower.top_height(), 35);
+        assert_eq!(
+            hex_argument(Terrain::Road, 7, None).unwrap(),
+            BattleHex::new(Terrain::Road, 7)
+        );
+        assert!(hex_argument(Terrain::Road, 1, Some(2)).is_err());
+        assert!(hex_argument(Terrain::Fire, 1, None).is_err());
     }
 
     /// The shared write path stores in-bounds tiles and leaves the map untouched on rejection.
