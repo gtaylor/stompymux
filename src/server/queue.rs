@@ -93,7 +93,7 @@ impl Server {
                 },
             );
             if let Err(error) = result {
-                tracing::error!("Queued command reply: {error:#}");
+                tracing::error!(error = %format_args!("{error:#}"), "queued command reply failed");
             }
         }
     }

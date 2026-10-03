@@ -198,7 +198,7 @@ impl Server {
     ) {
         if create && let Err(reason) = self.registration_admission() {
             if let Err(error) = self.reject_admission(id, reason).await {
-                tracing::error!("Admission close: {error:#}");
+                tracing::error!(error = %format_args!("{error:#}"), "admission close failed");
             }
             return;
         }
@@ -248,7 +248,7 @@ impl Server {
                 .cache_close(id, crate::message_cache::File::Connect, message, message)
                 .await
             {
-                tracing::error!("Authentication throttle close: {error:#}");
+                tracing::error!(error = %format_args!("{error:#}"), "authentication throttle close failed");
             }
             return;
         }
@@ -390,7 +390,7 @@ impl Server {
             Ok(h) => h,
             Err(error) => {
                 if create || !error.is::<accounts::IncorrectCredentials>() {
-                    tracing::error!("Authentication worker failed: {error:#}");
+                    tracing::error!(error = %format_args!("{error:#}"), "authentication worker failed");
                     self.prompt(
                         id,
                         LoginFlow::Name,
@@ -460,7 +460,7 @@ impl Server {
                     *self.scripts.world.borrow_mut() = before;
                     self.reconcile_connections();
                     self.scripts.effects.rollback();
-                    tracing::error!("registration failed: {e:#}");
+                    tracing::error!(error = %format_args!("{e:#}"), "registration failed");
                     self.prompt(
                         id,
                         LoginFlow::Name,
@@ -534,7 +534,7 @@ impl Server {
             self.scripts
                 .lifecycle("on_player_connect", Some(p), Some(id.0), reconnect, "")
         }) {
-            tracing::error!("connect hook failed: {e:#}");
+            tracing::error!(error = %format_args!("{e:#}"), "connect hook failed");
             *self.scripts.world.borrow_mut() = before.clone();
             self.reconcile_connections();
             self.scripts.effects.rollback();
@@ -590,7 +590,7 @@ impl Server {
                 *self.scripts.world.borrow_mut() = before;
                 self.reconcile_connections();
                 self.scripts.effects.rollback();
-                tracing::error!("Connect appearance failed: {error:#}");
+                tracing::error!(error = %format_args!("{error:#}"), "connect appearance failed");
                 self.tell(id, "Unable to render your location.\r\n");
             }
         }

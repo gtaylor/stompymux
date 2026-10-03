@@ -210,7 +210,7 @@ impl Server {
                             .event("on_player_disconnect", Some(p), Some(id.0))
                     })
                 {
-                    tracing::error!("disconnect hook failed: {e:#}");
+                    tracing::error!(error = %format_args!("{e:#}"), "disconnect hook failed");
                     *self.scripts.world.borrow_mut() = before.clone();
                     self.reconcile_connections();
                     self.scripts.effects.rollback();
@@ -371,7 +371,7 @@ impl Server {
                     .is_some_and(|o| o.flags.contains(crate::flags::Flag::Ansi))
             });
             if let Err(error) = session.styled_report(&message, ansi, &self.config).await {
-                tracing::error!("Closing message: {error:#}");
+                tracing::error!(error = %format_args!("{error:#}"), "closing message failed");
                 session.raw(crate::telnet::bounded_error(
                     fallback,
                     self.config.runtime.output_message_limit,

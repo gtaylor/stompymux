@@ -56,7 +56,7 @@ impl Server {
             )
             .await
         {
-            tracing::error!("Queued command snapshot: {error:#}");
+            tracing::error!(error = %format_args!("{error:#}"), "queued command snapshot failed");
         }
     }
 
@@ -301,12 +301,9 @@ impl Server {
                     }
                     Err(error) => {
                         tracing::error!(
-                            "{}",
-                            if destination.is_queued() {
-                                format!("Queued examination: {error:#}")
-                            } else {
-                                format!("Debug examination: {error:#}")
-                            }
+                            error = %format_args!("{error:#}"),
+                            queued = destination.is_queued(),
+                            "examination failed"
                         );
                         self.command_reply(destination, "Unable to read object bookkeeping.");
                         self.flush_for(destination);
@@ -425,7 +422,7 @@ impl Server {
             tracing::error!(
                 player = actor.0,
                 cause = execution.cause.0,
-                "queued command failed: {error:#}"
+                error = %format_args!("{error:#}"), "queued command failed"
             );
             self.queue_reply(
                 ReplyDestination::Object(actor),
@@ -434,7 +431,7 @@ impl Server {
             self.flush();
             return;
         }
-        tracing::error!("Command callback failed: {error:#}");
+        tracing::error!(error = %format_args!("{error:#}"), "command callback failed");
         let actor = execution.executor;
         let report = self.config.lua.error_reporting;
         let wizard = self.scripts.world.borrow().objects[&actor]
@@ -451,7 +448,7 @@ impl Server {
     }
 
     fn report_delivery_error(&self, session: &Session, error: anyhow::Error) {
-        tracing::warn!("Report delivery: {error:#}");
+        tracing::warn!(error = %format_args!("{error:#}"), "report delivery failed");
         session.raw(crate::telnet::bounded_error(
             "Unable to deliver complete report.",
             self.config.runtime.output_message_limit,

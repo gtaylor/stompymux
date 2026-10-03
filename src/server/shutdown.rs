@@ -21,7 +21,7 @@ impl Server {
         let snapshot = self.scripts.world.borrow().clone();
         let result = self.save_snapshot(snapshot).await;
         if let Err(e) = result {
-            tracing::error!("Shutdown initial save failed: {e:#}");
+            tracing::error!(error = %format_args!("{e:#}"), "shutdown initial save failed");
             if let ShutdownRequest::Player(player) = request {
                 for (id, session) in &self.sessions {
                     if session.player == Some(player) {
@@ -47,7 +47,7 @@ impl Server {
         self.scripts.flows.stop();
         for id in self.sessions.keys().copied().collect::<Vec<_>>() {
             if let Err(e) = self.disconnect(id).await {
-                tracing::error!("Shutdown disconnect failed: {e:#}");
+                tracing::error!(error = %format_args!("{e:#}"), "shutdown disconnect failed");
                 self.shutdown_failed = true;
             }
         }
@@ -55,13 +55,13 @@ impl Server {
         let snapshot = self.scripts.world.borrow().clone();
         let result = self.save_snapshot(snapshot).await;
         if let Err(e) = result {
-            tracing::error!("Shutdown final save failed: {e:#}");
+            tracing::error!(error = %format_args!("{e:#}"), "shutdown final save failed");
             self.shutdown_failed = true;
         }
         if let Some(database) = self.database.take()
             && let Err(e) = database.close().await
         {
-            tracing::error!("Closing the database failed: {e:#}");
+            tracing::error!(error = %format_args!("{e:#}"), "closing the database failed");
         }
     }
 }

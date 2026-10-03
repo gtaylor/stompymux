@@ -53,7 +53,7 @@ impl Server {
                     target: crate::logging::targets::CONFIG,
                     player = player.0,
                     directive = %request.directive,
-                    "configuration edit failed: {error:#}"
+                    error = %format_args!("{error:#}"), "configuration edit failed"
                 );
                 error.to_string()
             }

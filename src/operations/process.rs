@@ -175,12 +175,12 @@ async fn report_with(
     {
         Ok(Ok(snapshot)) => {
             for error in &snapshot.errors {
-                tracing::warn!("process statistics: {error}");
+                tracing::warn!(error = %error, "process statistics unavailable");
             }
             snapshot.render()
         }
         error => {
-            tracing::warn!("Process report failed: {error:?}");
+            tracing::warn!(error = ?error, "process report failed");
             "Unable to collect process statistics before the report deadline.".into()
         }
     }

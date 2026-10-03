@@ -164,7 +164,7 @@ impl Service<'_> {
                 LockOutcome::CallbackFailed(error) => {
                     *self.world.borrow_mut() = before;
                     self.effects.restore(checkpoint);
-                    tracing::error!("Channel lock {}: {error}", access.lock().key());
+                    tracing::error!(error = %error, "channel lock {} failed", access.lock().key());
                 }
             }
         }

@@ -15,7 +15,7 @@ impl Server {
                 if let Some(session) = self.sessions.get(&id)
                     && let Err(error) = session.help(&response, ansi, &self.config).await
                 {
-                    tracing::error!("Help rendering: {error:#}");
+                    tracing::error!(error = %format_args!("{error:#}"), "help rendering failed");
                     self.tell(
                         id,
                         "Unable to render help article. See server diagnostics.\r\n",
@@ -23,7 +23,7 @@ impl Server {
                 }
             }
             error => {
-                tracing::error!("Help read: {error:?}");
+                tracing::error!(error = ?error, "help read failed");
                 self.tell(
                     id,
                     "Unable to render help article. See server diagnostics.\r\n",
@@ -50,7 +50,7 @@ impl Server {
                 if let Some(session) = self.sessions.get(&id)
                     && let Err(error) = session.help(&response, false, &self.config).await
                 {
-                    tracing::warn!("Help reload diagnostics: {error:#}");
+                    tracing::warn!(error = %format_args!("{error:#}"), "help reload reported problems");
                     self.tell(
                         id,
                         "Help reindexed; see server diagnostics for details.\r\n",
@@ -58,7 +58,7 @@ impl Server {
                 }
             }
             error => {
-                tracing::error!("Help reload failed: {error:?}");
+                tracing::error!(error = ?error, "help reload failed");
                 self.tell(
                     id,
                     "Help reload failed; previous index retained. See server diagnostics.\r\n",

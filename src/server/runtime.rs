@@ -149,7 +149,7 @@ pub async fn run_with_clocks(
                 session.protocol(negotiation);
                 let index = if server.message_cache.banner_count() == 0 { 0 } else { rand::random_range(0..server.message_cache.banner_count()) };
                 let banner = server.message_cache.welcome(index);
-                if let Err(error) = session.styled_report(banner, true, &server.config).await { tracing::warn!("Welcome delivery: {error:#}"); }
+                if let Err(error) = session.styled_report(banner, true, &server.config).await { tracing::warn!(error = %format_args!("{error:#}"), "welcome delivery failed"); }
                 session.text("Who are you? ",true);
             },
             event = rx.recv() => {
@@ -208,7 +208,7 @@ pub async fn run_with_clocks(
         while tasks.join_next().await.is_some() {}
     }
     if let Err(error) = server.config.logger.shutdown(&server.config).await {
-        tracing::error!("Logging shutdown: {error:#}");
+        tracing::error!(error = %format_args!("{error:#}"), "logging shutdown failed");
         server.shutdown_failed = true;
     }
     anyhow::ensure!(

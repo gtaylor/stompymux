@@ -40,7 +40,7 @@ impl Server {
         match result {
             Err(e) => {
                 self.database = None;
-                tracing::error!("Persistence failed: {e:#}");
+                tracing::error!(error = %format_args!("{e:#}"), "persistence failed");
                 if self.shutdown.is_some() {
                     self.shutdown_failed = true;
                 }

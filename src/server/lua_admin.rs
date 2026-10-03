@@ -55,7 +55,7 @@ impl Server {
             if let Some(session) = self.sessions.get(&id)
                 && let Err(error) = session.literal_report(&text, &self.config).await
             {
-                tracing::error!("Lua source output: {error:#}");
+                tracing::error!(error = %format_args!("{error:#}"), "Lua source output failed");
                 self.tell(id, "Unable to deliver complete Lua source.\r\n");
             }
             return;
@@ -136,7 +136,7 @@ impl Server {
             }
             Err(error) => {
                 tracing::error!(
-                    "Lua {} failed: {error:#}",
+                    error = %format_args!("{error:#}"), "Lua {} failed",
                     if checking { "check" } else { "reload" }
                 );
                 self.inspection_report(
@@ -156,7 +156,7 @@ impl Server {
         if let Some(session) = self.sessions.get(&id) {
             let report = crate::help::HelpResponse::Message(text);
             if let Err(error) = session.help(&report, false, &self.config).await {
-                tracing::error!("Inspection report: {error:#}");
+                tracing::error!(error = %format_args!("{error:#}"), "inspection report failed");
                 self.tell(id, "Unable to deliver complete report.\r\n");
             }
         }

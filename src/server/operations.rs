@@ -43,7 +43,7 @@ impl Server {
         {
             tracing::warn!(
                 session = id.0,
-                "operation report delivery failed: {error:#}"
+                error = %format_args!("{error:#}"), "operation report delivery failed"
             );
             self.tell(id, "Unable to deliver complete report.\r\n");
         }

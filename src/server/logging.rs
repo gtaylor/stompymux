@@ -6,7 +6,7 @@ impl Server {
         match self.config.logger.write(&self.config, request).await {
             Ok(()) => "Message logged.".into(),
             Err(e) => {
-                tracing::error!("@log write failed: {e:#}");
+                tracing::error!(error = %format_args!("{e:#}"), "@log write failed");
                 "Request failed.".into()
             }
         }
@@ -46,7 +46,7 @@ impl Server {
             *self.scripts.world.borrow_mut() = before;
             self.reconcile_connections();
             self.scripts.effects.rollback();
-            tracing::error!("Suspect audit failed: {e}");
+            tracing::error!(error = %e, "suspect audit failed");
             return;
         }
         if self.commit(before).await {

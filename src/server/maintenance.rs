@@ -21,7 +21,7 @@ impl Server {
                 *self.scripts.world.borrow_mut() = before;
                 self.reconcile_connections();
                 self.scripts.effects.rollback();
-                tracing::error!("Lua schedule failed: {error:#}");
+                tracing::error!(error = %format_args!("{error:#}"), "Lua schedule failed");
             }
         }
     }
@@ -46,7 +46,7 @@ impl Server {
                 self.scripts.effects.rollback();
                 self.scripts.flows.cancel(id.0);
                 self.reconcile_connections();
-                tracing::error!(session = id.0, "interactive flow failed: {error:#}");
+                tracing::error!(session = id.0, error = %format_args!("{error:#}"), "interactive flow failed");
                 self.tell(id, "Interactive flow failed and was cancelled.\r\n");
             }
         }
@@ -112,7 +112,7 @@ impl Server {
         let destination =
             session.map_or(ReplyDestination::Object(actor), ReplyDestination::Session);
         if let Err(error) = self.snapshots() {
-            tracing::error!("DBCK session snapshot failed: {error:#}");
+            tracing::error!(error = %format_args!("{error:#}"), "DBCK session snapshot failed");
             if !automatic {
                 self.queue_reply(
                     destination,
@@ -242,7 +242,7 @@ impl Server {
                 *self.scripts.world.borrow_mut() = before;
                 self.reconcile_connections();
                 self.scripts.effects.rollback();
-                tracing::error!("DBCK rolled back: {e:#}");
+                tracing::error!(error = %format_args!("{e:#}"), "DBCK rolled back");
                 if !automatic {
                     self.queue_reply(
                         destination,

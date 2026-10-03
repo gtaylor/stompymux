@@ -143,7 +143,7 @@ impl Scripts {
             return self.call_event(t, name, ctx);
         }
         if let Err(error) = self.atomic(|_| self.call_event(t, name, ctx)) {
-            tracing::error!("Lua {name} callback failed: {error:#}");
+            tracing::error!(error = %format_args!("{error:#}"), "Lua {name} callback failed");
         }
         Ok(())
     }
@@ -370,7 +370,7 @@ impl Scripts {
         let result = match self.lock_outcome(ctx.clone()) {
             Ok(result) => result,
             Err(error) => {
-                tracing::error!("Traversal lock on #{} failed: {error:#}", exit.0);
+                tracing::error!(error = %format_args!("{error:#}"), "traversal lock on #{} failed", exit.0);
                 LockOutcome {
                     passes: false,
                     enactor_message: None,
@@ -428,7 +428,9 @@ impl Scripts {
             });
             match result {
                 Ok(result) if result.passes => passing.push(*id),
-                Err(e) => tracing::error!("MATCH lock on #{} failed: {e:#}", id.0),
+                Err(e) => {
+                    tracing::error!(error = %format_args!("{e:#}"), "MATCH lock on #{} failed", id.0)
+                }
                 _ => {}
             }
         }

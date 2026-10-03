@@ -114,7 +114,7 @@ impl Server {
             Ok(())
         })();
         if let Err(error) = result {
-            tracing::error!("Suspect connection notification: {error:#}");
+            tracing::error!(error = %format_args!("{error:#}"), "suspect connection notification failed");
             *self.scripts.world.borrow_mut() = before;
             self.reconcile_connections();
             self.scripts.effects.rollback();
@@ -157,7 +157,7 @@ pub(super) async fn reject_site(
                 }
             }
             Err(error) => {
-                tracing::error!("Bad-site message rendering: {error:#}");
+                tracing::error!(error = %format_args!("{error:#}"), "bad-site message rendering failed");
                 let fallback = crate::telnet::bounded_error(
                     "Connection refused.",
                     config.runtime.output_message_limit,
@@ -187,7 +187,7 @@ pub(super) async fn reject_site(
     .await
     {
         Ok(Ok(())) => {}
-        Ok(Err(error)) => tracing::warn!("Bad-site message delivery: {error}"),
+        Ok(Err(error)) => tracing::warn!(error = %error, "bad-site message delivery failed"),
         Err(_) => tracing::warn!("Bad-site message delivery timed out"),
     }
 }

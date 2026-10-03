@@ -48,7 +48,7 @@ impl Server {
             return;
         }
         if let Err(error) = crate::advance_battle_wrecks_action(&self.scripts, &self.config) {
-            tracing::error!("BattleTech update failed: {error:#}");
+            tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
             *self.scripts.world.borrow_mut() = before;
             self.scripts
                 .world
@@ -64,7 +64,7 @@ impl Server {
         crate::advance_map_smoke(&mut self.scripts.world.borrow_mut());
         let fire_result = crate::advance_map_fire(&mut self.scripts.world.borrow_mut());
         if let Err(error) = fire_result {
-            tracing::error!("BattleTech update failed: {error:#}");
+            tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
             *self.scripts.world.borrow_mut() = before;
             self.scripts
                 .world
@@ -97,7 +97,7 @@ impl Server {
                 toughness: false,
             },
         ) {
-            tracing::error!(system = "artillery", "BattleTech update failed: {error:#}");
+            tracing::error!(system = "artillery", error = %format_args!("{error:#}"), "BattleTech update failed");
             *self.scripts.world.borrow_mut() = before;
             self.scripts
                 .world
@@ -108,22 +108,23 @@ impl Server {
             self.scripts.effects.rollback();
             return;
         }
-        let mut building_arrivals =
-            match crate::advance_battle_building_entries_action(&self.scripts) {
-                Ok(arrivals) => arrivals,
-                Err(error) => {
-                    tracing::error!(system = "building", "BattleTech update failed: {error:#}");
-                    *self.scripts.world.borrow_mut() = before;
-                    self.scripts
-                        .world
-                        .borrow_mut()
-                        .btech
-                        .autopilot_plans
-                        .clear();
-                    self.scripts.effects.rollback();
-                    return;
-                }
-            };
+        let mut building_arrivals = match crate::advance_battle_building_entries_action(
+            &self.scripts,
+        ) {
+            Ok(arrivals) => arrivals,
+            Err(error) => {
+                tracing::error!(system = "building", error = %format_args!("{error:#}"), "BattleTech update failed");
+                *self.scripts.world.borrow_mut() = before;
+                self.scripts
+                    .world
+                    .borrow_mut()
+                    .btech
+                    .autopilot_plans
+                    .clear();
+                self.scripts.effects.rollback();
+                return;
+            }
+        };
         if !building_arrivals.is_empty() {
             // New map membership changes eligible pairs; startup completion below still waits a tick.
             scanner_observers.extend(crate::battle_contact_observers(
@@ -131,7 +132,7 @@ impl Server {
             ));
         }
         if let Err(error) = crate::advance_battle_sixth_sense_action(&self.scripts) {
-            tracing::error!("BattleTech update failed: {error:#}");
+            tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
             *self.scripts.world.borrow_mut() = before;
             self.scripts
                 .world
@@ -145,7 +146,7 @@ impl Server {
         if let Err(error) =
             crate::advance_battle_periodic_piloting_action(&self.scripts, &self.config)
         {
-            tracing::error!(system = "piloting", "BattleTech update failed: {error:#}");
+            tracing::error!(system = "piloting", error = %format_args!("{error:#}"), "BattleTech update failed");
             *self.scripts.world.borrow_mut() = before;
             self.scripts
                 .world
@@ -177,7 +178,7 @@ impl Server {
         match autopilot_result {
             Ok(autopilot_notices) => notices.extend(autopilot_notices),
             Err(error) => {
-                tracing::error!(system = "autopilot", "BattleTech update failed: {error:#}");
+                tracing::error!(system = "autopilot", error = %format_args!("{error:#}"), "BattleTech update failed");
                 *self.scripts.world.borrow_mut() = before;
                 self.scripts
                     .world
@@ -240,7 +241,7 @@ impl Server {
                 }
             }
             Err(error) => {
-                tracing::error!("BattleTech update failed: {error:#}");
+                tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
                 *self.scripts.world.borrow_mut() = before;
                 self.scripts
                     .world
@@ -265,7 +266,7 @@ impl Server {
             &mut self.scripts.world.borrow_mut(),
         ));
         if let Err(error) = crate::advance_battle_boosters_action(&self.scripts, &self.config) {
-            tracing::error!("BattleTech update failed: {error:#}");
+            tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
             *self.scripts.world.borrow_mut() = before;
             self.scripts
                 .world
@@ -280,7 +281,7 @@ impl Server {
         match dump_result {
             Ok(dumping) => notices.extend(dumping),
             Err(error) => {
-                tracing::error!("BattleTech update failed: {error:#}");
+                tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
                 *self.scripts.world.borrow_mut() = before;
                 self.scripts
                     .world
@@ -300,7 +301,7 @@ impl Server {
         let unjam_report = match unjam_result {
             Ok(messages) => messages,
             Err(error) => {
-                tracing::error!("BattleTech update failed: {error:#}");
+                tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
                 *self.scripts.world.borrow_mut() = before;
                 self.scripts
                     .world
@@ -319,7 +320,7 @@ impl Server {
         match vehicle_fires {
             Ok(_) => (),
             Err(error) => {
-                tracing::error!("BattleTech update failed: {error:#}");
+                tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
                 *self.scripts.world.borrow_mut() = before;
                 self.scripts
                     .world
@@ -383,7 +384,7 @@ impl Server {
                 }
             }
             Err(error) => {
-                tracing::error!("BattleTech update failed: {error:#}");
+                tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
                 *self.scripts.world.borrow_mut() = before;
                 self.scripts
                     .world
@@ -405,7 +406,7 @@ impl Server {
             .map(|notice| (crate::BattleMessageTarget::Unit(notice.unit), notice.text))
         {
             if let Err(error) = crate::btech::notify_message(&self.scripts, target, &text) {
-                tracing::error!("BattleTech update failed: {error:#}");
+                tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
                 *self.scripts.world.borrow_mut() = before;
                 self.scripts
                     .world
@@ -420,7 +421,7 @@ impl Server {
         if let Err(error) =
             crate::btech::unjam::publish_unjamming(&self.scripts, &self.config, &unjam_report)
         {
-            tracing::error!("BattleTech update failed: {error:#}");
+            tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
             *self.scripts.world.borrow_mut() = before;
             self.scripts
                 .world
@@ -453,7 +454,7 @@ impl Server {
         match thermal {
             Ok(_) => {}
             Err(error) => {
-                tracing::error!("BattleTech update failed: {error:#}");
+                tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
                 *self.scripts.world.borrow_mut() = before;
                 self.scripts
                     .world
@@ -483,7 +484,7 @@ impl Server {
         match stagger {
             Ok(_) => {}
             Err(error) => {
-                tracing::error!("BattleTech update failed: {error:#}");
+                tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
                 *self.scripts.world.borrow_mut() = before;
                 self.scripts
                     .world
@@ -498,7 +499,7 @@ impl Server {
         if let Err(error) =
             crate::advance_battle_computer_failures_action(&self.scripts, &self.config)
         {
-            tracing::error!(system = "computer", "BattleTech update failed: {error:#}");
+            tracing::error!(system = "computer", error = %format_args!("{error:#}"), "BattleTech update failed");
             *self.scripts.world.borrow_mut() = before;
             self.scripts
                 .world
@@ -514,7 +515,7 @@ impl Server {
         match electronic_changes {
             Ok(changes) => notices.extend(changes),
             Err(error) => {
-                tracing::error!("BattleTech update failed: {error:#}");
+                tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
                 *self.scripts.world.borrow_mut() = before;
                 self.scripts
                     .world
@@ -531,7 +532,7 @@ impl Server {
         match networks {
             Ok(network_notices) => notices.extend(network_notices),
             Err(error) => {
-                tracing::error!("BattleTech update failed: {error:#}");
+                tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
                 *self.scripts.world.borrow_mut() = before;
                 self.scripts
                     .world
@@ -547,7 +548,7 @@ impl Server {
         match links {
             Ok(link_notices) => notices.extend(link_notices),
             Err(error) => {
-                tracing::error!("BattleTech update failed: {error:#}");
+                tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
                 *self.scripts.world.borrow_mut() = before;
                 self.scripts
                     .world
@@ -569,7 +570,7 @@ impl Server {
         {
             tracing::error!(
                 system = "selfdestruct",
-                "BattleTech update failed: {error:#}"
+                error = %format_args!("{error:#}"), "BattleTech update failed"
             );
             *self.scripts.world.borrow_mut() = before;
             self.scripts
@@ -589,7 +590,7 @@ impl Server {
         let contact_events = match contact_events {
             Ok(events) => events,
             Err(error) => {
-                tracing::error!("BattleTech update failed: {error:#}");
+                tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
                 *self.scripts.world.borrow_mut() = before;
                 self.scripts
                     .world
@@ -604,7 +605,7 @@ impl Server {
         match crate::advance_battle_hiding(&mut self.scripts.world.borrow_mut()) {
             Ok(updates) => notices.extend(updates),
             Err(error) => {
-                tracing::error!(system = "hide", "BattleTech update failed: {error:#}");
+                tracing::error!(system = "hide", error = %format_args!("{error:#}"), "BattleTech update failed");
                 *self.scripts.world.borrow_mut() = before;
                 self.scripts
                     .world
@@ -635,7 +636,7 @@ impl Server {
         match autopilot_result {
             Ok(autopilot_notices) => notices.extend(autopilot_notices),
             Err(error) => {
-                tracing::error!(system = "autopilot", "BattleTech update failed: {error:#}");
+                tracing::error!(system = "autopilot", error = %format_args!("{error:#}"), "BattleTech update failed");
                 *self.scripts.world.borrow_mut() = before;
                 self.scripts
                     .world
@@ -649,7 +650,7 @@ impl Server {
         }
         for event in contact_events {
             if let Err(error) = crate::btech::notify_contact(&self.scripts, &self.config, event) {
-                tracing::error!("BattleTech update failed: {error:#}");
+                tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
                 *self.scripts.world.borrow_mut() = before;
                 self.scripts
                     .world
@@ -664,7 +665,7 @@ impl Server {
         if let Err(error) =
             crate::publish_battle_building_arrivals(&self.scripts, building_arrivals)
         {
-            tracing::error!(system = "building", "BattleTech update failed: {error:#}");
+            tracing::error!(system = "building", error = %format_args!("{error:#}"), "BattleTech update failed");
             *self.scripts.world.borrow_mut() = before;
             self.scripts
                 .world
@@ -677,7 +678,7 @@ impl Server {
         }
         for notice in recovery_notices {
             if let Err(error) = crate::btech::notify_character(&self.scripts, notice) {
-                tracing::error!("BattleTech update failed: {error:#}");
+                tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
                 *self.scripts.world.borrow_mut() = before;
                 self.scripts
                     .world
@@ -694,7 +695,7 @@ impl Server {
             .map(|notice| (crate::BattleMessageTarget::Unit(notice.unit), notice.text));
         for (unit, text) in messages {
             if let Err(error) = crate::btech::notify_message(&self.scripts, unit, &text) {
-                tracing::error!("BattleTech update failed: {error:#}");
+                tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
                 *self.scripts.world.borrow_mut() = before;
                 self.scripts
                     .world
