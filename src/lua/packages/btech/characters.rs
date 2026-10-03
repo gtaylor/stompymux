@@ -109,14 +109,8 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             crate::lua::transactions::require(lua)?;
             let scripts = crate::Scripts::services(lua)?;
             crate::lua::transactions::run(lua, &scripts.world, || {
-                crate::edit_battle_skill_threshold(
-                    &scripts,
-                    &crate::lua::configuration(lua),
-                    ObjectId(actor),
-                    &name,
-                    threshold,
-                )
-                .map_err(mlua::Error::external)?;
+                crate::edit_battle_skill_threshold(&scripts, ObjectId(actor), &name, threshold)
+                    .map_err(mlua::Error::external)?;
                 Ok(true)
             })
         })?;

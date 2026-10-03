@@ -41,12 +41,9 @@ impl Server {
         if let Some(session) = self.sessions.get(&id)
             && let Err(error) = session.literal_report(text, &self.config).await
         {
-            self.config.log(
-                crate::logging::LogLevel::Info,
-                &[crate::logging::Category::Network],
-                "NET",
-                "REPORT",
-                error.to_string(),
+            tracing::warn!(
+                session = id.0,
+                "operation report delivery failed: {error:#}"
             );
             self.tell(id, "Unable to deliver complete report.\r\n");
         }

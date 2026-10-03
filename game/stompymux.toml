@@ -310,47 +310,23 @@ maximum_length = 30
 # -----------------------------------------------
 
 [logging]
-# Controls extra data written with each log entry: flags, location, timestamp.
-# Runtime @admin log_options edits accept !flags/!location/!timestamp to clear.
-# Command audit passwords are redacted; Lua mux.log requests wait for commit.
-log_options = ["flags", "location", "timestamp"]
-# Least severe entry written to the server log: "debug", "info", "warn", or
-# "error". Entries below this level are discarded even if their topic is on.
-min_level = "info"
-
-[logging.topics]
-# Write account usage information when a player logs out.
-accounting = false
-# Write every command entered by any player.
-all_commands = false
-# Write commands entered by players marked SUSPECT.
-suspect_commands = false
-# Write commands the server does not recognize.
-bad_commands = false
-# Retained for compatibility; no Rust allocator event producer.
-buffer_alloc = false
-# Write internal server bugs and crash reports.
-bugs = true
-# Write normal database checkpoint activity.
-checkpoints = false
-# Write runtime changes to configuration directives.
-config_changes = true
-# Write player-character creation events.
-create = true
-# Write successful logins and logouts.
-logins = true
-# Write network connections and disconnections.
-network = true
-# Write detected runtime inconsistencies and other operational problems.
-problems = true
-# Write security-related events, including failed authentication attempts.
-security = true
-# Write shouts, broadcasts, and other global speech.
-shouts = false
-# Write nonfatal errors and progress during server startup.
-startup = true
-# Write sensitive or dangerous wizard actions.
-wizard = false
+# Which diagnostics reach stderr, in RUST_LOG filter syntax. RUST_LOG, when set,
+# overrides this at startup; GOD can replace it live with @admin log_filter.
+# Routine events use their module path as the target (stompymux_rs::server, ...).
+# Audit trails use fixed targets that can be switched on or off individually:
+#   audit::commands           every command entered (secrets redacted)
+#   audit::commands::suspect  commands entered by SUSPECT players
+#   audit::bad_commands       commands the server did not recognize
+#   audit::accounting         per-session traffic totals at disconnect
+#   audit::logins             connects, disconnects, failed and throttled logins
+#   audit::accounts           character registration and account administration
+#   audit::config             runtime configuration edits
+#   audit::shouts             wizard shouts
+#   audit::wizard             operator changes to BattleTech settings
+# Example: "info,audit::commands=info" also records every command entered.
+filter = "info,audit::commands=off,audit::bad_commands=off,audit::accounting=off"
+# Line layout: "full" (default), "compact", or "json" (one object per line).
+format = "full"
 
 # Rust runtime resource limits. Counts and byte limits must be positive.
 [runtime]

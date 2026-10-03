@@ -610,91 +610,6 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "accounting",
-        parser: "cf_bool_bit",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "all_commands",
-        parser: "cf_bool_bit",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "suspect_commands",
-        parser: "cf_bool_bit",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "bad_commands",
-        parser: "cf_bool_bit",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "buffer_alloc",
-        parser: "cf_bool_bit",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "bugs",
-        parser: "cf_bool_bit",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "checkpoints",
-        parser: "cf_bool_bit",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "config_changes",
-        parser: "cf_bool_bit",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "create",
-        parser: "cf_bool_bit",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "logins",
-        parser: "cf_bool_bit",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "network",
-        parser: "cf_bool_bit",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "problems",
-        parser: "cf_bool_bit",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "security",
-        parser: "cf_bool_bit",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "shouts",
-        parser: "cf_bool_bit",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "startup",
-        parser: "cf_bool_bit",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "wizard",
-        parser: "cf_bool_bit",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "log_options",
-        parser: "configuration_modify_bits",
-        permission: P::GOD,
-    },
-    Directive {
         name: "map_database",
         parser: "cf_string",
         permission: P::GOD,
@@ -757,6 +672,11 @@ pub const DIRECTIVES: &[Directive] = &[
     Directive {
         name: "permit_site",
         parser: "cf_site",
+        permission: P::GOD,
+    },
+    Directive {
+        name: "log_filter",
+        parser: "cf_string",
         permission: P::GOD,
     },
     Directive {

@@ -36,3 +36,10 @@ Integration tests use isolated game fixtures under `tests/fixtures/game` and
 helpers under `tests/support/`. They exercise the Rust server, Lua APIs,
 SQLite persistence, and network behavior. A failing test reports its assertion
 and any fixture or temporary directory it retains for inspection.
+
+Server diagnostics in integration tests go through the test harness's output
+capture: a passing test prints nothing, and a failing test prints the log lines
+that led up to its failure. Set `RUST_LOG` to change what is recorded, for
+example `RUST_LOG=debug just test-scenario btech_status`. To assert on emitted
+events, install `stompymux_rs::logging::Capture` for the test's thread and
+inspect its text.

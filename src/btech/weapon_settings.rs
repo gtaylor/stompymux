@@ -143,8 +143,7 @@ pub(crate) fn edit_command(
     recycle: bool,
 ) -> Result<String> {
     let weapon = BattleWeapon::parse_operator_name(name)?;
-    let values =
-        super::edit_weapon_settings(ctx.scripts, ctx.config, ctx.player, name, value, recycle)?;
+    let values = super::edit_weapon_settings(ctx.scripts, ctx.player, name, value, recycle)?;
     Ok(format!(
         "{} for {} set to {}.",
         if recycle { "VRT" } else { "BV" },

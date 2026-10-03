@@ -214,8 +214,7 @@ fn record_origins(
 }
 /// Canonicalize case-insensitive legacy token arrays before deserialization.
 fn normalize(path: &str, value: &mut Value) {
-    let flags = (path.starts_with("mux.default_") && path.ends_with("_flags"))
-        || path == "logging.log_options";
+    let flags = path.starts_with("mux.default_") && path.ends_with("_flags");
     if flags && let Some(values) = value.as_array_mut() {
         for value in values {
             if let Some(name) = value.as_str() {
@@ -247,8 +246,11 @@ pub fn validate(spec: &KeySpec, value: &Value) -> Result<()> {
         "IpAddr" => typed::<std::net::IpAddr>(value)?,
         "ErrorReporting" => typed::<ErrorReporting>(value)?,
         "Vec<Flag>" => typed::<Vec<String>>(value)?,
-        "Vec<LogOption>" => typed::<Vec<LogOption>>(value)?,
-        "LogLevel" => typed::<LogLevel>(value)?,
+        "LogFilter" => {
+            let filter: String = value.clone().try_into()?;
+            crate::logging::parse_filter(&filter)?;
+        }
+        "LogFormat" => typed::<LogFormat>(value)?,
         "Vec<String>" => typed::<Vec<String>>(value)?,
         "Vec<usize>" => typed::<Vec<usize>>(value)?,
         "BTreeMap<String, String>" => {

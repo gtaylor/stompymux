@@ -206,28 +206,16 @@ impl Server {
             return;
         }
         self.flush();
-        self.config.log(
-            crate::logging::LogLevel::Info,
+        tracing::info!(
+            target: crate::logging::targets::ACCOUNTS,
+            wizard = job.caller.0,
+            player = target.0,
+            "{}",
             if created {
-                &[
-                    crate::logging::Category::Wizard,
-                    crate::logging::Category::Create,
-                ]
+                "account created"
             } else {
-                &[crate::logging::Category::Wizard]
-            },
-            "WIZ",
-            "ACCOUNT",
-            format!(
-                "Account administration: #{} {} #{}",
-                job.caller.0,
-                if created {
-                    "created"
-                } else {
-                    "reset password for"
-                },
-                target.0
-            ),
+                "password reset"
+            }
         );
         if created {
             let name = self.scripts.world.borrow().objects[&target].name.clone();
@@ -297,16 +285,7 @@ impl Server {
             if !quiet {
                 self.tell(victim, &format!("{name} gently shows you the door.\r\n"));
             }
-            self.config.log(
-                crate::logging::LogLevel::Info,
-                &[crate::logging::Category::Wizard],
-                "WIZ",
-                "ACCOUNT",
-                format!(
-                    "Account administration: #{} booted session {}",
-                    caller.0, victim.0
-                ),
-            );
+            tracing::info!(target: crate::logging::targets::ACCOUNTS, wizard = caller.0, session = victim.0, "session booted");
             self.disconnect(victim).await?;
         }
         Ok(())

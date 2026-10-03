@@ -334,13 +334,7 @@ pub(crate) fn threshold_command(
         );
         let name = super::character_names::resolve(args[0]).context("That isn't any charvalue!")?;
         let skill = skill_definition(name).context("That isn't any skill!")?;
-        super::edit_skill_threshold(
-            ctx.scripts,
-            ctx.config,
-            ctx.player,
-            skill.name,
-            i64::from(threshold),
-        )
+        super::edit_skill_threshold(ctx.scripts, ctx.player, skill.name, i64::from(threshold))
     })();
     Ok(match result {
         Ok(()) => crate::CommandAction::Continue,

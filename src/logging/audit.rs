@@ -1,7 +1,7 @@
 //! Conservative command classification shared by stderr and suspect-channel auditing.
 use crate::{
     commands::{CommandInput, ExecutionContext},
-    config::{Config, LogOption},
+    config::Config,
     world::{ObjectId, World},
 };
 /// Classify expanded command forms without retaining raw secret-bearing input.
@@ -50,23 +50,18 @@ fn safe_command_for(
     // exists only to decide whether the original arguments must be redacted.
     super::clean(line)
 }
-/// Capture identity and configured decorations before callbacks can change them.
+/// Capture identity, flags and location before callbacks can change them.
 pub fn message(c: &Config, w: &World, execution: ExecutionContext, line: &str) -> String {
     let actor = execution.executor;
     let identity = w.objects.get(&actor).map_or_else(
         || format!("#{}", actor.0),
         |o| {
-            let flags = if c.logging.log_options.contains(&LogOption::Flags) {
-                crate::find::suffix(o)
-            } else {
-                format!("(#{})", actor.0)
-            };
-            let location = if c.logging.log_options.contains(&LogOption::Location) {
-                format!(" (in #{})", o.location.map_or(-1, |id| id.0))
-            } else {
-                String::new()
-            };
-            format!("{}{flags}{location}", super::clean(&o.name))
+            format!(
+                "{}{} (in #{})",
+                super::clean(&o.name),
+                crate::find::suffix(o),
+                o.location.map_or(-1, |id| id.0)
+            )
         },
     );
     format!(

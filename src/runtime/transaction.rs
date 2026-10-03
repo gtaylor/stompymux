@@ -72,7 +72,7 @@ pub struct EffectBatch {
     /// Deferred logfile appends.
     pub logs: Vec<crate::logging::FileRequest>,
     /// Categorized diagnostics published only after world commit.
-    pub records: Vec<crate::logging::Record>,
+    pub records: Vec<crate::logging::AuditRecord>,
     /// Prepared map replacements, published only after world commit.
     pub map_writes: Vec<super::MapAssetWrite>,
     /// Merged semantic maintenance request.
@@ -230,8 +230,8 @@ impl Effects {
         true
     }
 
-    /// Admit a categorized diagnostic under the aggregate transaction output budget.
-    pub fn stage_record(&self, record: crate::logging::Record) -> anyhow::Result<()> {
+    /// Admit a wizard audit under the aggregate transaction output budget.
+    pub fn stage_record(&self, record: crate::logging::AuditRecord) -> anyhow::Result<()> {
         let before = self.checkpoint();
         self.state.borrow_mut().pending.records.push(record);
         if let Err(error) = self.validate() {
@@ -241,8 +241,8 @@ impl Effects {
         Ok(())
     }
 
-    /// Consume categorized diagnostics after successful persistence.
-    pub fn drain_records(&self) -> Vec<crate::logging::Record> {
+    /// Consume wizard audits after successful persistence.
+    pub fn drain_records(&self) -> Vec<crate::logging::AuditRecord> {
         std::mem::take(&mut self.state.borrow_mut().pending.records)
     }
 
@@ -341,7 +341,7 @@ impl Effects {
                 pending
                     .records
                     .iter()
-                    .map(|record| record.text.len())
+                    .map(|record| record.message.len())
                     .sum::<usize>(),
             )
             .saturating_add(

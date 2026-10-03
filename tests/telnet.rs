@@ -235,16 +235,6 @@ fn charset_pending_collisions_and_utf8_only_policy() {
     assert!(events.iter().any(
         |event| matches!(event, Input::Problem("CHARSET", message) if message.contains("unsupported charset"))
     ));
-    let diagnostic = events.iter().find_map(Input::problem).unwrap();
-    assert_eq!(diagnostic.0, stompymux_rs::logging::Category::Problems);
-    let directory = tempfile::tempdir().unwrap();
-    let path = directory.path().join("stompymux.toml");
-    std::fs::write(&path, "[logging.topics]\nproblems=true\nnetwork=false\n").unwrap();
-    let config = stompymux_rs::Config::load(directory.path()).unwrap();
-    assert!(diagnostic.0.enabled(&config));
-    std::fs::write(&path, "[logging.topics]\nproblems=false\nnetwork=true\n").unwrap();
-    let config = stompymux_rs::Config::load(directory.path()).unwrap();
-    assert!(!diagnostic.0.enabled(&config));
     assert!(matches!(
         d.feed(&[0xfe, b'\n']).unwrap().as_slice(),
         [Input::InvalidUtf8]

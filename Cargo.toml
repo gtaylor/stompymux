@@ -50,6 +50,9 @@ chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 rand_chacha = { version = "0.10.0", features = ["serde"] }
 csv = "1.4.0"
 sha2 = "0.11.0"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", default-features = false, features = ["std", "fmt", "ansi", "env-filter", "json", "registry", "smallvec"] }
+tracing-appender = "0.2.5"
 
 [dev-dependencies]
 stompymux-mapgen = { path = "crates/mapgen", default-features = false }

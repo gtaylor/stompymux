@@ -1,18 +1,12 @@
 //! Nontransactional command audits and explicit file-write acknowledgments.
 use super::*;
-use crate::logging::{Category, FileRequest};
+use crate::logging::{FileRequest, targets};
 impl Server {
     pub(super) async fn write_log(&self, request: FileRequest) -> String {
         match self.config.logger.write(&self.config, request).await {
             Ok(()) => "Message logged.".into(),
             Err(e) => {
-                self.config.log(
-                    crate::logging::LogLevel::Error,
-                    &[Category::Problems],
-                    "LOG",
-                    "WRITE",
-                    e.to_string(),
-                );
+                tracing::error!("@log write failed: {e:#}");
                 "Request failed.".into()
             }
         }
@@ -28,18 +22,11 @@ impl Server {
                     .is_some_and(|o| o.flags.contains(crate::flags::Flag::Suspect)),
             )
         };
-        let categories = if suspect {
-            &[Category::AllCommands, Category::SuspectCommands][..]
+        if suspect {
+            tracing::info!(target: targets::SUSPECT_COMMANDS, "{message}");
         } else {
-            &[Category::AllCommands][..]
-        };
-        self.config.log(
-            crate::logging::LogLevel::Info,
-            categories,
-            "CMD",
-            if suspect { "SUS" } else { "ALL" },
-            &message,
-        );
+            tracing::info!(target: targets::COMMANDS, "{message}");
+        }
         if !suspect
             || self
                 .scripts
@@ -59,13 +46,7 @@ impl Server {
             *self.scripts.world.borrow_mut() = before;
             self.reconcile_connections();
             self.scripts.effects.rollback();
-            self.config.log(
-                crate::logging::LogLevel::Error,
-                &[Category::Problems],
-                "CMD",
-                "SUS",
-                format!("Suspect audit failed: {e}"),
-            );
+            tracing::error!("Suspect audit failed: {e}");
             return;
         }
         if self.commit(before).await {

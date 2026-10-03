@@ -594,80 +594,18 @@ impl Default for SecurityConfig {
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
-/// Typed logging topics.
-pub struct LoggingTopics {
-    /// Configuration value for `accounting`; defaults are centralized below.
-    pub accounting: bool,
-    /// Configuration value for `all_commands`; defaults are centralized below.
-    pub all_commands: bool,
-    /// Configuration value for `suspect_commands`; defaults are centralized below.
-    pub suspect_commands: bool,
-    /// Configuration value for `bad_commands`; defaults are centralized below.
-    pub bad_commands: bool,
-    /// Configuration value for `buffer_alloc`; defaults are centralized below.
-    pub buffer_alloc: bool,
-    /// Configuration value for `bugs`; defaults are centralized below.
-    pub bugs: bool,
-    /// Configuration value for `checkpoints`; defaults are centralized below.
-    pub checkpoints: bool,
-    /// Configuration value for `config_changes`; defaults are centralized below.
-    pub config_changes: bool,
-    /// Configuration value for `create`; defaults are centralized below.
-    pub create: bool,
-    /// Configuration value for `logins`; defaults are centralized below.
-    pub logins: bool,
-    /// Configuration value for `network`; defaults are centralized below.
-    pub network: bool,
-    /// Configuration value for `problems`; defaults are centralized below.
-    pub problems: bool,
-    /// Configuration value for `security`; defaults are centralized below.
-    pub security: bool,
-    /// Configuration value for `shouts`; defaults are centralized below.
-    pub shouts: bool,
-    /// Configuration value for `startup`; defaults are centralized below.
-    pub startup: bool,
-    /// Configuration value for `wizard`; defaults are centralized below.
-    pub wizard: bool,
-}
-impl Default for LoggingTopics {
-    fn default() -> Self {
-        Self {
-            accounting: false,
-            all_commands: false,
-            suspect_commands: false,
-            bad_commands: false,
-            buffer_alloc: false,
-            bugs: true,
-            checkpoints: true,
-            config_changes: true,
-            create: true,
-            logins: true,
-            network: true,
-            problems: true,
-            security: true,
-            shouts: true,
-            startup: true,
-            wizard: true,
-        }
-    }
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(default)]
 /// Typed logging config.
 pub struct LoggingConfig {
-    /// Configuration value for `log_options`; defaults are centralized below.
-    pub log_options: Vec<LogOption>,
-    /// Configuration value for `topics`; defaults are centralized below.
-    pub topics: LoggingTopics,
-    /// Least severe level written to the server log; less severe records are dropped.
-    pub min_level: LogLevel,
+    /// `tracing` filter directives (the `RUST_LOG` syntax) selecting which events are written.
+    pub filter: String,
+    /// Line layout for diagnostics written to stderr.
+    pub format: LogFormat,
 }
 impl Default for LoggingConfig {
     fn default() -> Self {
         Self {
-            log_options: vec![LogOption::Timestamp, LogOption::Location],
-            topics: Default::default(),
-            min_level: LogLevel::Info,
+            filter: crate::logging::DEFAULT_FILTER.into(),
+            format: LogFormat::Full,
         }
     }
 }

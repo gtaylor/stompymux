@@ -52,7 +52,7 @@ impl Session {
     }
 
     /// Queue ordered Telnet output; metadata events are already reflected in the decoder.
-    pub fn protocol(&self, events: Vec<crate::telnet::Input>, config: &crate::config::Config) {
+    pub fn protocol(&self, events: Vec<crate::telnet::Input>) {
         for event in events {
             match event {
                 crate::telnet::Input::Reply(bytes) => {
@@ -70,13 +70,9 @@ impl Session {
                         self.stats.compression.store(0, Relaxed);
                     }
                 }
-                crate::telnet::Input::Problem(secondary, message) => config.log(
-                    crate::logging::LogLevel::Warn,
-                    &[crate::logging::Category::Problems],
-                    "TELNET",
-                    secondary,
-                    message,
-                ),
+                crate::telnet::Input::Problem(secondary, message) => {
+                    tracing::warn!(peer = %self.peer, option = secondary, "telnet problem: {message}")
+                }
                 _ => {}
             }
         }

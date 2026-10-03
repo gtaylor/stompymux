@@ -151,8 +151,8 @@ impl Scripts {
         self.effects.rollback();
     }
 
-    /// Drain categorized diagnostics during embedding transaction inspection.
-    pub fn drain_records_for_inspection(&self) -> Vec<crate::logging::Record> {
+    /// Drain staged wizard audits during embedding transaction inspection.
+    pub fn drain_records_for_inspection(&self) -> Vec<crate::logging::AuditRecord> {
         self.effects.drain_records()
     }
 

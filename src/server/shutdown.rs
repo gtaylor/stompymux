@@ -21,13 +21,7 @@ impl Server {
         let snapshot = self.scripts.world.borrow().clone();
         let result = self.save_snapshot(snapshot).await;
         if let Err(e) = result {
-            self.config.log(
-                crate::logging::LogLevel::Error,
-                &[crate::logging::Category::Problems],
-                "SHT",
-                "ERROR",
-                format!("Shutdown initial save failed: {e:#}"),
-            );
+            tracing::error!("Shutdown initial save failed: {e:#}");
             if let ShutdownRequest::Player(player) = request {
                 for (id, session) in &self.sessions {
                     if session.player == Some(player) {
@@ -40,13 +34,7 @@ impl Server {
         }
         self.shutdown = Some(request);
         self.scripts.flows.stop();
-        self.config.log(
-            crate::logging::LogLevel::Info,
-            &[crate::logging::Category::Startup],
-            "SHT",
-            "START",
-            format!("Graceful shutdown: {request:?}"),
-        );
+        tracing::info!(?request, "graceful shutdown");
         if let ShutdownRequest::Player(player) = request {
             let name = self.scripts.world.borrow().objects[&player].name.clone();
             for id in self.sessions.keys() {
@@ -59,13 +47,7 @@ impl Server {
         self.scripts.flows.stop();
         for id in self.sessions.keys().copied().collect::<Vec<_>>() {
             if let Err(e) = self.disconnect(id).await {
-                self.config.log(
-                    crate::logging::LogLevel::Error,
-                    &[crate::logging::Category::Problems],
-                    "SHT",
-                    "ERROR",
-                    format!("Shutdown disconnect failed: {e:#}"),
-                );
+                tracing::error!("Shutdown disconnect failed: {e:#}");
                 self.shutdown_failed = true;
             }
         }
@@ -73,25 +55,13 @@ impl Server {
         let snapshot = self.scripts.world.borrow().clone();
         let result = self.save_snapshot(snapshot).await;
         if let Err(e) = result {
-            self.config.log(
-                crate::logging::LogLevel::Error,
-                &[crate::logging::Category::Problems],
-                "SHT",
-                "ERROR",
-                format!("Shutdown final save failed: {e:#}"),
-            );
+            tracing::error!("Shutdown final save failed: {e:#}");
             self.shutdown_failed = true;
         }
         if let Some(database) = self.database.take()
             && let Err(e) = database.close().await
         {
-            self.config.log(
-                crate::logging::LogLevel::Error,
-                &[crate::logging::Category::Problems],
-                "SHT",
-                "ERROR",
-                format!("Closing the database failed: {e:#}"),
-            );
+            tracing::error!("Closing the database failed: {e:#}");
         }
     }
 }

@@ -1,118 +1,123 @@
-//! Categorized diagnostics, bounded asynchronous output and explicit game log writes.
+//! Server diagnostics through `tracing`: audit targets, filter parsing, the stderr subscriber
+//! with its live filter reload, commit-staged wizard audits, and the `@log` file-append command.
+//!
+//! Library code only emits events; the server binary installs the subscriber with [`init`].
+//! Routine diagnostics use their module path as the target. Audit trails that operators switch
+//! on and off use the fixed targets in [`targets`], so a filter such as
+//! `info,audit::commands=info` enables command auditing without touching anything else.
 pub mod audit;
 mod worker;
-pub use crate::config::LogLevel;
 use crate::{
     commands::{Action, CommandContext, CommandInput},
-    config::{Config, LogOption},
+    config::{Config, LogFormat},
 };
-use anyhow::Result;
+use anyhow::{Context, Result};
+use std::{
+    io::IsTerminal,
+    sync::{Arc, Mutex, OnceLock},
+};
+use tracing_subscriber::{
+    EnvFilter, Registry, fmt::MakeWriter, layer::SubscriberExt, reload, util::SubscriberInitExt,
+};
 pub use worker::{FileRequest, Logger};
 
-/// C event categories; unavailable allocator instrumentation remains metadata only.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Category {
-    Accounting,
-    AllCommands,
-    SuspectCommands,
-    BadCommands,
-    BufferAlloc,
-    Bugs,
-    Checkpoints,
-    ConfigChanges,
-    Create,
-    Logins,
-    Network,
-    Problems,
-    Security,
-    Shouts,
-    Startup,
-    Wizard,
+/// Fixed targets for audit trails, independent of which module emits them.
+pub mod targets {
+    /// Every command a player enters (redacted where it may carry secrets).
+    pub const COMMANDS: &str = "audit::commands";
+    /// Commands entered by SUSPECT players; also enabled by an `audit::commands` directive.
+    pub const SUSPECT_COMMANDS: &str = "audit::commands::suspect";
+    /// Commands the server did not recognize.
+    pub const BAD_COMMANDS: &str = "audit::bad_commands";
+    /// Per-session traffic and duration totals written at disconnect.
+    pub const ACCOUNTING: &str = "audit::accounting";
+    /// Connects, disconnects, failed and throttled logins.
+    pub const LOGINS: &str = "audit::logins";
+    /// Character registration and wizard account administration.
+    pub const ACCOUNTS: &str = "audit::accounts";
+    /// Runtime configuration edits.
+    pub const CONFIG: &str = "audit::config";
+    /// Wizard shouts.
+    pub const SHOUTS: &str = "audit::shouts";
+    /// Operator changes to BattleTech settings.
+    pub const WIZARD: &str = "audit::wizard";
 }
-/// Declaration order and minimum C abbreviations.
-pub const CATEGORIES: &[(Category, &str, usize)] = &[
-    (Category::Accounting, "accounting", 2),
-    (Category::AllCommands, "all_commands", 2),
-    (Category::SuspectCommands, "suspect_commands", 2),
-    (Category::BadCommands, "bad_commands", 2),
-    (Category::BufferAlloc, "buffer_alloc", 3),
-    (Category::Bugs, "bugs", 3),
-    (Category::Checkpoints, "checkpoints", 2),
-    (Category::ConfigChanges, "config_changes", 2),
-    (Category::Create, "create", 2),
-    (Category::Logins, "logins", 1),
-    (Category::Network, "network", 1),
-    (Category::Problems, "problems", 1),
-    (Category::Security, "security", 2),
-    (Category::Shouts, "shouts", 2),
-    (Category::Startup, "startup", 2),
-    (Category::Wizard, "wizard", 1),
-];
-impl Category {
-    /// Sample the effective topic switches before enqueueing a record.
-    pub fn enabled(self, c: &Config) -> bool {
-        let t = &c.logging.topics;
-        match self {
-            Self::Accounting => t.accounting,
-            Self::AllCommands => t.all_commands,
-            Self::SuspectCommands => t.suspect_commands,
-            Self::BadCommands => t.bad_commands,
-            Self::BufferAlloc => t.buffer_alloc,
-            Self::Bugs => t.bugs,
-            Self::Checkpoints => t.checkpoints,
-            Self::ConfigChanges => t.config_changes,
-            Self::Create => t.create,
-            Self::Logins => t.logins,
-            Self::Network => t.network,
-            Self::Problems => t.problems,
-            Self::Security => t.security,
-            Self::Shouts => t.shouts,
-            Self::Startup => t.startup,
-            Self::Wizard => t.wizard,
-        }
+
+/// Filter used when neither `logging.filter` nor `RUST_LOG` says otherwise: everything at
+/// `info` and above except the high-volume command and accounting audits.
+pub const DEFAULT_FILTER: &str =
+    "info,audit::commands=off,audit::bad_commands=off,audit::accounting=off";
+
+/// Parse filter directives in the `RUST_LOG` syntax, rejecting any malformed directive.
+pub fn parse_filter(directives: &str) -> Result<EnvFilter> {
+    EnvFilter::builder()
+        .parse(directives)
+        .with_context(|| format!("invalid log filter {directives:?}"))
+}
+
+/// Handle used to swap the active filter after `@admin log_filter` edits.
+static RELOAD: OnceLock<reload::Handle<EnvFilter, Registry>> = OnceLock::new();
+
+/// Install the process-wide stderr subscriber. `RUST_LOG`, when set, overrides
+/// `logging.filter` until the next `@admin log_filter` edit. Keep the returned guard alive for
+/// the life of the process; dropping it flushes buffered output.
+pub fn init(c: &Config) -> Result<tracing_appender::non_blocking::WorkerGuard> {
+    let filter = match std::env::var("RUST_LOG") {
+        Ok(directives) if !directives.is_empty() => parse_filter(&directives)?,
+        _ => parse_filter(&c.logging.filter)?,
+    };
+    let (filter, handle) = reload::Layer::new(filter);
+    let ansi = std::io::stderr().is_terminal();
+    let (writer, guard) = tracing_appender::non_blocking::NonBlockingBuilder::default()
+        .lossy(true)
+        .finish(std::io::stderr());
+    let fmt = tracing_subscriber::fmt::layer()
+        .with_writer(writer)
+        .with_ansi(ansi);
+    let registry = tracing_subscriber::registry().with(filter);
+    match c.logging.format {
+        LogFormat::Full => registry.with(fmt).try_init(),
+        LogFormat::Compact => registry.with(fmt.compact()).try_init(),
+        LogFormat::Json => registry.with(fmt.json()).try_init(),
+    }
+    .context("installing the log subscriber")?;
+    let _ = RELOAD.set(handle);
+    Ok(guard)
+}
+
+/// Make `logging.filter` the active filter; a no-op when [`init`] has not run.
+pub fn apply_filter(c: &Config) -> Result<()> {
+    let Some(handle) = RELOAD.get() else {
+        return Ok(());
+    };
+    handle
+        .reload(parse_filter(&c.logging.filter)?)
+        .context("reloading the log filter")
+}
+
+/// The filter currently deciding which events are written.
+pub fn active_filter(c: &Config) -> String {
+    RELOAD
+        .get()
+        .and_then(|handle| handle.with_current(|filter| filter.to_string()).ok())
+        .unwrap_or_else(|| c.logging.filter.clone())
+}
+
+/// A wizard audit held until its transaction commits, so rolled-back changes leave no trace.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AuditRecord {
+    pub message: String,
+}
+
+impl AuditRecord {
+    /// Emit the committed audit to [`targets::WIZARD`].
+    pub fn emit(&self) {
+        tracing::info!(target: targets::WIZARD, "{}", self.message);
     }
 }
-/// A complete immutable record; the worker never reads world or live configuration.
-#[derive(Clone, Debug)]
-pub struct Record {
-    /// Severity compared against `logging.min_level` before output.
-    pub level: LogLevel,
-    pub text: String,
-}
-impl Record {
-    /// C stderr header and decorations, bounded and stripped of executable terminal text.
-    pub fn new(c: &Config, level: LogLevel, primary: &str, secondary: &str, message: &str) -> Self {
-        let time = if c.logging.log_options.contains(&LogOption::Timestamp) {
-            chrono::Local::now().format("%Y%m%d.%H%M%S ").to_string()
-        } else {
-            String::new()
-        };
-        let name = clean(&c.server.mud_name);
-        let name = &name[..name.floor_char_boundary(name.len().min(128))];
-        let primary = clean(primary);
-        let secondary = clean(secondary);
-        let header = if secondary.is_empty() {
-            format!("{time}{name} {primary:<9}: ")
-        } else {
-            format!("{time}{name} {primary:>3}/{secondary:<5}: ")
-        };
-        let text = clean(message);
-        const RECORD_LIMIT: usize = 8192;
-        let available = RECORD_LIMIT.saturating_sub(header.len() + 1);
-        let text = if text.len() > available {
-            let n = available.saturating_sub(14);
-            format!("{}...[truncated]", &text[..text.floor_char_boundary(n)])
-        } else {
-            text
-        };
-        Self {
-            level,
-            text: format!("{header}{text}\n"),
-        }
-    }
-}
-/// Strip styles and escape control bytes so one diagnostic remains one physical line.
-pub fn clean(text: &str) -> String {
+
+/// Strip styles and escape control bytes so player text stays one inert line.
+pub(crate) fn clean(text: &str) -> String {
     let plain: String = crate::text::Document::Styled(text.into())
         .spans(&Default::default(), &Default::default())
         .iter()
@@ -129,26 +134,7 @@ pub fn clean(text: &str) -> String {
         })
         .collect()
 }
-impl Config {
-    /// Record if the level meets `logging.min_level` and any category is enabled;
-    /// producer threads never wait on diagnostic output.
-    pub fn log(
-        &self,
-        level: LogLevel,
-        categories: &[Category],
-        primary: &str,
-        secondary: &str,
-        message: impl AsRef<str>,
-    ) {
-        if level < self.logging.min_level || !categories.iter().any(|v| v.enabled(self)) {
-            return;
-        }
-        self.logger.record(
-            self,
-            Record::new(self, level, primary, secondary, message.as_ref()),
-        );
-    }
-}
+
 /// Wizard entry point delegates file I/O to the world owner, outside database transactions.
 pub fn command(_: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
     let (filename, message) = input.args.split_once('=').unwrap_or((&input.args, ""));
@@ -167,42 +153,102 @@ pub fn command(_: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
         Err(_) => Action::Report(crate::commands::Report::Reply("Request failed.".into())),
     })
 }
-/// Effective C topic/decorator report, with no claims about unavailable producers.
+
+/// Active filter and format, for `@list logging`.
 pub fn report(c: &Config) -> String {
-    let mut lines = vec!["Events Logged:".into()];
-    lines.extend(CATEGORIES.iter().map(|(v, name, _)| {
-        format!(
-            "{name}: {}{}",
-            if v.enabled(c) { "enabled" } else { "disabled" },
-            if *v == Category::BufferAlloc {
-                " (no allocator instrumentation)"
-            } else {
-                ""
-            }
-        )
-    }));
-    lines.push("Information Logged:".into());
-    for (name, option) in [
-        ("flags", LogOption::Flags),
-        ("location", LogOption::Location),
-        ("timestamp", LogOption::Timestamp),
-    ] {
-        lines.push(format!(
-            "{name}: {}",
-            if c.logging.log_options.contains(&option) {
-                "yes"
-            } else {
-                "no"
-            }
-        ));
-    }
-    lines.join("\n")
+    format!(
+        "Log filter: {}\nLog format: {:?}",
+        active_filter(c),
+        c.logging.format
+    )
 }
 
-/// Emergency process diagnostics remain visible even before configuration or after worker failure.
-pub fn fatal(message: &str) {
-    let _ = std::io::Write::write_all(
-        &mut std::io::stderr(),
-        format!("FATAL: {}\n", clean(message)).as_bytes(),
-    );
+/// In-memory event sink for asserting on emitted diagnostics in tests.
+#[derive(Clone, Debug, Default)]
+pub struct Capture(Arc<Mutex<Vec<u8>>>);
+
+impl Capture {
+    /// Capture this thread's events that pass `filter` until the returned guard drops.
+    pub fn install(filter: &str) -> (Self, tracing::subscriber::DefaultGuard) {
+        let capture = Self::default();
+        let subscriber = tracing_subscriber::fmt()
+            .with_env_filter(parse_filter(filter).expect("valid capture filter"))
+            .with_writer(capture.clone())
+            .with_ansi(false)
+            .without_time()
+            .finish();
+        (capture, tracing::subscriber::set_default(subscriber))
+    }
+
+    /// Everything captured so far, one formatted event per line.
+    pub fn text(&self) -> String {
+        String::from_utf8_lossy(&self.0.lock().unwrap()).into_owned()
+    }
+
+    /// Captured lines containing `needle`.
+    pub fn lines_containing(&self, needle: &str) -> Vec<String> {
+        self.text()
+            .lines()
+            .filter(|line| line.contains(needle))
+            .map(str::to_owned)
+            .collect()
+    }
+}
+
+/// Appends formatted events to the shared capture buffer.
+pub struct CaptureWriter(Arc<Mutex<Vec<u8>>>);
+
+impl std::io::Write for CaptureWriter {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        self.0.lock().unwrap().extend_from_slice(bytes);
+        Ok(bytes.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+impl<'a> MakeWriter<'a> for Capture {
+    type Writer = CaptureWriter;
+
+    fn make_writer(&'a self) -> Self::Writer {
+        CaptureWriter(self.0.clone())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Filters parse with `RUST_LOG` syntax and reject malformed directives.
+    #[test]
+    fn filters_parse_and_reject_garbage() {
+        parse_filter(DEFAULT_FILTER).unwrap();
+        parse_filter("warn,stompymux_rs::server=debug").unwrap();
+        assert!(parse_filter("info,audit::commands=loud").is_err());
+    }
+
+    /// The default filter keeps routine events but silences the high-volume audits.
+    #[test]
+    fn default_filter_silences_command_audits() {
+        let (capture, _guard) = Capture::install(DEFAULT_FILTER);
+        tracing::info!("routine");
+        tracing::info!(target: targets::COMMANDS, "entered");
+        tracing::info!(target: targets::SUSPECT_COMMANDS, "suspect");
+        tracing::info!(target: targets::LOGINS, "connected");
+        let text = capture.text();
+        assert!(text.contains("routine") && text.contains("connected"));
+        assert!(!text.contains("entered") && !text.contains("suspect"));
+    }
+
+    /// Enabling command audits also enables the suspect-command trail beneath it.
+    #[test]
+    fn command_audit_directive_covers_suspect_commands() {
+        let (capture, _guard) = Capture::install("warn,audit::commands=info");
+        tracing::info!("routine");
+        tracing::info!(target: targets::SUSPECT_COMMANDS, "suspect");
+        let text = capture.text();
+        assert!(!text.contains("routine") && text.contains("suspect"));
+    }
 }

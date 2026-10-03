@@ -18,6 +18,7 @@ pub fn copy(source: &Path, target: &Path) {
 
 /// Copy and load the unchanged relational game fixture.
 pub async fn isolated_world() -> (tempfile::TempDir, Config, World) {
+    crate::init_logging();
     let directory = tempfile::tempdir().unwrap();
     copy(
         &Path::new(env!("CARGO_MANIFEST_DIR")).join("../fixtures/game"),

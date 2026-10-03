@@ -227,7 +227,6 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
             if let Some((name, value)) = argument.trim().split_once('=') {
                 super::edit_skill_threshold(
                     ctx.scripts,
-                    ctx.config,
                     ctx.player,
                     name.trim(),
                     value

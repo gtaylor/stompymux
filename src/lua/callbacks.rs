@@ -143,13 +143,7 @@ impl Scripts {
             return self.call_event(t, name, ctx);
         }
         if let Err(error) = self.atomic(|_| self.call_event(t, name, ctx)) {
-            crate::lua::configuration(&self.lua).log(
-                crate::logging::LogLevel::Error,
-                &[crate::logging::Category::Bugs],
-                "LUA",
-                "ERROR",
-                format!("Lua {name} callback failed: {error:#}"),
-            );
+            tracing::error!("Lua {name} callback failed: {error:#}");
         }
         Ok(())
     }
@@ -376,13 +370,7 @@ impl Scripts {
         let result = match self.lock_outcome(ctx.clone()) {
             Ok(result) => result,
             Err(error) => {
-                crate::lua::configuration(&self.lua).log(
-                    crate::logging::LogLevel::Error,
-                    &[crate::logging::Category::Bugs],
-                    "LUA",
-                    "ERROR",
-                    format!("Traversal lock on #{} failed: {error:#}", exit.0),
-                );
+                tracing::error!("Traversal lock on #{} failed: {error:#}", exit.0);
                 LockOutcome {
                     passes: false,
                     enactor_message: None,
@@ -440,13 +428,7 @@ impl Scripts {
             });
             match result {
                 Ok(result) if result.passes => passing.push(*id),
-                Err(e) => crate::lua::configuration(&self.lua).log(
-                    crate::logging::LogLevel::Error,
-                    &[crate::logging::Category::Bugs],
-                    "LUA",
-                    "ERROR",
-                    format!("MATCH lock on #{} failed: {e:#}", id.0),
-                ),
+                Err(e) => tracing::error!("MATCH lock on #{} failed: {e:#}", id.0),
                 _ => {}
             }
         }

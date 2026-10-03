@@ -41,14 +41,17 @@ async fn complete_legacy_catalog_and_compiled_defaults() {
     let (_d, c) = config("");
     let inventory: Vec<serde_json::Value> =
         serde_json::from_str(include_str!("fixtures/config/legacy-catalog.json")).unwrap();
-    assert_eq!(inventory.len(), 175);
+    assert_eq!(inventory.len(), 158);
     let expected: BTreeSet<_> = inventory
         .iter()
         .map(|v| v["path"].as_str().unwrap())
         .collect();
     let actual: BTreeSet<_> = KEYS
         .iter()
-        .filter(|s| !s.legacy.is_empty() && s.path != "mux.default_player_macros")
+        .filter(|s| {
+            !s.legacy.is_empty()
+                && !matches!(s.path, "mux.default_player_macros" | "logging.filter")
+        })
         .map(|s| s.path)
         .collect();
     assert_eq!(expected, actual);
@@ -77,7 +80,8 @@ async fn complete_fixture_parses_every_shape() {
     assert_eq!(c.colors["brand-blue"], [32, 96, 192]);
     assert_eq!(c.access.commands["@foo"].0, ["wizard", "need_player"]);
     assert_eq!(c.sites.forbid.len(), 2);
-    assert_eq!(c.logging.min_level, stompymux_rs::logging::LogLevel::Error);
+    assert_eq!(c.logging.filter, "warn,audit::commands=info");
+    assert_eq!(c.logging.format, stompymux_rs::config::LogFormat::Json);
     assert_eq!(c.sites.forbid[0].address.to_string(), "192.0.2.0");
     assert_eq!(c.server.listen_address.to_string(), "::1");
     assert!(c.validate_for_serve().is_err());
@@ -169,7 +173,8 @@ async fn malformed_known_values_and_cycles_are_rejected() {
         "sites.forbid=[{address='::1',mask='255.255.255.0'}]",
         "database.bootstrap.objects.1={type='room',name='GOD',wizard=true}",
         "runtime.event_queue_capacity=0",
-        "logging.min_level='loud'",
+        "logging.filter='info,audit=loud'",
+        "logging.format='xml'",
         "include='x'",
         "include=[123]",
     ] {
@@ -525,7 +530,7 @@ async fn supplied_configuration_parses_without_unknown_keys() {
     )
     .unwrap();
     let c = Config::load(d.path()).unwrap();
-    assert_eq!(KEYS.len(), 199);
+    assert_eq!(KEYS.len(), 183);
     assert_eq!(c.server.port, 5555);
     assert!(
         !c.warnings.iter().any(|w| w.contains("unknown")),

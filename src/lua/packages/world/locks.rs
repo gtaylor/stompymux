@@ -12,14 +12,8 @@ const MESSAGE_LIMIT: usize = 8192;
 pub(super) fn register(lua: &Lua, api: &Table, world: &SharedWorld) -> mlua::Result<()> {
     api.set(
         "lock_error",
-        lua.create_function(|lua, message: String| {
-            crate::lua::configuration(lua).log(
-                crate::logging::LogLevel::Error,
-                &[crate::logging::Category::Bugs],
-                "LUA",
-                "ERROR",
-                format!("Lua lock failed: {message}"),
-            );
+        lua.create_function(|_, message: String| {
+            tracing::error!("Lua lock failed: {message}");
             Ok(())
         })?,
     )?;

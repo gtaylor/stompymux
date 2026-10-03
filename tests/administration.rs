@@ -211,10 +211,10 @@ async fn sites_prepend_and_live_destinations() {
 fn compiled_directive_catalog_and_file_access() {
     let rows: Vec<serde_json::Value> =
         serde_json::from_str(include_str!("fixtures/config-directives.json")).unwrap();
-    // Compare imported directive metadata separately from the Rust macro-default setting.
+    // Compare imported directive metadata separately from Rust-only directives.
     let imported: Vec<_> = DIRECTIVES
         .iter()
-        .filter(|d| d.name != "default_player_macros")
+        .filter(|d| !matches!(d.name, "default_player_macros" | "log_filter"))
         .collect();
     assert_eq!(rows.len(), imported.len());
     for (row, d) in rows.iter().zip(imported) {

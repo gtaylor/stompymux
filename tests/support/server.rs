@@ -14,6 +14,7 @@ pub async fn start(
     tokio::task::JoinHandle<anyhow::Result<()>>,
     mlua::Lua,
 ) {
+    crate::init_logging();
     let scripts = prepare_server(config).await.unwrap();
     let lua = scripts.inspect_lua();
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();

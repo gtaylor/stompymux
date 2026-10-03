@@ -307,9 +307,19 @@ async fn bootstrap_once_and_existing_world_does_not_bootstrap() {
     assert_eq!(s.world().objects.len(), 16);
     assert!(!c.root.join("bootstrap-credentials.txt").exists());
 }
+/// A spawned server process. Its stderr is collected and replayed only if the test panics,
+/// so passing tests stay quiet.
 struct Running {
     child: Child,
     address: String,
+    log: std::sync::Arc<std::sync::Mutex<String>>,
+}
+impl Drop for Running {
+    fn drop(&mut self) {
+        if std::thread::panicking() {
+            print!("{}", self.log.lock().unwrap());
+        }
+    }
 }
 impl Running {
     async fn start(c: &Config) -> Self {
@@ -322,10 +332,20 @@ impl Running {
                 "0",
             ])
             .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::inherit())
+            .stderr(std::process::Stdio::piped())
             .kill_on_drop(true)
             .spawn()
             .unwrap();
+        let log = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+        let mut stderr = BufReader::new(child.stderr.take().unwrap()).lines();
+        let sink = log.clone();
+        tokio::spawn(async move {
+            while let Ok(Some(line)) = stderr.next_line().await {
+                let mut log = sink.lock().unwrap();
+                log.push_str(&line);
+                log.push('\n');
+            }
+        });
         let mut lines = BufReader::new(child.stdout.take().unwrap()).lines();
         let line = tokio::time::timeout(Duration::from_secs(15), lines.next_line())
             .await
@@ -335,6 +355,7 @@ impl Running {
         Self {
             child,
             address: line.strip_prefix("Listening on ").unwrap().into(),
+            log,
         }
     }
     async fn stop(mut self) {
@@ -2575,7 +2596,7 @@ async fn tcp_comsys_pages_sessions_and_write_rollback() {
     w.accounts.get_mut(&ObjectId(2)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
     w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(c.start()));
     persistence::save(&c.database(), &w).await.unwrap();
-    let running = Running::start(&c).await;
+    let mut running = Running::start(&c).await;
     let mut wizard = Client::connect(&running).await;
     wizard.login("#2").await;
     wizard.send("@chan/flags Public=loud").await;
@@ -2682,13 +2703,7 @@ async fn tcp_comsys_pages_sessions_and_write_rollback() {
     wizard.send("@shutdown").await;
     assert!(
         tokio::time::timeout(Duration::from_secs(10), async {
-            running
-                .child
-                .wait_with_output()
-                .await
-                .unwrap()
-                .status
-                .success()
+            running.child.wait().await.unwrap().success()
         })
         .await
         .unwrap()
