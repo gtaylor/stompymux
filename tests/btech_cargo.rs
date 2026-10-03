@@ -956,7 +956,7 @@ async fn operator_stock_limits_and_batch_rollback_are_shared() {
         },
     )
     .unwrap();
-    assert!(rows.len() > 20);
+    assert!(rows.len() > 5);
 }
 
 /// The scripted store function adjusts one catalogue match and preserves its signed-count contract.

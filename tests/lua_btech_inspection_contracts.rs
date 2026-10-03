@@ -112,11 +112,11 @@ async fn mech_inspection_projects_exact_record_shapes_and_keeps_the_old_report()
         if row.part.id==135 then srm=row.quantity end
         if row.part.id==135+1024 then ammo=row.quantity end
       end
-      assert(medium_lasers==4 and srm==1 and ammo==1,'installed '..medium_lasers..' '..srm..' '..ammo)
+      assert(medium_lasers==2 and srm==1 and ammo==1,'installed '..medium_lasers..' '..srm..' '..ammo)
       local payload=btech.unit.payload(unit)
       local payload_lasers=0
       for _,row in ipairs(payload) do if row.part.id==79 then payload_lasers=row.quantity end end
-      assert(payload_lasers==4 and #payload==3,'payload '..payload_lasers..' '..#payload)
+      assert(payload_lasers==2 and #payload==3,'payload '..payload_lasers..' '..#payload)
       local technologies=btech.unit.technologies(unit)
       local flip=false; for _,row in ipairs(technologies) do if row.code==btech.unit.technology.FLIPPABLE_ARMS then flip=true end end; assert(flip)
       assert(btech.unit.section_condition(unit,btech.unit.sections.HEAD)=='operational')

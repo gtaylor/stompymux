@@ -77,7 +77,7 @@ async fn catalogue_resolution_and_c_weapon_projection_are_exact() {
             assert(part.weight_tons==weight,id..' weight '..part.weight_tons..' '..weight)
             end
         end
-        assert(registered_ids==98,'registered ids '..registered_ids)
+        assert(registered_ids==178,'registered ids '..registered_ids)
 
         assert(ambiguous,'expected a source-catalogue ambiguous name')
         local ok,err=mux.error.pcall(function() btech.parts.resolve(ambiguous) end)

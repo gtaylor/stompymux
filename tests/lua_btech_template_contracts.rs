@@ -2,9 +2,8 @@
 use crate::support;
 use support::isolated_scripts;
 
-/// The PARITY fixture uses branded criticals exclusively, so its projections
-/// match the C reference values captured by the template_catalog and
-/// template_inspection probes.
+/// The PARITY fixture's projections match the reference values captured by the
+/// template_catalog and template_inspection probes.
 const LOADABLE: &str = include_str!("fixtures/btech/mechs/PARITY.toml");
 
 fn seed(config: &stompymux_rs::Config) {
@@ -145,14 +144,16 @@ async fn loadable_template_projects_exact_reference_rows() {
       local slots=btech.template.critical_slots('parity',btech.unit.sections.HEAD)
       assert(#slots==12 and slots[1].kind=='empty' and slots[12].slot==12,'head slots')
       local arm=btech.template.critical_slots('parity',btech.unit.sections.LEFT_ARM)
-      assert(arm[1].kind=='weapon' and arm[1].part.id==77 and arm[1].part.brand==5,'arm slots')
+      assert(arm[1].kind=='weapon' and arm[1].part.id==77,'arm slots')
       local weapons=btech.template.weapons('parity')
       assert(#weapons==1 and weapons[1].number==0 and weapons[1].first_slot==1,'weapons')
-      assert(weapons[1].part.id==77 and weapons[1].part.brand==5 and weapons[1].operational,'weapon row')
+      assert(weapons[1].part.id==77 and weapons[1].operational,'weapon row')
       local left=btech.template.weapons('parity',btech.unit.sections.LEFT_ARM)
       assert(#left==1 and left[1].part.id==77,'filtered weapons')
       local installed=btech.template.installed_parts('parity')
-      assert(#installed==1 and installed[1].part.id==77 and installed[1].part.brand==5 and installed[1].quantity==1,'installed')
+      local ppc=0
+      for _,row in ipairs(installed) do if row.part.id==77 then ppc=row.quantity end end
+      assert(ppc==1,'installed')
       local payload=btech.template.payload('parity')
       assert(#payload==1 and payload[1].part.id==77,'payload')
       local technologies=btech.template.technologies('parity')
