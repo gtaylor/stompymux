@@ -388,9 +388,16 @@ fn assert_wreck_unchanged(after: &BattleUnit, before: &BattleUnit) {
     // Excess is sampled on the heartbeat; a post-shot sample may rise even
     // while stored heat cools. It cannot exceed the earlier thermal energy.
     assert!(after.heat().excess <= before.heat().stored.max(before.heat().excess));
+    // Any real heartbeat between the two reads resamples the thermal rates as the
+    // wreck cools, and its dissipation follows sink and terrain state. With its
+    // equipment dead, the new sample cannot report more production than the
+    // earlier stored heat or sample.
+    let (sampled, earlier) = (after.sampled_heat_rates(), before.sampled_heat_rates());
+    assert!(sampled.production <= before.heat().stored.max(earlier.production));
     let actual = serde_json::to_value(after).unwrap();
     let mut expected = serde_json::to_value(before).unwrap();
     expected["heat"] = actual["heat"].clone();
+    expected["heat_sample"] = actual["heat_sample"].clone();
     match (
         after.reactor_instability_remaining(),
         before.reactor_instability_remaining(),
