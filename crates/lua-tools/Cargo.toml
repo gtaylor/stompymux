@@ -1,0 +1,22 @@
+[package]
+name = "stompymux-lua-tools"
+version = "0.1.0"
+edition = "2024"
+description = "Generators and checkers for the LuaLS declarations and Lua API reference"
+publish = false
+
+# These tools read Rust sources as text and never link the server crate, so
+# they build in seconds instead of waiting on a full server compile.
+
+[[bin]]
+name = "lua-type-updater"
+path = "src/bin/lua-type-updater.rs"
+
+[[bin]]
+name = "lua-doc-updater"
+path = "src/bin/lua-doc-updater.rs"
+
+[dependencies]
+anyhow = "1.0.104"
+regex = "1.13.1"
+tempfile = "3.27.0"

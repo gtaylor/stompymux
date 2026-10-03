@@ -22,7 +22,6 @@ script from `.devcontainer/`:
 
 | Environment | Detected by | Script | What it does |
 | --- | --- | --- | --- |
-| CI | `GITHUB_ACTIONS=true` | `setup-ci.sh` | Verifies the devcontainer image has every required tool. |
 | Claude Code cloud | `CLAUDE_CODE_REMOTE=true` | `setup-claude-cloud.sh` | Installs the toolchain (Node under `~/.local`, ahead of the image's Node on `PATH`), Rust, docs dependencies, and Codex. |
 | Codex cloud | explicit `codex-cloud` argument | `setup-codex-cloud.sh` | Installs the toolchain (Node under `~/.local`, ahead of nvm's Node on `PATH`), Rust, docs dependencies, and Claude Code. |
 | Local | anything else | `setup-local.sh` | Checks the toolchain, then installs docs dependencies, Codex, and Claude Code. |
@@ -42,7 +41,7 @@ access, so configure it in the Codex environment settings instead. Set both the
 The script is safe to re-run. It persists `PATH` changes to `~/.bashrc`, since
 exports from the setup script do not reach the agent phase.
 
-Pass `ci`, `local`, `claude-cloud`, or `codex-cloud` as the first argument (or set `STOMPYMUX_ENV`)
+Pass `local`, `claude-cloud`, or `codex-cloud` as the first argument (or set `STOMPYMUX_ENV`)
 to override detection.
 
 The devcontainer is optional for local development. When you open the
@@ -63,7 +62,7 @@ Edit the relevant Rust module, then format and test the package:
 
 ```sh
 cargo fmt
-cargo test
+just test
 cargo run -- serve --game-dir game-local
 ```
 
@@ -74,28 +73,30 @@ are shortcuts; the last command uses the default `game/` directory.
 
 Unit tests live beside their implementations. Integration scenarios and
 fixtures live in `tests/`; the scenarios are grouped into sixteen consolidated
-suites under `tests/suites/`, and each suite is its own test binary. A full
-`cargo test` builds the library twice (once as the unit-test binary and once
-for the suites to link), plus all sixteen suite binaries, so it is the slowest
-loop available. While iterating, build and run only what your change touches:
+suites under `tests/suites/`, and each suite is its own test binary. Tests run
+under [cargo-nextest](https://nexte.st/), which runs every test in its own
+process and schedules all suites together. While iterating, build and run only
+what your change touches:
 
 ```sh
 just check                          # type-check every target, no codegen
-just test-unit btech::los        # unit tests in src/, filtered by name
+just test-unit btech::los           # unit tests in src/, filtered by name
 just test-scenario btech_status     # one scenario file from tests/
 just test-suite btech_08 status     # one suite, filtered by test name
 just list-scenarios                 # which suite includes which scenario
 ```
 
 `just test-scenario` finds the suite that includes the scenario module and
-runs `cargo test --test <suite> <scenario>::`, so only that suite's binary is
-built. Run the whole suite with `just test` before handing work back.
+runs `cargo nextest run --test <suite> <scenario>::`, so only that suite's
+binary is built. Run the whole suite with `just test` before handing work back.
 
-The test profile in `Cargo.toml` compiles incrementally, so after the first
-full build a small edit rebuilds in well under a minute; the incremental
-caches under `target/` take several gigabytes, and `cargo clean` throws them
-away along with the fifteen-minute cold build, so avoid it unless the target
-directory is corrupt.
+Workspace crates compile unoptimized and incrementally while dependencies are
+fully optimized, so after the first build a small edit rebuilds everything in
+well under a minute. The `dev` and `test` profiles are identical on purpose:
+`cargo build`, `cargo run`, and `cargo test` then share one set of artifacts,
+so switching between them never recompiles the server crate. Avoid
+`cargo clean` unless the target directory is corrupt; it throws away the
+optimized dependencies along with the incremental caches.
 
 `just checks` runs formatting, generated Lua type and API documentation checks,
 and the Rust test suite.

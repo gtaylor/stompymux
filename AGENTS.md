@@ -11,22 +11,24 @@ stompymux-rs is a Rust rewrite of stompymux, a C-based MUD server that includes 
 - `src`: Location of all Rust sources for the game and its supporting utilities.
 - `src/btech`: Battletech extensions that layer on top of the base MUX game server.
 - `crates/mapgen`: Standalone map generation library and `mapgen` CLI. Keep it free of dependencies on the server crate so map editors can embed it.
+- `crates/lua-tools`: `lua-type-updater` and `lua-doc-updater`, which read Rust sources as text. Keep them free of the server crate so they build in seconds.
 - `tests`: Integration tests.
 
 ## Principals
 
 * We're pre-1.0 so you need not write migration, shim, or "legacy bridge" code because there are on the whole no existing production users of the codebase. Do not litter the project with code which "supports legacy users" or somesuch.
-* Write all tools and misc scripts in rust instead of introducing Python. Place them in `src/bin/`
+* Write all tools and misc scripts in rust instead of introducing Python. Place them in `src/bin/` when they need the server crate; tools that do not should live in their own crate under `crates/` so they never wait on a server build.
 
 ## Core workflow
 
 1. Make your changes.
-1. While iterating, build and run only what your change touches. A full `cargo test` compiles the 200k-line library twice plus sixteen integration suite binaries, so it costs many minutes even for a one-line edit; use it once at the end, not after every edit.
+1. While iterating, build and run only what your change touches. Tests run under cargo-nextest.
    - `just check` type-checks every target without codegen (fastest feedback on compile errors).
    - `just test-unit <filter>` runs unit tests in `src/`; only the library's unit-test binary is built.
    - `just test-scenario <name>` runs one scenario file from `tests/` (for example `just test-scenario btech_status`); only its suite binary is built. `just list-scenarios` shows which suite includes which scenario.
    - `just test-suite <suite> [filter]` runs one suite from `tests/suites/`.
-1. Run `cargo fmt`, `just lint`, and `cargo test` before handing back to the human. CI runs `just checks`, which fails on any clippy warning.
+1. Run `cargo fmt`, `just lint`, and `just test` before handing back to the human. CI also checks generated Lua types and docs, maps, and fails on any clippy warning.
+1. Keep the `dev` and `test` Cargo profiles identical, and do not enable dependency features only under `[dev-dependencies]`. Either one makes `cargo build`, `cargo run`, and `cargo test` compile separate copies of the 200k-line server crate.
 
 ## Rust rules
 

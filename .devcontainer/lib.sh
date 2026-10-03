@@ -6,7 +6,7 @@ REPOSITORY_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 DEVCONTAINER_DIR="$REPOSITORY_ROOT/.devcontainer"
 
 # Tools every environment needs to build, test, and check the project.
-REQUIRED_TOOLS=(cargo rustfmt just stylua node npm go hugo)
+REQUIRED_TOOLS=(cargo cargo-nextest rustfmt just stylua node npm go hugo)
 
 # Rust toolchain pinned by rust-toolchain.toml at the repository root. The
 # devcontainer image is built without the repository, so the version is repeated
@@ -107,6 +107,22 @@ install_cloud_toolchain() {
 install_docs_dependencies() {
   log "Installing documentation site dependencies"
   npm --prefix "$REPOSITORY_ROOT/docs" ci --no-audit --no-fund
+}
+
+# Starts compiling every test target, then the clippy pass, in a detached
+# background process. Cloud sessions begin with an empty target directory, and
+# this overlaps that cold build with the agent's first minutes of reading code.
+# Cargo's build-directory lock makes any build the agent starts wait for this
+# one and then reuse its artifacts rather than duplicating the work.
+warm_build_cache() {
+  local log_file="${TMPDIR:-/tmp}/stompymux-warm-build.log"
+  log "Warming the Cargo build cache in the background (log: $log_file)"
+  (
+    cd -- "$REPOSITORY_ROOT"
+    setsid nohup bash -c \
+      'cargo nextest run --workspace --no-run && cargo clippy --all-targets --all-features' \
+      >"$log_file" 2>&1 </dev/null &
+  )
 }
 
 # Installs the Codex CLI unless it is already present.

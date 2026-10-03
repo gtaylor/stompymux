@@ -13,10 +13,26 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  CARGO_TERM_COLOR: always
+  # Incremental state is never reused on a fresh runner; skipping it makes the
+  # one full build of the workspace crates faster.
+  CARGO_INCREMENTAL: "0"
+  NEXTEST_PROFILE: ci
+  # Keep these in sync with .devcontainer/install-tools.sh.
+  JUST_VERSION: 1.57.0
+  STYLUA_VERSION: 2.5.2
+  NEXTEST_VERSION: 0.9.146
+
+# Jobs run directly on the runner rather than inside the devcontainer image so
+# rust-cache can restore compiled dependencies. The Rust toolchain comes from
+# rust-toolchain.toml and every other tool is pinned above, so the environment
+# still matches the devcontainer.
 jobs:
-  build-test:
+  lint:
+    name: Format, lint, and generated files
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 30
 
     steps:
       - name: Check out repository
@@ -24,15 +40,75 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Build and test in devcontainer
-        uses: devcontainers/ci@v0.3
+      - name: Install Rust toolchain
+        run: |
+          channel="$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)"
+          rustup toolchain install "$channel" --profile minimal --component rustfmt,clippy
+
+      - name: Install just
+        uses: taiki-e/install-action@v2
         with:
-          configFile: .devcontainer/devcontainer.json
-          env: |
-            GITHUB_ACTIONS=true
-          push: never
-          runCmd: |
-            set -euo pipefail
-            just checks
-            cargo build --locked
-            git diff --exit-code
+          tool: just@${{ env.JUST_VERSION }}
+
+      - name: Install StyLua
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl --location --fail --silent --show-error --retry 5 \
+            "https://github.com/JohnnyMorganz/StyLua/releases/download/v${STYLUA_VERSION}/stylua-linux-x86_64.zip" \
+            --output "$RUNNER_TEMP/stylua.zip"
+          unzip -oq "$RUNNER_TEMP/stylua.zip" stylua -d "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Restore Cargo cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check lockfile
+        run: cargo metadata --locked --format-version 1 > /dev/null
+
+      - name: Check formatting
+        run: just fmt-check
+
+      - name: Lint
+        run: just lint
+
+      - name: Check generated Lua types
+        run: just check-lua-types
+
+      - name: Check generated Lua docs
+        run: just check-lua-docs
+
+  test:
+    name: Test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        run: |
+          channel="$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)"
+          rustup toolchain install "$channel" --profile minimal
+
+      - name: Install just and cargo-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: just@${{ env.JUST_VERSION }},cargo-nextest@${{ env.NEXTEST_VERSION }}
+
+      - name: Restore Cargo cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build tests
+        run: cargo nextest run --workspace --locked --no-run
+
+      - name: Run tests
+        run: just test
+
+      - name: Check maps
+        run: just check-maps
+
+      - name: Check for uncommitted changes
+        run: git diff --exit-code

@@ -1,0 +1,10 @@
+# nextest settings shared by local runs, cloud agents, and CI.
+
+[profile.default]
+# Report tests slower than 30s and kill any that hang past two minutes, so a
+# stuck socket wait fails fast instead of stalling the whole run.
+slow-timeout = { period = "30s", terminate-after = 4 }
+
+[profile.ci]
+# Show every failure in one CI run rather than stopping at the first.
+fail-fast = false

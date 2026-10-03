@@ -22,8 +22,12 @@ fmt-check-lua:
 fmt-check-rust:
     cargo fmt --check
 
+# Run every test in the workspace. nextest runs each test in its own process
+# and schedules all suites together, so one slow suite no longer serializes
+# the rest. It does not run doctests, so those follow separately.
 test:
-    cargo test
+    cargo nextest run --workspace
+    cargo test --workspace --doc --quiet
 
 # Compile-only pass over every target; skips codegen so it is the fastest way
 # to find type errors while iterating.
@@ -40,13 +44,13 @@ lint:
 
 # Run the unit tests beside the sources in src/, e.g. `just test-unit btech::los`.
 test-unit *filter:
-    cargo test --lib -- {{filter}}
+    cargo nextest run --lib {{filter}}
 
 # Only that suite's binary is built, not the other fifteen.
 
 # Run one integration suite from tests/suites/, e.g. `just test-suite btech_08 status`.
 test-suite suite *filter:
-    cargo test --test {{suite}} -- {{filter}}
+    cargo nextest run --test {{suite}} {{filter}}
 
 # Finds the suite in tests/suites/ that includes the scenario module so only
 # that suite is built, then filters the run to the scenario's tests.
@@ -63,7 +67,7 @@ test-scenario scenario *filter:
     fi
     name="$(basename "$suite" .rs)"
     echo "==> {{scenario}} lives in suite $name"
-    cargo test --test "$name" -- "{{scenario}}::{{filter}}"
+    cargo nextest run --test "$name" "{{scenario}}::{{filter}}"
 
 # List every consolidated suite and the scenario files it includes.
 list-scenarios:
@@ -97,16 +101,14 @@ mappy dir="game/maps":
     cargo run --profile mappy --features mappy --bin mappy -- {{dir}}
 
 update-lua-docs:
-    cargo run --quiet --features lua-doc-updater --bin lua-doc-updater -- --write
+    cargo run --quiet -p stompymux-lua-tools --bin lua-doc-updater -- --write
 
 check-lua-docs:
-    cargo run --quiet --features lua-doc-updater --bin lua-doc-updater -- --check
+    cargo run --quiet -p stompymux-lua-tools --bin lua-doc-updater -- --check
 
-build-lua-doc-updater:
-    cargo build --features lua-doc-updater --bin lua-doc-updater
-
-build-lua-type-updater:
-    cargo build --features lua-type-updater --bin lua-type-updater
+# Build the LuaLS declaration and Lua API reference generators.
+build-lua-tools:
+    cargo build -p stompymux-lua-tools
 
 run:
     cargo run serve
@@ -115,12 +117,12 @@ build-and-run: build run
 
 # Regenerate LuaLS libraries and their isolated test fixtures from Rust contracts.
 update-lua-types:
-    cargo run --quiet --features lua-type-updater --bin lua-type-updater -- --write
+    cargo run --quiet -p stompymux-lua-tools --bin lua-type-updater -- --write
     {{stylua}} --check game/lua/types/mux.d.lua game/lua/types/btech.d.lua
 
 # Fail when any checked-in LuaLS library or test fixture is stale.
 check-lua-types:
-    cargo run --quiet --features lua-type-updater --bin lua-type-updater -- --check
+    cargo run --quiet -p stompymux-lua-tools --bin lua-type-updater -- --check
     {{stylua}} --check game/lua/types/mux.d.lua game/lua/types/btech.d.lua
 
 # Runs a differential Lua parity probe against the pinned C reference.
