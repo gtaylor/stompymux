@@ -5,8 +5,8 @@
 //! ends, so a drag across many hexes undoes in one step.
 //!
 //! Hexes are edited layer by layer, which can build hexes the map file format cannot store:
-//! the file keeps one feature per hex, so woods on rough ground, or fire anywhere but bare
-//! clear ground, would not survive a save. [`file_holds`] asks the game's own encoder and
+//! the file keeps one feature per hex, so woods on rough ground, or a bridge with no water
+//! under it, would not survive a save. [`file_holds`] asks the game's own encoder and
 //! decoder, the document keeps the set of hexes that fail, and saving refuses while any do.
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -507,8 +507,8 @@ mod tests {
         document.save_to(&path).unwrap();
     }
 
-    /// Bridges are storable over water and not over dry ground; fire and smoke only over bare
-    /// clear ground.
+    /// Bridges are storable over water and not over dry ground, fire and smoke over anything,
+    /// and one feature per hex: woods on rough ground are not storable.
     #[test]
     fn file_holds_follows_the_map_file_rules() {
         let bridge = Some(BattleStructure::Bridge { deck: 2 });
@@ -518,8 +518,13 @@ mod tests {
         assert!(!file_holds(BattleHex::at_level(0).with_structure(bridge)));
         let fire = Some(BattleDecorationKind::Fire);
         assert!(file_holds(BattleHex::at_level(4).with_overlay(fire)));
-        assert!(!file_holds(
+        assert!(file_holds(
             BattleHex::new(Terrain::Rough, 4).with_overlay(fire)
+        ));
+        let water_on_a_hill = BattleHex::new(Terrain::Water, 2).with_level(6);
+        assert!(file_holds(water_on_a_hill.with_structure(bridge)));
+        assert!(!file_holds(
+            BattleHex::new(Terrain::Rough, 4).with_woods(Some(BattleWoods::Light))
         ));
         assert!(file_holds(
             BattleHex::new(Terrain::Building, 30).with_level(5)

@@ -450,8 +450,7 @@ impl Mappy {
             panel = panel.push(
                 text(format!(
                     "{unsavable} hex(es), hatched red, can't be saved. A map file holds one of \
-                     ground, woods, water, building or wall per hex; fire and smoke only over \
-                     bare clear ground; bridges only over water."
+                     ground, woods, water, building or wall per hex, and bridges only over water."
                 ))
                 .size(12)
                 .color(Color::from_rgb(1.0, 0.45, 0.4)),

@@ -326,7 +326,6 @@ impl BrushPanel {
             ),
             section(self, Layer::Overlay, "Fire and smoke"),
             overlay,
-            text("Saved only over bare clear ground.").size(12),
             text("Brush").size(15),
             amount("Radius", self.radius, MAX_RADIUS, BrushEdit::Radius),
         ]
