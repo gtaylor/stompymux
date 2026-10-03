@@ -25,9 +25,8 @@ const SQRT_3: f32 = 1.732_050_8;
 pub const MIN_RADIUS: f32 = 0.5;
 pub const MAX_RADIUS: f32 = 64.0;
 
-/// Below this radius no grid is drawn; below the next, hex labels are not.
+/// Below this radius no grid is drawn. Labels have their own limit; see [`Label::min_radius`].
 const GRID_RADIUS: f32 = 7.0;
-const DIGIT_RADIUS: f32 = 12.0;
 
 /// Width in pixels of the background gap left between neighboring hexes as grid lines.
 const GRID_GAP: f32 = 1.0;
@@ -311,7 +310,7 @@ impl shader::Program<Message> for MapView<'_> {
                     0.0
                 },
                 brush: self.hover.map_or(-1.0, |_| f32::from(self.brush_radius)),
-                label: if camera.radius >= DIGIT_RADIUS {
+                label: if camera.radius >= self.label.min_radius() {
                     self.label.shader_value()
                 } else {
                     -1.0

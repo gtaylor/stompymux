@@ -380,6 +380,7 @@ impl Mappy {
                     .into()
             }))
             .spacing(2),
+            text(self.label.legend()).size(12),
         ]
         .spacing(8)
         .padding(8)

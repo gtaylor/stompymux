@@ -48,10 +48,16 @@ const STRUCTURE_WALL: u32 = 2u;
 const STRUCTURE_BRIDGE: u32 = 3u;
 
 // Label modes, matching `Label` in render.rs.
-const LABEL_LEVEL: i32 = 0;
-const LABEL_DEPTH: i32 = 1;
-const LABEL_HEIGHT: i32 = 2;
-const LABEL_DECK: i32 = 3;
+const LABEL_ALL: i32 = 0;
+const LABEL_LEVEL: i32 = 1;
+const LABEL_DEPTH: i32 = 2;
+const LABEL_TOP: i32 = 3;
+
+// Digit half heights in map units for one centered number and for the stacked rows of
+// LABEL_ALL, and how far the top and bottom rows sit from the hex center.
+const SINGLE_SIZE: f32 = 0.35;
+const ROW_SIZE: f32 = 0.17;
+const ROW_OFFSET: f32 = 0.5;
 
 const SQRT_3: f32 = 1.7320508;
 const APOTHEM: f32 = 0.8660254;
@@ -161,6 +167,18 @@ fn number_distance(p: vec2<f32>, value: u32) -> f32 {
     );
 }
 
+// `color` with `value` written over it in black or white, whichever contrasts, centered
+// `y` map units below the hex center. `size` is the half height of a single digit in map
+// units; two-digit numbers are drawn a little smaller to fit.
+fn ink_number(color: vec3<f32>, local: vec2<f32>, y: f32, size: f32, value: u32) -> vec3<f32> {
+    let half_height = u.radius * size * select(1.0, 0.8, value >= 10u);
+    let p = (local - vec2<f32>(0.0, y)) * u.radius / half_height;
+    let stroke = (number_distance(p, value) - 0.16) * half_height;
+    let luminance = dot(color, vec3<f32>(0.299, 0.587, 0.114));
+    let ink = select(vec3<f32>(1.0), vec3<f32>(0.0), luminance > palette[INK_THRESHOLD].r);
+    return mix(color, ink, clamp(0.5 - stroke, 0.0, 1.0));
+}
+
 // `color` mixed toward white by `amount`.
 fn lighten(color: vec3<f32>, amount: f32) -> vec3<f32> {
     return mix(color, vec3<f32>(1.0), clamp(amount, 0.0, 0.7));
@@ -221,28 +239,29 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         color = mix(color, vec3<f32>(0.85, 0.05, 0.05), select(0.0, 0.75, stripe < 0.4));
     }
 
+    // Labels. The top of a deck or structure is an elevation, comparable with ground levels.
     let mode = i32(u.label);
-    var value = 0u;
-    var labelled = false;
-    if mode == LABEL_LEVEL {
-        value = level;
-        labelled = level != 0u;
-    } else if mode == LABEL_DEPTH {
-        value = water - 1u;
-        labelled = water != 0u;
-    } else if mode == LABEL_HEIGHT {
-        value = structure_height;
-        labelled = structure == STRUCTURE_BUILDING || structure == STRUCTURE_WALL;
-    } else if mode == LABEL_DECK {
-        value = structure_height;
-        labelled = structure == STRUCTURE_BRIDGE;
-    }
-    if labelled {
-        let half_height = u.radius * select(0.35, 0.28, value >= 10u);
-        let stroke = (number_distance(local * u.radius / half_height, value) - 0.16) * half_height;
-        let luminance = dot(color, vec3<f32>(0.299, 0.587, 0.114));
-        let ink = select(vec3<f32>(1.0), vec3<f32>(0.0), luminance > palette[INK_THRESHOLD].r);
-        color = mix(color, ink, clamp(0.5 - stroke, 0.0, 1.0));
+    let has_water = water != 0u;
+    let has_structure = structure != 0u;
+    let depth = water - 1u;
+    let top = level + structure_height;
+    if mode == LABEL_ALL {
+        // Fixed rows, so a lone number still says which layer it belongs to.
+        if has_structure {
+            color = ink_number(color, local, -ROW_OFFSET, ROW_SIZE, top);
+        }
+        if level != 0u || has_water || has_structure {
+            color = ink_number(color, local, 0.0, ROW_SIZE, level);
+        }
+        if has_water {
+            color = ink_number(color, local, ROW_OFFSET, ROW_SIZE, depth);
+        }
+    } else if mode == LABEL_LEVEL && level != 0u {
+        color = ink_number(color, local, 0.0, SINGLE_SIZE, level);
+    } else if mode == LABEL_DEPTH && has_water {
+        color = ink_number(color, local, 0.0, SINGLE_SIZE, depth);
+    } else if mode == LABEL_TOP && has_structure {
+        color = ink_number(color, local, 0.0, SINGLE_SIZE, top);
     }
 
     if u.brush >= 0.0 && hex_distance(hex, vec2<i32>(u.hover)) <= i32(u.brush) {
