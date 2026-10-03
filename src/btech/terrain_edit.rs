@@ -1,7 +1,7 @@
 //! Live terrain edits preserve unit positions and share their mutation with seasonal ice growth.
 use super::{BattleHex, BattleHexCoordinate, Terrain};
 use crate::{Config, ObjectId, Scripts, World};
-use anyhow::{Context, Result, ensure};
+use anyhow::{Context, Result, bail, ensure};
 use serde::Serialize;
 use std::sync::Arc;
 
@@ -145,8 +145,98 @@ fn terrain_argument(value: &str) -> Result<Terrain> {
     }
 }
 
-/// Parsed ADDHEX arguments: where, what, its signed height and an optional ground level.
+/// Parsed compact ADDHEX arguments: where, what, its signed height and an optional ground
+/// level.
 type HexArguments = (BattleHexCoordinate, Terrain, i32, Option<u8>);
+
+/// Parse ADDHEX arguments into the hex to write: either the compact symbol form or, when the
+/// third argument names a layer, the layer form. A bare `=` is the wall symbol, not a layer.
+fn parse_hex(arguments: &str) -> Result<(BattleHexCoordinate, BattleHex)> {
+    let args: Vec<_> = arguments.split_whitespace().collect();
+    let names_layer = |arg: &&str| {
+        arg.split_once('=')
+            .is_some_and(|(layer, _)| !layer.is_empty())
+    };
+    if args.get(2).is_some_and(names_layer) {
+        let coordinate = BattleHexCoordinate {
+            x: args[0].parse().context("Invalid x coordinate")?,
+            y: args[1].parse().context("Invalid y coordinate")?,
+        };
+        return Ok((coordinate, layers_argument(&args[2..])?));
+    }
+    let (coordinate, terrain, elevation, level) = parse(arguments)?;
+    Ok((coordinate, hex_argument(terrain, elevation, level)?))
+}
+
+/// Build a hex from `layer=value` words, the way `btech.map.set_hex` takes a hex's layers:
+/// `level` (0-35), `ground` (a ground type), `woods` (`light` or `heavy`), `water` or `ice`
+/// (depth 1-9), and at most one of `bridge` (deck height), `building` or `wall` (height 1-35).
+/// Unnamed layers are absent, on clear ground at level 0. A bridge must span water or ice.
+fn layers_argument(words: &[&str]) -> Result<BattleHex> {
+    let mut hex = BattleHex::at_level(0);
+    let mut seen = std::collections::BTreeSet::new();
+    for word in words {
+        let (layer, value) = word
+            .split_once('=')
+            .with_context(|| format!("Expected layer=value, got {word:?}"))?;
+        let layer = layer.to_ascii_lowercase();
+        let value = value.to_ascii_lowercase();
+        let height = |limit: u8, least: u8| -> Result<u8> {
+            let height: u8 = value
+                .parse()
+                .with_context(|| format!("Invalid {layer} {value:?}"))?;
+            ensure!(
+                (least..=limit).contains(&height),
+                "{layer} must be from {least} to {limit}"
+            );
+            Ok(height)
+        };
+        // Water and ice share a layer, as do the three structures.
+        let slot = match layer.as_str() {
+            "water" | "ice" => "water",
+            "bridge" | "building" | "wall" => "structure",
+            other => other,
+        };
+        ensure!(
+            seen.insert(slot.to_owned()),
+            "Only one {slot} layer is allowed"
+        );
+        hex = match layer.as_str() {
+            "level" => hex.with_level(height(super::hex::MAX_HEIGHT, 0)?),
+            "ground" => hex.with_ground(
+                serde_json::from_value(serde_json::Value::String(value.clone()))
+                    .with_context(|| format!("Unknown ground {value:?}"))?,
+            ),
+            "woods" => hex.with_woods(Some(
+                serde_json::from_value(serde_json::Value::String(value.clone()))
+                    .with_context(|| format!("Unknown woods {value:?}"))?,
+            )),
+            "water" | "ice" => hex.with_water(Some(super::Water {
+                depth: height(super::hex::MAX_DEPTH, 1)?,
+                frozen: layer == "ice",
+            })),
+            "bridge" => hex.with_structure(Some(super::Structure::Bridge {
+                deck: height(super::hex::MAX_HEIGHT, 1)?,
+            })),
+            "building" => hex.with_structure(Some(super::Structure::Building {
+                height: height(super::hex::MAX_HEIGHT, 1)?,
+            })),
+            "wall" => hex.with_structure(Some(super::Structure::Wall {
+                height: height(super::hex::MAX_HEIGHT, 1)?,
+            })),
+            "fire" | "smoke" => bail!("Fire and smoke are not terrain; use ADDFIRE or ADDSMOKE"),
+            _ => bail!(
+                "Unknown layer {layer:?}; use level, ground, woods, water, ice, bridge, building or wall"
+            ),
+        };
+    }
+    ensure!(
+        hex.deck_clearance().is_none() || hex.water().is_some(),
+        "A bridge must span water or ice"
+    );
+    hex.validate()?;
+    Ok(hex)
+}
 
 /// Parse one coordinate, symbol, signed magnitude and optional ground level before
 /// authorizing an edit.
@@ -154,7 +244,7 @@ fn parse(arguments: &str) -> Result<HexArguments> {
     let args: Vec<_> = arguments.split_whitespace().take(6).collect();
     ensure!(
         matches!(args.len(), 4 | 5),
-        "Expected x y terrain elevation [level]"
+        "Expected x y terrain elevation [level], or x y layer=value ..."
     );
     let level = match args.get(4) {
         Some(level) => {
@@ -215,8 +305,7 @@ pub(crate) fn command(
     input: &crate::CommandInput,
 ) -> Result<crate::CommandAction> {
     let result = (|| -> Result<()> {
-        let (coordinate, terrain, elevation, level) = parse(&input.args)?;
-        let hex = hex_argument(terrain, elevation, level)?;
+        let (coordinate, hex) = parse_hex(&input.args)?;
         let map = super::special_dispatch::object(ctx)?;
         set_map_hex_action(ctx.scripts, ctx.config, ctx.player, map, coordinate, hex)?;
         Ok(())
@@ -278,6 +367,54 @@ mod tests {
             "0 0 . 2147483648",
         ] {
             assert!(parse(args).is_err(), "{args}");
+        }
+    }
+
+    /// The layer form names each layer, so a hex can hold several at once.
+    #[test]
+    fn terrain_edit_layers() {
+        use super::super::{Ground, Structure, Water, Woods};
+        let (coordinate, hex) = parse_hex("3 4 level=5 ground=snow woods=heavy").unwrap();
+        assert_eq!(coordinate, BattleHexCoordinate { x: 3, y: 4 });
+        assert_eq!(
+            hex,
+            BattleHex::at_level(5)
+                .with_ground(Ground::Snow)
+                .with_woods(Some(Woods::Heavy))
+        );
+        let (_, tower) = parse_hex("0 0 building=30 level=5 ground=road").unwrap();
+        assert_eq!(tower.structure(), Some(Structure::Building { height: 30 }));
+        assert_eq!((tower.ground(), tower.top_height()), (Ground::Road, 35));
+        let (_, lake) = parse_hex("0 0 ice=9").unwrap();
+        assert_eq!(
+            lake.water(),
+            Some(Water {
+                depth: 9,
+                frozen: true
+            })
+        );
+        // The symbol form still reads the compact notation, including the wall symbol `=`.
+        assert_eq!(
+            parse_hex("0 0 ~ 2 3").unwrap().1,
+            BattleHex::new(Terrain::Water, 2).with_level(3)
+        );
+        assert_eq!(
+            parse_hex("0 0 = 4").unwrap().1,
+            BattleHex::new(Terrain::Wall, 4)
+        );
+        for args in [
+            "0 0 level=",
+            "0 0 =3",
+            "0 0 level=-1",
+            "0 0 building=0",
+            "0 0 bridge=1",
+            "0 0 water=2 wall=1 wall=2",
+            "0 0 water=2 =1",
+            "0 0 smoke=1",
+            "0 0 level=1 x",
+            "x 0 level=1",
+        ] {
+            assert!(parse_hex(args).is_err(), "{args}");
         }
     }
 

@@ -484,8 +484,18 @@ wizard's current map. Use a terrain symbol from the table below; elevation is
 converted to a positive magnitude and capped at 35, or 9 for the depth of water and
 ice. Water, ice, bridges, buildings and walls can take a ground `level` from 0 to
 35 to stand on: `ADDHEX 4 7 ~ 2 3` makes water two deep with its surface at level 3.
-Other terrain takes its level from the elevation. Units retain their physical altitude
-and current movement or flight state. Editing ice into water is a direct terrain
+Other terrain takes its level from the elevation.
+
+`ADDHEX <x> <y> <layer>=<value> ...` names a hex's layers instead, so one hex can hold
+several: `ADDHEX 4 7 level=2 ground=road woods=light` is light woods on a road two
+levels up, and `ADDHEX 4 8 level=3 water=2 bridge=4` is a bridge deck four levels over
+water two deep. The layers are `level` (0 to 35), `ground` (`clear`, `road`, `rough`,
+`mountains`, `snow` or `sand`), `woods` (`light` or `heavy`), `water` or `ice` (depth 1
+to 9), and one of `bridge`, `building` or `wall` (height 1 to 35). Layers you leave out
+are absent, on clear ground at level 0. A bridge must span water or ice.
+
+Either form keeps units at their physical altitude and in their current movement or
+flight state. Editing ice into water is a direct terrain
 edit; use `DELICE` to melt ice with normal occupant falls and flooding. Fire and
 smoke are not terrain: they lie over a tile without changing it, so use `ADDFIRE`
 and `ADDSMOKE` for them. Lua offers `btech.map.set_hex(actor, map, x, y, hex)`,

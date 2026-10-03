@@ -141,6 +141,55 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
             );
             assert_eq!(native.world().btech, before);
         }
+        // The layer form builds hexes the symbol form cannot, such as woods on a road or a
+        // bridge over raised water, and rejects anything a hex cannot hold.
+        let bridge = BattleHex::new(Terrain::Bridge, 4)
+            .with_water(Some(BattleWater {
+                depth: 2,
+                frozen: false,
+            }))
+            .with_ground(BattleGround::Sand)
+            .with_level(3);
+        for (args, expected) in [
+            (
+                "level=2 ground=road woods=light",
+                BattleHex::new(Terrain::Road, 2).with_woods(Some(BattleWoods::Light)),
+            ),
+            (
+                "ice=2 level=4",
+                BattleHex::new(Terrain::Ice, 2).with_level(4),
+            ),
+            ("LEVEL=3 water=2 Bridge=4 ground=sand", bridge),
+        ] {
+            let output =
+                support::run_text(&native, &config, actor, 1, &format!("addhex 0 11 {args}"));
+            assert!(output.contains("Hex set!"), "{output}");
+            assert_eq!(
+                native.world().btech.maps()[&map].base_hex(0, 11).unwrap(),
+                expected,
+                "{args}"
+            );
+        }
+        for args in [
+            "level=36",
+            "water=0",
+            "water=10",
+            "water=1 ice=1",
+            "level=1 level=2",
+            "bridge=2",
+            "water=1 building=2 bridge=1",
+            "fire=1",
+            "ground=lava",
+            "woods=dense",
+            "depth=2",
+            "level=1 woods",
+        ] {
+            let before = native.world().btech.clone();
+            let output =
+                support::run_text(&native, &config, actor, 1, &format!("addhex 0 11 {args}"));
+            assert!(!output.contains("Hex set!"), "{args}: {output}");
+            assert_eq!(native.world().btech, before, "{args}");
+        }
         // Lua takes a hex's layers; operator symbols belong to ADDHEX.
         let before = lua.world().btech.clone();
         for hex in [
