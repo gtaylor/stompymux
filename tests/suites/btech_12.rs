@@ -47,6 +47,9 @@ mod btech_map_export;
 #[path = "../btech_markings.rs"]
 mod btech_markings;
 
+#[path = "../btech_megamek_convert.rs"]
+mod btech_megamek_convert;
+
 #[path = "../btech_orbital_drop_combat.rs"]
 mod btech_orbital_drop_combat;
 
