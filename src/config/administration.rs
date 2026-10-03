@@ -9,6 +9,7 @@ use crate::{
     world::{Kind, ObjectId, World},
 };
 use anyhow::{Context, Result, bail, ensure};
+use std::sync::Arc;
 
 /// Runtime capability is independent of editable access bits.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -139,7 +140,7 @@ pub struct Candidate {
 impl Config {
     /// Compile file access declarations before any startup side effects.
     pub(super) fn compile_directive_permissions(&mut self) -> Result<()> {
-        self.directive_permissions = DIRECTIVES
+        let mut permissions: std::collections::BTreeMap<String, Permissions> = DIRECTIVES
             .iter()
             .map(|d| (d.name.into(), d.permission))
             .collect();
@@ -167,16 +168,14 @@ impl Config {
                             .display()
                     )
                 })?;
-            self.directive_permissions
-                .get_mut(name)
-                .unwrap()
-                .edit(&edits);
+            permissions.get_mut(name).unwrap().edit(&edits);
         }
+        self.directive_permissions = Arc::new(permissions);
         Ok(())
     }
     /// Keep serde and Lua effective lookup synchronized after supported edits.
     fn refresh(&mut self) -> Result<()> {
-        self.effective = toml::Value::try_from(&self.settings)?;
+        self.effective = Arc::new(toml::Value::try_from(&*self.settings)?);
         self.validate_values(false)?;
         self.validate_for_serve()
     }
@@ -214,7 +213,8 @@ impl Config {
                     .find(|k| k.path == "mux.default_player_macros")
                     .expect("macro defaults catalog entry");
                 super::loader::validate(spec, list)?;
-                c.settings.mux.default_player_macros = list.clone().try_into()?;
+                Arc::make_mut(&mut c.settings).mux.default_player_macros =
+                    list.clone().try_into()?;
             }
             "access" | "list_access" | "config_access" => {
                 let (target, words) = value
@@ -242,11 +242,11 @@ impl Config {
                 );
                 if d.name == "config_access" {
                     directive(target)?;
-                    c.directive_permissions
+                    Arc::make_mut(&mut c.directive_permissions)
                         .get_mut(target)
                         .unwrap()
                         .edit(&edits);
-                    c.settings
+                    Arc::make_mut(&mut c.settings)
                         .access
                         .config
                         .entry(target.into())
@@ -255,9 +255,9 @@ impl Config {
                         .extend(accepted);
                 } else {
                     let table = if d.name == "list_access" {
-                        &mut c.settings.access.lists
+                        &mut Arc::make_mut(&mut c.settings).access.lists
                     } else {
-                        &mut c.settings.access.commands
+                        &mut Arc::make_mut(&mut c.settings).access.commands
                     };
                     table
                         .entry(target.to_ascii_lowercase())
@@ -292,7 +292,10 @@ impl Config {
                                 .any(|k| k.eq_ignore_ascii_case(&alias)),
                         "Invalid or conflicting flag alias: {alias}"
                     );
-                    c.settings.aliases.flags.insert(alias, flag.world_name());
+                    Arc::make_mut(&mut c.settings)
+                        .aliases
+                        .flags
+                        .insert(alias, flag.world_name());
                 } else {
                     ensure!(
                         !c.aliases
@@ -322,16 +325,19 @@ impl Config {
                         input.switch.map_or(String::new(), |s| format!("/{s}"))
                     );
                     c.runtime_aliases.push(alias.clone());
-                    c.settings.aliases.commands.insert(alias, canonical);
+                    Arc::make_mut(&mut c.settings)
+                        .aliases
+                        .commands
+                        .insert(alias, canonical);
                 }
             }
             "bad_name" => {
                 if !c.names.bad.iter().any(|p| p.eq_ignore_ascii_case(value)) {
-                    c.settings.names.bad.push(value.into());
+                    Arc::make_mut(&mut c.settings).names.bad.push(value.into());
                 }
             }
             "good_name" => {
-                c.settings
+                Arc::make_mut(&mut c.settings)
                     .names
                     .bad
                     .retain(|p| !p.eq_ignore_ascii_case(value));
@@ -357,10 +363,10 @@ impl Config {
                     mask: rule.mask,
                 };
                 match d.name {
-                    "forbid_site" => c.settings.sites.forbid.insert(0, site),
-                    "permit_site" => c.settings.sites.permit.insert(0, site),
-                    "suspect_site" => c.settings.sites.suspect.insert(0, site),
-                    _ => c.settings.sites.trust.insert(0, site),
+                    "forbid_site" => Arc::make_mut(&mut c.settings).sites.forbid.insert(0, site),
+                    "permit_site" => Arc::make_mut(&mut c.settings).sites.permit.insert(0, site),
+                    "suspect_site" => Arc::make_mut(&mut c.settings).sites.suspect.insert(0, site),
+                    _ => Arc::make_mut(&mut c.settings).sites.trust.insert(0, site),
                 }
                 if matches!(d.name, "forbid_site" | "permit_site") {
                     c.site_policy.access.insert(0, rule);
@@ -427,13 +433,13 @@ impl Config {
                         _ => bail!("Unsupported directive shape"),
                     }
                 };
-                let mut effective = c.effective.clone();
+                let mut effective = (*c.effective).clone();
                 let mut slot = &mut effective;
                 for part in spec.path.split('.') {
                     slot = slot.get_mut(part).context("Missing configuration path")?;
                 }
                 *slot = parsed;
-                c.settings = effective.try_into().context("Invalid directive value")?;
+                c.settings = Arc::new(effective.try_into().context("Invalid directive value")?);
                 if matches!(
                     d.name,
                     "default_home" | "player_starting_home" | "player_starting_room"
@@ -473,7 +479,7 @@ impl Config {
                 retained.insert(object.id, (object.generation, object.state.clone()));
             }
         }
-        c.retained_state = std::sync::Arc::new(retained);
+        c.retained_state = Arc::new(retained);
         Ok(Candidate {
             config: c,
             diagnostics,

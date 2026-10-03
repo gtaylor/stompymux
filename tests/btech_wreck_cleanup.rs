@@ -404,7 +404,7 @@ async fn wreck_idle_server_commit_retry() {
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::query("CREATE TRIGGER deny_wreck BEFORE DELETE ON btech_units BEGIN SELECT RAISE(ABORT,'wreck commit failure'); END").execute(&mut sql).await.unwrap();
         let (_, shutdown, task, _) = support::start(&config, Rc::new(Cell::new(1))).await;
-        tokio::time::sleep(std::time::Duration::from_millis(1250)).await;
+        support::attempt_heartbeat().await;
         let loaded = persistence::load(&config.database()).await.unwrap();
         assert_eq!(loaded.btech, world.btech);
         assert_eq!(loaded.objects[&id].location, world.objects[&id].location);

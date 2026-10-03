@@ -3,7 +3,6 @@
 use super::{contract, error};
 use crate::{BattlePart, BattlePartForm, SharedWorld, World};
 use mlua::{Lua, LuaString, MultiValue, Table, Value};
-use std::sync::Arc;
 
 const GROUP: &str = "parts";
 const ITEM_COUNT: i64 = crate::btech::PART_ID_LIMIT as i64;
@@ -529,13 +528,13 @@ fn categories(lua: &Lua) -> mlua::Result<Table> {
 }
 
 /// The part-name registry Lua resolves names against.
-pub(super) fn registered_catalogue() -> Vec<BattlePartForm> {
+pub(super) fn registered_catalogue() -> &'static [BattlePartForm] {
     crate::btech::part_catalogue()
 }
 
 /// Register all eight C-native `btech.parts` operations.
 pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::Result<()> {
-    let catalogue = Arc::new(registered_catalogue());
+    let catalogue = registered_catalogue();
     contract::bind(
         lua,
         native,
@@ -546,7 +545,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     )?;
 
     let shared = world.clone();
-    let records = catalogue.clone();
+    let records = catalogue;
     contract::bind(
         lua,
         native,
@@ -563,7 +562,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             })) {
                 result.raw_set(
                     output,
-                    push_part(lua, &world, &records, PartReference { id: form.part_id })?,
+                    push_part(lua, &world, records, PartReference { id: form.part_id })?,
                 )?;
             }
             Ok(result)
@@ -571,7 +570,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     )?;
 
     let shared = world.clone();
-    let records = catalogue.clone();
+    let records = catalogue;
     contract::bind(
         lua,
         native,
@@ -604,7 +603,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             })) {
                 result.raw_set(
                     output,
-                    push_part(lua, &world, &records, PartReference { id: form.part_id })?,
+                    push_part(lua, &world, records, PartReference { id: form.part_id })?,
                 )?;
             }
             Ok(result)
@@ -612,7 +611,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     )?;
 
     let shared = world.clone();
-    let records = catalogue.clone();
+    let records = catalogue;
     contract::bind(
         lua,
         native,
@@ -622,14 +621,14 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         lua.create_function(move |lua, arguments: MultiValue| {
             crate::lua::transactions::require(lua)?;
             let world = shared.borrow();
-            check_part(value(&arguments, 0), 1, &records)?.map_or(Ok(Value::Nil), |part| {
-                push_part(lua, &world, &records, part).map(Value::Table)
+            check_part(value(&arguments, 0), 1, records)?.map_or(Ok(Value::Nil), |part| {
+                push_part(lua, &world, records, part).map(Value::Table)
             })
         })?,
     )?;
 
     let shared = world.clone();
-    let records = catalogue.clone();
+    let records = catalogue;
     contract::bind(
         lua,
         native,
@@ -646,11 +645,11 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 .map_err(|failure| error::failure("btech.operation.failed", failure))?
             {
                 let part = PartReference { id: entry.part_id };
-                if entry.quantity <= 0 || form_for(&records, part).is_none() {
+                if entry.quantity <= 0 || form_for(records, part).is_none() {
                     continue;
                 }
                 let row = lua.create_table()?;
-                row.raw_set("part", push_part(lua, &world, &records, part)?)?;
+                row.raw_set("part", push_part(lua, &world, records, part)?)?;
                 row.raw_set("quantity", entry.quantity)?;
                 result.raw_set(output, row)?;
                 output += 1;
@@ -660,7 +659,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     )?;
 
     let shared = world.clone();
-    let records = catalogue.clone();
+    let records = catalogue;
     contract::bind(
         lua,
         native,
@@ -671,7 +670,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             crate::lua::transactions::require(lua)?;
             let world = shared.borrow();
             let object = contract::require_object(lua, &world, value(&arguments, 0), 1)?;
-            let part = require_part(value(&arguments, 1), 2, &records)?;
+            let part = require_part(value(&arguments, 1), 2, records)?;
             Ok(crate::btech::inventory(&world, object)
                 .map_err(|failure| error::failure("btech.operation.failed", failure))?
                 .iter()
@@ -680,7 +679,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         })?,
     )?;
 
-    let records = catalogue.clone();
+    let records = catalogue;
     contract::bind(
         lua,
         native,
@@ -692,7 +691,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             let scripts = crate::Scripts::services(lua)?;
             let mut world = scripts.world_mut();
             let object = contract::require_object(lua, &world, value(&arguments, 0), 1)?;
-            let part = require_part(value(&arguments, 1), 2, &records)?;
+            let part = require_part(value(&arguments, 1), 2, records)?;
             let raw_delta = value(&arguments, 2);
             if !matches!(raw_delta, Value::Integer(_) | Value::Number(_)) {
                 return Err(argument_failure(
@@ -759,7 +758,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             crate::lua::transactions::require(lua)?;
             let scripts = crate::Scripts::services(lua)?;
             let mut world = scripts.world_mut();
-            let part = require_part(value(&arguments, 0), 1, &records)?;
+            let part = require_part(value(&arguments, 0), 1, records)?;
             let raw_cost = value(&arguments, 1);
             if !matches!(raw_cost, Value::Integer(_) | Value::Number(_)) {
                 return Err(argument_failure(

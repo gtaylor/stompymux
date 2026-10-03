@@ -5,23 +5,11 @@ edition = "2024"
 autotests = false
 
 [workspace]
-members = ["crates/mapgen", "tests/support"]
-default-members = [".", "crates/mapgen"]
+members = ["crates/lua-tools", "crates/mapgen", "tests/support"]
+default-members = [".", "crates/lua-tools", "crates/mapgen"]
 
 [features]
-lua-type-updater = []
-lua-doc-updater = []
 mappy = ["dep:iced"]
-
-[[bin]]
-name = "lua-type-updater"
-path = "src/bin/lua-type-updater.rs"
-required-features = ["lua-type-updater"]
-
-[[bin]]
-name = "lua-doc-updater"
-path = "src/bin/lua-doc-updater.rs"
-required-features = ["lua-doc-updater"]
 
 [[bin]]
 name = "mappy"
@@ -46,7 +34,11 @@ regex = "1.13.1"
 sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "sqlite"] }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_json = { version = "1.0.151", features = ["float_roundtrip"] }
-tokio = { version = "1.53.1", features = ["full"] }
+# `test-util` (paused clocks for tests) is enabled here rather than only as a
+# dev-dependency feature. A dev-only feature changes tokio's build under `cargo
+# test`, which forces `cargo build` and `cargo run` to recompile tokio and the
+# whole server crate separately. Outside a paused test clock it costs nothing.
+tokio = { version = "1.53.1", features = ["full", "test-util"] }
 toml = { version = "1.1.5", features = ["preserve_order"] }
 unicode-width = "0.2.2"
 zeroize = { version = "1.9.0", features = ["derive"] }
@@ -64,7 +56,6 @@ iced = { version = "0.14.0", optional = true }
 [dev-dependencies]
 stompymux-mapgen = { path = "crates/mapgen", default-features = false }
 stompymux-test-support = { path = "tests/support" }
-tokio = { version = "1.53.1", features = ["test-util"] }
 
 # Autopilot and contract helpers pass world, unit, and tuning state explicitly
 # rather than bundling them into single-use structs.
@@ -72,22 +63,23 @@ tokio = { version = "1.53.1", features = ["test-util"] }
 too_many_arguments = "allow"
 
 # Debug info is off by default to cut compile, link, and disk costs. Opt back
-# in for a debugger session with `CARGO_PROFILE_DEV_DEBUG=true` (or
-# `CARGO_PROFILE_TEST_DEBUG=true` for test binaries).
+# in for a debugger session with `CARGO_PROFILE_DEV_DEBUG=true`.
+#
+# Workspace crates build unoptimized: optimizing the sixteen integration suites
+# cost roughly 3,000 CPU-seconds per clean build while barely changing how
+# long they take to run, because the hot paths live in the server crate and
+# its dependencies. Dependencies are optimized instead; they rarely change, so
+# that cost is paid once per lockfile and then cached.
+#
+# `cargo test` uses the `test` profile, which inherits everything here. Keep it
+# free of overrides: when `dev` and `test` match, `cargo build`, `cargo run`,
+# and `cargo test` share one set of compiled artifacts instead of each
+# rebuilding the 200k-line server crate.
 [profile.dev]
 debug = false
 
-# `cargo test` compiles the whole library twice (unit-test binary plus the
-# rlib the suites link) and sixteen suite binaries. Light optimization keeps
-# the BattleTech simulations quick at run time; incremental compilation makes
-# an edit-and-retest cycle cost seconds instead of a full crate rebuild; and
-# skipping rustc's local ThinLTO pass removes roughly 40% of each crate's
-# codegen time for a few percent of test run time.
-[profile.test]
-opt-level = 1
-debug = false
-incremental = true
-lto = "off"
+[profile.dev.package."*"]
+opt-level = 3
 
 # Mappy's window, input handling and GPU setup run through iced and wgpu, which are sluggish
 # unoptimized. This profile optimizes every dependency fully and this crate lightly, so

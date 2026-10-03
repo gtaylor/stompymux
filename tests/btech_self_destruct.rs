@@ -529,7 +529,7 @@ async fn self_destruct_server_restart_retries_failed_commit() {
         client.until("biped").await;
         let mut sql=sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::query("CREATE TRIGGER deny_self_destruct BEFORE UPDATE ON btech_units BEGIN SELECT RAISE(ABORT,'self-destruct commit failure'); END").execute(&mut sql).await.unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(1250)).await;
+        support::attempt_heartbeat().await;
         let persisted=persistence::load(&config.database()).await.unwrap();
         assert_eq!(persisted.btech.constructed_units()[&id].self_destruct().unwrap().remaining,2);
         client.send("status").await;
@@ -634,7 +634,7 @@ async fn self_destruct_ground_wreck_descends_after_restart() {
                         );
                         break;
                     }
-                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                    support::attempt_heartbeat().await;
                 }
             })
             .await;

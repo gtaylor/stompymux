@@ -243,7 +243,7 @@ async fn powered_off_crew_recovery_retries_failed_server_ticks() {
         // A running countdown keeps its timer row still; refuse the commit at the snapshot stamp.
         sqlx::raw_sql("CREATE TRIGGER deny_stun BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(ABORT,'stun failure'); END;").execute(&mut sql).await.unwrap();
         let (_address,shutdown,task,_lua)=support::start(&config,std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        tokio::time::sleep(std::time::Duration::from_millis(1200)).await;
+        support::attempt_heartbeat().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.vehicles()[&id].crew_stun_remaining(),2);
         sqlx::query("DROP TRIGGER deny_stun").execute(&mut sql).await.unwrap();
         tokio::time::timeout(std::time::Duration::from_secs(5),async {

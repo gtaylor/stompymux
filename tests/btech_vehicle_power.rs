@@ -177,7 +177,7 @@ async fn server_tick_retries_failed_countdowns_without_publishing_completion() {
         // every save leaves its mark: the snapshot stamp.
         sqlx::query("CREATE TRIGGER deny_tick BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(ABORT,'tick failure'); END").execute(&mut sql).await.unwrap();
         let initial=persistence::load(&config.database()).await.unwrap().btech.vehicles()[&id].power();
-        tokio::time::sleep(std::time::Duration::from_millis(1200)).await;
+        support::attempt_heartbeat().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.vehicles()[&id].power(),initial);
         sqlx::query("DROP TRIGGER deny_tick").execute(&mut sql).await.unwrap();
         client.until("All systems operational!").await;
@@ -188,7 +188,7 @@ async fn server_tick_retries_failed_countdowns_without_publishing_completion() {
         tokio::time::timeout(std::time::Duration::from_secs(6), async {
             loop {
                 if persistence::load(&config.database()).await.unwrap().btech.vehicles()[&id].motion().unwrap().point != before_point { break; }
-                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                support::attempt_heartbeat().await;
             }
         }).await.unwrap();
         client.send("shutdown").await;

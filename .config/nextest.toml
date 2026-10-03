@@ -1,0 +1,22 @@
+# nextest settings shared by local runs, cloud agents, and CI.
+
+[profile.default]
+# Report tests slower than 30s and kill any that hang past two minutes, so a
+# stuck socket wait fails fast instead of stalling the whole run.
+slow-timeout = { period = "30s", terminate-after = 4 }
+
+# Start the longest tests first so they overlap the short ones instead of
+# trailing past the end of the run. The autopilot persistence benchmarks step
+# a thirty-unit battlefield through dozens of sequential heartbeats.
+[[profile.default.overrides]]
+filter = 'test(/^btech::autopilot::benchmark::persistence_tests::/)'
+priority = 100
+
+# Matrix scenarios replay a mechanic across every chassis or through a restart.
+[[profile.default.overrides]]
+filter = 'test(/across_chassis|all_chassis|every_chassis|and_restart|_replay|saved_replay/)'
+priority = 50
+
+[profile.ci]
+# Show every failure in one CI run rather than stopping at the first.
+fail-fast = false

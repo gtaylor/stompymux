@@ -28,5 +28,6 @@ check_optional_tools
 
 install_docs_dependencies
 install_codex
+warm_build_cache
 
 log "Claude Code cloud environment ready"

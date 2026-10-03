@@ -118,11 +118,16 @@ pub fn part_forms(
     Ok(forms)
 }
 
-/// Enumerate the immutable catalogue without command authority checks.
-pub fn part_catalogue() -> Vec<BattlePartForm> {
-    let mut forms = exact_names().forms.clone();
-    forms.sort_by(|a, b| (&a.short_name, a.part_id).cmp(&(&b.short_name, b.part_id)));
-    forms
+/// Enumerate the immutable catalogue without command authority checks, sorted by
+/// short name and part. Built once; template parsing, validation, and every Lua
+/// VM's package registration read it.
+pub fn part_catalogue() -> &'static [BattlePartForm] {
+    static SORTED: OnceLock<Vec<BattlePartForm>> = OnceLock::new();
+    SORTED.get_or_init(|| {
+        let mut forms = exact_names().forms.clone();
+        forms.sort_by(|a, b| (&a.short_name, a.part_id).cmp(&(&b.short_name, b.part_id)));
+        forms
+    })
 }
 
 /// Exact catalogue indexes choose the lowest part ID for colliding names.

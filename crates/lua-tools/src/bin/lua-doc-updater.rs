@@ -30,10 +30,19 @@ enum Mode {
     Write,
 }
 
+/// Repository checkout that holds this crate at `crates/lua-tools`.
+fn repository_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .expect("crates/lua-tools sits two levels below the repository root")
+        .to_path_buf()
+}
+
 /// Parse the small CLI shared in style with the Lua definition updater.
 fn arguments() -> Result<(Mode, PathBuf)> {
     let mut mode = None;
-    let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let mut root = repository_root();
     let mut args = env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -1012,7 +1021,7 @@ mod tests {
 
     #[test]
     fn section_lists_use_short_callable_names() -> Result<()> {
-        let pages = render(Path::new(env!("CARGO_MANIFEST_DIR")))?;
+        let pages = render(&repository_root())?;
         let unit_index = &pages["btech/unit/_index.md"];
         assert!(unit_index.contains("- [`armor`](armor/)"));
         assert!(!unit_index.contains("- [`btech.unit.armor`](armor/)"));
@@ -1041,7 +1050,7 @@ mod tests {
 
     #[test]
     fn autopilot_typed_fields_get_reference_pages() -> Result<()> {
-        let pages = render(Path::new(env!("CARGO_MANIFEST_DIR")))?;
+        let pages = render(&repository_root())?;
         let index = &pages["btech/autopilot/_index.md"];
         assert!(index.contains("- [`attach`](attach/)"));
         assert!(index.contains("- [`feedback`](feedback/)"));

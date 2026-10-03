@@ -6,7 +6,7 @@ use support::isolated_world;
 async fn part_costs_use_canonical_c_names_and_preserve_unknown_rows() {
     let (_directory, config, _) = isolated_world().await;
     let catalogue = stompymux_rs::btech::part_catalogue();
-    for form in &catalogue {
+    for form in catalogue {
         assert_eq!(
             form.very_long_name,
             stompymux_rs::BattlePart::from_id(form.part_id)

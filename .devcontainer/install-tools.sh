@@ -10,6 +10,7 @@ source "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
 
 JUST_VERSION="${JUST_VERSION:-1.57.0}"
 STYLUA_VERSION="${STYLUA_VERSION:-2.5.2}"
+NEXTEST_VERSION="${NEXTEST_VERSION:-0.9.146}"
 LUA_LANGUAGE_SERVER_VERSION="${LUA_LANGUAGE_SERVER_VERSION:-3.19.1}"
 NODE_VERSION="${NODE_VERSION:-24.13.0}"
 HUGO_VERSION="${HUGO_VERSION:-0.164.0}"
@@ -18,6 +19,7 @@ NODE_PREFIX="${NODE_PREFIX:-/usr/local}"
 case "$(uname -m)" in
   x86_64)
     RUST_ARCH=x86_64
+    NEXTEST_PLATFORM=linux
     STYLUA_ARCH=x86_64
     LUA_LANGUAGE_SERVER_ARCH=x64
     NODE_ARCH=x64
@@ -25,6 +27,7 @@ case "$(uname -m)" in
     ;;
   aarch64)
     RUST_ARCH=aarch64
+    NEXTEST_PLATFORM=linux-arm
     STYLUA_ARCH=aarch64
     LUA_LANGUAGE_SERVER_ARCH=arm64
     NODE_ARCH=arm64
@@ -70,6 +73,16 @@ else
     --output "$download_dir/stylua.zip"
   unzip -oq "$download_dir/stylua.zip" stylua -d /usr/local/bin
   chmod 0755 /usr/local/bin/stylua
+fi
+
+if has_version /usr/local/bin/cargo-nextest "$NEXTEST_VERSION"; then
+  log "cargo-nextest $NEXTEST_VERSION already installed"
+else
+  log "Installing cargo-nextest $NEXTEST_VERSION"
+  curl "${CURL_OPTIONS[@]}" \
+    "https://get.nexte.st/${NEXTEST_VERSION}/${NEXTEST_PLATFORM}" \
+    --output "$download_dir/cargo-nextest.tar.gz"
+  tar -xzf "$download_dir/cargo-nextest.tar.gz" -C /usr/local/bin cargo-nextest
 fi
 
 lua_language_server_dir="/opt/lua-language-server-${LUA_LANGUAGE_SERVER_VERSION}"

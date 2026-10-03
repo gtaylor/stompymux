@@ -1,7 +1,6 @@
 //! C-compatible player configuration bindings.
 
 use super::*;
-use std::sync::Arc;
 
 fn argument_failure(argument: usize, code: &'static str, message: &str) -> mlua::Error {
     error::failure_with_detail(code, message, serde_json::json!({"argument":argument}))
@@ -272,7 +271,7 @@ fn preferences_table(
 }
 
 pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::Result<()> {
-    let catalogue = Arc::new(parts_contract::registered_catalogue());
+    let catalogue = parts_contract::registered_catalogue();
     let shared = world.clone();
     contract::bind(
         lua,
@@ -417,7 +416,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         })?,
     )?;
     let shared = world.clone();
-    let parts = catalogue.clone();
+    let parts = catalogue;
     contract::bind(
         lua,
         native,
@@ -433,7 +432,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             configuration
                 .loadout
                 .as_ref()
-                .map(|loadout| push_loadout(lua, &world, &parts, loadout))
+                .map(|loadout| push_loadout(lua, &world, parts, loadout))
                 .transpose()
         })?,
     )?;
@@ -459,7 +458,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                         "value must be a table",
                     ));
                 };
-                Some(parse_loadout(table, &parts)?)
+                Some(parse_loadout(table, parts)?)
             };
             let mut configuration = crate::btech::player_configuration(&world, player)
                 .map_err(mlua::Error::external)?;

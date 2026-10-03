@@ -3,21 +3,33 @@
 use crate::World;
 use anyhow::{Context, Result};
 use sqlx::{Row, SqliteConnection};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::sync::OnceLock;
+
+/// Catalogue names mapped to their part, keeping the first match in catalogue
+/// order. Built once because every world load resolves each cost row.
+fn parts_by_name() -> &'static HashMap<&'static str, i32> {
+    static INDEX: OnceLock<HashMap<&'static str, i32>> = OnceLock::new();
+    INDEX.get_or_init(|| {
+        let mut index = HashMap::new();
+        for form in crate::btech::part_catalogue() {
+            index
+                .entry(form.very_long_name.as_str())
+                .or_insert(form.part_id);
+        }
+        index
+    })
+}
 
 pub(super) async fn load(c: &mut SqliteConnection) -> Result<BTreeMap<i32, u64>> {
     let mut result = BTreeMap::new();
-    let catalogue = crate::btech::part_catalogue();
+    let parts = parts_by_name();
     for row in sqlx::query("SELECT item_name,cost FROM btech_economy_costs ORDER BY item_name")
         .fetch_all(c)
         .await?
     {
         let name: String = row.try_get("item_name")?;
-        let Some(id) = catalogue
-            .iter()
-            .find(|form| form.very_long_name == name)
-            .map(|form| form.part_id)
-        else {
+        let Some(&id) = parts.get(name.as_str()) else {
             continue;
         };
         let cost: String = row.try_get("cost")?;

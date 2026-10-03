@@ -340,7 +340,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
             inspection_records::criticals(
                 lua,
                 &world,
-                &parts_contract::registered_catalogue(),
+                parts_contract::registered_catalogue(),
                 crate::btech::inspect_raw_template_criticals(&template, selected)
                     .map_err(mlua::Error::external)?,
             )
@@ -361,7 +361,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
                 .map_err(mlua::Error::external)?
                 .into_iter()
                 .filter(|row| selected.is_none_or(|section| row.section == section as i32));
-            inspection_records::weapons(lua, &world, &parts_contract::registered_catalogue(), rows)
+            inspection_records::weapons(lua, &world, parts_contract::registered_catalogue(), rows)
         })?,
     )?;
     for (name, payload) in [("installed_parts", false), ("payload", true)] {
@@ -383,7 +383,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
                 inspection_records::inventory(
                     lua,
                     &world,
-                    &parts_contract::registered_catalogue(),
+                    parts_contract::registered_catalogue(),
                     crate::btech::inspect_raw_template_inventory(&template, payload)
                         .map_err(mlua::Error::external)?,
                 )

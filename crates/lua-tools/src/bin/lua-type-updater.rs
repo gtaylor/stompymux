@@ -20,10 +20,19 @@ enum Mode {
     Write,
 }
 
+/// Repository checkout that holds this crate at `crates/lua-tools`.
+fn repository_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .expect("crates/lua-tools sits two levels below the repository root")
+        .to_path_buf()
+}
+
 /// Parse the deliberately small command-line interface.
 fn arguments() -> Result<(Mode, PathBuf)> {
     let mut mode = None;
-    let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let mut root = repository_root();
     let mut args = env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {

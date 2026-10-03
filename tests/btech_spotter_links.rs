@@ -441,7 +441,7 @@ async fn simultaneous_requests_keep_insertion_order() {
 #[tokio::test(flavor = "current_thread")]
 async fn server_retries_connection_after_failed_commit() {
     use sqlx::{Connection, SqliteConnection};
-    use std::{cell::Cell, rc::Rc, time::Duration};
+    use std::{cell::Cell, rc::Rc};
     tokio::task::LocalSet::new().run_until(async {
         for template in [include_str!("../game/mechs/JR7-D.toml"), include_str!("../game/mechs/Demolisher.toml")] {
             let (_dir, config, mut world, source, observer, _) = fixture(template, template).await;
@@ -466,7 +466,7 @@ async fn server_retries_connection_after_failed_commit() {
             client.until("Password: ").await;
             client.send("secret").await;
             client.until("Sighter").await;
-            tokio::time::sleep(Duration::from_millis(1200)).await;
+            support::attempt_heartbeat().await;
             let saved = persistence::load(&config.database()).await.unwrap();
             assert_eq!(selected(&saved, source), None);
             assert!(pending(&saved, source));

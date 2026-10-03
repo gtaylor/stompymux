@@ -483,7 +483,7 @@ pub(crate) fn inspection_template_part(name: &str) -> Option<(InspectionPart, bo
             true,
         ));
     }
-    if let Some(form) = super::part_catalogue().into_iter().find(|form| {
+    if let Some(form) = super::part_catalogue().iter().find(|form| {
         form.very_long_name.eq_ignore_ascii_case(name)
             || form.long_name.eq_ignore_ascii_case(name)
             || form.short_name.eq_ignore_ascii_case(name)
@@ -1106,7 +1106,7 @@ pub fn inspect_raw_template_inventory(
     payload_only: bool,
 ) -> Result<Vec<(InspectionPart, u32)>> {
     let registered: std::collections::BTreeSet<_> = super::part_catalogue()
-        .into_iter()
+        .iter()
         .map(|form| form.part_id)
         .collect();
     let mut quantities = BTreeMap::<InspectionPart, u32>::new();

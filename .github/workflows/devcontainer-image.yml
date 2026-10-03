@@ -61,6 +61,7 @@ jobs:
             cargo --version
             rustfmt --version
             cargo clippy --version
+            cargo nextest --version
             just --version
             stylua --version
             lua-language-server --version

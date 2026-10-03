@@ -541,7 +541,7 @@ async fn weapon_install_accepts_native_slot_layouts() {
     )
     .unwrap();
     let paired = stompymux_rs::btech::part_catalogue()
-        .into_iter()
+        .iter()
         .find(|part| {
             BattleWeapon::from_part_id(part.part_id)
                 .is_some_and(|weapon| weapon.profile().critical_slots == 2)
@@ -552,7 +552,7 @@ async fn weapon_install_accepts_native_slot_layouts() {
         .profile()
         .critical_slots;
     let partial = stompymux_rs::btech::part_catalogue()
-        .into_iter()
+        .iter()
         .find(|part| {
             BattleWeapon::from_part_id(part.part_id)
                 .is_some_and(|weapon| weapon.profile().critical_slots >= 9)

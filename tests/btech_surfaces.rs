@@ -7472,7 +7472,7 @@ async fn artillery_queue_server_save_failure_and_retry() {
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::query("CREATE TRIGGER deny_artillery BEFORE DELETE ON btech_artillery BEGIN SELECT RAISE(ABORT,'artillery failure'); END").execute(&mut sql).await.unwrap();
         let (_address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        tokio::time::sleep(std::time::Duration::from_millis(1400)).await;
+        support::attempt_heartbeat().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech, before.btech);
         sqlx::query("DROP TRIGGER deny_artillery").execute(&mut sql).await.unwrap();
         tokio::time::timeout(std::time::Duration::from_secs(5), async {
