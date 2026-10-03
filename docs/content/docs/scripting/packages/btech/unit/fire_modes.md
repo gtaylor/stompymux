@@ -23,7 +23,9 @@ The numbers below are native identifiers; pass the typed constants to Lua APIs.
 | `btech.unit.fire_modes.RAPID_FIRE` | `2048` |  |
 | `btech.unit.fire_modes.GATLING` | `4096` |  |
 | `btech.unit.fire_modes.ROTARY_TWO_SHOT` | `8192` |  |
+| `btech.unit.fire_modes.ROTARY_THREE_SHOT` | `2097152` |  |
 | `btech.unit.fire_modes.ROTARY_FOUR_SHOT` | `16384` |  |
+| `btech.unit.fire_modes.ROTARY_FIVE_SHOT` | `4194304` |  |
 | `btech.unit.fire_modes.ROTARY_SIX_SHOT` | `32768` |  |
 | `btech.unit.fire_modes.HEAT` | `65536` |  |
 | `btech.unit.fire_modes.BACKPACK` | `131072` |  |

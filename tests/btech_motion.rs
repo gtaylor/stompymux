@@ -11641,7 +11641,9 @@ async fn rotary_burst_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
     for weapon in weapons.iter().copied() {
         for (rounds, mode, flag, jam_limit) in [
             (2_u8, BattleFireMode::Rotary2, "Rotary_TwoShot", 2_u8),
+            (3, BattleFireMode::Rotary3, "Rotary_ThreeShot", 2),
             (4, BattleFireMode::Rotary4, "Rotary_FourShot", 3),
+            (5, BattleFireMode::Rotary5, "Rotary_FiveShot", 3),
             (6, BattleFireMode::Rotary6, "Rotary_SixShot", 4),
         ] {
             for (supply, attack, skill) in [

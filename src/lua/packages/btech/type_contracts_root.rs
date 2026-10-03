@@ -121,7 +121,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00014
-//|---@alias BattleFireMode "normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary4"|"rotary6"|"gatling"
+//|---@alias BattleFireMode "normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary3"|"rotary4"|"rotary5"|"rotary6"|"gatling"
 // lua-types-end
 
 // lua-types-begin btech 00015

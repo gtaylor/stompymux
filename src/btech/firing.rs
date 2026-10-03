@@ -189,8 +189,12 @@ fn weapon_line<S>(mount: BattleWeaponInspection<S>, location: &str) -> String {
             " [HEAT]"
         } else if mount.fire_mode == super::BattleFireMode::Rotary2 {
             " [RAC 2]"
+        } else if mount.fire_mode == super::BattleFireMode::Rotary3 {
+            " [RAC 3]"
         } else if mount.fire_mode == super::BattleFireMode::Rotary4 {
             " [RAC 4]"
+        } else if mount.fire_mode == super::BattleFireMode::Rotary5 {
+            " [RAC 5]"
         } else if mount.fire_mode == super::BattleFireMode::Rotary6 {
             " [RAC 6]"
         } else if mount.fire_mode == super::BattleFireMode::Gatling {

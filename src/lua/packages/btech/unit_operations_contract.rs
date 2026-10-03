@@ -198,8 +198,12 @@ fn fire_mode(bits: &[i32]) -> BattleFireMode {
         BattleFireMode::Heat
     } else if bits.contains(&32768) {
         BattleFireMode::Rotary6
+    } else if bits.contains(&4194304) {
+        BattleFireMode::Rotary5
     } else if bits.contains(&16384) {
         BattleFireMode::Rotary4
+    } else if bits.contains(&2097152) {
+        BattleFireMode::Rotary3
     } else if bits.contains(&8192) {
         BattleFireMode::Rotary2
     } else if bits.contains(&4096) {
@@ -323,6 +327,8 @@ fn fire_mode_names(bits: &[i32]) -> Vec<String> {
                 262144 => Some("Jettisoned"),
                 524288 => Some("OmniBase"),
                 1048576 => Some("RocketFired"),
+                2097152 => Some("Rotary_ThreeShot"),
+                4194304 => Some("Rotary_FiveShot"),
                 _ => None,
             }
             .map(str::to_owned)

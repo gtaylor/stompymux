@@ -402,12 +402,14 @@ hitting independently. The weapon returns to normal mode if only one round
 remains. A jam requires `unjam`; a catastrophic misload destroys the weapon
 and damages internal structure in its mounting section.
 
-`rac <selection> [1|2|4|6]` sets a rotary autocannon's burst length. Omitting
+`rac <selection> [1-6]` sets a rotary autocannon's burst length. Omitting
 the rate selects one round. Repeating a setting leaves it enabled. Bursts spend
 their full ammunition and heat even on a miss; each hitting shell lands
 independently. Short ammunition supply resets the weapon to single-shot mode.
-Longer bursts jam more easily. Use `unjam` to recover; rotary recovery uses
-gunnery with a +3 penalty.
+Longer bursts jam more easily: a to-hit roll of 2 jams a two- or three-round
+burst, 2-3 jams four or five rounds, and 2-4 jams six. A critical hit on a
+jammed rotary autocannon makes it explode for one shell's damage. Use `unjam`
+to recover; rotary recovery uses gunnery with a +3 penalty.
 
 `gattling <selection>` toggles gatling fire on supported machine guns. Each
 attempt rolls damage and heat together, and spends three rounds per damage

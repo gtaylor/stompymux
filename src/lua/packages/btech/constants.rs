@@ -751,8 +751,16 @@ pub(super) static FIRE_MODES: Catalog = Catalog {
             value: 8192,
         },
         Entry {
+            name: "ROTARY_THREE_SHOT",
+            value: 2097152,
+        },
+        Entry {
             name: "ROTARY_FOUR_SHOT",
             value: 16384,
+        },
+        Entry {
+            name: "ROTARY_FIVE_SHOT",
+            value: 4194304,
         },
         Entry {
             name: "ROTARY_SIX_SHOT",

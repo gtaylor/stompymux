@@ -267,7 +267,9 @@ fn fire_letter(mode: BattleFireMode) -> char {
         BattleFireMode::Ultra => 'U',
         BattleFireMode::Rapid => 'F',
         BattleFireMode::Rotary2 => '2',
+        BattleFireMode::Rotary3 => '3',
         BattleFireMode::Rotary4 => '4',
+        BattleFireMode::Rotary5 => '5',
         BattleFireMode::Rotary6 => '6',
         BattleFireMode::Gatling => 'G',
     }

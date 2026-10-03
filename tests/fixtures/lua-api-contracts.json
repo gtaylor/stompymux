@@ -4918,6 +4918,38 @@
       "accepted_difference_ids": []
     },
     {
+      "symbol": "btech.unit.fire_modes.ROTARY_FIVE_SHOT",
+      "kind": "constant",
+      "package": "btech.unit.fire_modes",
+      "arguments": "",
+      "returns": [
+        "BtechFireMode"
+      ],
+      "reference": "game/lua/types/btech.d.lua",
+      "contract": "Typed immutable constant.",
+      "status": "verified",
+      "prerequisite": "",
+      "rust_evidence": "tests/lua_btech_constants.rs::canonical_btech_constants_are_typed_immutable_and_available_while_checking; live C catalogue oracle at pinned revision",
+      "acceptance": "exact name/value, typed catalog identity/equality/tostring, protected metatables, unknown lookup, mutation rejection and checking-mode availability",
+      "accepted_difference_ids": []
+    },
+    {
+      "symbol": "btech.unit.fire_modes.ROTARY_THREE_SHOT",
+      "kind": "constant",
+      "package": "btech.unit.fire_modes",
+      "arguments": "",
+      "returns": [
+        "BtechFireMode"
+      ],
+      "reference": "game/lua/types/btech.d.lua",
+      "contract": "Typed immutable constant.",
+      "status": "verified",
+      "prerequisite": "",
+      "rust_evidence": "tests/lua_btech_constants.rs::canonical_btech_constants_are_typed_immutable_and_available_while_checking; live C catalogue oracle at pinned revision",
+      "acceptance": "exact name/value, typed catalog identity/equality/tostring, protected metatables, unknown lookup, mutation rejection and checking-mode availability",
+      "accepted_difference_ids": []
+    },
+    {
       "symbol": "btech.unit.fire_modes.ROTARY_FOUR_SHOT",
       "kind": "constant",
       "package": "btech.unit.fire_modes",

@@ -94,7 +94,7 @@ Alias: `"smoke"|"mine"|"i_narc_explosive"|"i_narc_haywire"|"i_narc_ecm"|"i_narc_
 
 ## BattleFireMode
 
-Alias: `"normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary4"|"rotary6"|"gatling"`
+Alias: `"normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary3"|"rotary4"|"rotary5"|"rotary6"|"gatling"`
 
 ## BattleWeaponMount
 

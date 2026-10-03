@@ -1583,6 +1583,12 @@
    "rust_evidence": "tests/lua_btech_constants.rs::canonical_btech_constants_are_typed_immutable_and_available_while_checking; live C catalogue oracle at pinned revision",
    "status": "verified"
   },
+  "btech.unit.fire_modes.ROTARY_FIVE_SHOT": {
+   "acceptance": "exact name/value, typed catalog identity/equality/tostring, protected metatables, unknown lookup, mutation rejection and checking-mode availability",
+   "prerequisite": "",
+   "rust_evidence": "tests/lua_btech_constants.rs::canonical_btech_constants_are_typed_immutable_and_available_while_checking; live C catalogue oracle at pinned revision",
+   "status": "verified"
+  },
   "btech.unit.fire_modes.ROTARY_FOUR_SHOT": {
    "acceptance": "exact name/value, typed catalog identity/equality/tostring, protected metatables, unknown lookup, mutation rejection and checking-mode availability",
    "prerequisite": "",
@@ -1590,6 +1596,12 @@
    "status": "verified"
   },
   "btech.unit.fire_modes.ROTARY_SIX_SHOT": {
+   "acceptance": "exact name/value, typed catalog identity/equality/tostring, protected metatables, unknown lookup, mutation rejection and checking-mode availability",
+   "prerequisite": "",
+   "rust_evidence": "tests/lua_btech_constants.rs::canonical_btech_constants_are_typed_immutable_and_available_while_checking; live C catalogue oracle at pinned revision",
+   "status": "verified"
+  },
+  "btech.unit.fire_modes.ROTARY_THREE_SHOT": {
    "acceptance": "exact name/value, typed catalog identity/equality/tostring, protected metatables, unknown lookup, mutation rejection and checking-mode availability",
    "prerequisite": "",
    "rust_evidence": "tests/lua_btech_constants.rs::canonical_btech_constants_are_typed_immutable_and_available_while_checking; live C catalogue oracle at pinned revision",

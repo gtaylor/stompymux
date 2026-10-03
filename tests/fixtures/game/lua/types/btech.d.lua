@@ -84,7 +84,7 @@
 
 ---@alias BattleAmmunitionMode "smoke"|"mine"|"i_narc_explosive"|"i_narc_haywire"|"i_narc_ecm"|"i_narc_nemesis"|"semi_guided"|"swarm"|"swarm1"|"stinger"|"narc"|"normal"|"cluster"|"artemis"|"precision"|"flechette"|"armor_piercing"|"caseless"|"incendiary"|"inferno"|"mml_lrm"|"mml_lrm_artemis"|"mml_lrm_narc"|"mml_lrm_swarm"|"mml_lrm_swarm1"|"mml_lrm_semi_guided"|"mml_lrm_stinger"|"extended_range"|"high_explosive"|"thunder_augmented"|"thunder_vibrabomb"|"thunder_active"
 
----@alias BattleFireMode "normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary4"|"rotary6"|"gatling"
+---@alias BattleFireMode "normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary3"|"rotary4"|"rotary5"|"rotary6"|"gatling"
 
 ---@class BattleWeaponMount
 ---@field weapon BattleWeapon
@@ -2033,7 +2033,7 @@ function btech_unit.rapidfire(dbref, pilot, weapon) end
 ---@param dbref integer
 ---@param pilot integer
 ---@param weapon integer Zero-based weapon index.
----@param rounds? 1|2|4|6 Defaults to one.
+---@param rounds? 1|2|3|4|5|6 Defaults to one.
 ---@return boolean changed
 function btech_unit.rac(dbref, pilot, weapon, rounds) end
 
