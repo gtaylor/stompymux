@@ -6,7 +6,8 @@ use std::sync::Arc;
 impl StoredBattleMap {
     /// Encode this map as map-file text without writing files or changing the map.
     /// Each hex saves its terrain, and permanent fire and smoke save in the overlay grid. Fire
-    /// and smoke that will burn out or drift away are left out. Map objects are not saved.
+    /// and smoke that will burn out or drift away are left out. Points of interest are saved;
+    /// other map objects are not.
     pub fn export_asset(&self) -> Result<String> {
         self.validate()?;
         let mut hexes = Vec::with_capacity((self.width * self.height) as usize);
@@ -28,6 +29,7 @@ impl StoredBattleMap {
             gravity: u8::try_from(self.gravity)?,
             temperature: i8::try_from(self.temperature)?,
             hexes: Arc::new(hexes),
+            points_of_interest: self.points_of_interest.to_vec(),
         };
         asset.to_file()
     }

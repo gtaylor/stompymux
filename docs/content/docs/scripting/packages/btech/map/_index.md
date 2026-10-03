@@ -42,6 +42,7 @@ no_list: true
 - [`load`](load/)
 - [`load_as`](load-as/)
 - [`place_unit`](place-unit/)
+- [`points_of_interest`](points-of-interest/)
 - [`range`](range/)
 - [`reload`](reload/)
 - [`remove_ice`](remove-ice/)

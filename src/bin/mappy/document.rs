@@ -118,6 +118,7 @@ pub fn file_holds(hex: BattleHex) -> bool {
             gravity: 100,
             temperature: 20,
             hexes: Arc::new(vec![hex]),
+            points_of_interest: Vec::new(),
         };
         map.to_file()
             .and_then(|source| BattleMapAsset::parse(&source))
@@ -182,6 +183,7 @@ impl Document {
                 gravity: 100,
                 temperature: 20,
                 hexes: Arc::new(hexes),
+                points_of_interest: Vec::new(),
             },
         ))
     }

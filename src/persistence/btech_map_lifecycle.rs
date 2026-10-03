@@ -14,6 +14,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
     super::btech_terrain::purge(c, &removed).await?;
     super::btech_decorations::purge(c, &removed).await?;
     super::btech_map_random::purge(c, &removed).await?;
+    super::btech_points_of_interest::purge(c, &removed).await?;
     super::btech_object_order::purge(c, &removed).await?;
     for id in &removed {
         for (table, key) in [

@@ -52,6 +52,16 @@
 //|---@field gravity integer
 //|---@field temperature integer
 //|---@field flags BattleMapFlag[] Map flags the asset enables.
+//|---@field points_of_interest BattleMapPointOfInterest[] Scripted points of interest in file order.
+// lua-types-end
+
+// lua-types-begin btech 00554
+//|---@class BattleMapPointOfInterest
+//|---@field type string Case-sensitive category chosen by the map author.
+//|---@field name string Display name chosen by the map author.
+//|---@field x integer Zero-based column.
+//|---@field y integer Zero-based row.
+//|---@field elevation integer|nil Levels above (negative: below) the hex's ground level, or nil when unset.
 // lua-types-end
 
 // lua-types-begin btech 00007
@@ -2139,6 +2149,6 @@
 //|btech.tactical = btech_tactical
 // lua-types-end
 
-// lua-types-begin btech 00554
+// lua-types-begin btech 00556
 //|return btech
 // lua-types-end

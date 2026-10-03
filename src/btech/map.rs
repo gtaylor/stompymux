@@ -128,6 +128,49 @@ pub struct BattleMapAsset {
     pub temperature: i8,
     /// Row-major immutable tiles shared by transaction checkpoints.
     pub hexes: Arc<Vec<BattleHex>>,
+    /// Scripted points of interest in file order.
+    pub points_of_interest: Vec<MapPointOfInterest>,
+}
+
+/// A scripted point of interest on a map. Points of interest are map metadata for scripts:
+/// they are never shown to units and do not change terrain.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MapPointOfInterest {
+    /// Case-sensitive category chosen by the map author, such as `objective`.
+    #[serde(rename = "type")]
+    pub kind: String,
+    /// Display name chosen by the map author.
+    pub name: String,
+    /// Zero-based column.
+    pub x: u16,
+    /// Zero-based row.
+    pub y: u16,
+    /// Height in levels relative to the hex's ground level; absent when the point has no
+    /// particular height.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub elevation: Option<i8>,
+}
+
+impl MapPointOfInterest {
+    /// Require a non-empty type and name without NUL characters, and a hex inside a
+    /// `width` by `height` map.
+    pub fn validate(&self, width: i64, height: i64) -> Result<()> {
+        for (field, value) in [("type", &self.kind), ("name", &self.name)] {
+            ensure!(
+                !value.is_empty() && !value.contains('\0'),
+                "point of interest {field} must be non-empty text without NUL characters"
+            );
+        }
+        ensure!(
+            i64::from(self.x) < width && i64::from(self.y) < height,
+            "point of interest {:?} at {},{} is off the map",
+            self.name,
+            self.x,
+            self.y
+        );
+        Ok(())
+    }
 }
 
 /// Why a named map file could not be loaded, without parsing error strings.
@@ -207,6 +250,7 @@ impl BattleMapAsset {
             gravity,
             temperature,
             hexes: Arc::new(hexes),
+            points_of_interest: Vec::new(),
         })
     }
 

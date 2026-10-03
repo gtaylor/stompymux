@@ -451,6 +451,7 @@ mod tests {
             fire_dice: None,
             decorations: Default::default(),
             static_decorations: Default::default(),
+            points_of_interest: Default::default(),
             terrain: None,
         };
         map.establish_terrain(Arc::new(

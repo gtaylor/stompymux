@@ -64,6 +64,7 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
             fire_dice: None,
             decorations: Default::default(),
             static_decorations: Default::default(),
+            points_of_interest: Default::default(),
                 terrain: None,
             },
         );
@@ -103,6 +104,7 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
     super::btech_decorations::load(c, &mut maps, clock).await?;
     super::btech_static_decorations::load(c, &mut maps).await?;
     super::btech_map_random::load(c, &mut maps).await?;
+    super::btech_points_of_interest::load(c, &mut maps).await?;
     super::btech_artillery::load(c, &mut maps, clock).await?;
     let (mut player_preferences, invalid_ui) = super::btech_view_preferences::load(c).await?;
     let (mut player_configuration, invalid_configuration) =
@@ -457,6 +459,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
     changed |= super::btech_decorations::save(c, before, after).await?;
     changed |= super::btech_static_decorations::save(c, before, after).await?;
     changed |= super::btech_map_random::save(c, before, after).await?;
+    changed |= super::btech_points_of_interest::save(c, before, after).await?;
     changed |= super::btech_entrances::save(c, before, after).await?;
     changed |= super::btech_building_routes::save(c, before, after).await?;
     changed |= super::btech_map_links::save(c, before, after).await?;

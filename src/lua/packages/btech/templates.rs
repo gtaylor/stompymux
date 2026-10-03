@@ -56,6 +56,10 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
             "flags",
             constants::push_map_flags(lua, i64::from(map.flags))?,
         )?;
+        result.set(
+            "points_of_interest",
+            super::map_contract::push_points_of_interest(lua, &map.points_of_interest, None)?,
+        )?;
         Ok(result)
     })?;
     native.set("mapfile", error::wrap(lua, map, "btech.operation.failed")?)?;

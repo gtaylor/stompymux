@@ -47,6 +47,7 @@ Alias: `"LeftArm"|"RightArm"|"LeftTorso"|"RightTorso"|"CenterTorso"|"LeftLeg"|"R
 - `gravity`: `integer`
 - `temperature`: `integer`
 - `flags`: `BattleMapFlag[]` — Map flags the asset enables.
+- `points_of_interest`: `BattleMapPointOfInterest[]` — Scripted points of interest in file order.
 
 ## BattleHex
 
@@ -1922,3 +1923,11 @@ Alias: `"manual_takeover"|"contact_lost"|"stuck"|"unreachable"|"invalidated"|"re
 ## BattleTacticalSubmitResult
 
 - `unit`: `integer` — Controller receiving these order IDs.
+
+## BattleMapPointOfInterest
+
+- `type`: `string` — Case-sensitive category chosen by the map author.
+- `name`: `string` — Display name chosen by the map author.
+- `x`: `integer` — Zero-based column.
+- `y`: `integer` — Zero-based row.
+- `elevation`: `integer|nil` — Levels above (negative: below) the hex's ground level, or nil when unset.

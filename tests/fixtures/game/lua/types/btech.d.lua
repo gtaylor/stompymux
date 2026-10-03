@@ -40,6 +40,7 @@
 ---@field gravity integer
 ---@field temperature integer
 ---@field flags BattleMapFlag[] Map flags the asset enables.
+---@field points_of_interest BattleMapPointOfInterest[] Scripted points of interest in file order.
 
 ---@class BattleHex
 ---@field level integer Ground height in levels; any water surface sits at this height.
@@ -4080,5 +4081,18 @@ function btech_map.has_flag(dbref, flag) end
 ---@param flag BattleMapFlag Typed constant from btech.map.flags.
 ---@param enabled boolean
 function btech_map.set_flag(actor, map, flag, enabled) end
+
+---@class BattleMapPointOfInterest
+---@field type string Case-sensitive category chosen by the map author.
+---@field name string Display name chosen by the map author.
+---@field x integer Zero-based column.
+---@field y integer Zero-based row.
+---@field elevation integer|nil Levels above (negative: below) the hex's ground level, or nil when unset.
+
+---List the map's scripted points of interest in file order. Units never see them.
+---@param map DbRef|Object
+---@param type? string Keep only points whose type matches exactly (case-sensitive).
+---@return BattleMapPointOfInterest[]
+function btech_map.points_of_interest(map, type) end
 
 return btech
