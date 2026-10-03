@@ -1,16 +1,20 @@
 //! Shared operator edits pair typed mutations with commit-staged wizard diagnostics.
 use crate::{
     Config, ObjectId, Scripts,
-    logging::{Category, Record},
+    logging::{Category, LogLevel, Record},
 };
 use anyhow::Result;
 
 /// Record successful operator changes only when wizard diagnostics are enabled.
 fn audit(scripts: &Scripts, config: &Config, message: String) -> Result<()> {
     if Category::Wizard.enabled(config) {
-        scripts
-            .effects
-            .stage_record(Record::new(config, "WIZ", "CHANGE", &message))?;
+        scripts.effects.stage_record(Record::new(
+            config,
+            LogLevel::Info,
+            "WIZ",
+            "CHANGE",
+            &message,
+        ))?;
     }
     Ok(())
 }

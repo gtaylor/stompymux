@@ -21,6 +21,23 @@ pub enum LogOption {
     Location,
     Timestamp,
 }
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+/// Diagnostic severity, ordered from least to most severe; records below
+/// `logging.min_level` are discarded before they reach the output worker.
+pub enum LogLevel {
+    /// Detailed tracing useful only while investigating a specific problem.
+    Debug,
+    /// Routine operational events such as connections, startup and saves.
+    #[default]
+    Info,
+    /// Recoverable problems that an operator may want to look at.
+    Warn,
+    /// Failures that lost work or left a request unserved.
+    Error,
+}
+
 /// Red, green and blue components in the inclusive range 0–255.
 pub type Rgb = [u8; 3];
 #[derive(Debug, Clone, Serialize, Deserialize)]

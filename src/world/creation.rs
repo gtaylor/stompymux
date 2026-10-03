@@ -108,6 +108,7 @@ impl World {
             for &number in &config.mux.default_player_macros {
                 let Some(set) = self.macros.sets.get(number) else {
                     config.log(
+                        crate::logging::LogLevel::Warn,
                         &[crate::logging::Category::Problems], "MAC", "WARN",
                         format!("Player #{} ({}) created without default macro set {number}: set not found (default_player_macros)", id.0, self.objects[&id].name),
                     );
@@ -117,6 +118,7 @@ impl World {
                 // Default attachments are trusted creation policy, independent of set sharing modes.
                 if let Err(error) = crate::macros::service::attach(self, id, identity) {
                     config.log(
+                        crate::logging::LogLevel::Warn,
                         &[crate::logging::Category::Problems],
                         "MAC",
                         "WARN",

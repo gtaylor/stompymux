@@ -1,6 +1,7 @@
 //! Categorized diagnostics, bounded asynchronous output and explicit game log writes.
 pub mod audit;
 mod worker;
+pub use crate::config::LogLevel;
 use crate::{
     commands::{Action, CommandContext, CommandInput},
     config::{Config, LogOption},
@@ -74,11 +75,13 @@ impl Category {
 /// A complete immutable record; the worker never reads world or live configuration.
 #[derive(Clone, Debug)]
 pub struct Record {
+    /// Severity compared against `logging.min_level` before output.
+    pub level: LogLevel,
     pub text: String,
 }
 impl Record {
     /// C stderr header and decorations, bounded and stripped of executable terminal text.
-    pub fn new(c: &Config, primary: &str, secondary: &str, message: &str) -> Self {
+    pub fn new(c: &Config, level: LogLevel, primary: &str, secondary: &str, message: &str) -> Self {
         let time = if c.logging.log_options.contains(&LogOption::Timestamp) {
             chrono::Local::now().format("%Y%m%d.%H%M%S ").to_string()
         } else {
@@ -103,6 +106,7 @@ impl Record {
             text
         };
         Self {
+            level,
             text: format!("{header}{text}\n"),
         }
     }
@@ -126,20 +130,23 @@ pub fn clean(text: &str) -> String {
         .collect()
 }
 impl Config {
-    /// Record if any category is enabled; producer threads never wait on diagnostic output.
+    /// Record if the level meets `logging.min_level` and any category is enabled;
+    /// producer threads never wait on diagnostic output.
     pub fn log(
         &self,
+        level: LogLevel,
         categories: &[Category],
         primary: &str,
         secondary: &str,
         message: impl AsRef<str>,
     ) {
-        if categories.iter().any(|v| v.enabled(self)) {
-            self.logger.record(
-                self,
-                Record::new(self, primary, secondary, message.as_ref()),
-            );
+        if level < self.logging.min_level || !categories.iter().any(|v| v.enabled(self)) {
+            return;
         }
+        self.logger.record(
+            self,
+            Record::new(self, level, primary, secondary, message.as_ref()),
+        );
     }
 }
 /// Wizard entry point delegates file I/O to the world owner, outside database transactions.

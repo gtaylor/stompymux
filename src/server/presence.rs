@@ -65,6 +65,7 @@ impl Server {
             TransitionKind::Disconnected => "disconnected",
         };
         self.config.log(
+            crate::logging::LogLevel::Info,
             &[crate::logging::Category::Logins],
             "CON",
             "EVENT",
@@ -120,6 +121,7 @@ impl Server {
         })();
         if let Err(error) = result {
             self.config.log(
+                crate::logging::LogLevel::Error,
                 &[crate::logging::Category::Problems],
                 "SRV",
                 "ERROR",
@@ -132,6 +134,7 @@ impl Server {
         }
         if !self.commit(before).await {
             self.config.log(
+                crate::logging::LogLevel::Error,
                 &[crate::logging::Category::Problems],
                 "SRV",
                 "ERROR",
@@ -173,6 +176,7 @@ pub(super) async fn reject_site(
             }
             Err(error) => {
                 config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "SRV",
                     "ERROR",
@@ -208,12 +212,14 @@ pub(super) async fn reject_site(
     {
         Ok(Ok(())) => {}
         Ok(Err(error)) => config.log(
+            crate::logging::LogLevel::Warn,
             &[crate::logging::Category::Network],
             "NET",
             "ERROR",
             format!("Bad-site message delivery: {error}"),
         ),
         Err(_) => config.log(
+            crate::logging::LogLevel::Warn,
             &[crate::logging::Category::Network],
             "NET",
             "ERROR",

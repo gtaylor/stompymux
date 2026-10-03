@@ -138,6 +138,7 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
             c.logger.submit(c, request);
         }
         (c).log(
+            crate::logging::LogLevel::Info,
             &[crate::logging::Category::Startup],
             "INI",
             "INFO",
@@ -162,6 +163,7 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
     if let Some(report) = scripts.effects.drain_maintenance() {
         for finding in report.findings {
             c.log(
+                crate::logging::LogLevel::Warn,
                 &[crate::logging::Category::Checkpoints],
                 "DB",
                 "CHECK",

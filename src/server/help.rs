@@ -16,6 +16,7 @@ impl Server {
                     && let Err(error) = session.help(&response, ansi, &self.config).await
                 {
                     self.config.log(
+                        crate::logging::LogLevel::Error,
                         &[crate::logging::Category::Problems],
                         "SRV",
                         "ERROR",
@@ -29,6 +30,7 @@ impl Server {
             }
             error => {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "SRV",
                     "ERROR",
@@ -61,9 +63,10 @@ impl Server {
                     && let Err(error) = session.help(&response, false, &self.config).await
                 {
                     self.config.log(
+                        crate::logging::LogLevel::Warn,
                         &[crate::logging::Category::Startup],
                         "INI",
-                        "INFO",
+                        "WARN",
                         format!("Help reload diagnostics: {error:#}"),
                     );
                     self.tell(
@@ -74,9 +77,10 @@ impl Server {
             }
             error => {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Startup],
                     "INI",
-                    "INFO",
+                    "ERROR",
                     format!("Help reload failed: {error:?}"),
                 );
                 self.tell(

@@ -42,6 +42,7 @@ impl Server {
             && let Err(error) = session.literal_report(text, &self.config).await
         {
             self.config.log(
+                crate::logging::LogLevel::Info,
                 &[crate::logging::Category::Network],
                 "NET",
                 "REPORT",

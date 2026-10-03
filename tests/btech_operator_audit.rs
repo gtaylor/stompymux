@@ -125,11 +125,17 @@ async fn diagnostic_effects_follow_savepoints_inheritance_and_commit() {
     let (_dir, config, _) = support::isolated_world().await;
     let outbox = Outbox::default();
     let effects = Effects::new(&config, &outbox);
-    let first = logging::Record::new(&config, "WIZ", "CHANGE", "first");
+    let first = logging::Record::new(&config, logging::LogLevel::Info, "WIZ", "CHANGE", "first");
     effects.stage_record(first.clone()).unwrap();
     let checkpoint = effects.checkpoint();
     effects
-        .stage_record(logging::Record::new(&config, "WIZ", "CHANGE", "discard"))
+        .stage_record(logging::Record::new(
+            &config,
+            logging::LogLevel::Info,
+            "WIZ",
+            "CHANGE",
+            "discard",
+        ))
         .unwrap();
     effects.restore(checkpoint);
     let loading = Effects::new(&config, &outbox);

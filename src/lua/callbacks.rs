@@ -144,6 +144,7 @@ impl Scripts {
         }
         if let Err(error) = self.atomic(|_| self.call_event(t, name, ctx)) {
             crate::lua::configuration(&self.lua).log(
+                crate::logging::LogLevel::Error,
                 &[crate::logging::Category::Bugs],
                 "LUA",
                 "ERROR",
@@ -376,6 +377,7 @@ impl Scripts {
             Ok(result) => result,
             Err(error) => {
                 crate::lua::configuration(&self.lua).log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Bugs],
                     "LUA",
                     "ERROR",
@@ -439,6 +441,7 @@ impl Scripts {
             match result {
                 Ok(result) if result.passes => passing.push(*id),
                 Err(e) => crate::lua::configuration(&self.lua).log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Bugs],
                     "LUA",
                     "ERROR",

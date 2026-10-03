@@ -171,6 +171,7 @@ impl Server {
         if let Some(s) = self.sessions.remove(&id) {
             let stats = s.stats.snapshot();
             self.config.log(
+                crate::logging::LogLevel::Info,
                 &[crate::logging::Category::Accounting],
                 "NET",
                 "DISC",
@@ -215,6 +216,7 @@ impl Server {
                     })
                 {
                     self.config.log(
+                        crate::logging::LogLevel::Error,
                         &[crate::logging::Category::Problems],
                         "SRV",
                         "ERROR",
@@ -260,6 +262,7 @@ impl Server {
                         self.sessions[&id].protocol(vec![Input::StartCompression], &self.config)
                     }
                     Input::Problem(secondary, message) => self.config.log(
+                        crate::logging::LogLevel::Warn,
                         &[crate::logging::Category::Problems],
                         "TELNET",
                         secondary,
@@ -332,6 +335,7 @@ impl Server {
                 self.message_cache = cache;
                 for row in &report {
                     self.config.log(
+                        crate::logging::LogLevel::Info,
                         &[crate::logging::Category::Startup],
                         "INI",
                         "INFO",
@@ -384,6 +388,7 @@ impl Server {
             });
             if let Err(error) = session.styled_report(&message, ansi, &self.config).await {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "SRV",
                     "ERROR",

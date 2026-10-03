@@ -94,6 +94,7 @@ impl Server {
             );
             if let Err(error) = result {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "SRV",
                     "ERROR",

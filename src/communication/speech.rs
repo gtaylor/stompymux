@@ -340,6 +340,7 @@ fn perform(ctx: &CommandContext<'_>, input: &CommandInput, mode: Mode) -> Result
         }
         Mode::Wall => {
             ctx.config.log(
+                crate::logging::LogLevel::Info,
                 &[crate::logging::Category::Shouts],
                 "WIZ",
                 "SHOUT",

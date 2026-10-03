@@ -14,6 +14,7 @@ pub(super) fn register(lua: &Lua, api: &Table, world: &SharedWorld) -> mlua::Res
         "lock_error",
         lua.create_function(|lua, message: String| {
             crate::lua::configuration(lua).log(
+                crate::logging::LogLevel::Error,
                 &[crate::logging::Category::Bugs],
                 "LUA",
                 "ERROR",

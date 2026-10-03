@@ -175,12 +175,19 @@ async fn report_with(
     {
         Ok(Ok(snapshot)) => {
             for error in &snapshot.errors {
-                c.log(&[Category::Problems], "SYS", "USAGE", error);
+                c.log(
+                    crate::logging::LogLevel::Warn,
+                    &[Category::Problems],
+                    "SYS",
+                    "USAGE",
+                    error,
+                );
             }
             snapshot.render()
         }
         error => {
             c.log(
+                crate::logging::LogLevel::Warn,
                 &[Category::Problems],
                 "SYS",
                 "USAGE",

@@ -71,6 +71,7 @@ impl Session {
                     }
                 }
                 crate::telnet::Input::Problem(secondary, message) => config.log(
+                    crate::logging::LogLevel::Warn,
                     &[crate::logging::Category::Problems],
                     "TELNET",
                     secondary,

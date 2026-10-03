@@ -659,12 +659,15 @@ pub struct LoggingConfig {
     pub log_options: Vec<LogOption>,
     /// Configuration value for `topics`; defaults are centralized below.
     pub topics: LoggingTopics,
+    /// Least severe level written to the server log; less severe records are dropped.
+    pub min_level: LogLevel,
 }
 impl Default for LoggingConfig {
     fn default() -> Self {
         Self {
             log_options: vec![LogOption::Timestamp, LogOption::Location],
             topics: Default::default(),
+            min_level: LogLevel::Info,
         }
     }
 }

@@ -32,7 +32,7 @@ precedence over included values.
 | `[access.*]` | Permission tables for commands, lists, and configuration directives. |
 | `[aliases.*]` | Command and flag alias tables. |
 | `[names]` | Player-name length limit and `bad`/`good` player-name lists. |
-| `[logging]` | The `log_options` formatting array and a `[logging.topics]` table of event-category booleans. |
+| `[logging]` | The `log_options` formatting array, the `min_level` severity threshold (`debug`, `info`, `warn`, or `error`; default `info`), and a `[logging.topics]` table of event-category booleans. |
 
 The server uses vendored LuaJIT with JIT tracing disabled so the configured
 `lua.instruction_limit` can bound callback and module execution. The

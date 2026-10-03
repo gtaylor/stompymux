@@ -49,6 +49,7 @@ impl Server {
         }
         if let Err(error) = crate::advance_battle_wrecks_action(&self.scripts, &self.config) {
             self.config.log(
+                crate::logging::LogLevel::Error,
                 &[crate::logging::Category::Problems],
                 "BTECH",
                 "ERROR",
@@ -70,6 +71,7 @@ impl Server {
         let fire_result = crate::advance_map_fire(&mut self.scripts.world.borrow_mut());
         if let Err(error) = fire_result {
             self.config.log(
+                crate::logging::LogLevel::Error,
                 &[crate::logging::Category::Problems],
                 "BTECH",
                 "ERROR",
@@ -108,6 +110,7 @@ impl Server {
             },
         ) {
             self.config.log(
+                crate::logging::LogLevel::Error,
                 &[crate::logging::Category::Problems],
                 "BTECH",
                 "ARTILLERY",
@@ -128,6 +131,7 @@ impl Server {
                 Ok(arrivals) => arrivals,
                 Err(error) => {
                     self.config.log(
+                        crate::logging::LogLevel::Error,
                         &[crate::logging::Category::Problems],
                         "BTECH",
                         "BUILDING",
@@ -152,6 +156,7 @@ impl Server {
         }
         if let Err(error) = crate::advance_battle_sixth_sense_action(&self.scripts) {
             self.config.log(
+                crate::logging::LogLevel::Error,
                 &[crate::logging::Category::Problems],
                 "BTECH",
                 "ERROR",
@@ -171,6 +176,7 @@ impl Server {
             crate::advance_battle_periodic_piloting_action(&self.scripts, &self.config)
         {
             self.config.log(
+                crate::logging::LogLevel::Error,
                 &[crate::logging::Category::Problems],
                 "BTECH",
                 "PILOTING",
@@ -208,6 +214,7 @@ impl Server {
             Ok(autopilot_notices) => notices.extend(autopilot_notices),
             Err(error) => {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "BTECH",
                     "AUTOPILOT",
@@ -276,6 +283,7 @@ impl Server {
             }
             Err(error) => {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "BTECH",
                     "ERROR",
@@ -306,6 +314,7 @@ impl Server {
         ));
         if let Err(error) = crate::advance_battle_boosters_action(&self.scripts, &self.config) {
             self.config.log(
+                crate::logging::LogLevel::Error,
                 &[crate::logging::Category::Problems],
                 "BTECH",
                 "ERROR",
@@ -326,6 +335,7 @@ impl Server {
             Ok(dumping) => notices.extend(dumping),
             Err(error) => {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "BTECH",
                     "ERROR",
@@ -351,6 +361,7 @@ impl Server {
             Ok(messages) => messages,
             Err(error) => {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "BTECH",
                     "ERROR",
@@ -375,6 +386,7 @@ impl Server {
             Ok(_) => (),
             Err(error) => {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "BTECH",
                     "ERROR",
@@ -444,6 +456,7 @@ impl Server {
             }
             Err(error) => {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "BTECH",
                     "ERROR",
@@ -471,6 +484,7 @@ impl Server {
         {
             if let Err(error) = crate::btech::notify_message(&self.scripts, target, &text) {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "BTECH",
                     "ERROR",
@@ -491,6 +505,7 @@ impl Server {
             crate::btech::unjam::publish_unjamming(&self.scripts, &self.config, &unjam_report)
         {
             self.config.log(
+                crate::logging::LogLevel::Error,
                 &[crate::logging::Category::Problems],
                 "BTECH",
                 "ERROR",
@@ -529,6 +544,7 @@ impl Server {
             Ok(_) => {}
             Err(error) => {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "BTECH",
                     "ERROR",
@@ -564,6 +580,7 @@ impl Server {
             Ok(_) => {}
             Err(error) => {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "BTECH",
                     "ERROR",
@@ -584,6 +601,7 @@ impl Server {
             crate::advance_battle_computer_failures_action(&self.scripts, &self.config)
         {
             self.config.log(
+                crate::logging::LogLevel::Error,
                 &[crate::logging::Category::Problems],
                 "BTECH",
                 "COMPUTER",
@@ -605,6 +623,7 @@ impl Server {
             Ok(changes) => notices.extend(changes),
             Err(error) => {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "BTECH",
                     "ERROR",
@@ -627,6 +646,7 @@ impl Server {
             Ok(network_notices) => notices.extend(network_notices),
             Err(error) => {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "BTECH",
                     "ERROR",
@@ -648,6 +668,7 @@ impl Server {
             Ok(link_notices) => notices.extend(link_notices),
             Err(error) => {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "BTECH",
                     "ERROR",
@@ -673,6 +694,7 @@ impl Server {
         if let Err(error) = crate::advance_battle_self_destructs_action(&self.scripts, &self.config)
         {
             self.config.log(
+                crate::logging::LogLevel::Error,
                 &[crate::logging::Category::Problems],
                 "BTECH",
                 "SELFDESTRUCT",
@@ -697,6 +719,7 @@ impl Server {
             Ok(events) => events,
             Err(error) => {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "BTECH",
                     "ERROR",
@@ -717,6 +740,7 @@ impl Server {
             Ok(updates) => notices.extend(updates),
             Err(error) => {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "BTECH",
                     "HIDE",
@@ -753,6 +777,7 @@ impl Server {
             Ok(autopilot_notices) => notices.extend(autopilot_notices),
             Err(error) => {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "BTECH",
                     "AUTOPILOT",
@@ -772,6 +797,7 @@ impl Server {
         for event in contact_events {
             if let Err(error) = crate::btech::notify_contact(&self.scripts, &self.config, event) {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "BTECH",
                     "ERROR",
@@ -792,6 +818,7 @@ impl Server {
             crate::publish_battle_building_arrivals(&self.scripts, building_arrivals)
         {
             self.config.log(
+                crate::logging::LogLevel::Error,
                 &[crate::logging::Category::Problems],
                 "BTECH",
                 "BUILDING",
@@ -810,6 +837,7 @@ impl Server {
         for notice in recovery_notices {
             if let Err(error) = crate::btech::notify_character(&self.scripts, notice) {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "BTECH",
                     "ERROR",
@@ -832,6 +860,7 @@ impl Server {
         for (unit, text) in messages {
             if let Err(error) = crate::btech::notify_message(&self.scripts, unit, &text) {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "BTECH",
                     "ERROR",

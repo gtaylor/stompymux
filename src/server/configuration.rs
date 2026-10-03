@@ -36,6 +36,7 @@ impl Server {
         match result {
             Ok(mut messages) => {
                 self.config.log(
+                    crate::logging::LogLevel::Info,
                     &[crate::logging::Category::ConfigChanges],
                     "CFG",
                     "UPDAT",
@@ -55,6 +56,7 @@ impl Server {
             }
             Err(error) => {
                 self.config.log(
+                    crate::logging::LogLevel::Info,
                     &[crate::logging::Category::ConfigChanges],
                     "CFG",
                     "UPDAT",

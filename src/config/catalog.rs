@@ -1197,4 +1197,10 @@ pub const KEYS: &[KeySpec] = &[
         kind: "i64",
         bounds: Some((0.0, 60.0)),
     },
+    KeySpec {
+        path: "logging.min_level",
+        legacy: "",
+        kind: "LogLevel",
+        bounds: None,
+    },
 ];

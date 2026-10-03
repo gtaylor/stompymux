@@ -57,6 +57,7 @@ impl Server {
             .await
         {
             self.config.log(
+                crate::logging::LogLevel::Error,
                 &[crate::logging::Category::Problems],
                 "SRV",
                 "ERROR",
@@ -301,6 +302,7 @@ impl Server {
                     }
                     Err(error) => {
                         self.config.log(
+                            crate::logging::LogLevel::Error,
                             &[crate::logging::Category::Problems],
                             "SRV",
                             "ERROR",
@@ -425,6 +427,7 @@ impl Server {
     ) {
         if let ReplyDestination::Object(actor) = destination {
             self.config.log(
+                crate::logging::LogLevel::Error,
                 &[crate::logging::Category::Problems],
                 "SRV",
                 "ERROR",
@@ -441,6 +444,7 @@ impl Server {
             return;
         }
         self.config.log(
+            crate::logging::LogLevel::Error,
             &[crate::logging::Category::Bugs],
             "LUA",
             "ERROR",
@@ -463,6 +467,7 @@ impl Server {
 
     fn report_delivery_error(&self, session: &Session, error: anyhow::Error) {
         self.config.log(
+            crate::logging::LogLevel::Warn,
             &[crate::logging::Category::Network],
             "NET",
             "ERROR",

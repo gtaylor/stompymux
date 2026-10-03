@@ -165,6 +165,7 @@ impl Service<'_> {
                     *self.world.borrow_mut() = before;
                     self.effects.restore(checkpoint);
                     self.config.log(
+                        crate::logging::LogLevel::Error,
                         &[crate::logging::Category::Bugs],
                         "LUA",
                         "ERROR",

@@ -6,8 +6,13 @@ impl Server {
         match self.config.logger.write(&self.config, request).await {
             Ok(()) => "Message logged.".into(),
             Err(e) => {
-                self.config
-                    .log(&[Category::Problems], "LOG", "WRITE", e.to_string());
+                self.config.log(
+                    crate::logging::LogLevel::Error,
+                    &[Category::Problems],
+                    "LOG",
+                    "WRITE",
+                    e.to_string(),
+                );
                 "Request failed.".into()
             }
         }
@@ -29,6 +34,7 @@ impl Server {
             &[Category::AllCommands][..]
         };
         self.config.log(
+            crate::logging::LogLevel::Info,
             categories,
             "CMD",
             if suspect { "SUS" } else { "ALL" },
@@ -54,6 +60,7 @@ impl Server {
             self.reconcile_connections();
             self.scripts.effects.rollback();
             self.config.log(
+                crate::logging::LogLevel::Error,
                 &[Category::Problems],
                 "CMD",
                 "SUS",

@@ -314,6 +314,9 @@ maximum_length = 30
 # Runtime @admin log_options edits accept !flags/!location/!timestamp to clear.
 # Command audit passwords are redacted; Lua mux.log requests wait for commit.
 log_options = ["flags", "location", "timestamp"]
+# Least severe entry written to the server log: "debug", "info", "warn", or
+# "error". Entries below this level are discarded even if their topic is on.
+min_level = "info"
 
 [logging.topics]
 # Write account usage information when a player logs out.

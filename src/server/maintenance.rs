@@ -14,6 +14,7 @@ impl Server {
                     self.flush();
                 } else {
                     self.config.log(
+                        crate::logging::LogLevel::Error,
                         &[crate::logging::Category::Bugs],
                         "LUA",
                         "ERROR",
@@ -27,6 +28,7 @@ impl Server {
                 self.reconcile_connections();
                 self.scripts.effects.rollback();
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Bugs],
                     "LUA",
                     "ERROR",
@@ -57,6 +59,7 @@ impl Server {
                 self.scripts.flows.cancel(id.0);
                 self.reconcile_connections();
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Bugs],
                     "LUA",
                     "ERROR",
@@ -128,6 +131,7 @@ impl Server {
             session.map_or(ReplyDestination::Object(actor), ReplyDestination::Session);
         if let Err(error) = self.snapshots() {
             self.config.log(
+                crate::logging::LogLevel::Error,
                 &[
                     crate::logging::Category::Checkpoints,
                     crate::logging::Category::Problems,
@@ -215,6 +219,7 @@ impl Server {
                 self.scripts.effects.drain_maintenance();
                 for finding in &report.findings {
                     self.config.log(
+                        crate::logging::LogLevel::Warn,
                         &[
                             crate::logging::Category::Checkpoints,
                             crate::logging::Category::Problems,
@@ -264,6 +269,7 @@ impl Server {
                     session.raw(report.response(self.config.runtime.output_message_limit));
                 } else if automatic {
                     self.config.log(
+                        crate::logging::LogLevel::Info,
                         &[crate::logging::Category::Startup],
                         "INI",
                         "INFO",
@@ -279,6 +285,7 @@ impl Server {
                 self.reconcile_connections();
                 self.scripts.effects.rollback();
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[
                         crate::logging::Category::Checkpoints,
                         crate::logging::Category::Problems,

@@ -56,6 +56,7 @@ impl Server {
                 && let Err(error) = session.literal_report(&text, &self.config).await
             {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Bugs],
                     "LUA",
                     "ERROR",
@@ -141,6 +142,7 @@ impl Server {
             }
             Err(error) => {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Bugs],
                     "LUA",
                     "ERROR",
@@ -167,6 +169,7 @@ impl Server {
             let report = crate::help::HelpResponse::Message(text);
             if let Err(error) = session.help(&report, false, &self.config).await {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "SRV",
                     "ERROR",

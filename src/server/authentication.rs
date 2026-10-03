@@ -199,6 +199,7 @@ impl Server {
         if create && let Err(reason) = self.registration_admission() {
             if let Err(error) = self.reject_admission(id, reason).await {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "SRV",
                     "ERROR",
@@ -249,6 +250,7 @@ impl Server {
                 "Either that player does not exist, or has a different password.\r\n"
             };
             self.config.log(
+                crate::logging::LogLevel::Warn,
                 &[
                     crate::logging::Category::Logins,
                     crate::logging::Category::Security,
@@ -265,6 +267,7 @@ impl Server {
                 .await
             {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "SRV",
                     "ERROR",
@@ -412,6 +415,7 @@ impl Server {
             Err(error) => {
                 if create || !error.is::<accounts::IncorrectCredentials>() {
                     self.config.log(
+                        crate::logging::LogLevel::Error,
                         &[crate::logging::Category::Problems],
                         "CON",
                         "HASH",
@@ -427,6 +431,7 @@ impl Server {
                 }
                 let exhausted = self.sessions.get_mut(&id).unwrap().failed_login();
                 self.config.log(
+                    crate::logging::LogLevel::Warn,
                     &[
                         crate::logging::Category::Logins,
                         crate::logging::Category::Security,
@@ -491,6 +496,7 @@ impl Server {
                 return Ok(());
             }
             self.config.log(
+                crate::logging::LogLevel::Info,
                 &[crate::logging::Category::Create],
                 "CON",
                 "CREATE",
@@ -503,6 +509,7 @@ impl Server {
                     self.reconcile_connections();
                     self.scripts.effects.rollback();
                     self.config.log(
+                        crate::logging::LogLevel::Error,
                         &[crate::logging::Category::Problems],
                         "SRV",
                         "ERROR",
@@ -582,6 +589,7 @@ impl Server {
                 .lifecycle("on_player_connect", Some(p), Some(id.0), reconnect, "")
         }) {
             self.config.log(
+                crate::logging::LogLevel::Error,
                 &[crate::logging::Category::Problems],
                 "SRV",
                 "ERROR",
@@ -643,6 +651,7 @@ impl Server {
                 self.reconcile_connections();
                 self.scripts.effects.rollback();
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Bugs],
                     "LUA",
                     "ERROR",

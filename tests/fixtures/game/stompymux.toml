@@ -20,8 +20,6 @@ include = ["aliases.toml"]
 clock_save_interval = 1
 # SQLite database file holding persistent game state.
 game_database = "data/stompymux.db"
-# Deprecated compatibility setting; ignored. game_database is the live database.
-legacy_game_database = "data/stompymux.db"
 # Directory containing BattleTech unit template files.
 mech_database = "mechs"
 # Directory containing map template files.
@@ -255,6 +253,8 @@ maximum_length = 30
 [logging]
 # Controls extra data written with each log entry: flags, location, timestamp.
 log_options = ["flags", "location", "timestamp"]
+# Keep test output readable: only warnings and errors reach stderr.
+min_level = "warn"
 
 [logging.topics]
 # Write account usage information when a player logs out.

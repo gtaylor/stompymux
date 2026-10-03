@@ -56,7 +56,13 @@ async fn categories_live_controls_formatting_and_redaction() {
         edit(&mut c, &mut s, "log_options", "!timestamp flags unknown").len(),
         1
     );
-    let r = Record::new(&c, "CMD", "ALL", "[bold]test[/]\nforged\x1b[31mRED\x1b[0m");
+    let r = Record::new(
+        &c,
+        logging::LogLevel::Info,
+        "CMD",
+        "ALL",
+        "[bold]test[/]\nforged\x1b[31mRED\x1b[0m",
+    );
     assert!(r.text.contains("CMD/ALL"));
     assert!(!r.text.contains("[bold]") && !r.text.contains('\x1b'));
     assert_eq!(r.text.matches('\n').count(), 1);

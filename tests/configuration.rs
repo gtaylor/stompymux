@@ -77,6 +77,7 @@ async fn complete_fixture_parses_every_shape() {
     assert_eq!(c.colors["brand-blue"], [32, 96, 192]);
     assert_eq!(c.access.commands["@foo"].0, ["wizard", "need_player"]);
     assert_eq!(c.sites.forbid.len(), 2);
+    assert_eq!(c.logging.min_level, stompymux_rs::logging::LogLevel::Error);
     assert_eq!(c.sites.forbid[0].address.to_string(), "192.0.2.0");
     assert_eq!(c.server.listen_address.to_string(), "::1");
     assert!(c.validate_for_serve().is_err());
@@ -168,6 +169,7 @@ async fn malformed_known_values_and_cycles_are_rejected() {
         "sites.forbid=[{address='::1',mask='255.255.255.0'}]",
         "database.bootstrap.objects.1={type='room',name='GOD',wizard=true}",
         "runtime.event_queue_capacity=0",
+        "logging.min_level='loud'",
         "include='x'",
         "include=[123]",
     ] {
@@ -523,7 +525,7 @@ async fn supplied_configuration_parses_without_unknown_keys() {
     )
     .unwrap();
     let c = Config::load(d.path()).unwrap();
-    assert_eq!(KEYS.len(), 198);
+    assert_eq!(KEYS.len(), 199);
     assert_eq!(c.server.port, 5555);
     assert!(
         !c.warnings.iter().any(|w| w.contains("unknown")),

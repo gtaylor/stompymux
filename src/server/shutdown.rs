@@ -22,6 +22,7 @@ impl Server {
         let result = self.save_snapshot(snapshot).await;
         if let Err(e) = result {
             self.config.log(
+                crate::logging::LogLevel::Error,
                 &[crate::logging::Category::Problems],
                 "SHT",
                 "ERROR",
@@ -40,6 +41,7 @@ impl Server {
         self.shutdown = Some(request);
         self.scripts.flows.stop();
         self.config.log(
+            crate::logging::LogLevel::Info,
             &[crate::logging::Category::Startup],
             "SHT",
             "START",
@@ -58,6 +60,7 @@ impl Server {
         for id in self.sessions.keys().copied().collect::<Vec<_>>() {
             if let Err(e) = self.disconnect(id).await {
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[crate::logging::Category::Problems],
                     "SHT",
                     "ERROR",
@@ -71,6 +74,7 @@ impl Server {
         let result = self.save_snapshot(snapshot).await;
         if let Err(e) = result {
             self.config.log(
+                crate::logging::LogLevel::Error,
                 &[crate::logging::Category::Problems],
                 "SHT",
                 "ERROR",
@@ -82,6 +86,7 @@ impl Server {
             && let Err(e) = database.close().await
         {
             self.config.log(
+                crate::logging::LogLevel::Error,
                 &[crate::logging::Category::Problems],
                 "SHT",
                 "ERROR",

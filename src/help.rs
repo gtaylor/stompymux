@@ -121,13 +121,15 @@ impl HelpLoadReport {
     pub fn log(&self, config: &Config) {
         for detail in self.errors.iter().chain(&self.warnings) {
             (config).log(
+                crate::logging::LogLevel::Warn,
                 &[crate::logging::Category::Startup],
                 "INI",
-                "INFO",
+                "WARN",
                 format!("Help: {detail}"),
             );
         }
         (config).log(
+            crate::logging::LogLevel::Info,
             &[crate::logging::Category::Startup],
             "INI",
             "INFO",

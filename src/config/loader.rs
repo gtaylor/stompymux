@@ -248,6 +248,7 @@ pub fn validate(spec: &KeySpec, value: &Value) -> Result<()> {
         "ErrorReporting" => typed::<ErrorReporting>(value)?,
         "Vec<Flag>" => typed::<Vec<String>>(value)?,
         "Vec<LogOption>" => typed::<Vec<LogOption>>(value)?,
+        "LogLevel" => typed::<LogLevel>(value)?,
         "Vec<String>" => typed::<Vec<String>>(value)?,
         "Vec<usize>" => typed::<Vec<usize>>(value)?,
         "BTreeMap<String, String>" => {

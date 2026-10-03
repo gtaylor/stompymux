@@ -245,7 +245,11 @@ impl Logger {
             tx
         })
     }
+    /// Queue a record for stderr unless it falls below `logging.min_level`.
     pub fn record(&self, c: &Config, r: Record) {
+        if r.level < c.logging.min_level {
+            return;
+        }
         if self.0.stopped.load(Ordering::Acquire)
             || self.sender(c).try_send(Request::Record(r)).is_err()
         {
@@ -266,6 +270,7 @@ impl Logger {
                 c,
                 Record::new(
                     c,
+                    super::LogLevel::Warn,
                     "LOG",
                     "WRITE",
                     "Script log request omitted: output queue unavailable",
@@ -411,6 +416,36 @@ mod tests {
         assert!(rx.try_recv().is_err());
     }
 
+    /// Records below `logging.min_level` never reach the output worker, whichever path queues them.
+    #[test]
+    fn records_below_min_level_are_dropped() {
+        use crate::logging::{Category, LogLevel};
+        let d = tempfile::tempdir().unwrap();
+        std::fs::write(
+            d.path().join("stompymux.toml"),
+            "[logging]\nmin_level = \"warn\"\n",
+        )
+        .unwrap();
+        let c = Config::load(d.path()).unwrap();
+        assert_eq!(c.logging.min_level, LogLevel::Warn);
+        let (tx, mut rx) = mpsc::channel(8);
+        c.logger.0.sender.set(tx).unwrap();
+        c.log(LogLevel::Info, &[Category::Startup], "INI", "INFO", "quiet");
+        c.logger
+            .record(&c, Record::new(&c, LogLevel::Debug, "T", "", "staged"));
+        assert!(rx.try_recv().is_err());
+        c.log(LogLevel::Warn, &[Category::Startup], "INI", "WARN", "loud");
+        c.logger
+            .record(&c, Record::new(&c, LogLevel::Error, "T", "", "staged"));
+        for expected in ["loud", "staged"] {
+            let Request::Record(record) = rx.try_recv().unwrap() else {
+                panic!("expected record");
+            };
+            assert!(record.text.contains(expected));
+        }
+        assert_eq!(c.logger.0.lost.load(Ordering::Relaxed), 0);
+    }
+
     #[tokio::test]
     async fn saturation_and_shutdown_deadline_are_bounded() {
         let d = tempfile::tempdir().unwrap();
@@ -422,8 +457,14 @@ mod tests {
         let c = Config::load(d.path()).unwrap();
         let (tx, _rx) = mpsc::channel(1);
         c.logger.0.sender.set(tx).unwrap();
-        c.logger.record(&c, Record::new(&c, "T", "", "one"));
-        c.logger.record(&c, Record::new(&c, "T", "", "two"));
+        c.logger.record(
+            &c,
+            Record::new(&c, crate::logging::LogLevel::Info, "T", "", "one"),
+        );
+        c.logger.record(
+            &c,
+            Record::new(&c, crate::logging::LogLevel::Info, "T", "", "two"),
+        );
         assert_eq!(c.logger.0.lost.load(Ordering::Relaxed), 1);
         assert!(
             c.logger

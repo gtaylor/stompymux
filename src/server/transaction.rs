@@ -41,6 +41,7 @@ impl Server {
             Err(e) => {
                 self.database = None;
                 self.config.log(
+                    crate::logging::LogLevel::Error,
                     &[
                         crate::logging::Category::Checkpoints,
                         crate::logging::Category::Problems,
@@ -105,6 +106,7 @@ impl Server {
         self.finish_maintenance();
         if saved {
             self.config.log(
+                crate::logging::LogLevel::Info,
                 &[crate::logging::Category::Checkpoints],
                 "DB",
                 "SAVE",
@@ -120,6 +122,7 @@ impl Server {
         };
         for finding in report.findings {
             self.config.log(
+                crate::logging::LogLevel::Warn,
                 &[
                     crate::logging::Category::Checkpoints,
                     crate::logging::Category::Problems,

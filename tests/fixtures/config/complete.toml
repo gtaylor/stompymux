@@ -162,6 +162,7 @@ logging.topics.shouts = true
 logging.topics.startup = true
 logging.topics.wizard = true
 logging.log_options = ["timestamp", "location"]
+logging.min_level = "error"
 access.commands = {"@dig" = ["wizard", "need_location"], "@foo" = "wizard need_player"}
 access.lists = {"options" = "wizard"}
 access.config = {"port" = ["god"]}

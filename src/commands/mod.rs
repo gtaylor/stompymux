@@ -279,6 +279,7 @@ fn run_inner(s: &Scripts, c: &Config, execution: ExecutionContext, line: &str) -
         return Ok(Action::Continue);
     }
     c.log(
+        crate::logging::LogLevel::Info,
         &[crate::logging::Category::BadCommands],
         "CMD",
         "BAD",

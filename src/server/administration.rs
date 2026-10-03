@@ -207,6 +207,7 @@ impl Server {
         }
         self.flush();
         self.config.log(
+            crate::logging::LogLevel::Info,
             if created {
                 &[
                     crate::logging::Category::Wizard,
@@ -297,6 +298,7 @@ impl Server {
                 self.tell(victim, &format!("{name} gently shows you the door.\r\n"));
             }
             self.config.log(
+                crate::logging::LogLevel::Info,
                 &[crate::logging::Category::Wizard],
                 "WIZ",
                 "ACCOUNT",
