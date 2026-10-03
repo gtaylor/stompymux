@@ -64,12 +64,7 @@ impl Server {
             TransitionKind::PartialDisconnect => "partially disconnected",
             TransitionKind::Disconnected => "disconnected",
         };
-        self.config.log(
-            &[crate::logging::Category::Logins],
-            "CON",
-            "EVENT",
-            format!("{} has {verb} from {}", t.name, t.peer),
-        );
+        tracing::info!(target: crate::logging::targets::LOGINS, player = ?t.name, peer = %t.peer, "{verb}");
         let message = format!("GAME: {} has {verb}.\r\n", t.name);
         {
             let world = self.scripts.world.borrow();
@@ -119,24 +114,14 @@ impl Server {
             Ok(())
         })();
         if let Err(error) = result {
-            self.config.log(
-                &[crate::logging::Category::Problems],
-                "SRV",
-                "ERROR",
-                format!("Suspect connection notification: {error:#}"),
-            );
+            tracing::error!(error = %format_args!("{error:#}"), "suspect connection notification failed");
             *self.scripts.world.borrow_mut() = before;
             self.reconcile_connections();
             self.scripts.effects.rollback();
             return;
         }
         if !self.commit(before).await {
-            self.config.log(
-                &[crate::logging::Category::Problems],
-                "SRV",
-                "ERROR",
-                "Suspect connection notification was not saved",
-            );
+            tracing::error!("Suspect connection notification was not saved");
         }
         self.flush();
     }
@@ -172,12 +157,7 @@ pub(super) async fn reject_site(
                 }
             }
             Err(error) => {
-                config.log(
-                    &[crate::logging::Category::Problems],
-                    "SRV",
-                    "ERROR",
-                    format!("Bad-site message rendering: {error:#}"),
-                );
+                tracing::error!(error = %format_args!("{error:#}"), "bad-site message rendering failed");
                 let fallback = crate::telnet::bounded_error(
                     "Connection refused.",
                     config.runtime.output_message_limit,
@@ -207,17 +187,7 @@ pub(super) async fn reject_site(
     .await
     {
         Ok(Ok(())) => {}
-        Ok(Err(error)) => config.log(
-            &[crate::logging::Category::Network],
-            "NET",
-            "ERROR",
-            format!("Bad-site message delivery: {error}"),
-        ),
-        Err(_) => config.log(
-            &[crate::logging::Category::Network],
-            "NET",
-            "ERROR",
-            "Bad-site message delivery timed out",
-        ),
+        Ok(Err(error)) => tracing::warn!(error = %error, "bad-site message delivery failed"),
+        Err(_) => tracing::warn!("Bad-site message delivery timed out"),
     }
 }

@@ -1,5 +1,5 @@
 //! On-demand Unix process metrics, normalized before rendering and independently fallible.
-use crate::{config::Config, logging::Category};
+use crate::config::Config;
 use nix::{
     sys::resource::{RLIM_INFINITY, Resource, UsageWho, getrlimit, getrusage},
     unistd::{SysconfVar, sysconf},
@@ -175,17 +175,12 @@ async fn report_with(
     {
         Ok(Ok(snapshot)) => {
             for error in &snapshot.errors {
-                c.log(&[Category::Problems], "SYS", "USAGE", error);
+                tracing::warn!(error = %error, "process statistics unavailable");
             }
             snapshot.render()
         }
         error => {
-            c.log(
-                &[Category::Problems],
-                "SYS",
-                "USAGE",
-                format!("Process report failed: {error:?}"),
-            );
+            tracing::warn!(error = ?error, "process report failed");
             "Unable to collect process statistics before the report deadline.".into()
         }
     }

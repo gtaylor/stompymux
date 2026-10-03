@@ -145,23 +145,8 @@ security.password_hash_memlimit = 12582912
 security.login_attempt_burst = 3
 security.login_attempt_refill = 10
 security.login_hash_limit = 5
-logging.topics.accounting = false
-logging.topics.all_commands = false
-logging.topics.suspect_commands = false
-logging.topics.bad_commands = false
-logging.topics.buffer_alloc = false
-logging.topics.bugs = true
-logging.topics.checkpoints = true
-logging.topics.config_changes = true
-logging.topics.create = true
-logging.topics.logins = true
-logging.topics.network = true
-logging.topics.problems = true
-logging.topics.security = true
-logging.topics.shouts = true
-logging.topics.startup = true
-logging.topics.wizard = true
-logging.log_options = ["timestamp", "location"]
+logging.filter = "warn,audit::commands=info"
+logging.format = "json"
 access.commands = {"@dig" = ["wizard", "need_location"], "@foo" = "wizard need_player"}
 access.lists = {"options" = "wizard"}
 access.config = {"port" = ["god"]}

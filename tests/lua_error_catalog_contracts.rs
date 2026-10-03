@@ -122,7 +122,7 @@ async fn argument_failures_capture_public_call_names_methods_and_c_buffer_limits
         local function tail() return btech.parts.list(false) end
         local tail_message=select(1,failure(tail))
         local long=string.rep('x',3000)
-        local long_message=select(1,failure(function() btech.parts.resolve({brand=long}) end))
+        local long_message=select(1,failure(function() btech.parts.resolve({id=long}) end))
         return direct,alias,method,tail_message,#long_message,argument
         "#,
         )

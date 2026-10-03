@@ -198,12 +198,7 @@ impl Server {
     ) {
         if create && let Err(reason) = self.registration_admission() {
             if let Err(error) = self.reject_admission(id, reason).await {
-                self.config.log(
-                    &[crate::logging::Category::Problems],
-                    "SRV",
-                    "ERROR",
-                    format!("Admission close: {error:#}"),
-                );
+                tracing::error!(error = %format_args!("{error:#}"), "admission close failed");
             }
             return;
         }
@@ -248,28 +243,12 @@ impl Server {
             } else {
                 "Either that player does not exist, or has a different password.\r\n"
             };
-            self.config.log(
-                &[
-                    crate::logging::Category::Logins,
-                    crate::logging::Category::Security,
-                ],
-                if create { "CRE" } else { "CON" },
-                "RJCT",
-                format!(
-                    "Authentication throttled for {} from {address}",
-                    crate::logging::clean(&name)
-                ),
-            );
+            tracing::warn!(target: crate::logging::targets::LOGINS, name = ?name, peer = %address, "authentication throttled");
             if let Err(error) = self
                 .cache_close(id, crate::message_cache::File::Connect, message, message)
                 .await
             {
-                self.config.log(
-                    &[crate::logging::Category::Problems],
-                    "SRV",
-                    "ERROR",
-                    format!("Authentication throttle close: {error:#}"),
-                );
+                tracing::error!(error = %format_args!("{error:#}"), "authentication throttle close failed");
             }
             return;
         }
@@ -411,12 +390,7 @@ impl Server {
             Ok(h) => h,
             Err(error) => {
                 if create || !error.is::<accounts::IncorrectCredentials>() {
-                    self.config.log(
-                        &[crate::logging::Category::Problems],
-                        "CON",
-                        "HASH",
-                        format!("Authentication worker failed: {error:#}"),
-                    );
+                    tracing::error!(error = %format_args!("{error:#}"), "authentication worker failed");
                     self.prompt(
                         id,
                         LoginFlow::Name,
@@ -426,18 +400,7 @@ impl Server {
                     return Ok(());
                 }
                 let exhausted = self.sessions.get_mut(&id).unwrap().failed_login();
-                self.config.log(
-                    &[
-                        crate::logging::Category::Logins,
-                        crate::logging::Category::Security,
-                    ],
-                    "CON",
-                    "BAD",
-                    format!(
-                        "Failed authentication for {} from {host}",
-                        crate::logging::clean(&name)
-                    ),
-                );
+                tracing::warn!(target: crate::logging::targets::LOGINS, name = ?name, peer = %host, "authentication failed");
                 if let Some(p) = existing {
                     let mut w = self.scripts.world.borrow_mut();
                     let a = w.accounts.get_mut(&p).unwrap();
@@ -490,24 +453,14 @@ impl Server {
                 );
                 return Ok(());
             }
-            self.config.log(
-                &[crate::logging::Category::Create],
-                "CON",
-                "CREATE",
-                format!("Registering {}", crate::logging::clean(&name)),
-            );
+            tracing::info!(target: crate::logging::targets::ACCOUNTS, name = ?name, "registering character");
             match self.create_account(name, hash) {
                 Ok(p) => p,
                 Err(e) => {
                     *self.scripts.world.borrow_mut() = before;
                     self.reconcile_connections();
                     self.scripts.effects.rollback();
-                    self.config.log(
-                        &[crate::logging::Category::Problems],
-                        "SRV",
-                        "ERROR",
-                        format!("Registration: {e:#}"),
-                    );
+                    tracing::error!(error = %format_args!("{e:#}"), "registration failed");
                     self.prompt(
                         id,
                         LoginFlow::Name,
@@ -581,12 +534,7 @@ impl Server {
             self.scripts
                 .lifecycle("on_player_connect", Some(p), Some(id.0), reconnect, "")
         }) {
-            self.config.log(
-                &[crate::logging::Category::Problems],
-                "SRV",
-                "ERROR",
-                format!("Connect hook: {e:#}"),
-            );
+            tracing::error!(error = %format_args!("{e:#}"), "connect hook failed");
             *self.scripts.world.borrow_mut() = before.clone();
             self.reconcile_connections();
             self.scripts.effects.rollback();
@@ -642,12 +590,7 @@ impl Server {
                 *self.scripts.world.borrow_mut() = before;
                 self.reconcile_connections();
                 self.scripts.effects.rollback();
-                self.config.log(
-                    &[crate::logging::Category::Bugs],
-                    "LUA",
-                    "ERROR",
-                    format!("Connect appearance failed: {error:#}"),
-                );
+                tracing::error!(error = %format_args!("{error:#}"), "connect appearance failed");
                 self.tell(id, "Unable to render your location.\r\n");
             }
         }

@@ -1,10 +1,11 @@
-//! Logging controls, conservative audit redaction, staged Lua effects and safe file appends.
+//! Log filter controls, command audits, conservative redaction, staged Lua effects and safe
+//! file appends.
 use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::{
     Config, ObjectId, Scripts,
     commands::{self, Action, ExecutionContext, InputOrigin},
-    logging::{self, Category, FileRequest, Record},
+    logging::{self, FileRequest},
     persistence,
 };
 use support::{Client, isolated_world, stable_world, start};
@@ -46,21 +47,31 @@ fn edit(c: &mut Config, s: &mut Scripts, name: &str, value: &str) -> Vec<String>
     candidate.diagnostics
 }
 #[tokio::test(flavor = "current_thread")]
-async fn categories_live_controls_formatting_and_redaction() {
+async fn live_filter_edits_and_redaction() {
     let (_d, mut c, mut s) = fixture().await;
-    assert!(!Category::AllCommands.enabled(&c));
-    assert!(Category::Bugs.enabled(&c));
-    edit(&mut c, &mut s, "all_commands", "yes");
-    assert!(Category::AllCommands.enabled(&c));
-    assert_eq!(
-        edit(&mut c, &mut s, "log_options", "!timestamp flags unknown").len(),
-        1
+    assert_eq!(c.logging.filter, "warn");
+    edit(&mut c, &mut s, "log_filter", "info,audit::commands=info");
+    assert_eq!(c.logging.filter, "info,audit::commands=info");
+    let rejected = c.administer(
+        &stompymux_rs::config::administration::Request {
+            directive: "log_filter".into(),
+            value: "info,audit=loud".into(),
+        },
+        &s.world(),
+        ObjectId(1),
+        s.commands(),
     );
-    let r = Record::new(&c, "CMD", "ALL", "[bold]test[/]\nforged\x1b[31mRED\x1b[0m");
-    assert!(r.text.contains("CMD/ALL"));
-    assert!(!r.text.contains("[bold]") && !r.text.contains('\x1b'));
-    assert_eq!(r.text.matches('\n').count(), 1);
-    assert!(r.text.contains("\\nforged"));
+    assert!(rejected.is_err());
+    for removed in ["all_commands", "log_options", "wizard"] {
+        let request = stompymux_rs::config::administration::Request {
+            directive: removed.into(),
+            value: "yes".into(),
+        };
+        assert!(
+            c.administer(&request, &s.world(), ObjectId(1), s.commands())
+                .is_err()
+        );
+    }
     edit(&mut c, &mut s, "alias", "pw @newpassword");
     edit(&mut c, &mut s, "alias", "fi @find");
     {
@@ -158,7 +169,7 @@ async fn categories_live_controls_formatting_and_redaction() {
     );
     assert!(queued.contains(".pw [arguments redacted]"));
     assert!(!queued.contains("@newpassword"));
-    assert!(logging::report(&c).contains("all_commands: enabled"));
+    assert!(logging::report(&c).contains("audit::commands=info"));
     for name in ["logging", "logfiles"] {
         let action = commands::run(&s, &c, ObjectId(1), 1, &format!("@list {name}")).unwrap();
         assert!(matches!(
@@ -306,6 +317,7 @@ async fn credentials(c: &Config) {
 
 #[tokio::test(flavor = "current_thread")]
 async fn tcp_log_commands_commit_and_rollback() {
+    let (capture, _guard) = logging::Capture::install("warn,audit::commands=info");
     tokio::task::LocalSet::new().run_until(async {
  let (_d,c,_s)=fixture().await;
  let path=c.root.join("stompymux.toml");
@@ -332,10 +344,12 @@ async fn tcp_log_commands_commit_and_rollback() {
  wizard.send("@lg test.log=native").await;wizard.until("Message logged.").await;
  wizard.send("@log missing=no").await;wizard.until("Request failed.").await;
  wizard.send("@list logfiles").await;wizard.until("test.log").await;
- wizard.send("@list logging").await;wizard.until("all_commands").await;
+ wizard.send("@list logging").await;wizard.until("Log filter").await;
  wizard.send("logok").await;
  wizard.send("logfail").await;
  wizard.send("@log test.log=barrier").await;wizard.until("Message logged.").await;
+ assert_eq!(capture.lines_containing("entered: 'logok'").len(), 1, "{}", capture.text());
+ assert!(capture.lines_containing("audit::commands").iter().all(|line| line.contains("INFO")));
  assert_eq!(std::fs::read_to_string(c.root.join("logs/test.log")).unwrap(),"native\nlua committed\nbarrier\n");
  assert_eq!(before,stable_world(&c.database()).await);
  use sqlx::Connection;
@@ -363,27 +377,4 @@ async fn tcp_log_commands_commit_and_rollback() {
  tokio::time::timeout(Duration::from_secs(10),task).await.unwrap().unwrap().unwrap();
  assert!(c.logger.report().contains("no open logfile"));
  }).await;
-}
-
-/// Defaults are grounded in configuration_registry.c and server/log.c, not operator TOML.
-#[test]
-fn category_catalog_matches_compiled_c_fixture() {
-    let d = tempfile::tempdir().unwrap();
-    std::fs::write(d.path().join("stompymux.toml"), "").unwrap();
-    let c = Config::load(d.path()).unwrap();
-    let catalog: Vec<serde_json::Value> =
-        serde_json::from_str(include_str!("fixtures/config/legacy-catalog.json")).unwrap();
-    assert_eq!(logging::CATEGORIES.len(), 16);
-    for (category, name, min) in logging::CATEGORIES {
-        let row = catalog
-            .iter()
-            .find(|v| v["path"] == format!("logging.topics.{name}"))
-            .unwrap();
-        assert_eq!(
-            category.enabled(&c),
-            row["default"].as_bool().unwrap(),
-            "{name}"
-        );
-        assert!(*min > 0 && *min <= name.len());
-    }
 }

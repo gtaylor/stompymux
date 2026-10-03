@@ -1,16 +1,14 @@
-//! Shared operator edits pair typed mutations with commit-staged wizard diagnostics.
+//! Shared operator edits pair typed mutations with commit-staged wizard audits.
 use crate::{
-    Config, ObjectId, Scripts,
-    logging::{Category, Record},
+    ObjectId, Scripts,
+    logging::{AuditRecord, targets},
 };
 use anyhow::Result;
 
-/// Record successful operator changes only when wizard diagnostics are enabled.
-fn audit(scripts: &Scripts, config: &Config, message: String) -> Result<()> {
-    if Category::Wizard.enabled(config) {
-        scripts
-            .effects
-            .stage_record(Record::new(config, "WIZ", "CHANGE", &message))?;
+/// Stage an operator-change audit only when the active filter would write it.
+fn audit(scripts: &Scripts, message: String) -> Result<()> {
+    if tracing::enabled!(target: targets::WIZARD, tracing::Level::INFO) {
+        scripts.effects.stage_record(AuditRecord { message })?;
     }
     Ok(())
 }
@@ -18,7 +16,6 @@ fn audit(scripts: &Scripts, config: &Config, message: String) -> Result<()> {
 /// Change weapon settings through the shared typed control and audit recycle edits.
 pub fn edit_weapon_settings(
     scripts: &Scripts,
-    config: &Config,
     actor: ObjectId,
     name: &str,
     value: i64,
@@ -34,7 +31,6 @@ pub fn edit_weapon_settings(
         let weapon = super::BattleWeapon::parse(name)?;
         audit(
             scripts,
-            config,
             format!(
                 "VRT for {} set to {} by #{}",
                 weapon.name(),
@@ -50,7 +46,6 @@ pub fn edit_weapon_settings(
 /// Change a skill threshold with canonical naming and atomic audit admission.
 pub fn edit_skill_threshold(
     scripts: &Scripts,
-    config: &Config,
     actor: ObjectId,
     name: &str,
     threshold: i64,
@@ -60,7 +55,6 @@ pub fn edit_skill_threshold(
     let skill = super::skill_definition(name).expect("validated skill name");
     audit(
         scripts,
-        config,
         format!(
             "Exp threshold for {} changed to {} by #{}",
             skill.name, threshold, actor.0

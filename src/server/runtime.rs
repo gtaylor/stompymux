@@ -43,12 +43,7 @@ pub async fn run_with_clocks(
     c.site_policy
         .validate_listener(listener.local_addr()?.ip())?;
     for warning in c.warnings.iter().chain(&scripts.warnings) {
-        c.log(
-            &[crate::logging::Category::Startup],
-            "INI",
-            "INFO",
-            format!("Warning: {warning}"),
-        );
+        tracing::warn!("{warning}");
     }
     println!("Listening on {}", listener.local_addr()?);
     let (tx, mut rx) = mpsc::channel(c.runtime.event_queue_capacity);
@@ -95,12 +90,7 @@ pub async fn run_with_clocks(
     .await?;
     server.message_cache = cache;
     for diagnostic in report {
-        server.config.log(
-            &[crate::logging::Category::Startup],
-            "INI",
-            "INFO",
-            format!("File cache: {diagnostic}"),
-        );
+        tracing::debug!("file cache: {diagnostic}");
     }
     let mut runtime_sources = server.scripts.sources.clone();
     let mut schedules = crate::lua::schedules::Queue::default();
@@ -135,13 +125,13 @@ pub async fn run_with_clocks(
                 if tasks.len()>=server.config.runtime.max_connections { drop(stream); continue; }
                 let site = server.config.site_policy.classify(peer.ip());
                 if site.forbidden {
-                    server.config.log(&[crate::logging::Category::Network], "NET", "ERROR", format!("Connection refused from {peer}: forbidden site"));
+                    tracing::warn!(%peer, "connection refused: forbidden site");
                     tasks.spawn(presence::reject_site(stream, server.message_cache.text(crate::message_cache::File::BadSite).to_owned(), server.scripts.palette.clone(), server.config.clone()));
                     continue;
                 }
                 next+=1;
                 let id=SessionId(next);
-                server.config.log(&[crate::logging::Category::Network], "NET", "CONN", format!("Session {} accepted from {peer}", id.0));
+                tracing::info!(session = id.0, %peer, "connection accepted");
                 let (output,receiver)=mpsc::channel(server.config.runtime.session_output_queue_capacity);
                 let now=Instant::now();
                 let stats=std::sync::Arc::new(telnet::transport::Stats::default());
@@ -156,10 +146,10 @@ pub async fn run_with_clocks(
                 tasks.spawn(connection(stream,id,tx.clone(),receiver,server.config.runtime.write_timeout_ms,stats));
                 let session=server.sessions.get_mut(&id).unwrap();
                 let negotiation=session.decoder.initial();
-                session.protocol(negotiation, &server.config);
+                session.protocol(negotiation);
                 let index = if server.message_cache.banner_count() == 0 { 0 } else { rand::random_range(0..server.message_cache.banner_count()) };
                 let banner = server.message_cache.welcome(index);
-                if let Err(error) = session.styled_report(banner, true, &server.config).await { server.config.log(&[crate::logging::Category::Network], "NET", "ERROR", format!("Welcome delivery: {error:#}")); }
+                if let Err(error) = session.styled_report(banner, true, &server.config).await { tracing::warn!(error = %format_args!("{error:#}"), "welcome delivery failed"); }
                 session.text("Who are you? ",true);
             },
             event = rx.recv() => {
@@ -218,7 +208,7 @@ pub async fn run_with_clocks(
         while tasks.join_next().await.is_some() {}
     }
     if let Err(error) = server.config.logger.shutdown(&server.config).await {
-        crate::logging::fatal(&format!("Logging shutdown: {error:#}"));
+        tracing::error!(error = %format_args!("{error:#}"), "logging shutdown failed");
         server.shutdown_failed = true;
     }
     anyhow::ensure!(

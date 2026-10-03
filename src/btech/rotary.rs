@@ -8,14 +8,17 @@ fn burst_mode(rounds: u8) -> Result<BattleFireMode> {
     Ok(match rounds {
         1 => BattleFireMode::Normal,
         2 => BattleFireMode::Rotary2,
+        3 => BattleFireMode::Rotary3,
         4 => BattleFireMode::Rotary4,
+        5 => BattleFireMode::Rotary5,
         6 => BattleFireMode::Rotary6,
-        _ => bail!("Rotary autocannons fire one, two, four or six rounds"),
+        _ => bail!("Rotary autocannons fire one to six rounds"),
     })
 }
 
 impl BattleWeapon {
-    /// Rotary shell counts follow the corresponding SRM table; glancing shifts its roll down four.
+    /// Rotary shell counts follow the cluster hits table column for the burst length; glancing
+    /// shifts its roll down four.
     pub(super) fn rotary_damage_groups(
         self,
         mode: BattleFireMode,
@@ -26,7 +29,9 @@ impl BattleWeapon {
         ensure!((2..=12).contains(&roll), "Invalid rotary cluster roll");
         let table = match mode {
             BattleFireMode::Rotary2 => Self::Srm2,
+            BattleFireMode::Rotary3 => Self::Mml3,
             BattleFireMode::Rotary4 => Self::Srm4,
+            BattleFireMode::Rotary5 => Self::Lrm5,
             BattleFireMode::Rotary6 => Self::Srm6,
             _ => bail!("Rotary burst mode is required"),
         };
@@ -62,7 +67,9 @@ pub(crate) fn message(index: usize, rounds: u8, changed: bool) -> String {
     let count = match rounds {
         1 => "one shot",
         2 => "two shots",
+        3 => "three shots",
         4 => "four shots",
+        5 => "five shots",
         6 => "six shots",
         _ => unreachable!("validated burst length"),
     };
@@ -89,7 +96,9 @@ pub(crate) fn command(
         .copied()
     {
         Some(b'2') => 2,
+        Some(b'3') => 3,
         Some(b'4') => 4,
+        Some(b'5') => 5,
         Some(b'6') => 6,
         _ => 1,
     };
@@ -110,11 +119,12 @@ mod tests {
             BattleWeapon::ClanRotaryAc2,
             BattleWeapon::ClanRotaryAc5,
             BattleWeapon::ClanRotaryAc10,
-            BattleWeapon::ClanRotaryAc20,
         ] {
             for (rounds, counts) in [
                 (2, [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2]),
+                (3, [1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3]),
                 (4, [1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4]),
+                (5, [1, 2, 2, 3, 3, 3, 3, 4, 4, 5, 5]),
                 (6, [2, 2, 3, 3, 4, 4, 4, 5, 5, 6, 6]),
             ] {
                 for roll in 2..=12 {
@@ -133,7 +143,7 @@ mod tests {
                 }
             }
         }
-        for rounds in [0, 3, 5, 7, 255] {
+        for rounds in [0, 7, 255] {
             assert!(burst_mode(rounds).is_err());
         }
     }

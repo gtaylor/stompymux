@@ -68,7 +68,7 @@ impl Server {
         if let Some(s) = self.sessions.get_mut(&id) {
             s.flow = flow;
             let negotiation = s.decoder.echo(secret);
-            s.protocol(negotiation, &self.config);
+            s.protocol(negotiation);
         }
         self.tell(id, text);
     }
@@ -167,23 +167,19 @@ impl Server {
             }
         }
     }
+    #[tracing::instrument(name = "session", skip_all, fields(session = id.0))]
     pub(super) async fn disconnect(&mut self, id: SessionId) -> Result<()> {
         if let Some(s) = self.sessions.remove(&id) {
             let stats = s.stats.snapshot();
-            self.config.log(
-                &[crate::logging::Category::Accounting],
-                "NET",
-                "DISC",
-                format!(
-                    "Session {} player {:?} peer {} duration {}s input {} output {} wire {}",
-                    id.0,
-                    s.player,
-                    s.peer,
-                    s.connected.elapsed().as_secs(),
-                    stats.input[2],
-                    stats.output[2],
-                    stats.wire_output
-                ),
+            tracing::info!(
+                target: crate::logging::targets::ACCOUNTING,
+                player = s.player.map(|p| p.0),
+                peer = %s.peer,
+                duration_secs = s.connected.elapsed().as_secs(),
+                input = stats.input[2],
+                output = stats.output[2],
+                wire_output = stats.wire_output,
+                "session closed"
             );
             s.close();
             self.reconcile_connections();
@@ -214,12 +210,7 @@ impl Server {
                             .event("on_player_disconnect", Some(p), Some(id.0))
                     })
                 {
-                    self.config.log(
-                        &[crate::logging::Category::Problems],
-                        "SRV",
-                        "ERROR",
-                        format!("Disconnect hook: {e:#}"),
-                    );
+                    tracing::error!(error = %format_args!("{e:#}"), "disconnect hook failed");
                     *self.scripts.world.borrow_mut() = before.clone();
                     self.reconcile_connections();
                     self.scripts.effects.rollback();
@@ -231,6 +222,7 @@ impl Server {
         }
         Ok(())
     }
+    #[tracing::instrument(name = "session", skip_all, fields(session = id.0))]
     pub(super) async fn input(&mut self, id: SessionId, bytes: &[u8]) -> Result<()> {
         for &byte in bytes {
             if self.shutdown.is_some() {
@@ -257,14 +249,15 @@ impl Server {
                 match input {
                     Input::Negotiated(_) => {}
                     Input::StartCompression => {
-                        self.sessions[&id].protocol(vec![Input::StartCompression], &self.config)
+                        self.sessions[&id].protocol(vec![Input::StartCompression])
                     }
-                    Input::Problem(secondary, message) => self.config.log(
-                        &[crate::logging::Category::Problems],
-                        "TELNET",
-                        secondary,
-                        format!("Telnet session {}: {message}", id.0),
-                    ),
+                    Input::Problem(secondary, message) => {
+                        tracing::warn!(
+                            session = id.0,
+                            option = secondary,
+                            "telnet problem: {message}"
+                        )
+                    }
                     Input::StatusRequest => self.mssp(id),
                     Input::Reply(v) => {
                         self.sessions[&id].raw(v);
@@ -331,12 +324,7 @@ impl Server {
             Ok((cache, report)) => {
                 self.message_cache = cache;
                 for row in &report {
-                    self.config.log(
-                        &[crate::logging::Category::Startup],
-                        "INI",
-                        "INFO",
-                        format!("File cache: {row}"),
-                    );
+                    tracing::debug!("file cache: {row}");
                 }
                 format!("File sizes: {}", report.join("  "))
             }
@@ -373,7 +361,7 @@ impl Server {
         };
         if let Some(session) = self.sessions.get_mut(&id) {
             let echo = session.decoder.echo(false);
-            session.protocol(echo, &self.config);
+            session.protocol(echo);
             let ansi = session.player.is_none_or(|p| {
                 self.scripts
                     .world
@@ -383,12 +371,7 @@ impl Server {
                     .is_some_and(|o| o.flags.contains(crate::flags::Flag::Ansi))
             });
             if let Err(error) = session.styled_report(&message, ansi, &self.config).await {
-                self.config.log(
-                    &[crate::logging::Category::Problems],
-                    "SRV",
-                    "ERROR",
-                    format!("Closing message: {error:#}"),
-                );
+                tracing::error!(error = %format_args!("{error:#}"), "closing message failed");
                 session.raw(crate::telnet::bounded_error(
                     fallback,
                     self.config.runtime.output_message_limit,

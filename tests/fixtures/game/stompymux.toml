@@ -20,8 +20,6 @@ include = ["aliases.toml"]
 clock_save_interval = 1
 # SQLite database file holding persistent game state.
 game_database = "data/stompymux.db"
-# Deprecated compatibility setting; ignored. game_database is the live database.
-legacy_game_database = "data/stompymux.db"
 # Directory containing BattleTech unit template files.
 mech_database = "mechs"
 # Directory containing map template files.
@@ -181,8 +179,9 @@ default_player_lua_parent = "default_player.lua"
 default_player_flags = ["ansi", "in_character"]
 # Ordered default macro set numbers (up to five); [] disables automatic attachments.
 # Resolve only when a player is created; missing sets warn and are skipped.
-# Lua bootstrapping can create set 0 before subsequent players are created.
-default_player_macros = [0]
+# The fixture database has no macro sets, so tests that exercise defaults
+# opt in explicitly.
+default_player_macros = []
 # Flags that are set on exits after creation.
 default_exit_flags = ["no_command"]
 # Flags that are set on rooms after creation.
@@ -253,39 +252,6 @@ maximum_length = 30
 # -----------------------------------------------
 
 [logging]
-# Controls extra data written with each log entry: flags, location, timestamp.
-log_options = ["flags", "location", "timestamp"]
-
-[logging.topics]
-# Write account usage information when a player logs out.
-accounting = false
-# Write every command entered by any player.
-all_commands = false
-# Write commands entered by players marked SUSPECT.
-suspect_commands = false
-# Write commands the server does not recognize.
-bad_commands = false
-# Write buffer-pool allocation and release activity.
-buffer_alloc = false
-# Write internal server bugs and crash reports.
-bugs = true
-# Write normal database checkpoint activity.
-checkpoints = false
-# Write runtime changes to configuration directives.
-config_changes = true
-# Write player-character creation events.
-create = true
-# Write successful logins and logouts.
-logins = true
-# Write network connections and disconnections.
-network = true
-# Write detected runtime inconsistencies and other operational problems.
-problems = true
-# Write security-related events, including failed authentication attempts.
-security = true
-# Write shouts, broadcasts, and other global speech.
-shouts = false
-# Write nonfatal errors and progress during server startup.
-startup = true
-# Write sensitive or dangerous wizard actions.
-wizard = false
+# Only spawned server processes read this; in-process test servers log through
+# the test harness subscriber (see tests/support/logging.rs).
+filter = "warn"

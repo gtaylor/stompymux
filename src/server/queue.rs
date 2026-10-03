@@ -93,12 +93,7 @@ impl Server {
                 },
             );
             if let Err(error) = result {
-                self.config.log(
-                    &[crate::logging::Category::Problems],
-                    "SRV",
-                    "ERROR",
-                    format!("Queued command reply: {error:#}"),
-                );
+                tracing::error!(error = %format_args!("{error:#}"), "queued command reply failed");
             }
         }
     }
@@ -309,30 +304,10 @@ mod tests {
     #[tokio::test]
     async fn operator_audit_waits_for_commit_and_discards_failed_changes() {
         let (_dir, mut server) = fixture().await;
-        let candidate = server
-            .config
-            .administer(
-                &crate::config::administration::Request {
-                    directive: "wizard".into(),
-                    value: "yes".into(),
-                },
-                &server.scripts.world(),
-                ObjectId(1),
-                server.scripts.commands(),
-            )
-            .unwrap();
-        server.scripts.configure(&candidate.config).unwrap();
-        server.config = candidate.config;
+        let (capture, _guard) = crate::logging::Capture::install("info");
         let before = server.scripts.world().clone();
-        crate::edit_battle_weapon_settings(
-            &server.scripts,
-            &server.config,
-            ObjectId(1),
-            "IS.SmallLaser",
-            17,
-            true,
-        )
-        .unwrap();
+        crate::edit_battle_weapon_settings(&server.scripts, ObjectId(1), "IS.SmallLaser", 17, true)
+            .unwrap();
         assert_eq!(server.scripts.effects.checkpoint().records.len(), 1);
         server
             .scripts
@@ -346,18 +321,15 @@ mod tests {
         assert_eq!(server.scripts.world().btech, before.btech);
         assert!(server.scripts.effects.drain_records().is_empty());
         sql(&server, "DROP TRIGGER reject_audit").await;
-        crate::edit_battle_skill_threshold(
-            &server.scripts,
-            &server.config,
-            ObjectId(1),
-            "PilBip",
-            17,
-        )
-        .unwrap();
+        crate::edit_battle_skill_threshold(&server.scripts, ObjectId(1), "PilBip", 17).unwrap();
         assert!(server.commit(before).await);
         assert_eq!(server.scripts.effects.checkpoint().records.len(), 1);
+        assert!(capture.lines_containing("audit::wizard").is_empty());
         server.flush();
         assert!(server.scripts.effects.drain_records().is_empty());
+        let audits = capture.lines_containing("audit::wizard");
+        assert_eq!(audits.len(), 1, "{}", capture.text());
+        assert!(audits[0].contains("Exp threshold for Piloting-Biped changed to 17 by #1"));
         assert_eq!(
             crate::battle_skill_threshold(&server.scripts.world(), "PilBip").unwrap(),
             17

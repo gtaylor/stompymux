@@ -1,5 +1,5 @@
-//! One bounded output worker owns append handles and expires them using monotonic time.
-use super::Record;
+//! One bounded output worker owns `@log`/`mux.log` append handles and expires them using
+//! monotonic time. Server diagnostics go through `tracing`, not this worker.
 use crate::config::Config;
 use anyhow::{Context, Result, ensure};
 use std::{
@@ -59,7 +59,7 @@ impl FileRequest {
         })
     }
 }
-/// Cloneable configuration dependency; no thread or file is opened until output is requested.
+/// Cloneable configuration dependency; no thread or file is opened until a write is requested.
 #[derive(Clone, Debug, Default)]
 pub struct Logger(Arc<Inner>);
 #[derive(Debug, Default)]
@@ -71,7 +71,6 @@ struct Inner {
 }
 #[derive(Debug)]
 enum Request {
-    Record(Record),
     File(FileRequest, Instant, Option<oneshot::Sender<Result<()>>>),
     Stop(oneshot::Sender<()>),
 }
@@ -187,7 +186,7 @@ impl Logger {
                 .name("mux-logging".into())
                 .spawn(move || {
                     loop {
-                        // Polling also expires cache entries while no records arrive.
+                        // Polling also expires cache entries while no requests arrive.
                         let request = match rx.try_recv() {
                             Ok(r) => r,
                             Err(mpsc::error::TryRecvError::Empty) => {
@@ -200,29 +199,20 @@ impl Logger {
                         };
                         let omitted = lost.swap(0, Ordering::Relaxed);
                         if omitted > 0 {
-                            let _ = writeln!(
-                                std::io::stderr(),
-                                "LOG/LOST: {omitted} log records omitted"
-                            );
+                            tracing::warn!(omitted, "script log requests omitted");
                         }
                         match request {
-                            Request::Record(r) => {
-                                if std::io::stderr().write_all(r.text.as_bytes()).is_err() {
-                                    lost.fetch_add(1, Ordering::Relaxed);
-                                }
-                            }
                             Request::File(r, deadline, reply) => {
                                 let result = if Instant::now() > deadline {
                                     Err(anyhow::anyhow!("Log request expired before write"))
                                 } else {
                                     cache.write(&r, Instant::now())
                                 };
-                                if let Err(e) = &result {
-                                    let _ = writeln!(
-                                        std::io::stderr(),
-                                        "LOG/WRITE: {}: {}",
-                                        super::clean(&r.filename),
-                                        super::clean(&e.to_string())
+                                if let Err(error) = &result {
+                                    tracing::error!(
+                                        filename = ?r.filename,
+                                        error = %error,
+                                        "log file write failed"
                                     );
                                 }
                                 publish(&cache, &files);
@@ -233,7 +223,6 @@ impl Logger {
                             Request::Stop(reply) => {
                                 cache.files.clear();
                                 publish(&cache, &files);
-                                let _ = std::io::stderr().flush();
                                 let _ = reply.send(());
                                 break;
                             }
@@ -245,15 +234,9 @@ impl Logger {
             tx
         })
     }
-    pub fn record(&self, c: &Config, r: Record) {
-        if self.0.stopped.load(Ordering::Acquire)
-            || self.sender(c).try_send(Request::Record(r)).is_err()
-        {
-            self.0.lost.fetch_add(1, Ordering::Relaxed);
-        }
-    }
     /// Accepted script writes are best effort after commit, with explicit overload diagnostics.
     pub fn submit(&self, c: &Config, r: FileRequest) {
+        let r_name = r.filename.clone();
         let deadline = Instant::now() + Duration::from_millis(c.runtime.write_timeout_ms);
         if self.0.stopped.load(Ordering::Acquire)
             || self
@@ -262,14 +245,9 @@ impl Logger {
                 .is_err()
         {
             self.0.lost.fetch_add(1, Ordering::Relaxed);
-            self.record(
-                c,
-                Record::new(
-                    c,
-                    "LOG",
-                    "WRITE",
-                    "Script log request omitted: output queue unavailable",
-                ),
+            tracing::warn!(
+                filename = ?r_name,
+                "script log request omitted: output queue unavailable"
             );
         }
     }
@@ -380,23 +358,16 @@ mod tests {
     /// Missing creation-time macro defaults produce a contextual warning without blocking allocation.
     #[test]
     fn default_player_macros_warn_only_when_missing_at_creation() {
+        let (capture, _guard) = crate::logging::Capture::install("warn");
         let d = tempfile::tempdir().unwrap();
         std::fs::write(d.path().join("stompymux.toml"), "").unwrap();
         let c = Config::load(d.path()).unwrap();
-        let (tx, mut rx) = mpsc::channel(8);
-        c.logger.0.sender.set(tx).unwrap();
         let mut world = crate::World::default();
         let early = world.create(&c, "Early player".into(), crate::Kind::Player);
-        let Request::Record(warning) = rx.try_recv().unwrap() else {
-            panic!("expected warning");
-        };
-        assert!(warning.text.contains("MAC/WARN"));
-        assert!(
-            warning
-                .text
-                .contains(&format!("Player #{} (Early player)", early.0))
-        );
-        assert!(warning.text.contains("default macro set 0: set not found"));
+        let warnings = capture.lines_containing("default macro set not found");
+        assert_eq!(warnings.len(), 1, "{}", capture.text());
+        assert!(warnings[0].contains(&format!("player={}", early.0)));
+        assert!(warnings[0].contains("set=0"));
         assert!(world.objects.contains_key(&early));
         world.macros.sets.push(crate::MacroSet {
             id: Default::default(),
@@ -408,7 +379,7 @@ mod tests {
         });
         let later = world.create(&c, "Later player".into(), crate::Kind::Player);
         assert_eq!(world.macros.players[&later].slots[0], Some(0));
-        assert!(rx.try_recv().is_err());
+        assert_eq!(capture.lines_containing("WARN").len(), 1);
     }
 
     #[tokio::test]
@@ -422,8 +393,10 @@ mod tests {
         let c = Config::load(d.path()).unwrap();
         let (tx, _rx) = mpsc::channel(1);
         c.logger.0.sender.set(tx).unwrap();
-        c.logger.record(&c, Record::new(&c, "T", "", "one"));
-        c.logger.record(&c, Record::new(&c, "T", "", "two"));
+        c.logger
+            .submit(&c, FileRequest::new("test", "one").unwrap());
+        c.logger
+            .submit(&c, FileRequest::new("test", "two").unwrap());
         assert_eq!(c.logger.0.lost.load(Ordering::Relaxed), 1);
         assert!(
             c.logger

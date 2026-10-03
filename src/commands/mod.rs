@@ -278,12 +278,7 @@ fn run_inner(s: &Scripts, c: &Config, execution: ExecutionContext, line: &str) -
     if s.dispatch_global(player, session, &input.line)? {
         return Ok(Action::Continue);
     }
-    c.log(
-        &[crate::logging::Category::BadCommands],
-        "CMD",
-        "BAD",
-        crate::logging::audit::message(c, &s.world.borrow(), execution, line),
-    );
+    tracing::info!(target: crate::logging::targets::BAD_COMMANDS, "{}", crate::logging::audit::message(c, &s.world.borrow(), execution, line));
     s.outbox.borrow_mut().push((
         player,
         "Huh? (Type look, say <message>, WHO, an exit name, or quit.)".into(),

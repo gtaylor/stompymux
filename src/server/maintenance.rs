@@ -13,12 +13,7 @@ impl Server {
                 if self.commit(before).await {
                     self.flush();
                 } else {
-                    self.config.log(
-                        &[crate::logging::Category::Bugs],
-                        "LUA",
-                        "ERROR",
-                        format!("Lua schedule persistence failed: {}", job.description()),
-                    );
+                    tracing::error!("Lua schedule persistence failed: {}", job.description());
                 }
             }
             Ok(false) => {}
@@ -26,12 +21,7 @@ impl Server {
                 *self.scripts.world.borrow_mut() = before;
                 self.reconcile_connections();
                 self.scripts.effects.rollback();
-                self.config.log(
-                    &[crate::logging::Category::Bugs],
-                    "LUA",
-                    "ERROR",
-                    format!("Lua schedule failed: {error:#}"),
-                );
+                tracing::error!(error = %format_args!("{error:#}"), "Lua schedule failed");
             }
         }
     }
@@ -56,12 +46,7 @@ impl Server {
                 self.scripts.effects.rollback();
                 self.scripts.flows.cancel(id.0);
                 self.reconcile_connections();
-                self.config.log(
-                    &[crate::logging::Category::Bugs],
-                    "LUA",
-                    "ERROR",
-                    format!("Interactive flow failed for session {}: {error:#}", id.0),
-                );
+                tracing::error!(session = id.0, error = %format_args!("{error:#}"), "interactive flow failed");
                 self.tell(id, "Interactive flow failed and was cancelled.\r\n");
             }
         }
@@ -127,15 +112,7 @@ impl Server {
         let destination =
             session.map_or(ReplyDestination::Object(actor), ReplyDestination::Session);
         if let Err(error) = self.snapshots() {
-            self.config.log(
-                &[
-                    crate::logging::Category::Checkpoints,
-                    crate::logging::Category::Problems,
-                ],
-                "DB",
-                "CHECK",
-                format!("DBCK session snapshot failed: {error:#}"),
-            );
+            tracing::error!(error = %format_args!("{error:#}"), "DBCK session snapshot failed");
             if !automatic {
                 self.queue_reply(
                     destination,
@@ -214,15 +191,7 @@ impl Server {
                 self.scripts.world.borrow_mut().links = links;
                 self.scripts.effects.drain_maintenance();
                 for finding in &report.findings {
-                    self.config.log(
-                        &[
-                            crate::logging::Category::Checkpoints,
-                            crate::logging::Category::Problems,
-                        ],
-                        "DB",
-                        "CHECK",
-                        format!("DBCK: {finding}"),
-                    );
+                    tracing::warn!("database check: {finding}");
                 }
                 let mut transitions = Vec::new();
                 for id in self
@@ -263,12 +232,7 @@ impl Server {
                 if let Some(session) = session.and_then(|id| self.sessions.get(&id)) {
                     session.raw(report.response(self.config.runtime.output_message_limit));
                 } else if automatic {
-                    self.config.log(
-                        &[crate::logging::Category::Startup],
-                        "INI",
-                        "INFO",
-                        format!("Automatic {}", report.summary()),
-                    );
+                    tracing::info!("Automatic {}", report.summary());
                 } else {
                     self.queue_reply(ReplyDestination::Object(actor), &report.summary());
                     self.flush();
@@ -278,15 +242,7 @@ impl Server {
                 *self.scripts.world.borrow_mut() = before;
                 self.reconcile_connections();
                 self.scripts.effects.rollback();
-                self.config.log(
-                    &[
-                        crate::logging::Category::Checkpoints,
-                        crate::logging::Category::Problems,
-                    ],
-                    "DB",
-                    "CHECK",
-                    format!("DBCK rolled back: {e:#}"),
-                );
+                tracing::error!(error = %format_args!("{e:#}"), "DBCK rolled back");
                 if !automatic {
                     self.queue_reply(
                         destination,

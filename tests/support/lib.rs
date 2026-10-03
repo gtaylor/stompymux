@@ -11,6 +11,7 @@ mod client;
 mod commands;
 mod database;
 mod fixtures;
+mod logging;
 mod reuse;
 mod server;
 pub mod templates;
@@ -18,6 +19,7 @@ pub use client::Client;
 pub use commands::{run_text, run_text_for_player};
 pub use database::{stable_world, store_unit_record, unit_record};
 pub use fixtures::{copy, isolated_scripts, isolated_world, with_clock_save_interval};
+pub use logging::init_logging;
 pub use reuse::{attempt_heartbeat, install, restore_database, snapshot_database};
 pub use server::start;
 

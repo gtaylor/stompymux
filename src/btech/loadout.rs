@@ -187,7 +187,11 @@ impl<L> WeaponMount<L> {
                     || (mode == "Gattling" && weapon.supports_gatling())
                     || (matches!(
                         mode.as_str(),
-                        "Rotary_TwoShot" | "Rotary_FourShot" | "Rotary_SixShot"
+                        "Rotary_TwoShot"
+                            | "Rotary_ThreeShot"
+                            | "Rotary_FourShot"
+                            | "Rotary_FiveShot"
+                            | "Rotary_SixShot"
                     ) && weapon.is_rotary())
                     || mode == "OnTC"
                     || (matches!(mode.as_str(), "OneShot" | "OneShot_Used")
@@ -248,8 +252,12 @@ impl<L> WeaponMount<L> {
                 super::BattleFireMode::Gatling
             } else if critical.modes.iter().any(|mode| mode == "Rotary_TwoShot") {
                 super::BattleFireMode::Rotary2
+            } else if critical.modes.iter().any(|mode| mode == "Rotary_ThreeShot") {
+                super::BattleFireMode::Rotary3
             } else if critical.modes.iter().any(|mode| mode == "Rotary_FourShot") {
                 super::BattleFireMode::Rotary4
+            } else if critical.modes.iter().any(|mode| mode == "Rotary_FiveShot") {
+                super::BattleFireMode::Rotary5
             } else if critical.modes.iter().any(|mode| mode == "Rotary_SixShot") {
                 super::BattleFireMode::Rotary6
             } else {
@@ -316,7 +324,9 @@ fn is_contract_fire_mode(mode: &str) -> bool {
             | "RapidFire"
             | "Gattling"
             | "Rotary_TwoShot"
+            | "Rotary_ThreeShot"
             | "Rotary_FourShot"
+            | "Rotary_FiveShot"
             | "Rotary_SixShot"
             | "Heat"
             | "BackPack"

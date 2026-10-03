@@ -695,7 +695,7 @@
 //|---@param dbref integer
 //|---@param pilot integer
 //|---@param weapon integer Zero-based weapon index.
-//|---@param rounds? 1|2|4|6 Defaults to one.
+//|---@param rounds? 1|2|3|4|5|6 Defaults to one.
 //|---@return boolean changed
 //|function btech_unit.rac(dbref, pilot, weapon, rounds) end
 // lua-types-end

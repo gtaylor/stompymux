@@ -164,12 +164,7 @@ impl Service<'_> {
                 LockOutcome::CallbackFailed(error) => {
                     *self.world.borrow_mut() = before;
                     self.effects.restore(checkpoint);
-                    self.config.log(
-                        &[crate::logging::Category::Bugs],
-                        "LUA",
-                        "ERROR",
-                        format!("Channel lock {}: {error}", access.lock().key()),
-                    );
+                    tracing::error!(error = %error, "channel lock {} failed", access.lock().key());
                 }
             }
         }

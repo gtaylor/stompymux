@@ -30,38 +30,30 @@ impl Server {
                 .hashes
                 .tokens
                 .min(candidate.config.security.login_hash_limit);
+            if request.directive == "log_filter" {
+                crate::logging::apply_filter(&candidate.config)?;
+            }
             self.config = candidate.config;
             Ok(candidate.diagnostics)
         })();
         match result {
             Ok(mut messages) => {
-                self.config.log(
-                    &[crate::logging::Category::ConfigChanges],
-                    "CFG",
-                    "UPDAT",
-                    format!(
-                        "Configuration: #{} edited {}: {}",
-                        player.0,
-                        request.directive,
-                        if messages.is_empty() {
-                            "Success"
-                        } else {
-                            "Partial success"
-                        }
-                    ),
+                tracing::info!(
+                    target: crate::logging::targets::CONFIG,
+                    player = player.0,
+                    directive = %request.directive,
+                    partial = !messages.is_empty(),
+                    "configuration edited"
                 );
                 messages.push("Set.".into());
                 messages.join("\n")
             }
             Err(error) => {
-                self.config.log(
-                    &[crate::logging::Category::ConfigChanges],
-                    "CFG",
-                    "UPDAT",
-                    format!(
-                        "Configuration: #{} {} failed: {error:#}",
-                        player.0, request.directive
-                    ),
+                tracing::info!(
+                    target: crate::logging::targets::CONFIG,
+                    player = player.0,
+                    directive = %request.directive,
+                    error = %format_args!("{error:#}"), "configuration edit failed"
                 );
                 error.to_string()
             }

@@ -6525,7 +6525,7 @@ async fn lua_firing_misses_and_optional_state_use_nil_without_losing_expenditure
 }
 
 /// Conventional direct-fire matrix coverage; sharded twelve weapons per test.
-const CONVENTIONAL_DIRECT_FIRE_WEAPONS: [stompymux_rs::BattleWeapon; 108] = [
+const CONVENTIONAL_DIRECT_FIRE_WEAPONS: [stompymux_rs::BattleWeapon; 107] = [
     stompymux_rs::BattleWeapon::ClanLbx2,
     stompymux_rs::BattleWeapon::ClanLbx5,
     stompymux_rs::BattleWeapon::ClanLbx10,
@@ -6588,7 +6588,6 @@ const CONVENTIONAL_DIRECT_FIRE_WEAPONS: [stompymux_rs::BattleWeapon; 108] = [
     stompymux_rs::BattleWeapon::ClanRotaryAc2,
     stompymux_rs::BattleWeapon::ClanRotaryAc5,
     stompymux_rs::BattleWeapon::ClanRotaryAc10,
-    stompymux_rs::BattleWeapon::ClanRotaryAc20,
     stompymux_rs::BattleWeapon::SmallLaser,
     stompymux_rs::BattleWeapon::LargeLaser,
     stompymux_rs::BattleWeapon::Ppc,
@@ -6876,7 +6875,7 @@ async fn conventional_direct_fire_parity_damage_and_recycle_survive_restart_08()
 
 #[tokio::test]
 async fn conventional_direct_fire_parity_damage_and_recycle_survive_restart_09() {
-    conventional_direct_fire_matrix(&CONVENTIONAL_DIRECT_FIRE_WEAPONS[96..108]).await;
+    conventional_direct_fire_matrix(&CONVENTIONAL_DIRECT_FIRE_WEAPONS[96..]).await;
 }
 
 /// Heat-mode shots transfer full heat, consume no target dice and share native/Lua transactions.
@@ -11619,12 +11618,6 @@ async fn rotary_unjam_gunnery_thresholds_and_restart_clanrotaryac10() {
     rotary_unjam_matrix(&[BattleWeapon::ClanRotaryAc10]).await;
 }
 
-#[tokio::test(flavor = "current_thread")]
-async fn rotary_unjam_gunnery_thresholds_and_restart_clanrotaryac20() {
-    use stompymux_rs::BattleWeapon;
-    rotary_unjam_matrix(&[BattleWeapon::ClanRotaryAc20]).await;
-}
-
 /// Rotary burst controls and firing agree across native/Lua, supply fallback, jams and restart.
 async fn rotary_burst_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
     use stompymux_rs::*;
@@ -11646,7 +11639,9 @@ async fn rotary_burst_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
     for weapon in weapons.iter().copied() {
         for (rounds, mode, flag, jam_limit) in [
             (2_u8, BattleFireMode::Rotary2, "Rotary_TwoShot", 2_u8),
+            (3, BattleFireMode::Rotary3, "Rotary_ThreeShot", 2),
             (4, BattleFireMode::Rotary4, "Rotary_FourShot", 3),
+            (5, BattleFireMode::Rotary5, "Rotary_FiveShot", 3),
             (6, BattleFireMode::Rotary6, "Rotary_SixShot", 4),
         ] {
             for (supply, attack, skill) in [
@@ -11953,12 +11948,6 @@ async fn rotary_burst_native_lua_supply_jams_and_restart_clan_rotary_ac5() {
 async fn rotary_burst_native_lua_supply_jams_and_restart_clan_rotary_ac10() {
     use stompymux_rs::BattleWeapon;
     rotary_burst_matrix(&[BattleWeapon::ClanRotaryAc10]).await;
-}
-
-#[tokio::test(flavor = "current_thread")]
-async fn rotary_burst_native_lua_supply_jams_and_restart_clan_rotary_ac20() {
-    use stompymux_rs::BattleWeapon;
-    rotary_burst_matrix(&[BattleWeapon::ClanRotaryAc20]).await;
 }
 
 /// Gatling fire shares a single supply-limited die across damage/heat/expenditure and replays both interfaces.

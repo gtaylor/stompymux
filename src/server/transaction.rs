@@ -40,15 +40,7 @@ impl Server {
         match result {
             Err(e) => {
                 self.database = None;
-                self.config.log(
-                    &[
-                        crate::logging::Category::Checkpoints,
-                        crate::logging::Category::Problems,
-                    ],
-                    "DB",
-                    "CHECK",
-                    format!("Persistence failed: {e:#}"),
-                );
+                tracing::error!(error = %format_args!("{e:#}"), "persistence failed");
                 if self.shutdown.is_some() {
                     self.shutdown_failed = true;
                 }
@@ -104,12 +96,7 @@ impl Server {
     fn committed(&mut self, saved: bool) -> bool {
         self.finish_maintenance();
         if saved {
-            self.config.log(
-                &[crate::logging::Category::Checkpoints],
-                "DB",
-                "SAVE",
-                "World changes committed.",
-            );
+            tracing::debug!("world changes committed");
         }
         true
     }
@@ -119,15 +106,7 @@ impl Server {
             return;
         };
         for finding in report.findings {
-            self.config.log(
-                &[
-                    crate::logging::Category::Checkpoints,
-                    crate::logging::Category::Problems,
-                ],
-                "DB",
-                "CHECK",
-                finding,
-            );
+            tracing::warn!("database check: {finding}");
         }
         let ids: Vec<_> = self
             .sessions
@@ -150,7 +129,7 @@ impl Server {
     }
     pub(super) fn flush(&self) {
         for record in self.scripts.effects.drain_records() {
-            self.config.logger.record(&self.config, record);
+            record.emit();
         }
         for request in self.scripts.effects.drain_logs() {
             self.config.logger.submit(&self.config, request);

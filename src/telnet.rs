@@ -47,21 +47,10 @@ pub enum Input {
     /// Writer control and world-owner status requests.
     StartCompression,
     StatusRequest,
-    /// A peer protocol problem with C's TELNET secondary category.
+    /// A peer protocol problem: the option involved and a description.
     Problem(&'static str, String),
     /// Negotiation state changed; option effects have already been applied.
     Negotiated(q::Change),
-}
-impl Input {
-    /// Telnet peer diagnostics always use C's Problems event switch.
-    pub fn problem(&self) -> Option<(crate::logging::Category, &str, &str)> {
-        match self {
-            Self::Problem(secondary, message) => {
-                Some((crate::logging::Category::Problems, secondary, message))
-            }
-            _ => None,
-        }
-    }
 }
 #[derive(Debug, Clone)]
 pub struct Decoder {

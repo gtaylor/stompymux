@@ -13,14 +13,19 @@ pub enum ErrorReporting {
 
 pub use crate::flags::Flag;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-/// Legacy log decoration flags retained for compatibility.
-pub enum LogOption {
-    Flags,
-    Location,
-    Timestamp,
+/// Line layout for server diagnostics written to stderr.
+pub enum LogFormat {
+    /// One line per event with timestamp, level, target and span context.
+    #[default]
+    Full,
+    /// Like `full`, but span context is abbreviated to field values.
+    Compact,
+    /// One JSON object per event, for log shippers.
+    Json,
 }
+
 /// Red, green and blue components in the inclusive range 0–255.
 pub type Rgb = [u8; 3];
 #[derive(Debug, Clone, Serialize, Deserialize)]

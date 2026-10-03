@@ -15,12 +15,7 @@ impl Server {
                 if let Some(session) = self.sessions.get(&id)
                     && let Err(error) = session.help(&response, ansi, &self.config).await
                 {
-                    self.config.log(
-                        &[crate::logging::Category::Problems],
-                        "SRV",
-                        "ERROR",
-                        format!("Help rendering: {error:#}"),
-                    );
+                    tracing::error!(error = %format_args!("{error:#}"), "help rendering failed");
                     self.tell(
                         id,
                         "Unable to render help article. See server diagnostics.\r\n",
@@ -28,12 +23,7 @@ impl Server {
                 }
             }
             error => {
-                self.config.log(
-                    &[crate::logging::Category::Problems],
-                    "SRV",
-                    "ERROR",
-                    format!("Help read: {error:?}"),
-                );
+                tracing::error!(error = ?error, "help read failed");
                 self.tell(
                     id,
                     "Unable to render help article. See server diagnostics.\r\n",
@@ -46,7 +36,7 @@ impl Server {
         let config = self.config.clone();
         match tokio::task::spawn_blocking(move || crate::help::HelpIndex::reload(&config)).await {
             Ok(Ok(index)) => {
-                index.report.log(&self.config);
+                index.report.log();
                 let report = &index.report;
                 let mut lines: Vec<_> = report
                     .errors
@@ -60,12 +50,7 @@ impl Server {
                 if let Some(session) = self.sessions.get(&id)
                     && let Err(error) = session.help(&response, false, &self.config).await
                 {
-                    self.config.log(
-                        &[crate::logging::Category::Startup],
-                        "INI",
-                        "INFO",
-                        format!("Help reload diagnostics: {error:#}"),
-                    );
+                    tracing::warn!(error = %format_args!("{error:#}"), "help reload reported problems");
                     self.tell(
                         id,
                         "Help reindexed; see server diagnostics for details.\r\n",
@@ -73,12 +58,7 @@ impl Server {
                 }
             }
             error => {
-                self.config.log(
-                    &[crate::logging::Category::Startup],
-                    "INI",
-                    "INFO",
-                    format!("Help reload failed: {error:?}"),
-                );
+                tracing::error!(error = ?error, "help reload failed");
                 self.tell(
                     id,
                     "Help reload failed; previous index retained. See server diagnostics.\r\n",

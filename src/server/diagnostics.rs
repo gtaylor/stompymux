@@ -32,10 +32,7 @@ impl Server {
             );
         }
         if let Some(session) = self.sessions.get(&id) {
-            session.protocol(
-                vec![telnet::Decoder::sub_reply(telnet::MSSP, &payload)],
-                &self.config,
-            );
+            session.protocol(vec![telnet::Decoder::sub_reply(telnet::MSSP, &payload)]);
         }
     }
     /// Color overrides never affect another connection or persistent account state.

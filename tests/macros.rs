@@ -620,7 +620,12 @@ async fn lua_macro_persistence_extensions_and_failure() {
 /// Creation resolves the current catalog, including sets installed later by Lua bootstrapping.
 #[tokio::test(flavor = "current_thread")]
 async fn default_player_macros_resolve_at_creation_and_persist() {
-    let (d, c, s) = fixture().await;
+    let (d, _, s) = fixture().await;
+    let path = d.path().join("stompymux.toml");
+    let mut config: toml::Value = toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    config["mux"]["default_player_macros"] = toml::Value::Array(vec![0.into()]);
+    std::fs::write(&path, toml::to_string(&config).unwrap()).unwrap();
+    let c = Config::load(d.path()).unwrap();
     let early = s
         .world_mut()
         .create_with(
@@ -661,8 +666,6 @@ async fn default_player_macros_resolve_at_creation_and_persist() {
         Some("say hello".into())
     );
     assert!(!s.world().macros.players.contains_key(&early));
-    let path = d.path().join("stompymux.toml");
-    let mut config: toml::Value = toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
     config["mux"]["default_player_macros"] =
         toml::Value::Array(vec![2.into(), 999.into(), 0.into(), 2.into()]);
     std::fs::write(&path, toml::to_string(&config).unwrap()).unwrap();

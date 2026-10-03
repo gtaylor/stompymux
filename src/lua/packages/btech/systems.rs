@@ -25,7 +25,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 crate::lua::transactions::run(lua, &scripts.world, || {
                     let values = crate::edit_battle_weapon_settings(
                         &scripts,
-                        &crate::lua::configuration(lua),
                         ObjectId(actor),
                         &name,
                         value,

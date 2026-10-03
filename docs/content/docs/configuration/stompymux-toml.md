@@ -32,7 +32,7 @@ precedence over included values.
 | `[access.*]` | Permission tables for commands, lists, and configuration directives. |
 | `[aliases.*]` | Command and flag alias tables. |
 | `[names]` | Player-name length limit and `bad`/`good` player-name lists. |
-| `[logging]` | The `log_options` formatting array and a `[logging.topics]` table of event-category booleans. |
+| `[logging]` | The diagnostic `filter` and output `format` (see below). |
 
 The server uses vendored LuaJIT with JIT tracing disabled so the configured
 `lua.instruction_limit` can bound callback and module execution. The
@@ -47,10 +47,8 @@ Most directives are plain scalars (`port = 5555`, or, under `[database]`,
 directives take other shapes:
 
 - **Flag/bitmask directives** (`mux.default_player_flags`,
-  `mux.default_exit_flags`, `mux.default_room_flags`,
-  `mux.default_thing_flags`, and `logging.log_options`) are TOML arrays of
-  strings. Logging event categories instead use individual booleans such as
-  `[logging.topics] security = true` and `all_commands = false`.
+  `mux.default_exit_flags`, `mux.default_room_flags`, and
+  `mux.default_thing_flags`) are TOML arrays of strings.
 - **Alias directives** (`[aliases.*]`) are tables mapping the alias to its
   target, e.g. `"@cr" = "@create"`. Flag aliases and their target flag names
   are case-insensitive. Repeating an existing identical flag mapping is
@@ -134,7 +132,7 @@ must not already exist. When this table is present, it replaces the compiled
 bootstrap object defaults rather than extending them. Startup fails if `#1` is
 not a player with `wizard = true`, even when the database already exists. The
 startup log records when bootstrap begins and lists each created object's name,
-dbref, and type, regardless of the `logging.topics.startup` setting.
+dbref, and type.
 
 The compiled fallbacks use bootstrap-safe room references: `#0` for the player
 starting room and default home, `#3` for the used mech store, and `#5` for the
@@ -242,3 +240,46 @@ without changing the selected editing slot. Missing sets generate a `MAC/WARN`
 server message and are skipped without failing creation. Existing players are
 unchanged. The list can also be changed live by GOD using
 `@admin default_player_macros=[0, 2]`.
+
+## Logging
+
+Server diagnostics are [`tracing`](https://docs.rs/tracing) events written to
+stderr. `logging.filter` chooses which events are written, using the same
+directive syntax as `RUST_LOG`: a default level, then comma-separated
+`target=level` overrides (`off`, `error`, `warn`, `info`, `debug`, `trace`).
+
+```toml
+[logging]
+filter = "info,audit::commands=off,audit::bad_commands=off,audit::accounting=off"
+format = "full"   # or "compact", or "json" for one JSON object per line
+```
+
+Routine events use their Rust module path as the target, so
+`stompymux_rs::server=debug` turns up detail for the server loop alone. Audit
+trails use fixed targets that can be switched individually:
+
+| Target | Records |
+|---|---|
+| `audit::commands` | Every command entered, with arguments redacted where they may carry secrets. |
+| `audit::commands::suspect` | Commands entered by SUSPECT players. Enabled by `audit::commands` too. |
+| `audit::bad_commands` | Commands the server did not recognize. |
+| `audit::accounting` | Per-session duration and traffic totals, written at disconnect. |
+| `audit::logins` | Connects, disconnects, and failed or throttled logins. |
+| `audit::accounts` | Character registration and wizard account administration. |
+| `audit::config` | Runtime configuration edits. |
+| `audit::shouts` | Wizard shouts. |
+| `audit::wizard` | Operator changes to BattleTech settings, written only once they commit. |
+
+The default filter writes everything at `info` and above except the
+high-volume command and accounting audits. When the `RUST_LOG` environment
+variable is set, it replaces `logging.filter` at startup. GOD can replace the
+active filter without a restart with `@admin log_filter=<directives>`; a
+malformed filter is rejected and the previous one stays active.
+`@list logging` shows the filter in effect.
+
+Events emitted while a session's input or a command is being processed carry
+`session`, `player`, and `cause` span fields, so related lines can be grouped
+without parsing message text.
+
+`@log` and Lua `mux.log` appends to files under `logs/` are a separate game
+feature and are not affected by the filter.

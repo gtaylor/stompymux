@@ -28,6 +28,8 @@ async fn main() -> anyhow::Result<()> {
             port,
         } => {
             let c = Config::load(game_dir)?.with_listener_overrides(listen_address, port)?;
+            // Held until exit so buffered diagnostics are flushed on shutdown.
+            let _log_guard = stompymux_rs::logging::init(&c)?;
             // Install both signal streams before startup so requests can wait for the world owner.
             let mut interrupt =
                 tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;

@@ -55,12 +55,7 @@ impl Server {
             if let Some(session) = self.sessions.get(&id)
                 && let Err(error) = session.literal_report(&text, &self.config).await
             {
-                self.config.log(
-                    &[crate::logging::Category::Bugs],
-                    "LUA",
-                    "ERROR",
-                    format!("Lua source output: {error:#}"),
-                );
+                tracing::error!(error = %format_args!("{error:#}"), "Lua source output failed");
                 self.tell(id, "Unable to deliver complete Lua source.\r\n");
             }
             return;
@@ -140,14 +135,9 @@ impl Server {
                 self.inspection_report(id, "Lua reloaded.".into()).await;
             }
             Err(error) => {
-                self.config.log(
-                    &[crate::logging::Category::Bugs],
-                    "LUA",
-                    "ERROR",
-                    format!(
-                        "Lua {} failed: {error:#}",
-                        if checking { "check" } else { "reload" }
-                    ),
+                tracing::error!(
+                    error = %format_args!("{error:#}"), "Lua {} failed",
+                    if checking { "check" } else { "reload" }
                 );
                 self.inspection_report(
                     id,
@@ -166,12 +156,7 @@ impl Server {
         if let Some(session) = self.sessions.get(&id) {
             let report = crate::help::HelpResponse::Message(text);
             if let Err(error) = session.help(&report, false, &self.config).await {
-                self.config.log(
-                    &[crate::logging::Category::Problems],
-                    "SRV",
-                    "ERROR",
-                    format!("Inspection report: {error:#}"),
-                );
+                tracing::error!(error = %format_args!("{error:#}"), "inspection report failed");
                 self.tell(id, "Unable to deliver complete report.\r\n");
             }
         }

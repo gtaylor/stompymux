@@ -339,12 +339,7 @@ fn perform(ctx: &CommandContext<'_>, input: &CommandInput, mode: Mode) -> Result
             }
         }
         Mode::Wall => {
-            ctx.config.log(
-                &[crate::logging::Category::Shouts],
-                "WIZ",
-                "SHOUT",
-                format!("#{}: {}", speaker.0, crate::logging::clean(message)),
-            );
+            tracing::info!(target: crate::logging::targets::SHOUTS, speaker = speaker.0, text = ?message, "shout");
             let wizard = has("wizard") || has("admin");
             let prefix = if has("no_prefix") {
                 ""

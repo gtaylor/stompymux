@@ -528,6 +528,7 @@ fn destroy_weapon(
         vehicle.weapon_failures(),
     );
     let gauss = mount.weapon.weapon_explosion_damage() > 0;
+    let jammed = mount.weapon.jammed_explosion_damage() > 0 && vehicle.weapon_jammed(index)?;
     let hotload = vehicle.fire_mode(index)? == BattleFireMode::Hotload;
     let hotload_supply = mount
         .weapon
@@ -536,6 +537,8 @@ fn destroy_weapon(
         0
     } else if gauss {
         u32::from(mount.weapon.weapon_explosion_damage())
+    } else if jammed {
+        u32::from(mount.weapon.jammed_explosion_damage())
     } else if hotload && supplied(hotload_supply) {
         u32::from(mount.weapon.profile_for_ammunition(hotload_supply).damage)
             * u32::from(mount.weapon.profile().missiles.max(1))
@@ -568,6 +571,8 @@ fn destroy_weapon(
         unit: id,
         text: if gauss {
             format!("It explodes for {explosion} points damage.")
+        } else if jammed {
+            format!("[fg=red bold]Your jammed autocannon explodes for {explosion} points of damage![reset]")
         } else if hotload {
             format!("[fg=red bold]Your hotloaded launcher explodes for {explosion} points of damage![reset]")
         } else {
@@ -581,6 +586,8 @@ fn destroy_weapon(
                 "'s {} is covered in a large electrical discharge!",
                 section.name().replace('_', " ")
             )
+        } else if jammed {
+            " loses an autocannon in a brilliant explosion!".into()
         } else if hotload {
             " loses a launcher in a brilliant explosion!".into()
         } else {

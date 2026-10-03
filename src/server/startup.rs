@@ -137,12 +137,7 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
         for request in scripts.effects.drain_logs() {
             c.logger.submit(c, request);
         }
-        (c).log(
-            &[crate::logging::Category::Startup],
-            "INI",
-            "INFO",
-            format!("Bootstrap credentials written to {}", credentials.display()),
-        );
+        tracing::info!(path = %credentials.display(), "bootstrap credentials written");
     }
     scripts.world.borrow().validate(c)?;
     scripts.event("on_server_startup", None, None)?;
@@ -161,12 +156,7 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
     scripts.world.borrow_mut().links = saved.links;
     if let Some(report) = scripts.effects.drain_maintenance() {
         for finding in report.findings {
-            c.log(
-                &[crate::logging::Category::Checkpoints],
-                "DB",
-                "CHECK",
-                finding,
-            );
+            tracing::warn!("database check: {finding}");
         }
     }
     scripts.outbox.borrow_mut().clear();

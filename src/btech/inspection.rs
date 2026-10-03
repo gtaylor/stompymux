@@ -742,6 +742,8 @@ fn template_fire_modes(flags: &[String]) -> Vec<i32> {
         ("Jettisoned", 262144),
         ("OmniBase", 524288),
         ("RocketFired", 1048576),
+        ("Rotary_ThreeShot", 2097152),
+        ("Rotary_FiveShot", 4194304),
         ("OnTC", 16),
     ];
     MODES
@@ -795,7 +797,9 @@ fn live_fire_mode(mode: super::BattleFireMode) -> Option<i32> {
         super::BattleFireMode::Ultra => 1024,
         super::BattleFireMode::Rapid => 2048,
         super::BattleFireMode::Rotary2 => 8192,
+        super::BattleFireMode::Rotary3 => 2097152,
         super::BattleFireMode::Rotary4 => 16384,
+        super::BattleFireMode::Rotary5 => 4194304,
         super::BattleFireMode::Rotary6 => 32768,
         super::BattleFireMode::Gatling => 4096,
     })

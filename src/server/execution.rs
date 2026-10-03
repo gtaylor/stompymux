@@ -56,16 +56,16 @@ impl Server {
             )
             .await
         {
-            self.config.log(
-                &[crate::logging::Category::Problems],
-                "SRV",
-                "ERROR",
-                format!("Queued command snapshot: {error:#}"),
-            );
+            tracing::error!(error = %format_args!("{error:#}"), "queued command snapshot failed");
         }
     }
 
     /// Snapshot, audit, dispatch, commit callbacks, and classify every command outcome.
+    #[tracing::instrument(
+        name = "command",
+        skip_all,
+        fields(player = execution.executor.0, cause = execution.cause.0)
+    )]
     async fn execute_command(
         &mut self,
         execution: commands::ExecutionContext,
@@ -300,15 +300,10 @@ impl Server {
                         }
                     }
                     Err(error) => {
-                        self.config.log(
-                            &[crate::logging::Category::Problems],
-                            "SRV",
-                            "ERROR",
-                            if destination.is_queued() {
-                                format!("Queued examination: {error:#}")
-                            } else {
-                                format!("Debug examination: {error:#}")
-                            },
+                        tracing::error!(
+                            error = %format_args!("{error:#}"),
+                            queued = destination.is_queued(),
+                            "examination failed"
                         );
                         self.command_reply(destination, "Unable to read object bookkeeping.");
                         self.flush_for(destination);
@@ -424,14 +419,10 @@ impl Server {
         error: &anyhow::Error,
     ) {
         if let ReplyDestination::Object(actor) = destination {
-            self.config.log(
-                &[crate::logging::Category::Problems],
-                "SRV",
-                "ERROR",
-                format!(
-                    "Queued command for #{} (cause #{}): {error:#}",
-                    actor.0, execution.cause.0
-                ),
+            tracing::error!(
+                player = actor.0,
+                cause = execution.cause.0,
+                error = %format_args!("{error:#}"), "queued command failed"
             );
             self.queue_reply(
                 ReplyDestination::Object(actor),
@@ -440,12 +431,7 @@ impl Server {
             self.flush();
             return;
         }
-        self.config.log(
-            &[crate::logging::Category::Bugs],
-            "LUA",
-            "ERROR",
-            format!("Command callback failed: {error:#}"),
-        );
+        tracing::error!(error = %format_args!("{error:#}"), "command callback failed");
         let actor = execution.executor;
         let report = self.config.lua.error_reporting;
         let wizard = self.scripts.world.borrow().objects[&actor]
@@ -462,12 +448,7 @@ impl Server {
     }
 
     fn report_delivery_error(&self, session: &Session, error: anyhow::Error) {
-        self.config.log(
-            &[crate::logging::Category::Network],
-            "NET",
-            "ERROR",
-            format!("Report delivery: {error:#}"),
-        );
+        tracing::warn!(error = %format_args!("{error:#}"), "report delivery failed");
         session.raw(crate::telnet::bounded_error(
             "Unable to deliver complete report.",
             self.config.runtime.output_message_limit,

@@ -97,7 +97,7 @@ fn ledger_is_complete_well_formed_and_keeps_the_legacy_fixture_compatible() {
     }
     assert_eq!(
         entries.len(),
-        671,
+        673,
         "reference inventory changed; regenerate and audit it"
     );
     let mut symbols = BTreeSet::new();
@@ -146,7 +146,7 @@ fn ledger_is_complete_well_formed_and_keeps_the_legacy_fixture_compatible() {
         }
         *counts.entry((kind, status)).or_insert(0usize) += 1;
     }
-    assert_eq!(counts.values().sum::<usize>(), 671);
+    assert_eq!(counts.values().sum::<usize>(), 673);
 
     let legacy: Value = serde_json::from_str(include_str!("fixtures/lua-api.json")).unwrap();
     let legacy = legacy.as_array().unwrap();
