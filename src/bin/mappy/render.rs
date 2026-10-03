@@ -32,21 +32,22 @@ pub struct Uniforms {
     pub label: f32,
 }
 
-/// What is written on each hex when zoomed in. A bridge deck's or structure's top is an
-/// elevation, its hex's level plus its deck or height, so it compares directly with the ground
-/// level of the hexes around it. Water depth is written as a negative number, how far the
-/// bottom lies below the surface, so it cannot be mistaken for a height.
+/// What is written on each hex when zoomed in. Water depth and a bridge deck are measured from
+/// the water surface and signed to say which way: depth as a negative number below it (-2),
+/// the deck as a positive one above it (+2), so neither can be mistaken for a ground level. A
+/// building's or wall's top is an elevation, its hex's level plus its height, so it compares
+/// directly with the ground level of the hexes around it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Label {
-    /// Every layer in fixed rows: deck or structure top above, ground level in the middle,
-    /// water depth below the surface beneath. Ground level is left off bare level-zero hexes.
+    /// Every layer in fixed rows: deck height or structure top above, ground level in the
+    /// middle, water depth below. Ground level is left off bare level-zero hexes.
     #[default]
     All,
     /// Ground level, on hexes above level zero.
     Level,
     /// Water depth below the surface, on water and ice.
     Depth,
-    /// Top of the bridge deck, building or wall.
+    /// Bridge deck height above the water, or building or wall top.
     Top,
 }
 
@@ -67,11 +68,12 @@ impl Label {
     pub fn legend(self) -> &'static str {
         match self {
             Self::All => {
-                "top: deck/structure top · middle: ground level · bottom: depth below the surface"
+                "top: +deck above the water, or structure top · middle: ground level · \
+                 bottom: -depth below the water"
             }
             Self::Level => "ground level",
-            Self::Depth => "depth below the water surface",
-            Self::Top => "deck/structure top (level + height)",
+            Self::Depth => "-depth below the water surface",
+            Self::Top => "+deck above the water, or building/wall top (level + height)",
         }
     }
 
@@ -797,20 +799,28 @@ mod tests {
         assert_eq!(rows(bare, Label::Level), [false, false, false]);
     }
 
-    /// Depth is written with a minus sign to the left of its digit, except a depth of zero.
+    /// Depth is written with a minus sign and a bridge deck with a plus sign, each to the left
+    /// of its digit, and neither sign appears on a zero.
     #[test]
-    fn depth_labels_are_negative() {
+    fn depth_and_deck_labels_are_signed() {
         let Some((device, queue)) = device() else {
             eprintln!("no graphics adapter; skipping");
             return;
         };
-        // A minus and one digit put the sign about a quarter radius left of center; a lone
-        // centered digit, anti-aliased edge included, stops short of 0.3.
-        let sign = |depth| {
-            let water = BattleHex::new(Terrain::Water, depth);
-            label_ink(&device, &queue, water, Label::Depth)(-0.3, 0.0)
-        };
-        assert!(sign(3));
-        assert!(!sign(0));
+        let inked = |hex, label, dx, dy| label_ink(&device, &queue, hex, label)(dx, dy);
+        // A sign and one digit put the sign's bar about a quarter radius left of center; a
+        // lone centered digit, anti-aliased edge included, stops short of 0.3. A plus also
+        // has a vertical stroke just above that bar, which a minus lacks.
+        let (bar, stem) = ((-0.3, 0.0), (-0.24, -0.08));
+        let deep = BattleHex::new(Terrain::Water, 3);
+        let still = BattleHex::new(Terrain::Water, 0);
+        let bridge = BattleHex::new(Terrain::Bridge, 3).with_level(4);
+        let flush = BattleHex::new(Terrain::Bridge, 0);
+        assert!(inked(deep, Label::Depth, bar.0, bar.1));
+        assert!(!inked(deep, Label::Depth, stem.0, stem.1));
+        assert!(!inked(still, Label::Depth, bar.0, bar.1));
+        assert!(inked(bridge, Label::Top, bar.0, bar.1));
+        assert!(inked(bridge, Label::Top, stem.0, stem.1));
+        assert!(!inked(flush, Label::Top, bar.0, bar.1));
     }
 }
