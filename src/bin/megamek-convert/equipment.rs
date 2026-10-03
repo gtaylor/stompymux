@@ -194,7 +194,6 @@ const WEAPON_ALIASES: &[(&str, &str)] = &[
     ("rac2", "rotaryac2"),
     ("rac5", "rotaryac5"),
     ("rac10", "rotaryac10"),
-    ("rac20", "rotaryac20"),
     ("lac2", "lightac2"),
     ("lac5", "lightac5"),
     ("lightautocannon2", "lightac2"),
