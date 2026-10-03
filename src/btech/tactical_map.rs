@@ -27,7 +27,8 @@ impl Pixel {
     }
 }
 
-/// Render standard terrain, L visibility, U underlying terrain, C/T cliffs, B landing zones or M mines.
+/// Render standard terrain, L visibility, C/T cliffs, B landing zones or M mines. Fire and smoke
+/// fill the top of a hex and the terrain beneath them keeps the bottom.
 /// Remaining arguments use the shared own-unit, acquired-contact or bearing/range grammar.
 /// Two-character contact cells show the first two characters of the battlefield label.
 pub fn tactical_map(
@@ -73,17 +74,16 @@ fn display(
     let flag = !navigation && first.len() == 1 && first.bytes().all(|b| b.is_ascii_alphabetic());
     let landing = flag && first.eq_ignore_ascii_case("B");
     let mines = flag && first.eq_ignore_ascii_case("M");
-    let (visible, underlying, cliff, center) = if flag {
+    let (visible, cliff, center) = if flag {
         match first.to_ascii_uppercase().as_str() {
-            "L" => (true, false, None, rest),
-            "U" => (false, true, None, rest),
-            "C" => (false, false, Some(3), rest),
-            "T" => (false, false, Some(2), rest),
-            "B" | "M" => (false, false, None, rest),
+            "L" => (true, None, rest),
+            "C" => (false, Some(3), rest),
+            "T" => (false, Some(2), rest),
+            "B" | "M" => (false, None, rest),
             _ => bail!("Invalid tactical map flag."),
         }
     } else {
-        (false, false, None, arguments)
+        (false, None, arguments)
     };
     let viewport = if navigation {
         let position = super::view_center::navigation_center(world, observer, pilot, arguments)?;
@@ -118,7 +118,7 @@ fn display(
     let ansi = world.objects[&pilot].flags.contains(crate::Flag::Ansi);
     let width = usize::from(viewport.width);
     let height = usize::from(viewport.height);
-    let mut canvas = terrain_canvas(world, viewport, Some(observer), visible, underlying, ansi)?;
+    let mut canvas = terrain_canvas(world, viewport, Some(observer), visible, ansi)?;
     if mines {
         draw_mines(world, observer, map, viewport, &mut canvas)?;
     }
@@ -219,7 +219,6 @@ fn terrain_canvas(
     viewport: BattleViewport,
     observer: Option<ObjectId>,
     visible: bool,
-    underlying: bool,
     ansi: bool,
 ) -> Result<Vec<Vec<Pixel>>> {
     let map = &world.btech.maps()[&viewport.map];
@@ -270,30 +269,26 @@ fn terrain_canvas(
             } else {
                 let hex = map.hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
                 let base = map.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
-                let (top, bottom) = match hex.terrain() {
+                let (base_top, bottom) = match base.terrain() {
                     Terrain::Grassland => (' ', '_'),
                     Terrain::Bridge => ('#', '+'),
-                    Terrain::Fire | Terrain::Smoke if underlying => {
-                        (hex.terrain().symbol(), base.terrain().symbol())
-                    }
                     terrain => (terrain.symbol(), terrain.symbol()),
                 };
-                let style = if ansi {
-                    super::map_style::terrain(hex)
+                // Fire or smoke fills the top row; the terrain beneath keeps the bottom row.
+                let top = hex
+                    .overlay()
+                    .map_or(base_top, |overlay| overlay.terrain().symbol());
+                let (style, bottom_style) = if ansi {
+                    (
+                        super::map_style::terrain(hex),
+                        super::map_style::terrain(base),
+                    )
                 } else {
-                    ""
+                    ("", "")
                 };
                 let elevation = match super::map_style::shown_height(hex) {
                     0 => bottom,
                     elevation => super::hex::height_glyph(elevation),
-                };
-                let bottom_style = if ansi
-                    && underlying
-                    && matches!(hex.terrain(), Terrain::Fire | Terrain::Smoke)
-                {
-                    super::map_style::terrain(base)
-                } else {
-                    style
                 };
                 [
                     Pixel { glyph: top, style },
@@ -333,7 +328,7 @@ pub(super) fn map_view(
         .objects
         .get(&player)
         .is_some_and(|player| player.flags.contains(crate::Flag::Ansi));
-    let canvas = terrain_canvas(world, viewport, None, false, false, ansi)?;
+    let canvas = terrain_canvas(world, viewport, None, false, ansi)?;
     Ok(BattleTacticalMap {
         viewport,
         text: render(viewport, &canvas),

@@ -785,6 +785,37 @@ mod tests {
     }
 
     #[test]
+    fn small_cockpits_construct_with_their_single_life_support() {
+        let jenner = include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml");
+        let small = jenner
+            .replace(
+                "{ at = 4, item = \"HeatSink\" }",
+                "{ at = 5, item = \"HeatSink\" }",
+            )
+            .replacen(
+                "\n[sections.",
+                "\n[construction]\ncockpit = \"small\"\n\n[sections.",
+                1,
+            );
+        let template = super::super::BattleTemplate::parse("JR7-D", &small).unwrap();
+        let head = &template.sections[&BattleSection::Head];
+        assert_eq!(
+            head.criticals
+                .values()
+                .filter(|critical| critical.equipment == LIFE_SUPPORT)
+                .count(),
+            1
+        );
+        assert!(super::super::BattleUnit::from_template(template).is_ok());
+
+        let mut flagged = super::super::BattleTemplate::parse("JR7-D", jenner).unwrap();
+        flagged
+            .attributes
+            .insert("specials".into(), "SmallCockpit_Tech".into());
+        assert!(super::super::BattleUnit::from_template(flagged).is_err());
+    }
+
+    #[test]
     fn derived_numbers_follow_tonnage_and_movement_points() {
         assert_eq!(
             mech_internal(80, BattleSection::CenterTorso, false),

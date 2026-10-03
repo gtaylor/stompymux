@@ -479,36 +479,42 @@ Lua provides `btech.map.add_ice(actor, map, percentage)` and
 and any surface-break reports. Terrain, dice, occupant effects and notifications
 roll back together if the action fails.
 
-`ADDHEX <x> <y> <terrain> <elevation> [level]` changes one base tile on the
-wizard's current map. Use a terrain symbol from the table below; elevation is
-converted to a positive magnitude and capped at 35, or 9 for the depth of water and
-ice. Water, ice, bridges, buildings and walls can take a ground `level` from 0 to
-35 to stand on: `ADDHEX 4 7 ~ 2 3` makes water two deep with its surface at level 3.
-Other terrain takes its level from the elevation. Units retain their physical altitude
-and current movement or flight state. Editing ice into water is a direct terrain
-edit; use `DELICE` to melt ice with normal occupant falls and flooding. Fire and
-smoke are not terrain: they lie over a tile without changing it, so use `ADDFIRE`
-and `ADDSMOKE` for them. Lua offers `btech.map.set_hex(actor, map, x, y, hex)`,
-which takes the hex's layers in the shape `btech.map.hex` returns (for example
-`{level = 2, ground = btech.map.ground_types.ROAD}`) and returns the previous and
-resulting tiles. Occupied maps can be edited and saved without reloading their
-source assets. `btech.map.terrain` reports the terrain name in the table below.
+`ADDHEX <x> <y> <layer>=<value> ...` changes one base tile on the wizard's current
+map by naming its layers, so one hex can hold several: `ADDHEX 4 7 level=2
+ground=road woods=light` is light woods on a road two levels up, and `ADDHEX 4 8
+level=3 water=2 bridge=4` is a bridge deck four levels over water two deep whose
+surface is at level 3. The layers are `level` (0 to 35), `ground` (`clear`, `road`,
+`rough`, `mountains`, `snow` or `sand`), `woods` (`light` or `heavy`), `water` or `ice`
+(depth 1 to 9), and one of `bridge`, `building` or `wall` (height 1 to 35, above the
+ground level). Layers you leave out are absent, on clear ground at level 0. A bridge
+must span water or ice.
 
-| Symbol | Terrain | Lua name | Elevation digit means |
-| --- | --- | --- | --- |
-| `.` | Grassland | `grassland` | height |
-| `#` | Road | `road` | height |
-| `` ` `` | Light forest | `light_forest` | height |
-| `"` | Heavy forest | `heavy_forest` | height |
-| `~` | Water | `water` | depth |
-| `-` | Ice | `ice` | depth of the water below |
-| `/` | Bridge | `bridge` | deck height |
-| `%` | Rough | `rough` | height |
-| `^` | Mountains | `mountains` | height |
-| `+` | Snow | `snow` | height |
-| `@` | Building | `building` | height |
-| `=` | Wall | `wall` | height |
-| `}` | Sand | `sand` | height |
+Units keep their physical altitude and their current movement or flight state.
+Editing ice into water is a direct terrain edit; use `DELICE` to melt ice with normal
+occupant falls and flooding. Fire and smoke are not terrain: they lie over a tile
+without changing it, so use `ADDFIRE` and `ADDSMOKE` for them. Lua offers
+`btech.map.set_hex(actor, map, x, y, hex)`, which takes the same layers in the shape
+`btech.map.hex` returns (for example `{level = 2, ground = btech.map.ground_types.ROAD}`)
+and returns the previous and resulting tiles. Occupied maps can be edited and saved
+without reloading their source assets.
+
+Maps show each hex as one terrain symbol, and `btech.map.terrain` reports its name:
+
+| Symbol | Terrain | Lua name |
+| --- | --- | --- |
+| `.` | Grassland | `grassland` |
+| `#` | Road | `road` |
+| `` ` `` | Light forest | `light_forest` |
+| `"` | Heavy forest | `heavy_forest` |
+| `~` | Water | `water` |
+| `-` | Ice | `ice` |
+| `/` | Bridge | `bridge` |
+| `%` | Rough | `rough` |
+| `^` | Mountains | `mountains` |
+| `+` | Snow | `snow` |
+| `@` | Building | `building` |
+| `=` | Wall | `wall` |
+| `}` | Sand | `sand` |
 
 Map files use the same symbols, except that bridges are listed separately and
 buildings, walls and water take their heights from their own grids. A map file's

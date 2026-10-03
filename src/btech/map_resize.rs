@@ -75,6 +75,9 @@ pub fn resize_map_action(
             map.terrain = Some(Arc::new(tiles));
             map.decorations = Arc::new(decorations);
             map.static_decorations = static_decorations;
+            // Points of interest cropped off the map are dropped with the terrain under them.
+            Arc::make_mut(&mut map.points_of_interest)
+                .retain(|point| inside(i64::from(point.x), i64::from(point.y)));
             world.validate(config)?;
         }
         super::notify_message(

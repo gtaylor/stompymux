@@ -900,6 +900,10 @@ impl<'a> ImpactContext<'a> {
                     let name = weapon.name().split_once('.').expect("catalog namespace").1;
                     let detail = if weapon.weapon_explosion_damage() > 0 {
                         format!("It explodes for {explosion} points damage.")
+                    } else if weapon.jammed_explosion_damage() > 0 {
+                        format!(
+                            "[fg=red bold]Your jammed autocannon explodes for {explosion} points of damage![reset]"
+                        )
                     } else if weapon.supports_hotload() {
                         format!(
                             "[fg=red bold]Your hotloaded launcher explodes for {explosion} points of damage![reset]"
@@ -940,6 +944,8 @@ impl<'a> ImpactContext<'a> {
                             .replace('_', " ");
                         Some(if weapon.weapon_explosion_damage() > 0 {
                             format!("'s {section} is covered in a large electrical discharge!")
+                        } else if weapon.jammed_explosion_damage() > 0 {
+                            "loses an autocannon in a brilliant explosion!".to_owned()
                         } else if weapon.supports_hotload() {
                             "loses a launcher in a brilliant explosion!".to_owned()
                         } else {

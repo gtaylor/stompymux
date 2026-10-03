@@ -22,7 +22,7 @@ async fn forms_cover_stock_and_share_native_lua_names_without_mutation() {
         .filter(|f| f.brand_id == 0)
         .map(|f| f.part_id)
         .collect();
-    assert_eq!(base.len(), 620);
+    assert_eq!(base.len(), 618);
     for id in base {
         let part = BattlePart::from_id(id).unwrap();
         assert!(

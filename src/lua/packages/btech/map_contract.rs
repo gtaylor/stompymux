@@ -41,6 +41,29 @@ fn optional_number_field(table: &Table, field: &str, argument: usize) -> mlua::R
     }
 }
 
+/// Build the Lua list of `points`, keeping only those whose type matches `kind` exactly when
+/// one is given.
+pub(super) fn push_points_of_interest(
+    lua: &Lua,
+    points: &[crate::MapPointOfInterest],
+    kind: Option<&str>,
+) -> mlua::Result<Table> {
+    let output = lua.create_table()?;
+    for point in points
+        .iter()
+        .filter(|point| kind.is_none_or(|kind| point.kind == kind))
+    {
+        let value = lua.create_table()?;
+        value.raw_set("type", point.kind.as_str())?;
+        value.raw_set("name", point.name.as_str())?;
+        value.raw_set("x", point.x)?;
+        value.raw_set("y", point.y)?;
+        value.raw_set("elevation", point.elevation)?;
+        output.raw_set(output.raw_len() + 1, value)?;
+    }
+    Ok(output)
+}
+
 fn table(value: Value, argument: usize, label: &str) -> mlua::Result<Table> {
     match value {
         Value::Table(table) => Ok(table),
@@ -268,6 +291,28 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         GROUP,
         "blast_zones",
         blast_zones,
+    )?;
+
+    let shared = world.clone();
+    let points_of_interest = lua.create_function(move |lua, arguments: MultiValue| {
+        let map = map_id(lua, &shared, arg(&arguments, 0), 1)?;
+        let kind = match arg(&arguments, 1) {
+            Value::Nil => None,
+            Value::String(kind) => Some(kind.to_str()?.to_owned()),
+            _ => return Err(argument_failure(2, "type must be a string")),
+        };
+        let points = shared.borrow().btech.maps()[&map]
+            .points_of_interest
+            .clone();
+        push_points_of_interest(lua, &points, kind.as_deref())
+    })?;
+    contract::bind(
+        lua,
+        native,
+        "map_contract_points_of_interest",
+        GROUP,
+        "points_of_interest",
+        points_of_interest,
     )?;
 
     let shared = world.clone();

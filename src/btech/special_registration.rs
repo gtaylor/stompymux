@@ -121,6 +121,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                             super::BattleHex::new(super::Terrain::Grassland, 0);
                             21 * 11
                         ]),
+                        points_of_interest: Vec::new(),
                     },
                 )?;
             }

@@ -322,6 +322,14 @@
 //|function btech_map.blast_zones(map) end
 // lua-types-end
 
+// lua-types-begin btech 00555
+//|---List the map's scripted points of interest in file order. Units never see them.
+//|---@param map DbRef|Object
+//|---@param type? string Keep only points whose type matches exactly (case-sensitive).
+//|---@return BattleMapPointOfInterest[]
+//|function btech_map.points_of_interest(map, type) end
+// lua-types-end
+
 // lua-types-begin btech 00139
 //|---Read the saved cargo transfer point, or nil when the map has no location restriction.
 //|---@param map DbRef|Object
@@ -345,7 +353,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00143
-//|---Read the one terrain feature a map shows for a hex: fire or smoke, then a structure, water, woods or the ground.
+//|---Read the one terrain feature a map shows for a hex: fire or smoke, then a structure, water, woods or the ground. Use btech.map.hex for every layer, including the terrain beneath fire or smoke.
 //|---@param map DbRef|Object
 //|---@param hex BattleHexCoordinate
 //|---@return BattleTerrainName terrain

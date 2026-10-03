@@ -43,6 +43,13 @@ depth = '''
 [[bridges]]
 deck = 2
 hexes = [[4, 0], [5, 0]]
+
+[[points_of_interest]]
+type = "objective"
+name = "Comms Tower"
+x = 6
+y = 1
+elevation = 3
 ```
 
 ## Settings
@@ -93,6 +100,27 @@ Each `[[bridges]]` entry gives a `deck` height above the water surface and the
 `[x, y]` hexes it covers, counting from 0 at the top left. Every bridge hex must
 be water or ice.
 
+## Points of interest
+
+Points of interest mark hexes that scripts care about, such as objectives,
+landing zones or supply caches. Units never see them: they do not appear on
+any map display, sensor or terrain report, and they do not change the terrain.
+Scripts read them with `btech.map.points_of_interest(map [, type])`, or from a
+map file that is not loaded with `btech.map.inspect_file(name)`.
+
+Each `[[points_of_interest]]` entry has these keys:
+
+| Key | Required | Meaning |
+| --- | --- | --- |
+| `type` | yes | Category chosen by the map author. Any non-empty text; matching is case-sensitive, so `"Objective"` and `"objective"` are different types. |
+| `name` | yes | Name chosen by the map author. Any non-empty text. |
+| `x`, `y` | yes | The hex, counting from 0 at the top left. It must be on the map. |
+| `elevation` | no | Height in levels relative to the hex's ground `level`, -128 to 127. Negative values are below the ground. |
+
+Points keep the order they have in the file. Reloading a map replaces its
+points of interest with the file's. Resizing a map drops the points that fall
+off it.
+
 ## Saving
 
 Fire and smoke are not terrain. When a map is loaded, each `&` and `:` in the
@@ -101,5 +129,5 @@ burns out or drifts away.
 
 `SAVEMAP <name>` writes the current map to `<name>.toml` in this format.
 Permanent fire and smoke are saved in the `overlay` grid. Fire and smoke that will
-burn out or drift away are not saved; those hexes save only the terrain underneath. Mine fields, landing zones and other map objects are
-kept in the database, not in map files.
+burn out or drift away are not saved; those hexes save only the terrain underneath. Points of interest are saved. Mine
+fields, landing zones and other map objects are kept in the database, not in map files.

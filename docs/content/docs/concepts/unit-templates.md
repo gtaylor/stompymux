@@ -177,3 +177,35 @@ adjacent section it continues into. Permitted pairs are a side torso with its
 arm, its leg or the centre torso, in either direction. Only weapons that support
 split mounting (the AC/20 family, Heavy Gauss Rifle and Arrow IV) load, and the
 slots across both placements must add up to the weapon's size.
+
+## Converting MegaMek units
+
+The `megamek-convert` tool turns MegaMek BattleMech (`.mtf`) and combat vehicle
+(`.blk`) files into templates:
+
+```sh
+# Print one template.
+cargo run --bin megamek-convert -- "Atlas AS7-D.mtf"
+
+# Write <reference>.toml files; --force replaces existing ones.
+cargo run --bin megamek-convert -- --output-dir game/mechs units/*.mtf units/*.blk
+```
+
+The reference is the mech's model (`AS7-D`), or its chassis and model when the
+model has no digits (`NightGyr-Prime`); vehicles use their name. Pass
+`--reference` to choose one for a single file.
+
+Every converted unit must load and construct exactly as the game would, so the
+tool refuses anything stompymux cannot field instead of dropping it: other unit
+types (LAMs, QuadVees, tripods, support and superheavy vehicles, naval and
+aerospace units, infantry), construction technology without a `[construction]`
+choice (such as fuel cell engines, torso-mounted cockpits or industrial
+structure), and weapons, equipment or ammunition munitions with no stompymux
+item. A refused file is reported on standard error and writes nothing; the
+other files still convert, and the exit status is non-zero.
+
+MegaMek's vehicle body location has no counterpart, so body ammunition is
+placed beside a weapon it feeds and other body equipment in the first location
+with room. Vehicle heat sinks are set to cover energy weapon heat. Troop and
+cargo capacity is not converted. Manufacturer brands, computers and radios are
+left at their defaults.

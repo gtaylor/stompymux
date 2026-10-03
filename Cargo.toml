@@ -11,6 +11,7 @@ default-members = [".", "crates/mapgen"]
 [features]
 lua-type-updater = []
 lua-doc-updater = []
+mappy = ["dep:iced"]
 
 [[bin]]
 name = "lua-type-updater"
@@ -21,6 +22,11 @@ required-features = ["lua-type-updater"]
 name = "lua-doc-updater"
 path = "src/bin/lua-doc-updater.rs"
 required-features = ["lua-doc-updater"]
+
+[[bin]]
+name = "mappy"
+path = "src/bin/mappy/main.rs"
+required-features = ["mappy"]
 
 [[bin]]
 name = "autopilot-bench"
@@ -53,6 +59,7 @@ sha2 = "0.11.0"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["std", "fmt", "ansi", "env-filter", "json", "registry", "smallvec"] }
 tracing-appender = "0.2.5"
+iced = { version = "0.14.0", optional = true }
 
 [dev-dependencies]
 stompymux-mapgen = { path = "crates/mapgen", default-features = false }
@@ -81,6 +88,16 @@ opt-level = 1
 debug = false
 incremental = true
 lto = "off"
+
+# Mappy's window, input handling and GPU setup run through iced and wgpu, which are sluggish
+# unoptimized. This profile optimizes every dependency fully and this crate lightly, so
+# `just mappy` stays responsive while an edit to Mappy still rebuilds incrementally.
+[profile.mappy]
+inherits = "dev"
+opt-level = 1
+
+[profile.mappy.package."*"]
+opt-level = 3
 
 # Consolidated integration suites; scenario files stay in tests/ for fixture paths.
 [[test]]

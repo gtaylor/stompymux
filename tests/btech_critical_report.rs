@@ -300,9 +300,7 @@ async fn critical_report_material_conditions() {
 async fn critical_equipment_labels_and_brand_configuration() {
     let mut template =
         BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap();
-    template
-        .attributes
-        .insert("specials".into(), "SMCPIT".into());
+    support::templates::small_cockpit(&mut template, "SMCPIT");
     let missile = template
         .sections
         .get_mut(&BattleSection::CenterTorso)
@@ -318,7 +316,7 @@ async fn critical_equipment_labels_and_brand_configuration() {
         .unwrap()
         .criticals
         .insert(
-            3,
+            5,
             CriticalDefinition {
                 equipment: "ArtemisIV".into(),
                 data: "11".into(),
@@ -382,7 +380,7 @@ async fn critical_equipment_labels_and_brand_configuration() {
         id,
         CriticalLocation {
             section: BattleSection::Head,
-            slot: 3,
+            slot: 5,
         },
     )
     .unwrap();

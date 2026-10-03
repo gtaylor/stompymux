@@ -103,6 +103,20 @@ CREATE TABLE btech_map_decorations (
     CHECK ((remaining IS NULL) <> (expires_at IS NULL))
 ) STRICT;
 
+-- btech_points_of_interest.rs.
+-- Scripted points of interest from a map file, in file order. `type` is case-sensitive.
+-- `elevation` is in levels relative to the hex's ground level, or NULL when unset.
+CREATE TABLE btech_map_points_of_interest (
+    map_dbref INTEGER NOT NULL REFERENCES objects(dbref) ON DELETE CASCADE,
+    position INTEGER NOT NULL CHECK (position >= 0),
+    type TEXT NOT NULL CHECK (length(type) > 0),
+    name TEXT NOT NULL CHECK (length(name) > 0),
+    x INTEGER NOT NULL CHECK (x BETWEEN 0 AND 999),
+    y INTEGER NOT NULL CHECK (y BETWEEN 0 AND 999),
+    elevation INTEGER CHECK (elevation BETWEEN -128 AND 127),
+    PRIMARY KEY (map_dbref, position)
+) STRICT, WITHOUT ROWID;
+
 -- btech_map_random.rs.
 -- Map-owned random stream for autonomous fire events, stored as typed generator state.
 CREATE TABLE btech_map_random (

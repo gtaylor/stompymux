@@ -1,0 +1,24 @@
+# Hand-written support vehicle, which megamek-convert must refuse.
+<UnitType>
+SupportTank
+</UnitType>
+
+<Name>
+Air Car
+</Name>
+
+<type>
+IS Level 1
+</type>
+
+<motion_type>
+Hover
+</motion_type>
+
+<cruiseMP>
+10
+</cruiseMP>
+
+<tonnage>
+5.0
+</tonnage>

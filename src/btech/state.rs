@@ -92,6 +92,9 @@ pub struct StoredBattleMap {
     /// Generic saved records carry restoration terrain but no autonomous timers.
     #[serde(default)]
     pub(crate) static_decorations: [Arc<BTreeMap<u32, super::BattleStaticDecoration>>; 3],
+    /// Scripted points of interest from the map file, in file order. Never shown to units.
+    #[serde(default)]
+    pub(crate) points_of_interest: Arc<Vec<super::MapPointOfInterest>>,
 }
 
 impl StoredBattleMap {
@@ -177,6 +180,9 @@ impl StoredBattleMap {
             point.validate(self)?;
         }
         self.validate_artillery()?;
+        for point in self.points_of_interest.iter() {
+            point.validate(self.width, self.height)?;
+        }
         ensure!(
             self.landing_exclusion_order.len() == self.landing_exclusions.len()
                 && self
@@ -1216,6 +1222,7 @@ pub(super) fn map_from_asset(name: &str, asset: BattleMapAsset) -> Result<Stored
         terrain: None,
         decorations: Default::default(),
         static_decorations: Default::default(),
+        points_of_interest: Arc::new(asset.points_of_interest),
     };
     map.establish_terrain(asset.hexes)?;
     map.validate()?;

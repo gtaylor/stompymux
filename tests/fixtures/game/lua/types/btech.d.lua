@@ -40,6 +40,7 @@
 ---@field gravity integer
 ---@field temperature integer
 ---@field flags BattleMapFlag[] Map flags the asset enables.
+---@field points_of_interest BattleMapPointOfInterest[] Scripted points of interest in file order.
 
 ---@class BattleHex
 ---@field level integer Ground height in levels; any water surface sits at this height.
@@ -75,7 +76,7 @@
 ---@field tons integer
 ---@field map integer|nil
 
----@alias BattleWeapon "arrow_iv"|"clan_arrow_iv"|"long_tom"|"sniper"|"thumper"|"long_tom_cannon"|"sniper_cannon"|"thumper_cannon"|"a_pod"|"clan_a_pod"|"i_narc_beacon"|"narc_beacon"|"clan_narc_beacon"|"anti_missile_system"|"clan_anti_missile_system"|"laser_ams"|"clan_laser_ams"|"clan_lbx2"|"clan_lbx5"|"clan_lbx10"|"clan_lbx20"|"clan_ultra_ac2"|"clan_ultra_ac5"|"clan_ultra_ac10"|"clan_ultra_ac20"|"mml3"|"mml5"|"mml7"|"mml9"|"clan_atm3"|"clan_atm6"|"clan_atm9"|"clan_atm12"|"clan_lrm5"|"clan_lrm10"|"clan_lrm15"|"clan_lrm20"|"clan_srm2"|"clan_srm4"|"clan_srm6"|"clan_streak_srm2"|"clan_streak_srm4"|"clan_streak_srm6"|"clan_streak_lrm5"|"clan_streak_lrm10"|"clan_streak_lrm15"|"clan_streak_lrm20"|"clan_gauss_rifle"|"clan_machine_gun"|"clan_light_machine_gun"|"clan_heavy_machine_gun"|"clan_er_large_laser"|"clan_er_medium_laser"|"clan_er_small_laser"|"clan_er_micro_laser"|"clan_er_ppc"|"clan_flamer"|"clan_heavy_large_laser"|"clan_heavy_medium_laser"|"clan_heavy_small_laser"|"clan_large_pulse_laser"|"clan_medium_pulse_laser"|"clan_small_pulse_laser"|"clan_micro_pulse_laser"|"clan_er_large_pulse_laser"|"clan_er_medium_pulse_laser"|"clan_er_small_pulse_laser"|"clan_plasma_rifle"|"flamer"|"coolant_gun"|"heavy_flamer"|"vehicle_flamer"|"vehicle_heavy_flamer"|"plasma_rifle"|"acid_thrower"|"thunderbolt5"|"thunderbolt10"|"thunderbolt15"|"thunderbolt20"|"hyper_ac2"|"hyper_ac5"|"hyper_ac10"|"machine_gun"|"heavy_machine_gun"|"light_ac2"|"light_ac5"|"small_laser"|"medium_laser"|"large_laser"|"ppc"|"er_small_laser"|"er_medium_laser"|"er_large_laser"|"er_ppc"|"small_pulse_laser"|"medium_pulse_laser"|"large_pulse_laser"|"x_small_pulse_laser"|"x_medium_pulse_laser"|"x_large_pulse_laser"|"light_ppc"|"heavy_ppc"|"snub_nosed_ppc"|"srm2"|"rocket10"|"rocket15"|"rocket20"|"mrm10"|"mrm20"|"mrm30"|"mrm40"|"streak_srm2"|"streak_srm4"|"streak_srm6"|"lr_dfm5"|"lr_dfm10"|"lr_dfm15"|"lr_dfm20"|"sr_dfm2"|"sr_dfm4"|"sr_dfm6"|"elrm5"|"elrm10"|"elrm15"|"elrm20"|"nlrm5"|"nlrm10"|"nlrm15"|"nlrm20"|"lrt5"|"lrt10"|"lrt15"|"lrt20"|"srt2"|"srt4"|"srt6"|"clan_lrt5"|"clan_lrt10"|"clan_lrt15"|"clan_lrt20"|"clan_srt2"|"clan_srt4"|"clan_srt6"|"lrm5"|"lrm10"|"lrm15"|"srm4"|"srm6"|"lrm20"|"heavy_gauss_rifle"|"gauss_rifle"|"light_gauss_rifle"|"magshot_gauss_rifle"|"lbx2"|"lbx5"|"lbx10"|"lbx20"|"ac2"|"ac5"|"ac10"|"ac20"|"ultra_ac2"|"ultra_ac5"|"ultra_ac10"|"ultra_ac20"|"rotary_ac2"|"rotary_ac5"|"clan_rotary_ac2"|"clan_rotary_ac5"|"clan_rotary_ac10"|"clan_rotary_ac20"
+---@alias BattleWeapon "arrow_iv"|"clan_arrow_iv"|"long_tom"|"sniper"|"thumper"|"long_tom_cannon"|"sniper_cannon"|"thumper_cannon"|"a_pod"|"clan_a_pod"|"i_narc_beacon"|"narc_beacon"|"clan_narc_beacon"|"anti_missile_system"|"clan_anti_missile_system"|"laser_ams"|"clan_laser_ams"|"clan_lbx2"|"clan_lbx5"|"clan_lbx10"|"clan_lbx20"|"clan_ultra_ac2"|"clan_ultra_ac5"|"clan_ultra_ac10"|"clan_ultra_ac20"|"mml3"|"mml5"|"mml7"|"mml9"|"clan_atm3"|"clan_atm6"|"clan_atm9"|"clan_atm12"|"clan_lrm5"|"clan_lrm10"|"clan_lrm15"|"clan_lrm20"|"clan_srm2"|"clan_srm4"|"clan_srm6"|"clan_streak_srm2"|"clan_streak_srm4"|"clan_streak_srm6"|"clan_streak_lrm5"|"clan_streak_lrm10"|"clan_streak_lrm15"|"clan_streak_lrm20"|"clan_gauss_rifle"|"clan_machine_gun"|"clan_light_machine_gun"|"clan_heavy_machine_gun"|"clan_er_large_laser"|"clan_er_medium_laser"|"clan_er_small_laser"|"clan_er_micro_laser"|"clan_er_ppc"|"clan_flamer"|"clan_heavy_large_laser"|"clan_heavy_medium_laser"|"clan_heavy_small_laser"|"clan_large_pulse_laser"|"clan_medium_pulse_laser"|"clan_small_pulse_laser"|"clan_micro_pulse_laser"|"clan_er_large_pulse_laser"|"clan_er_medium_pulse_laser"|"clan_er_small_pulse_laser"|"clan_plasma_rifle"|"flamer"|"coolant_gun"|"heavy_flamer"|"vehicle_flamer"|"vehicle_heavy_flamer"|"plasma_rifle"|"acid_thrower"|"thunderbolt5"|"thunderbolt10"|"thunderbolt15"|"thunderbolt20"|"hyper_ac2"|"hyper_ac5"|"hyper_ac10"|"machine_gun"|"heavy_machine_gun"|"light_ac2"|"light_ac5"|"small_laser"|"medium_laser"|"large_laser"|"ppc"|"er_small_laser"|"er_medium_laser"|"er_large_laser"|"er_ppc"|"small_pulse_laser"|"medium_pulse_laser"|"large_pulse_laser"|"x_small_pulse_laser"|"x_medium_pulse_laser"|"x_large_pulse_laser"|"light_ppc"|"heavy_ppc"|"snub_nosed_ppc"|"srm2"|"rocket10"|"rocket15"|"rocket20"|"mrm10"|"mrm20"|"mrm30"|"mrm40"|"streak_srm2"|"streak_srm4"|"streak_srm6"|"lr_dfm5"|"lr_dfm10"|"lr_dfm15"|"lr_dfm20"|"sr_dfm2"|"sr_dfm4"|"sr_dfm6"|"elrm5"|"elrm10"|"elrm15"|"elrm20"|"nlrm5"|"nlrm10"|"nlrm15"|"nlrm20"|"lrt5"|"lrt10"|"lrt15"|"lrt20"|"srt2"|"srt4"|"srt6"|"clan_lrt5"|"clan_lrt10"|"clan_lrt15"|"clan_lrt20"|"clan_srt2"|"clan_srt4"|"clan_srt6"|"lrm5"|"lrm10"|"lrm15"|"srm4"|"srm6"|"lrm20"|"heavy_gauss_rifle"|"gauss_rifle"|"light_gauss_rifle"|"magshot_gauss_rifle"|"lbx2"|"lbx5"|"lbx10"|"lbx20"|"ac2"|"ac5"|"ac10"|"ac20"|"ultra_ac2"|"ultra_ac5"|"ultra_ac10"|"ultra_ac20"|"rotary_ac2"|"rotary_ac5"|"clan_rotary_ac2"|"clan_rotary_ac5"|"clan_rotary_ac10"
 
 ---@class BattleCriticalLocation
 ---@field section BattleSectionName
@@ -1124,7 +1125,7 @@ function btech_map.elevation(map, hex) end
 ---@field WALL "wall"
 ---@field BRIDGE "bridge"
 
----Read the one terrain feature a map shows for a hex: fire or smoke, then a structure, water, woods or the ground.
+---Read the one terrain feature a map shows for a hex: fire or smoke, then a structure, water, woods or the ground. Use btech.map.hex for every layer, including the terrain beneath fire or smoke.
 ---@param map DbRef|Object
 ---@param hex BattleHexCoordinate
 ---@return BattleTerrainName terrain
@@ -2665,7 +2666,7 @@ function btech_unit.viewport(dbref, pilot, kind, arguments, dimensions) end
 ---Dark maps mask unseen terrain. Rendering consumes no dice and sends no notices.
 ---@param dbref integer Scanner unit dbref.
 ---@param pilot integer
----@param mode string First letter T/E/C/M/L/H/S (case insensitive), or a descriptive API mode name.
+---@param mode string First letter T/E/C/M/L/H/S/U (case insensitive), or a descriptive API mode name. U shows the terrain beneath fire and smoke.
 ---@param arguments string? Shared centering arguments.
 ---@return BattleLongRangeMap
 function btech_unit.lrsmap(dbref, pilot, mode, arguments) end
@@ -2674,11 +2675,11 @@ function btech_unit.lrsmap(dbref, pilot, mode, arguments) end
 ---@field viewport BattleViewport
 ---@field text string Styled hex display with acquired two-character contact labels.
 
----Render standard, C/T (mech/tank cliffs), B (landing zones), M (mines), L (visible), or U (underlying) tactical maps.
+---Render standard, C/T (mech/tank cliffs), B (landing zones), M (mines) or L (visible) tactical maps. Fire and smoke fill the top of a hex over the terrain beneath.
 ---Uses shared cockpit/display admission; no acquisition rolls, notices or state changes.
 ---@param dbref integer Scanner unit dbref.
 ---@param pilot integer
----@param arguments string? Optional C/T/B/M/L/U flag followed by shared centering arguments.
+---@param arguments string? Optional C/T/B/M/L flag followed by shared centering arguments.
 ---@return BattleTacticalMap
 function btech_unit.tactical(dbref, pilot, arguments) end
 
@@ -4080,5 +4081,18 @@ function btech_map.has_flag(dbref, flag) end
 ---@param flag BattleMapFlag Typed constant from btech.map.flags.
 ---@param enabled boolean
 function btech_map.set_flag(actor, map, flag, enabled) end
+
+---@class BattleMapPointOfInterest
+---@field type string Case-sensitive category chosen by the map author.
+---@field name string Display name chosen by the map author.
+---@field x integer Zero-based column.
+---@field y integer Zero-based row.
+---@field elevation integer|nil Levels above (negative: below) the hex's ground level, or nil when unset.
+
+---List the map's scripted points of interest in file order. Units never see them.
+---@param map DbRef|Object
+---@param type? string Keep only points whose type matches exactly (case-sensitive).
+---@return BattleMapPointOfInterest[]
+function btech_map.points_of_interest(map, type) end
 
 return btech

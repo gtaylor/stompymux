@@ -19,6 +19,32 @@ fn lua_table(value: &serde_json::Value) -> String {
     }
 }
 
+/// The ADDHEX layer words that build `hex`.
+fn layer_words(hex: BattleHex) -> String {
+    let value = serde_json::to_value(hex).unwrap();
+    let mut words = vec![
+        format!("level={}", value["level"]),
+        format!("ground={}", value["ground"].as_str().unwrap()),
+    ];
+    if let Some(woods) = value["woods"].as_str() {
+        words.push(format!("woods={woods}"));
+    }
+    if let Some(water) = value.get("water") {
+        let layer = if water["frozen"] == true {
+            "ice"
+        } else {
+            "water"
+        };
+        words.push(format!("{layer}={}", water["depth"]));
+    }
+    if let Some(structure) = value.get("structure") {
+        let kind = structure["kind"].as_str().unwrap();
+        let height = structure.get("deck").unwrap_or(&structure["height"]);
+        words.push(format!("{kind}={height}"));
+    }
+    words.join(" ")
+}
+
 /// Keep the assigned pilot in its cockpit while a separate wizard edits its map.
 fn operator(world: &mut World, config: &Config, map: ObjectId) -> ObjectId {
     let id = world.create(config, "Terrain operator".into(), Kind::Player);
@@ -45,21 +71,21 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
         let altitude = battle_unit_altitude(&world, unit).unwrap();
         let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        for (symbol, terrain) in [
-            ('^', Terrain::Mountains),
-            ('~', Terrain::Water),
-            ('-', Terrain::Ice),
-            ('/', Terrain::Bridge),
-            ('#', Terrain::Road),
-            ('`', Terrain::LightForest),
-            ('"', Terrain::HeavyForest),
-            ('%', Terrain::Rough),
-            ('+', Terrain::Snow),
-            ('@', Terrain::Building),
-            ('=', Terrain::Wall),
-            ('.', Terrain::Grassland),
+        for terrain in [
+            Terrain::Mountains,
+            Terrain::Water,
+            Terrain::Ice,
+            Terrain::Bridge,
+            Terrain::Road,
+            Terrain::LightForest,
+            Terrain::HeavyForest,
+            Terrain::Rough,
+            Terrain::Snow,
+            Terrain::Building,
+            Terrain::Wall,
+            Terrain::Grassland,
         ] {
-            // ADDHEX caps a depth at 9 and any other height at 35.
+            // The deepest water and a tall feature of every other kind.
             let expected = BattleHex::new(
                 terrain,
                 if matches!(terrain, Terrain::Water | Terrain::Ice) {
@@ -95,7 +121,7 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
                 &config,
                 actor,
                 1,
-                &format!("addhex 0 11 {symbol} -30"),
+                &format!("addhex 0 11 {}", layer_words(expected)),
             );
             assert!(output.contains("Hex set!"), "{output}");
             assert_eq!(native.world().btech, lua.world().btech);
@@ -126,14 +152,14 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
             );
         }
         // Fire and smoke are not terrain; ADDFIRE and ADDSMOKE place them instead.
-        for symbol in ['&', ':'] {
+        for layer in ["fire", "smoke"] {
             let before = native.world().btech.clone();
             let output = support::run_text(
                 &native,
                 &config,
                 actor,
                 1,
-                &format!("addhex 0 11 {symbol} 1"),
+                &format!("addhex 0 11 {layer}=1"),
             );
             assert!(
                 output.contains("Fire and smoke are not terrain"),
@@ -141,7 +167,56 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
             );
             assert_eq!(native.world().btech, before);
         }
-        // Lua takes a hex's layers; operator symbols belong to ADDHEX.
+        // Several layers share a hex, such as woods on a road or a bridge over raised water;
+        // anything a hex cannot hold is rejected.
+        let bridge = BattleHex::new(Terrain::Bridge, 4)
+            .with_water(Some(BattleWater {
+                depth: 2,
+                frozen: false,
+            }))
+            .with_ground(BattleGround::Sand)
+            .with_level(3);
+        for (args, expected) in [
+            (
+                "level=2 ground=road woods=light",
+                BattleHex::new(Terrain::Road, 2).with_woods(Some(BattleWoods::Light)),
+            ),
+            (
+                "ice=2 level=4",
+                BattleHex::new(Terrain::Ice, 2).with_level(4),
+            ),
+            ("LEVEL=3 water=2 Bridge=4 ground=sand", bridge),
+        ] {
+            let output =
+                support::run_text(&native, &config, actor, 1, &format!("addhex 0 11 {args}"));
+            assert!(output.contains("Hex set!"), "{output}");
+            assert_eq!(
+                native.world().btech.maps()[&map].base_hex(0, 11).unwrap(),
+                expected,
+                "{args}"
+            );
+        }
+        for args in [
+            "level=36",
+            "water=0",
+            "water=10",
+            "water=1 ice=1",
+            "level=1 level=2",
+            "bridge=2",
+            "water=1 building=2 bridge=1",
+            "fire=1",
+            "ground=lava",
+            "woods=dense",
+            "depth=2",
+            "level=1 woods",
+        ] {
+            let before = native.world().btech.clone();
+            let output =
+                support::run_text(&native, &config, actor, 1, &format!("addhex 0 11 {args}"));
+            assert!(!output.contains("Hex set!"), "{args}: {output}");
+            assert_eq!(native.world().btech, before, "{args}");
+        }
+        // Lua takes a hex's layers, never terrain symbols or names.
         let before = lua.world().btech.clone();
         for hex in [
             "'^'",
@@ -253,12 +328,13 @@ async fn edit_admission_overlays_and_extreme_elevations() {
     let before = scripts.world().btech.clone();
     for command in [
         "addhex",
-        "addhex 0 0 . 1 extra",
-        "addhex -1 0 . 0",
-        "addhex 0 12 . 0",
-        "addhex 0 0 X 0",
-        "addhex 0 0 . 2147483648",
-        "addhex/bad 0 0 . 0",
+        "addhex 0 0",
+        "addhex 0 0 level=1 extra",
+        "addhex -1 0 level=0",
+        "addhex 0 12 level=0",
+        "addhex 0 0 . 1",
+        "addhex 0 0 level=2147483648",
+        "addhex/bad 0 0 level=0",
     ] {
         support::run_text(&scripts, &config, actor, 1, command);
         assert_eq!(scripts.world().btech, before, "{command}");
@@ -286,14 +362,14 @@ async fn edit_admission_overlays_and_extreme_elevations() {
         .is_err()
     );
     assert_eq!(scripts.world().btech, before);
-    // A fifth argument raises water onto higher ground; ground terrain cannot take one.
-    let output = support::run_text(&scripts, &config, actor, 1, "addhex 0 5 ~ 2 4");
+    // A level raises water onto higher ground; depth stops at 9.
+    let output = support::run_text(&scripts, &config, actor, 1, "addhex 0 5 level=4 water=2");
     assert!(output.contains("Hex set!"), "{output}");
     let lake = scripts.world().btech.maps()[&map].base_hex(0, 5).unwrap();
     assert_eq!((lake.water_line(), lake.water_depth()), (4, 2));
-    let output = support::run_text(&scripts, &config, actor, 1, "addhex 0 5 . 2 4");
-    assert!(output.contains("take a separate level"), "{output}");
-    let output = support::run_text(&scripts, &config, actor, 1, "addhex 0 5 ~ -2147483648");
+    let output = support::run_text(&scripts, &config, actor, 1, "addhex 0 5 water=10");
+    assert!(output.contains("water must be from 1 to 9"), "{output}");
+    let output = support::run_text(&scripts, &config, actor, 1, "addhex 0 5 water=9");
     assert!(output.contains("Hex set!"), "{output}");
     let world = scripts.world();
     assert_eq!(
@@ -450,7 +526,13 @@ async fn terrain_saves_preserve_persisted_landing_exclusions() {
             ..zone
         };
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        let output = support::run_text(&scripts, &config, actor, 1, "addhex 0 11 ^ 2");
+        let output = support::run_text(
+            &scripts,
+            &config,
+            actor,
+            1,
+            "addhex 0 11 level=2 ground=mountains",
+        );
         assert!(output.contains("Hex set"), "{output}");
         let edited = scripts.world().clone();
         persistence::save(&config.database(), &edited)

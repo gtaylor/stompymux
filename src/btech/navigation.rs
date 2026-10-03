@@ -93,7 +93,14 @@ pub fn navigate(
                 position.y,
                 super::unit_elevation(world, observer)?.unwrap_or(0)
             ),
-            3 => format!("Terrain: {:>14}", terrain_name(tile.terrain())),
+            // The terrain line names the ground feature; fire or smoke over it gets its own line.
+            3 => format!(
+                "Terrain: {:>14}",
+                terrain_name(tile.with_overlay(None).terrain())
+            ),
+            4 => tile.overlay().map_or_else(String::new, |overlay| {
+                format!("Effect:  {:>14}", terrain_name(overlay.terrain()))
+            }),
             6 => format!("Speed:           {:6.1}", unit.speed),
             7 => format!("Vertical Speed:  {:6.1}", vertical_speed),
             8 => format!("Heading:           {:4.0}", heading),
@@ -132,7 +139,7 @@ fn plot_cell(
     Some((row as usize, column as usize))
 }
 
-/// Display names for effective terrain, including transient fire and smoke.
+/// Display names for terrain features, and for the fire and smoke shown on the effect line.
 fn terrain_name(terrain: super::Terrain) -> &'static str {
     use super::Terrain::*;
     match terrain {

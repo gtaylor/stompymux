@@ -23,6 +23,13 @@
 //! [[bridges]]
 //! deck = 2
 //! hexes = [[4, 0], [5, 0]]
+//!
+//! [[points_of_interest]]
+//! type = "objective"         # case-sensitive; any non-empty text
+//! name = "Comms Tower"
+//! x = 6
+//! y = 1
+//! elevation = 3              # optional, levels above (or below) the hex's ground level
 //! ```
 //!
 //! Grids are TOML literal strings (`'''`), since `"` is the heavy-woods symbol.
@@ -30,9 +37,13 @@
 //! `depth` does for water. The optional `overlay` grid places permanent fire (`&`) and smoke
 //! (`:`) over any hex. Heights use `0`-`9` then `a`-`z`. Width and height come from the
 //! grids, whose rows must all be the same length.
+//!
+//! Points of interest are metadata for scripts, which read them through
+//! `btech.map.points_of_interest`. Units never see them and they do not change the terrain.
 use super::hex::MAX_HEIGHT;
 use super::{
-    BattleDecorationKind, BattleHex, BattleMapAsset, BattleMapFlag, Ground, Structure, Water, Woods,
+    BattleDecorationKind, BattleHex, BattleMapAsset, BattleMapFlag, Ground, MapPointOfInterest,
+    Structure, Water, Woods,
 };
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -61,6 +72,8 @@ struct MapFile {
     overlay: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     bridges: Vec<Bridge>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    points_of_interest: Vec<MapPointOfInterest>,
 }
 
 /// A bridge deck spanning water hexes.
@@ -333,6 +346,9 @@ impl BattleMapAsset {
                 *hex = hex.with_structure(Some(Structure::Bridge { deck: bridge.deck }));
             }
         }
+        for point in &file.points_of_interest {
+            point.validate(width as i64, rows as i64)?;
+        }
         let flags = match file.flags {
             Some(flags) => flags
                 .into_iter()
@@ -346,6 +362,7 @@ impl BattleMapAsset {
             gravity: file.gravity,
             temperature: file.temperature,
             hexes: Arc::new(hexes),
+            points_of_interest: file.points_of_interest,
         })
     }
 
@@ -447,6 +464,19 @@ impl BattleMapAsset {
                 .join(", ");
             writeln!(text, "hexes = [{hexes}]")?;
         }
+        for point in &self.points_of_interest {
+            point.validate(i64::from(self.width), i64::from(self.height))?;
+        }
+        if !self.points_of_interest.is_empty() {
+            writeln!(
+                text,
+                "\n{}",
+                toml::to_string(&PointsOfInterest {
+                    points_of_interest: &self.points_of_interest,
+                })?
+                .trim_end()
+            )?;
+        }
         Ok(text)
     }
 }
@@ -455,6 +485,13 @@ impl BattleMapAsset {
 #[derive(Serialize)]
 struct Flags {
     flags: Vec<BattleMapFlag>,
+}
+
+/// Helper so points of interest are written as `[[points_of_interest]]` tables with TOML's
+/// own string quoting.
+#[derive(Serialize)]
+struct PointsOfInterest<'a> {
+    points_of_interest: &'a [MapPointOfInterest],
 }
 
 #[cfg(test)]
@@ -651,6 +688,86 @@ hexes = [[3, 0]]
                 .unwrap()
                 .validate()
                 .unwrap_or_else(|error| panic!("{biome:?}: {error:#}"));
+        }
+    }
+
+    /// Points of interest keep their file order, exact type spelling and optional elevation,
+    /// and survive a save and reload.
+    #[test]
+    fn points_of_interest_round_trip() {
+        let source = format!(
+            "{SAMPLE}\n[[points_of_interest]]\ntype = \"Objective\"\nname = \"Comms \\\"Tower\\\"\"\nx = 3\ny = 1\nelevation = -2\n\n[[points_of_interest]]\ntype = \"objective\"\nname = \"Ford\"\nx = 4\ny = 0\n"
+        );
+        let map = BattleMapAsset::parse(&source).unwrap();
+        assert_eq!(
+            map.points_of_interest,
+            [
+                MapPointOfInterest {
+                    kind: "Objective".into(),
+                    name: "Comms \"Tower\"".into(),
+                    x: 3,
+                    y: 1,
+                    elevation: Some(-2),
+                },
+                MapPointOfInterest {
+                    kind: "objective".into(),
+                    name: "Ford".into(),
+                    x: 4,
+                    y: 0,
+                    elevation: None,
+                },
+            ]
+        );
+        let text = map.to_file().unwrap();
+        assert_eq!(BattleMapAsset::parse(&text).unwrap(), map);
+        assert_eq!(map.to_file().unwrap(), text);
+        let stored = crate::btech::state::map_from_asset("poi", map.clone()).unwrap();
+        assert_eq!(*stored.points_of_interest, map.points_of_interest);
+        assert_eq!(
+            BattleMapAsset::parse(&stored.export_asset().unwrap()).unwrap(),
+            map
+        );
+        assert!(
+            !BattleMapAsset::parse(SAMPLE)
+                .unwrap()
+                .to_file()
+                .unwrap()
+                .contains("points_of_interest")
+        );
+    }
+
+    #[test]
+    fn rejects_malformed_points_of_interest() {
+        let base = "terrain = '..'\nlevel = '00'\n[[points_of_interest]]\n";
+        for (extra, message) in [
+            ("type = 'a'\nname = 'b'\nx = 2\ny = 0", "off the map"),
+            ("type = 'a'\nname = 'b'\nx = 0\ny = 1", "off the map"),
+            (
+                "type = ''\nname = 'b'\nx = 0\ny = 0",
+                "type must be non-empty",
+            ),
+            (
+                "type = 'a'\nname = ''\nx = 0\ny = 0",
+                "name must be non-empty",
+            ),
+            (
+                "type = \"a\\u0000\"\nname = 'b'\nx = 0\ny = 0",
+                "type must be non-empty",
+            ),
+            ("type = 'a'\nx = 0\ny = 0", "invalid map file"),
+            ("name = 'b'\nx = 0\ny = 0", "invalid map file"),
+            (
+                "type = 'a'\nname = 'b'\nx = 0\ny = 0\nelevation = 200",
+                "invalid map file",
+            ),
+            (
+                "type = 'a'\nname = 'b'\nx = 0\ny = 0\ncolour = 1",
+                "invalid map file",
+            ),
+        ] {
+            let source = format!("{base}{extra}\n");
+            let error = format!("{:#}", BattleMapAsset::parse(&source).unwrap_err());
+            assert!(error.contains(message), "{message:?} not in {error:?}");
         }
     }
 

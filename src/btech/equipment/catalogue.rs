@@ -413,14 +413,12 @@ weapon_catalogue! {
         profile: (1, 2, 0, 0, [6, 12, 18], 3, 45, 15) },
     RotaryAc5 { name: ("IS", "RotaryAC/5"), part_id: 110, mass: 10240, bv: 247, skill: "Gunnery-Ballistic",
         profile: (1, 5, 0, 0, [5, 10, 15], 6, 20, 22) },
-    ClanRotaryAc2 { name: ("CL", "RotaryAC/2"), part_id: 164, mass: 7168, bv: 75, skill: "Gunnery-Ballistic",
-        profile: (1, 2, 0, 2, [9, 18, 27], 4, 45, 10) },
-    ClanRotaryAc5 { name: ("CL", "RotaryAC/5"), part_id: 165, mass: 10240, bv: 150, skill: "Gunnery-Ballistic",
-        profile: (1, 5, 0, 0, [7, 14, 21], 5, 20, 15) },
+    ClanRotaryAc2 { name: ("CL", "RotaryAC/2"), part_id: 164, mass: 8192, bv: 161, skill: "Gunnery-Ballistic",
+        profile: (1, 2, 0, 0, [8, 17, 25], 4, 45, 10) },
+    ClanRotaryAc5 { name: ("CL", "RotaryAC/5"), part_id: 165, mass: 10240, bv: 345, skill: "Gunnery-Ballistic",
+        profile: (1, 5, 0, 0, [7, 14, 21], 8, 20, 15) },
     ClanRotaryAc10 { name: ("CL", "RotaryAC/10"), part_id: 166, mass: 14336, bv: 250, skill: "Gunnery-Ballistic",
-        profile: (3, 10, 0, 0, [6, 12, 18], 7, 10, 20) },
-    ClanRotaryAc20 { name: ("CL", "RotaryAC/20"), part_id: 167, mass: 16384, bv: 400, skill: "Gunnery-Ballistic",
-        profile: (7, 20, 0, 0, [4, 8, 12], 10, 5, 25) }
+        profile: (3, 10, 0, 0, [6, 12, 18], 7, 10, 20) }
 }
 
 #[cfg(test)]

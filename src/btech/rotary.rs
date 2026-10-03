@@ -110,7 +110,6 @@ mod tests {
             BattleWeapon::ClanRotaryAc2,
             BattleWeapon::ClanRotaryAc5,
             BattleWeapon::ClanRotaryAc10,
-            BattleWeapon::ClanRotaryAc20,
         ] {
             for (rounds, counts) in [
                 (2, [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2]),

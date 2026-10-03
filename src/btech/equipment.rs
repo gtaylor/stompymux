@@ -120,7 +120,6 @@ impl BattleWeapon {
                 | Self::ClanRotaryAc2
                 | Self::ClanRotaryAc5
                 | Self::ClanRotaryAc10
-                | Self::ClanRotaryAc20
         )
     }
 
@@ -249,6 +248,16 @@ impl BattleWeapon {
             Self::LightGaussRifle => 16,
             Self::MagshotGaussRifle => 3,
             _ => 0,
+        }
+    }
+
+    /// Damage a critical hit releases from this weapon while its feed is jammed: a jammed
+    /// rotary autocannon explodes for one shot's damage, as in MegaMek.
+    pub fn jammed_explosion_damage(self) -> u8 {
+        if self.is_rotary() {
+            self.profile().damage
+        } else {
+            0
         }
     }
 

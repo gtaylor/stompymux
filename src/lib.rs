@@ -21,8 +21,8 @@ pub use btech::{
 pub use btech::{BattleCommandClass, BattleSpecialCommand, BattleSpecialType};
 pub use btech::{BattleMinePlacement, add_mine_action as add_battle_mine_action};
 pub use btech::{
-    Ground as BattleGround, Structure as BattleStructure, Water as BattleWater,
-    Woods as BattleWoods,
+    Ground as BattleGround, MAX_DEPTH as BATTLE_MAX_DEPTH, MAX_HEIGHT as BATTLE_MAX_HEIGHT,
+    Structure as BattleStructure, Water as BattleWater, Woods as BattleWoods,
 };
 
 pub use btech::{
@@ -56,8 +56,8 @@ pub use btech::{
     BattleVehicleHitRules, BattleVehicleMotiveHit, BattleWaterRanges, BattleWeapon,
     BattleWeaponDamage, BattleWeaponDamageEffects, BattleWeaponDamageKind, BattleWeaponRange,
     BattleWeaponReadiness, BattleWeaponUse, BtechState, CriticalDefinition, CriticalLocation,
-    RawMovement, RawSectionCode, RawTemplate, RawUnitClass, SectionDefinition, StoredBattleMap,
-    StoredBattleUnit, SystemCritical, Terrain, WeaponMount, WeaponProfile,
+    MapPointOfInterest, RawMovement, RawSectionCode, RawTemplate, RawUnitClass, SectionDefinition,
+    StoredBattleMap, StoredBattleUnit, SystemCritical, Terrain, WeaponMount, WeaponProfile,
     advance_heat as advance_battle_heat, advance_jumps as advance_battle_jumps,
     advance_motion as advance_battle_motion, advance_overheat as advance_battle_overheat,
     advance_recovery as advance_battle_recovery, advance_recycle as advance_battle_recycle,

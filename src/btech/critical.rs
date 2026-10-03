@@ -312,6 +312,8 @@ impl BattleUnit {
                         })
                     {
                         weapon.profile().damage
+                    } else if weapon.jammed_explosion_damage() > 0 && self.weapon_jammed(index)? {
+                        weapon.jammed_explosion_damage()
                     } else {
                         weapon.weapon_explosion_damage()
                     }
@@ -592,4 +594,65 @@ pub fn destroy_unit_critical(
         .get_mut(&id)
         .unwrap()
         .destroy_critical(location)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The test Atlas with its AC/20 swapped for `item` and a bin of its ammunition.
+    fn atlas(item: &str, slots: &str, rounds: u16) -> BattleUnit {
+        let source = include_str!("../../tests/fixtures/btech/mechs/AS7-D.toml")
+            .replace(
+                "{ at = \"1-10\", item = \"IS.AC/20\" }",
+                &format!("{{ at = \"{slots}\", item = \"{item}\" }}"),
+            )
+            .replace(
+                "{ at = \"11-12\", item = \"Ammo_IS.AC/20\", rounds = 5 }",
+                &format!("{{ at = 11, item = \"Ammo_{item}\", rounds = {rounds} }}"),
+            );
+        BattleUnit::from_template(super::super::BattleTemplate::parse("AS7-D", &source).unwrap())
+            .unwrap()
+    }
+
+    /// The explosion a critical hit on the right torso's first slot would release.
+    fn explosion(unit: &BattleUnit) -> u8 {
+        let location = CriticalLocation {
+            section: BattleSection::RightTorso,
+            slot: 0,
+        };
+        match unit.critical_loss(location).unwrap() {
+            Some(BattleCriticalLoss::Weapon {
+                explosion_damage, ..
+            }) => explosion_damage,
+            other => panic!("expected a weapon loss, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn rotary_autocannons_explode_only_while_jammed() {
+        let mut unit = atlas("IS.RotaryAC/5", "1-6", 20);
+        let index = unit
+            .loadout()
+            .unwrap()
+            .weapons
+            .iter()
+            .position(|mount| mount.weapon == super::super::BattleWeapon::RotaryAc5)
+            .unwrap();
+        assert_eq!(explosion(&unit), 0);
+        assert!(unit.jam_weapon(index).unwrap());
+        assert_eq!(explosion(&unit), 5);
+
+        let mut gauss = atlas("IS.GaussRifle", "1-7", 8);
+        assert_eq!(explosion(&gauss), 20);
+        let index = gauss
+            .loadout()
+            .unwrap()
+            .weapons
+            .iter()
+            .position(|mount| mount.weapon == super::super::BattleWeapon::GaussRifle)
+            .unwrap();
+        gauss.jam_weapon(index).unwrap();
+        assert_eq!(explosion(&gauss), 20);
+    }
 }
