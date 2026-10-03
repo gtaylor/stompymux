@@ -8,14 +8,15 @@ use serde::Serialize;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BattleAmsReport {
     pub weapon_index: usize,
-    pub ammunition_bin: usize,
+    /// Bin that fed the defense; laser AMS has none.
+    pub ammunition_bin: Option<usize>,
     pub roll: u8,
     pub ammunition_spent: u16,
     pub shot_down: u8,
 }
 
 impl BattleWeapon {
-    /// Defensive-only anti-missile systems; all supported catalogue identities use a matching bin.
+    /// Defensive-only anti-missile systems; ballistic AMS draws from a matching bin, laser AMS from heat.
     pub fn is_ams(self) -> bool {
         matches!(
             self,

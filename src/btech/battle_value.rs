@@ -114,7 +114,7 @@ impl BattleUnit {
         });
         let engine_factor = match engine {
             BattleEngine::Light => 0.75,
-            BattleEngine::Xl if clan => 0.75,
+            BattleEngine::Xl if definition.clan_engine() => 0.75,
             BattleEngine::Xl | BattleEngine::Xxl => 0.5,
             _ => 1.0,
         };

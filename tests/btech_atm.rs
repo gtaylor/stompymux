@@ -5,7 +5,7 @@ use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
-/// Catalogue cluster rows and ammo markers preserve the reference's range and damage profile.
+/// Catalogue cluster rows, the guidance bonus, five-point clusters and ER/HE ammunition profiles.
 #[test]
 fn atm_profiles_tables_and_ammunition_markers() {
     for (weapon, id, size, slots, capacity, mass, heat, recycle, hits) in [
@@ -18,7 +18,7 @@ fn atm_profiles_tables_and_ammunition_markers() {
             1536,
             2,
             15,
-            [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3],
+            [1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3],
         ),
         (
             BattleWeapon::ClanAtm6,
@@ -40,7 +40,7 @@ fn atm_profiles_tables_and_ammunition_markers() {
             5120,
             6,
             25,
-            [2, 2, 3, 4, 4, 5, 5, 6, 7, 8, 9],
+            [3, 3, 4, 5, 5, 5, 5, 7, 7, 9, 9],
         ),
         (
             BattleWeapon::ClanAtm12,
@@ -51,7 +51,7 @@ fn atm_profiles_tables_and_ammunition_markers() {
             7168,
             8,
             30,
-            [4, 4, 6, 6, 8, 8, 8, 10, 10, 12, 12],
+            [4, 4, 5, 8, 8, 8, 8, 10, 10, 12, 12],
         ),
     ] {
         let p = weapon.profile();
@@ -87,32 +87,56 @@ fn atm_profiles_tables_and_ammunition_markers() {
         assert!(weapon.supports_indirect_fire());
         for (roll, count) in (2..=12).zip(hits) {
             assert_eq!(weapon.missile_hits(roll).unwrap(), count);
-            for mode in [
-                BattleAmmunitionMode::Normal,
-                BattleAmmunitionMode::ExtendedRange,
-                BattleAmmunitionMode::HighExplosive,
+        }
+        for roll in 2..=12u8 {
+            // The ATM's guidance adds two to the cluster roll.
+            let landed = weapon.missile_hits((roll + 2).min(12)).unwrap();
+            for (mode, damage, ranges) in [
+                (BattleAmmunitionMode::Normal, 2, (4, 5, 10, 15)),
+                (BattleAmmunitionMode::ExtendedRange, 1, (4, 9, 18, 27)),
+                (BattleAmmunitionMode::HighExplosive, 3, (0, 3, 6, 9)),
             ] {
+                let profile = weapon.profile_for_ammunition(mode);
                 assert_eq!(
-                    weapon
-                        .damage_groups_for_ammunition(mode, Some(roll), 5.0)
-                        .unwrap(),
-                    vec![2; usize::from(count)]
+                    (
+                        profile.damage,
+                        (
+                            profile.minimum_range,
+                            profile.short_range,
+                            profile.medium_range,
+                            profile.long_range
+                        )
+                    ),
+                    (damage, ranges)
                 );
-                for distance in [1.0, 4.0, 5.0, 10.0, 15.0, 16.0, 20.0, 21.0] {
-                    for extended in [false, true] {
-                        assert_eq!(
-                            weapon
-                                .range_modifier_for_ammunition(
-                                    distance,
-                                    extended,
-                                    BattleFireMode::Normal,
-                                    false,
-                                    mode
-                                )
-                                .unwrap(),
-                            weapon.range_modifier(distance, extended).unwrap()
-                        );
-                    }
+                // Damage lands in five-point clusters.
+                let total = u16::from(landed) * u16::from(damage);
+                let groups = weapon
+                    .damage_groups_for_ammunition(mode, Some(roll), 5.0)
+                    .unwrap();
+                assert_eq!(groups.iter().sum::<u16>(), total);
+                assert_eq!(groups.len(), usize::from(total.div_ceil(5)));
+                assert!(groups.iter().all(|damage| (1..=5).contains(damage)));
+                let long = f64::from(ranges.3);
+                for (distance, extended, reaches) in [
+                    (long, false, true),
+                    (long + 0.051, false, false),
+                    (f64::from(ranges.2) * 2.0, true, true),
+                ] {
+                    assert_eq!(
+                        weapon
+                            .range_modifier_for_ammunition(
+                                distance,
+                                extended,
+                                BattleFireMode::Normal,
+                                false,
+                                mode
+                            )
+                            .unwrap()
+                            .is_some(),
+                        reaches,
+                        "{mode:?} at {distance}"
+                    );
                 }
             }
         }
@@ -306,7 +330,7 @@ async fn atm_mode_controls_share_eligibility_and_exclusivity() {
     for source in firing::templates() {
         for (weapon, eligible) in [
             (BattleWeapon::ClanAtm3, true),
-            (BattleWeapon::Lrm5, true),
+            (BattleWeapon::Lrm5, false),
             (BattleWeapon::ClanStreakLrm5, false),
             (BattleWeapon::MediumLaser, false),
         ] {

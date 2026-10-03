@@ -321,8 +321,8 @@ async fn vehicle_missiles_use_shooter_dice_for_mech_ams_only_on_admitted_hits() 
         assert_eq!(ams.roll, defense);
         assert_eq!(ams.ammunition_spent, u16::from(defense));
         assert_eq!(
-            world.btech.constructed_units()[&target].ammunition()[ams.ammunition_bin],
-            before[ams.ammunition_bin] - u16::from(defense)
+            world.btech.constructed_units()[&target].ammunition()[ams.ammunition_bin.unwrap()],
+            before[ams.ammunition_bin.unwrap()] - u16::from(defense)
         );
         assert_eq!(roll_unit_dice(&mut world, shooter, 1).unwrap(), [dice.d6()]);
         world.validate(&config).unwrap();
@@ -712,9 +712,20 @@ async fn occupied_hex_selection_does_not_skip_hidden_or_forbidden_targets() {
     assert!(battle_hex_occupant(&base, shooter, BattleHexCoordinate { x: 9, y: 9 }).is_err());
 }
 
-/// Replace the target's two mounts and four bins while preserving battlefield membership.
+/// Replace the target's turret mount and its bin while preserving battlefield membership. Laser
+/// AMS draws no ammunition, so it takes no bin.
 fn install_vehicle_ams(world: &mut World, target: ObjectId, weapon: BattleWeapon) {
-    let source = include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", weapon.name());
+    let template = include_str!("../game/mechs/Demolisher.toml");
+    let source = if weapon.profile().ammunition_per_ton > 0 {
+        template.replace("IS.AC/20", weapon.name())
+    } else {
+        template
+            .replace(
+                "    { at = \"3-6\", item = \"Ammo_IS.AC/20\", rounds = 5 },\n",
+                "",
+            )
+            .replace("IS.AC/20", weapon.name())
+    };
     let unit = BattleVehicle::new(BattleVehicleTemplate::parse("test", &source).unwrap()).unwrap();
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     saved["vehicles"][target.0.to_string()]["definition"] =
@@ -744,7 +755,12 @@ async fn vehicle_ams_shares_interception_dice_supply_limits_and_restart_replay()
             seed(&mut world, shooter, value);
             let mut dice = BattleDice::seeded([value; 32]);
             dice.two_d6();
-            let rounds = world.btech.vehicles()[&target].ammunition()[0];
+            let fed = weapon.profile().ammunition_per_ton > 0;
+            let rounds = world.btech.vehicles()[&target]
+                .ammunition()
+                .first()
+                .copied()
+                .unwrap_or(0);
             persistence::save(&config.database(), &world).await.unwrap();
             let mut replay = persistence::load(&config.database()).await.unwrap();
             assert!(replay.btech.vehicles()[&target].ams_enabled());
@@ -767,7 +783,9 @@ async fn vehicle_ams_shares_interception_dice_supply_limits_and_restart_replay()
             if !hit {
                 assert!(report.ams.is_none());
                 assert!(report.salvo.is_none());
-                assert_eq!(world.btech.vehicles()[&target].ammunition()[0], rounds);
+                if fed {
+                    assert_eq!(world.btech.vehicles()[&target].ammunition()[0], rounds);
+                }
                 assert_eq!(world.btech.vehicles()[&target].weapon_heat(), 0.0);
                 assert!(world.btech.vehicles()[&target].weapon_recycle().is_empty());
                 assert_eq!(roll_unit_dice(&mut world, shooter, 1).unwrap(), [dice.d6()]);
@@ -788,12 +806,19 @@ async fn vehicle_ams_shares_interception_dice_supply_limits_and_restart_replay()
                 world.btech.vehicles()[&target].weapon_heat(),
                 f64::from(weapon.profile().heat)
             );
-            assert_eq!((ams.weapon_index, ams.ammunition_bin), (0, 0));
-            assert_eq!(ams.ammunition_spent, rounds.min(u16::from(defense.min(6))));
             assert_eq!(
-                world.btech.vehicles()[&target].ammunition()[0],
-                rounds - ams.ammunition_spent
+                (ams.weapon_index, ams.ammunition_bin),
+                (0, fed.then_some(0))
             );
+            if fed {
+                assert_eq!(ams.ammunition_spent, rounds.min(u16::from(defense.min(6))));
+                assert_eq!(
+                    world.btech.vehicles()[&target].ammunition()[0],
+                    rounds - ams.ammunition_spent
+                );
+            } else {
+                assert_eq!(ams.ammunition_spent, 0);
+            }
             assert_eq!(
                 world.btech.vehicles()[&target].weapon_recycle()[&0],
                 u16::from(weapon.profile().recycle_seconds)
@@ -915,7 +940,7 @@ async fn vehicle_ams_selection_obeys_switch_supply_recycle_and_critical_loss() {
             );
             assert_eq!(
                 report.ams.as_ref().unwrap().ammunition_bin,
-                usize::from(condition == "first_bin_lost")
+                Some(usize::from(condition == "first_bin_lost"))
             );
         } else {
             assert!(report.ams.is_none(), "{condition}");

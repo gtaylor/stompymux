@@ -1654,6 +1654,37 @@ pub(super) fn remap_map<T: Clone>(
         .collect()
 }
 
+/// Refuse technology whose rules stompymux does not model, rather than fielding it as something
+/// else: reactive armor, compact heat sinks, Inner Sphere laser heat sinks, and null signature
+/// systems beside stealth armor.
+fn validate_unsupported_technology(definition: &BattleTemplate) -> Result<()> {
+    ensure!(
+        !definition.has_special("ReactiveArmor_Tech"),
+        "Reactive armor is unsupported"
+    );
+    ensure!(
+        !definition.has_special("CompactHS"),
+        "Compact heat sinks are unsupported"
+    );
+    ensure!(
+        definition.has_special("Clan")
+            || !definition.has_technology(super::BattleTechnology::LaserHeatSinks),
+        "Laser heat sinks are Clan technology"
+    );
+    let installed = |system| {
+        definition
+            .sections
+            .values()
+            .flat_map(|section| section.criticals.values())
+            .any(|critical| BattleSystem::parse(&critical.equipment).is_ok_and(|s| s == system))
+    };
+    ensure!(
+        !(installed(BattleSystem::NullSignature) && installed(BattleSystem::StealthArmor)),
+        "A null signature system cannot be combined with stealth armor"
+    );
+    Ok(())
+}
+
 /// Gate the initial conventional chassis features without silently discarding unknown fields.
 fn validate_definition(definition: &BattleTemplate) -> Result<()> {
     super::unit_identity::validate_metadata(&definition.attributes)?;
@@ -1688,6 +1719,7 @@ fn validate_definition(definition: &BattleTemplate) -> Result<()> {
     );
     super::radio::validate_attributes(&definition.attributes)?;
     definition.validate_armor_slots()?;
+    validate_unsupported_technology(definition)?;
     for (field, value) in &definition.attributes {
         match field.as_str() {
             "name" | "reference" | "tons" | "max_speed" | "jump_speed" | "heat_sinks"
@@ -1757,6 +1789,7 @@ fn validate_definition(definition: &BattleTemplate) -> Result<()> {
                             || flag.eq_ignore_ascii_case("HvyFerroFibrous_Tech")
                             || flag.eq_ignore_ascii_case("LtFerroFibrous_Tech")
                             || flag.eq_ignore_ascii_case("XLEngine_Tech")
+                            || super::template_construction::mixed_technology_flag(flag)
                             || flag.eq_ignore_ascii_case("LightEngine_Tech")
                             || flag.eq_ignore_ascii_case("XXL_Tech")
                             || flag.eq_ignore_ascii_case("CompactEngine_Tech")
@@ -1801,7 +1834,7 @@ fn validate_definition(definition: &BattleTemplate) -> Result<()> {
         );
     }
     let loadout = super::equipment_context::mech(definition, false)?;
-    super::BattleEngine::resolve(&loadout, definition.has_special("Clan"))?;
+    super::BattleEngine::resolve(&loadout, definition.clan_engine())?;
     ensure!(
         ["HDGYRO", "XLGYRO", "CGYRO"]
             .iter()

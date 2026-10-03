@@ -954,7 +954,7 @@
 // lua-types-begin btech 00194
 //|---@class BattleAmsReport
 //|---@field weapon_index integer Zero-based defensive weapon index.
-//|---@field ammunition_bin integer Selected normal-ammunition bin.
+//|---@field ammunition_bin integer|nil Selected normal-ammunition bin; nil for laser AMS, which uses none.
 //|---@field roll integer Interception capacity before rack and cluster limits.
 //|---@field ammunition_spent integer May be less than interception capacity.
 //|---@field shot_down integer Actual intercepted hits after the missile meets its base target number.

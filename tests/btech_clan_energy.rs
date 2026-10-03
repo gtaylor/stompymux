@@ -9,14 +9,7 @@ fn clan_energy_mounts_accuracy_and_grouped_critical_losses() {
         .filter(|w| w.name().starts_with("CL.") && w.gunnery_skill(true) == "Gunnery-Laser")
     {
         assert_eq!(weapon.gunnery_skill(true), "Gunnery-Laser");
-        assert_eq!(
-            weapon.profile().ammunition_per_ton,
-            if weapon == BattleWeapon::ClanLaserAms {
-                24
-            } else {
-                0
-            }
-        );
+        assert_eq!(weapon.profile().ammunition_per_ton, 0);
         assert_eq!(weapon.profile().missiles, 0);
         assert_eq!(
             weapon.damage_groups(None).unwrap(),
@@ -72,7 +65,12 @@ fn clan_energy_mounts_accuracy_and_grouped_critical_losses() {
                 .remove(&2);
             assert!(BattleUnit::from_template(template).is_err());
         }
-        let accuracy = if weapon.name().contains("Pulse") {
+        let accuracy = if weapon.name().contains("ERLargePulse")
+            || weapon.name().contains("ERMediumPulse")
+            || weapon.name().contains("ERSmallPulse")
+        {
+            -1
+        } else if weapon.name().contains("Pulse") {
             -2
         } else if weapon.name().contains("Heavy") {
             1

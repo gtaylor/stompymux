@@ -185,15 +185,15 @@ fn shot_rules() -> BattleShotRules {
 #[tokio::test]
 async fn probe_families_reach_their_range_and_only_bloodhound_sees_concealment() {
     assert_eq!(
-        FAMILIES.map(|(probe, _)| (probe.range(), probe.sees_concealed(), probe.name())),
+        FAMILIES.map(|(probe, _)| (probe.range(false), probe.sees_concealed(), probe.name())),
         [
             (3, false, "Light Active Probe"),
-            (6, false, "Beagle Active Probe"),
+            (4, false, "Beagle Active Probe"),
             (8, true, "Bloodhound Active Probe"),
         ]
     );
     for (probe, equipment) in FAMILIES {
-        let reach = i64::from(probe.range());
+        let reach = i64::from(probe.range(false));
         let (_dir, config, mut world, map) = hill_lane(10).await;
         let observer = probe_vehicle(&mut world, &config, map, Some(equipment), false, 0);
         let target = target(&mut world, &config, map, reach);
@@ -202,7 +202,7 @@ async fn probe_families_reach_their_range_and_only_bloodhound_sees_concealment()
             profile.probe,
             Some(BattleProbeProfile {
                 kind: probe,
-                range: u16::from(probe.range()),
+                range: u16::from(probe.range(false)),
                 status: BattlePerceptionStatus::Ready,
             })
         );
@@ -237,8 +237,8 @@ async fn probe_families_reach_their_range_and_only_bloodhound_sees_concealment()
 /// Fixed-installation reach uses integer 140% boundaries; merely stopping a mobile vehicle does not qualify.
 #[tokio::test]
 async fn stationary_probe_ranges_use_shared_bonus_and_preserve_boundaries() {
-    for ((probe, equipment), fixed) in FAMILIES.into_iter().zip([4, 8, 11]) {
-        let ordinary = i64::from(probe.range());
+    for ((probe, equipment), fixed) in FAMILIES.into_iter().zip([4, 5, 11]) {
+        let ordinary = i64::from(probe.range(false));
         for stationary in [false, true] {
             let (_dir, config, mut world, map) = lane(&[".0"; 14]).await;
             let observer = probe_vehicle(&mut world, &config, map, Some(equipment), stationary, 0);
@@ -365,7 +365,7 @@ async fn probes_acquire_hidden_hostiles_without_a_search() {
         .unwrap()
     };
     for (equipment, distance, acquired, searched) in [
-        (Some("BeagleProbe"), 6, Some(true), false),
+        (Some("BloodhoundProbe"), 6, Some(true), false),
         (Some("BeagleProbe"), 4, Some(true), false),
         (Some("Light_BAP"), 4, None, true),
         (None, 4, None, true),

@@ -1324,8 +1324,8 @@ function btech_unit.heatcutoff(dbref, pilot) end
 ---@return BattleAmmunitionMode The selected supply: SRM rounds, or mml_lrm and its mml_lrm_* special rounds for LRM.
 function btech_unit.mml(dbref, pilot, weapon) end
 
----Toggle Extended Range ammunition on an eligible indirect launcher; requires matching bins.
----This reference ammunition marker does not change the weapon's range or damage profile.
+---Toggle Extended Range ammunition on an ATM launcher; requires matching bins.
+---Extended Range missiles deal one damage each at 9/18/27 hexes with a four-hex minimum.
 ---@param dbref integer
 ---@param pilot integer
 ---@param weapon integer
@@ -1333,6 +1333,7 @@ function btech_unit.mml(dbref, pilot, weapon) end
 function btech_unit.atmrange(dbref, pilot, weapon) end
 
 ---Toggle High Explosive ammunition using the same eligibility and saved selection rules.
+---High Explosive missiles deal three damage each at 3/6/9 hexes with no minimum range.
 ---@param dbref integer
 ---@param pilot integer
 ---@param weapon integer
@@ -1482,7 +1483,7 @@ function btech_unit.autoturret(dbref, pilot) end
 
 ---@class BattleAmsReport
 ---@field weapon_index integer Zero-based defensive weapon index.
----@field ammunition_bin integer Selected normal-ammunition bin.
+---@field ammunition_bin integer|nil Selected normal-ammunition bin; nil for laser AMS, which uses none.
 ---@field roll integer Interception capacity before rack and cluster limits.
 ---@field ammunition_spent integer May be less than interception capacity.
 ---@field shot_down integer Actual intercepted hits after the missile meets its base target number.

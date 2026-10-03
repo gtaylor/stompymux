@@ -10,9 +10,13 @@ impl BattleWeapon {
     }
 
     /// Resolve ballistic facts once for aim, damage, interception and ammunition hazards.
-    /// Normal MML ammunition is SRM; MML_LRM bins carry the long-range family.
+    /// Normal MML ammunition is SRM; MML_LRM bins carry the long-range family. ATM Extended
+    /// Range and High Explosive missiles change damage and ranges.
     pub fn profile_for_ammunition(self, ammunition: BattleAmmunitionMode) -> WeaponProfile {
         let mut profile = self.profile();
+        if self.is_atm() {
+            return Self::atm_profile(profile, ammunition);
+        }
         if self.is_mml() && ammunition.is_mml_lrm() {
             profile.damage = 1;
             profile.minimum_range = 6;

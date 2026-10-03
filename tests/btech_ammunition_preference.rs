@@ -245,15 +245,19 @@ async fn preferred_sections_controls_feed_and_restart() {
     }
 }
 
-/// Laser AMS ammunition catalogue fields do not make these energy weapons eligible for usebin.
+/// Laser AMS draws no ammunition, so these energy weapons are not eligible for usebin.
 #[tokio::test]
 async fn laser_defense_rejects_preferred_ammunition() {
     for weapon in [BattleWeapon::LaserAms, BattleWeapon::ClanLaserAms] {
         let (_dir, config, mut world) = support::isolated_world().await;
         let id = world.create(&config, "Laser defense".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        let source =
-            include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", weapon.name());
+        let source = include_str!("../game/mechs/Demolisher.toml")
+            .replace(
+                "    { at = \"3-6\", item = \"Ammo_IS.AC/20\", rounds = 5 },\n",
+                "",
+            )
+            .replace("IS.AC/20", weapon.name());
         create_battle_vehicle(
             &mut world,
             id,

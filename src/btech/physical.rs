@@ -263,9 +263,8 @@ impl BattleArmAttack {
     pub fn minimum_slots(self, tons: u16) -> u16 {
         match self {
             Self::Punch => 0,
-            Self::Axe | Self::Claw => tons / 15,
-            Self::Sword => (tons + 15) / 20,
-            Self::Mace => tons / 10,
+            Self::Axe | Self::Claw | Self::Sword => tons.div_ceil(15),
+            Self::Mace => tons.div_ceil(10),
             Self::Saw => 7,
             Self::RetractableBlade => tons.div_ceil(20) + 1,
             Self::Lance => tons.div_ceil(20),
@@ -314,12 +313,12 @@ impl BattleArmAttack {
     /// Base damage for an attacker of this mass before myomer and actuator effects.
     fn damage(self, tons: u16) -> u16 {
         match self {
-            Self::Punch => tons / 10,
+            Self::Punch => tons.div_ceil(10),
             Self::Axe | Self::Lance => tons / 5,
             Self::Sword => (tons + 5) / 10 + 1,
-            Self::Mace => tons / 4,
+            Self::Mace => tons.div_ceil(4),
             Self::Saw => 7,
-            Self::Claw => tons / 7,
+            Self::Claw => tons.div_ceil(7),
             Self::RetractableBlade => tons.div_ceil(10),
             Self::Flail => 9,
             Self::WreckingBall => 8,

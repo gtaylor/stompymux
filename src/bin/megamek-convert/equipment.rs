@@ -352,6 +352,24 @@ pub fn parse(raw: &str) -> Result<Critical> {
     }
 }
 
+/// The technology base a slot's system implies, for the systems whose Inner Sphere and Clan
+/// versions differ in mass or reach while stompymux reads their technology from the chassis:
+/// CASE II, ECM suites and active probes. `None` when the slot names no such system or does
+/// not say which base built it.
+pub fn system_tech(raw: &str) -> Option<TechBase> {
+    let name = raw.split(['(', ':']).next().unwrap_or_default();
+    for (tech, base) in readings(&key(name)) {
+        match base {
+            "caseii" | "ecmsuite" | "activeprobe" if tech.is_some() => return tech,
+            "guardianecm" | "guardianecmsuite" | "beagleactiveprobe" => {
+                return Some(TechBase::InnerSphere);
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
 /// Resolve a non-ammunition item.
 fn parse_equipment(name: &str) -> Result<Critical> {
     let full = key(name);

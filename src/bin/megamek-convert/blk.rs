@@ -313,12 +313,14 @@ pub fn convert(source: &str) -> Result<Converted> {
     if !file.lines("transporters").is_empty() {
         warnings.push("ignoring transporter (troop and cargo) capacity".to_owned());
     }
+    let reference = if model.is_empty() {
+        name.clone()
+    } else {
+        format!("{name} {model}")
+    };
     Ok(Converted {
-        reference: if model.is_empty() {
-            name.clone()
-        } else {
-            format!("{name} {model}")
-        },
+        full_reference: reference.clone(),
+        reference,
         draft: Draft {
             name,
             class,

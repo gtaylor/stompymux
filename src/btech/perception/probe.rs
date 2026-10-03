@@ -16,13 +16,15 @@ pub enum BattleActiveProbe {
 
 impl BattleActiveProbe {
     /// Every family, longest reach first.
-    pub const BY_REACH: [Self; 4] = [Self::Bloodhound, Self::Beagle, Self::Watchdog, Self::Light];
+    pub const BY_REACH: [Self; 4] = [Self::Bloodhound, Self::Watchdog, Self::Beagle, Self::Light];
 
-    /// Hardware reach before the stationary-installation bonus.
-    pub fn range(self) -> u8 {
+    /// Hardware reach before the stationary-installation bonus. On a Clan chassis the
+    /// Beagle slot is the Clan active probe, which reaches as far as the Watchdog.
+    pub fn range(self, clan: bool) -> u8 {
         match self {
-            // The Watchdog's probe matches the Clan active probe.
-            Self::Beagle | Self::Watchdog => 6,
+            Self::Beagle if clan => 5,
+            Self::Beagle => 4,
+            Self::Watchdog => 5,
             Self::Light => 3,
             Self::Bloodhound => 8,
         }
@@ -49,7 +51,7 @@ impl BattleActiveProbe {
             Self::Beagle => (BattleSystem::BeagleProbe, 1),
             Self::Light => (BattleSystem::LightProbe, 1),
             Self::Bloodhound => (BattleSystem::BloodhoundProbe, 3),
-            Self::Watchdog => (BattleSystem::Ecm, 1),
+            Self::Watchdog => (BattleSystem::Ecm, 2),
         }
     }
 }
@@ -160,8 +162,9 @@ mod tests {
     /// Reach ordering drives profile selection; only the Bloodhound sees concealed units.
     #[test]
     fn families_order_by_reach_and_concealment() {
-        let ranges = BattleActiveProbe::BY_REACH.map(BattleActiveProbe::range);
-        assert_eq!(ranges, [8, 6, 6, 3]);
+        let ranges = |clan| BattleActiveProbe::BY_REACH.map(|probe| probe.range(clan));
+        assert_eq!(ranges(false), [8, 5, 4, 3]);
+        assert_eq!(ranges(true), [8, 5, 5, 3]);
         assert_eq!(
             BattleActiveProbe::BY_REACH.map(BattleActiveProbe::sees_concealed),
             [true, false, false, false]

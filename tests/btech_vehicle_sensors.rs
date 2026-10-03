@@ -163,7 +163,7 @@ async fn vehicle_probe_profile_follows_critical_and_section_loss() {
     let ready = |kind: BattleActiveProbe| {
         Some(BattleProbeProfile {
             kind,
-            range: u16::from(kind.range()),
+            range: u16::from(kind.range(false)),
             status: BattlePerceptionStatus::Ready,
         })
     };

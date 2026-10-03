@@ -54,7 +54,7 @@ fn light_ballistic_catalog_ranges_and_critical_ammunition() {
             100,
             512,
             7,
-            [1, 2, 3],
+            [1, 2, 2],
         ),
         (BattleWeapon::AcidThrower, 3, 3, 2, 10, 1536, 25, [1, 2, 3]),
         (BattleWeapon::LightAc2, 1, 2, 1, 45, 4096, 12, [6, 12, 18]),
@@ -62,12 +62,12 @@ fn light_ballistic_catalog_ranges_and_critical_ammunition() {
         (
             BattleWeapon::HeavyMachineGun,
             0,
-            2,
+            3,
             1,
             100,
             1024,
             7,
-            [2, 4, 6],
+            [1, 2, 2],
         ),
     ] {
         assert_eq!(BattleWeapon::parse(weapon.name()).unwrap(), weapon);
@@ -96,7 +96,11 @@ fn light_ballistic_catalog_ranges_and_critical_ammunition() {
             (f64::from(ranges[1]), 2),
             (f64::from(ranges[1]) + 0.051, 4),
             (f64::from(ranges[2]), 4),
-        ] {
+        ]
+        .into_iter()
+        // The heavy machine gun's long band ends where its medium band does, so it has none.
+        .filter(|(_, modifier)| *modifier < 4 || ranges[1] < ranges[2])
+        {
             assert_eq!(
                 weapon
                     .range_modifier(distance, false)

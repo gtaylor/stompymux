@@ -411,8 +411,8 @@
 // lua-types-end
 
 // lua-types-begin btech 00175
-//|---Toggle Extended Range ammunition on an eligible indirect launcher; requires matching bins.
-//|---This reference ammunition marker does not change the weapon's range or damage profile.
+//|---Toggle Extended Range ammunition on an ATM launcher; requires matching bins.
+//|---Extended Range missiles deal one damage each at 9/18/27 hexes with a four-hex minimum.
 //|---@param dbref integer
 //|---@param pilot integer
 //|---@param weapon integer
@@ -422,6 +422,7 @@
 
 // lua-types-begin btech 00176
 //|---Toggle High Explosive ammunition using the same eligibility and saved selection rules.
+//|---High Explosive missiles deal three damage each at 3/6/9 hexes with no minimum range.
 //|---@param dbref integer
 //|---@param pilot integer
 //|---@param weapon integer

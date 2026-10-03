@@ -29,19 +29,24 @@ impl BattleUnit {
         // C derives the engine mass family from technology flags alone; reference
         // builds without engine criticals still carry a nominal engine mass.
         let engine_family = || {
-            super::BattleEngine::resolve(&loadout, definition.has_special("Clan")).unwrap_or_else(
-                |_| {
-                    super::BattleEngine::display_from_flags(
-                        definition.has_special("LightEngine_Tech"),
-                        definition.has_special("CompactEngine_Tech"),
-                        definition.has_special("XXL_Tech"),
-                        definition.has_special("XLEngine_Tech"),
-                    )
-                },
-            )
+            super::BattleEngine::resolve(&loadout, definition.clan_engine()).unwrap_or_else(|_| {
+                super::BattleEngine::display_from_flags(
+                    definition.has_special("LightEngine_Tech"),
+                    definition.has_special("CompactEngine_Tech"),
+                    definition.has_special("XXL_Tech"),
+                    definition.has_special("XLEngine_Tech"),
+                )
+            })
+        };
+        let ice = definition.has_special("ICEEngine_Tech");
+        // Internal combustion engines weigh twice a standard fusion engine.
+        let installed_engine = if ice {
+            half_ton(engine_mass(rating) * 2)
+        } else {
+            half_ton(engine_family().unrounded_mass(engine_mass(rating)))
         };
         let engine = if survives(BattleSection::CenterTorso) {
-            half_ton(engine_family().unrounded_mass(engine_mass(rating)))
+            installed_engine
         } else {
             0
         };
@@ -78,15 +83,12 @@ impl BattleUnit {
                 .filter(|part| part.system == system)
                 .count()
         };
-        let material_slots = if definition.has_special("Clan") {
-            7
-        } else {
-            14
-        };
+        let material_slots = |clan| if clan { 7 } else { 14 };
         let structure_divisor =
             if definition.has_technology(super::BattleTechnology::ReinforcedStructure) {
                 1
-            } else if material_count(BattleSystem::EndoSteel) >= material_slots
+            } else if material_count(BattleSystem::EndoSteel)
+                >= material_slots(definition.clan_structure())
                 || definition.has_technology(super::BattleTechnology::CompositeStructure)
             {
                 4
@@ -99,12 +101,10 @@ impl BattleUnit {
             .values()
             .map(|section| u32::from(section.armor) + u32::from(section.rear))
             .sum();
-        let armor_denominator = if material_count(BattleSystem::FerroFibrous) >= material_slots {
-            if definition.has_special("Clan") {
-                60
-            } else {
-                56
-            }
+        let armor_denominator = if material_count(BattleSystem::FerroFibrous)
+            >= material_slots(definition.clan_armor())
+        {
+            if definition.clan_armor() { 60 } else { 56 }
         } else if material_count(BattleSystem::HeavyFerroFibrous) >= 21 {
             62
         } else if material_count(BattleSystem::LightFerroFibrous) >= 7 {
@@ -115,8 +115,7 @@ impl BattleUnit {
         } else {
             50
         };
-        // Apply the material conversion before mass scaling and half-ton rounding.
-        let armor = half_ton((protection * 50 / armor_denominator) * 1024 / 16);
+        let armor = armor_mass(protection, armor_denominator);
         let mut equipment = loadout
             .systems
             .iter()
@@ -131,9 +130,21 @@ impl BattleUnit {
                     .iter()
                     .filter(|slot| survives(slot.section))
                     .count() as u32;
+            if survives(mount.criticals[0].section) {
+                equipment += one_shot_mass(mount);
+            }
         }
         let sink_mass = self.cooling_mass()?;
         equipment += sink_mass;
+        if ice {
+            equipment += power_amplifier_mass(&loadout.weapons, survives);
+        }
+        if loadout.systems.iter().any(|part| {
+            part.system == BattleSystem::Supercharger && survives(part.location.section)
+        }) {
+            // A supercharger weighs a tenth of the engine, rounded up to the half ton.
+            equipment += half_ton(installed_engine.div_ceil(10));
+        }
         let ammunition = loadout
             .ammunition
             .iter()
@@ -192,8 +203,14 @@ impl BattleUnit {
         };
         // Keep per-critical integer rounding, including 341 units per IS double-sink slot.
         let slot_mass = 1024 / sink_slots;
+        // Fusion engines carry ten heat sinks for free; combustion engines carry none.
+        let free = if definition.has_special("ICEEngine_Tech") {
+            0
+        } else {
+            10
+        };
         Ok(if sinks > 0 {
-            (u32::from(sinks) * sink_slots / sink_efficiency).saturating_sub(10 * sink_slots)
+            (u32::from(sinks) * sink_slots / sink_efficiency).saturating_sub(free * sink_slots)
                 * slot_mass
         } else {
             loadout
@@ -213,7 +230,14 @@ pub(super) fn system_slot_mass(definition: &super::BattleTemplate, system: Battl
     match system {
         BattleSystem::Case | BattleSystem::LightProbe => 512,
         BattleSystem::C3i => 1280,
-        BattleSystem::BeagleProbe => 768,
+        // The Clan active probe fills one slot for a ton; the Beagle two for a ton and a half.
+        BattleSystem::BeagleProbe => {
+            if definition.has_special("Clan") {
+                1024
+            } else {
+                768
+            }
+        }
         BattleSystem::BloodhoundProbe => 2048 / 3,
         BattleSystem::TargetingComputer
         | BattleSystem::Masc
@@ -221,7 +245,6 @@ pub(super) fn system_slot_mass(definition: &super::BattleTemplate, system: Battl
         | BattleSystem::C3Slave
         | BattleSystem::Tag
         | BattleSystem::AngelEcm
-        | BattleSystem::NullSignature
         | BattleSystem::Axe
         | BattleSystem::Mace
         | BattleSystem::DualSaw
@@ -234,10 +257,10 @@ pub(super) fn system_slot_mass(definition: &super::BattleTemplate, system: Battl
                 1024
             }
         }
-        // A Watchdog CEWS weighs a ton and a half in the Clan ECM slot.
+        // A Watchdog CEWS weighs a ton and a half across two ECM slots.
         BattleSystem::Ecm => {
             if definition.has_technology(super::BattleTechnology::Watchdog) {
-                1536
+                768
             } else if definition.has_special("Clan") {
                 1024
             } else {
@@ -255,9 +278,11 @@ pub(super) fn system_slot_mass(definition: &super::BattleTemplate, system: Battl
         BattleSystem::Sword => {
             u32::from(definition.tons.div_ceil(10)) * 512 / u32::from(definition.tons.div_ceil(15))
         }
+        // Half a ton plus a twentieth of the Mech rounded up to the half ton, spread over one
+        // slot plus one per twenty tons.
         BattleSystem::RetractableBlade => {
-            let blade = u32::from(definition.tons.div_ceil(20));
-            (blade * 1024 + 512) / (blade + 1)
+            let slots = u32::from(definition.tons.div_ceil(20)) + 1;
+            (512 + half_ton((u32::from(definition.tons) * 1024).div_ceil(20))) / slots
         }
         BattleSystem::Lance => 1024,
         BattleSystem::Flail => 5 * 1024 / 4,
@@ -273,6 +298,45 @@ pub(super) fn system_slot_mass(definition: &super::BattleTemplate, system: Battl
         },
         _ => 0,
     }
+}
+
+/// A one-shot launcher weighs half a ton more than the launcher it adapts; rocket launchers are
+/// built as one-shot weapons and their catalogue mass already counts it.
+pub(super) fn one_shot_mass<L>(mount: &super::WeaponMount<L>) -> u32 {
+    if mount.one_shot && !mount.weapon.is_rocket() {
+        512
+    } else {
+        0
+    }
+}
+
+/// Power amplifiers a combustion-engined Mech needs for its surviving energy weapons: a tenth of
+/// their mass, rounded up to the half ton.
+fn power_amplifier_mass(
+    weapons: &[super::WeaponMount],
+    survives: impl Fn(BattleSection) -> bool,
+) -> u32 {
+    let energy: u32 = weapons
+        .iter()
+        .filter(|mount| {
+            (mount.weapon.is_energy() && mount.weapon.profile().ammunition_per_ton == 0)
+                || matches!(
+                    mount.weapon,
+                    super::BattleWeapon::PlasmaRifle
+                        | super::BattleWeapon::LaserAms
+                        | super::BattleWeapon::ClanLaserAms
+                )
+        })
+        .filter(|mount| survives(mount.criticals[0].section))
+        .map(|mount| mount.weapon.mass())
+        .sum();
+    half_ton(energy.div_ceil(10))
+}
+
+/// Armor mass for `protection` points of a type worth `denominator` fiftieths of a standard
+/// point each: converted to tons without truncating, then rounded up to the next half ton.
+pub(super) fn armor_mass(protection: u32, denominator: u32) -> u32 {
+    half_ton((protection * 50 * 1024).div_ceil(denominator * 16))
 }
 
 /// Shared structure accounting preserves the surviving proportion before half-ton rounding.
@@ -341,6 +405,20 @@ mod tests {
         ] {
             assert_eq!(engine_mass(rating), half_tons * 512);
         }
+    }
+
+    /// Armor converts points to tons before rounding, so a fraction of a point still costs
+    /// the next half ton.
+    #[test]
+    fn armor_mass_rounds_up_without_truncating_points() {
+        // 144 Inner Sphere ferro-fibrous points weigh 8.04 tons: 8.5 after rounding.
+        assert_eq!(armor_mass(144, 56), 8 * 1024 + 512);
+        // 154 Clan ferro-fibrous points weigh 8.02 tons.
+        assert_eq!(armor_mass(154, 60), 8 * 1024 + 512);
+        assert_eq!(armor_mass(160, 50), 10 * 1024);
+        assert_eq!(armor_mass(161, 50), 10 * 1024 + 512);
+        // Hardened armor carries eight points per ton.
+        assert_eq!(armor_mass(80, 25), 10 * 1024);
     }
 
     /// CASE II weighs a ton per Inner Sphere slot and half a ton per Clan slot.

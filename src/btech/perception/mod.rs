@@ -410,10 +410,14 @@ fn probe_profile(
     jammed: bool,
 ) -> Result<Option<BattleProbeProfile>> {
     // Build the equipment projection once and check every family against it.
-    let fittings = match world.btech.vehicles().get(&observer) {
+    let (clan, fittings) = match world.btech.vehicles().get(&observer) {
         Some(vehicle) => {
             let loadout = vehicle.loadout()?;
-            BattleActiveProbe::BY_REACH.map(|kind| (kind, vehicle.probe_fitting(&loadout, kind)))
+            (
+                vehicle.definition().has_special("Clan"),
+                BattleActiveProbe::BY_REACH
+                    .map(|kind| (kind, vehicle.probe_fitting(&loadout, kind))),
+            )
         }
         None => {
             let unit = world
@@ -422,7 +426,10 @@ fn probe_profile(
                 .get(&observer)
                 .context("Observer is not constructed")?;
             let loadout = unit.loadout()?;
-            BattleActiveProbe::BY_REACH.map(|kind| (kind, unit.probe_fitting(&loadout, kind)))
+            (
+                unit.definition().has_special("Clan"),
+                BattleActiveProbe::BY_REACH.map(|kind| (kind, unit.probe_fitting(&loadout, kind))),
+            )
         }
     };
     let mut damaged = None;
@@ -430,7 +437,7 @@ fn probe_profile(
         if !fitting.installed {
             continue;
         }
-        let range = installation_reach(world, observer, u16::from(kind.range()));
+        let range = installation_reach(world, observer, u16::from(kind.range(clan)));
         if !fitting.available {
             damaged.get_or_insert(BattleProbeProfile {
                 kind,

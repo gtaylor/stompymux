@@ -82,6 +82,8 @@ struct MechFile {
     fields: BTreeMap<String, String>,
     /// Lowercase location headings and their equipment lines.
     locations: BTreeMap<String, Vec<String>>,
+    /// Lowercase design quirks, from the repeated `quirk:` lines.
+    quirks: Vec<String>,
 }
 
 impl MechFile {
@@ -90,6 +92,7 @@ impl MechFile {
         let mut file = Self {
             fields: BTreeMap::new(),
             locations: BTreeMap::new(),
+            quirks: Vec::new(),
         };
         let mut current: Option<String> = None;
         for line in source.lines() {
@@ -115,8 +118,12 @@ impl MechFile {
                 continue;
             }
             if let Some((key, value)) = line.split_once(':') {
-                file.fields
-                    .insert(key.trim().to_ascii_lowercase(), value.trim().to_owned());
+                let key = key.trim().to_ascii_lowercase();
+                if key == "quirk" {
+                    file.quirks.push(value.trim().to_ascii_lowercase());
+                    continue;
+                }
+                file.fields.insert(key, value.trim().to_owned());
             }
         }
         file
@@ -165,8 +172,9 @@ pub fn convert(source: &str) -> Result<Converted> {
     let chassis = file.required("chassis")?.to_owned();
     let model = file.field("model").unwrap_or_default().to_owned();
     let config = file.required("config")?;
-    let movement = match config
-        .to_ascii_lowercase()
+    let lower_config = config.to_ascii_lowercase();
+    let omni = lower_config.contains("omnimech") || lower_config.contains("omnimek");
+    let movement = match lower_config
         .replace("omnimech", "")
         .replace("omnimek", "")
         .trim()
@@ -184,11 +192,52 @@ pub fn convert(source: &str) -> Result<Converted> {
     if tech == TechBase::Clan {
         construction.push(("tech_base", "clan"));
     }
-    construction.extend(engine(file.required("engine")?)?.map(|engine| ("engine", engine)));
+    let engine_header = file.required("engine")?;
+    let engine_family = engine(engine_header)?;
+    construction.extend(engine_family.map(|engine| ("engine", engine)));
     construction.extend(gyro(file.field("gyro"))?.map(|gyro| ("gyro", gyro)));
     construction.extend(cockpit(file.field("cockpit"))?.map(|cockpit| ("cockpit", cockpit)));
-    construction.extend(structure(file.required("structure")?)?.map(|kind| ("structure", kind)));
-    construction.extend(armor(file.required("armor")?)?.map(|armor| ("armor", armor)));
+    let structure_header = file.required("structure")?;
+    let structure_family = structure(structure_header)?;
+    construction.extend(structure_family.map(|kind| ("structure", kind)));
+    let armor_header = file.required("armor")?;
+    let armor_family = armor(armor_header)?;
+    construction.extend(armor_family.map(|armor| ("armor", armor)));
+    // A mixed-technology unit may take its engine, structure or armor from the other base;
+    // record it where the technology base changes slots or mass.
+    for (key, family, component, tech_dependent) in [
+        (
+            "engine_tech",
+            engine_family,
+            engine_tech(engine_header),
+            &["xl", "xxl", "light"][..],
+        ),
+        (
+            "structure_tech",
+            structure_family,
+            structure_tech(structure_header),
+            &["endo_steel"][..],
+        ),
+        (
+            "armor_tech",
+            armor_family,
+            armor_tech(armor_header),
+            &["ferro_fibrous", "laser_reflective"][..],
+        ),
+    ] {
+        if let Some(component) = component
+            && component != tech
+            && family.is_some_and(|family| tech_dependent.contains(&family))
+        {
+            construction.push((
+                key,
+                match component {
+                    TechBase::InnerSphere => "inner_sphere",
+                    TechBase::Clan => "clan",
+                },
+            ));
+        }
+    }
     let (sink_count, sinks) = heat_sinks(file.required("heat sinks")?, tech)?;
     match sinks {
         HeatSinkKind::Double(TechBase::InnerSphere) => construction.push(("heat_sinks", "double")),
@@ -203,6 +252,12 @@ pub fn convert(source: &str) -> Result<Converted> {
     };
     let locations = if movement == "quad" { &QUAD } else { &BIPED };
     let mut specials = Vec::new();
+    if omni {
+        specials.push("OmniMech_Tech");
+    }
+    if file.quirks.iter().any(|quirk| quirk == "searchlight") {
+        specials.push("SearchLight");
+    }
     let mut criticals = Vec::new();
     for (mtf, heading, _, _) in locations {
         let lines = file
@@ -221,6 +276,15 @@ pub fn convert(source: &str) -> Result<Converted> {
                         sinks
                     )
                 }
+                Critical::System(item)
+                    if equipment::system_tech(line).is_some_and(|item_tech| item_tech != tech) =>
+                {
+                    bail!(
+                        "{heading} slot {}: {line} is mixed technology on this {} chassis, which stompymux cannot represent ({item})",
+                        slot + 1,
+                        tech.label()
+                    )
+                }
                 Critical::Searchlight => {
                     if !specials.contains(&"SearchLight") {
                         specials.push("SearchLight");
@@ -232,6 +296,7 @@ pub fn convert(source: &str) -> Result<Converted> {
         }
         criticals.push(resolved);
     }
+    feed_other_tech_launchers(&mut criticals);
     let split_mounts = split_mounts(&mut criticals, locations)?;
     let mut sections = Vec::new();
     for ((_, heading, armor_key, rear_key), criticals) in locations.iter().zip(&criticals) {
@@ -245,12 +310,15 @@ pub fn convert(source: &str) -> Result<Converted> {
             layout::slots(criticals, WeaponSpan::Catalogue).with_context(|| heading.to_string())?;
         sections.push(section);
     }
-    let reference = if model.is_empty() {
+    let full_reference = if model.is_empty() {
         chassis.clone()
-    } else if model.chars().any(|c| c.is_ascii_digit()) {
-        model.clone()
     } else {
         format!("{}-{model}", chassis.replace(' ', ""))
+    };
+    let reference = if is_designation(&model) {
+        model.clone()
+    } else {
+        full_reference.clone()
     };
     Ok(Converted {
         draft: Draft {
@@ -271,8 +339,62 @@ pub fn convert(source: &str) -> Result<Converted> {
             split_mounts,
         },
         reference,
+        full_reference,
         warnings: Vec::new(),
     })
+}
+
+/// Whether a model is a self-standing designation such as `AS7-D` or `HER-4K`, letters and
+/// digits around a hyphen, rather than a variant label such as `Prime`, `2` or `C 2` that only
+/// makes sense beside the chassis name.
+fn is_designation(model: &str) -> bool {
+    let Some((prefix, suffix)) = model.split_once('-') else {
+        return false;
+    };
+    prefix.chars().any(|c| c.is_ascii_alphabetic())
+        && model.chars().any(|c| c.is_ascii_digit())
+        && !suffix.is_empty()
+        && !model.contains(' ')
+}
+
+/// MegaMek shares some ammunition between Inner Sphere and Clan launchers (Narc pods are
+/// written as `ISNarc Pods` on Clan units). Feed a bin whose launcher the unit lacks to the
+/// other technology base's matching launcher when the unit carries that one instead.
+fn feed_other_tech_launchers(criticals: &mut [Vec<Critical>]) {
+    let launchers: Vec<_> = criticals
+        .iter()
+        .flatten()
+        .filter_map(|critical| match critical {
+            Critical::Weapon { weapon, .. } => Some(*weapon),
+            _ => None,
+        })
+        .collect();
+    for critical in criticals.iter_mut().flatten() {
+        let Critical::Ammo { weapon, rounds, .. } = critical else {
+            continue;
+        };
+        if launchers.contains(weapon) {
+            continue;
+        }
+        let Some((namespace, label)) = weapon.name().split_once('.') else {
+            continue;
+        };
+        let other = if namespace == "IS" { "CL" } else { "IS" };
+        let Ok(fed) = stompymux_rs::BattleWeapon::parse(&format!("{other}.{label}")) else {
+            continue;
+        };
+        if !launchers.contains(&fed) {
+            continue;
+        }
+        let per_ton = weapon.profile().ammunition_per_ton;
+        let fed_per_ton = fed.profile().ammunition_per_ton;
+        if per_ton > 0 {
+            *rounds =
+                u16::try_from(u32::from(*rounds) * u32::from(fed_per_ton) / u32::from(per_ton))
+                    .unwrap_or(*rounds);
+        }
+        *weapon = fed;
+    }
 }
 
 /// Pair weapon runs that hold only part of a weapon with their remainder in an adjacent
@@ -383,6 +505,35 @@ fn tech_base(value: &str) -> Result<TechBase> {
         "clan" | "mixed (clan chassis)" => TechBase::Clan,
         _ => bail!("unsupported technology base {value}"),
     })
+}
+
+/// The technology base an engine header names (`XL (Clan) Engine`, `XL Engine(IS)`), if any.
+fn engine_tech(value: &str) -> Option<TechBase> {
+    let lower = value.to_ascii_lowercase();
+    if lower.contains("(clan)") {
+        Some(TechBase::Clan)
+    } else if lower.contains("(is)") || lower.contains("(inner sphere)") {
+        Some(TechBase::InnerSphere)
+    } else {
+        None
+    }
+}
+
+/// The technology base a structure header names (`IS Endo Steel`, `Clan Endo Steel`), if any.
+fn structure_tech(value: &str) -> Option<TechBase> {
+    let lower = value.to_ascii_lowercase();
+    if lower.starts_with("clan ") {
+        Some(TechBase::Clan)
+    } else if lower.starts_with("is ") {
+        Some(TechBase::InnerSphere)
+    } else {
+        None
+    }
+}
+
+/// The technology base an armor header names (`Ferro-Fibrous(Clan)`), if any.
+fn armor_tech(value: &str) -> Option<TechBase> {
+    engine_tech(value)
 }
 
 /// The engine family, or `None` for a standard fusion engine.
@@ -605,6 +756,87 @@ mod tests {
         );
         let stranded = replace_line(ATLAS, "Right Torso:", 10, "-Empty-");
         assert!(template_error(&stranded).contains("left over"));
+    }
+
+    #[test]
+    fn references_use_designations_and_qualify_variant_labels() {
+        assert!(is_designation("AS7-D"));
+        assert!(is_designation("HER-4K"));
+        for label in ["2", "C 2", "Prime", "IIC", "GDR-", "-D"] {
+            assert!(!is_designation(label), "{label}");
+        }
+        let numbered = ATLAS.replace("model:AS7-D", "model:2");
+        let converted = convert(&numbered).unwrap();
+        assert_eq!(converted.reference, "Atlas-2");
+        assert_eq!(convert(ATLAS).unwrap().full_reference, "Atlas-AS7-D");
+    }
+
+    #[test]
+    fn omnimechs_and_searchlight_quirks_become_specials() {
+        let source = ATLAS
+            .replace("Config:Biped", "Config:Biped OmniMek")
+            .replace(
+                "model:AS7-D",
+                "model:AS7-D\nquirk:command_mech\nquirk:searchlight",
+            );
+        let draft = convert(&source).unwrap().draft;
+        assert_eq!(draft.specials, ["OmniMech_Tech", "SearchLight"]);
+    }
+
+    #[test]
+    fn mixed_technology_components_are_recorded_or_refused() {
+        let clan_engine = ATLAS.replace("300 Fusion Engine(IS)", "300 XL (Clan) Engine");
+        let draft = convert(&clan_engine).unwrap().draft;
+        assert!(draft.construction.contains(&("engine", "xl")));
+        assert!(draft.construction.contains(&("engine_tech", "clan")));
+        // A standard fusion engine is the same whichever base built it.
+        let clan_fusion = ATLAS.replace("300 Fusion Engine(IS)", "300 Fusion (Clan) Engine");
+        let draft = convert(&clan_fusion).unwrap().draft;
+        assert!(
+            !draft
+                .construction
+                .iter()
+                .any(|(key, _)| *key == "engine_tech")
+        );
+        let clan_case = replace_line(ATLAS, "Left Torso:", 12, "CLCASEII");
+        assert!(template_error(&clan_case).contains("mixed technology"));
+        assert_eq!(equipment::system_tech("CLCASEII"), Some(TechBase::Clan));
+        assert_eq!(
+            equipment::system_tech("BeagleActiveProbe (OMNIPOD)"),
+            Some(TechBase::InnerSphere)
+        );
+        assert_eq!(equipment::system_tech("CASE II"), None);
+        assert_eq!(equipment::system_tech("Medium Laser"), None);
+    }
+
+    #[test]
+    fn shared_ammunition_feeds_the_other_base_launcher() {
+        let narc = |weapon| Critical::Weapon {
+            weapon,
+            rear: false,
+            one_shot: false,
+        };
+        let pods = |weapon| Critical::Ammo {
+            weapon,
+            modes: Vec::new(),
+            rounds: 6,
+        };
+        let mut criticals = vec![vec![
+            narc(stompymux_rs::BattleWeapon::ClanNarcBeacon),
+            pods(stompymux_rs::BattleWeapon::NarcBeacon),
+        ]];
+        feed_other_tech_launchers(&mut criticals);
+        assert_eq!(
+            criticals[0][1],
+            pods(stompymux_rs::BattleWeapon::ClanNarcBeacon)
+        );
+        // Ammunition for a launcher the unit carries is left alone.
+        let mut matched = vec![vec![
+            narc(stompymux_rs::BattleWeapon::NarcBeacon),
+            pods(stompymux_rs::BattleWeapon::NarcBeacon),
+        ]];
+        feed_other_tech_launchers(&mut matched);
+        assert_eq!(matched[0][1], pods(stompymux_rs::BattleWeapon::NarcBeacon));
     }
 
     /// The full error chain from converting an `.mtf` source.

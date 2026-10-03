@@ -71,7 +71,7 @@ impl BattleAmmunitionMode {
             | Self::MmlLrmSwarm1
             | Self::MmlLrmSemiGuided
             | Self::MmlLrmStinger => weapon.is_mml(),
-            Self::ExtendedRange | Self::HighExplosive => weapon.supports_semiguided(),
+            Self::ExtendedRange | Self::HighExplosive => weapon.is_atm(),
             Self::Inferno => weapon.profile().missiles > 0,
             Self::SemiGuided | Self::Stinger => weapon.supports_semiguided(),
             Self::Swarm | Self::Swarm1 => weapon.supports_semiguided() && !weapon.is_dead_fire(),

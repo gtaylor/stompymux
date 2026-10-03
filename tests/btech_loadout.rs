@@ -1019,8 +1019,9 @@ fn elrm_catalog_and_ranges() {
             (10.051, 0),
             (12.049, 0),
             (12.051, 2),
-            (24.051, 4),
-            (36.0, 4),
+            (22.049, 2),
+            (22.051, 4),
+            (38.0, 4),
         ] {
             assert_eq!(
                 weapon
@@ -1031,12 +1032,12 @@ fn elrm_catalog_and_ranges() {
                 modifier
             );
         }
-        assert!(weapon.range_modifier(36.001, false).unwrap().is_none());
+        assert!(weapon.range_modifier(38.001, false).unwrap().is_none());
         assert_eq!(
-            weapon.range_modifier(48.0, true).unwrap().unwrap().modifier,
+            weapon.range_modifier(44.0, true).unwrap().unwrap().modifier,
             8
         );
-        assert!(weapon.range_modifier(48.001, true).unwrap().is_none());
+        assert!(weapon.range_modifier(44.001, true).unwrap().is_none());
     }
 }
 

@@ -132,7 +132,7 @@ pub fn critical_report(world: &World, id: ObjectId, section: &str) -> Result<Bat
     let names = ConstructionNames {
         leg: unit.chassis().is_leg(section),
         double_sinks: unit.definition().has_double_heat_sinks(),
-        engine: BattleEngine::display_family(&loadout, unit.definition().has_special("Clan"))?,
+        engine: BattleEngine::display_family(&loadout, unit.definition().clan_engine())?,
         improved_jets: unit.definition().has_special("ImprovedJJ_Tech"),
         small_cockpit: unit
             .definition()

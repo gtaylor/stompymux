@@ -335,7 +335,7 @@ async fn damage_installations_and_map_switches_shape_the_band() {
     let installation = lane(&grass(4), Observer::Installation(Some("BeagleProbe"))).await;
     let profile = battle_perception_profile(&installation.world, installation.observer).unwrap();
     assert_eq!(profile.sensor_range, 21);
-    assert_eq!(profile.probe.map(|probe| probe.range), Some(8));
+    assert_eq!(profile.probe.map(|probe| probe.range), Some(5));
 
     let mut switched = lane(&grass(4), Observer::Vehicle(Some("BeagleProbe"))).await;
     let profile = battle_perception_profile(&switched.world, switched.observer).unwrap();
@@ -467,7 +467,7 @@ async fn acquisition_is_instant_except_for_hidden_units() {
     for (distance, equipment, acquired, rolled) in [
         (2, None, Some(true), false),
         (6, None, Some(false), false),
-        (6, Some("BeagleProbe"), Some(true), false),
+        (6, Some("BloodhoundProbe"), Some(true), false),
         (4, None, None, true),
     ] {
         let mut lane = lane(&grass(8), Observer::Vehicle(equipment)).await;
@@ -524,7 +524,7 @@ async fn sensor_command_and_lua_report_perception() {
     for line in [
         "Sensors: 15 hexes in any light or weather",
         "Sight:   30 hexes",
-        "Probe:   Beagle Active Probe, 6 hexes",
+        "Probe:   Beagle Active Probe, 4 hexes",
         "Radar:   none",
     ] {
         assert!(text.contains(line), "{text}");
