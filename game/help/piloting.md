@@ -826,8 +826,9 @@ enabled, terrain and unit modes use map colors: your marker is bold, friends are
 yellow, enemies and fire are red, woods green and water blue. Ordinary `lrs E`
 remains uncolored and leaves zero elevation blank.
 
-Use `lrs L` to filter terrain by current visibility, `lrs H` for filtered
-elevation, or `lrs S` for visible units over filtered terrain. These modes work
+Use `lrs U` to see the terrain beneath fire and smoke. Use `lrs L` to filter terrain
+by current visibility, `lrs H` for filtered elevation, or `lrs S` for visible units
+over filtered terrain. These modes work
 on ordinary maps as well as dark maps. Question marks mean the requested terrain
 information is obscured.
 
@@ -836,10 +837,10 @@ can reveal terrain farther away at night, but obstructions block their beams.
 Visibility-filtered maps update as those light sources move or expire.
 
 
-`tactical [C|T|B|M|L|U] [target | bearing range]` draws nearby terrain, elevations and
+`tactical [C|T|B|M|L] [target | bearing range]` draws nearby terrain, elevations and
 known contacts in a hex grid. Your unit is `**`; friendly contact IDs are lowercase
-and enemy IDs uppercase. Use `L` to show only visible terrain, or `U` to show terrain
-under fire and smoke. Dark maps always hide unseen terrain. Omit the center to
+and enemy IDs uppercase. Fire (`&`) and smoke (`:`) fill the top of a hex, and the
+terrain beneath them stays in the bottom. Use `L` to show only visible terrain. Dark maps always hide unseen terrain. Omit the center to
 use your unit, supply a known contact ID, or give a bearing and signed distance.
 The display needs a running unit and working tactical sensors. Use `navigate` for a local hex-shaped view.
 
@@ -852,9 +853,8 @@ displays use `|`, `!` and `,`. These overlays are unavailable on dark maps.
 
 
 `tactical B` marks potential landing hexes with O (suitable) or X (unsuitable).
-Suitable terrain is grass or road with six equal-height neighboring hexes,
-outside landing restrictions that apply to your team. The display uses base
-terrain beneath fire and smoke. It shows your own marker but omits other contacts,
+Suitable terrain is grass, road or sand clear of fire and smoke, with six
+equal-height neighboring hexes, outside landing restrictions that apply to your team. It shows your own marker but omits other contacts,
 and is unavailable on dark maps. This display does not enable aircraft landing.
 
 
@@ -873,7 +873,7 @@ center, the bearing readout is 180 degrees.
 `navigate [target | bearing range]` combines a local hex map with a compass plot
 of positions inside the selected center hex. The compass shows your unit as *,
 friendly contacts as x and enemies as X. The readouts always show your own position,
-terrain, speed and heading. Omit arguments to center on yourself. This view remains
+terrain, speed and heading, plus an effect line when fire or smoke covers your hex. Omit arguments to center on yourself. This view remains
 centered near map edges and can show your own hex with failed scanners.
 
 

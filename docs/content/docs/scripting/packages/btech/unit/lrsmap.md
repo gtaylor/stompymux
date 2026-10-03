@@ -21,7 +21,7 @@ btech.unit.lrsmap(dbref, pilot, mode, arguments)
 | --- | --- | --- |
 | `dbref` | `integer` | Scanner unit dbref. |
 | `pilot` | `integer` |  |
-| `mode` | `string` | First letter T/E/C/M/L/H/S (case insensitive), or a descriptive API mode name. |
+| `mode` | `string` | First letter T/E/C/M/L/H/S/U (case insensitive), or a descriptive API mode name. U shows the terrain beneath fire and smoke. |
 | `arguments` | `string?` | Shared centering arguments. |
 
 ## Returns

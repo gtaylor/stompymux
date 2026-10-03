@@ -16,6 +16,8 @@ pub enum BattleLongRangeMode {
     VisibleTerrain,
     VisibleElevation,
     VisibleUnits,
+    /// Terrain with any fire or smoke over it left out.
+    UnderlyingTerrain,
 }
 
 impl std::str::FromStr for BattleLongRangeMode {
@@ -28,6 +30,7 @@ impl std::str::FromStr for BattleLongRangeMode {
             "visible_terrain" => Some(b'l'),
             "visible_elevation" => Some(b'h'),
             "visible_units" => Some(b's'),
+            "underlying_terrain" => Some(b'u'),
             _ => lower.as_bytes().first().copied(),
         };
         match selector {
@@ -38,8 +41,9 @@ impl std::str::FromStr for BattleLongRangeMode {
             Some(b'l') => Ok(Self::VisibleTerrain),
             Some(b'h') => Ok(Self::VisibleElevation),
             Some(b's') => Ok(Self::VisibleUnits),
+            Some(b'u') => Ok(Self::UnderlyingTerrain),
             _ => bail!(
-                "Supported LRS sensor types: T (terrain), E (elevation), C (colored elevation), M (units), L/H/S (visible terrain/elevation/units)"
+                "Supported LRS sensor types: T (terrain), E (elevation), C (colored elevation), M (units), L/H/S (visible terrain/elevation/units), U (terrain under fire and smoke)"
             ),
         }
     }
@@ -182,7 +186,11 @@ fn render_viewport(
                 });
                 continue;
             }
-            let hex = map.hex(i64::from(x), i64::from(y))?;
+            let hex = if mode == BattleLongRangeMode::UnderlyingTerrain {
+                map.base_hex(i64::from(x), i64::from(y))?
+            } else {
+                map.hex(i64::from(x), i64::from(y))?
+            };
             let glyph = match mode {
                 BattleLongRangeMode::Elevation
                 | BattleLongRangeMode::ColoredElevation
@@ -430,6 +438,10 @@ mod tests {
             (Mode::VisibleTerrain, ["L", "visible_terrain", "LOS"]),
             (Mode::VisibleElevation, ["H", "visible_elevation", "Height"]),
             (Mode::VisibleUnits, ["S", "visible_units", "Sensors"]),
+            (
+                Mode::UnderlyingTerrain,
+                ["U", "underlying_terrain", "Under"],
+            ),
         ] {
             for input in inputs {
                 assert_eq!(input.parse::<Mode>().unwrap(), mode);

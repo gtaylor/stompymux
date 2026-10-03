@@ -111,10 +111,11 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
             BattleLongRangeMode::VisibleTerrain,
             BattleLongRangeMode::VisibleElevation,
             BattleLongRangeMode::VisibleUnits,
+            BattleLongRangeMode::UnderlyingTerrain,
         ] {
             battle_long_range_map(&world, observer, ObjectId(1), mode, "", dimensions).unwrap();
         }
-        for flag in ["L", "U", "C", "T", "B", "M"] {
+        for flag in ["L", "C", "T", "B", "M"] {
             battle_tactical_map(&world, observer, ObjectId(1), flag, dimensions).unwrap();
         }
         let nav = battle_navigate(&world, observer, ObjectId(1), "").unwrap();
