@@ -299,7 +299,9 @@ async fn idle_cutoff_transition_runs_on_server_heartbeat() {
             persistence::save(&config.database(), &world).await.unwrap();
             let (_address, shutdown, task, _lua) =
                 support::start(&config, Rc::new(Cell::new(1))).await;
-            tokio::time::timeout(Duration::from_secs(9), async {
+            // Each attempt advances the paused clock one heartbeat, so the bound counts
+            // heartbeats rather than real seconds.
+            tokio::time::timeout(Duration::from_secs(30), async {
                 loop {
                     let saved = persistence::load(&config.database()).await.unwrap();
                     let unit = &saved.btech.constructed_units()[&id];
@@ -312,7 +314,7 @@ async fn idle_cutoff_transition_runs_on_server_heartbeat() {
                         );
                         break;
                     }
-                    tokio::time::sleep(Duration::from_millis(50)).await;
+                    support::attempt_heartbeat().await;
                 }
             })
             .await

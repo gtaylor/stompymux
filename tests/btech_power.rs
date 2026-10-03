@@ -188,7 +188,7 @@ async fn server_tick_retries_failed_countdowns_without_publishing_completion() {
         let text=client.until("Power: Starting").await;
         assert!(!text.contains("All systems operational"));
         sqlx::query("DROP TRIGGER deny_tick").execute(&mut sql).await.unwrap();
-        client.until("All systems operational!").await;
+        client.until_heartbeats("All systems operational!", 20).await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].power(),BattlePower::Running);
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].last_startup(), 1);
         let before_motion=persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].motion().unwrap();

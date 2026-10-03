@@ -180,7 +180,7 @@ async fn server_tick_retries_failed_countdowns_without_publishing_completion() {
         support::attempt_heartbeat().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.vehicles()[&id].power(),initial);
         sqlx::query("DROP TRIGGER deny_tick").execute(&mut sql).await.unwrap();
-        client.until("All systems operational!").await;
+        client.until_heartbeats("All systems operational!", 20).await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.vehicles()[&id].power(),BattlePower::Running);
         let before_point = persistence::load(&config.database()).await.unwrap().btech.vehicles()[&id].motion().unwrap().point;
         client.send("speed 10.75").await;
