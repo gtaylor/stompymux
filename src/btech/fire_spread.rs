@@ -75,18 +75,29 @@ fn advance_fire(map: &mut StoredBattleMap) -> Result<()> {
             Arc::make_mut(&mut map.decorations).remove(&index);
             let (x, y) = (i64::from(index) % map.width, i64::from(index) / map.width);
             let tile = map.base_hex(x, y)?;
-            if tile.is_woods() {
-                let ground = if map.fire_dice.as_mut().unwrap().d6() < 3 {
-                    super::Ground::Clear
-                } else {
-                    super::Ground::Rough
-                };
-                map.write_hex(x, y, tile.with_woods(None).with_ground(ground))?;
+            if let Some(burnt) = burn_out(tile, map.fire_dice.as_mut().unwrap()) {
+                map.write_hex(x, y, burnt)?;
             }
             continue;
         }
     }
     Ok(())
+}
+
+/// The hex left when a fire over it burns out, if the fire changed it. Heavy woods thin to
+/// light woods, and light woods burn away. Clear ground beneath is left rough two times in
+/// three; any other ground, such as a road or sand, keeps its own kind.
+fn burn_out(tile: super::BattleHex, dice: &mut super::BattleDice) -> Option<super::BattleHex> {
+    match tile.woods()? {
+        super::Woods::Heavy => Some(tile.with_woods(Some(super::Woods::Light))),
+        super::Woods::Light => {
+            let ground = match tile.ground() {
+                super::Ground::Clear if dice.d6() >= 3 => super::Ground::Rough,
+                ground => ground,
+            };
+            Some(tile.with_woods(None).with_ground(ground))
+        }
+    }
 }
 
 /// Resolve all spread checks before smoke/fire duration draws; fire replaces smoke at shared tiles.
@@ -103,13 +114,7 @@ fn spread(map: &mut StoredBattleMap, index: u32, replaced: &mut BTreeSet<u32>) -
             dice.generic_roll() >= threshold && i64::from(dice.die(60)?) <= map.wind_speed;
     }
     for index in targets.iter().flatten().copied() {
-        if map.decorations.contains_key(&index)
-            || matches!(
-                map.base_hex(i64::from(index) % map.width, i64::from(index) / map.width)?
-                    .structure(),
-                Some(super::Structure::Building { .. } | super::Structure::Wall { .. })
-            )
-        {
+        if map.decorations.contains_key(&index) {
             continue;
         }
         let remaining = 89 + map.fire_dice.as_mut().unwrap().die(61)?;
@@ -124,9 +129,14 @@ fn spread(map: &mut StoredBattleMap, index: u32, replaced: &mut BTreeSet<u32>) -
         let Some(index) = index.filter(|_| ignite) else {
             continue;
         };
-        if !map
-            .base_hex(i64::from(index) % map.width, i64::from(index) / map.width)?
-            .is_woods()
+        let burning = map
+            .decorations
+            .get(&index)
+            .is_some_and(|effect| effect.kind == BattleDecorationKind::Fire);
+        if burning
+            || !map
+                .base_hex(i64::from(index) % map.width, i64::from(index) / map.width)?
+                .is_woods()
         {
             continue;
         }
@@ -226,5 +236,37 @@ mod tests {
             spread_hexes(&map, BattleHexCoordinate { x: 0, y: 0 }),
             [None, None, Some(1), None]
         );
+    }
+
+    #[test]
+    fn burnout_thins_heavy_woods_and_keeps_the_ground_under_light_woods() {
+        use crate::btech::{BattleHex, Ground, Terrain, Woods};
+        let mut dice = crate::btech::BattleDice::seeded([7; 32]);
+        let heavy = BattleHex::new(Terrain::HeavyForest, 3);
+        assert_eq!(
+            burn_out(heavy, &mut dice),
+            Some(heavy.with_woods(Some(Woods::Light)))
+        );
+        for ground in [Ground::Road, Ground::Sand, Ground::Snow, Ground::Mountains] {
+            let light = BattleHex::at_level(2)
+                .with_ground(ground)
+                .with_woods(Some(Woods::Light));
+            assert_eq!(
+                burn_out(light, &mut dice),
+                Some(BattleHex::at_level(2).with_ground(ground))
+            );
+        }
+        let mut grounds = std::collections::BTreeSet::new();
+        for _ in 0..64 {
+            let burnt = burn_out(BattleHex::new(Terrain::LightForest, 1), &mut dice).unwrap();
+            assert_eq!((burnt.woods(), burnt.level()), (None, 1));
+            grounds.insert(format!("{:?}", burnt.ground()));
+        }
+        assert_eq!(
+            grounds.len(),
+            2,
+            "clear ground burns to clear or rough: {grounds:?}"
+        );
+        assert_eq!(burn_out(BattleHex::new(Terrain::Rough, 0), &mut dice), None);
     }
 }

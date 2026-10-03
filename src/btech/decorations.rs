@@ -99,7 +99,38 @@ pub fn set_map_decoration(
     })
 }
 
-/// Install an overlay, replacing any stored decoration records at its hex.
+/// Raise smoke over a hex for `seconds` as a side effect of combat, such as an artillery
+/// smoke round or the steam of a quenched inferno. Smoke never smothers a fire burning there.
+pub(super) fn raise_smoke(
+    world: &mut World,
+    map: ObjectId,
+    coordinate: BattleHexCoordinate,
+    seconds: i64,
+) -> Result<()> {
+    let burning = world
+        .btech
+        .maps()
+        .get(&map)
+        .context("Map not found")?
+        .decoration(coordinate)?
+        .is_some_and(|effect| effect.kind == BattleDecorationKind::Fire);
+    if burning {
+        return Ok(());
+    }
+    set_map_decoration(
+        world,
+        map,
+        coordinate,
+        Some(BattleDecoration::new(
+            BattleDecorationKind::Smoke,
+            seconds,
+            None,
+        )),
+    )
+}
+
+/// Install an overlay, replacing any stored fire or smoke records at its hex. Generic
+/// decorations there stay, with the terrain they restore.
 pub(super) fn install_decoration(
     map: &mut StoredBattleMap,
     index: u32,
@@ -120,8 +151,12 @@ pub(super) fn install_decoration(
         y: (i64::from(index) / map.width) as i32,
     };
     map.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
-    for records in &mut map.static_decorations {
-        Arc::make_mut(records).retain(|_, record| record.coordinate != coordinate);
+    for kind in [
+        super::BattleStaticDecorationKind::Fire,
+        super::BattleStaticDecorationKind::Smoke,
+    ] {
+        Arc::make_mut(&mut map.static_decorations[kind.index()])
+            .retain(|_, record| record.coordinate != coordinate);
     }
     Arc::make_mut(&mut map.decorations).insert(index, effect);
     Ok(())

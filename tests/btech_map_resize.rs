@@ -149,9 +149,10 @@ async fn reshape_persists_grid_and_removes_map_objects() {
     );
 }
 
-/// Resizing keeps the terrain under fire and smoke while clearing them and reciprocal building exits.
+/// Resizing keeps fire and smoke, and the terrain under them, on hexes still on the map, drops
+/// them from hexes cut off, and clears reciprocal building exits.
 #[tokio::test]
-async fn resize_clears_effects_and_building_routes() {
+async fn resize_keeps_effects_on_remaining_hexes_and_clears_building_routes() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Exterior".into(), Kind::Room);
     let interior = world.create(&config, "Interior".into(), Kind::Room);
@@ -179,37 +180,44 @@ async fn resize_clears_effects_and_building_routes() {
     )
     .unwrap();
     set_battle_building_exit(&mut world, interior, 5, Some(map)).unwrap();
-    for (x, kind) in [
-        (0, BattleDecorationKind::Fire),
-        (1, BattleDecorationKind::Smoke),
+    for ((x, y), kind) in [
+        ((0, 1), BattleDecorationKind::Fire),
+        ((1, 0), BattleDecorationKind::Smoke),
     ] {
         set_map_decoration(
             &mut world,
             map,
-            BattleHexCoordinate { x, y: 0 },
+            BattleHexCoordinate { x, y },
             Some(BattleDecoration::new(kind, 30, None)),
         )
         .unwrap();
     }
     persistence::save(&config.database(), &world).await.unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-    resize_battle_map_action(&scripts, &config, actor, map, 2, 2).unwrap();
+    resize_battle_map_action(&scripts, &config, actor, map, 1, 3).unwrap();
     let saved = scripts.world().clone();
     let field = &saved.btech.maps()[&map];
     assert!(field.building_entrances().is_empty());
     assert!(saved.btech.maps()[&interior].building_exits().is_empty());
-    for (x, terrain, elevation) in [(0, Terrain::LightForest, 2), (1, Terrain::Road, 1)] {
-        assert_eq!(
-            field.base_hex(x, 0).unwrap(),
-            BattleHex::new(terrain, elevation)
-        );
-        assert!(
+    assert_eq!(
+        field.base_hex(0, 1).unwrap(),
+        BattleHex::new(Terrain::Grassland, 0)
+    );
+    // The fire keeps its hex although the narrower map numbers its hexes differently.
+    let kinds: Vec<_> = (0..3)
+        .map(|y| {
             field
-                .decoration(BattleHexCoordinate { x: x as i32, y: 0 })
+                .decoration(BattleHexCoordinate { x: 0, y })
                 .unwrap()
-                .is_none()
-        );
-    }
+                .map(|effect| effect.kind)
+        })
+        .collect();
+    assert_eq!(kinds, [None, Some(BattleDecorationKind::Fire), None]);
+    assert!(
+        field
+            .decoration(BattleHexCoordinate { x: 1, y: 0 })
+            .is_err()
+    );
     persistence::save(&config.database(), &saved).await.unwrap();
     assert_eq!(
         persistence::load(&config.database()).await.unwrap().btech,

@@ -17,6 +17,9 @@ mod btech_autopilot_orders;
 #[path = "../btech_battlefield_identity.rs"]
 mod btech_battlefield_identity;
 
+#[path = "../btech_fire_layers.rs"]
+mod btech_fire_layers;
+
 #[path = "../btech_gauss.rs"]
 mod btech_gauss;
 

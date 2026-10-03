@@ -73,7 +73,7 @@ fn site(world: &World, id: ObjectId, character: bool) -> Result<Option<DropSite>
         .maps()
         .get(&position.map)
         .context("Drop map is unavailable")?
-        .base_hex(i64::from(position.x), i64::from(position.y))?;
+        .hex(i64::from(position.x), i64::from(position.y))?;
     let hover = world
         .btech
         .vehicles()

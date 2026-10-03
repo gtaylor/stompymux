@@ -87,15 +87,11 @@ pub(super) fn advance(
     for cell in report.pattern.cells.clone() {
         match cell.effect {
             BattleArtilleryEffect::Smoke { seconds } => {
-                set_map_decoration(
+                super::decorations::raise_smoke(
                     &mut candidate,
                     map,
                     cell.position,
-                    Some(BattleDecoration::new(
-                        BattleDecorationKind::Smoke,
-                        i64::from(seconds),
-                        None,
-                    )),
+                    i64::from(seconds),
                 )?;
             }
             BattleArtilleryEffect::Mine { strength } => {

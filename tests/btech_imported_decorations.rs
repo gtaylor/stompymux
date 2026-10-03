@@ -137,7 +137,7 @@ async fn imported_records_preserve_lookup_order_and_share_native_lua_removal() {
 }
 
 #[tokio::test]
-async fn replacing_imported_effects_preserves_underlying_terrain_and_clears_source_rows() {
+async fn replacing_imported_effects_preserves_underlying_terrain_and_clears_their_rows() {
     let (_dir, config, mut world, map) = fixture().await;
     set_map_decoration(
         &mut world,
@@ -146,9 +146,19 @@ async fn replacing_imported_effects_preserves_underlying_terrain_and_clears_sour
         Some(BattleDecoration::new(BattleDecorationKind::Smoke, 2, None)),
     )
     .unwrap();
-    for kind in BattleStaticDecorationKind::ALL {
+    // New smoke replaces the stored fire and smoke records but keeps the generic decoration.
+    for kind in [
+        BattleStaticDecorationKind::Fire,
+        BattleStaticDecorationKind::Smoke,
+    ] {
         assert!(world.btech.maps()[&map].static_decorations(kind).is_empty());
     }
+    assert_eq!(
+        world.btech.maps()[&map]
+            .static_decorations(BattleStaticDecorationKind::Decoration)
+            .len(),
+        1
+    );
     assert_eq!(
         world.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
         Terrain::Smoke
@@ -204,22 +214,26 @@ async fn replacing_imported_effects_preserves_underlying_terrain_and_clears_sour
         )
         .is_err()
     );
-    // Resizing clears fire and smoke with the other map objects.
-    resize_battle_map_action(&scripts, &config, ObjectId(1), map, 2, 2).unwrap();
-    assert_eq!(
-        scripts.world().btech.maps()[&map]
-            .hex(1, 1)
-            .unwrap()
-            .terrain(),
-        Terrain::HeavyForest
-    );
-    for kind in BattleStaticDecorationKind::ALL {
-        assert!(
+    // Resizing keeps the fire, its records and the woods under it on a hex still on the map.
+    let before: Vec<_> = BattleStaticDecorationKind::ALL
+        .map(|kind| {
             scripts.world().btech.maps()[&map]
                 .static_decorations(kind)
-                .is_empty()
-        );
-    }
+                .len()
+        })
+        .into();
+    resize_battle_map_action(&scripts, &config, ObjectId(1), map, 2, 3).unwrap();
+    let world = scripts.world().clone();
+    let field = &world.btech.maps()[&map];
+    assert_eq!(field.hex(1, 1).unwrap().terrain(), Terrain::Fire);
+    assert_eq!(
+        field.base_hex(1, 1).unwrap().terrain(),
+        Terrain::HeavyForest
+    );
+    let after: Vec<_> = BattleStaticDecorationKind::ALL
+        .map(|kind| field.static_decorations(kind).len())
+        .into();
+    assert_eq!(after, before);
     let saved = scripts.world().clone();
     persistence::save(&config.database(), &saved).await.unwrap();
     assert_eq!(

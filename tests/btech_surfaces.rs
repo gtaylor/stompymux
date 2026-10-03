@@ -4932,12 +4932,9 @@ async fn calm_fire_spreads_smoke_then_burns_out_with_saved_replay() {
     assert_eq!(world.btech, replay.btech);
     assert!(!map_fire_pending(&world));
     assert!(map_smoke_pending(&world));
+    // Heavy woods thin to light woods when the fire burns out.
     let burnt = world.btech.maps()[&map].hex(1, 1).unwrap();
-    assert!(matches!(
-        burnt.terrain(),
-        Terrain::Grassland | Terrain::Rough
-    ));
-    assert_eq!(burnt.level(), 2);
+    assert_eq!(burnt, BattleHex::new(Terrain::LightForest, 2));
     for x in 0..3 {
         let smoke = world.btech.maps()[&map]
             .decoration(BattleHexCoordinate { x, y: 0 })
@@ -7013,7 +7010,8 @@ async fn artillery_world_damage_and_restart() {
     );
 }
 
-/// Smoke replaces overlays and survives storage; delivered mines neither reinforce nor replace existing fields.
+/// Smoke covers the pattern except where a fire burns, and survives storage; delivered mines
+/// neither reinforce nor replace existing fields.
 #[tokio::test]
 async fn artillery_world_smoke_and_mines() {
     let (_dir, config, mut world, map, _) = fixture_field(Terrain::Grassland, 0, 3).await;
@@ -7044,6 +7042,10 @@ async fn artillery_world_smoke_and_mines() {
                     .decoration(cell.position)
                     .unwrap()
                     .unwrap();
+                if cell.position == center {
+                    assert_eq!(decoration.kind, BattleDecorationKind::Fire);
+                    continue;
+                }
                 assert_eq!(decoration.kind, BattleDecorationKind::Smoke);
                 assert!((90..=150).contains(&decoration.remaining));
                 assert_eq!(

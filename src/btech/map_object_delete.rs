@@ -142,6 +142,29 @@ pub(super) fn restoration_kind(
     }
 }
 
+/// The hex a deleted decoration leaves: its restored terrain standing at the current hex's
+/// ground level. Water, a bridge or a structure keeps the current hex's depth, deck or height
+/// when it already has one, and is one level deep or tall otherwise.
+fn restore_terrain(current: super::BattleHex, terrain: super::Terrain) -> super::BattleHex {
+    use super::{BattleHex, Structure, Terrain, Water};
+    let depth = current.water().map_or(1, |water| water.depth.max(1));
+    let height = match current.structure() {
+        Some(Structure::Building { height } | Structure::Wall { height }) => height.max(1),
+        _ => 1,
+    };
+    let restored = match terrain {
+        Terrain::Water | Terrain::Ice => BattleHex::new(terrain, depth),
+        Terrain::Bridge => BattleHex::new(terrain, current.deck_clearance().unwrap_or(1))
+            .with_water(Some(Water {
+                depth,
+                frozen: false,
+            })),
+        Terrain::Building | Terrain::Wall => BattleHex::new(terrain, height),
+        _ => BattleHex::new(terrain, current.level()),
+    };
+    restored.with_level(current.level())
+}
+
 /// Snapshot one kind before removing it; building consequences may remove later kinds as well.
 fn remove_kind(
     world: &mut World,
@@ -165,10 +188,8 @@ fn remove_kind(
                 let terrain = record.static_decorations(stored_kind)[&ordinal]
                     .restored_terrain
                     .context("Decoration has no terrain to restore")?;
-                let level = record
-                    .base_hex(i64::from(position.x), i64::from(position.y))?
-                    .level();
-                let restored = super::BattleHex::new(terrain, level);
+                let current = record.base_hex(i64::from(position.x), i64::from(position.y))?;
+                let restored = restore_terrain(current, terrain);
                 super::terrain_edit::replace_hex(world, map, position, restored)?;
             }
             super::set_static_decoration(world, map, stored_kind, ordinal, None)?;
@@ -304,4 +325,38 @@ pub(super) fn object_positions(
         });
     }
     positions
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::btech::{BattleHex, Structure, Terrain};
+
+    #[test]
+    fn restored_terrain_stands_at_the_current_ground_level() {
+        let raised = BattleHex::new(Terrain::Grassland, 3);
+        assert_eq!(
+            restore_terrain(raised, Terrain::Water),
+            BattleHex::new(Terrain::Water, 1).with_level(3)
+        );
+        assert_eq!(
+            restore_terrain(raised, Terrain::Rough),
+            BattleHex::new(Terrain::Rough, 3)
+        );
+        let lake = BattleHex::new(Terrain::Water, 2).with_level(4);
+        assert_eq!(restore_terrain(lake, Terrain::Ice), lake.frozen());
+        let bridge = restore_terrain(lake, Terrain::Bridge);
+        assert_eq!(
+            (
+                bridge.level(),
+                bridge.water_depth(),
+                bridge.deck_clearance()
+            ),
+            (4, 2, Some(1))
+        );
+        let tower = BattleHex::new(Terrain::Building, 7).with_level(2);
+        let wall = restore_terrain(tower, Terrain::Wall);
+        assert_eq!(wall.structure(), Some(Structure::Wall { height: 7 }));
+        assert_eq!(wall.level(), 2);
+    }
 }

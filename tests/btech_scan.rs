@@ -2441,7 +2441,7 @@ async fn landing_overlays_honor_saved_team_exclusions_and_terrain() {
 }
 
 #[tokio::test]
-async fn landing_suitability_checks_full_hex_neighborhood_and_base_terrain() {
+async fn landing_suitability_checks_full_hex_neighborhood_terrain_and_fire() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let center = BattleHexCoordinate { x: 1, y: 1 };
     for (tiles, flags, expected) in [
@@ -2480,19 +2480,22 @@ async fn landing_suitability_checks_full_hex_neighborhood_and_base_terrain() {
                 .unwrap(),
             expected
         );
-        set_map_decoration(
-            &mut world,
-            map,
-            center,
-            Some(BattleDecoration::new(BattleDecorationKind::Fire, 30, None)),
-        )
-        .unwrap();
-        assert_eq!(
-            world.btech.maps()[&map]
-                .landing_suitability(center, 0)
-                .unwrap(),
-            expected
-        );
+        // Nothing lands in fire or smoke, whatever the ground beneath.
+        for kind in [BattleDecorationKind::Fire, BattleDecorationKind::Smoke] {
+            set_map_decoration(
+                &mut world,
+                map,
+                center,
+                Some(BattleDecoration::new(kind, 30, None)),
+            )
+            .unwrap();
+            assert_eq!(
+                world.btech.maps()[&map]
+                    .landing_suitability(center, 0)
+                    .unwrap(),
+                BattleLandingSuitability::ImproperTerrain
+            );
+        }
     }
 }
 

@@ -46,7 +46,7 @@ pub fn propose_mech_ground_motion(
         "Invalid unit motion"
     );
     motion.point.range(motion.point)?;
-    let current = map.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
+    let current = map.hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
     let base = super::load::movement_maximum(
         world,
         id,

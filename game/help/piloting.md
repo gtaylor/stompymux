@@ -28,7 +28,9 @@ unable to save progress. A running unit accepts `heading <degrees>` and
 causes a fall and can cause crowding collisions. Reverse or slower motion stops
 without that shutdown fall. Motion supports grassland, roads, forests, rough ground, mountains, snow, sand and
 bridge decks, including one- and two-level elevation changes. Sand halves the speed
-of wheeled vehicles; Mechs, tracked vehicles and hovercraft cross it like grassland. Forward steps reduce
+of wheeled vehicles; Mechs, tracked vehicles and hovercraft cross it like grassland. Fire and smoke slow
+every ground unit as much as rough ground. Standing in flames adds five to a Mech's heat production,
+unless it is under the water or beneath the bridge deck the fire burns on. Forward steps reduce
 speed by 10.75 kph per level while preserving your requested throttle. Backing
 across a step normally requires a piloting check: failure causes a fall, with an
 uphill fall returning you to the previous position. When reverse-step checks are

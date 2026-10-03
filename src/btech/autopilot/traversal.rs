@@ -289,12 +289,11 @@ fn terrain_cost(hex: BattleHex, kind: GroundUnitKind) -> Option<u32> {
     if matches!(hex.structure(), Some(Structure::Wall { .. })) {
         return None;
     }
-    Some(if hex.overlay().is_some() {
-        2
-    } else if hex.is_water_surface() {
+    Some(if hex.is_water_surface() {
         3
     } else {
-        // Elsewhere a route prefers terrain in proportion to the speed it costs.
+        // Elsewhere a route prefers terrain in proportion to the speed it costs, which counts
+        // any fire or smoke over it.
         hex.ground_speed_divisor(kind == GroundUnitKind::Wheeled) as u32
     })
 }

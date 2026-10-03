@@ -309,7 +309,7 @@ async fn idle_map_fire_burnout_retries_random_state_save_failure() {
     tokio::task::LocalSet::new().run_until(async {
         let (_dir, config, mut world) = support::isolated_world().await;
         let map = world.create(&config, "Burnout field".into(), Kind::Room);
-        create_battle_map(&mut world, map, "fire.map", BattleMapAsset::from_cells("1 1\n\"2\n").unwrap()).unwrap();
+        create_battle_map(&mut world, map, "fire.map", BattleMapAsset::from_cells("1 1\n`2\n").unwrap()).unwrap();
         let coordinate = BattleHexCoordinate { x: 0, y: 0 };
         set_map_decoration(&mut world, map, coordinate, Some(BattleDecoration::new(BattleDecorationKind::Fire, 60, None))).unwrap();
         // Resume the final burnout phase of an already spreading fire.
