@@ -250,7 +250,7 @@ fn compiled_directive_catalog_and_file_access() {
 #[tokio::test(flavor = "current_thread")]
 async fn default_player_macros_live_list_updates() {
     let (_d, mut c, mut s) = fixture().await;
-    assert_eq!(c.mux.default_player_macros, vec![0]);
+    assert!(c.mux.default_player_macros.is_empty());
     edit(&mut c, &mut s, 1, "default_player_macros", "[0, 999, 0]").unwrap();
     assert_eq!(c.mux.default_player_macros, vec![0, 999, 0]);
     for value in [

@@ -179,8 +179,9 @@ default_player_lua_parent = "default_player.lua"
 default_player_flags = ["ansi", "in_character"]
 # Ordered default macro set numbers (up to five); [] disables automatic attachments.
 # Resolve only when a player is created; missing sets warn and are skipped.
-# Lua bootstrapping can create set 0 before subsequent players are created.
-default_player_macros = [0]
+# The fixture database has no macro sets, so tests that exercise defaults
+# opt in explicitly.
+default_player_macros = []
 # Flags that are set on exits after creation.
 default_exit_flags = ["no_command"]
 # Flags that are set on rooms after creation.
