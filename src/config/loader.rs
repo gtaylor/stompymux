@@ -6,6 +6,7 @@ use super::{
 use anyhow::{Context, Result, bail, ensure};
 use std::{
     collections::{BTreeMap, BTreeSet},
+    ops::Bound,
     path::{Path, PathBuf},
 };
 use toml::Value;
@@ -16,6 +17,22 @@ pub struct Document {
     pub origins: BTreeMap<String, PathBuf>,
     pub warnings: Vec<String>,
 }
+/// Provenance keys at `path` itself or nested beneath it, as `path.key` and,
+/// when `indexed`, `path[index]`. Keys sharing a prefix sort together, so this
+/// visits only the matching run of the map instead of every key.
+fn beneath<'a, V>(
+    map: &'a BTreeMap<String, V>,
+    path: &'a str,
+    indexed: bool,
+) -> impl Iterator<Item = (&'a String, &'a V)> + 'a {
+    map.range::<str, _>((Bound::Included(path), Bound::Unbounded))
+        .take_while(move |(key, _)| key.starts_with(path))
+        .filter(move |(key, _)| {
+            let rest = &key[path.len()..];
+            rest.is_empty() || rest.starts_with('.') || (indexed && rest.starts_with('['))
+        })
+}
+
 /// Merge ordered values and provenance using the C TOML loader's rules.
 fn merge(a: &mut Document, b: Document) {
     fn value(
@@ -25,58 +42,56 @@ fn merge(a: &mut Document, b: Document) {
         origins: &mut BTreeMap<String, PathBuf>,
         source: &BTreeMap<String, PathBuf>,
     ) {
-        if let (Value::Table(old), Value::Table(new)) = (&mut *a, &b) {
-            for (key, v) in new {
-                let child = if path.is_empty() {
-                    key.clone()
-                } else {
-                    format!("{path}.{key}")
-                };
-                value(
-                    old.entry(key.clone())
-                        .or_insert(Value::String(String::new())),
-                    v.clone(),
-                    &child,
-                    origins,
-                    source,
-                );
+        match b {
+            Value::Table(new) if a.is_table() => {
+                let old = a.as_table_mut().expect("checked table");
+                for (key, v) in new {
+                    let child = if path.is_empty() {
+                        key.clone()
+                    } else {
+                        format!("{path}.{key}")
+                    };
+                    value(
+                        old.entry(key).or_insert(Value::String(String::new())),
+                        v,
+                        &child,
+                        origins,
+                        source,
+                    );
+                }
+                if let Some(file) = source.get(path) {
+                    origins.insert(path.into(), file.clone());
+                }
             }
-            if let Some(file) = source.get(path) {
-                origins.insert(path.into(), file.clone());
-            }
-            return;
-        }
-        if let (Value::Array(old), Value::Array(new)) = (&mut *a, &b)
-            && old.iter().all(Value::is_table)
-            && new.iter().all(Value::is_table)
-        {
-            let offset = old.len();
-            for (index, item) in new.iter().enumerate() {
-                let from = format!("{path}[{index}]");
-                let to = format!("{path}[{}]", offset + index);
-                for (key, file) in source {
-                    if key == &from || key.starts_with(&format!("{from}.")) {
+            Value::Array(new)
+                if a.as_array()
+                    .is_some_and(|old| old.iter().all(Value::is_table))
+                    && new.iter().all(Value::is_table) =>
+            {
+                let old = a.as_array_mut().expect("checked array");
+                let offset = old.len();
+                for (index, item) in new.into_iter().enumerate() {
+                    let from = format!("{path}[{index}]");
+                    let to = format!("{path}[{}]", offset + index);
+                    for (key, file) in beneath(source, &from, false) {
                         origins.insert(format!("{to}{}", &key[from.len()..]), file.clone());
                     }
+                    old.push(item);
                 }
-                old.push(item.clone());
             }
-            return;
-        }
-        origins.retain(|key, _| {
-            key != path
-                && !key.starts_with(&format!("{path}."))
-                && !key.starts_with(&format!("{path}["))
-        });
-        for (key, file) in source {
-            if key == path
-                || key.starts_with(&format!("{path}."))
-                || key.starts_with(&format!("{path}["))
-            {
-                origins.insert(key.clone(), file.clone());
+            b => {
+                let stale: Vec<String> = beneath(origins, path, true)
+                    .map(|(key, _)| key.clone())
+                    .collect();
+                for key in stale {
+                    origins.remove(&key);
+                }
+                for (key, file) in beneath(source, path, true) {
+                    origins.insert(key.clone(), file.clone());
+                }
+                *a = b;
             }
         }
-        *a = b;
     }
     let mut root = Value::Table(std::mem::take(&mut a.values));
     value(
@@ -86,7 +101,10 @@ fn merge(a: &mut Document, b: Document) {
         &mut a.origins,
         &b.origins,
     );
-    a.values = root.as_table().unwrap().clone();
+    let Value::Table(values) = root else {
+        unreachable!("merging two tables yields a table");
+    };
+    a.values = values;
     a.warnings.extend(b.warnings);
 }
 /// Read and merge a configuration file and its recursive includes.
@@ -177,12 +195,16 @@ fn filter(
             }
             validate(spec, &value).with_context(|| format!("{}: {path}", source.display()))?;
             out.insert(key, value);
-        } else if KEYS.iter().any(|s| s.path.starts_with(&format!("{path}."))) {
-            let table = value
-                .as_table()
-                .with_context(|| format!("{}: {path} must be a table", source.display()))?;
+        } else if KEYS.iter().any(|s| {
+            s.path
+                .strip_prefix(path.as_str())
+                .is_some_and(|rest| rest.starts_with('.'))
+        }) {
+            let Value::Table(table) = value else {
+                bail!("{}: {path} must be a table", source.display());
+            };
             let mut child = toml::Table::new();
-            filter(table.clone(), &mut child, &path, source, origins, warnings)?;
+            filter(table, &mut child, &path, source, origins, warnings)?;
             out.insert(key, Value::Table(child));
         } else {
             warnings.push(format!(
