@@ -436,3 +436,135 @@ fn rules_fall() -> BattleFallRules {
         toughness: false,
     }
 }
+
+/// An LRM boat and a spotter on the shore south of a lake, a deep hex and then a shallow one,
+/// with a target at `target_row`. A target under the surface hides from units ashore, so the
+/// water cases use a Mech wading in the shallows. Returns the shooter, spotter and target.
+async fn barrage(
+    asset: BattleMapAsset,
+    target_row: i64,
+) -> (tempfile::TempDir, World, [ObjectId; 3]) {
+    let (dir, config, mut world) = support::isolated_world().await;
+    let map = world.create(&config, "Raised barrage".into(), Kind::Room);
+    create_battle_map(&mut world, map, "barrage.map", asset).unwrap();
+    let mut units = Vec::new();
+    for (pilot, source, row, team) in [
+        (
+            Some(ObjectId(1)),
+            include_str!("fixtures/btech/mechs/AS7-D.toml"),
+            9,
+            0,
+        ),
+        (
+            Some(ObjectId(2)),
+            include_str!("fixtures/btech/mechs/JR7-D.toml"),
+            3,
+            0,
+        ),
+        (
+            None,
+            include_str!("fixtures/btech/mechs/JR7-D.toml"),
+            target_row,
+            2,
+        ),
+    ] {
+        let id = world.create(&config, format!("Barrage unit {row}"), Kind::Thing);
+        world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
+        create_battle_unit(
+            &mut world,
+            id,
+            BattleTemplate::parse("test", source).unwrap(),
+        )
+        .unwrap();
+        place_battle_unit(&mut world, id, map, 0, row).unwrap();
+        if let Some(pilot) = pilot {
+            world.objects.get_mut(&pilot).unwrap().location = Some(id);
+            assign_battle_pilot(&mut world, id, pilot).unwrap();
+        }
+        set_battle_unit_signature(
+            &mut world,
+            id,
+            BattleUnitSignature {
+                team,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let mut state = serde_json::to_value(&world.btech).unwrap();
+        let unit = &mut state["constructed"][id.0.to_string()];
+        unit["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+        unit["dice"] = serde_json::to_value(BattleDice::seeded([31; 32])).unwrap();
+        unit["crew_recovery"]["dice"] = serde_json::to_value(BattleDice::seeded([13; 32])).unwrap();
+        world.btech = serde_json::from_value(state).unwrap();
+        units.push(id);
+    }
+    let [shooter, spotter, target] = [units[0], units[1], units[2]];
+    let seen = (0..=255).any(|seed| {
+        let mut state = serde_json::to_value(&world.btech).unwrap();
+        state["constructed"][spotter.0.to_string()]["dice"] =
+            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        world.btech = serde_json::from_value(state).unwrap();
+        refresh_battle_contacts(&mut world, &[spotter, shooter]).unwrap();
+        visible_battle_contact(&world, spotter, target)
+            .unwrap()
+            .is_some()
+    });
+    assert!(seen, "the spotter never saw the target at row {target_row}");
+    select_battle_target(&mut world, spotter, ObjectId(2), Some(target)).unwrap();
+    select_battle_spotter(&mut world, spotter, ObjectId(2), Some(spotter)).unwrap();
+    select_battle_spotter(&mut world, shooter, ObjectId(1), Some(spotter)).unwrap();
+    (dir, world, [shooter, spotter, target])
+}
+
+/// Indirect fire from dry land is refused at a target standing in the water and allowed at one
+/// ashore, with the same aim and shot whether the lake lies at level 0 or higher.
+#[tokio::test]
+async fn lifting_a_map_keeps_indirect_fire_into_water_unchanged() {
+    let lake =
+        BattleMapAsset::from_cells("1 10\n~2\n~1\n.0\n.0\n.0\n.0\n.0\n.0\n.0\n.0\n").unwrap();
+    let rules = shot_rules();
+    let mut outcomes = Vec::new();
+    for target_row in [1, 2] {
+        let (_low_dir, mut low, units) = barrage(lake.clone(), target_row).await;
+        let (_high_dir, mut high, _) = barrage(lifted(&lake), target_row).await;
+        let [shooter, spotter, target] = units;
+        assert_eq!(
+            battle_spotter_target(&low, shooter).unwrap(),
+            BattleSpotterTarget { spotter, target },
+            "row {target_row}"
+        );
+        let lrm = low.btech.constructed_units()[&shooter]
+            .loadout()
+            .unwrap()
+            .weapons
+            .iter()
+            .position(|mount| mount.weapon == BattleWeapon::Lrm20)
+            .unwrap();
+        let aim = format!(
+            "{:?}",
+            battle_aim_modifiers(&low, shooter, target, lrm, 4, rules.aim)
+        );
+        assert_eq!(
+            aim,
+            format!(
+                "{:?}",
+                battle_aim_modifiers(&high, shooter, target, lrm, 4, rules.aim)
+            ),
+            "row {target_row}"
+        );
+        let low_shot = resolve_battle_shot(&mut low, shooter, ObjectId(1), target, lrm, rules)
+            .map_err(|error| error.to_string());
+        let high_shot = resolve_battle_shot(&mut high, shooter, ObjectId(1), target, lrm, rules)
+            .map_err(|error| error.to_string());
+        assert_eq!(
+            format!("{low_shot:?}"),
+            format!("{high_shot:?}"),
+            "row {target_row}"
+        );
+        let differing = differing(&outcome(&low, target), &outcome(&high, target));
+        assert!(differing.is_empty(), "row {target_row}: {differing:#?}");
+        outcomes.push(low_shot.err());
+    }
+    let refused = Some("You can't fire into water with that weapon from here.".to_string());
+    assert_eq!(outcomes, [refused, None]);
+}
