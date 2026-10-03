@@ -188,7 +188,7 @@ async fn server_tick_retries_failed_countdowns_without_publishing_completion() {
         tokio::time::timeout(std::time::Duration::from_secs(6), async {
             loop {
                 if persistence::load(&config.database()).await.unwrap().btech.vehicles()[&id].motion().unwrap().point != before_point { break; }
-                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                support::attempt_heartbeat().await;
             }
         }).await.unwrap();
         client.send("shutdown").await;

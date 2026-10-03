@@ -634,7 +634,7 @@ async fn self_destruct_ground_wreck_descends_after_restart() {
                         );
                         break;
                     }
-                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                    support::attempt_heartbeat().await;
                 }
             })
             .await;
