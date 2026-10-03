@@ -283,12 +283,13 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let top_sign = sign_for(top, SIGN_PLUS);
     let depth_sign = sign_for(depth, SIGN_MINUS);
     if mode == LABEL_ALL {
-        // Fixed rows, so a lone number still says which layer it belongs to.
-        if has_structure {
-            color = ink_number(color, local, -ROW_OFFSET, ROW_SIZE, top, top_sign);
-        }
+        // Fixed rows, so a lone number still says which layer it belongs to: ground level on
+        // top, the structure above it in the middle, the water below it at the bottom.
         if level != 0u || has_water || has_structure {
-            color = ink_number(color, local, 0.0, ROW_SIZE, level, SIGN_NONE);
+            color = ink_number(color, local, -ROW_OFFSET, ROW_SIZE, level, SIGN_NONE);
+        }
+        if has_structure {
+            color = ink_number(color, local, 0.0, ROW_SIZE, top, top_sign);
         }
         if has_water {
             color = ink_number(color, local, ROW_OFFSET, ROW_SIZE, depth, depth_sign);

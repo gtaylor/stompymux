@@ -38,8 +38,8 @@ pub struct Uniforms {
 /// positive one above it (+2). A layer's own elevation is ground level plus its offset.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Label {
-    /// Every layer in fixed rows: deck, building or wall height above, ground level in the
-    /// middle, water depth below. Ground level is left off bare level-zero hexes.
+    /// Every layer in fixed rows: ground level on top, deck, building or wall height in the
+    /// middle, water depth at the bottom. Ground level is left off bare level-zero hexes.
     #[default]
     All,
     /// Ground level, on hexes above level zero.
@@ -67,7 +67,7 @@ impl Label {
     pub fn legend(self) -> &'static str {
         match self {
             Self::All => {
-                "top: +deck, building or wall height · middle: ground level · \
+                "top: ground level · middle: +deck, building or wall height · \
                  bottom: -depth below the water"
             }
             Self::Level => "ground level",
@@ -791,7 +791,7 @@ mod tests {
         let bare = BattleHex::at_level(0);
         let rows = |hex, label| inked_rows(&device, &queue, hex, label);
         assert_eq!(rows(bridge, Label::All), [true, true, true]);
-        assert_eq!(rows(water, Label::All), [false, true, true]);
+        assert_eq!(rows(water, Label::All), [true, false, true]);
         assert_eq!(rows(building, Label::All), [true, true, false]);
         assert_eq!(rows(bare, Label::All), [false, false, false]);
         assert!(rows(bridge, Label::Height)[1]);
