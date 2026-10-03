@@ -1908,23 +1908,18 @@ async fn tactical_maps_render_contacts_and_underlying_terrain_with_native_lua_pa
     assert_eq!(plain.lines().nth(2).unwrap(), "     0  1  2  ");
     assert_eq!(&plain.lines().nth(5).unwrap()[8..10], "**");
     assert_eq!(&plain.lines().nth(7).unwrap()[8..10], "ab");
+    // Fire fills the top of its hex; the grassland beneath keeps the bottom.
     assert_eq!(&plain.lines().nth(10).unwrap()[5..7], "&&");
-    assert_eq!(&plain.lines().nth(11).unwrap()[5..7], "&&");
-    let underlying = battle_tactical_map(
-        &world,
-        source,
-        ObjectId(1),
-        "u",
-        BattleViewDimensions::default(),
-    )
-    .unwrap();
-    assert_eq!(
-        &text::plain(&underlying.text).lines().nth(10).unwrap()[5..7],
-        "&&"
-    );
-    assert_eq!(
-        &text::plain(&underlying.text).lines().nth(11).unwrap()[5..7],
-        "  "
+    assert_eq!(&plain.lines().nth(11).unwrap()[5..7], "__");
+    assert!(
+        battle_tactical_map(
+            &world,
+            source,
+            ObjectId(1),
+            "u",
+            BattleViewDimensions::default(),
+        )
+        .is_err()
     );
     assert!(report.text.contains("[bold]**[reset]"));
     assert!(report.text.contains("[fg=yellow bold]ab[reset]"));
@@ -1933,28 +1928,17 @@ async fn tactical_maps_render_contacts_and_underlying_terrain_with_native_lua_pa
         std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
     )
     .unwrap();
-    for (args, expected) in [("", &report), ("U", &underlying)] {
-        assert_eq!(
-            support::run_text(
-                &scripts,
-                &config,
-                ObjectId(1),
-                1,
-                &format!("tactical {args}")
-            ),
-            expected.text
-        );
-        let lua: mlua::Table = scripts
-            .eval_callback(&format!(
-                "return btech.unit.tactical({},1,'{args}')",
-                source.0
-            ))
-            .unwrap();
-        assert_eq!(
-            serde_json::to_value(lua).unwrap(),
-            serde_json::to_value(expected).unwrap()
-        );
-    }
+    assert_eq!(
+        support::run_text(&scripts, &config, ObjectId(1), 1, "tactical"),
+        report.text
+    );
+    let lua: mlua::Table = scripts
+        .eval_callback(&format!("return btech.unit.tactical({},1,'')", source.0))
+        .unwrap();
+    assert_eq!(
+        serde_json::to_value(lua).unwrap(),
+        serde_json::to_value(&report).unwrap()
+    );
     assert!(scripts.drain_outbox().is_empty());
     assert_eq!(scripts.world().btech, before);
     persistence::save(&config.database(), &world).await.unwrap();

@@ -1,5 +1,5 @@
-//! Fire and smoke over hexes that are not clear ground: burnout, spreading, heat, steam and
-//! the decorations sharing a hex all respect the layers beneath the overlay.
+//! Fire and smoke over hexes that are not clear ground: burnout, spreading, heat, steam, the
+//! decorations sharing a hex and the map displays all respect the layers beneath the overlay.
 use crate::support;
 use std::sync::Arc;
 use stompymux_rs::*;
@@ -211,4 +211,91 @@ async fn steam_leaves_a_fire_burning() {
         overlay(&world, map, 0, 0).map(|effect| effect.kind),
         Some(BattleDecorationKind::Fire)
     );
+}
+
+/// A piloted Jenner standing in smoky heavy woods beside a burning bridge, with ANSI colours.
+async fn smoky_crossing() -> (tempfile::TempDir, World, ObjectId) {
+    let (dir, config, mut world, map) = field("3 3\n\"0/2.0\n.0.0.0\n.0.0.0\n", |hex| hex).await;
+    let id = mech(&mut world, &config, map, 0, 0);
+    world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
+    world
+        .objects
+        .get_mut(&ObjectId(1))
+        .unwrap()
+        .flags
+        .insert(Flag::Ansi);
+    assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    set_map_decoration(
+        &mut world,
+        map,
+        BattleHexCoordinate { x: 0, y: 0 },
+        Some(BattleDecoration::new(BattleDecorationKind::Smoke, 60, None)),
+    )
+    .unwrap();
+    ignite(&mut world, map, 1, 0, 60);
+    (dir, world, id)
+}
+
+/// The tactical map draws fire and smoke in the top of a hex and keeps the terrain beneath in
+/// the bottom, with its own glyph, colour and height.
+#[tokio::test]
+async fn tactical_map_shows_the_terrain_beneath_fire_and_smoke() {
+    let (_dir, world, id) = smoky_crossing().await;
+    let report =
+        battle_tactical_map(&world, id, ObjectId(1), "", BattleViewDimensions::default()).unwrap();
+    let plain = text::plain(&report.text);
+    let lines: Vec<_> = plain.lines().collect();
+    let hex = |x: usize, y: usize| {
+        let row = 3 + y * 2 + usize::from(x.is_multiple_of(2));
+        let column = 5 + x * 3;
+        (
+            &lines[row][column..column + 2],
+            &lines[row + 1][column..column + 2],
+        )
+    };
+    // Our own marker covers the woods' top row; the woods stay underneath.
+    assert_eq!(hex(0, 0).1, "\"\"", "{plain}");
+    // The bridge deck burns: fire above, the deck and its height below.
+    assert_eq!(hex(1, 0), ("&&", "+2"), "{plain}");
+    // Each row takes its own colour: red fire, and green woods under the grey smoke.
+    for styled in ["[fg=red bold]&&[reset]", "[fg=green]\"\"[reset]"] {
+        assert!(report.text.contains(styled), "{}", report.text);
+    }
+}
+
+/// Long-range terrain shows fire and smoke, and the U mode shows the terrain beneath them.
+#[tokio::test]
+async fn long_range_u_mode_shows_the_terrain_beneath_fire_and_smoke() {
+    let (_dir, world, id) = smoky_crossing().await;
+    let map = |mode| {
+        text::plain(
+            &battle_long_range_map(
+                &world,
+                id,
+                ObjectId(1),
+                mode,
+                "",
+                BattleViewDimensions::default(),
+            )
+            .unwrap()
+            .text,
+        )
+    };
+    let terrain = map(BattleLongRangeMode::Terrain);
+    assert!(terrain.contains('&') && terrain.contains(':'), "{terrain}");
+    let beneath = map(BattleLongRangeMode::UnderlyingTerrain);
+    assert!(
+        !beneath.contains('&') && !beneath.contains(':'),
+        "{beneath}"
+    );
+    assert!(beneath.contains('"') && beneath.contains('/'), "{beneath}");
+}
+
+/// The navigation readout names the terrain under a unit and the smoke over it separately.
+#[tokio::test]
+async fn navigation_names_terrain_and_smoke_separately() {
+    let (_dir, world, id) = smoky_crossing().await;
+    let text = text::plain(&battle_navigate(&world, id, ObjectId(1), "").unwrap().text);
+    assert!(text.contains("Terrain:   Heavy Forest"), "{text}");
+    assert!(text.contains("Effect:           Smoke"), "{text}");
 }

@@ -1124,7 +1124,7 @@ function btech_map.elevation(map, hex) end
 ---@field WALL "wall"
 ---@field BRIDGE "bridge"
 
----Read the one terrain feature a map shows for a hex: fire or smoke, then a structure, water, woods or the ground.
+---Read the one terrain feature a map shows for a hex: fire or smoke, then a structure, water, woods or the ground. Use btech.map.hex for every layer, including the terrain beneath fire or smoke.
 ---@param map DbRef|Object
 ---@param hex BattleHexCoordinate
 ---@return BattleTerrainName terrain
@@ -2665,7 +2665,7 @@ function btech_unit.viewport(dbref, pilot, kind, arguments, dimensions) end
 ---Dark maps mask unseen terrain. Rendering consumes no dice and sends no notices.
 ---@param dbref integer Scanner unit dbref.
 ---@param pilot integer
----@param mode string First letter T/E/C/M/L/H/S (case insensitive), or a descriptive API mode name.
+---@param mode string First letter T/E/C/M/L/H/S/U (case insensitive), or a descriptive API mode name. U shows the terrain beneath fire and smoke.
 ---@param arguments string? Shared centering arguments.
 ---@return BattleLongRangeMap
 function btech_unit.lrsmap(dbref, pilot, mode, arguments) end
@@ -2674,11 +2674,11 @@ function btech_unit.lrsmap(dbref, pilot, mode, arguments) end
 ---@field viewport BattleViewport
 ---@field text string Styled hex display with acquired two-character contact labels.
 
----Render standard, C/T (mech/tank cliffs), B (landing zones), M (mines), L (visible), or U (underlying) tactical maps.
+---Render standard, C/T (mech/tank cliffs), B (landing zones), M (mines) or L (visible) tactical maps. Fire and smoke fill the top of a hex over the terrain beneath.
 ---Uses shared cockpit/display admission; no acquisition rolls, notices or state changes.
 ---@param dbref integer Scanner unit dbref.
 ---@param pilot integer
----@param arguments string? Optional C/T/B/M/L/U flag followed by shared centering arguments.
+---@param arguments string? Optional C/T/B/M/L flag followed by shared centering arguments.
 ---@return BattleTacticalMap
 function btech_unit.tactical(dbref, pilot, arguments) end
 
