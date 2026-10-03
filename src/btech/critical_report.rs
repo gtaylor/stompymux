@@ -207,7 +207,7 @@ fn inspect<L: Copy + PartialEq>(
                 .iter()
                 .enumerate()
                 .find(|(_, bin)| bin.location == location);
-            let system = BattleSystem::parse(&definition.equipment).ok();
+            let system = BattleSystem::named(&definition.equipment);
             let proxy = definition.equipment.eq_ignore_ascii_case("SplitCrit_Left")
                 || definition.equipment.eq_ignore_ascii_case("SplitCrit_Right");
             let placeholder = proxy

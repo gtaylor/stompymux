@@ -78,16 +78,18 @@ fn inventory<S: Ord, const MASTER: usize, const C3I: usize>(
 impl BattleUnit {
     /// Supply Mech slot availability, including flooding and whole-unit destruction.
     fn command_computers(&self) -> Result<ComputerInventory> {
-        Ok(inventory::<_, 5, 2>(
-            self.loadout()?.systems.into_iter().map(|part| {
-                (
-                    part.location.section,
-                    part.location.slot,
-                    part.system,
-                    !self.is_destroyed() && !self.critical_unavailable(part.location),
-                )
-            }),
-        ))
+        let systems = self.loadout()?.systems;
+        // Whole-unit destruction is the same for every slot; scanner and network
+        // queries ask this of every unit each tick, so evaluate it once.
+        let destroyed = self.is_destroyed();
+        Ok(inventory::<_, 5, 2>(systems.into_iter().map(|part| {
+            (
+                part.location.section,
+                part.location.slot,
+                part.system,
+                !destroyed && !self.critical_unavailable(part.location),
+            )
+        })))
     }
 
     /// Derive computer capabilities without trusting template flags or caching damage.
@@ -104,16 +106,18 @@ impl BattleUnit {
 impl BattleVehicle {
     /// Supply independent vehicle slots, including destroyed sections and whole-unit destruction.
     fn command_computers(&self) -> Result<ComputerInventory> {
-        Ok(inventory::<_, 1, 1>(
-            self.loadout()?.systems.into_iter().map(|part| {
-                (
-                    part.location.section,
-                    part.location.slot,
-                    part.system,
-                    !self.is_destroyed() && !self.critical_unavailable(part.location),
-                )
-            }),
-        ))
+        let systems = self.loadout()?.systems;
+        // Whole-unit destruction is the same for every slot; scanner and network
+        // queries ask this of every unit each tick, so evaluate it once.
+        let destroyed = self.is_destroyed();
+        Ok(inventory::<_, 1, 1>(systems.into_iter().map(|part| {
+            (
+                part.location.section,
+                part.location.slot,
+                part.system,
+                !destroyed && !self.critical_unavailable(part.location),
+            )
+        })))
     }
 
     /// Derive vehicle command-computer capabilities from installed equipment and live damage.

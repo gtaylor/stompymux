@@ -29,8 +29,9 @@ impl BattleUnit {
             || self.section_disabled(BattleSection::Head)
             || self.character_pilot.is_some_and(|status| status.killed)
             || self.pilot_killed
-            || self.system_hits(super::BattleSystem::Engine) >= 3
-            || self.system_hits(super::BattleSystem::Cockpit) > 0
+            || (!self.systems_intact()
+                && (self.system_hits(super::BattleSystem::Engine) >= 3
+                    || self.system_hits(super::BattleSystem::Cockpit) > 0))
             || [BattleSection::Head, BattleSection::CenterTorso]
                 .iter()
                 .any(|section| {

@@ -117,7 +117,7 @@ impl BattleUnit {
                 || self.weapon_failures.contains_key(&index),
             ready: self.power() == BattlePower::Running
                 && !self.is_destroyed()
-                && mechanics.check().is_ok()
+                && mechanics.admits()
                 && !spent
                 && !self.jammed_weapons.contains(&index)
                 && self.unjam.is_none()

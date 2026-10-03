@@ -1,6 +1,6 @@
 //! Resolve template critical slots into distinct weapons, ammunition bins and systems.
 use super::{BattleSection, BattleSystem, BattleTemplate, BattleWeapon};
-use anyhow::{Context, Result, ensure};
+use anyhow::{Context, Result, bail, ensure};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -663,22 +663,20 @@ impl BattleLoadout {
                         loadout.weapons.push(mount);
                         return Ok(());
                     }
-                    let system = match BattleSystem::parse(&critical.equipment) {
-                        Ok(system) => system,
-                        Err(_)
-                            if super::BattlePart::parse(&critical.equipment).is_ok_and(
-                                |part| {
-                                    matches!(
-                                        part.kind,
-                                        super::BattlePartKind::Component
-                                            | super::BattlePartKind::Bomb
-                                    )
-                                },
-                            ) =>
+                    let system = match BattleSystem::named(&critical.equipment) {
+                        Some(system) => system,
+                        None if super::BattlePart::parse(&critical.equipment).is_ok_and(
+                            |part| {
+                                matches!(
+                                    part.kind,
+                                    super::BattlePartKind::Component | super::BattlePartKind::Bomb
+                                )
+                            },
+                        ) =>
                         {
                             return Ok(());
                         }
-                        Err(error) => return Err(error),
+                        None => bail!("Unsupported equipment {}", critical.equipment),
                     };
                     ensure!(critical.modes.is_empty(), "Unsupported system mode");
                     loadout.systems.push(SystemCritical { location, system });

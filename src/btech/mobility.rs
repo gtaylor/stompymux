@@ -43,7 +43,7 @@ impl BattleUnit {
                         slot: **slot,
                     })
                 })
-                .filter_map(|(_, part)| BattleSystem::parse(&part.equipment).ok())
+                .filter_map(|(_, part)| BattleSystem::named(&part.equipment))
                 .collect();
             if damaged.contains(&BattleSystem::ShoulderOrHip) {
                 hips += 1;

@@ -2037,7 +2037,7 @@ fn template_system_at(
     slot: u8,
 ) -> Option<super::BattleSystem> {
     let critical = template.sections.get(&section)?.criticals.get(&slot)?;
-    super::BattleSystem::parse(&critical.equipment).ok()
+    super::BattleSystem::named(&critical.equipment)
 }
 
 /// Equipment-derived native technology flags produced during template loading.
@@ -2074,8 +2074,8 @@ pub(crate) fn inspection_template_inferred_technology(
                         .criticals
                         .values()
                         .filter(|critical| {
-                            super::BattleSystem::parse(&critical.equipment)
-                                .is_ok_and(|system| system == super::BattleSystem::Engine)
+                            super::BattleSystem::named(&critical.equipment)
+                                .is_some_and(|system| system == super::BattleSystem::Engine)
                         })
                         .count()
                 })
@@ -2180,7 +2180,7 @@ pub fn inspect_raw_template_technologies(
         .sections
         .values()
         .flat_map(|section| section.criticals.values())
-        .filter_map(|critical| super::BattleSystem::parse(&critical.equipment).ok())
+        .filter_map(|critical| super::BattleSystem::named(&critical.equipment))
         .collect();
     for (system, code, name) in [
         (super::BattleSystem::Masc, 4, "Masc"),

@@ -895,8 +895,8 @@ fn remove_administrative_systems(
                 layout.configuration = None;
             }
             layout.criticals.retain(|&slot, critical| {
-                let remove = BattleSystem::parse(&critical.equipment)
-                    .is_ok_and(|system| systems.contains(&system));
+                let remove = BattleSystem::named(&critical.equipment)
+                    .is_some_and(|system| systems.contains(&system));
                 if remove {
                     touched.push(CriticalLocation { section, slot });
                 }
@@ -927,8 +927,8 @@ fn remove_administrative_systems(
             layout.configuration = None;
         }
         layout.criticals.retain(|&slot, critical| {
-            let remove = BattleSystem::parse(&critical.equipment)
-                .is_ok_and(|system| systems.contains(&system));
+            let remove = BattleSystem::named(&critical.equipment)
+                .is_some_and(|system| systems.contains(&system));
             if remove {
                 touched.push(VehicleCriticalLocation { section, slot });
             }

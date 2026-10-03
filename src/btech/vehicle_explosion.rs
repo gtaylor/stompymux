@@ -20,8 +20,8 @@ impl BattleVehicle {
         self.definition().sections.values().any(|layout| {
             layout.criticals.values().any(|part| {
                 matches!(
-                    BattleSystem::parse(&part.equipment),
-                    Ok(BattleSystem::Case | BattleSystem::CaseIi)
+                    BattleSystem::named(&part.equipment),
+                    Some(BattleSystem::Case | BattleSystem::CaseIi)
                 )
             })
         })

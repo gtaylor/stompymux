@@ -167,7 +167,7 @@ impl BattleVehicle {
             spent,
             jammed: self.weapon_failures.contains_key(&index)
                 || self.jammed_weapons.contains(&index),
-            ready: mechanics.check().is_ok()
+            ready: mechanics.admits()
                 && self.power() == BattlePower::Running
                 && !self.is_destroyed()
                 && self.turret_repairs().is_empty()

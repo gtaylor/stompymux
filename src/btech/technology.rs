@@ -179,8 +179,8 @@ impl super::BattleTemplate {
             .flat_map(|section| section.criticals.values())
             .filter(|critical| {
                 matches!(
-                    super::BattleSystem::parse(&critical.equipment),
-                    Ok(super::BattleSystem::LaserReflective)
+                    super::BattleSystem::named(&critical.equipment),
+                    Some(super::BattleSystem::LaserReflective)
                 )
             })
             .count();

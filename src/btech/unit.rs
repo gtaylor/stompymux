@@ -1676,7 +1676,7 @@ fn validate_unsupported_technology(definition: &BattleTemplate) -> Result<()> {
             .sections
             .values()
             .flat_map(|section| section.criticals.values())
-            .any(|critical| BattleSystem::parse(&critical.equipment).is_ok_and(|s| s == system))
+            .any(|critical| BattleSystem::named(&critical.equipment).is_some_and(|s| s == system))
     };
     ensure!(
         !(installed(BattleSystem::NullSignature) && installed(BattleSystem::StealthArmor)),

@@ -102,8 +102,8 @@ impl BattleVehicle {
             .values()
             .flat_map(|section| section.criticals.values())
             .filter(|critical| {
-                super::BattleSystem::parse(&critical.equipment)
-                    .is_ok_and(|system| system == super::BattleSystem::FuelTank)
+                super::BattleSystem::named(&critical.equipment)
+                    .is_some_and(|system| system == super::BattleSystem::FuelTank)
             })
             .count() as u64
     }

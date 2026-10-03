@@ -1,6 +1,6 @@
 //! Vehicle slots resolve complete weapons and independent bins using shared equipment validation.
 use super::*;
-use anyhow::{Context, Result, ensure};
+use anyhow::{Context, Result, bail, ensure};
 use serde::{Deserialize, Serialize};
 
 /// A zero-based equipment slot in a vehicle hull face or turret.
@@ -95,20 +95,19 @@ impl BattleVehicleLoadout {
                         });
                         return Ok(());
                     }
-                    let system = match BattleSystem::parse(&critical.equipment) {
-                        Ok(system) => system,
-                        Err(_)
-                            if contract
-                                && BattlePart::parse(&critical.equipment).is_ok_and(|part| {
-                                    matches!(
-                                        part.kind,
-                                        BattlePartKind::Component | BattlePartKind::Bomb
-                                    )
-                                }) =>
+                    let system = match BattleSystem::named(&critical.equipment) {
+                        Some(system) => system,
+                        None if contract
+                            && BattlePart::parse(&critical.equipment).is_ok_and(|part| {
+                                matches!(
+                                    part.kind,
+                                    BattlePartKind::Component | BattlePartKind::Bomb
+                                )
+                            }) =>
                         {
                             return Ok(());
                         }
-                        Err(error) => return Err(error),
+                        None => bail!("Unsupported equipment {}", critical.equipment),
                     };
                     ensure!(critical.modes.is_empty(), "Unsupported system mode");
                     loadout.systems.push(SystemCritical { location, system });
