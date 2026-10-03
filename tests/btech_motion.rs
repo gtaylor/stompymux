@@ -9887,9 +9887,7 @@ async fn small_cockpit_piloting_mass_and_restart() {
     let mut template =
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let standard = stompymux_rs::BattleUnit::from_template(template.clone()).unwrap();
-    template
-        .attributes
-        .insert("specials".into(), "SMCPIT".into());
+    support::templates::small_cockpit(&mut template, "SMCPIT");
     let (_dir, config, mut world, id) = fixture_assets(
         &format!("12 12\n{}", format!("{}\n", ".0".repeat(12)).repeat(12)),
         template,

@@ -3197,7 +3197,7 @@
     "name": "CL.RotaryAC/5",
     "profile": {
       "ammunition_per_ton": 20,
-      "critical_slots": 5,
+      "critical_slots": 8,
       "damage": 5,
       "heat": 1,
       "long_range": 21,

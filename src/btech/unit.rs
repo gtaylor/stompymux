@@ -1819,7 +1819,15 @@ fn validate_definition(definition: &BattleTemplate) -> Result<()> {
         ),
         (BattleSystem::Cockpit, 1),
         (BattleSystem::Sensors, 2),
-        (BattleSystem::LifeSupport, 2),
+        // A small cockpit fits one life support slot beside its two sensors.
+        (
+            BattleSystem::LifeSupport,
+            if definition.has_technology(super::BattleTechnology::SmallCockpit) {
+                1
+            } else {
+                2
+            },
+        ),
     ] {
         ensure!(
             loadout

@@ -52,3 +52,44 @@ pub fn without_flags(source: &str, flags: &[&str]) -> String {
         }
     }
 }
+
+/// Give a mech a small cockpit under `flag` (`SmallCockpit_Tech` or `SMCPIT`), with the head
+/// laid out as one: life support, sensors, cockpit and sensors, then the head's other
+/// equipment in its original order.
+pub fn small_cockpit(template: &mut stompymux_rs::BattleTemplate, flag: &str) {
+    use stompymux_rs::{BattleSection, CriticalDefinition};
+    let specials = template.attributes.entry("specials".into()).or_default();
+    if !specials.is_empty() {
+        specials.push(' ');
+    }
+    specials.push_str(flag);
+    let head = template.sections.get_mut(&BattleSection::Head).unwrap();
+    let fixed = ["LifeSupport", "Sensors", "Cockpit"];
+    let brand = head
+        .criticals
+        .values()
+        .find(|critical| fixed.contains(&critical.equipment.as_str()))
+        .and_then(|critical| critical.brand);
+    let others: Vec<_> = head
+        .criticals
+        .values()
+        .filter(|critical| !fixed.contains(&critical.equipment.as_str()))
+        .cloned()
+        .collect();
+    head.criticals.clear();
+    for (slot, item) in ["LifeSupport", "Sensors", "Cockpit", "Sensors"]
+        .into_iter()
+        .enumerate()
+    {
+        let critical = CriticalDefinition {
+            equipment: item.into(),
+            data: "-".into(),
+            modes: Vec::new(),
+            brand,
+        };
+        head.criticals.insert(slot as u8, critical);
+    }
+    for (offset, critical) in others.into_iter().enumerate() {
+        head.criticals.insert(4 + offset as u8, critical);
+    }
+}

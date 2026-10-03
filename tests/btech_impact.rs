@@ -487,17 +487,15 @@ async fn technology_fixture(
     object.location = Some(ObjectId(config.start()));
     object.home = Some(ObjectId(config.home()));
     let source = include_str!("fixtures/btech/mechs/JR7-D.toml");
-    let source = if specials.is_empty() {
-        source.to_owned()
+    let template = if matches!(specials, "SmallCockpit_Tech" | "SMCPIT") {
+        let mut template = BattleTemplate::parse("JR7-D", source).unwrap();
+        support::templates::small_cockpit(&mut template, specials);
+        template
     } else {
-        support::templates::with_flags(source, &[specials])
+        let source = support::templates::with_flags(source, &[specials]);
+        BattleTemplate::parse("JR7-D", &source).unwrap()
     };
-    create_battle_unit(
-        &mut world,
-        id,
-        BattleTemplate::parse("JR7-D", &source).unwrap(),
-    )
-    .unwrap();
+    create_battle_unit(&mut world, id, template).unwrap();
     seed(&mut world, id, 0);
     (dir, config, world, id)
 }
