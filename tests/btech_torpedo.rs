@@ -1,6 +1,10 @@
 //! Torpedo launchers fire only from a submerged mount at a target in the water.
 use crate::support;
+use std::sync::Arc;
 use stompymux_rs::*;
+
+/// How far the raised copy of the lake is lifted.
+const LIFT: u8 = 3;
 
 /// Set isolated runtime facts through the persisted representation.
 fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Value)) {
@@ -54,15 +58,27 @@ fn launcher() -> BattleUnitTemplate {
 }
 
 /// A launcher and a target on a strip whose north end is a deep lake with a shallow southern
-/// ford. `rows` places each unit.
-async fn fixture(rows: [i64; 2]) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
+/// ford, with every hex raised `lift` levels. `rows` places each unit.
+async fn fixture(
+    rows: [i64; 2],
+    lift: u8,
+) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Lake".into(), Kind::Room);
+    let lake = BattleMapAsset::from_cells("1 8\n~2\n~2\n~2\n~2\n~2\n~1\n.0\n.0\n").unwrap();
+    let hexes = lake
+        .hexes
+        .iter()
+        .map(|hex| hex.with_level(hex.level() + lift))
+        .collect();
     create_battle_map(
         &mut world,
         map,
         "lake",
-        BattleMapAsset::from_cells("1 8\n~2\n~2\n~2\n~2\n~2\n~1\n.0\n.0\n").unwrap(),
+        BattleMapAsset {
+            hexes: Arc::new(hexes),
+            ..lake
+        },
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -122,6 +138,14 @@ fn shot_rules() -> BattleShotRules {
 
 /// Seed the shooter until its contacts include the target.
 fn acquire(world: &mut World, shooter: ObjectId, target: ObjectId) {
+    assert!(
+        try_acquire(world, shooter, target).is_some(),
+        "Fixture contact was not acquired"
+    );
+}
+
+/// Seed the shooter until its contacts include the target, returning the seed that worked.
+fn try_acquire(world: &mut World, shooter: ObjectId, target: ObjectId) -> Option<u8> {
     for seed in 0..=255 {
         edit(world, shooter, |unit| {
             unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
@@ -131,10 +155,10 @@ fn acquire(world: &mut World, shooter: ObjectId, target: ObjectId) {
             .unwrap()
             .is_some()
         {
-            return;
+            return Some(seed);
         }
     }
-    panic!("Fixture contact was not acquired");
+    None
 }
 
 /// Fire the SRT at the target and describe any refusal.
@@ -147,31 +171,61 @@ fn fire(
         .map_err(|error| error.to_string())
 }
 
-/// A submerged launcher's torpedoes reach a submerged target, and AMS cannot stop them.
+/// A submerged launcher's torpedoes reach a submerged target, and AMS cannot stop them, whether
+/// the lake lies at level 0 or higher.
 #[tokio::test]
 async fn submerged_launchers_fire_torpedoes_at_targets_in_water() {
-    let (_dir, config, mut world, shooter, target) = fixture([4, 1]).await;
-    acquire(&mut world, shooter, target);
-    edit(&mut world, target, |unit| unit["ams_enabled"] = true.into());
-    let report = fire(&mut world, shooter, target).unwrap();
-    assert!(report.expenditure.heat > 0);
-    assert!(report.ams.is_none(), "AMS cannot engage torpedoes");
-    world.validate(&config).unwrap();
+    for lift in [0, LIFT] {
+        let (_dir, config, mut world, shooter, target) = fixture([4, 1], lift).await;
+        acquire(&mut world, shooter, target);
+        edit(&mut world, target, |unit| unit["ams_enabled"] = true.into());
+        let report = fire(&mut world, shooter, target).unwrap();
+        assert!(report.expenditure.heat > 0, "lift {lift}");
+        assert!(report.ams.is_none(), "AMS cannot engage torpedoes");
+        world.validate(&config).unwrap();
+    }
 }
 
-/// Torpedoes stay in their tubes on dry land and cannot reach a target ashore.
+/// Torpedoes stay in their tubes on dry land and cannot reach a target ashore, whether the lake
+/// lies at level 0 or higher.
 #[tokio::test]
 async fn torpedoes_need_water_at_both_ends() {
-    for (rows, message) in [
-        ([6, 5], "Torpedoes can only be fired underwater."),
-        ([5, 7], "Torpedoes can only strike targets in the water!"),
-    ] {
-        let (_dir, _config, mut world, shooter, target) = fixture(rows).await;
-        acquire(&mut world, shooter, target);
-        let before = world.clone();
-        assert_eq!(fire(&mut world, shooter, target).unwrap_err(), message);
-        assert_eq!(world.btech, before.btech);
+    for lift in [0, LIFT] {
+        for (rows, message) in [
+            ([6, 5], "Torpedoes can only be fired underwater."),
+            ([5, 7], "Torpedoes can only strike targets in the water!"),
+        ] {
+            let (_dir, _config, mut world, shooter, target) = fixture(rows, lift).await;
+            acquire(&mut world, shooter, target);
+            let before = world.clone();
+            assert_eq!(
+                fire(&mut world, shooter, target).unwrap_err(),
+                message,
+                "lift {lift}"
+            );
+            assert_eq!(world.btech, before.btech);
+        }
     }
+}
+
+/// Every torpedo duel on the lake plays out identically when the lake is lifted: the same
+/// contacts, the same refusals, and the same hits on the same sections.
+#[tokio::test]
+async fn lifting_the_lake_leaves_torpedo_duels_unchanged() {
+    let mut fired = 0;
+    for rows in [[4, 1], [2, 0], [5, 3], [3, 5], [6, 5], [5, 7], [6, 4]] {
+        let mut results = Vec::new();
+        for lift in [0, LIFT] {
+            let (_dir, _config, mut world, shooter, target) = fixture(rows, lift).await;
+            let seed = try_acquire(&mut world, shooter, target);
+            let shot = fire(&mut world, shooter, target);
+            let target = serde_json::to_value(&world.btech.constructed_units()[&target]).unwrap();
+            results.push(format!("{seed:?} {shot:?} {}", target["sections"]));
+        }
+        assert_eq!(results[0], results[1], "rows {rows:?}");
+        fired += usize::from(results[0].contains("Ok("));
+    }
+    assert!(fired >= 2, "too few torpedo duels fired");
 }
 
 /// Torpedo launchers are their own catalogue weapons with part identities above the old limit.
