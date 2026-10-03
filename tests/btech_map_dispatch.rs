@@ -55,7 +55,7 @@ async fn inventory_map_commands_share_handlers_and_preserve_location() {
         "VIEW 1 1",
         "ADDBLOCK 1 1 2",
         "ADDMINE 1 1 1 5",
-        "ADDHEX 1 1 . 2",
+        "ADDHEX 1 1 level=2",
         "SETLINKED",
         "@MAPEMIT Routed message",
         "FIXMAP",

@@ -5,7 +5,7 @@
 //! bridge deck above a river without one value standing in for another. Fire and smoke never
 //! replace what they burn or cover: they are an overlay the map applies from its decorations.
 //! Rules ask the layers. [`BattleHex::terrain`] names the one feature a map shows for a hex,
-//! and [`BattleHex::new`] reads the compact symbol-and-digit notation used by `ADDHEX` and
+//! and [`BattleHex::new`] reads the compact symbol-and-digit notation used by
 //! [`BattleMapAsset::from_cells`](super::BattleMapAsset::from_cells).
 use super::{BattleDecorationKind, Terrain};
 use serde::{Deserialize, Serialize};
