@@ -1,0 +1,25 @@
+[package]
+name = "stompymux-mapgen"
+version = "0.1.0"
+edition = "2024"
+description = "Procedural BattleTech battlefield generation that writes stompymux map files"
+publish = false
+
+# The `cli` feature only adds the `mapgen` binary; embedders such as map editors
+# can depend on this crate with `default-features = false`.
+[features]
+default = ["cli"]
+cli = ["dep:clap"]
+
+[[bin]]
+name = "mapgen"
+path = "src/bin/mapgen.rs"
+required-features = ["cli"]
+
+[dependencies]
+anyhow = "1.0.104"
+clap = { version = "4.6.6", features = ["derive"], optional = true }
+schemars = "1.2.2"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+toml = { version = "1.1.5", features = ["preserve_order"] }

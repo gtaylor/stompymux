@@ -23,6 +23,7 @@ The implementation is organized by responsibility across modules.
 | `src/text/`, `src/telnet/` | Styled and Markdown documents, terminal rendering, Telnet negotiation, and transport |
 | `src/help/` | In-game help indexing and rendering (see [Help system](../help-system/)) |
 | `src/config/` | Configuration model, directives, and runtime administration |
+| `crates/mapgen/` | Procedural battlefield map generation library and the `mapgen` CLI; depends on nothing in the server so editors can embed it (see [Map generation](../map-generation/)) |
 | `tests/` | Integration scenarios and fixtures; unit tests also live beside implementations |
 
 The server owns one serialized `World`. Tokio socket tasks send connection
