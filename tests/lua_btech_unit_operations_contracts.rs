@@ -541,7 +541,7 @@ async fn weapon_install_accepts_native_slot_layouts_and_discards_the_input_brand
     )
     .unwrap();
     let branded = stompymux_rs::btech::part_catalogue()
-        .into_iter()
+        .iter()
         .find(|part| {
             part.brand_id > 0
                 && BattleWeapon::from_part_id(part.part_id)
@@ -553,7 +553,7 @@ async fn weapon_install_accepts_native_slot_layouts_and_discards_the_input_brand
         .profile()
         .critical_slots;
     let partial = stompymux_rs::btech::part_catalogue()
-        .into_iter()
+        .iter()
         .find(|part| {
             part.brand_id > 0
                 && BattleWeapon::from_part_id(part.part_id)

@@ -49,7 +49,7 @@ impl BattleUnit {
     /// Reject forged active state and invalid saved event countdowns.
     pub(super) fn validate_stealth(&self) -> Result<()> {
         ensure!(
-            self.has_stealth_armor()? || self.stealth == BattleSignatureState::default(),
+            self.stealth == BattleSignatureState::default() || self.has_stealth_armor()?,
             "Stealth state requires complete installed armor and Guardian ECM"
         );
         ensure!(

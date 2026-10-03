@@ -3,7 +3,6 @@
 use super::{contract, error};
 use crate::{BattlePart, BattlePartForm, SharedWorld, World};
 use mlua::{Lua, LuaString, MultiValue, Table, Value};
-use std::sync::Arc;
 
 const GROUP: &str = "parts";
 const ITEM_COUNT: i64 = crate::btech::PART_ID_LIMIT as i64;
@@ -159,16 +158,19 @@ pub(super) fn weapon_critical_slots(id: i32) -> Option<u8> {
 
 /// Fully qualified spelling used by C template files for a registered form.
 pub(super) fn part_equipment_name(part: PartReference) -> Option<String> {
-    form_for(&registered_catalogue(), part).map(|form| form.very_long_name.clone())
+    form_for(registered_catalogue(), part).map(|form| form.very_long_name.clone())
 }
 
 /// Every part name a template may use. Templates name most parts without a manufacturer and
 /// keep the brand in its own field, so unbranded names count alongside the
 /// manufacturer-qualified registry.
-fn known_catalogue() -> Vec<BattlePartForm> {
-    let mut catalogue = crate::btech::part_catalogue();
-    catalogue.extend(c_infantry_forms());
-    catalogue
+fn known_catalogue() -> &'static [BattlePartForm] {
+    static KNOWN: std::sync::OnceLock<Vec<BattlePartForm>> = std::sync::OnceLock::new();
+    KNOWN.get_or_init(|| {
+        let mut catalogue = crate::btech::part_catalogue().to_vec();
+        catalogue.extend(c_infantry_forms());
+        catalogue
+    })
 }
 
 /// Resolve every authored critical to its part, rejecting the whole template when one names
@@ -875,20 +877,25 @@ fn c_infantry_forms() -> Vec<BattlePartForm> {
 }
 
 /// Exact C part-name registry, excluding unregistered brand-zero identities.
-pub(super) fn registered_catalogue() -> Vec<BattlePartForm> {
-    let mut catalogue = crate::btech::part_catalogue()
-        .into_iter()
-        .filter(|form| form.brand_id != 0)
-        .collect::<Vec<_>>();
-    catalogue.extend(c_infantry_forms());
-    catalogue.sort_by(|left, right| {
-        (&left.short_name, left.brand_id, left.part_id).cmp(&(
-            &right.short_name,
-            right.brand_id,
-            right.part_id,
-        ))
-    });
-    catalogue
+/// Built once, since every Lua VM registers several contracts against it.
+pub(super) fn registered_catalogue() -> &'static [BattlePartForm] {
+    static REGISTERED: std::sync::OnceLock<Vec<BattlePartForm>> = std::sync::OnceLock::new();
+    REGISTERED.get_or_init(|| {
+        let mut catalogue = crate::btech::part_catalogue()
+            .iter()
+            .filter(|form| form.brand_id != 0)
+            .cloned()
+            .collect::<Vec<_>>();
+        catalogue.extend(c_infantry_forms());
+        catalogue.sort_by(|left, right| {
+            (&left.short_name, left.brand_id, left.part_id).cmp(&(
+                &right.short_name,
+                right.brand_id,
+                right.part_id,
+            ))
+        });
+        catalogue
+    })
 }
 
 /// Register all eight C-native `btech.parts` operations.
@@ -897,7 +904,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     // create_brandname rejects brand zero before formatting any component or
     // commodity name. Raw installed-part projection remains separate and may
     // still describe unregistered brand-zero identities.
-    let catalogue = Arc::new(registered_catalogue());
+    let catalogue = registered_catalogue();
     contract::bind(
         lua,
         native,
@@ -908,7 +915,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     )?;
 
     let shared = world.clone();
-    let records = catalogue.clone();
+    let records = catalogue;
     contract::bind(
         lua,
         native,
@@ -928,7 +935,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     push_part(
                         lua,
                         &world,
-                        &records,
+                        records,
                         PartReference {
                             id: form.part_id,
                             brand: form.brand_id,
@@ -941,7 +948,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     )?;
 
     let shared = world.clone();
-    let records = catalogue.clone();
+    let records = catalogue;
     contract::bind(
         lua,
         native,
@@ -977,7 +984,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     push_part(
                         lua,
                         &world,
-                        &records,
+                        records,
                         PartReference {
                             id: form.part_id,
                             brand: form.brand_id,
@@ -990,7 +997,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     )?;
 
     let shared = world.clone();
-    let records = catalogue.clone();
+    let records = catalogue;
     contract::bind(
         lua,
         native,
@@ -1000,14 +1007,14 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         lua.create_function(move |lua, arguments: MultiValue| {
             crate::lua::transactions::require(lua)?;
             let world = shared.borrow();
-            check_part(value(&arguments, 0), 1, &records)?.map_or(Ok(Value::Nil), |part| {
-                push_part(lua, &world, &records, part).map(Value::Table)
+            check_part(value(&arguments, 0), 1, records)?.map_or(Ok(Value::Nil), |part| {
+                push_part(lua, &world, records, part).map(Value::Table)
             })
         })?,
     )?;
 
     let shared = world.clone();
-    let records = catalogue.clone();
+    let records = catalogue;
     contract::bind(
         lua,
         native,
@@ -1027,11 +1034,11 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     id: entry.part_id,
                     brand: entry.brand_id,
                 };
-                if entry.quantity <= 0 || form_for(&records, part).is_none() {
+                if entry.quantity <= 0 || form_for(records, part).is_none() {
                     continue;
                 }
                 let row = lua.create_table()?;
-                row.raw_set("part", push_part(lua, &world, &records, part)?)?;
+                row.raw_set("part", push_part(lua, &world, records, part)?)?;
                 row.raw_set("quantity", entry.quantity)?;
                 result.raw_set(output, row)?;
                 output += 1;
@@ -1041,7 +1048,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     )?;
 
     let shared = world.clone();
-    let records = catalogue.clone();
+    let records = catalogue;
     contract::bind(
         lua,
         native,
@@ -1052,7 +1059,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             crate::lua::transactions::require(lua)?;
             let world = shared.borrow();
             let object = contract::require_object(lua, &world, value(&arguments, 0), 1)?;
-            let part = require_part(value(&arguments, 1), 2, &records)?;
+            let part = require_part(value(&arguments, 1), 2, records)?;
             Ok(crate::btech::inventory(&world, object)
                 .map_err(|failure| error::failure("btech.operation.failed", failure))?
                 .iter()
@@ -1061,7 +1068,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         })?,
     )?;
 
-    let records = catalogue.clone();
+    let records = catalogue;
     contract::bind(
         lua,
         native,
@@ -1073,7 +1080,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             let scripts = crate::Scripts::services(lua)?;
             let mut world = scripts.world_mut();
             let object = contract::require_object(lua, &world, value(&arguments, 0), 1)?;
-            let part = require_part(value(&arguments, 1), 2, &records)?;
+            let part = require_part(value(&arguments, 1), 2, records)?;
             let raw_delta = value(&arguments, 2);
             if !matches!(raw_delta, Value::Integer(_) | Value::Number(_)) {
                 return Err(argument_failure(
@@ -1146,7 +1153,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             crate::lua::transactions::require(lua)?;
             let scripts = crate::Scripts::services(lua)?;
             let mut world = scripts.world_mut();
-            let part = require_part(value(&arguments, 0), 1, &records)?;
+            let part = require_part(value(&arguments, 0), 1, records)?;
             let raw_cost = value(&arguments, 1);
             if !matches!(raw_cost, Value::Integer(_) | Value::Number(_)) {
                 return Err(argument_failure(

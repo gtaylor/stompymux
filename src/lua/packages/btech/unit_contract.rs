@@ -264,7 +264,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
                 return inspection_records::criticals(
                     lua,
                     &borrowed,
-                    &catalogue,
+                    catalogue,
                     crate::btech::inspect_vehicle_criticals(unit, selected)
                         .map_err(mlua::Error::external)?,
                 );
@@ -280,7 +280,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
             inspection_records::criticals(
                 lua,
                 &borrowed,
-                &catalogue,
+                catalogue,
                 match unit {
                     Some(unit) => crate::btech::inspect_unit_criticals(unit, selected),
                     None => crate::btech::inspect_template_criticals(template, selected),
@@ -310,7 +310,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
                 return inspection_records::weapons(
                     lua,
                     &borrowed,
-                    &parts_contract::registered_catalogue(),
+                    parts_contract::registered_catalogue(),
                     rows,
                 );
             }
@@ -335,7 +335,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
             inspection_records::weapons(
                 lua,
                 &borrowed,
-                &parts_contract::registered_catalogue(),
+                parts_contract::registered_catalogue(),
                 rows,
             )
         })?,
@@ -498,7 +498,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
                     return inspection_records::inventory(
                         lua,
                         &borrowed,
-                        &parts_contract::registered_catalogue(),
+                        parts_contract::registered_catalogue(),
                         crate::btech::inspect_vehicle_inventory(unit, payload)
                             .map_err(mlua::Error::external)?,
                     );
@@ -512,7 +512,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
                 inspection_records::inventory(
                     lua,
                     &borrowed,
-                    &parts_contract::registered_catalogue(),
+                    parts_contract::registered_catalogue(),
                     match unit {
                         Some(unit) => crate::btech::inspect_unit_inventory(unit, payload),
                         None => crate::btech::inspect_template_inventory(template, payload),
@@ -697,7 +697,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
                 return inspection_records::weapons(
                     lua,
                     &borrowed,
-                    &parts_contract::registered_catalogue(),
+                    parts_contract::registered_catalogue(),
                     rows,
                 );
             }
@@ -713,7 +713,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
             inspection_records::weapons(
                 lua,
                 &borrowed,
-                &parts_contract::registered_catalogue(),
+                parts_contract::registered_catalogue(),
                 rows,
             )
         })?,

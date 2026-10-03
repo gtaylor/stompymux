@@ -12,31 +12,36 @@ use std::{
     net::{IpAddr, SocketAddr},
     ops::Deref,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 pub use types::*;
 
 #[derive(Debug, Clone)]
 /// Validated effective settings together with game-root and source diagnostics.
+///
+/// Clones are cheap: every Lua VM, effect owner, and server task holds its own
+/// copy, so the large load-time tables sit behind `Arc` and the rare runtime
+/// edits copy them on write with `Arc::make_mut`.
 pub struct Config {
     pub root: PathBuf,
     /// Bounded output service shared by effective snapshots and Lua reloads.
     pub logger: crate::logging::Logger,
-    settings: Settings,
+    settings: Arc<Settings>,
     /// Exact pre-edit states permitted after a live quota reduction; never serialized.
     retained_state: std::sync::Arc<
         BTreeMap<crate::world::ObjectId, (crate::state::Generation, crate::state::State)>,
     >,
-    effective: toml::Value,
+    effective: Arc<toml::Value>,
     pub warnings: Vec<String>,
     /// Ordered site rules compiled from the merged document.
     pub site_policy: crate::sites::Policy,
     /// Ordered command/list access edits, resolved after module registration.
     pub access_rules: Vec<crate::access::Rule>,
-    origins: BTreeMap<String, PathBuf>,
+    origins: Arc<BTreeMap<String, PathBuf>>,
     /// Effective directive permissions, including runtime edits.
     /// Runtime aliases must still resolve in a candidate Lua registry.
     pub runtime_aliases: Vec<String>,
-    pub directive_permissions: BTreeMap<String, crate::access::Permissions>,
+    pub directive_permissions: Arc<BTreeMap<String, crate::access::Permissions>>,
 }
 impl Deref for Config {
     type Target = Settings;
@@ -62,18 +67,18 @@ impl Config {
                 root.join("stompymux.toml").display()
             )
         })?;
-        let effective = toml::Value::try_from(&settings)?;
+        let effective = Arc::new(toml::Value::try_from(&settings)?);
         let mut config = Self {
             root,
             logger: Default::default(),
-            settings,
+            settings: Arc::new(settings),
             retained_state: Default::default(),
             effective,
             warnings: doc.warnings,
             site_policy,
             access_rules,
-            origins: doc.origins,
-            directive_permissions: BTreeMap::new(),
+            origins: Arc::new(doc.origins),
+            directive_permissions: Default::default(),
             runtime_aliases: Vec::new(),
         };
         config.compile_directive_permissions()?;
@@ -227,12 +232,12 @@ impl Config {
         port: Option<u16>,
     ) -> Result<Self> {
         if let Some(address) = address {
-            self.settings.server.listen_address = address;
+            Arc::make_mut(&mut self.settings).server.listen_address = address;
         }
         if let Some(port) = port {
-            self.settings.server.port = port;
+            Arc::make_mut(&mut self.settings).server.port = port;
         }
-        self.effective = toml::Value::try_from(&self.settings)?;
+        self.effective = Arc::new(toml::Value::try_from(&*self.settings)?);
         Ok(self)
     }
     /// Construct the effective IPv4 or IPv6 listener endpoint.
@@ -245,7 +250,7 @@ impl Config {
             .iter()
             .find(|s| s.legacy == key && !key.is_empty())
             .map_or(key, |s| s.path);
-        let mut value = &self.effective;
+        let mut value: &toml::Value = &self.effective;
         for part in path.split('.') {
             value = value.get(part)?;
         }
