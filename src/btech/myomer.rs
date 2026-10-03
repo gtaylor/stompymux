@@ -45,14 +45,15 @@ impl BattleUnit {
 
     /// Saved controls can retain an equipment or gravity ceiling after those inputs change.
     pub(super) fn motion_speed_limit(&self, maximum: f64) -> f64 {
+        let triple_myomer = self.definition().has_triple_myomer();
         let retained = super::speed_bonus::saved_limit(
             maximum,
             self.masc_installed().unwrap_or(false),
             self.supercharger_installed(),
-            self.definition().has_triple_myomer(),
+            triple_myomer,
         );
         let envelope = self.booster_speed_envelope();
-        if !self.definition().has_triple_myomer() {
+        if !triple_myomer {
             return retained.max(maximum * envelope);
         }
         // TSM rounding can occur before, between or after the two independent toggles.
