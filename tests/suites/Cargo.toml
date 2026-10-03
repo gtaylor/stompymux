@@ -85,8 +85,20 @@ name = "btech_12"
 path = "btech_12.rs"
 
 [[test]]
-name = "btech_motion"
-path = "btech_motion.rs"
+name = "btech_motion_core"
+path = "btech_motion_core.rs"
+
+[[test]]
+name = "btech_motion_weapons"
+path = "btech_motion_weapons.rs"
+
+[[test]]
+name = "btech_motion_physical"
+path = "btech_motion_physical.rs"
+
+[[test]]
+name = "btech_motion_electronics"
+path = "btech_motion_electronics.rs"
 
 [[test]]
 name = "core_01"
