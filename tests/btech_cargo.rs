@@ -65,7 +65,7 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId, O
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
     }
-    set_battle_inventory_named(&mut world, ObjectId(1), map, "Gold", 0, 20).unwrap();
+    set_battle_inventory_named(&mut world, ObjectId(1), map, "Gold", 20).unwrap();
     (dir, config, world, map, unit)
 }
 
@@ -147,16 +147,9 @@ async fn all_chassis_share_load_unload_gates_and_restart() {
 async fn multi_part_transfers_are_atomic_and_quantity_bounded() {
     let (_dir, config, mut world, map, unit) =
         fixture(include_str!("../game/mechs/JR7-D.toml")).await;
-    set_battle_inventory_named(&mut world, ObjectId(1), map, "Medical_Supplies", 0, 3).unwrap();
-    set_battle_inventory_named(
-        &mut world,
-        ObjectId(1),
-        unit,
-        "Medical_Supplies",
-        0,
-        i32::MAX,
-    )
-    .unwrap();
+    set_battle_inventory_named(&mut world, ObjectId(1), map, "Medical_Supplies", 3).unwrap();
+    set_battle_inventory_named(&mut world, ObjectId(1), unit, "Medical_Supplies", i32::MAX)
+        .unwrap();
     let before = world.btech.clone();
     assert!(
         transfer_battle_cargo(&mut world, &config, ObjectId(1), true, "*", 1)
@@ -165,8 +158,8 @@ async fn multi_part_transfers_are_atomic_and_quantity_bounded() {
             .contains("overflow")
     );
     assert_eq!(world.btech, before);
-    set_battle_inventory_named(&mut world, ObjectId(1), unit, "Medical_Supplies", 0, 0).unwrap();
-    set_battle_inventory_quantity(&mut world, ObjectId(1), map, i32::MAX, 0, 1).unwrap();
+    set_battle_inventory_named(&mut world, ObjectId(1), unit, "Medical_Supplies", 0).unwrap();
+    set_battle_inventory_quantity(&mut world, ObjectId(1), map, i32::MAX, 1).unwrap();
     let before = world.btech.clone();
     assert!(transfer_battle_cargo(&mut world, &config, ObjectId(1), true, "*", 1).is_err());
     assert_eq!(world.btech, before);
@@ -177,7 +170,7 @@ async fn multi_part_transfers_are_atomic_and_quantity_bounded() {
         );
         assert_eq!(world.btech, before);
     }
-    set_battle_inventory_named(&mut world, ObjectId(1), map, "Gold", 0, 50_001).unwrap();
+    set_battle_inventory_named(&mut world, ObjectId(1), map, "Gold", 50_001).unwrap();
     let moved =
         transfer_battle_cargo(&mut world, &config, ObjectId(1), true, "Gold", i32::MAX).unwrap();
     assert_eq!(moved[0].quantity, 50_000);
@@ -308,32 +301,18 @@ async fn cargo_commands_and_lua_share_state_and_callback_rollback() {
     }
 }
 
-/// Manufacturer selection and short names filter stock without duplicating equipment definitions.
+/// Full and short names filter stock without duplicating equipment definitions.
 #[tokio::test]
-async fn cargo_patterns_select_brands_and_multiple_part_types() {
+async fn cargo_patterns_select_multiple_part_types() {
     let (_dir, config, mut world, map, unit) =
         fixture(include_str!("../game/mechs/JR7-D.toml")).await;
-    for (brand, quantity) in [(1, 2), (4, 3)] {
-        set_battle_inventory_named(
-            &mut world,
-            ObjectId(1),
-            map,
-            "IS.MediumLaser",
-            brand,
-            quantity,
-        )
-        .unwrap();
-    }
-    let rows = transfer_battle_cargo(
-        &mut world,
-        &config,
-        ObjectId(1),
-        true,
-        "Magna.IS.MediumLaser",
-        1,
-    )
-    .unwrap();
-    assert_eq!((rows.len(), rows[0].brand_id), (1, 4));
+    set_battle_inventory_named(&mut world, ObjectId(1), map, "IS.MediumLaser", 5).unwrap();
+    let rows =
+        transfer_battle_cargo(&mut world, &config, ObjectId(1), true, "IS.MediumLaser", 1).unwrap();
+    assert_eq!(
+        (rows.len(), rows[0].part_id, rows[0].quantity),
+        (1, BattleWeapon::MediumLaser.part_id(), 1)
+    );
     let rows =
         transfer_battle_cargo(&mut world, &config, ObjectId(1), true, "MediumLas?r", 20).unwrap();
     assert_eq!(rows.iter().map(|row| row.quantity).sum::<i32>(), 4);
@@ -366,9 +345,9 @@ async fn moving_load_is_rejected_and_loading_clamps_pending_throttle() {
             .to_string();
         assert!(error.contains("moving"), "{error}");
         assert_eq!(world.btech, before);
-        set_battle_inventory_named(&mut world, ObjectId(1), unit, "Gold", 0, 1).unwrap();
+        set_battle_inventory_named(&mut world, ObjectId(1), unit, "Gold", 1).unwrap();
         transfer_battle_cargo(&mut world, &config, ObjectId(1), false, "Gold", 1).unwrap();
-        set_battle_inventory_named(&mut world, ObjectId(1), map, "Gold", 0, 50_000).unwrap();
+        set_battle_inventory_named(&mut world, ObjectId(1), map, "Gold", 50_000).unwrap();
         let mut encoded = serde_json::to_value(&world.btech).unwrap();
         encoded[registry][unit.0.to_string()]["motion"]["speed"] = 0.0.into();
         encoded[registry][unit.0.to_string()]["motion"]["desired_speed"] = maximum.into();
@@ -388,55 +367,43 @@ async fn moving_load_is_rejected_and_loading_clamps_pending_throttle() {
 
 /// Exact catalogue choices do not fall through to stocked aliases; both adapters share that priority.
 #[tokio::test]
-async fn cargo_abbreviations_resolve_before_stock_and_preserve_brand_identity() {
+async fn cargo_abbreviations_resolve_before_stock() {
     for source in templates() {
         let (_dir, config, mut world, map, unit) = fixture(&source).await;
         let laser = BattleWeapon::MediumLaser.part_id();
-        set_battle_inventory_quantity(&mut world, ObjectId(1), map, laser, 4, 3).unwrap();
-        let before = world.btech.clone();
-        for exact in ["Ma.ML", "ML", "IS.MediumLaser"] {
-            assert!(
-                transfer_battle_cargo(&mut world, &config, ObjectId(1), true, exact, 1).is_err()
-            );
-            assert_eq!(world.btech, before);
-        }
-        set_battle_inventory_quantity(&mut world, ObjectId(1), map, laser, 3, 2).unwrap();
+        set_battle_inventory_quantity(&mut world, ObjectId(1), map, laser, 3).unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        let output = support::run_text(&scripts, &config, ObjectId(1), 1, "loadcargo ma.ml 1");
-        assert!(output.contains("Martell.IS.MediumLaser"), "{output}");
+        let output = support::run_text(&scripts, &config, ObjectId(1), 1, "loadcargo ml 1");
+        assert!(output.contains("IS.MediumLaser"), "{output}");
         let rows: mlua::Table = scripts
-            .eval_callback("return btech.cargo.load(1, 'Magna.IS.MediumLaser', 1)")
+            .eval_callback("return btech.cargo.load(1, 'IS.MediumLaser', 1)")
             .unwrap();
         assert_eq!(
             rows.get::<mlua::Table>(1)
                 .unwrap()
-                .get::<u8>("brand_id")
+                .get::<i32>("part_id")
                 .unwrap(),
-            4
+            laser
         );
         let rows: mlua::Table = scripts
-            .eval_callback("return btech.cargo.unload(1, 'Ma.ML', 1)")
+            .eval_callback("return btech.cargo.unload(1, 'ML', 1)")
             .unwrap();
         assert_eq!(
             rows.get::<mlua::Table>(1)
                 .unwrap()
-                .get::<u8>("brand_id")
+                .get::<i32>("quantity")
                 .unwrap(),
-            3
+            1
         );
         let mut world = scripts.world().clone();
-        let rows = transfer_battle_cargo(
-            &mut world,
-            &config,
-            ObjectId(1),
-            true,
-            "Magna.MediumLas?r",
-            10,
-        )
-        .unwrap();
-        assert_eq!((rows.len(), rows[0].brand_id, rows[0].quantity), (1, 4, 2));
+        let rows = transfer_battle_cargo(&mut world, &config, ObjectId(1), true, "MediumLas?r", 10)
+            .unwrap();
+        assert_eq!(
+            (rows.len(), rows[0].part_id, rows[0].quantity),
+            (1, laser, 2)
+        );
         assert_eq!(count(&world, unit, laser), 3);
-        set_battle_inventory_quantity(&mut world, ObjectId(1), map, 609, 0, 3).unwrap();
+        set_battle_inventory_quantity(&mut world, ObjectId(1), map, 609, 3).unwrap();
         let before = world.btech.clone();
         assert!(transfer_battle_cargo(&mut world, &config, ObjectId(1), true, "Steel", 1).is_err());
         assert_eq!(world.btech, before);
@@ -450,11 +417,14 @@ async fn cargo_abbreviations_resolve_before_stock_and_preserve_brand_identity() 
             &config,
             ObjectId(1),
             false,
-            "Magna.IS.MediumLaser",
+            "IS.MediumLaser",
             3,
         )
         .unwrap();
-        assert_eq!((rows.len(), rows[0].brand_id, rows[0].quantity), (1, 4, 3));
+        assert_eq!(
+            (rows.len(), rows[0].part_id, rows[0].quantity),
+            (1, laser, 3)
+        );
     }
 }
 
@@ -568,9 +538,7 @@ async fn vtol_auxiliary_tanks_share_capacity_mass_and_saved_surplus_fuel() {
     let (_dir, config, mut world, map, unit) =
         fixture(include_str!("../game/mechs/Kestrel.toml")).await;
     let original_speed = battle_throttle_maximum(&world, unit, true).unwrap();
-    for (brand, quantity) in [(0, 2), (5, 1)] {
-        set_battle_inventory_quantity(&mut world, ObjectId(1), map, 422, brand, quantity).unwrap();
-    }
+    set_battle_inventory_quantity(&mut world, ObjectId(1), map, 422, 3).unwrap();
     transfer_battle_cargo(&mut world, &config, ObjectId(1), true, "#422", 3).unwrap();
     let fuel = battle_vtol_fuel_status(&world, unit).unwrap();
     assert_eq!(
@@ -684,7 +652,7 @@ async fn vtol_fuel_corrections_are_bounded_authorized_and_transactional() {
     }
     for source in templates().into_iter().take(6) {
         let (_dir, config, mut world, _map, unit) = fixture(&source).await;
-        set_battle_inventory_quantity(&mut world, ObjectId(1), unit, 422, 0, 1).unwrap();
+        set_battle_inventory_quantity(&mut world, ObjectId(1), unit, 422, 1).unwrap();
         assert_eq!(battle_inventory_mass(&world, unit).unwrap(), 102);
         assert!(battle_vtol_fuel_status(&world, unit).is_err());
         let before = world.btech.clone();
@@ -698,11 +666,9 @@ async fn vtol_fuel_corrections_are_bounded_authorized_and_transactional() {
 async fn vtol_tank_capacity_uses_wide_inventory_totals() {
     let (_dir, config, mut world, _map, unit) =
         fixture(include_str!("../game/mechs/Kestrel.toml")).await;
-    for brand in [0, 5] {
-        set_battle_inventory_quantity(&mut world, ObjectId(1), unit, 422, brand, i32::MAX).unwrap();
-    }
+    set_battle_inventory_quantity(&mut world, ObjectId(1), unit, 422, i32::MAX).unwrap();
     let fuel = battle_vtol_fuel_status(&world, unit).unwrap();
-    assert_eq!(fuel.capacity, 4000 + 2 * i32::MAX as u64 * 2000);
+    assert_eq!(fuel.capacity, 4000 + i32::MAX as u64 * 2000);
     let fuel = set_battle_vtol_fuel(&mut world, &config, ObjectId(1), unit, u32::MAX).unwrap();
     assert_eq!(fuel.remaining, i64::from(u32::MAX));
     assert_eq!(battle_throttle_maximum(&world, unit, true).unwrap(), 0.0);
@@ -733,7 +699,7 @@ async fn wizard_stock_actions_share_audits_and_immediate_load_limits() {
             &config,
             ObjectId(1),
             1,
-            &format!("@btech inventory-set #{} Gold 0 50000", unit.0),
+            &format!("@btech inventory-set #{} Gold 50000", unit.0),
         );
         assert!(output.contains("added 50000 Gold"), "{output}");
         let encoded = serde_json::to_value(&scripts.world().btech).unwrap();
@@ -746,17 +712,14 @@ async fn wizard_stock_actions_share_audits_and_immediate_load_limits() {
             0.0
         );
         scripts
-            .eval_callback::<()>(&format!(
-                "btech.inventory.set_named(1,{},'Gold',0,2)",
-                unit.0
-            ))
+            .eval_callback::<()>(&format!("btech.inventory.set_named(1,{},'Gold',2)", unit.0))
             .unwrap();
         scripts
-            .eval_callback::<()>(&format!("btech.inventory.set(1,{},528,0,2)", unit.0))
+            .eval_callback::<()>(&format!("btech.inventory.set(1,{},528,2)", unit.0))
             .unwrap();
         assert_eq!(scripts.world().channels["MechEconInfo"].messages, 2);
         scripts
-            .eval_callback::<()>(&format!("btech.inventory.set(1,{},528,0,0)", unit.0))
+            .eval_callback::<()>(&format!("btech.inventory.set(1,{},528,0)", unit.0))
             .unwrap();
         let channel = scripts.world().channels["MechEconInfo"].clone();
         assert_eq!(channel.messages, 3);
@@ -771,7 +734,7 @@ async fn wizard_stock_actions_share_audits_and_immediate_load_limits() {
         assert!(
             scripts
                 .eval_callback::<()>(&format!(
-                    "btech.inventory.set_named(1,{},'Gold',0,50000); error('abort stock')",
+                    "btech.inventory.set_named(1,{},'Gold',50000); error('abort stock')",
                     unit.0
                 ))
                 .is_err()
@@ -805,10 +768,10 @@ async fn wizard_stock_publication_failure_restores_both_adapters() {
             &config,
             ObjectId(1),
             1,
-            &format!("@btech inventory-set #{} Gold 0 50000", unit.0),
+            &format!("@btech inventory-set #{} Gold 50000", unit.0),
         );
         assert!(!output.contains("quantity 50000."), "{output}");
-        let code: String = scripts.eval_callback(&format!("local ok,e=pcall(btech.inventory.set_named,1,{},'Gold',0,50000); assert(not ok); return e.code",unit.0)).unwrap();
+        let code: String = scripts.eval_callback(&format!("local ok,e=pcall(btech.inventory.set_named,1,{},'Gold',50000); assert(not ok); return e.code",unit.0)).unwrap();
         assert_eq!(code, "btech.operation.failed");
         assert_eq!(scripts.world().btech, before.btech);
         assert_eq!(
@@ -841,8 +804,8 @@ async fn operator_stock_commands_and_lua_share_catalogue_edits() {
                 format!("btech.inventory.remove(1,{},'Gold',10)", unit.0),
             ),
             (
-                "addstuff Ma.ML 2",
-                format!("btech.inventory.add(1,{},'Ma.ML',2)", unit.0),
+                "addstuff ML 2",
+                format!("btech.inventory.add(1,{},'ML',2)", unit.0),
             ),
             (
                 "addstuff ShoulderOrHip 3",
@@ -864,9 +827,7 @@ async fn operator_stock_commands_and_lua_share_catalogue_edits() {
             battle_inventory(&lua.world(), unit)
                 .unwrap()
                 .iter()
-                .any(|row| row.part_id == BattleWeapon::MediumLaser.part_id()
-                    && row.brand_id == 3
-                    && row.quantity == 2)
+                .any(|row| row.part_id == BattleWeapon::MediumLaser.part_id() && row.quantity == 2)
         );
         assert!(
             lua.world().channels["MechEconInfo"].history[0]
@@ -915,7 +876,7 @@ async fn operator_stock_limits_and_batch_rollback_are_shared() {
         .flags
         .insert(Flag::Wizard);
     let ordinary = world.create(&config, "Ordinary".into(), Kind::Player);
-    set_battle_inventory_quantity(&mut world, ObjectId(1), map, i32::MAX, 0, 1).unwrap();
+    set_battle_inventory_quantity(&mut world, ObjectId(1), map, i32::MAX, 1).unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     for (actor, pattern, quantity) in [
         (ordinary, "Gold", 1),
@@ -945,7 +906,7 @@ async fn operator_stock_limits_and_batch_rollback_are_shared() {
         .channels
         .get_mut("MechEconInfo")
         .unwrap()
-        .messages = i64::MAX - 1;
+        .messages = i64::MAX;
     let before = scripts.world().clone();
     assert!(
         scripts
@@ -995,7 +956,7 @@ async fn operator_stock_limits_and_batch_rollback_are_shared() {
         },
     )
     .unwrap();
-    assert!(rows.len() > 20);
+    assert!(rows.len() > 5);
 }
 
 /// The scripted store function adjusts one catalogue match and preserves its signed-count contract.
@@ -1004,11 +965,11 @@ async fn scripted_add_stores_uses_first_match_signed_counts_and_atomic_logging()
     for source in templates() {
         let (_dir, config, mut world, _map, unit) = fixture(&source).await;
         economy_channel(&mut world);
-        set_battle_inventory_quantity(&mut world, ObjectId(1), unit, 528, 0, 80000).unwrap();
+        set_battle_inventory_quantity(&mut world, ObjectId(1), unit, 528, 80000).unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let added: bool = scripts
             .eval_callback(&format!(
-                "return btech.inventory.add_stores(1,{},'*.MediumLas?r',2147483647)",
+                "return btech.inventory.add_stores(1,{},'IS.MediumLas?r',2147483647)",
                 unit.0
             ))
             .unwrap();
@@ -1019,7 +980,7 @@ async fn scripted_add_stores_uses_first_match_signed_counts_and_atomic_logging()
             .filter(|row| row.part_id == BattleWeapon::MediumLaser.part_id())
             .collect();
         assert_eq!(lasers.len(), 1);
-        assert_eq!((lasers[0].brand_id, lasers[0].quantity), (5, 50000));
+        assert_eq!(lasers[0].quantity, 50000);
         assert!(
             add_battle_stores_action(&scripts, &config, ObjectId(1), unit, "Gold", -70000).unwrap()
         );
@@ -1129,14 +1090,14 @@ async fn scripted_add_stores_guards_and_failure_rollback() {
 
 /// Native and Lua cleanup share stock selection, load reconciliation and persistence on every chassis.
 #[tokio::test]
-async fn inventory_cleanup_preserves_installed_units_and_branded_stock() {
+async fn inventory_cleanup_preserves_installed_units_and_stock() {
     for source in templates() {
         let (_dir, config, mut world, _, unit) = fixture(&source).await;
         for part in [406, 407, 408, 428, 432, 433, 443, 444] {
-            set_battle_inventory_quantity(&mut world, ObjectId(1), unit, part, 0, 2).unwrap();
+            set_battle_inventory_quantity(&mut world, ObjectId(1), unit, part, 2).unwrap();
         }
-        set_battle_inventory_named(&mut world, ObjectId(1), unit, "Gold", 0, 7).unwrap();
-        set_battle_inventory_named(&mut world, ObjectId(1), unit, "Gold", 5, 3).unwrap();
+        set_battle_inventory_named(&mut world, ObjectId(1), unit, "Gold", 7).unwrap();
+        set_battle_inventory_quantity(&mut world, ObjectId(1), unit, 535, 3).unwrap();
         let installed = battle_weapon_specifications(&world, unit, true).unwrap();
         let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -1180,9 +1141,9 @@ async fn inventory_cleanup_preserves_installed_units_and_branded_stock() {
         assert_eq!(
             stock
                 .iter()
-                .map(|row| (row.brand_id, row.quantity))
+                .map(|row| (row.part_id, row.quantity))
                 .collect::<Vec<_>>(),
-            vec![(0, 7), (5, 3)]
+            vec![(528, 7), (535, 3)]
         );
         let saved = lua.world().clone();
         persistence::save(&config.database(), &saved).await.unwrap();
@@ -1204,8 +1165,8 @@ async fn inventory_cleanup_unknown_stock_authority_and_publication_rollback() {
         fixture(include_str!("../game/mechs/JR7-D.toml")).await;
     release_battle_pilot(&mut world, unit, ObjectId(1)).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(room);
-    set_battle_inventory_quantity(&mut world, ObjectId(1), room, i32::MAX, 0, 4).unwrap();
-    set_battle_inventory_quantity(&mut world, ObjectId(1), room, 406, 0, 2).unwrap();
+    set_battle_inventory_quantity(&mut world, ObjectId(1), room, i32::MAX, 4).unwrap();
+    set_battle_inventory_quantity(&mut world, ObjectId(1), room, 406, 2).unwrap();
     let ordinary = world.create(&config, "Ordinary operator".into(), Kind::Player);
     let before = world.btech.clone();
     assert!(clean_battle_inventory(&mut world, &config, ordinary, room).is_err());

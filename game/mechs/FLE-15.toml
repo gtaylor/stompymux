@@ -3,7 +3,6 @@ class = "mech"
 movement = "biped"
 tons = 20
 walk_mp = 9
-computer = 5
 radio = 5
 tac_range = 32
 lrs_range = 64

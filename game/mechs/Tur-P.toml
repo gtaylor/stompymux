@@ -5,7 +5,6 @@ tons = 95
 walk_mp = 5
 jump_mp = 3
 heat_sinks = 38
-computer = 5
 radio = 5
 
 [construction]
@@ -35,7 +34,7 @@ rear = 10
 slots = [
     { at = "3-6", item = "HeatSink" },
     { at = 7, item = "JumpJet" },
-    { at = "8-9", item = "CL.LRM-15", brand = 0 },
+    { at = "8-9", item = "CL.LRM-15" },
     { at = "10-11", item = "Ammo_CL.LRM-15", rounds = 8 },
 ]
 
@@ -45,7 +44,7 @@ rear = 10
 slots = [
     { at = "3-6", item = "HeatSink" },
     { at = 7, item = "JumpJet" },
-    { at = "8-9", item = "CL.LRM-15", brand = 0 },
+    { at = "8-9", item = "CL.LRM-15" },
     { at = 10, item = "Ammo_CL.LRM-15", rounds = 8 },
 ]
 

@@ -176,7 +176,7 @@ async fn secondary_critical_fields_project_gyro_and_probe_damage() {
         let section = if mech { "LeftTorso" } else { "front" };
         firing::edit(&mut world, id, |unit| {
             unit["definition"]["sections"][section]["criticals"]["10"] =
-                serde_json::json!({"equipment":"Light_BAP","data":"-","modes":[],"brand":null});
+                serde_json::json!({"equipment":"Light_BAP","data":"-","modes":[]});
             if mech {
                 let specials = unit["definition"]["attributes"]["specials"]
                     .as_str()
@@ -220,7 +220,7 @@ async fn secondary_status_projects_matrix(index: usize, source: &str) {
     firing::edit(&mut world, id, |unit| {
         for (slot, part) in [(6, "AngelEcm"), (7, "AngelEcm"), (10, "Ecm")] {
             unit["definition"]["sections"][section]["criticals"][slot.to_string()] =
-                serde_json::json!({"equipment":part,"data":"-","modes":[],"brand":null});
+                serde_json::json!({"equipment":part,"data":"-","modes":[]});
         }
         let specials = unit["definition"]["attributes"]["specials"]
             .as_str()
@@ -306,7 +306,8 @@ async fn secondary_status_projects_matrix(index: usize, source: &str) {
                     11
                 };
                 for slot in first..first + if state == "stealth" { 2 } else { 1 } {
-                    unit["definition"]["sections"][section]["criticals"][slot.to_string()] = serde_json::json!({"equipment":equipment,"data":"-","modes":[],"brand":null});
+                    unit["definition"]["sections"][section]["criticals"][slot.to_string()] =
+                        serde_json::json!({"equipment":equipment,"data":"-","modes":[]});
                 }
             }
             unit[state]["enabled"] = true.into();
@@ -495,7 +496,7 @@ async fn primary_critical_fields_share_equipment_matrix(index: usize, source: &s
         firing::edit(&mut candidate, id, |unit| {
             for slot in 8..8 + slots {
                 unit["definition"]["sections"][section]["criticals"][slot.to_string()] =
-                    serde_json::json!({"equipment":equipment,"data":"-","modes":[],"brand":null});
+                    serde_json::json!({"equipment":equipment,"data":"-","modes":[]});
             }
         });
         fields
@@ -617,7 +618,7 @@ async fn secondary_critical_edits_preserve_material_and_follow_later_hits() {
         firing::edit(&mut world, id, |unit| {
             for slot in [10, 11] {
                 unit["definition"]["sections"][section]["criticals"][slot.to_string()] =
-                    serde_json::json!({"equipment":"Light_BAP","data":"-","modes":[],"brand":null});
+                    serde_json::json!({"equipment":"Light_BAP","data":"-","modes":[]});
             }
             if mech {
                 let specials = unit["definition"]["attributes"]["specials"]

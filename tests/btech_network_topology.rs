@@ -23,7 +23,6 @@ async fn field(
         equipment: equipment.into(),
         data: "-".into(),
         modes: vec![],
-        brand: None,
     };
     let mut units = Vec::new();
     for (i, &master_count) in masters.iter().enumerate() {

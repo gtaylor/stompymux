@@ -5,33 +5,31 @@ tons = 100
 walk_mp = 5
 jump_mp = 3
 heat_sinks = 28
-computer = 4
 radio = 4
 
 [construction]
 engine = "xl"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 34
 slots = [
-    { at = "5-7", item = "HeatSink", brand = 3 },
-    { at = "8-9", item = "IS.MediumLaser", brand = 3 },
+    { at = "5-7", item = "HeatSink" },
+    { at = "8-9", item = "IS.MediumLaser" },
 ]
 
 [sections.right_arm]
 armor = 34
 slots = [
-    { at = "5-7", item = "HeatSink", brand = 3 },
-    { at = "8-9", item = "IS.LargeLaser", brand = 3 },
+    { at = "5-7", item = "HeatSink" },
+    { at = "8-9", item = "IS.LargeLaser" },
 ]
 
 [sections.left_torso]
 armor = 32
 rear = 10
 slots = [
-    { at = "4-10", item = "IS.GaussRifle", brand = 3 },
+    { at = "4-10", item = "IS.GaussRifle" },
     { at = "11-12", item = "Ammo_IS.GaussRifle", rounds = 8 },
 ]
 
@@ -39,7 +37,7 @@ slots = [
 armor = 32
 rear = 10
 slots = [
-    { at = "4-10", item = "IS.GaussRifle", brand = 3 },
+    { at = "4-10", item = "IS.GaussRifle" },
     { at = "11-12", item = "Ammo_IS.GaussRifle", rounds = 8 },
 ]
 
@@ -47,26 +45,26 @@ slots = [
 armor = 52
 rear = 10
 slots = [
-    { at = 11, item = "JumpJet", brand = 3 },
-    { at = 12, item = "IS.MediumLaser", brand = 3 },
+    { at = 11, item = "JumpJet" },
+    { at = 12, item = "IS.MediumLaser" },
 ]
 
 [sections.left_leg]
 armor = 42
 slots = [
-    { at = 5, item = "JumpJet", brand = 3 },
+    { at = 5, item = "JumpJet" },
     { at = 6, item = "Ammo_IS.GaussRifle", rounds = 8 },
 ]
 
 [sections.right_leg]
 armor = 42
 slots = [
-    { at = 5, item = "JumpJet", brand = 3 },
+    { at = 5, item = "JumpJet" },
     { at = 6, item = "Ammo_IS.GaussRifle", rounds = 8 },
 ]
 
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "IS.MediumLaser", brand = 3 },
+    { at = 4, item = "IS.MediumLaser" },
 ]

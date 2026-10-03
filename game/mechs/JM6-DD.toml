@@ -3,53 +3,51 @@ class = "mech"
 movement = "biped"
 tons = 65
 walk_mp = 6
-computer = 4
 radio = 4
 specials = ["AntiAircraft"]
 
 [construction]
 engine = "xl"
 armor = "ferro_fibrous"
-brand = 3
 
 [sections.left_arm]
 armor = 8
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-7", item = "IS.UltraAC/5", brand = 3 },
-    { at = 8, item = "IS.AC/2", brand = 3 },
-    { at = "9-11", item = "FerroFibrous", brand = 3 },
+    { at = "3-7", item = "IS.UltraAC/5" },
+    { at = 8, item = "IS.AC/2" },
+    { at = "9-11", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 8
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-7", item = "IS.UltraAC/5", brand = 3 },
-    { at = 8, item = "IS.AC/2", brand = 3 },
-    { at = "9-11", item = "FerroFibrous", brand = 3 },
+    { at = "3-7", item = "IS.UltraAC/5" },
+    { at = 8, item = "IS.AC/2" },
+    { at = "9-11", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 17
 rear = 5
 slots = [
-    { at = 4, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = 4, item = "IS.MediumPulseLaser" },
     { at = 5, item = "Ammo_IS.UltraAC/5", rounds = 20 },
     { at = 6, item = "Ammo_IS.AC/2", rounds = 45 },
-    { at = 7, item = "Case", brand = 3 },
-    { at = "8-11", item = "FerroFibrous", brand = 3 },
+    { at = 7, item = "Case" },
+    { at = "8-11", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 17
 rear = 5
 slots = [
-    { at = 4, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = 4, item = "IS.MediumPulseLaser" },
     { at = 5, item = "Ammo_IS.UltraAC/5", rounds = 20 },
     { at = 6, item = "Ammo_IS.AC/2", rounds = 45 },
-    { at = 7, item = "Case", brand = 3 },
-    { at = "8-11", item = "FerroFibrous", brand = 3 },
+    { at = 7, item = "Case" },
+    { at = "8-11", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]

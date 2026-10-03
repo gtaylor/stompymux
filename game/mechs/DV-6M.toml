@@ -9,8 +9,8 @@ jump_mp = 5
 armor = 10
 omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "IS.MediumLaser", brand = 4 },
-    { at = 5, item = "IS.SRM-2", brand = 2 },
+    { at = 4, item = "IS.MediumLaser" },
+    { at = 5, item = "IS.SRM-2" },
     { at = 6, item = "Ammo_IS.SRM-2", rounds = 50 },
 ]
 
@@ -18,8 +18,8 @@ slots = [
 armor = 10
 omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "IS.MediumLaser", brand = 4 },
-    { at = 5, item = "IS.SRM-2", brand = 2 },
+    { at = 4, item = "IS.MediumLaser" },
+    { at = 5, item = "IS.SRM-2" },
     { at = 6, item = "Ammo_IS.SRM-2", rounds = 50 },
 ]
 

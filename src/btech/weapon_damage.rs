@@ -337,7 +337,6 @@ mod tests {
                     equipment: weapon.name().into(),
                     data: "-".into(),
                     modes: Vec::new(),
-                    brand: None,
                 },
             );
         }

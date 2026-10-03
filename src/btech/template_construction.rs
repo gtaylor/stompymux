@@ -170,7 +170,7 @@ choice!(
     }
 );
 
-/// The `[construction]` table: technology types, plus the brand stamped on fixed equipment.
+/// The `[construction]` table: technology types for the chassis and its fixed equipment.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(super) struct Construction {
     pub clan: bool,
@@ -181,7 +181,6 @@ pub(super) struct Construction {
     pub armor: Armor,
     pub heat_sinks: HeatSinks,
     pub myomer: Myomer,
-    pub brand: Option<u8>,
 }
 
 /// The document form of [`Construction`].
@@ -196,7 +195,6 @@ struct ConstructionDocument {
     armor: Option<String>,
     heat_sinks: Option<String>,
     myomer: Option<String>,
-    brand: Option<u8>,
 }
 
 impl Construction {
@@ -226,7 +224,6 @@ impl Construction {
             armor: choice(document.armor, Armor::parse, "armor")?,
             heat_sinks,
             myomer: choice(document.myomer, Myomer::parse, "myomer")?,
-            brand: document.brand,
         })
     }
 
@@ -246,7 +243,6 @@ impl Construction {
             armor: Armor::from_flags("armor", flags)?,
             heat_sinks,
             myomer: Myomer::from_flags("myomer", flags)?,
-            brand: None,
         };
         let remaining = flags
             .iter()
@@ -315,9 +311,6 @@ impl Construction {
             if value != default {
                 line(key, value);
             }
-        }
-        if let Some(brand) = self.brand {
-            let _ = writeln!(lines, "brand = {brand}");
         }
         if lines.is_empty() {
             return lines;
@@ -653,7 +646,6 @@ mod tests {
             armor: Armor::FerroFibrous,
             heat_sinks: HeatSinks::Double,
             myomer: Myomer::TripleStrength,
-            brand: None,
         };
         let flags = construction.flags();
         assert!(!flags.contains(&"DoubleHS"));

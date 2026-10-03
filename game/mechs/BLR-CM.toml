@@ -5,7 +5,6 @@ tons = 85
 walk_mp = 5
 jump_mp = 3
 heat_sinks = 32
-computer = 4
 radio = 4
 specials = ["C3MasterTech", "SearchLight"]
 

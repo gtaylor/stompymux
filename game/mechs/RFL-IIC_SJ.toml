@@ -5,29 +5,27 @@ tons = 65
 walk_mp = 6
 jump_mp = 4
 heat_sinks = 20
-computer = 4
 radio = 5
 
 [construction]
 tech_base = "clan"
 structure = "endo_steel"
 armor = "ferro_fibrous"
-brand = 5
 
 [sections.left_arm]
 armor = 20
 omit = ["upper_actuator", "lower_actuator", "hand_actuator"]
 slots = [
-    { at = "2-5", item = "CL.UltraAC/2", brand = 5 },
-    { at = "6-8", item = "FerroFibrous", brand = 0 },
+    { at = "2-5", item = "CL.UltraAC/2" },
+    { at = "6-8", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 20
 omit = ["upper_actuator", "lower_actuator", "hand_actuator"]
 slots = [
-    { at = "2-5", item = "CL.UltraAC/2", brand = 5 },
-    { at = "6-8", item = "FerroFibrous", brand = 0 },
+    { at = "2-5", item = "CL.UltraAC/2" },
+    { at = "6-8", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
@@ -35,8 +33,8 @@ armor = 20
 rear = 10
 slots = [
     { at = "1-3", item = "Ammo_CL.UltraAC/2", rounds = 45 },
-    { at = "4-6", item = "EndoSteel", brand = 0 },
-    { at = "7-8", item = "JumpJet", brand = 0 },
+    { at = "4-6", item = "EndoSteel" },
+    { at = "7-8", item = "JumpJet" },
 ]
 
 [sections.right_torso]
@@ -44,27 +42,27 @@ armor = 20
 rear = 10
 slots = [
     { at = "1-3", item = "Ammo_CL.UltraAC/2", rounds = 45 },
-    { at = "4-6", item = "EndoSteel", brand = 0 },
-    { at = "7-8", item = "JumpJet", brand = 0 },
+    { at = "4-6", item = "EndoSteel" },
+    { at = "7-8", item = "JumpJet" },
 ]
 
 [sections.center_torso]
 armor = 30
 rear = 12
 slots = [
-    { at = "11-12", item = "CL.ERSmallLaser", brand = 0 },
+    { at = "11-12", item = "CL.ERSmallLaser" },
 ]
 
 [sections.left_leg]
 armor = 30
 slots = [
-    { at = 5, item = "FerroFibrous", brand = 0 },
+    { at = 5, item = "FerroFibrous" },
 ]
 
 [sections.right_leg]
 armor = 30
 slots = [
-    { at = 5, item = "EndoSteel", brand = 0 },
+    { at = 5, item = "EndoSteel" },
 ]
 
 [sections.head]

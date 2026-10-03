@@ -3,7 +3,6 @@ class = "mech"
 movement = "biped"
 tons = 40
 walk_mp = 9
-computer = 5
 radio = 4
 
 [sections.left_arm]
@@ -13,7 +12,7 @@ armor = 6
 armor = 6
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-10", item = "IS.AC/10", brand = 4 },
+    { at = "4-10", item = "IS.AC/10" },
 ]
 
 [sections.left_torso]

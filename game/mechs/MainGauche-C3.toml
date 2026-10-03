@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "track"
 tons = 30
 walk_mp = 6
-computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0
@@ -17,13 +16,13 @@ armor = 19
 [sections.front_side]
 armor = 29
 slots = [
-    { at = 1, item = "IS.LightGaussRifle", brand = 3 },
-    { at = 2, item = "IS.ERSmallLaser", brand = 3 },
+    { at = 1, item = "IS.LightGaussRifle" },
+    { at = 2, item = "IS.ERSmallLaser" },
 ]
 
 [sections.aft_side]
 armor = 13
 slots = [
     { at = 1, item = "Ammo_IS.LightGaussRifle", rounds = 16 },
-    { at = 12, item = "C3Slave", brand = 0 },
+    { at = 12, item = "C3Slave" },
 ]

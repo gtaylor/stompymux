@@ -226,7 +226,6 @@ async fn quad_shallow_water_counts_front_leg_sinks_and_excludes_flooded_equipmen
                 equipment: "HeatSink".into(),
                 data: "-".into(),
                 modes: vec![],
-                brand: None,
             })
             .unwrap();
         }

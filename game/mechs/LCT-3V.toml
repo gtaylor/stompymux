@@ -3,7 +3,6 @@ class = "mech"
 movement = "biped"
 tons = 20
 walk_mp = 12
-computer = 3
 radio = 3
 
 [sections.left_arm]

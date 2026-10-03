@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "track"
 tons = 50
 walk_mp = 8
-computer = 3
 specials = ["SearchLight"]
 
 [construction]
@@ -18,7 +17,7 @@ armor = 18
 [sections.front_side]
 armor = 20
 slots = [
-    { at = 1, item = "IS.MachineGun", brand = 3 },
+    { at = 1, item = "IS.MachineGun" },
     { at = 2, item = "Ammo_IS.MachineGun", rounds = 200 },
 ]
 
@@ -28,8 +27,8 @@ armor = 20
 [sections.turret]
 armor = 20
 slots = [
-    { at = 1, item = "IS.AC/2", brand = 3 },
+    { at = 1, item = "IS.AC/2" },
     { at = 2, item = "Ammo_IS.AC/2", rounds = 45 },
-    { at = 3, item = "IS.SRM-2", brand = 3 },
+    { at = 3, item = "IS.SRM-2" },
     { at = 4, item = "Ammo_IS.SRM-2", rounds = 50 },
 ]

@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "wheel"
 tons = 45
 walk_mp = 8
-computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0
@@ -17,8 +16,8 @@ armor = 17
 [sections.front_side]
 armor = 27
 slots = [
-    { at = 1, item = "IS.LRM-15", brand = 0 },
-    { at = 2, item = "ArtemisIV", brand = 0 },
+    { at = 1, item = "IS.LRM-15" },
+    { at = 2, item = "ArtemisIV" },
 ]
 
 [sections.aft_side]
@@ -31,6 +30,6 @@ slots = [
 [sections.turret]
 armor = 15
 slots = [
-    { at = 1, item = "IS.ERLargeLaser", brand = 0 },
-    { at = "2-3", item = "IS.MachineGun", brand = 0 },
+    { at = 1, item = "IS.ERLargeLaser" },
+    { at = "2-3", item = "IS.MachineGun" },
 ]

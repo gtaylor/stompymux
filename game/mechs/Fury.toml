@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "track"
 tons = 80
 walk_mp = 6
-computer = 3
 cargo_space = 768
 specials = ["SearchLight"]
 
@@ -22,6 +21,6 @@ armor = 40
 [sections.turret]
 armor = 60
 slots = [
-    { at = 1, item = "IS.GaussRifle", brand = 3 },
+    { at = 1, item = "IS.GaussRifle" },
     { at = "2-3", item = "Ammo_IS.GaussRifle", rounds = 8 },
 ]

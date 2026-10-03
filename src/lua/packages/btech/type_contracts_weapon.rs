@@ -2,8 +2,8 @@
 // This file is read by lua-type-updater. Keep declarations next to the bindings.
 
 // lua-types-begin btech 00222
-//|---Read detached effective values using a canonical or manufacturer-qualified weapon name.
-//|---Examples: IS.MediumLaser or Magna.IS.MediumLaser; exact names ignore ASCII case.
+//|---Read detached effective values using a canonical weapon name.
+//|---Examples: IS.MediumLaser or CL.LRM-20; exact names ignore ASCII case.
 //|---@param name string
 //|---@return BattleWeaponValues
 //|function btech_weapon.settings(name) end

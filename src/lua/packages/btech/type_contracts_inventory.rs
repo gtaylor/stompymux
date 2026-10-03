@@ -69,9 +69,8 @@
 //|---@param actor integer
 //|---@param object integer
 //|---@param name string
-//|---@param brand integer From zero through five.
 //|---@param quantity integer From zero through 2147483647.
-//|function btech_inventory.set_named(actor, object, name, brand, quantity) end
+//|function btech_inventory.set_named(actor, object, name, quantity) end
 // lua-types-end
 
 // lua-types-begin btech 00237
@@ -88,14 +87,13 @@
 //|---@param actor integer
 //|---@param object integer
 //|---@param part integer Nonnegative signed-32-bit identifier.
-//|---@param brand integer From zero through five.
 //|---@param quantity integer From zero through 2147483647.
-//|function btech_inventory.set(actor, object, part, brand, quantity) end
+//|function btech_inventory.set(actor, object, part, quantity) end
 // lua-types-end
 
 // lua-types-begin btech 00416
-//|---Return all part/manufacturer forms in short-name order, without requiring live stock.
+//|---Return all part forms in short-name order, without requiring live stock.
 //|---@param actor integer Wizard requesting inspection.
-//|---@return table[] forms Part ID, brand ID, short_name, long_name and very_long_name.
+//|---@return table[] forms Part ID, short_name, long_name and very_long_name.
 //|function btech_inventory.forms(actor) end
 // lua-types-end

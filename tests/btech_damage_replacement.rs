@@ -126,7 +126,6 @@ async fn replacement_critical_groups_and_weapon_failures_resolve_installed_slots
                     equipment: "JumpJet".into(),
                     data: "-".into(),
                     modes: Vec::new(),
-                    brand: None,
                 },
             );
     }
@@ -142,7 +141,6 @@ async fn replacement_critical_groups_and_weapon_failures_resolve_installed_slots
                     equipment: "HeatSink".into(),
                     data: "-".into(),
                     modes: Vec::new(),
-                    brand: None,
                 },
             );
     }

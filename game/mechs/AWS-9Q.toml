@@ -4,50 +4,48 @@ movement = "biped"
 tons = 80
 walk_mp = 5
 heat_sinks = 38
-computer = 4
 radio = 4
 
 [construction]
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 26
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-9", item = "HeatSink", brand = 3 },
-    { at = "10-12", item = "IS.PPC", brand = 3 },
+    { at = "4-9", item = "HeatSink" },
+    { at = "10-12", item = "IS.PPC" },
 ]
 
 [sections.right_arm]
 armor = 26
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-9", item = "HeatSink", brand = 3 },
-    { at = "10-12", item = "IS.PPC", brand = 3 },
+    { at = "4-9", item = "HeatSink" },
+    { at = "10-12", item = "IS.PPC" },
 ]
 
 [sections.left_torso]
 armor = 24
 rear = 10
 slots = [
-    { at = "1-9", item = "HeatSink", brand = 3 },
-    { at = "10-12", item = "IS.PPC", brand = 3 },
+    { at = "1-9", item = "HeatSink" },
+    { at = "10-12", item = "IS.PPC" },
 ]
 
 [sections.right_torso]
 armor = 24
 rear = 10
 slots = [
-    { at = "1-9", item = "HeatSink", brand = 3 },
-    { at = "10-12", item = "IS.PPC", brand = 3 },
+    { at = "1-9", item = "HeatSink" },
+    { at = "10-12", item = "IS.PPC" },
 ]
 
 [sections.center_torso]
 armor = 31
 rear = 19
 slots = [
-    { at = "11-12", item = "Ecm", brand = 3 },
+    { at = "11-12", item = "Ecm" },
 ]
 
 [sections.left_leg]
@@ -59,5 +57,5 @@ armor = 34
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "IS.SmallLaser", brand = 3 },
+    { at = 4, item = "IS.SmallLaser" },
 ]

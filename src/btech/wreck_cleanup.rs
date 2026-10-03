@@ -73,7 +73,6 @@ pub(crate) fn validate(state: &BtechState) -> Result<()> {
 /// Remove only the simulation identity; mines and other game-object-owned data remain valid.
 pub(crate) fn forget(state: &mut BtechState, id: ObjectId) {
     super::map_slots::depart(state, id);
-    Arc::make_mut(&mut state.sensor_recoveries).retain(|event| event.unit() != id);
     super::contacts::forget_state(state, id);
     Arc::make_mut(&mut state.tows).retain(|carrier, target| *carrier != id && *target != id);
     state.constructed.remove(&id);

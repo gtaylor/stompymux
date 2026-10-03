@@ -303,10 +303,8 @@ to read the current flags.
 `weapon-settings <weapon>` shows the current recycle time and Battle Value.
 `setvrt <weapon> <seconds>` accepts 1 through 127 seconds; `setwbv <weapon> <value>`
 accepts 0 through 2147483647. Use canonical weapon names such as `IS.MediumLaser`
-or `CL.LRM-20`, or exact manufacturer-qualified names such as
-`Magna.IS.MediumLaser`. Manufacturer names must match the weapon family; the
-setting still applies to every installation of that weapon. Names ignore ASCII
-case and do not accept wildcards. An equals sign can replace the space before the value.
+or `CL.LRM-20`; the setting applies to every installation of that weapon. Names
+ignore ASCII case and do not accept wildcards. An equals sign can replace the space before the value.
 
 These Wizard settings apply to every supported chassis. New weapon and AMS
 activations use the recycle override, while active countdowns keep their remaining
@@ -322,13 +320,12 @@ actor and participate in callback rollback.
 ## Parts inventory administration
 
 `@btech inventory <object>` lists an object's loose-parts stock by the identifiers
-stored in the game database. `@btech inventory-set <object> <part> <manufacturer> <quantity>`
-corrects one quantity. Manufacturer identifiers range from zero through five;
-quantity ranges from zero through 2147483647. Zero removes the entry. These
+stored in the game database. `@btech inventory-set <object> <part> <quantity>`
+corrects one quantity. Quantity ranges from zero through 2147483647. Zero removes the entry. These
 Wizard operations share one stock model for rooms and units.
 
 Trusted callbacks inspect `btech.inventory.read(object)` and make Wizard stock
-corrections with `btech.inventory.set(actor, object, part, manufacturer, quantity)`.
+corrections with `btech.inventory.set(actor, object, part, quantity)`.
 Changes persist in the existing economy table and roll back with the callback.
 Part arguments also accept exact stock names such as `Gold`, `HeatSink`,
 `IS.MediumLaser` and `Ammo_IS.LRM-20`, ignoring ASCII case. Inventory listings
@@ -393,8 +390,8 @@ Trusted Lua uses `btech.unit.fuel(unit)` and
 `btech.unit.set_fuel(actor, unit, amount)`. The same fuel projection appears in
 `btech.unit.state(unit).fuel` and the cockpit status report.
 
-Each installed `Fuel_Tank` critical and each carried tank, across all
-manufacturer records, adds 2000 units of capacity. Installed tanks contribute
+Each installed `Fuel_Tank` critical and each carried tank adds 2000 units of
+capacity. Installed tanks contribute
 cargo mass and retain their capacity and mass when their slots are damaged. Loading a tank does not add fuel. Unloading tanks can leave fuel above
 the new capacity; that fuel remains aboard and survives restart. Fuel above the
 template's original capacity adds cargo mass and receives the unit's usual cargo
@@ -723,8 +720,7 @@ asset name. Use one column to see longer field labels.
 `SETVRT weapon seconds` changes future activations to use a recycle duration of
 1–127 seconds. `SETWBV weapon value` sets Battle Value from 0–2147483647.
 Both require wizard authority, accept exactly two arguments and share the
-`@btech setvrt`/`@btech setwbv` controls. Weapon names are exact and case-insensitive;
-supported manufacturer-qualified names select the same weapon identity.
+`@btech setvrt`/`@btech setwbv` controls. Weapon names are exact and case-insensitive.
 These runtime settings apply across unit types and reset on database reload.
 Existing active recycle countdowns are preserved. Lua uses
 `btech.weapon.set_recycle` and `btech.weapon.set_battle_value`.
@@ -772,12 +768,12 @@ no success message is published. Callback rollback cancels the request.
 
 ## Part name forms
 
-`LISTFORMS` displays every part/manufacturer identity in the shared stock-name
+`LISTFORMS` displays every part identity in the shared stock-name
 catalogue, ordered by short name. Each row shows its zero-based report index,
 short name, long name and very-long name. The report includes parts with no live
 stock and uses paced output. It requires wizard authority and ignores trailing
 input. Lua `btech.inventory.forms(actor)` returns the same ordered forms with
-part and brand IDs as detached data; it does not publish the text report.
+part IDs as detached data; it does not publish the text report.
 
 `eventstats` reports whether the one-second simulation currently has work,
 scanner-observer count, and artillery shots in flight.

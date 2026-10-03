@@ -20,7 +20,6 @@ fn definition(section: BattleSection, link: &str) -> BattleTemplate {
                 equipment: "ArtemisIV".into(),
                 data: link.into(),
                 modes: vec![],
-                brand: None,
             },
         );
     if section == BattleSection::CenterTorso {
@@ -36,7 +35,6 @@ fn definition(section: BattleSection, link: &str) -> BattleTemplate {
                     equipment: "JumpJet".into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
     }
@@ -139,7 +137,6 @@ fn head_controller_reports_both_matching_mounts() {
         equipment: "IS.SRM-2".into(),
         data: "-".into(),
         modes: vec![],
-        brand: None,
     };
     let life_support = template
         .sections

@@ -9,13 +9,13 @@ specials = ["SearchLight"]
 [sections.left_arm]
 armor = 6
 slots = [
-    { at = 5, item = "IS.MediumLaser", brand = 4 },
+    { at = 5, item = "IS.MediumLaser" },
 ]
 
 [sections.right_arm]
 armor = 6
 slots = [
-    { at = 5, item = "IS.MediumLaser", brand = 4 },
+    { at = 5, item = "IS.MediumLaser" },
 ]
 
 [sections.left_torso]

@@ -4,58 +4,56 @@ movement = "biped"
 tons = 85
 walk_mp = 5
 heat_sinks = 28
-computer = 4
 radio = 4
 specials = ["AntiAircraft"]
 
 [construction]
 engine = "xl"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 28
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-5", item = "HeatSink", brand = 3 },
-    { at = "6-10", item = "IS.LRM-20", brand = 3 },
-    { at = 11, item = "ArtemisIV", brand = 3 },
+    { at = "3-5", item = "HeatSink" },
+    { at = "6-10", item = "IS.LRM-20" },
+    { at = 11, item = "ArtemisIV" },
 ]
 
 [sections.right_arm]
 armor = 28
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-5", item = "HeatSink", brand = 3 },
-    { at = "6-10", item = "IS.LRM-20", brand = 3 },
-    { at = 11, item = "ArtemisIV", brand = 3 },
+    { at = "3-5", item = "HeatSink" },
+    { at = "6-10", item = "IS.LRM-20" },
+    { at = 11, item = "ArtemisIV" },
 ]
 
 [sections.left_torso]
 armor = 26
 rear = 10
 slots = [
-    { at = "4-6", item = "HeatSink", brand = 3 },
-    { at = "7-8", item = "IS.MediumPulseLaser", brand = 3 },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-8", item = "IS.MediumPulseLaser" },
     { at = "9-11", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
-    { at = 12, item = "Case", brand = 3 },
+    { at = 12, item = "Case" },
 ]
 
 [sections.right_torso]
 armor = 26
 rear = 10
 slots = [
-    { at = "4-6", item = "HeatSink", brand = 3 },
-    { at = "7-8", item = "IS.MediumPulseLaser", brand = 3 },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-8", item = "IS.MediumPulseLaser" },
     { at = "9-11", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
-    { at = 12, item = "Case", brand = 3 },
+    { at = 12, item = "Case" },
 ]
 
 [sections.center_torso]
 armor = 41
 rear = 12
 slots = [
-    { at = "11-12", item = "IS.ERLargeLaser", brand = 3 },
+    { at = "11-12", item = "IS.ERLargeLaser" },
 ]
 
 [sections.left_leg]
@@ -67,5 +65,5 @@ armor = 33
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = 4, item = "IS.MediumPulseLaser" },
 ]

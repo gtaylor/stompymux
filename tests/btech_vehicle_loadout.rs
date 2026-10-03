@@ -52,7 +52,6 @@ fn vehicle_slots_are_complete_weapons_and_independent_bins() {
         loadout.systems[1].location.section,
         BattleVehicleSection::Rear
     );
-    assert_eq!(loadout.weapons[0].brand, Some(3));
 }
 
 /// Every known weapon fits one vehicle slot, including artillery and disposable launchers.
@@ -77,7 +76,6 @@ fn vehicle_catalogue_uses_shared_modes_and_supply() {
                 } else {
                     vec![]
                 },
-                brand: Some(2),
             },
         );
         if weapon.profile().ammunition_per_ton > 0 {
@@ -87,7 +85,6 @@ fn vehicle_catalogue_uses_shared_modes_and_supply() {
                     equipment: format!("Ammo_{}", weapon.name()),
                     data: weapon.profile().ammunition_per_ton.to_string(),
                     modes: vec![],
-                    brand: None,
                 },
             );
         }
@@ -112,7 +109,6 @@ fn vehicle_catalogue_uses_shared_modes_and_supply() {
             equipment: BattleWeapon::ClanArrowIv.name().into(),
             data: "-".into(),
             modes: vec!["Cluster".into(), "Hotload".into()],
-            brand: None,
         },
     );
     turret.criticals.insert(
@@ -121,7 +117,6 @@ fn vehicle_catalogue_uses_shared_modes_and_supply() {
             equipment: format!("Ammo_{}", BattleWeapon::ClanArrowIv.name()),
             data: "2".into(),
             modes: vec!["Cluster".into(), "Halfton".into()],
-            brand: None,
         },
     );
     let loadout = BattleVehicleLoadout::resolve(&template).unwrap();
@@ -200,7 +195,6 @@ fn vehicle_loadout_rejects_unknown_equipment_and_bad_slots() {
                 equipment: equipment.into(),
                 data: data.into(),
                 modes: modes.into_iter().map(str::to_string).collect(),
-                brand: None,
             },
         );
         let error = BattleVehicleLoadout::resolve(&template).unwrap_err();

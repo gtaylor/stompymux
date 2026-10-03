@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "hover"
 tons = 5
 max_speed = 216.0
-computer = 4
 
 [construction]
 engine = "compact"
@@ -17,7 +16,7 @@ armor = 6
 [sections.front_side]
 armor = 10
 slots = [
-    { at = 1, item = "IS.MediumLaser", brand = 3 },
+    { at = 1, item = "IS.MediumLaser" },
 ]
 
 [sections.aft_side]

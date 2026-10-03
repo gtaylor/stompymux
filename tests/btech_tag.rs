@@ -17,7 +17,6 @@ fn install(world: &mut World, id: ObjectId, computer: bool) {
                     equipment: if computer { "C3Master" } else { "TAG" }.into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 })
                 .unwrap();
         }

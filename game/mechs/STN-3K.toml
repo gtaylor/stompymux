@@ -3,14 +3,13 @@ class = "mech"
 movement = "biped"
 tons = 40
 walk_mp = 9
-computer = 4
 radio = 4
 
 [sections.left_arm]
 armor = 8
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-6", item = "IS.AC/5", brand = 4 },
+    { at = "3-6", item = "IS.AC/5" },
 ]
 
 [sections.right_arm]
@@ -28,8 +27,8 @@ slots = [
 armor = 10
 rear = 5
 slots = [
-    { at = 1, item = "IS.SmallLaser", brand = 4 },
-    { at = 2, item = "IS.SRM-2", brand = 4 },
+    { at = 1, item = "IS.SmallLaser" },
+    { at = 2, item = "IS.SRM-2" },
     { at = 3, item = "Ammo_IS.SRM-2", rounds = 50 },
 ]
 

@@ -736,7 +736,6 @@ impl BattleVehicle {
                     | "RocketFired"
             )
         });
-        critical.brand = critical.brand.map(|brand| brand % 16);
         if weapon.is_some() || ammunition.is_some() {
             critical.data = "0".into();
         }

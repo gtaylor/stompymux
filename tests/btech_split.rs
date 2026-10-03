@@ -142,7 +142,7 @@ fn split_mount_locations_metadata_and_critical_availability() {
 fn invalid_split_links_are_rejected() {
     use BattleSection::*;
     let source = definition(BattleWeapon::HeavyGaussRifle, LeftArm, LeftTorso);
-    for variant in 0..9 {
+    for variant in 0..8 {
         let mut template = source.clone();
         let child = template.sections.get_mut(&LeftTorso).unwrap();
         match variant {
@@ -167,16 +167,13 @@ fn invalid_split_links_are_rejected() {
                     .push("RearMount".into());
             }
             5 => {
-                child.criticals.get_mut(&2).unwrap().brand = Some(3);
-            }
-            6 => {
                 let part = child.criticals.remove(&3).unwrap();
                 child.criticals.insert(5, part);
             }
-            7 => {
+            6 => {
                 child.criticals.get_mut(&2).unwrap().data = "Right_Arm:4".into();
             }
-            8 => {
+            7 => {
                 child.criticals.get_mut(&2).unwrap().data = "4".into();
             }
             _ => unreachable!(),
@@ -526,8 +523,7 @@ async fn repeated_split_proxy_criticals_accumulate_once_and_replay() {
                         BattleWeaponDamageEffects::default()
                     );
                 }
-                let criticals =
-                    battle_critical_report(&world, id, primary.section.name(), true).unwrap();
+                let criticals = battle_critical_report(&world, id, primary.section.name()).unwrap();
                 assert_eq!(
                     criticals.slots[usize::from(primary.slot)].condition,
                     if step < 4 {
@@ -536,8 +532,7 @@ async fn repeated_split_proxy_criticals_accumulate_once_and_replay() {
                         BattleEquipmentCondition::Destroyed
                     }
                 );
-                let extensions =
-                    battle_critical_report(&world, id, proxy.section.name(), true).unwrap();
+                let extensions = battle_critical_report(&world, id, proxy.section.name()).unwrap();
                 let proxy_row = &extensions.slots[usize::from(proxy.slot)];
                 assert_eq!(proxy_row.weapon_index, Some(index));
                 assert!(!proxy_row.equipment.contains("SplitCrit"));

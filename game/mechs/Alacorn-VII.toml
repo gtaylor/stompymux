@@ -21,7 +21,7 @@ armor = 75
 [sections.front_side]
 armor = 112
 slots = [
-    { at = "1-2", item = "IS.HeavyGaussRifle", brand = 3 },
+    { at = "1-2", item = "IS.HeavyGaussRifle" },
     { at = "3-7", item = "Ammo_IS.HeavyGaussRifle", rounds = 4 },
     { at = "9-12", item = "Ammo_IS.HeavyGaussRifle", rounds = 4 },
 ]

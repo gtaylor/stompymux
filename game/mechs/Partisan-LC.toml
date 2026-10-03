@@ -9,13 +9,13 @@ specials = ["AntiAircraft"]
 [sections.left_side]
 armor = 26
 slots = [
-    { at = "6-12", item = "FerroFibrous", brand = 3 },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.right_side]
 armor = 26
 slots = [
-    { at = "6-12", item = "FerroFibrous", brand = 3 },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.front_side]
@@ -24,14 +24,14 @@ armor = 35
 [sections.aft_side]
 armor = 21
 slots = [
-    { at = 1, item = "C3Master", brand = 3 },
+    { at = 1, item = "C3Master" },
 ]
 
 [sections.turret]
 armor = 35
 slots = [
-    { at = "1-2", item = "IS.UltraAC/5", brand = 3 },
-    { at = "3-4", item = "IS.AC/2", brand = 3 },
+    { at = "1-2", item = "IS.UltraAC/5" },
+    { at = "3-4", item = "IS.AC/2" },
     { at = "5-7", item = "Ammo_IS.UltraAC/5", rounds = 20 },
     { at = 8, item = "Ammo_IS.AC/2", rounds = 45 },
 ]

@@ -5,7 +5,6 @@ tons = 75
 walk_mp = 6
 jump_mp = 4
 heat_sinks = 36
-computer = 4
 radio = 5
 
 [construction]
@@ -13,65 +12,64 @@ tech_base = "clan"
 engine = "xl"
 structure = "endo_steel"
 armor = "ferro_fibrous"
-brand = 5
 
 [sections.left_arm]
 armor = 24
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-8", item = "CL.UltraAC/2", modes = ["OnTC"], brand = 5 },
+    { at = "3-8", item = "CL.UltraAC/2", modes = ["OnTC"] },
     { at = "9-10", item = "Ammo_CL.UltraAC/2", rounds = 45 },
-    { at = "11-12", item = "FerroFibrous", brand = 5 },
+    { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 24
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "CL.ERLargeLaser", modes = ["OnTC"], brand = 5 },
-    { at = "5-10", item = "HeatSink", brand = 5 },
-    { at = "11-12", item = "EndoSteel", brand = 5 },
+    { at = "3-4", item = "CL.ERLargeLaser", modes = ["OnTC"] },
+    { at = "5-10", item = "HeatSink" },
+    { at = "11-12", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
 armor = 22
 rear = 10
 slots = [
-    { at = 3, item = "CL.ERMediumLaser", modes = ["OnTC"], brand = 5 },
-    { at = "4-5", item = "HeatSink", brand = 0 },
-    { at = "6-7", item = "HeatSink", brand = 5 },
-    { at = "8-12", item = "FerroFibrous", brand = 5 },
+    { at = 3, item = "CL.ERMediumLaser", modes = ["OnTC"] },
+    { at = "4-5", item = "HeatSink" },
+    { at = "6-7", item = "HeatSink" },
+    { at = "8-12", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 22
 rear = 10
 slots = [
-    { at = "3-7", item = "TargetingComputer", brand = 5 },
-    { at = "8-12", item = "EndoSteel", brand = 5 },
+    { at = "3-7", item = "TargetingComputer" },
+    { at = "8-12", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 34
 rear = 10
 slots = [
-    { at = "11-12", item = "HeatSink", brand = 5 },
+    { at = "11-12", item = "HeatSink" },
 ]
 
 [sections.left_leg]
 armor = 28
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 5 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 28
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 5 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "CL.ERMediumLaser", modes = ["OnTC"], brand = 5 },
+    { at = 4, item = "CL.ERMediumLaser", modes = ["OnTC"] },
 ]

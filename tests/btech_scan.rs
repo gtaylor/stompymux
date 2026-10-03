@@ -81,14 +81,25 @@ fn acquire(world: &mut World, source: ObjectId, target: ObjectId) {
 }
 
 #[test]
-fn sensor_hardware_grades_defaults_and_critical_halving() {
-    for (quality, base) in [(0, 25), (1, 16), (2, 20), (3, 25), (4, 30), (5, 35), (6, 0)] {
+fn sensor_defaults_follow_technology_base_and_critical_halving() {
+    for (clan, base) in [(false, 25), (true, 35)] {
         let mut template =
             BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
                 .unwrap();
-        template
-            .attributes
-            .insert("computer".into(), quality.to_string());
+        for field in ["tac_range", "lrs_range", "scan_range"] {
+            template.attributes.remove(field);
+        }
+        if clan {
+            template
+                .attributes
+                .insert("specials".into(), "Clan FlipArms".into());
+            template.heat_sinks = 20;
+            for section in template.sections.values_mut() {
+                section
+                    .criticals
+                    .retain(|_, part| part.equipment != "HeatSink");
+            }
+        }
         let mut unit = BattleUnit::from_template(template).unwrap();
         assert_eq!(
             unit.sensor_ranges(),
@@ -118,24 +129,6 @@ fn sensor_hardware_grades_defaults_and_critical_halving() {
         .unwrap();
         assert_eq!(unit.sensor_ranges().scan, 0);
     }
-    let mut clan =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
-    clan.attributes
-        .insert("specials".into(), "Clan FlipArms".into());
-    clan.attributes.remove("computer");
-    clan.heat_sinks = 20;
-    for section in clan.sections.values_mut() {
-        section
-            .criticals
-            .retain(|_, part| part.equipment != "HeatSink");
-    }
-    assert_eq!(
-        BattleUnit::from_template(clan)
-            .unwrap()
-            .sensor_ranges()
-            .scan,
-        35
-    );
 }
 
 #[tokio::test]
@@ -4093,7 +4086,7 @@ async fn probe_contacts_through_terrain_hide_identity_and_friendly_categories() 
     }
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["constructed"][source.0.to_string()]["definition"]["sections"]["LeftTorso"]["criticals"]
-        ["8"] = serde_json::json!({"equipment":"BeagleProbe","data":"-","modes":[],"brand":null});
+        ["8"] = serde_json::json!({"equipment":"BeagleProbe","data":"-","modes":[]});
     world.btech = serde_json::from_value(state).unwrap();
     assert!(
         battle_unit_terrain_los(&world, source, target)
@@ -5890,9 +5883,9 @@ fn explicit_template_ranges_preserve_defaults_and_damage_limits() {
         let mut unit = BattleUnit::from_template(template).unwrap();
         let expected = if value == "0" {
             BattleSensorRanges {
-                tactical: 20,
-                long_range: 40,
-                scan: 20,
+                tactical: 25,
+                long_range: 50,
+                scan: 25,
             }
         } else {
             let n = value.parse().unwrap();

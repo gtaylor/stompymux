@@ -16,7 +16,7 @@ slots = [
 armor = 4
 slots = [
     { at = 5, item = "IS.MachineGun" },
-    { at = 6, item = "IS.MediumLaser", brand = 4 },
+    { at = 6, item = "IS.MediumLaser" },
 ]
 
 [sections.left_torso]

@@ -3,7 +3,6 @@ class = "mech"
 movement = "biped"
 tons = 60
 walk_mp = 6
-computer = 4
 
 [construction]
 tech_base = "clan"

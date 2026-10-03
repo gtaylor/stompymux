@@ -5,78 +5,76 @@ tons = 50
 walk_mp = 8
 jump_mp = 5
 heat_sinks = 22
-computer = 4
 radio = 4
 
 [construction]
 structure = "endo_steel"
 armor = "ferro_fibrous"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 16
 slots = [
-    { at = "5-8", item = "EndoSteel", brand = 3 },
-    { at = "9-12", item = "FerroFibrous", brand = 3 },
+    { at = "5-8", item = "EndoSteel" },
+    { at = "9-12", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 16
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "IS.LargeLaser", brand = 3 },
-    { at = "5-8", item = "EndoSteel", brand = 3 },
-    { at = "9-12", item = "FerroFibrous", brand = 3 },
+    { at = "3-4", item = "IS.LargeLaser" },
+    { at = "5-8", item = "EndoSteel" },
+    { at = "9-12", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 19
 rear = 5
 slots = [
-    { at = "1-2", item = "JumpJet", brand = 3 },
-    { at = 3, item = "IS.SRM-4", brand = 3 },
-    { at = "4-5", item = "IS.MediumLaser", brand = 3 },
+    { at = "1-2", item = "JumpJet" },
+    { at = 3, item = "IS.SRM-4" },
+    { at = "4-5", item = "IS.MediumLaser" },
     { at = 6, item = "Ammo_IS.SRM-4", rounds = 25 },
-    { at = "7-8", item = "EndoSteel", brand = 3 },
-    { at = "9-10", item = "FerroFibrous", brand = 3 },
-    { at = 11, item = "Case", brand = 3 },
+    { at = "7-8", item = "EndoSteel" },
+    { at = "9-10", item = "FerroFibrous" },
+    { at = 11, item = "Case" },
 ]
 
 [sections.right_torso]
 armor = 19
 rear = 5
 slots = [
-    { at = "1-3", item = "HeatSink", brand = 3 },
-    { at = "4-5", item = "JumpJet", brand = 3 },
-    { at = "6-7", item = "IS.LargeLaser", brand = 3 },
-    { at = "8-9", item = "EndoSteel", brand = 3 },
-    { at = "10-11", item = "FerroFibrous", brand = 3 },
+    { at = "1-3", item = "HeatSink" },
+    { at = "4-5", item = "JumpJet" },
+    { at = "6-7", item = "IS.LargeLaser" },
+    { at = "8-9", item = "EndoSteel" },
+    { at = "10-11", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 26
 rear = 6
 slots = [
-    { at = 11, item = "JumpJet", brand = 3 },
+    { at = 11, item = "JumpJet" },
 ]
 
 [sections.left_leg]
 armor = 24
 slots = [
-    { at = 5, item = "EndoSteel", brand = 3 },
-    { at = 6, item = "FerroFibrous", brand = 3 },
+    { at = 5, item = "EndoSteel" },
+    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.right_leg]
 armor = 24
 slots = [
-    { at = 5, item = "EndoSteel", brand = 3 },
-    { at = 6, item = "FerroFibrous", brand = 3 },
+    { at = 5, item = "EndoSteel" },
+    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "IS.SmallLaser", modes = ["RearMount"], brand = 3 },
+    { at = 4, item = "IS.SmallLaser", modes = ["RearMount"] },
 ]

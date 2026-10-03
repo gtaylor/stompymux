@@ -4,7 +4,6 @@ movement = "biped"
 tons = 60
 walk_mp = 8
 heat_sinks = 24
-computer = 4
 specials = ["ArtemisIV"]
 
 [construction]

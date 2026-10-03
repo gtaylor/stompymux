@@ -138,7 +138,6 @@ fn artillery_mount_payload_resolution_and_conflicts() {
                     equipment: BattleWeapon::ClanArrowIv.name().into(),
                     data: "-".into(),
                     modes: flags.iter().map(|flag| (*flag).into()).collect(),
-                    brand: None,
                 },
             );
         }

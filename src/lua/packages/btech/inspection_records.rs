@@ -44,10 +44,7 @@ pub(super) fn weapon(
             lua,
             world,
             catalogue,
-            parts_contract::PartReference {
-                id: row.part.id,
-                brand: row.part.brand,
-            },
+            parts_contract::PartReference { id: row.part.id },
         )?,
     )?;
     table.raw_set("slot_count", row.slot_count)?;
@@ -79,16 +76,12 @@ pub(super) fn inventory(
     let table = lua.create_table()?;
     let mut rows: Vec<_> = rows
         .into_iter()
-        .filter(|(part, _)| {
-            catalogue
-                .iter()
-                .any(|form| form.part_id == part.id && form.brand_id == part.brand)
-        })
+        .filter(|(part, _)| catalogue.iter().any(|form| form.part_id == part.id))
         .collect();
     rows.sort_by_key(|(part, _)| {
         catalogue
             .iter()
-            .position(|form| form.part_id == part.id && form.brand_id == part.brand)
+            .position(|form| form.part_id == part.id)
             .unwrap_or(usize::MAX)
     });
     for (index, (part, quantity)) in rows.into_iter().enumerate() {
@@ -99,10 +92,7 @@ pub(super) fn inventory(
                 lua,
                 world,
                 catalogue,
-                parts_contract::PartReference {
-                    id: part.id,
-                    brand: part.brand,
-                },
+                parts_contract::PartReference { id: part.id },
             )?,
         )?;
         row.raw_set("quantity", quantity)?;
@@ -133,10 +123,7 @@ pub(super) fn criticals(
                     lua,
                     world,
                     catalogue,
-                    parts_contract::PartReference {
-                        id: part.id,
-                        brand: part.brand,
-                    },
+                    parts_contract::PartReference { id: part.id },
                 )?,
             )?;
         }

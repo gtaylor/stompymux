@@ -15,7 +15,7 @@ async fn native_and_lua_edits_audit_canonical_names_and_rollback() {
     let _guard = enable();
     for (command, lua, expected) in [
         (
-            "setvrt Magna.IS.SmallLaser 127",
+            "setvrt IS.SmallLaser 127",
             "btech.weapon.set_recycle(1,'IS.SmallLaser',127)",
             "VRT for IS.SmallLaser set to 127 by #1",
         ),

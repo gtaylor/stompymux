@@ -54,5 +54,5 @@ slots = [
 [sections.head]
 armor = 8
 slots = [
-    { at = 4, item = "IS.MediumLaser", brand = 4 },
+    { at = 4, item = "IS.MediumLaser" },
 ]

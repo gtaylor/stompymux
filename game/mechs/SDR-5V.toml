@@ -6,7 +6,6 @@ walk_mp = 12
 jump_mp = 8
 
 [construction]
-brand = 3
 
 [sections.left_arm]
 armor = 5
@@ -18,21 +17,21 @@ armor = 5
 armor = 6
 rear = 2
 slots = [
-    { at = "1-4", item = "JumpJet", brand = 3 },
+    { at = "1-4", item = "JumpJet" },
 ]
 
 [sections.right_torso]
 armor = 6
 rear = 2
 slots = [
-    { at = "1-4", item = "JumpJet", brand = 3 },
+    { at = "1-4", item = "JumpJet" },
 ]
 
 [sections.center_torso]
 armor = 8
 rear = 4
 slots = [
-    { at = "11-12", item = "IS.MediumLaser", brand = 5 },
+    { at = "11-12", item = "IS.MediumLaser" },
 ]
 
 [sections.left_leg]
@@ -44,5 +43,5 @@ armor = 6
 [sections.head]
 armor = 6
 slots = [
-    { at = 4, item = "HeatSink", brand = 3 },
+    { at = 4, item = "HeatSink" },
 ]

@@ -36,7 +36,6 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
                             equipment: equipment.into(),
                             data: "-".into(),
                             modes: vec![],
-                            brand: None,
                         },
                     );
             }

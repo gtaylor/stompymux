@@ -267,7 +267,9 @@ fn fire_letter(mode: BattleFireMode) -> char {
         BattleFireMode::Ultra => 'U',
         BattleFireMode::Rapid => 'F',
         BattleFireMode::Rotary2 => '2',
+        BattleFireMode::Rotary3 => '3',
         BattleFireMode::Rotary4 => '4',
+        BattleFireMode::Rotary5 => '5',
         BattleFireMode::Rotary6 => '6',
         BattleFireMode::Gatling => 'G',
     }
@@ -297,10 +299,7 @@ mod tests {
         ] {
             let original = include_str!("../../../game/mechs/AXM-2N.toml");
             let source = original
-                .replace(
-                    "    { at = \"5-7\", item = \"IS.MediumLaser\", brand = 3 },\n",
-                    "",
-                )
+                .replace("    { at = \"5-7\", item = \"IS.MediumLaser\" },\n", "")
                 .replace(
                     "{ at = \"8-12\", item = \"Axe\"",
                     &format!("{{ at = \"5-12\", item = \"{equipment}\""),

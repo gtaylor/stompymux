@@ -5,7 +5,7 @@ linkTitle: "list"
 manualLinkTitle: "list"
 ---
 
-List registered branded forms in catalogue order; a case-insensitive category filters them.
+List registered parts in catalogue order; a case-insensitive category filters them.
 
 ## Signature
 

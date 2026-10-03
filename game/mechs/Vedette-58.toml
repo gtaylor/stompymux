@@ -11,13 +11,13 @@ engine = "ice"
 [sections.left_side]
 armor = 21
 slots = [
-    { at = "6-12", item = "FerroFibrous", brand = 3 },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.right_side]
 armor = 21
 slots = [
-    { at = "6-12", item = "FerroFibrous", brand = 3 },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.front_side]
@@ -32,5 +32,5 @@ armor = 24
 [sections.turret]
 armor = 25
 slots = [
-    { at = 1, item = "IS.UltraAC/5", brand = 3 },
+    { at = 1, item = "IS.UltraAC/5" },
 ]

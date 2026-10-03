@@ -1777,7 +1777,7 @@ async fn cargo_field_edits_share_load_rules_and_atomic_publication_scenario(f: &
     let config = &f.config;
     for source in firing::templates() {
         let (mut world, id, _, _) = f.pair(&source, &source);
-        set_battle_inventory_named(&mut world, ObjectId(1), id, "Gold", 0, 2).unwrap();
+        set_battle_inventory_named(&mut world, ObjectId(1), id, "Gold", 2).unwrap();
         let moving = world.btech.constructed_units().contains_key(&id)
             || world
                 .btech

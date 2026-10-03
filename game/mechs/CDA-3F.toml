@@ -5,7 +5,6 @@ tons = 40
 walk_mp = 12
 jump_mp = 8
 heat_sinks = 20
-computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0
@@ -15,60 +14,59 @@ engine = "xl"
 structure = "endo_steel"
 armor = "ferro_fibrous"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 8
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-9", item = "EndoSteel", brand = 3 },
-    { at = "10-12", item = "FerroFibrous", brand = 3 },
+    { at = "3-9", item = "EndoSteel" },
+    { at = "10-12", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 8
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-9", item = "EndoSteel", brand = 3 },
-    { at = "10-12", item = "FerroFibrous", brand = 3 },
+    { at = "3-9", item = "EndoSteel" },
+    { at = "10-12", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 15
 rear = 5
 slots = [
-    { at = 4, item = "IS.MediumLaser", brand = 3 },
-    { at = "5-7", item = "IS.ERPPC", brand = 3 },
-    { at = "8-9", item = "JumpJet", brand = 3 },
-    { at = "10-12", item = "FerroFibrous", brand = 3 },
+    { at = 4, item = "IS.MediumLaser" },
+    { at = "5-7", item = "IS.ERPPC" },
+    { at = "8-9", item = "JumpJet" },
+    { at = "10-12", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 15
 rear = 5
 slots = [
-    { at = 4, item = "IS.MediumLaser", brand = 3 },
-    { at = "5-6", item = "JumpJet", brand = 3 },
-    { at = "7-9", item = "FerroFibrous", brand = 3 },
+    { at = 4, item = "IS.MediumLaser" },
+    { at = "5-6", item = "JumpJet" },
+    { at = "7-9", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 15
 rear = 6
 slots = [
-    { at = "11-12", item = "FerroFibrous", brand = 3 },
+    { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.left_leg]
 armor = 15
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 15
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.head]

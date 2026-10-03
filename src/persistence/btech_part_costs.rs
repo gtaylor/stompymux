@@ -6,16 +6,13 @@ use sqlx::{Row, SqliteConnection};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::OnceLock;
 
-/// Unbranded catalogue names mapped to their part, keeping the first match in
-/// catalogue order. Built once because every world load resolves each cost row.
-fn unbranded_parts() -> &'static HashMap<&'static str, i32> {
+/// Catalogue names mapped to their part, keeping the first match in catalogue
+/// order. Built once because every world load resolves each cost row.
+fn parts_by_name() -> &'static HashMap<&'static str, i32> {
     static INDEX: OnceLock<HashMap<&'static str, i32>> = OnceLock::new();
     INDEX.get_or_init(|| {
         let mut index = HashMap::new();
-        for form in crate::btech::part_catalogue()
-            .iter()
-            .filter(|form| form.brand_id == 0)
-        {
+        for form in crate::btech::part_catalogue() {
             index
                 .entry(form.very_long_name.as_str())
                 .or_insert(form.part_id);
@@ -26,7 +23,7 @@ fn unbranded_parts() -> &'static HashMap<&'static str, i32> {
 
 pub(super) async fn load(c: &mut SqliteConnection) -> Result<BTreeMap<i32, u64>> {
     let mut result = BTreeMap::new();
-    let parts = unbranded_parts();
+    let parts = parts_by_name();
     for row in sqlx::query("SELECT item_name,cost FROM btech_economy_costs ORDER BY item_name")
         .fetch_all(c)
         .await?

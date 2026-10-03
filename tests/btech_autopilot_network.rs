@@ -22,7 +22,6 @@ fn networked_jenner() -> BattleTemplate {
                 equipment: "C3i".into(),
                 data: "-".into(),
                 modes: vec![],
-                brand: None,
             },
         );
     }

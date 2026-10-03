@@ -378,9 +378,7 @@ fn inspection_loadout(template: &BattleTemplate) -> Result<(BattleLoadout, Vec<I
             {
                 return true;
             }
-            if let Some(part) =
-                inspection::inspection_template_part(&critical.equipment, critical.brand)
-            {
+            if let Some(part) = inspection::inspection_template_part(&critical.equipment) {
                 raw.push(part);
             }
             false

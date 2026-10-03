@@ -16,7 +16,7 @@ pub struct BattleSensorRanges {
 }
 
 impl BattleUnit {
-    /// Nonzero template ranges override quality defaults independently.
+    /// Nonzero template ranges override technology-base defaults independently.
     /// Template zero selects defaults; runtime zero remains zero. Subsequent sensor hits degrade ranges.
     pub fn sensor_ranges(&self) -> BattleSensorRanges {
         configured_ranges(
@@ -40,18 +40,6 @@ impl super::BattleVehicle {
     }
 }
 
-/// Resolve installed computer quality using the same defaults for every chassis.
-pub(super) fn computer_quality(
-    attributes: &std::collections::BTreeMap<String, String>,
-    clan: bool,
-) -> u8 {
-    attributes
-        .get("computer")
-        .and_then(|v| v.parse::<u8>().ok())
-        .filter(|q| *q != 0)
-        .unwrap_or(if clan { 5 } else { 3 })
-}
-
 /// Derive shared computer defaults before applying Mech-specific sensor critical degradation.
 fn configured_ranges(
     attributes: &std::collections::BTreeMap<String, String>,
@@ -59,15 +47,7 @@ fn configured_ranges(
     hits: u8,
     hardware: super::hardware_settings::HardwareSettings,
 ) -> BattleSensorRanges {
-    let quality = computer_quality(attributes, clan);
-    let base = match quality {
-        1 => 16,
-        2 => 20,
-        3 => 25,
-        4 => 30,
-        5 => 35,
-        _ => 0,
-    };
+    let base = if clan { 35 } else { 25 };
     let range = |field: &str, default, explicit: Option<super::hardware_settings::RangeSetting>| {
         if let Some(value) = explicit {
             return value.at_hits(hits);

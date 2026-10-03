@@ -4,7 +4,6 @@ movement = "biped"
 tons = 75
 walk_mp = 6
 heat_sinks = 30
-computer = 4
 radio = 4
 specials = ["SearchLight"]
 
@@ -12,66 +11,65 @@ specials = ["SearchLight"]
 engine = "xl"
 structure = "endo_steel"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 24
 slots = [
-    { at = 5, item = "IS.MediumPulseLaser", brand = 3 },
-    { at = "6-10", item = "Axe", brand = 3 },
-    { at = "11-12", item = "EndoSteel", brand = 3 },
+    { at = 5, item = "IS.MediumPulseLaser" },
+    { at = "6-10", item = "Axe" },
+    { at = "11-12", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 24
 slots = [
-    { at = "5-7", item = "HeatSink", brand = 3 },
-    { at = "8-10", item = "IS.ERPPC", brand = 3 },
-    { at = 11, item = "IS.MediumPulseLaser", brand = 3 },
-    { at = 12, item = "EndoSteel", brand = 3 },
+    { at = "5-7", item = "HeatSink" },
+    { at = "8-10", item = "IS.ERPPC" },
+    { at = 11, item = "IS.MediumPulseLaser" },
+    { at = 12, item = "EndoSteel" },
 ]
 
 [sections.left_torso]
 armor = 24
 rear = 8
 slots = [
-    { at = "4-6", item = "HeatSink", brand = 3 },
-    { at = "7-8", item = "IS.LargeLaser", brand = 3 },
-    { at = 9, item = "IS.MediumPulseLaser", brand = 3 },
-    { at = "10-12", item = "EndoSteel", brand = 3 },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-8", item = "IS.LargeLaser" },
+    { at = 9, item = "IS.MediumPulseLaser" },
+    { at = "10-12", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 24
 rear = 8
 slots = [
-    { at = "4-6", item = "HeatSink", brand = 3 },
-    { at = "7-8", item = "IS.LargeLaser", brand = 3 },
-    { at = 9, item = "IS.MediumPulseLaser", brand = 3 },
-    { at = "10-12", item = "EndoSteel", brand = 3 },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-8", item = "IS.LargeLaser" },
+    { at = 9, item = "IS.MediumPulseLaser" },
+    { at = "10-12", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 35
 rear = 10
 slots = [
-    { at = "11-12", item = "IS.LargePulseLaser", brand = 3 },
+    { at = "11-12", item = "IS.LargePulseLaser" },
 ]
 
 [sections.left_leg]
 armor = 25
 slots = [
-    { at = "5-6", item = "EndoSteel", brand = 3 },
+    { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.right_leg]
 armor = 25
 slots = [
-    { at = "5-6", item = "EndoSteel", brand = 3 },
+    { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "EndoSteel", brand = 3 },
+    { at = 4, item = "EndoSteel" },
 ]

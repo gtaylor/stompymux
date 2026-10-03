@@ -4,12 +4,10 @@ movement = "biped"
 tons = 90
 walk_mp = 6
 heat_sinks = 12
-computer = 4
 radio = 4
 radio_type = 127
 
 [construction]
-brand = 3
 
 [sections.left_arm]
 armor = 10
@@ -17,14 +15,14 @@ armor = 10
 [sections.right_arm]
 armor = 10
 slots = [
-    { at = "5-6", item = "IS.MediumLaser", brand = 3 },
+    { at = "5-6", item = "IS.MediumLaser" },
 ]
 
 [sections.left_torso]
 armor = 20
 rear = 8
 slots = [
-    { at = "1-2", item = "IS.LRM-10", brand = 3 },
+    { at = "1-2", item = "IS.LRM-10" },
     { at = "3-4", item = "Ammo_IS.LRM-10", rounds = 12 },
 ]
 
@@ -32,7 +30,7 @@ slots = [
 armor = 20
 rear = 8
 slots = [
-    { at = "1-7", item = "IS.GaussRifle", brand = 3 },
+    { at = "1-7", item = "IS.GaussRifle" },
     { at = "8-9", item = "Ammo_IS.GaussRifle", rounds = 8 },
 ]
 
@@ -40,7 +38,7 @@ slots = [
 armor = 30
 rear = 11
 slots = [
-    { at = 11, item = "IS.SRM-4", brand = 3 },
+    { at = 11, item = "IS.SRM-4" },
     { at = 12, item = "Ammo_IS.SRM-4", rounds = 25 },
 ]
 

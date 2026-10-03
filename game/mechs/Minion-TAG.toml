@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "hover"
 tons = 20
 walk_mp = 14
-computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0
@@ -18,11 +17,11 @@ armor = 22
 [sections.front_side]
 armor = 28
 slots = [
-    { at = "1-2", item = "IS.MediumPulseLaser", brand = 3 },
+    { at = "1-2", item = "IS.MediumPulseLaser" },
 ]
 
 [sections.aft_side]
 armor = 16
 slots = [
-    { at = 1, item = "TAG", brand = 3 },
+    { at = 1, item = "TAG" },
 ]

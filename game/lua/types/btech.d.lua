@@ -15,7 +15,6 @@
 ---@field equipment string Unresolved asset equipment name.
 ---@field data string Unresolved asset data token.
 ---@field modes string[] Unresolved asset mode names.
----@field brand integer|nil Optional asset brand.
 
 ---@class BattleSectionDefinition
 ---@field armor integer
@@ -84,7 +83,7 @@
 
 ---@alias BattleAmmunitionMode "smoke"|"mine"|"i_narc_explosive"|"i_narc_haywire"|"i_narc_ecm"|"i_narc_nemesis"|"semi_guided"|"swarm"|"swarm1"|"stinger"|"narc"|"normal"|"cluster"|"artemis"|"precision"|"flechette"|"armor_piercing"|"caseless"|"incendiary"|"inferno"|"mml_lrm"|"mml_lrm_artemis"|"mml_lrm_narc"|"mml_lrm_swarm"|"mml_lrm_swarm1"|"mml_lrm_semi_guided"|"mml_lrm_stinger"|"extended_range"|"high_explosive"|"thunder_augmented"|"thunder_vibrabomb"|"thunder_active"
 
----@alias BattleFireMode "normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary4"|"rotary6"|"gatling"
+---@alias BattleFireMode "normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary3"|"rotary4"|"rotary5"|"rotary6"|"gatling"
 
 ---@class BattleWeaponMount
 ---@field weapon BattleWeapon
@@ -95,7 +94,6 @@
 ---@field initial_fire_mode BattleFireMode Template mode; live mode is reported by unit.weapons.
 ---@field rear_mount boolean
 ---@field on_targeting_computer boolean Explicit authored link, separate from automatic eligibility.
----@field brand integer|nil Manufacturer metadata.
 
 ---@class BattleAmmunitionBin
 ---@field location BattleCriticalLocation
@@ -105,12 +103,10 @@
 ---@field hotload boolean Retained bin flag; does not hotload the launcher.
 ---@field half_ton boolean Explicit half-ton construction flag.
 ---@field mode BattleAmmunitionMode
----@field brand integer|nil
 
 ---@class BattleSystemCritical
 ---@field location BattleCriticalLocation
 ---@field system string Snake_case system identity.
----@field brand integer|nil
 
 ---@class BattleLoadout
 ---@field weapons BattleWeaponMount[]
@@ -199,7 +195,7 @@ local btech_unit = {}
 ---@field original_capacity integer Template fuel capacity.
 ---@field capacity integer Current capacity including 2000 per installed or carried auxiliary tank.
 ---@field remaining integer Saved fuel; -1 indicates announced exhaustion.
----@field auxiliary_tanks integer Carried Fuel_Tank items across manufacturers.
+---@field auxiliary_tanks integer Carried Fuel_Tank items.
 ---@field installed_tanks integer Fuel_Tank criticals in saved VTOL construction.
 ---@field excess_mass integer Fuel above original capacity in 1/1024 tons before cargo discounts.
 
@@ -1757,8 +1753,8 @@ function btech_unit.hide(dbref, pilot) end
 
 local btech_weapon = {}
 
----Read detached effective values using a canonical or manufacturer-qualified weapon name.
----Examples: IS.MediumLaser or Magna.IS.MediumLaser; exact names ignore ASCII case.
+---Read detached effective values using a canonical weapon name.
+---Examples: IS.MediumLaser or CL.LRM-20; exact names ignore ASCII case.
 ---@param name string
 ---@return BattleWeaponValues
 function btech_weapon.settings(name) end
@@ -1779,7 +1775,6 @@ function btech_weapon.set_battle_value(actor, name, value) end
 
 ---@class BattleInventoryEntry
 ---@field part_id integer Stable game-directory part identifier.
----@field brand_id integer Manufacturer identifier, zero through five.
 ---@field quantity integer Positive stock quantity, at most 2147483647.
 
 ---@class BattlePart
@@ -1848,9 +1843,8 @@ function btech_inventory.mass(object) end
 ---@param actor integer
 ---@param object integer
 ---@param name string
----@param brand integer From zero through five.
 ---@param quantity integer From zero through 2147483647.
-function btech_inventory.set_named(actor, object, name, brand, quantity) end
+function btech_inventory.set_named(actor, object, name, quantity) end
 
 ---Read an object's detached, ordered loose-parts stock in a callback.
 ---@param object integer
@@ -1863,12 +1857,11 @@ function btech_inventory.read(object) end
 ---@param actor integer
 ---@param object integer
 ---@param part integer Nonnegative signed-32-bit identifier.
----@param brand integer From zero through five.
 ---@param quantity integer From zero through 2147483647.
-function btech_inventory.set(actor, object, part, brand, quantity) end
+function btech_inventory.set(actor, object, part, quantity) end
 
 ---@class BattleCargoRow: BattleInventoryEntry
----@field name string Stock display name, including a known weapon manufacturer when available.
+---@field name string Stock display name.
 
 local btech_cargo = {}
 
@@ -2033,7 +2026,7 @@ function btech_unit.rapidfire(dbref, pilot, weapon) end
 ---@param dbref integer
 ---@param pilot integer
 ---@param weapon integer Zero-based weapon index.
----@param rounds? 1|2|4|6 Defaults to one.
+---@param rounds? 1|2|3|4|5|6 Defaults to one.
 ---@return boolean changed
 function btech_unit.rac(dbref, pilot, weapon, rounds) end
 
@@ -2182,13 +2175,12 @@ function btech_unit.weapon_specifications(dbref) end
 
 ---@class BattleCriticalInspection
 ---@field slot integer Zero-based physical slot; native labels add one.
----@field equipment string Resolved display name, including configured manufacturer and bin mode.
+---@field equipment string Resolved display name, including bin mode.
 ---@field condition BattleEquipmentCondition
 ---@field weapon_index integer? Stable zero-based mount index, including split extensions.
 ---@field ammunition_index integer? Zero-based bin index.
 ---@field ammunition_remaining integer? Saved bin quantity; native text hides it when unavailable.
 ---@field ammunition_capacity integer? Installed bin capacity, including special rounds and half tons.
----@field brand integer? Authored quality; split slots use their parent weapon's brand.
 ---@field rear_mount boolean
 ---@field one_shot boolean
 ---@field spent boolean
@@ -3134,9 +3126,9 @@ function btech_character.xptop(actor, skill) end
 ---@return boolean queued Success is published only after persistence; rollback cancels the request.
 function btech_database.save(actor) end
 
----Return all part/manufacturer forms in short-name order, without requiring live stock.
+---Return all part forms in short-name order, without requiring live stock.
 ---@param actor integer Wizard requesting inspection.
----@return table[] forms Part ID, brand ID, short_name, long_name and very_long_name.
+---@return table[] forms Part ID, short_name, long_name and very_long_name.
 function btech_inventory.forms(actor) end
 
 ---@class BattleRuntimeStats
@@ -3243,8 +3235,6 @@ function btech_unit.set_field(actor, unit, field, value) end
 
 ---@class BattlePartDefinition
 ---@field id integer Stable catalogue part identifier.
----@field brand integer Manufacturer identifier.
----@field packed_id integer Brand-major combined identifier.
 ---@field short_name string
 ---@field long_name string
 ---@field very_long_name string
@@ -3762,12 +3752,12 @@ function btech_parts.adjust_stores(target, part, delta) end
 ---@return BattlePartCategory[] categories
 function btech_parts.categories() end
 
----List registered branded forms in catalogue order; a case-insensitive category filters them.
+---List registered parts in catalogue order; a case-insensitive category filters them.
 ---@param category? string
 ---@return BattlePartDefinition[] parts
 function btech_parts.list(category) end
 
----Resolve one registered part by packed ID, case-insensitive name or {id, brand} record.
+---Resolve one registered part by ID, case-insensitive name or {id} record.
 ---@param part BattlePartRef
 ---@return BattlePartDefinition|nil part
 function btech_parts.resolve(part) end
@@ -3777,7 +3767,7 @@ function btech_parts.resolve(part) end
 ---@return BattlePartDefinition[] parts
 function btech_parts.search(query) end
 
----Set the cost shared by every brand of one registered part.
+---Set the cost of one registered part.
 ---@param part BattlePartRef
 ---@param cost integer From 0 through 2^53-1.
 function btech_parts.set_cost(part, cost) end

@@ -5,26 +5,24 @@ tons = 40
 walk_mp = 8
 jump_mp = 5
 heat_sinks = 20
-computer = 4
 radio = 4
 
 [construction]
 structure = "endo_steel"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 12
 slots = [
-    { at = "5-8", item = "IS.MachineGun", brand = 3 },
-    { at = "9-11", item = "IS.PPC", brand = 3 },
+    { at = "5-8", item = "IS.MachineGun" },
+    { at = "9-11", item = "IS.PPC" },
 ]
 
 [sections.right_arm]
 armor = 12
 slots = [
-    { at = "5-7", item = "EndoSteel", brand = 3 },
-    { at = "8-9", item = "IS.SmallPulseLaser", brand = 3 },
+    { at = "5-7", item = "EndoSteel" },
+    { at = "8-9", item = "IS.SmallPulseLaser" },
 ]
 
 [sections.left_torso]
@@ -32,39 +30,39 @@ armor = 15
 rear = 5
 slots = [
     { at = 1, item = "Ammo_IS.MachineGun", rounds = 200 },
-    { at = "2-8", item = "EndoSteel", brand = 3 },
-    { at = 9, item = "Case", brand = 3 },
+    { at = "2-8", item = "EndoSteel" },
+    { at = 9, item = "Case" },
 ]
 
 [sections.right_torso]
 armor = 15
 rear = 5
 slots = [
-    { at = "1-6", item = "HeatSink", brand = 3 },
-    { at = "7-10", item = "EndoSteel", brand = 3 },
+    { at = "1-6", item = "HeatSink" },
+    { at = "7-10", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 17
 rear = 6
 slots = [
-    { at = 11, item = "JumpJet", brand = 3 },
+    { at = 11, item = "JumpJet" },
 ]
 
 [sections.left_leg]
 armor = 20
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 20
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "IS.Flamer", brand = 3 },
+    { at = 4, item = "IS.Flamer" },
 ]

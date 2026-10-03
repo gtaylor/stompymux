@@ -4,7 +4,6 @@ movement = "track"
 tons = 95
 walk_mp = 3
 heat_sinks = 0
-computer = 2
 radio = 2
 
 [sections.left_side]

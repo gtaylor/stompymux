@@ -4,42 +4,40 @@ movement = "biped"
 tons = 30
 walk_mp = 11
 heat_sinks = 11
-computer = 4
 radio = 4
 
 [construction]
 engine = "xl"
 structure = "endo_steel"
-brand = 3
 
 [sections.left_arm]
 armor = 8
 slots = [
-    { at = 5, item = "IS.StreakSRM-2", brand = 3 },
-    { at = "6-7", item = "EndoSteel", brand = 3 },
+    { at = 5, item = "IS.StreakSRM-2" },
+    { at = "6-7", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 8
 slots = [
-    { at = "5-6", item = "EndoSteel", brand = 3 },
+    { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
 armor = 10
 rear = 4
 slots = [
-    { at = 4, item = "HeatSink", brand = 3 },
+    { at = 4, item = "HeatSink" },
     { at = 5, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
-    { at = "6-9", item = "EndoSteel", brand = 3 },
+    { at = "6-9", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 10
 rear = 4
 slots = [
-    { at = "4-6", item = "IS.ERPPC", brand = 3 },
-    { at = "7-10", item = "EndoSteel", brand = 3 },
+    { at = "4-6", item = "IS.ERPPC" },
+    { at = "7-10", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
@@ -52,19 +50,19 @@ slots = [
 [sections.left_leg]
 armor = 12
 slots = [
-    { at = 5, item = "HeatSink", brand = 3 },
-    { at = 6, item = "EndoSteel", brand = 3 },
+    { at = 5, item = "HeatSink" },
+    { at = 6, item = "EndoSteel" },
 ]
 
 [sections.right_leg]
 armor = 12
 slots = [
-    { at = 5, item = "HeatSink", brand = 3 },
-    { at = 6, item = "EndoSteel", brand = 3 },
+    { at = 5, item = "HeatSink" },
+    { at = 6, item = "EndoSteel" },
 ]
 
 [sections.head]
 armor = 8
 slots = [
-    { at = 4, item = "IS.Anti-MissileSystem", brand = 3 },
+    { at = 4, item = "IS.Anti-MissileSystem" },
 ]

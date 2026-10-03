@@ -14,7 +14,6 @@ fn mount(section: Section, rear_mount: bool) -> WeaponMount {
         initially_spent: false,
         initial_ammunition_mode: stompymux_rs::BattleAmmunitionMode::Normal,
         initial_fire_mode: stompymux_rs::BattleFireMode::Normal,
-        brand: None,
     }
 }
 

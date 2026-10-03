@@ -5,47 +5,45 @@ tons = 75
 walk_mp = 6
 jump_mp = 4
 heat_sinks = 32
-computer = 4
 radio = 4
 specials = ["SearchLight"]
 
 [construction]
 engine = "xl"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 23
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "IS.ERPPC", brand = 3 },
-    { at = 7, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = "4-6", item = "IS.ERPPC" },
+    { at = 7, item = "IS.MediumPulseLaser" },
 ]
 
 [sections.right_arm]
 armor = 23
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "IS.ERPPC", brand = 3 },
-    { at = 7, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = "4-6", item = "IS.ERPPC" },
+    { at = 7, item = "IS.MediumPulseLaser" },
 ]
 
 [sections.left_torso]
 armor = 24
 rear = 8
 slots = [
-    { at = "4-9", item = "HeatSink", brand = 3 },
-    { at = 10, item = "IS.StreakSRM-2", brand = 3 },
+    { at = "4-9", item = "HeatSink" },
+    { at = 10, item = "IS.StreakSRM-2" },
     { at = 11, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
-    { at = 12, item = "Case", brand = 3 },
+    { at = 12, item = "Case" },
 ]
 
 [sections.right_torso]
 armor = 24
 rear = 8
 slots = [
-    { at = "4-9", item = "HeatSink", brand = 3 },
-    { at = "10-11", item = "IS.LargePulseLaser", brand = 3 },
+    { at = "4-9", item = "HeatSink" },
+    { at = "10-11", item = "IS.LargePulseLaser" },
 ]
 
 [sections.center_torso]
@@ -55,13 +53,13 @@ rear = 10
 [sections.left_leg]
 armor = 30
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 30
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.head]

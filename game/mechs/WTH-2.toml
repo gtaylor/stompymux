@@ -4,12 +4,10 @@ movement = "biped"
 tons = 40
 walk_mp = 6
 jump_mp = 4
-computer = 4
 radio = 4
 specials = ["AntiAircraft"]
 
 [construction]
-brand = 3
 
 [sections.left_arm]
 armor = 12
@@ -23,9 +21,9 @@ omit = ["hand_actuator"]
 armor = 12
 rear = 6
 slots = [
-    { at = "1-2", item = "HeatSink", brand = 3 },
-    { at = "3-4", item = "IS.LRM-10", brand = 3 },
-    { at = 5, item = "ArtemisIV", brand = 3 },
+    { at = "1-2", item = "HeatSink" },
+    { at = "3-4", item = "IS.LRM-10" },
+    { at = 5, item = "ArtemisIV" },
     { at = 6, item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
 ]
 
@@ -33,9 +31,9 @@ slots = [
 armor = 12
 rear = 6
 slots = [
-    { at = "1-2", item = "HeatSink", brand = 3 },
-    { at = "3-4", item = "IS.LRM-10", brand = 3 },
-    { at = 5, item = "ArtemisIV", brand = 3 },
+    { at = "1-2", item = "HeatSink" },
+    { at = "3-4", item = "IS.LRM-10" },
+    { at = 5, item = "ArtemisIV" },
     { at = 6, item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
 ]
 
@@ -46,17 +44,17 @@ rear = 7
 [sections.left_leg]
 armor = 18
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 18
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "IS.MediumLaser", brand = 3 },
+    { at = 4, item = "IS.MediumLaser" },
 ]

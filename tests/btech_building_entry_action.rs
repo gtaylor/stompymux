@@ -1259,7 +1259,6 @@ async fn building_host_honors_configured_hot_myomer_load_assistance() {
                     equipment: "TripleStrengthMyomer".into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
             remaining -= 1;

@@ -3,7 +3,6 @@ class = "mech"
 movement = "biped"
 tons = 60
 walk_mp = 6
-computer = 5
 radio = 4
 specials = ["AntiAircraft", "SearchLight"]
 
@@ -25,7 +24,7 @@ slots = [
 armor = 15
 rear = 4
 slots = [
-    { at = 1, item = "IS.MediumLaser", brand = 4 },
+    { at = 1, item = "IS.MediumLaser" },
     { at = 2, item = "HeatSink" },
 ]
 
@@ -33,7 +32,7 @@ slots = [
 armor = 15
 rear = 4
 slots = [
-    { at = 1, item = "IS.MediumLaser", brand = 4 },
+    { at = 1, item = "IS.MediumLaser" },
     { at = "2-3", item = "Ammo_IS.AC/10", rounds = 10 },
 ]
 

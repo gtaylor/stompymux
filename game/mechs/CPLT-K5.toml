@@ -5,7 +5,6 @@ tons = 65
 walk_mp = 6
 jump_mp = 4
 heat_sinks = 24
-computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0
@@ -14,67 +13,66 @@ max_suits = 0
 engine = "xl"
 structure = "endo_steel"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 20
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-7", item = "IS.MRM-30", brand = 3 },
-    { at = "8-10", item = "HeatSink", brand = 3 },
-    { at = "11-12", item = "EndoSteel", brand = 3 },
+    { at = "3-7", item = "IS.MRM-30" },
+    { at = "8-10", item = "HeatSink" },
+    { at = "11-12", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 20
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-7", item = "IS.MRM-30", brand = 3 },
-    { at = "8-10", item = "HeatSink", brand = 3 },
-    { at = "11-12", item = "EndoSteel", brand = 3 },
+    { at = "3-7", item = "IS.MRM-30" },
+    { at = "8-10", item = "HeatSink" },
+    { at = "11-12", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
 armor = 21
 rear = 9
 slots = [
-    { at = "4-5", item = "JumpJet", brand = 3 },
+    { at = "4-5", item = "JumpJet" },
     { at = "6-7", item = "Ammo_IS.MRM-30", rounds = 8 },
-    { at = 8, item = "Case", brand = 3 },
-    { at = "9-11", item = "EndoSteel", brand = 3 },
+    { at = 8, item = "Case" },
+    { at = "9-11", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 21
 rear = 9
 slots = [
-    { at = "4-5", item = "JumpJet", brand = 3 },
+    { at = "4-5", item = "JumpJet" },
     { at = "6-7", item = "Ammo_IS.MRM-30", rounds = 8 },
-    { at = 8, item = "Case", brand = 3 },
-    { at = "9-11", item = "EndoSteel", brand = 3 },
+    { at = 8, item = "Case" },
+    { at = "9-11", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 30
 rear = 11
 slots = [
-    { at = "11-12", item = "IS.MediumPulseLaser", brand = 3 },
+    { at = "11-12", item = "IS.MediumPulseLaser" },
 ]
 
 [sections.left_leg]
 armor = 25
 slots = [
-    { at = "5-6", item = "EndoSteel", brand = 3 },
+    { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.right_leg]
 armor = 25
 slots = [
-    { at = "5-6", item = "EndoSteel", brand = 3 },
+    { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "C3Slave", brand = 3 },
+    { at = 4, item = "C3Slave" },
 ]

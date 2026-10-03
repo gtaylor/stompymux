@@ -3,11 +3,9 @@ class = "mech"
 movement = "biped"
 tons = 25
 walk_mp = 14
-computer = 4
 radio = 4
 
 [construction]
-brand = 3
 
 [sections.left_arm]
 armor = 5
@@ -23,14 +21,14 @@ rear = 3
 armor = 7
 rear = 3
 slots = [
-    { at = 1, item = "HeatSink", brand = 3 },
+    { at = 1, item = "HeatSink" },
 ]
 
 [sections.center_torso]
 armor = 7
 rear = 3
 slots = [
-    { at = "11-12", item = "IS.SmallPulseLaser", brand = 3 },
+    { at = "11-12", item = "IS.SmallPulseLaser" },
 ]
 
 [sections.left_leg]
@@ -42,5 +40,5 @@ armor = 5
 [sections.head]
 armor = 6
 slots = [
-    { at = 4, item = "IS.SmallPulseLaser", brand = 3 },
+    { at = 4, item = "IS.SmallPulseLaser" },
 ]

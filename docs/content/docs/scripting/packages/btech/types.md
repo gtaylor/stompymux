@@ -19,7 +19,6 @@ Alias: `"LeftArm"|"RightArm"|"LeftTorso"|"RightTorso"|"CenterTorso"|"LeftLeg"|"R
 - `equipment`: `string` — Unresolved asset equipment name.
 - `data`: `string` — Unresolved asset data token.
 - `modes`: `string[]` — Unresolved asset mode names.
-- `brand`: `integer|nil` — Optional asset brand.
 
 ## BattleSectionDefinition
 
@@ -94,7 +93,7 @@ Alias: `"smoke"|"mine"|"i_narc_explosive"|"i_narc_haywire"|"i_narc_ecm"|"i_narc_
 
 ## BattleFireMode
 
-Alias: `"normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary4"|"rotary6"|"gatling"`
+Alias: `"normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary3"|"rotary4"|"rotary5"|"rotary6"|"gatling"`
 
 ## BattleWeaponMount
 
@@ -106,7 +105,6 @@ Alias: `"normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary4"|"rotary6"|
 - `initial_fire_mode`: `BattleFireMode` — Template mode; live mode is reported by unit.weapons.
 - `rear_mount`: `boolean`
 - `on_targeting_computer`: `boolean` — Explicit authored link, separate from automatic eligibility.
-- `brand`: `integer|nil` — Manufacturer metadata.
 
 ## BattleAmmunitionBin
 
@@ -117,13 +115,11 @@ Alias: `"normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary4"|"rotary6"|
 - `hotload`: `boolean` — Retained bin flag; does not hotload the launcher.
 - `half_ton`: `boolean` — Explicit half-ton construction flag.
 - `mode`: `BattleAmmunitionMode`
-- `brand`: `integer|nil`
 
 ## BattleSystemCritical
 
 - `location`: `BattleCriticalLocation`
 - `system`: `string` — Snake_case system identity.
-- `brand`: `integer|nil`
 
 ## BattleLoadout
 
@@ -148,7 +144,7 @@ Alias: `"normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary4"|"rotary6"|
 - `original_capacity`: `integer` — Template fuel capacity.
 - `capacity`: `integer` — Current capacity including 2000 per installed or carried auxiliary tank.
 - `remaining`: `integer` — Saved fuel; -1 indicates announced exhaustion.
-- `auxiliary_tanks`: `integer` — Carried Fuel_Tank items across manufacturers.
+- `auxiliary_tanks`: `integer` — Carried Fuel_Tank items.
 - `installed_tanks`: `integer` — Fuel_Tank criticals in saved VTOL construction.
 - `excess_mass`: `integer` — Fuel above original capacity in 1/1024 tons before cargo discounts.
 
@@ -1042,7 +1038,6 @@ Alias: `{class: "mech", section: string}|{class: "ground_vehicle"|"vtol", sectio
 ## BattleInventoryEntry
 
 - `part_id`: `integer` — Stable game-directory part identifier.
-- `brand_id`: `integer` — Manufacturer identifier, zero through five.
 - `quantity`: `integer` — Positive stock quantity, at most 2147483647.
 
 ## BattlePart
@@ -1060,7 +1055,7 @@ Alias: `{class: "mech", section: string}|{class: "ground_vehicle"|"vtol", sectio
 
 ## BattleCargoRow
 
-- `name`: `string` — Stock display name, including a known weapon manufacturer when available.
+- `name`: `string` — Stock display name.
 
 ## BattleTechInspection
 
@@ -1152,13 +1147,12 @@ Alias: `'empty'|'operational'|'damaged'|'disabled'|'broken'|'destroyed'|'jammed'
 ## BattleCriticalInspection
 
 - `slot`: `integer` — Zero-based physical slot; native labels add one.
-- `equipment`: `string` — Resolved display name, including configured manufacturer and bin mode.
+- `equipment`: `string` — Resolved display name, including bin mode.
 - `condition`: `BattleEquipmentCondition`
 - `weapon_index`: `integer?` — Stable zero-based mount index, including split extensions.
 - `ammunition_index`: `integer?` — Zero-based bin index.
 - `ammunition_remaining`: `integer?` — Saved bin quantity; native text hides it when unavailable.
 - `ammunition_capacity`: `integer?` — Installed bin capacity, including special rounds and half tons.
-- `brand`: `integer?` — Authored quality; split slots use their parent weapon's brand.
 - `rear_mount`: `boolean`
 - `one_shot`: `boolean`
 - `spent`: `boolean`
@@ -1505,8 +1499,6 @@ Alias: `"follow_brief" | "include" | "exclude"`
 ## BattlePartDefinition
 
 - `id`: `integer` — Stable catalogue part identifier.
-- `brand`: `integer` — Manufacturer identifier.
-- `packed_id`: `integer` — Brand-major combined identifier.
 - `short_name`: `string`
 - `long_name`: `string`
 - `very_long_name`: `string`

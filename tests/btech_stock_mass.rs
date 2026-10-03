@@ -135,7 +135,7 @@ async fn cargo_mass_and_throttle_are_shared_across_every_chassis() {
             let mech = world.btech.constructed_units().contains_key(&id);
             let baseline = battle_throttle_maximum(&world, id, true).unwrap();
             for (name, count) in [("Gold", 2), ("Natural_Extracts", 1), ("Ore", 1)] {
-                set_battle_inventory_named(&mut world, ObjectId(1), id, name, 0, count).unwrap();
+                set_battle_inventory_named(&mut world, ObjectId(1), id, name, count).unwrap();
             }
             assert_eq!(battle_inventory_mass(&world, id).unwrap(), 510);
             let expected = match (mech, cargo) {
@@ -148,12 +148,11 @@ async fn cargo_mass_and_throttle_are_shared_across_every_chassis() {
                 expected
             );
             assert!(battle_throttle_maximum(&world, id, true).unwrap() <= baseline);
-            set_battle_inventory_named(&mut world, ObjectId(1), id, "Bomb_10_Inferno", 0, 1)
-                .unwrap();
+            set_battle_inventory_named(&mut world, ObjectId(1), id, "Bomb_10_Inferno", 1).unwrap();
             assert_eq!(battle_inventory_mass(&world, id).unwrap(), 4590);
             let before = world.btech.clone();
             assert!(
-                set_battle_inventory_quantity(&mut world, ObjectId(1), id, i32::MAX, 0, 1).is_err()
+                set_battle_inventory_quantity(&mut world, ObjectId(1), id, i32::MAX, 1).is_err()
             );
             assert_eq!(world.btech, before);
             world.validate(&config).unwrap();
@@ -164,13 +163,13 @@ async fn cargo_mass_and_throttle_are_shared_across_every_chassis() {
                 battle_throttle_maximum(&loaded, id, true).unwrap(),
                 battle_throttle_maximum(&world, id, true).unwrap()
             );
-            set_battle_inventory_named(&mut world, ObjectId(1), id, "Gold", 0, i32::MAX).unwrap();
+            set_battle_inventory_named(&mut world, ObjectId(1), id, "Gold", i32::MAX).unwrap();
             assert_eq!(battle_throttle_maximum(&world, id, true).unwrap(), 0.0);
             for name in ["Gold", "Natural_Extracts", "Ore", "Bomb_10_Inferno"] {
-                set_battle_inventory_named(&mut world, ObjectId(1), id, name, 0, 0).unwrap();
+                set_battle_inventory_named(&mut world, ObjectId(1), id, name, 0).unwrap();
             }
             assert_eq!(battle_throttle_maximum(&world, id, true).unwrap(), baseline);
-            set_battle_inventory_named(&mut world, ObjectId(1), id, "SplitCrit_Left", 0, i32::MAX)
+            set_battle_inventory_named(&mut world, ObjectId(1), id, "SplitCrit_Left", i32::MAX)
                 .unwrap();
             assert_eq!(battle_inventory_mass(&world, id).unwrap(), 0);
             assert_eq!(battle_throttle_maximum(&world, id, true).unwrap(), baseline);
@@ -185,8 +184,8 @@ async fn named_stock_controls_and_inspection_agree() {
         fixture(include_str!("../game/mechs/JR7-D.toml"), false).await;
     let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
     let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-    let command = format!("@btech inventory-set #{} Gold 0 2", id.0);
-    let callback = format!("btech.inventory.set_named(1,{},'gOlD',0,2)", id.0);
+    let command = format!("@btech inventory-set #{} Gold 2", id.0);
+    let callback = format!("btech.inventory.set_named(1,{},'gOlD',2)", id.0);
     let before = lua.world().btech.clone();
     assert!(
         lua.eval_callback::<()>(&format!("{callback}; error('abort')"))
@@ -213,8 +212,8 @@ async fn named_stock_controls_and_inspection_agree() {
     );
     let before = lua.world().btech.clone();
     for code in [
-        format!("btech.inventory.set_named(4,{},'Gold',0,3)", id.0),
-        format!("btech.inventory.set_named(1,{},'Unknown',0,3)", id.0),
+        format!("btech.inventory.set_named(4,{},'Gold',3)", id.0),
+        format!("btech.inventory.set_named(1,{},'Unknown',3)", id.0),
     ] {
         assert!(lua.eval_callback::<()>(&code).is_err());
         assert_eq!(lua.world().btech, before);
@@ -243,7 +242,7 @@ async fn carried_stock_affects_live_movement_and_adds_to_tow_load() {
         place_battle_unit(&mut world, target, map, 0, 0).unwrap();
         set_battle_tow(&mut world, id, Some(target)).unwrap();
         let empty = battle_unit_load(&world, id, true).unwrap().carried_mass;
-        set_battle_inventory_named(&mut world, ObjectId(1), id, "Gold", 0, 50).unwrap();
+        set_battle_inventory_named(&mut world, ObjectId(1), id, "Gold", 50).unwrap();
         let mech = world.btech.constructed_units().contains_key(&id);
         assert_eq!(
             battle_unit_load(&world, id, true).unwrap().carried_mass - empty,
@@ -296,7 +295,7 @@ async fn construction_rejects_unknown_stock_before_mutation() {
     for source in templates() {
         let (_dir, config, mut world) = support::isolated_world().await;
         let id = world.create(&config, "Stocked shell".into(), Kind::Thing);
-        set_battle_inventory_quantity(&mut world, ObjectId(1), id, 384, 0, 1).unwrap();
+        set_battle_inventory_quantity(&mut world, ObjectId(1), id, 384, 1).unwrap();
         let before = world.btech.clone();
         assert!(
             BattleUnitTemplate::parse("test", &source)
@@ -305,8 +304,8 @@ async fn construction_rejects_unknown_stock_before_mutation() {
                 .is_err()
         );
         assert_eq!(world.btech, before);
-        set_battle_inventory_quantity(&mut world, ObjectId(1), id, 384, 0, 0).unwrap();
-        set_battle_inventory_named(&mut world, ObjectId(1), id, "Gold", 0, 1).unwrap();
+        set_battle_inventory_quantity(&mut world, ObjectId(1), id, 384, 0).unwrap();
+        set_battle_inventory_named(&mut world, ObjectId(1), id, "Gold", 1).unwrap();
         BattleUnitTemplate::parse("test", &source)
             .unwrap()
             .create(&mut world, id)

@@ -453,10 +453,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
                                 let selected =
                                     section(value(&args, 2), &template, true, 3)?.unwrap();
                                 crate::btech::inspect_template_critical_text(
-                                    &borrowed,
-                                    &template,
-                                    selected,
-                                    config.battletech.parts != 0,
+                                    &borrowed, &template, selected,
                                 )
                             }
                         },
@@ -494,10 +491,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
                                     )
                                 })?;
                                 crate::btech::inspect_vehicle_template_critical_text(
-                                    &borrowed,
-                                    &template,
-                                    selected,
-                                    config.battletech.parts != 0,
+                                    &borrowed, &template, selected,
                                 )
                             }
                         },

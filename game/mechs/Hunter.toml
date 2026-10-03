@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "track"
 tons = 35
 walk_mp = 8
-computer = 3
 specials = ["SearchLight"]
 
 [sections.left_side]
@@ -15,12 +14,12 @@ armor = 22
 [sections.front_side]
 armor = 32
 slots = [
-    { at = 1, item = "IS.LRM-20", brand = 3 },
+    { at = 1, item = "IS.LRM-20" },
     { at = "2-3", item = "Ammo_IS.LRM-20", rounds = 6 },
 ]
 
 [sections.aft_side]
 armor = 16
 slots = [
-    { at = 1, item = "IS.Flamer", brand = 3 },
+    { at = 1, item = "IS.Flamer" },
 ]

@@ -18,7 +18,7 @@ armor = 66
 [sections.front_side]
 armor = 66
 slots = [
-    { at = 1, item = "IS.HeavyGaussRifle", brand = 3 },
+    { at = 1, item = "IS.HeavyGaussRifle" },
     { at = "2-7", item = "Ammo_IS.HeavyGaussRifle", rounds = 4 },
 ]
 
@@ -28,7 +28,7 @@ armor = 48
 [sections.turret]
 armor = 66
 slots = [
-    { at = 1, item = "IS.LRM-10", brand = 3 },
-    { at = 2, item = "IS.ERMediumLaser", brand = 3 },
+    { at = 1, item = "IS.LRM-10" },
+    { at = 2, item = "IS.ERMediumLaser" },
     { at = "3-4", item = "Ammo_IS.LRM-10", rounds = 12 },
 ]

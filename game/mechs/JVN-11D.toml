@@ -5,7 +5,6 @@ tons = 30
 walk_mp = 9
 jump_mp = 6
 heat_sinks = 22
-computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0
@@ -14,61 +13,60 @@ max_suits = 0
 engine = "xl"
 structure = "endo_steel"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 8
 slots = [
-    { at = "5-7", item = "HeatSink", brand = 3 },
-    { at = "8-12", item = "EndoSteel", brand = 3 },
+    { at = "5-7", item = "HeatSink" },
+    { at = "8-12", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 8
 slots = [
-    { at = "5-7", item = "HeatSink", brand = 3 },
-    { at = "8-12", item = "EndoSteel", brand = 3 },
+    { at = "5-7", item = "HeatSink" },
+    { at = "8-12", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
 armor = 10
 rear = 4
 slots = [
-    { at = 4, item = "IS.MediumPulseLaser", modes = ["OnTC"], brand = 3 },
-    { at = 5, item = "IS.ERMediumLaser", modes = ["OnTC"], brand = 3 },
-    { at = "6-7", item = "TargetingComputer", brand = 3 },
-    { at = "8-10", item = "HeatSink", brand = 3 },
-    { at = "11-12", item = "EndoSteel", brand = 3 },
+    { at = 4, item = "IS.MediumPulseLaser", modes = ["OnTC"] },
+    { at = 5, item = "IS.ERMediumLaser", modes = ["OnTC"] },
+    { at = "6-7", item = "TargetingComputer" },
+    { at = "8-10", item = "HeatSink" },
+    { at = "11-12", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 10
 rear = 4
 slots = [
-    { at = 4, item = "IS.MediumPulseLaser", modes = ["OnTC"], brand = 3 },
-    { at = "5-6", item = "IS.ERMediumLaser", modes = ["OnTC"], brand = 3 },
-    { at = 7, item = "C3Slave", brand = 3 },
-    { at = "8-10", item = "HeatSink", brand = 3 },
-    { at = "11-12", item = "EndoSteel", brand = 3 },
+    { at = 4, item = "IS.MediumPulseLaser", modes = ["OnTC"] },
+    { at = "5-6", item = "IS.ERMediumLaser", modes = ["OnTC"] },
+    { at = 7, item = "C3Slave" },
+    { at = "8-10", item = "HeatSink" },
+    { at = "11-12", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 15
 rear = 5
 slots = [
-    { at = "11-12", item = "JumpJet", brand = 3 },
+    { at = "11-12", item = "JumpJet" },
 ]
 
 [sections.left_leg]
 armor = 12
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 12
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.head]

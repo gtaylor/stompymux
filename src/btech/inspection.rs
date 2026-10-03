@@ -25,7 +25,7 @@ pub fn inspection_battle_value(
     super::battle_value::configured(world, id, super::SpeedPolicy::configured(config))
 }
 
-/// Pristine BattleMech value after normalizing C manufacturer-qualified names.
+/// Pristine BattleMech value after normalizing C weapon names.
 pub fn inspection_template_battle_value(template: &BattleTemplate) -> Result<super::BattleValue> {
     let compatible = inspection_compatible_template(template);
     let loadout = BattleLoadout::resolve(&compatible)?;
@@ -161,7 +161,7 @@ pub fn inspection_template_battle_value(template: &BattleTemplate) -> Result<sup
                 .criticals
                 .values()
                 .filter(|critical| {
-                    super::BattleWeapon::parse_operator_name(&critical.equipment)
+                    super::BattleWeapon::parse(&critical.equipment)
                         .is_ok_and(|weapon| weapon.weapon_explosion_damage() > 0)
                 })
                 .count() as f32;
@@ -201,7 +201,7 @@ pub fn inspection_template_battle_value(template: &BattleTemplate) -> Result<sup
     })
 }
 
-/// Pristine vehicle value after normalizing C manufacturer-qualified names.
+/// Pristine vehicle value after normalizing C weapon names.
 pub fn inspection_vehicle_template_battle_value(
     template: &super::BattleVehicleTemplate,
 ) -> Result<super::BattleValue> {
@@ -456,7 +456,6 @@ fn canonical_mech_internal(template: &BattleTemplate, section: BattleSection) ->
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct InspectionPart {
     pub id: i32,
-    pub brand: u8,
 }
 
 /// Resolve the equipment spelling used by C templates to its stable catalogue identity.
@@ -464,16 +463,11 @@ pub struct InspectionPart {
 /// Template internals occupy the component range before similarly named cargo.  In
 /// particular `CASE-II` means component 427 in a critical slot, while loose cargo
 /// 562 deliberately has the same display name.
-pub(crate) fn inspection_template_part(
-    name: &str,
-    brand: Option<u8>,
-) -> Option<(InspectionPart, bool, bool)> {
-    let supplied_brand = brand.unwrap_or(0) % 16;
-    if let Ok(weapon) = super::BattleWeapon::parse_operator_name(name) {
+pub(crate) fn inspection_template_part(name: &str) -> Option<(InspectionPart, bool, bool)> {
+    if let Ok(weapon) = super::BattleWeapon::parse(name) {
         return Some((
             InspectionPart {
                 id: weapon.part_id(),
-                brand: supplied_brand,
             },
             true,
             true,
@@ -484,7 +478,6 @@ pub(crate) fn inspection_template_part(
         return Some((
             InspectionPart {
                 id: weapon.ammunition_part_id(),
-                brand: supplied_brand,
             },
             false,
             true,
@@ -498,14 +491,7 @@ pub(crate) fn inspection_template_part(
         let part = BattlePart::from_id(form.part_id)?;
         let is_weapon = part.kind == BattlePartKind::Weapon;
         return Some((
-            InspectionPart {
-                id: form.part_id,
-                brand: if supplied_brand == 0 {
-                    form.brand_id
-                } else {
-                    supplied_brand
-                },
-            },
+            InspectionPart { id: form.part_id },
             is_weapon,
             is_weapon || part.kind == BattlePartKind::Ammunition,
         ));
@@ -516,18 +502,10 @@ pub(crate) fn inspection_template_part(
     let part =
         internal.or_else(|| BattlePart::all().find(|part| part.name.eq_ignore_ascii_case(name)))?;
     let weapon = part.kind == BattlePartKind::Weapon;
-    Some((
-        InspectionPart {
-            id: part.part_id,
-            brand: supplied_brand,
-        },
-        weapon,
-        weapon,
-    ))
+    Some((InspectionPart { id: part.part_id }, weapon, weapon))
 }
 
-/// Normalize manufacturer-qualified native weapon names for the combat
-/// catalogue while retaining each slot's explicit brand field.
+/// Normalize native weapon names and mech internals for the combat catalogue.
 pub(crate) fn inspection_compatible_template(template: &BattleTemplate) -> BattleTemplate {
     let mut compatible = template.clone();
     for section in BattleSection::ALL {
@@ -540,7 +518,7 @@ pub(crate) fn inspection_compatible_template(template: &BattleTemplate) -> Battl
     compatible.jump_speed = inspection_normalized_jump_speed(template);
     for definition in compatible.sections.values_mut() {
         for critical in definition.criticals.values_mut() {
-            if let Ok(weapon) = super::BattleWeapon::parse_operator_name(&critical.equipment) {
+            if let Ok(weapon) = super::BattleWeapon::parse(&critical.equipment) {
                 critical.equipment = weapon.name().to_owned();
             }
         }
@@ -567,14 +545,14 @@ pub(crate) fn inspection_normalized_jump_speed(template: &BattleTemplate) -> f64
     f64::from(criticals) * 10.75
 }
 
-/// Normalize manufacturer-qualified native vehicle weapon names while retaining brands.
+/// Normalize native vehicle weapon names for the combat catalogue.
 pub(crate) fn inspection_compatible_vehicle_template(
     template: &super::BattleVehicleTemplate,
 ) -> super::BattleVehicleTemplate {
     let mut compatible = template.clone();
     for definition in compatible.sections.values_mut() {
         for critical in definition.criticals.values_mut() {
-            if let Ok(weapon) = super::BattleWeapon::parse_operator_name(&critical.equipment) {
+            if let Ok(weapon) = super::BattleWeapon::parse(&critical.equipment) {
                 critical.equipment = weapon.name().to_owned();
             }
         }
@@ -646,20 +624,15 @@ fn critical_rows(
         let part = if let Some(mount) = weapon {
             Some(InspectionPart {
                 id: mount.weapon.part_id(),
-                brand: mount.brand.unwrap_or(0) % 16,
             })
         } else if let Some((_, bin)) = ammunition {
             Some(InspectionPart {
                 id: bin.weapon.ammunition_part_id(),
-                brand: bin.brand.unwrap_or(0) % 16,
             })
-        } else if let Some(system) = system {
+        } else if system.is_some() {
             critical
                 .and_then(|raw| BattlePart::parse(&raw.equipment).ok())
-                .map(|part| InspectionPart {
-                    id: part.part_id,
-                    brand: system.brand.unwrap_or(0) % 16,
-                })
+                .map(|part| InspectionPart { id: part.part_id })
         } else {
             raw_identity.map(|value| value.0)
         };
@@ -728,12 +701,9 @@ fn critical_rows(
             },
             part,
             operational: !fire_modes.iter().any(|mode| matches!(mode, 1 | 2 | 4)),
-            temporary_failure: critical
-                .and_then(|critical| critical.brand)
-                .is_some_and(|brand| brand >> 4 != 0)
-                || live.is_some_and(|unit| {
-                    weapon_index.is_some_and(|index| unit.weapon_failures().contains_key(&index))
-                }),
+            temporary_failure: live.is_some_and(|unit| {
+                weapon_index.is_some_and(|index| unit.weapon_failures().contains_key(&index))
+            }),
             auxiliary_data: rounds.map_or_else(
                 || {
                     critical
@@ -772,6 +742,8 @@ fn template_fire_modes(flags: &[String]) -> Vec<i32> {
         ("Jettisoned", 262144),
         ("OmniBase", 524288),
         ("RocketFired", 1048576),
+        ("Rotary_ThreeShot", 2097152),
+        ("Rotary_FiveShot", 4194304),
         ("OnTC", 16),
     ];
     MODES
@@ -825,7 +797,9 @@ fn live_fire_mode(mode: super::BattleFireMode) -> Option<i32> {
         super::BattleFireMode::Ultra => 1024,
         super::BattleFireMode::Rapid => 2048,
         super::BattleFireMode::Rotary2 => 8192,
+        super::BattleFireMode::Rotary3 => 2097152,
         super::BattleFireMode::Rotary4 => 16384,
+        super::BattleFireMode::Rotary5 => 4194304,
         super::BattleFireMode::Rotary6 => 32768,
         super::BattleFireMode::Gatling => 4096,
     })
@@ -956,9 +930,7 @@ pub fn inspect_raw_template_criticals(
             },
             part,
             operational: !fire_modes.iter().any(|mode| matches!(mode, 1 | 2 | 4)),
-            temporary_failure: critical
-                .and_then(|critical| critical.brand)
-                .is_some_and(|brand| brand >> 4 != 0),
+            temporary_failure: false,
             auxiliary_data,
             ammunition,
             fire_modes,
@@ -995,7 +967,6 @@ fn weapon_rows(
                 first_slot: first.slot + 1,
                 part: InspectionPart {
                     id: mount.weapon.part_id(),
-                    brand: mount.brand.unwrap_or(0) % 16,
                 },
                 slot_count: mount.weapon.profile().critical_slots,
                 recycle: 0,
@@ -1030,10 +1001,7 @@ pub fn inspect_template_weapons(template: &BattleTemplate) -> Result<Vec<Inspect
                 if consumed.len() >= usize::from(slots) {
                     break;
                 }
-                if other.equipment.eq_ignore_ascii_case(&raw.equipment)
-                    && other.brand == raw.brand
-                    && other.data == raw.data
-                {
+                if other.equipment.eq_ignore_ascii_case(&raw.equipment) && other.data == raw.data {
                     consumed.insert(candidate);
                 }
             }
@@ -1043,7 +1011,6 @@ pub fn inspect_template_weapons(template: &BattleTemplate) -> Result<Vec<Inspect
                 first_slot: slot + 1,
                 part: InspectionPart {
                     id: weapon.part_id(),
-                    brand: raw.brand.unwrap_or(0) % 16,
                 },
                 slot_count: slots,
                 recycle: 0,
@@ -1140,7 +1107,7 @@ pub fn inspect_raw_template_inventory(
 ) -> Result<Vec<(InspectionPart, u32)>> {
     let registered: std::collections::BTreeSet<_> = super::part_catalogue()
         .iter()
-        .map(|form| (form.part_id, form.brand_id))
+        .map(|form| form.part_id)
         .collect();
     let mut quantities = BTreeMap::<InspectionPart, u32>::new();
     for section in super::RawSectionCode::for_unit(template.class, template.movement) {
@@ -1162,7 +1129,7 @@ pub fn inspect_raw_template_inventory(
                 previous = None;
                 continue;
             };
-            if !registered.contains(&(part.id, part.brand)) || (payload_only && !is_payload) {
+            if !registered.contains(&part.id) || (payload_only && !is_payload) {
                 previous = None;
                 continue;
             }
@@ -1223,7 +1190,7 @@ fn inventory_rows(
 }
 
 fn raw_part(raw: &super::CriticalDefinition) -> Option<(InspectionPart, bool, bool)> {
-    inspection_template_part(&raw.equipment, raw.brand)
+    inspection_template_part(&raw.equipment)
 }
 
 /// Ordered TIC membership without requiring cockpit authority.
@@ -1803,7 +1770,6 @@ pub fn inspect_vehicle_template_weapons(
                 first_slot: first.slot + 1,
                 part: InspectionPart {
                     id: mount.weapon.part_id(),
-                    brand: mount.brand.unwrap_or(0) % 16,
                 },
                 slot_count: mount.criticals.len() as u8,
                 recycle: 0,
@@ -1847,7 +1813,6 @@ pub fn inspect_vehicle_weapons(unit: &super::BattleVehicle) -> Result<Vec<Inspec
                 first_slot: first.slot + 1,
                 part: InspectionPart {
                     id: mount.weapon.part_id(),
-                    brand: mount.brand.unwrap_or(0) % 16,
                 },
                 slot_count: mount.criticals.len() as u8,
                 recycle: unit.weapon_recycle().get(&number).copied().unwrap_or(0),
@@ -1902,19 +1867,14 @@ pub fn inspect_vehicle_criticals(
         let part = if let Some((_, mount)) = weapon {
             Some(InspectionPart {
                 id: mount.weapon.part_id(),
-                brand: mount.brand.unwrap_or(0) % 16,
             })
         } else if let Some((_, bin)) = ammo {
             Some(InspectionPart {
                 id: bin.weapon.ammunition_part_id(),
-                brand: bin.brand.unwrap_or(0) % 16,
             })
-        } else if let Some(system) = system {
+        } else if system.is_some() {
             raw.and_then(|raw| BattlePart::parse(&raw.equipment).ok())
-                .map(|part| InspectionPart {
-                    id: part.part_id,
-                    brand: system.brand.unwrap_or(0) % 16,
-                })
+                .map(|part| InspectionPart { id: part.part_id })
         } else {
             None
         };
@@ -1950,10 +1910,8 @@ pub fn inspect_vehicle_criticals(
             },
             part,
             operational: !fire_modes.iter().any(|mode| matches!(mode, 1 | 2 | 4)),
-            temporary_failure: raw
-                .and_then(|critical| critical.brand)
-                .is_some_and(|brand| brand >> 4 != 0)
-                || weapon.is_some_and(|(index, _)| unit.weapon_failures().contains_key(&index)),
+            temporary_failure: weapon
+                .is_some_and(|(index, _)| unit.weapon_failures().contains_key(&index)),
             auxiliary_data: ammunition.map_or_else(
                 || raw.and_then(|raw| raw.data.parse().ok()).unwrap_or(0),
                 |value| i32::from(value.0),
@@ -2349,7 +2307,6 @@ pub fn inspect_template_critical_text(
     world: &crate::World,
     template: &BattleTemplate,
     section: BattleSection,
-    show_brands: bool,
 ) -> Result<String> {
     let (detached, id) = detached_template_world(world, template)?;
     // The C binding converts the typed section back through the command's
@@ -2360,8 +2317,7 @@ pub fn inspect_template_critical_text(
         BattleSection::RightArm => BattleSection::RightLeg,
         section => section,
     };
-    decorated_critical_status(&detached, id, command_section.name(), show_brands)
-        .map(native_menu_controls)
+    decorated_critical_status(&detached, id, command_section.name()).map(native_menu_controls)
 }
 
 fn native_status_controls(source: String) -> String {
@@ -2411,9 +2367,8 @@ fn decorated_critical_status(
     world: &crate::World,
     id: crate::ObjectId,
     section: &str,
-    show_brands: bool,
 ) -> Result<String> {
-    let report = super::critical_status(world, id, section, show_brands)?;
+    let report = super::critical_status(world, id, section)?;
     let mut source = report.split("\r\n");
     let heading = source.next().unwrap_or_default();
     let mut lines = vec![
@@ -2509,10 +2464,9 @@ pub fn inspect_vehicle_template_critical_text(
     world: &crate::World,
     template: &super::BattleVehicleTemplate,
     section: super::BattleVehicleSection,
-    show_brands: bool,
 ) -> Result<String> {
     let (detached, id) = detached_vehicle_world(world, template)?;
-    decorated_critical_status(&detached, id, section.name(), show_brands).map(native_menu_controls)
+    decorated_critical_status(&detached, id, section.name()).map(native_menu_controls)
 }
 
 #[cfg(test)]

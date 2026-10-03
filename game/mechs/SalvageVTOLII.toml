@@ -3,7 +3,6 @@ class = "vtol"
 movement = "vtol"
 tons = 100
 walk_mp = 15
-computer = 3
 cargo_space = 0
 specials = ["SalvageTech"]
 
@@ -11,21 +10,21 @@ specials = ["SalvageTech"]
 armor = 8
 internals = 5
 slots = [
-    { at = 1, item = "IS.SmallLaser", brand = 3 },
+    { at = 1, item = "IS.SmallLaser" },
 ]
 
 [sections.right_side]
 armor = 8
 internals = 5
 slots = [
-    { at = 1, item = "IS.SmallLaser", brand = 3 },
+    { at = 1, item = "IS.SmallLaser" },
 ]
 
 [sections.front_side]
 armor = 8
 internals = 5
 slots = [
-    { at = 1, item = "BeagleProbe", brand = 3 },
+    { at = 1, item = "BeagleProbe" },
 ]
 
 [sections.aft_side]

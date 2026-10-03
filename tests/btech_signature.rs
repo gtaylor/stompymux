@@ -38,7 +38,6 @@ fn equipped() -> BattleTemplate {
                     equipment: "NullSig_Device".into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
     }

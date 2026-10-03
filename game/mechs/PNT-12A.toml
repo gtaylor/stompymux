@@ -14,20 +14,19 @@ max_suits = 0
 [construction]
 structure = "endo_steel"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 12
 slots = [
-    { at = "5-7", item = "HeatSink", brand = 3 },
-    { at = 8, item = "EndoSteel", brand = 3 },
+    { at = "5-7", item = "HeatSink" },
+    { at = 8, item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 12
 slots = [
-    { at = "5-6", item = "IS.ERLargeLaser", modes = ["OnTC"], brand = 3 },
-    { at = "7-12", item = "HeatSink", brand = 3 },
+    { at = "5-6", item = "IS.ERLargeLaser", modes = ["OnTC"] },
+    { at = "7-12", item = "HeatSink" },
 ]
 
 [sections.left_torso]
@@ -35,38 +34,38 @@ armor = 12
 rear = 4
 slots = [
     { at = 1, item = "Ammo_IS.StreakSRM-4", rounds = 25 },
-    { at = "2-4", item = "HeatSink", brand = 3 },
-    { at = 5, item = "Case", brand = 3 },
-    { at = "6-11", item = "EndoSteel", brand = 3 },
+    { at = "2-4", item = "HeatSink" },
+    { at = 5, item = "Case" },
+    { at = "6-11", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 12
 rear = 4
 slots = [
-    { at = "1-2", item = "TargetingComputer", brand = 3 },
-    { at = "3-5", item = "HeatSink", brand = 3 },
-    { at = "6-12", item = "EndoSteel", brand = 3 },
+    { at = "1-2", item = "TargetingComputer" },
+    { at = "3-5", item = "HeatSink" },
+    { at = "6-12", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 16
 rear = 6
 slots = [
-    { at = 11, item = "IS.StreakSRM-4", brand = 3 },
-    { at = 12, item = "IS.MediumPulseLaser", modes = ["OnTC"], brand = 3 },
+    { at = 11, item = "IS.StreakSRM-4" },
+    { at = 12, item = "IS.MediumPulseLaser", modes = ["OnTC"] },
 ]
 
 [sections.left_leg]
 armor = 16
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 16
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.head]

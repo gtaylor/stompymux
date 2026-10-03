@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "hover"
 tons = 35
 walk_mp = 12
-computer = 3
 
 [construction]
 engine = "ice"

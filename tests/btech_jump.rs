@@ -26,7 +26,7 @@ async fn cargo_jump_admission_matches_native_lua_and_restart_at_one_mp() {
             unit["definition"]["attributes"]["specials"] = "FlipArms CargoTech".into();
         }
         world.btech = serde_json::from_value(encoded).unwrap();
-        set_battle_inventory_named(&mut world, ObjectId(1), id, "Cockpit", 0, quantity).unwrap();
+        set_battle_inventory_named(&mut world, ObjectId(1), id, "Cockpit", quantity).unwrap();
         let loss = 118.25 - battle_effective_maximum_speed(&world, id, true).unwrap();
         assert_eq!(loss <= 10.75, allowed);
         if cargo_tech && quantity == 7 {
@@ -3401,7 +3401,7 @@ fn improved_jet_template() -> BattleTemplate {
     template
 }
 
-/// Improved installations reject incomplete pairs, mixed brands and unsupported declared thrust.
+/// Improved installations reject incomplete pairs and unsupported declared thrust.
 #[test]
 fn improved_jet_construction_pairs_and_mass() {
     let template = improved_jet_template();
@@ -3415,7 +3415,7 @@ fn improved_jet_construction_pairs_and_mass() {
         improved.mass().unwrap().equipment - ordinary.mass().unwrap().equipment,
         5 * 512
     );
-    for case in ["missing", "split", "brand", "capacity"] {
+    for case in ["missing", "split", "capacity"] {
         let mut invalid = template.clone();
         match case {
             "missing" => {
@@ -3440,16 +3440,6 @@ fn improved_jet_construction_pairs_and_mass() {
                     .unwrap()
                     .criticals
                     .insert(1, part);
-            }
-            "brand" => {
-                invalid
-                    .sections
-                    .get_mut(&BattleSection::LeftTorso)
-                    .unwrap()
-                    .criticals
-                    .get_mut(&1)
-                    .unwrap()
-                    .brand = Some(1);
             }
             _ => invalid.jump_speed -= 10.75,
         }

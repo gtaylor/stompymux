@@ -60,7 +60,6 @@ pub struct CriticalDefinition {
     pub equipment: String,
     pub data: String,
     pub modes: Vec<String>,
-    pub brand: Option<u8>,
 }
 
 /// Unresolved armor and slot layout shared by unit-specific template decoders.

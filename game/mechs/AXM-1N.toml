@@ -5,7 +5,6 @@ tons = 65
 walk_mp = 6
 jump_mp = 4
 heat_sinks = 20
-computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0

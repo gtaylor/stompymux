@@ -3,7 +3,7 @@
 use super::{
     BattleAmmunitionMode, BattleFireMode, BattleSection, BattleTemplate, BattleUnit,
     BattleUnitTemplate, BattleVehicle, BattleVehicleSection, BattleVehicleTemplate,
-    CriticalDefinition, SectionDefinition,
+    CriticalDefinition,
 };
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -435,7 +435,6 @@ pub(crate) fn reset_unit_criticals(world: &mut World, id: ObjectId) -> Result<()
                         equipment: equipment.into(),
                         data: "-".into(),
                         modes: Vec::new(),
-                        brand: None,
                     },
                 );
             };
@@ -492,7 +491,6 @@ pub(crate) fn install_vehicle_weapon_named(
     world: &mut World,
     id: ObjectId,
     equipment: &str,
-    brand: u8,
     section: BattleVehicleSection,
     slot: u8,
     modes: Vec<String>,
@@ -513,7 +511,6 @@ pub(crate) fn install_vehicle_weapon_named(
                         equipment: equipment.into(),
                         data: "-".into(),
                         modes,
-                        brand: (brand != 0).then_some(brand),
                     },
                 );
             Ok(())
@@ -525,7 +522,6 @@ pub(crate) fn install_unit_weapon_named(
     world: &mut World,
     id: ObjectId,
     equipment: &str,
-    brand: u8,
     section: BattleSection,
     slots: &[u8],
     modes: Vec<String>,
@@ -543,7 +539,6 @@ pub(crate) fn install_unit_weapon_named(
             equipment: equipment.into(),
             data: "-".into(),
             modes,
-            brand: (brand != 0).then_some(brand),
         };
         for &slot in slots {
             layout.criticals.insert(slot, critical.clone());
@@ -556,7 +551,6 @@ pub(crate) fn configure_unit_ammunition(
     world: &mut World,
     id: ObjectId,
     weapon: super::BattleWeapon,
-    brand: u8,
     section: BattleSection,
     slot: u8,
     half_ton: bool,
@@ -584,7 +578,6 @@ pub(crate) fn configure_unit_ammunition(
                         equipment: format!("Ammo_{}", weapon.name()),
                         data: capacity.to_string(),
                         modes: flags,
-                        brand: (brand != 0).then_some(brand),
                     },
                 );
             Ok(())
@@ -596,7 +589,6 @@ pub(crate) fn configure_vehicle_ammunition(
     world: &mut World,
     id: ObjectId,
     weapon: super::BattleWeapon,
-    brand: u8,
     section: BattleVehicleSection,
     slot: u8,
     half_ton: bool,
@@ -624,7 +616,6 @@ pub(crate) fn configure_vehicle_ammunition(
                         equipment: format!("Ammo_{}", weapon.name()),
                         data: capacity.to_string(),
                         modes: flags,
-                        brand: (brand != 0).then_some(brand),
                     },
                 );
             Ok(())
@@ -739,7 +730,6 @@ pub(crate) fn install_unit_special(
     world: &mut World,
     id: ObjectId,
     equipment: Option<String>,
-    brand: u8,
     section: BattleSection,
     slot: u8,
     data: i32,
@@ -761,7 +751,6 @@ pub(crate) fn install_unit_special(
                         equipment,
                         data: data.to_string(),
                         modes: Vec::new(),
-                        brand: (brand != 0).then_some(brand),
                     },
                 );
             } else {
@@ -776,7 +765,6 @@ pub(crate) fn install_vehicle_special(
     world: &mut World,
     id: ObjectId,
     equipment: Option<String>,
-    brand: u8,
     section: BattleVehicleSection,
     slot: u8,
     data: i32,
@@ -798,7 +786,6 @@ pub(crate) fn install_vehicle_special(
                         equipment,
                         data: data.to_string(),
                         modes: Vec::new(),
-                        brand: (brand != 0).then_some(brand),
                     },
                 );
             } else {
@@ -836,19 +823,13 @@ fn unit_template_source(template: &BattleTemplate) -> Result<String> {
         default_movement,
         template.tons,
     );
-    let layouts: Vec<_> = BattleSection::ALL
+    let sections: Vec<_> = BattleSection::ALL
         .into_iter()
-        .map(|section| (section, saved_layout(&template.sections[&section])))
-        .collect();
-    let sections: Vec<_> = layouts
-        .iter()
-        .map(
-            |(section, layout)| super::template_document::RenderSection {
-                heading: chassis.section_name(*section).to_ascii_lowercase(),
-                mech: Some(*section),
-                layout,
-            },
-        )
+        .map(|section| super::template_document::RenderSection {
+            heading: chassis.section_name(section).to_ascii_lowercase(),
+            mech: Some(section),
+            layout: &template.sections[&section],
+        })
         .collect();
     super::template_document::render(&attributes, &sections)
 }
@@ -861,12 +842,8 @@ fn vehicle_template_source(template: &BattleVehicleTemplate) -> Result<String> {
         ("Vehicle", "Track")
     };
     let attributes = saved_attributes(&template.attributes, class, movement, template.tons);
-    let layouts: Vec<_> = template
+    let sections: Vec<_> = template
         .sections
-        .iter()
-        .map(|(section, layout)| (*section, saved_layout(layout)))
-        .collect();
-    let sections: Vec<_> = layouts
         .iter()
         .map(
             |(section, layout)| super::template_document::RenderSection {
@@ -903,23 +880,4 @@ fn saved_attributes(
         saved.insert(field.into(), value);
     }
     saved
-}
-
-/// Copy a section with every critical written under its saved equipment spelling.
-fn saved_layout(layout: &SectionDefinition) -> SectionDefinition {
-    let mut saved = layout.clone();
-    for critical in saved.criticals.values_mut() {
-        critical.equipment = saved_equipment_name(&critical.equipment).to_owned();
-    }
-    saved
-}
-
-/// Serialize critical equipment without its manufacturer qualifier.
-///
-/// The reference save path formats every part through the brand-zero
-/// registry lookup, which the pinned branded-only registry cannot resolve;
-/// saved templates are therefore not reloadable there. Writing the
-/// unqualified technology-prefixed spelling keeps that observable.
-fn saved_equipment_name(equipment: &str) -> &str {
-    super::loadout::unbranded_weapon_name(equipment).unwrap_or(equipment)
 }

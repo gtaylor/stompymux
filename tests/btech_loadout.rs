@@ -68,7 +68,7 @@ fn atlas_groups_multislot_weapons_but_keeps_independent_ammunition_bins() {
     assert_eq!(rear.len(), 2);
     assert!(
         rear.iter()
-            .all(|mount| mount.brand == Some(4) && mount.weapon == BattleWeapon::MediumLaser)
+            .all(|mount| mount.weapon == BattleWeapon::MediumLaser)
     );
     assert_eq!(
         loadout
@@ -107,8 +107,8 @@ fn unresolved_equipment_modes_counts_and_incomplete_mounts_fail_with_locations()
         JENNER.replace("item = \"HeatSink\"", "item = \"UnknownSink\""),
         ATLAS.replace("at = \"1-10\"", "at = \"1-9\""),
         ATLAS.replace(
-            "{ at = \"9-10\", item = \"IS.SRM-6\", brand = 4 }",
-            "{ at = 9, item = \"IS.SRM-6\", brand = 3 }",
+            "{ at = \"9-10\", item = \"IS.SRM-6\" }",
+            "{ at = 9, item = \"IS.SRM-6\" }",
         ),
     ] {
         assert!(source != JENNER && source != ATLAS);
@@ -495,7 +495,6 @@ fn machine_gun_and_flamer_profiles_and_firestarter_asset() {
     let source = include_str!("../game/mechs/FS9-H.toml");
     let unit = BattleUnit::from_template(BattleTemplate::parse("test", source).unwrap()).unwrap();
     let loadout = unit.loadout().unwrap();
-    assert_eq!(loadout.ammunition[0].brand, None);
     assert_eq!(loadout.weapons.len(), 8);
     assert_eq!(
         loadout
@@ -1188,7 +1187,6 @@ fn triple_myomer_construction_slots_mass_and_critical_eligibility() {
                             equipment: "TripleStrengthMyomer".into(),
                             data: "-".into(),
                             modes: vec![],
-                            brand: None,
                         },
                     );
             }

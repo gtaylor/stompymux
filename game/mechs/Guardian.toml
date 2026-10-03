@@ -4,14 +4,13 @@ movement = "fly"
 tons = 20
 walk_mp = 11
 heat_sinks = 0
-computer = 5
 fuel = 2000
 
 [sections.nose]
 armor = 3
 internals = 7
 slots = [
-    { at = 1, item = "IS.SRM-6", brand = 5 },
+    { at = 1, item = "IS.SRM-6" },
     { at = 2, item = "Ammo_IS.SRM-6", rounds = 15 },
 ]
 

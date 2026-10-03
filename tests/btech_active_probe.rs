@@ -75,7 +75,6 @@ fn probe_vehicle(
                 equipment: equipment.into(),
                 data: "-".into(),
                 modes: vec![],
-                brand: None,
             },
         );
     }

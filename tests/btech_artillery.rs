@@ -366,7 +366,6 @@ fn artillery_catalogue_admits_delayed_launchers() {
                 equipment: BattleWeapon::ClanArrowIv.name().into(),
                 data: "-".into(),
                 modes: vec![],
-                brand: None,
             },
         );
     }

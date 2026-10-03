@@ -1521,14 +1521,6 @@ mod roll_history;
 mod roll_statistics;
 pub use roll_statistics::BattleRollStatistics;
 
-mod computer_failure;
-pub use computer_failure::{
-    BattleComputerFailure, BattleComputerFailureInput, select_computer_failure,
-};
-
-pub(crate) mod computer_runtime;
-pub use computer_runtime::advance_battle_computer_failures_action;
-
 mod tactical;
 pub use tactical::{
     MAX_TACTICAL_UNITS, TacticalContact, TacticalIntention, TacticalSighting, TacticalSnapshot,

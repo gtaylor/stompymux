@@ -4,34 +4,32 @@ movement = "biped"
 tons = 100
 walk_mp = 5
 heat_sinks = 30
-computer = 4
 radio = 4
 
 [construction]
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 34
 slots = [
-    { at = "5-7", item = "HeatSink", brand = 3 },
-    { at = 11, item = "IS.MediumLaser", brand = 3 },
+    { at = "5-7", item = "HeatSink" },
+    { at = 11, item = "IS.MediumLaser" },
 ]
 
 [sections.right_arm]
 armor = 34
 slots = [
-    { at = "5-10", item = "HeatSink", brand = 3 },
-    { at = 11, item = "IS.MediumLaser", brand = 3 },
+    { at = "5-10", item = "HeatSink" },
+    { at = 11, item = "IS.MediumLaser" },
 ]
 
 [sections.left_torso]
 armor = 32
 rear = 10
 slots = [
-    { at = "1-5", item = "IS.LRM-20", brand = 3 },
-    { at = "6-7", item = "IS.SRM-6", brand = 3 },
-    { at = "8-9", item = "IS.StreakSRM-2", modes = ["RearMount"], brand = 3 },
+    { at = "1-5", item = "IS.LRM-20" },
+    { at = "6-7", item = "IS.SRM-6" },
+    { at = "8-9", item = "IS.StreakSRM-2", modes = ["RearMount"] },
     { at = "10-11", item = "Ammo_IS.LRM-20", rounds = 6 },
     { at = 12, item = "Ammo_IS.SRM-6", rounds = 15 },
 ]
@@ -40,7 +38,7 @@ slots = [
 armor = 32
 rear = 10
 slots = [
-    { at = "1-10", item = "IS.AC/20", brand = 3 },
+    { at = "1-10", item = "IS.AC/20" },
     { at = "11-12", item = "Ammo_IS.AC/20", rounds = 5 },
 ]
 
@@ -48,7 +46,7 @@ slots = [
 armor = 47
 rear = 14
 slots = [
-    { at = "11-12", item = "IS.MediumLaser", modes = ["RearMount"], brand = 3 },
+    { at = "11-12", item = "IS.MediumLaser", modes = ["RearMount"] },
 ]
 
 [sections.left_leg]

@@ -118,7 +118,6 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
     let mut state = BtechState {
         template_registry: Default::default(),
         retire_sanctions: Default::default(),
-        sensor_recoveries: super::btech_sensor_recovery::load(c, clock).await?.into(),
         turn_clock,
         simulation_seconds,
         inventories: super::btech_inventory::load(c).await?.into(),
@@ -155,7 +154,6 @@ pub(super) fn validate_changes(
     purges: Option<&BTreeSet<ObjectId>>,
 ) -> Result<()> {
     let mut expected = before.btech.clone();
-    expected.sensor_recoveries = after.btech.sensor_recoveries.clone();
     expected.turn_clock = after.btech.turn_clock;
     expected.simulation_seconds = after.btech.simulation_seconds;
     expected.reactor = after.btech.reactor.clone();
@@ -454,7 +452,6 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
     changed |= super::btech_cargo_bay::save(c, before, after).await?;
     changed |= super::btech_recovery::save(c, before, after).await?;
     changed |= super::btech_reactor::save(c, before, after).await?;
-    changed |= super::btech_sensor_recovery::save(c, before, after).await?;
     changed |= super::btech_wrecks::save(c, before, after).await?;
     changed |= super::btech_decorations::save(c, before, after).await?;
     changed |= super::btech_static_decorations::save(c, before, after).await?;

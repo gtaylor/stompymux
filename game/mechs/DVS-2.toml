@@ -4,19 +4,17 @@ movement = "biped"
 tons = 100
 walk_mp = 5
 heat_sinks = 28
-computer = 4
 radio = 4
 
 [construction]
 engine = "xl"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 34
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-10", item = "IS.GaussRifle", brand = 3 },
+    { at = "4-10", item = "IS.GaussRifle" },
     { at = 11, item = "Ammo_IS.GaussRifle", rounds = 8 },
 ]
 
@@ -24,7 +22,7 @@ slots = [
 armor = 34
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-10", item = "IS.GaussRifle", brand = 3 },
+    { at = "4-10", item = "IS.GaussRifle" },
     { at = 11, item = "Ammo_IS.GaussRifle", rounds = 8 },
 ]
 
@@ -32,9 +30,9 @@ slots = [
 armor = 30
 rear = 10
 slots = [
-    { at = "4-6", item = "HeatSink", brand = 3 },
-    { at = "7-9", item = "IS.PPC", brand = 3 },
-    { at = 10, item = "IS.MediumLaser", brand = 3 },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-9", item = "IS.PPC" },
+    { at = 10, item = "IS.MediumLaser" },
     { at = 11, item = "Ammo_IS.GaussRifle", rounds = 8 },
 ]
 
@@ -42,9 +40,9 @@ slots = [
 armor = 30
 rear = 10
 slots = [
-    { at = "4-6", item = "HeatSink", brand = 3 },
-    { at = "7-9", item = "IS.PPC", brand = 3 },
-    { at = 10, item = "IS.MediumLaser", brand = 3 },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-9", item = "IS.PPC" },
+    { at = 10, item = "IS.MediumLaser" },
     { at = 11, item = "Ammo_IS.GaussRifle", rounds = 8 },
 ]
 
@@ -52,7 +50,7 @@ slots = [
 armor = 47
 rear = 12
 slots = [
-    { at = 11, item = "IS.MediumLaser", modes = ["RearMount"], brand = 3 },
+    { at = 11, item = "IS.MediumLaser", modes = ["RearMount"] },
 ]
 
 [sections.left_leg]
@@ -64,5 +62,5 @@ armor = 40
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "IS.MediumLaser", brand = 3 },
+    { at = 4, item = "IS.MediumLaser" },
 ]

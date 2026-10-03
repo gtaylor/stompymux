@@ -20,7 +20,7 @@ btech.unit.rac(dbref, pilot, weapon, rounds)
 | `dbref` | `integer` |  |
 | `pilot` | `integer` |  |
 | `weapon` | `integer` | Zero-based weapon index. |
-| `rounds?` | `1\|2\|4\|6` | Defaults to one. |
+| `rounds?` | `1\|2\|3\|4\|5\|6` | Defaults to one. |
 
 ## Returns
 

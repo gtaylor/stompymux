@@ -4,7 +4,6 @@ movement = "biped"
 tons = 40
 walk_mp = 11
 heat_sinks = 11
-computer = 4
 radio = 4
 
 [sections.left_arm]
@@ -36,13 +35,13 @@ slots = [
 [sections.left_leg]
 armor = 6
 slots = [
-    { at = 5, item = "IS.MachineGun", brand = 2 },
+    { at = 5, item = "IS.MachineGun" },
 ]
 
 [sections.right_leg]
 armor = 6
 slots = [
-    { at = 5, item = "IS.MachineGun", brand = 2 },
+    { at = 5, item = "IS.MachineGun" },
 ]
 
 [sections.head]

@@ -10,7 +10,7 @@ specials = ["SearchLight"]
 armor = 22
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "IS.PPC", brand = 4 },
+    { at = "4-6", item = "IS.PPC" },
     { at = 7, item = "IS.MediumLaser" },
 ]
 
@@ -18,7 +18,7 @@ slots = [
 armor = 22
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "IS.PPC", brand = 4 },
+    { at = "4-6", item = "IS.PPC" },
     { at = 7, item = "IS.MediumLaser" },
 ]
 

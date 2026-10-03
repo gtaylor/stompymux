@@ -15,7 +15,9 @@ pub enum BattleFireMode {
     Ultra,
     Rapid,
     Rotary2,
+    Rotary3,
     Rotary4,
+    Rotary5,
     Rotary6,
     Gatling,
 }
@@ -48,7 +50,9 @@ impl BattleFireMode {
             Self::Ultra => weapon.is_ultra(),
             Self::Rapid => weapon.supports_rapid_fire(),
             Self::Gatling => weapon.supports_gatling(),
-            Self::Rotary2 | Self::Rotary4 | Self::Rotary6 => weapon.is_rotary(),
+            Self::Rotary2 | Self::Rotary3 | Self::Rotary4 | Self::Rotary5 | Self::Rotary6 => {
+                weapon.is_rotary()
+            }
         }
     }
 
@@ -304,17 +308,21 @@ impl BattleFireMode {
     pub(super) fn rounds_per_cycle(self) -> u16 {
         match self {
             Self::Ultra | Self::Rapid | Self::Rotary2 => 2,
+            Self::Rotary3 => 3,
             Self::Rotary4 => 4,
+            Self::Rotary5 => 5,
             Self::Rotary6 => 6,
             _ => 1,
         }
     }
 
-    /// Rotary bursts jam at increasing thresholds and never destroy the loader directly.
+    /// Rotary bursts jam at increasing thresholds and never destroy the loader directly: a
+    /// to-hit roll at or below 2 jams two- and three-round bursts, 3 jams four and five, and 4
+    /// jams six, as in MegaMek.
     pub(super) fn rotary_jam_threshold(self) -> u8 {
         match self {
-            Self::Rotary2 => 2,
-            Self::Rotary4 => 3,
+            Self::Rotary2 | Self::Rotary3 => 2,
+            Self::Rotary4 | Self::Rotary5 => 3,
             Self::Rotary6 => 4,
             _ => 0,
         }

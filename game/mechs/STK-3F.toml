@@ -4,7 +4,6 @@ movement = "biped"
 tons = 85
 walk_mp = 5
 heat_sinks = 20
-computer = 4
 
 [sections.left_arm]
 armor = 23
@@ -12,9 +11,9 @@ omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-4", item = "IS.LRM-10" },
     { at = 5, item = "HeatSink" },
-    { at = 6, item = "IS.MediumLaser", brand = 4 },
+    { at = 6, item = "IS.MediumLaser" },
     { at = 7, item = "Ammo_IS.LRM-10", rounds = 12 },
-    { at = 8, item = "IS.MediumLaser", brand = 4 },
+    { at = 8, item = "IS.MediumLaser" },
 ]
 
 [sections.right_arm]
@@ -23,16 +22,16 @@ omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-4", item = "IS.LRM-10" },
     { at = 5, item = "HeatSink" },
-    { at = 6, item = "IS.MediumLaser", brand = 4 },
+    { at = 6, item = "IS.MediumLaser" },
     { at = 7, item = "Ammo_IS.LRM-10", rounds = 12 },
-    { at = 8, item = "IS.MediumLaser", brand = 4 },
+    { at = 8, item = "IS.MediumLaser" },
 ]
 
 [sections.left_torso]
 armor = 25
 rear = 7
 slots = [
-    { at = "1-2", item = "IS.LargeLaser", brand = 4 },
+    { at = "1-2", item = "IS.LargeLaser" },
     { at = "3-4", item = "IS.SRM-6" },
     { at = 5, item = "Ammo_IS.SRM-6", rounds = 15 },
     { at = 6, item = "HeatSink" },
@@ -42,7 +41,7 @@ slots = [
 armor = 25
 rear = 7
 slots = [
-    { at = "1-2", item = "IS.LargeLaser", brand = 4 },
+    { at = "1-2", item = "IS.LargeLaser" },
     { at = "3-4", item = "IS.SRM-6" },
     { at = 5, item = "Ammo_IS.SRM-6", rounds = 15 },
     { at = 6, item = "HeatSink" },

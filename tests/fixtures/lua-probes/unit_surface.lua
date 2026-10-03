@@ -1,7 +1,7 @@
 -- Differential probe: btech.unit read-only inspection surface.
 --
 -- The harness prelude registers three live MECH special objects, and the probe
--- loads a branded template onto each before projecting every inspection getter.
+-- loads a parity template onto each before projecting every inspection getter.
 -- PARITY-NAVAL stays unloaded here: Rust's unit-construction dispatch does not
 -- accept Naval-class templates yet (C template_load.c loads every class), so
 -- that variant is blocked on the load_template owner.
@@ -104,7 +104,7 @@ local function weapon_rows(rows)
     out[index] = {
       number = row.number, section = tostring(row.section),
       first_slot = row.first_slot, part_id = row.part.id,
-      part_brand = row.part.brand, slot_count = row.slot_count,
+      slot_count = row.slot_count,
       recycle = row.recycle, recycle_time = row.recycle_time,
       operational = row.operational,
     }
@@ -132,7 +132,7 @@ local function inventory_rows(rows)
   local out = {}
   for index, row in ipairs(rows) do
     out[index] = {
-      part_id = row.part.id, part_brand = row.part.brand, quantity = row.quantity,
+      part_id = row.part.id, quantity = row.quantity,
     }
   end
   return out
@@ -296,7 +296,7 @@ local function page_three()
       armor_player = call(btech.unit.armor, state.god),
       armor_unregistered = call(btech.unit.armor, state.unregistered),
       load_missing = call(btech.unit.load_template, unit, 'PARITY-MISSING'),
-      load_unbranded = call(btech.unit.load_template, unit, 'jr7-d'),
+      load_stock = call(btech.unit.load_template, unit, 'jr7-d'),
     },
   }
   return json({ mech = surface })

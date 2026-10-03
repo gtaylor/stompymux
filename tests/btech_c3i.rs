@@ -55,7 +55,6 @@ async fn field_with_equipment(
                         equipment: "C3i".into(),
                         data: "-".into(),
                         modes: vec![],
-                        brand: None,
                     },
                 );
         }
@@ -71,7 +70,6 @@ async fn field_with_equipment(
                         equipment: "C3Slave".into(),
                         data: "-".into(),
                         modes: vec![],
-                        brand: None,
                     },
                 );
         }
@@ -91,7 +89,6 @@ async fn field_with_equipment(
                             equipment: "C3Master".into(),
                             data: "-".into(),
                             modes: vec![],
-                            brand: None,
                         },
                     );
             }
@@ -108,7 +105,6 @@ async fn field_with_equipment(
                         equipment: "BeagleProbe".into(),
                         data: "-".into(),
                         modes: vec![],
-                        brand: None,
                     },
                 );
         }
@@ -124,7 +120,6 @@ async fn field_with_equipment(
                         equipment: "Ecm".into(),
                         data: "-".into(),
                         modes: vec![],
-                        brand: None,
                     },
                 );
         }

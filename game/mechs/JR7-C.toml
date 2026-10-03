@@ -4,54 +4,52 @@ movement = "biped"
 tons = 35
 walk_mp = 11
 jump_mp = 5
-computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
 armor = "ferro_fibrous"
-brand = 3
 
 [sections.left_arm]
 armor = 4
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 3, item = "IS.MediumLaser", brand = 3 },
+    { at = 3, item = "IS.MediumLaser" },
 ]
 
 [sections.right_arm]
 armor = 4
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "IS.MediumLaser", brand = 3 },
+    { at = "3-4", item = "IS.MediumLaser" },
 ]
 
 [sections.left_torso]
 armor = 8
 rear = 4
 slots = [
-    { at = "1-2", item = "JumpJet", brand = 3 },
-    { at = 3, item = "C3Slave", brand = 3 },
-    { at = "4-10", item = "FerroFibrous", brand = 3 },
+    { at = "1-2", item = "JumpJet" },
+    { at = 3, item = "C3Slave" },
+    { at = "4-10", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 8
 rear = 4
 slots = [
-    { at = "1-2", item = "JumpJet", brand = 3 },
+    { at = "1-2", item = "JumpJet" },
     { at = 3, item = "Ammo_IS.SRM-4", rounds = 25 },
-    { at = "4-10", item = "FerroFibrous", brand = 3 },
-    { at = 11, item = "Case", brand = 3 },
+    { at = "4-10", item = "FerroFibrous" },
+    { at = 11, item = "Case" },
 ]
 
 [sections.center_torso]
 armor = 9
 rear = 3
 slots = [
-    { at = 11, item = "JumpJet", brand = 3 },
-    { at = 12, item = "IS.SRM-4", brand = 3 },
+    { at = 11, item = "JumpJet" },
+    { at = 12, item = "IS.SRM-4" },
 ]
 
 [sections.left_leg]
@@ -63,5 +61,5 @@ armor = 6
 [sections.head]
 armor = 7
 slots = [
-    { at = 4, item = "HeatSink", brand = 3 },
+    { at = 4, item = "HeatSink" },
 ]

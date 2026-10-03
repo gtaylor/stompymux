@@ -80,7 +80,7 @@ async fn cargo_space_mass_is_shared_and_persists_with_ordinary_stock() {
             assert_eq!(mass(&world, unit), (expected, base + expected));
             let material = battle_unit_load(&world, unit, true).unwrap().material_mass;
             assert_eq!(material, base + expected);
-            set_battle_inventory_named(&mut world, ObjectId(1), unit, "Gold", 0, 2).unwrap();
+            set_battle_inventory_named(&mut world, ObjectId(1), unit, "Gold", 2).unwrap();
             assert_eq!(mass(&world, unit), (expected, base + expected));
             assert!(battle_unit_load(&world, unit, true).unwrap().carried_mass > 0);
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

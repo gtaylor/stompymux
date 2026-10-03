@@ -95,7 +95,6 @@ async fn lane(rows: &[&str], observer: Observer<'_>) -> Lane {
                     equipment: equipment.into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
         }

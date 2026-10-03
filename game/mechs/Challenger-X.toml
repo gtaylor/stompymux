@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "track"
 tons = 90
 walk_mp = 5
-computer = 3
 radio = 5
 radio_type = 126
 radio_range = 210

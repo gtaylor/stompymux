@@ -23,7 +23,7 @@ slots = [
 armor = 20
 rear = 10
 slots = [
-    { at = 1, item = "IS.SRM-4", brand = 4 },
+    { at = 1, item = "IS.SRM-4" },
     { at = 2, item = "Ammo_IS.SRM-4", rounds = 25 },
 ]
 

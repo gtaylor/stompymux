@@ -10,7 +10,7 @@ Wizard stock correction by exact part name, sharing validation and callback roll
 ## Signature
 
 ```lua
-btech.inventory.set_named(actor, object, name, brand, quantity)
+btech.inventory.set_named(actor, object, name, quantity)
 ```
 
 ## Parameters
@@ -20,7 +20,6 @@ btech.inventory.set_named(actor, object, name, brand, quantity)
 | `actor` | `integer` |  |
 | `object` | `integer` |  |
 | `name` | `string` |  |
-| `brand` | `integer` | From zero through five. |
 | `quantity` | `integer` | From zero through 2147483647. |
 
 ## Returns

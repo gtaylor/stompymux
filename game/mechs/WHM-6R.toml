@@ -27,8 +27,8 @@ armor = 17
 rear = 8
 slots = [
     { at = 1, item = "IS.MediumLaser" },
-    { at = 2, item = "IS.SmallLaser", brand = 4 },
-    { at = 3, item = "IS.MachineGun", brand = 2 },
+    { at = 2, item = "IS.SmallLaser" },
+    { at = 3, item = "IS.MachineGun" },
 ]
 
 [sections.right_torso]
@@ -36,9 +36,9 @@ armor = 17
 rear = 8
 slots = [
     { at = 1, item = "IS.MediumLaser" },
-    { at = 2, item = "IS.SmallLaser", brand = 4 },
-    { at = "3-4", item = "IS.SRM-6", brand = 4 },
-    { at = 5, item = "IS.MachineGun", brand = 2 },
+    { at = 2, item = "IS.SmallLaser" },
+    { at = "3-4", item = "IS.SRM-6" },
+    { at = 5, item = "IS.MachineGun" },
     { at = 6, item = "Ammo_IS.SRM-6", rounds = 15 },
 ]
 

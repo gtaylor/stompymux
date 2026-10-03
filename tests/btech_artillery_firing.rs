@@ -40,7 +40,6 @@ async fn fixture_source(
                 equipment: BattleWeapon::ClanArrowIv.name().into(),
                 data: "-".into(),
                 modes: flags.iter().map(|flag| (*flag).into()).collect(),
-                brand: None,
             },
         );
     }

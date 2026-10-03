@@ -12,36 +12,23 @@ async fn forms_cover_stock_and_share_native_lua_names_without_mutation() {
     let (_dir, config, world) = support::isolated_world().await;
     let before = world.btech.clone();
     let forms = battle_part_forms(&world, ObjectId(1)).unwrap();
-    assert!(forms.len() > 1024);
+    assert_eq!(forms.len(), 618);
     assert!(forms.windows(2).all(|pair| {
-        let key = |f: &BattlePartForm| (f.short_name.clone(), f.brand_id, f.part_id);
+        let key = |f: &BattlePartForm| (f.short_name.clone(), f.part_id);
         key(&pair[0]) < key(&pair[1])
     }));
-    let base: BTreeSet<_> = forms
-        .iter()
-        .filter(|f| f.brand_id == 0)
-        .map(|f| f.part_id)
-        .collect();
-    assert_eq!(base.len(), 618);
-    for id in base {
-        let part = BattlePart::from_id(id).unwrap();
-        assert!(
-            forms
-                .iter()
-                .any(|f| f.brand_id == 0 && f.part_id == id && f.very_long_name == part.name)
-        );
+    let ids: BTreeSet<_> = forms.iter().map(|f| f.part_id).collect();
+    assert_eq!(ids.len(), forms.len());
+    for form in &forms {
+        let part = BattlePart::from_id(form.part_id).unwrap();
+        assert_eq!(form.very_long_name, part.name);
     }
-    let magna = forms
+    let laser = forms
         .iter()
-        .find(|f| f.very_long_name == "Magna.IS.SmallLaser")
+        .find(|f| f.very_long_name == "IS.SmallLaser")
         .unwrap();
-    assert_eq!(magna.short_name, "Ma.SL");
-    assert_eq!(magna.long_name, "Magna.SmallLaser");
-    assert!(
-        forms
-            .iter()
-            .any(|f| f.short_name == magna.short_name && f.brand_id != magna.brand_id)
-    );
+    assert_eq!(laser.short_name, "SL");
+    assert_eq!(laser.long_name, "SmallLaser");
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let output = support::run_text(&scripts, &config, ObjectId(1), 1, "listforms ignored");
     let lines: Vec<_> = output.lines().collect();

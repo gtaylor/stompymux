@@ -33,7 +33,7 @@ async fn catalogue_resolution_and_c_weapon_projection_are_exact() {
         end
 
         local all=btech.parts.list()
-        assert(#all==545,'catalogue '..#all)
+        assert(#all==618,'catalogue '..#all)
         local counted=0
         local registered_weapons={}
         local names={}
@@ -46,22 +46,19 @@ async fn catalogue_resolution_and_c_weapon_projection_are_exact() {
         assert(counted==#all)
         for index,part in ipairs(all) do
             assert(type(part.id)=='number' and part.id>=0 and part.id<2048)
-            assert(type(part.brand)=='number' and part.brand>=0 and part.brand<=5)
-            assert(part.packed_id==part.brand*2048+part.id)
             assert(type(part.short_name)=='string' and type(part.long_name)=='string' and type(part.very_long_name)=='string')
             assert(type(part.weight_tons)=='number' and type(part.cost)=='number')
-            local by_number=btech.parts.resolve(part.packed_id)
-            local by_record=btech.parts.resolve({id=part.id,brand=part.brand,ignored_projection_field=true})
-            assert(by_number.id==part.id and by_number.brand==part.brand)
-            assert(by_record.id==part.id and by_record.brand==part.brand)
-            assert(part.brand>0 and part.category=='weapon')
-            registered_weapons[part.id]=part
+            local by_number=btech.parts.resolve(part.id)
+            local by_record=btech.parts.resolve({id=part.id,ignored_projection_field=true})
+            assert(by_number.id==part.id)
+            assert(by_record.id==part.id)
+            if part.category=='weapon' then registered_weapons[part.id]=part end
             if part.category=='weapon' then assert(type(part.weapon)=='table') else assert(part.weapon==nil) end
             if index>1 then assert(all[index-1].short_name<=part.short_name) end
             for _,name in ipairs({part.short_name,part.long_name,part.very_long_name}) do
                 local key=name:lower()
-                if names[key] and names[key]~=part.packed_id then ambiguous=name end
-                names[key]=part.packed_id
+                if names[key] and names[key]~=part.id then ambiguous=name end
+                names[key]=part.id
             end
         end
 
@@ -80,14 +77,14 @@ async fn catalogue_resolution_and_c_weapon_projection_are_exact() {
             assert(part.weight_tons==weight,id..' weight '..part.weight_tons..' '..weight)
             end
         end
-        assert(registered_ids==98,'registered ids '..registered_ids)
+        assert(registered_ids==177,'registered ids '..registered_ids)
 
         assert(ambiguous,'expected a source-catalogue ambiguous name')
         local ok,err=mux.error.pcall(function() btech.parts.resolve(ambiguous) end)
         assert(not ok and err.code=='btech.part.ambiguous' and err.detail.argument==1)
 
         local first=all[1]
-        assert(btech.parts.resolve(first.short_name..'\0ignored').packed_id==first.packed_id)
+        assert(btech.parts.resolve(first.short_name..'\0ignored').id==first.id)
         assert(#btech.parts.search(first.short_name..'\0ignored')>=1)
         assert(#btech.parts.list('weapon\0ignored')==#btech.parts.list('weapon'))
         assert(btech.parts.resolve(256*2048+first.id)==nil)
@@ -98,11 +95,11 @@ async fn catalogue_resolution_and_c_weapon_projection_are_exact() {
             ok,err=mux.error.pcall(function() btech.parts.resolve(bad) end)
             assert(not ok and err.code=='mux.arg.invalid' and err.detail.argument==1)
         end
-        ok,err=mux.error.pcall(function() btech.parts.resolve({id=1,brand=6}) end)
+        ok,err=mux.error.pcall(function() btech.parts.resolve({id=2048}) end)
         assert(not ok and err.code=='mux.arg.invalid' and err.detail.argument==1)
-        assert(btech.parts.resolve({id=79,brand=0})==nil)
-        assert(btech.parts.resolve('IS.MediumLaser')==nil)
-        ok,err=mux.error.pcall(function() btech.parts.store_quantity(1,{id=0,brand=0}) end)
+        assert(btech.parts.resolve({id=2047})==nil)
+        assert(btech.parts.resolve('IS.MediumLaser').id==btech.parts.resolve('ML').id)
+        ok,err=mux.error.pcall(function() btech.parts.store_quantity(1,{id=0}) end)
         assert(not ok and err.code=='btech.part.not_found' and err.detail.argument==2)
     "#).unwrap();
 }
@@ -118,7 +115,7 @@ async fn stores_costs_rollback_persistence_and_checking_match_contract() {
         assert(btech.parts.store_quantity(1,part)==3)
         local stores=btech.parts.stores(1)
         local found=false
-        for _,row in ipairs(stores) do if row.part.packed_id==part.packed_id then assert(row.quantity==3); found=true end end
+        for _,row in ipairs(stores) do if row.part.id==part.id then assert(row.quantity==3); found=true end end
         assert(found)
         btech.parts.adjust_stores(1,part,-2)
         assert(btech.parts.store_quantity(1,part)==1)
@@ -127,14 +124,11 @@ async fn stores_costs_rollback_persistence_and_checking_match_contract() {
         ok,err=mux.error.pcall(function() btech.parts.adjust_stores(1,part,0) end)
         assert(not ok and err.code=='mux.arg.invalid' and err.detail.argument==3)
 
-        local branded
-        for _,candidate in ipairs(btech.parts.list('weapon')) do if candidate.brand>0 then branded=candidate break end end
-        assert(branded)
-        assert(select('#',btech.parts.set_cost(branded,9007199254740991))==0)
-        assert(btech.parts.resolve(branded).cost==9007199254740991)
-        ok,err=mux.error.pcall(function() btech.parts.set_cost(branded,9007199254740992) end)
+        assert(select('#',btech.parts.set_cost(part,9007199254740991))==0)
+        assert(btech.parts.resolve(part).cost==9007199254740991)
+        ok,err=mux.error.pcall(function() btech.parts.set_cost(part,9007199254740992) end)
         assert(not ok and err.code=='mux.arg.invalid' and err.detail.argument==2)
-        persisted_part=branded.id
+        persisted_part=part.id
     "#).unwrap();
 
     let before = scripts

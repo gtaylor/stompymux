@@ -4,7 +4,6 @@ movement = "biped"
 tons = 35
 walk_mp = 9
 heat_sinks = 22
-computer = 4
 radio = 5
 
 [construction]
@@ -12,7 +11,6 @@ tech_base = "clan"
 engine = "xl"
 structure = "endo_steel"
 armor = "ferro_fibrous"
-brand = 5
 
 [sections.left_arm]
 armor = 12
@@ -21,48 +19,48 @@ armor = 12
 armor = 12
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "CL.LargePulseLaser", brand = 5 },
+    { at = "4-5", item = "CL.LargePulseLaser" },
 ]
 
 [sections.left_torso]
 armor = 11
 rear = 5
 slots = [
-    { at = 5, item = "CL.MediumPulseLaser", brand = 5 },
-    { at = "6-12", item = "EndoSteel", brand = 5 },
+    { at = 5, item = "CL.MediumPulseLaser" },
+    { at = "6-12", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 11
 rear = 5
 slots = [
-    { at = "3-4", item = "HeatSink", brand = 5 },
-    { at = 5, item = "CL.MediumPulseLaser", brand = 5 },
-    { at = "6-12", item = "FerroFibrous", brand = 5 },
+    { at = "3-4", item = "HeatSink" },
+    { at = 5, item = "CL.MediumPulseLaser" },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 16
 rear = 6
 slots = [
-    { at = 11, item = "CL.MediumPulseLaser", brand = 5 },
-    { at = 12, item = "CL.MediumPulseLaser", modes = ["RearMount"], brand = 5 },
+    { at = 11, item = "CL.MediumPulseLaser" },
+    { at = 12, item = "CL.MediumPulseLaser", modes = ["RearMount"] },
 ]
 
 [sections.left_leg]
 armor = 16
 slots = [
-    { at = "5-6", item = "HeatSink", brand = 5 },
+    { at = "5-6", item = "HeatSink" },
 ]
 
 [sections.right_leg]
 armor = 16
 slots = [
-    { at = "5-6", item = "HeatSink", brand = 5 },
+    { at = "5-6", item = "HeatSink" },
 ]
 
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "Ecm", brand = 5 },
+    { at = 4, item = "Ecm" },
 ]

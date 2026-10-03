@@ -4,38 +4,36 @@ movement = "biped"
 tons = 75
 walk_mp = 6
 heat_sinks = 32
-computer = 4
 radio = 4
 specials = ["SearchLight"]
 
 [construction]
 engine = "xl"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 22
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "HeatSink", brand = 3 },
-    { at = "7-9", item = "IS.ERPPC", brand = 3 },
-    { at = 10, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-9", item = "IS.ERPPC" },
+    { at = 10, item = "IS.MediumPulseLaser" },
 ]
 
 [sections.right_arm]
 armor = 22
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "HeatSink", brand = 3 },
-    { at = "7-9", item = "IS.ERPPC", brand = 3 },
-    { at = 10, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-9", item = "IS.ERPPC" },
+    { at = 10, item = "IS.MediumPulseLaser" },
 ]
 
 [sections.left_torso]
 armor = 17
 rear = 8
 slots = [
-    { at = "4-9", item = "HeatSink", brand = 3 },
+    { at = "4-9", item = "HeatSink" },
     { at = 10, item = "Ammo_IS.GaussRifle", rounds = 8 },
 ]
 
@@ -43,8 +41,8 @@ slots = [
 armor = 17
 rear = 8
 slots = [
-    { at = "4-10", item = "IS.GaussRifle", brand = 3 },
-    { at = 11, item = "Case", brand = 3 },
+    { at = "4-10", item = "IS.GaussRifle" },
+    { at = 11, item = "Case" },
 ]
 
 [sections.center_torso]

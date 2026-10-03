@@ -5,7 +5,6 @@ use crate::{
     BattleAmmunitionMode, BattleFireMode, BattleSection, BattleWeapon, ObjectId, SharedWorld,
 };
 use mlua::{Lua, MultiValue, Table, Value};
-use std::sync::Arc;
 
 const GROUP: &str = "unit";
 fn arg(values: &MultiValue, index: usize) -> Value {
@@ -198,8 +197,12 @@ fn fire_mode(bits: &[i32]) -> BattleFireMode {
         BattleFireMode::Heat
     } else if bits.contains(&32768) {
         BattleFireMode::Rotary6
+    } else if bits.contains(&4194304) {
+        BattleFireMode::Rotary5
     } else if bits.contains(&16384) {
         BattleFireMode::Rotary4
+    } else if bits.contains(&2097152) {
+        BattleFireMode::Rotary3
     } else if bits.contains(&8192) {
         BattleFireMode::Rotary2
     } else if bits.contains(&4096) {
@@ -323,6 +326,8 @@ fn fire_mode_names(bits: &[i32]) -> Vec<String> {
                 262144 => Some("Jettisoned"),
                 524288 => Some("OmniBase"),
                 1048576 => Some("RocketFired"),
+                2097152 => Some("Rotary_ThreeShot"),
+                4194304 => Some("Rotary_FiveShot"),
                 _ => None,
             }
             .map(str::to_owned)
@@ -331,7 +336,7 @@ fn fire_mode_names(bits: &[i32]) -> Vec<String> {
 }
 
 pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::Result<()> {
-    let catalogue = Arc::new(parts_contract::registered_catalogue());
+    let catalogue = parts_contract::registered_catalogue();
     let shared = world.clone();
     contract::bind(
         lua,
@@ -590,7 +595,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     )?;
 
     let shared = world.clone();
-    let records = catalogue.clone();
+    let records = catalogue;
     contract::bind(
         lua,
         native,
@@ -612,23 +617,13 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 ],
                 2,
             )?;
-            let part = parts_contract::check_part(contract::field(&request, "part")?, 2, &records)?
+            let part = parts_contract::check_part(contract::field(&request, "part")?, 2, records)?
                 .ok_or_else(|| failure(2, "btech.part.not_found", "part was not found"))?;
             if parts_contract::part_category(part.id) != "weapon" {
                 return Err(failure(2, "btech.part.wrong_kind", "part must be a weapon"));
             }
-            // Native administration validates the selected manufacturer form, then stores
-            // only the part identity.  The eight infantry weapons are intentionally absent
-            // from the combat enum, so derive their unbranded C template spelling from the
-            // registered fully-qualified name instead of rejecting their raw critical.
             let equipment = crate::BattlePart::from_id(part.id)
                 .map(|part| part.name)
-                .or_else(|| {
-                    parts_contract::part_equipment_name(part).and_then(|name| {
-                        name.split_once('.')
-                            .map(|(_, equipment)| equipment.to_owned())
-                    })
-                })
                 .ok_or_else(|| failure(2, "btech.part.not_found", "part was not found"))?;
             let section = section(contract::field(&request, "section")?, 2, &shared, id)?;
             let Value::Table(raw) = contract::field(&request, "slots")? else {
@@ -678,7 +673,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     &mut shared.borrow_mut(),
                     id,
                     &equipment,
-                    0,
                     section,
                     &slots,
                     modes,
@@ -687,7 +681,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     &mut shared.borrow_mut(),
                     id,
                     &equipment,
-                    0,
                     section,
                     slots[0],
                     modes,
@@ -699,7 +692,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     )?;
 
     let shared = world.clone();
-    let records = catalogue.clone();
+    let records = catalogue;
     contract::bind(
         lua,
         native,
@@ -715,7 +708,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 2,
             )?;
             let part =
-                parts_contract::check_part(contract::field(&request, "weapon")?, 2, &records)?
+                parts_contract::check_part(contract::field(&request, "weapon")?, 2, records)?
                     .ok_or_else(|| failure(2, "btech.part.not_found", "weapon was not found"))?;
             let weapon = BattleWeapon::from_part_id(part.id).ok_or_else(|| {
                 failure(2, "btech.part.wrong_kind", "weapon must identify a weapon")
@@ -744,7 +737,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     &mut shared.borrow_mut(),
                     id,
                     weapon,
-                    0,
                     section,
                     slot,
                     half,
@@ -754,7 +746,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     &mut shared.borrow_mut(),
                     id,
                     weapon,
-                    0,
                     section,
                     slot,
                     half,
@@ -863,7 +854,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 None
             } else {
                 Some(
-                    parts_contract::check_part(raw, 2, &records)?
+                    parts_contract::check_part(raw, 2, records)?
                         .ok_or_else(|| failure(2, "btech.part.not_found", "part was not found"))?,
                 )
             };
@@ -882,12 +873,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 .map(|p| {
                     crate::BattlePart::from_id(p.id)
                         .map(|part| part.name)
-                        .or_else(|| {
-                            parts_contract::part_equipment_name(p).and_then(|name| {
-                                name.split_once('.')
-                                    .map(|(_, equipment)| equipment.to_owned())
-                            })
-                        })
                         .ok_or_else(|| failure(2, "btech.part.not_found", "part was not found"))
                 })
                 .transpose()?;
@@ -897,7 +882,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     &mut shared.borrow_mut(),
                     id,
                     equipment,
-                    0,
                     section,
                     slot,
                     data,
@@ -906,7 +890,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     &mut shared.borrow_mut(),
                     id,
                     equipment,
-                    0,
                     section,
                     slot,
                     data,

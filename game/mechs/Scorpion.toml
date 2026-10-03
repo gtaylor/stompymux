@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "track"
 tons = 25
 walk_mp = 6
-computer = 3
 
 [construction]
 engine = "ice"
@@ -17,7 +16,7 @@ armor = 11
 [sections.front_side]
 armor = 16
 slots = [
-    { at = 1, item = "IS.MachineGun", brand = 3 },
+    { at = 1, item = "IS.MachineGun" },
     { at = 2, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
 ]
 
@@ -27,6 +26,6 @@ armor = 10
 [sections.turret]
 armor = 16
 slots = [
-    { at = 1, item = "IS.AC/5", brand = 3 },
+    { at = 1, item = "IS.AC/5" },
     { at = 2, item = "Ammo_IS.AC/5", rounds = 20 },
 ]

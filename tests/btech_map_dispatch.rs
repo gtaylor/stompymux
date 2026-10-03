@@ -121,8 +121,8 @@ async fn inventory_map_commands_share_handlers_and_preserve_location() {
 #[tokio::test]
 async fn map_stores_uses_manifest_and_location_inventory() {
     let (_dir, config, mut world, room, selected) = fixture().await;
-    set_battle_inventory_quantity(&mut world, ObjectId(1), room, 422, 0, 7).unwrap();
-    set_battle_inventory_quantity(&mut world, ObjectId(1), selected, 422, 0, 3).unwrap();
+    set_battle_inventory_quantity(&mut world, ObjectId(1), room, 422, 7).unwrap();
+    set_battle_inventory_quantity(&mut world, ObjectId(1), selected, 422, 3).unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let before = scripts.world().btech.clone();
     let stores = support::run_text(&scripts, &config, ObjectId(1), 1, "STORES");

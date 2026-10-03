@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "wheel"
 tons = 60
 walk_mp = 8
-computer = 4
 radio = 4
 cargo_space = 2500
 max_suits = 0

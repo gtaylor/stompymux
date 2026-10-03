@@ -14,7 +14,7 @@ async fn unregister_map_shuts_down_all_chassis_and_survives_restart() {
         let map = world.btech.units()[&unit].map.unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         scripts
-            .eval_callback::<()>(&format!("btech.inventory.set(1,{},422,0,7)", map.0))
+            .eval_callback::<()>(&format!("btech.inventory.set(1,{},422,7)", map.0))
             .unwrap();
         scripts.drain_outbox();
         let before = scripts.world().clone();

@@ -26,7 +26,6 @@ pub struct WeaponMount<L = CriticalLocation> {
     pub initially_spent: bool,
     pub initial_fire_mode: super::BattleFireMode,
     pub initial_ammunition_mode: super::BattleAmmunitionMode,
-    pub brand: Option<u8>,
 }
 
 /// One independent ammunition bin; rounds count complete weapon salvos.
@@ -41,7 +40,6 @@ pub struct AmmunitionBin<L = CriticalLocation> {
     /// Retained bin fire flag; launcher hotloading is selected on the weapon, not its supply.
     pub hotload: bool,
     pub mode: super::BattleAmmunitionMode,
-    pub brand: Option<u8>,
 }
 
 impl AmmunitionBin {
@@ -133,12 +131,11 @@ impl AmmunitionBin {
     }
 }
 
-/// One system critical, retaining optional manufacturer information.
+/// One system critical at its installed location.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct SystemCritical<L = CriticalLocation> {
     pub location: L,
     pub system: BattleSystem,
-    pub brand: Option<u8>,
 }
 
 impl<L> WeaponMount<L> {
@@ -190,7 +187,11 @@ impl<L> WeaponMount<L> {
                     || (mode == "Gattling" && weapon.supports_gatling())
                     || (matches!(
                         mode.as_str(),
-                        "Rotary_TwoShot" | "Rotary_FourShot" | "Rotary_SixShot"
+                        "Rotary_TwoShot"
+                            | "Rotary_ThreeShot"
+                            | "Rotary_FourShot"
+                            | "Rotary_FiveShot"
+                            | "Rotary_SixShot"
                     ) && weapon.is_rotary())
                     || mode == "OnTC"
                     || (matches!(mode.as_str(), "OneShot" | "OneShot_Used")
@@ -251,8 +252,12 @@ impl<L> WeaponMount<L> {
                 super::BattleFireMode::Gatling
             } else if critical.modes.iter().any(|mode| mode == "Rotary_TwoShot") {
                 super::BattleFireMode::Rotary2
+            } else if critical.modes.iter().any(|mode| mode == "Rotary_ThreeShot") {
+                super::BattleFireMode::Rotary3
             } else if critical.modes.iter().any(|mode| mode == "Rotary_FourShot") {
                 super::BattleFireMode::Rotary4
+            } else if critical.modes.iter().any(|mode| mode == "Rotary_FiveShot") {
+                super::BattleFireMode::Rotary5
             } else if critical.modes.iter().any(|mode| mode == "Rotary_SixShot") {
                 super::BattleFireMode::Rotary6
             } else {
@@ -262,7 +267,6 @@ impl<L> WeaponMount<L> {
                 weapon,
                 &critical.modes,
             ),
-            brand: critical.brand,
         }
     }
 }
@@ -320,7 +324,9 @@ fn is_contract_fire_mode(mode: &str) -> bool {
             | "RapidFire"
             | "Gattling"
             | "Rotary_TwoShot"
+            | "Rotary_ThreeShot"
             | "Rotary_FourShot"
+            | "Rotary_FiveShot"
             | "Rotary_SixShot"
             | "Heat"
             | "BackPack"
@@ -349,7 +355,6 @@ impl<L> AmmunitionBin<L> {
             half_ton,
             hotload: critical.modes.iter().any(|mode| mode == "Hotload"),
             mode,
-            brand: critical.brand,
         })
     }
 
@@ -371,7 +376,6 @@ impl<L> AmmunitionBin<L> {
             half_ton,
             hotload: critical.modes.iter().any(|mode| mode == "Hotload"),
             mode,
-            brand: critical.brand,
         })
     }
 }
@@ -427,7 +431,6 @@ impl BattleLoadout {
                             |(offset, part)| part.location.section == first.location.section
                                 && usize::from(part.location.slot)
                                     == usize::from(first.location.slot) + offset
-                                && part.brand == first.brand
                         ),
                     "Incomplete or inconsistent {label} criticals"
                 );
@@ -472,12 +475,7 @@ impl BattleLoadout {
                         "Unsupported critical data {}",
                         critical.data
                     );
-                    // Manufacturer-qualified spellings name the same weapon as
-                    // their technology-prefixed form; the brand column carries
-                    // the manufacturer identity.
-                    let equipment = unbranded_weapon_name(&critical.equipment)
-                        .map(str::to_owned)
-                        .unwrap_or_else(|| critical.equipment.clone());
+                    let equipment = critical.equipment.clone();
                     if super::equipment::strip_name_prefix(&equipment, "IS.").is_some()
                         || super::equipment::strip_name_prefix(&equipment, "CL.").is_some()
                     {
@@ -505,7 +503,6 @@ impl BattleLoadout {
                                     && definition.criticals.get(&index).is_some_and(|part| {
                                         part.equipment.eq_ignore_ascii_case(&critical.equipment)
                                             && part.data == critical.data
-                                            && part.brand == critical.brand
                                             && (part.modes.is_empty()
                                                 || part.modes == critical.modes)
                                     }),
@@ -525,11 +522,7 @@ impl BattleLoadout {
                     }
                     ensure!(critical.modes.is_empty(), "Unsupported system mode");
                     let system = BattleSystem::parse(&critical.equipment)?;
-                    loadout.systems.push(SystemCritical {
-                        location,
-                        system,
-                        brand: critical.brand,
-                    });
+                    loadout.systems.push(SystemCritical { location, system });
                     Ok(())
                 })()
                 .with_context(|| {
@@ -604,12 +597,7 @@ impl BattleLoadout {
                         "Unsupported critical data {}",
                         critical.data
                     );
-                    // Manufacturer-qualified spellings (for example "Agra.IS.PPC") name the
-                    // same weapon as their technology-prefixed form; the brand column
-                    // already carries the manufacturer identity.
-                    let equipment = unbranded_weapon_name(&critical.equipment)
-                        .map(str::to_owned)
-                        .unwrap_or_else(|| critical.equipment.clone());
+                    let equipment = critical.equipment.clone();
                     if super::equipment::strip_name_prefix(&equipment, "IS.").is_some()
                         || super::equipment::strip_name_prefix(&equipment, "CL.").is_some()
                     {
@@ -651,7 +639,6 @@ impl BattleLoadout {
                             .filter(|(index, part)| {
                                 !consumed.contains(*index)
                                     && part.equipment.eq_ignore_ascii_case(&critical.equipment)
-                                    && part.brand == critical.brand
                                     && (part.modes.is_empty() || part.modes == critical.modes)
                             })
                             .map(|(&index, _)| index)
@@ -694,11 +681,7 @@ impl BattleLoadout {
                         Err(error) => return Err(error),
                     };
                     ensure!(critical.modes.is_empty(), "Unsupported system mode");
-                    loadout.systems.push(SystemCritical {
-                        location,
-                        system,
-                        brand: critical.brand,
-                    });
+                    loadout.systems.push(SystemCritical { location, system });
                     Ok(())
                 })()
                 .with_context(|| {
@@ -723,11 +706,8 @@ impl BattleLoadout {
 /// corresponding combat enum yet.  Contract construction retains their criticals for
 /// administration, inspection and persistence while strict construction still rejects them.
 pub(super) fn contract_raw_weapon(name: &str) -> bool {
-    let name = unbranded_weapon_name(name)
-        .map(str::to_owned)
-        .unwrap_or_else(|| name.to_owned());
-    let name = super::equipment::strip_name_prefix(&name, "IS.")
-        .or_else(|| super::equipment::strip_name_prefix(&name, "CL."));
+    let name = super::equipment::strip_name_prefix(name, "IS.")
+        .or_else(|| super::equipment::strip_name_prefix(name, "CL."));
     name.is_some_and(|name| {
         matches!(
             name.to_ascii_lowercase().as_str(),
@@ -741,21 +721,6 @@ pub(super) fn contract_raw_weapon(name: &str) -> bool {
                 | "infantryflamer"
         )
     })
-}
-
-/// Strip a leading manufacturer qualifier from a fully qualified weapon spelling,
-/// keeping the technology segment: `Agra.IS.PPC` becomes `IS.PPC`.
-pub(super) fn unbranded_weapon_name(equipment: &str) -> Option<&str> {
-    let (manufacturer, rest) = equipment.split_once('.')?;
-    if manufacturer.is_empty() {
-        return None;
-    }
-    let technology = rest.split('.').next().unwrap_or_default();
-    if technology.eq_ignore_ascii_case("IS") || technology.eq_ignore_ascii_case("CL") {
-        Some(rest)
-    } else {
-        None
-    }
 }
 
 /// Resolve each extension marker's explicit primary section and zero-based slot
@@ -795,7 +760,7 @@ fn split_criticals(
                 "Weapon does not support split criticals"
             );
             ensure!(
-                part.modes.is_empty() && part.brand == primary.brand,
+                part.modes.is_empty(),
                 "Inconsistent split critical metadata"
             );
             links
@@ -834,7 +799,6 @@ mod tests {
                 let critical = super::super::CriticalDefinition {
                     equipment: weapon.name().into(),
                     data: "-".into(),
-                    brand: None,
                     modes: if linked {
                         vec!["OnTC".into()]
                     } else {

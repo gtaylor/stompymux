@@ -45,7 +45,6 @@ fn vehicle_assets_decode_without_mech_anatomy() {
     )
     .unwrap();
     assert!(!truck.sections.contains_key(&BattleVehicleSection::Turret));
-    assert_eq!(truck.attributes["computer"], "3");
 }
 
 /// The shared syntax retains modes and merged specials while rejecting malformed or mixed anatomy.

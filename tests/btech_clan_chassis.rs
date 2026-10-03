@@ -25,7 +25,6 @@ fn definition() -> BattleTemplate {
                     equipment: "HeatSink".into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
     }
@@ -89,7 +88,6 @@ fn clan_sink_groups_containment_and_material_mass() {
                             equipment: name.into(),
                             data: "-".into(),
                             modes: vec![],
-                            brand: None,
                         },
                     );
             }

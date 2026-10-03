@@ -8,23 +8,23 @@ cargo_space = 0
 [sections.left_side]
 armor = 38
 slots = [
-    { at = "1-2", item = "IS.Flamer", brand = 3 },
-    { at = 3, item = "IS.MachineGun", brand = 3 },
+    { at = "1-2", item = "IS.Flamer" },
+    { at = 3, item = "IS.MachineGun" },
 ]
 
 [sections.right_side]
 armor = 38
 slots = [
-    { at = "1-2", item = "IS.Flamer", brand = 3 },
-    { at = 3, item = "IS.MachineGun", brand = 3 },
+    { at = "1-2", item = "IS.Flamer" },
+    { at = 3, item = "IS.MachineGun" },
 ]
 
 [sections.front_side]
 armor = 46
 slots = [
-    { at = "1-4", item = "IS.LRM-5", brand = 3 },
-    { at = "5-6", item = "IS.Flamer", brand = 3 },
-    { at = "7-8", item = "IS.MachineGun", brand = 3 },
+    { at = "1-4", item = "IS.LRM-5" },
+    { at = "5-6", item = "IS.Flamer" },
+    { at = "7-8", item = "IS.MachineGun" },
     { at = "9-10", item = "Ammo_IS.LRM-5", rounds = 24 },
     { at = 11, item = "Ammo_IS.MachineGun", rounds = 200 },
 ]
@@ -35,8 +35,8 @@ armor = 40
 [sections.turret]
 armor = 46
 slots = [
-    { at = "1-2", item = "IS.AC/10", brand = 3 },
-    { at = "3-4", item = "IS.SRM-6", brand = 3 },
+    { at = "1-2", item = "IS.AC/10" },
+    { at = "3-4", item = "IS.SRM-6" },
     { at = "5-6", item = "Ammo_IS.AC/10", rounds = 10 },
     { at = "7-8", item = "Ammo_IS.SRM-6", rounds = 15 },
 ]

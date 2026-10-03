@@ -123,7 +123,6 @@ fn apply_raw_section_repair(
                             | "RocketFired"
                     )
                 });
-                critical.brand = critical.brand.map(|brand| brand % 16);
                 let equipment = critical.equipment.as_str();
                 if equipment.starts_with("Ammo_")
                     || equipment.starts_with("IS.")

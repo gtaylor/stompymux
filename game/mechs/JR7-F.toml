@@ -4,7 +4,6 @@ movement = "biped"
 tons = 35
 walk_mp = 11
 jump_mp = 5
-computer = 2
 radio = 2
 
 [sections.left_arm]

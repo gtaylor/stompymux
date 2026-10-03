@@ -5,7 +5,6 @@ tons = 30
 walk_mp = 3
 jump_mp = 2
 heat_sinks = 11
-computer = 3
 radio = 3
 
 [sections.left_arm]

@@ -3,7 +3,6 @@ class = "mech"
 movement = "biped"
 tons = 35
 walk_mp = 12
-computer = 4
 radio = 4
 
 [construction]

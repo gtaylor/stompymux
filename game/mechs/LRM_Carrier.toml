@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "track"
 tons = 60
 walk_mp = 5
-computer = 3
 
 [construction]
 engine = "ice"
@@ -17,7 +16,7 @@ armor = 12
 [sections.front_side]
 armor = 12
 slots = [
-    { at = "1-3", item = "IS.LRM-20", brand = 3 },
+    { at = "1-3", item = "IS.LRM-20" },
     { at = "4-7", item = "Ammo_IS.LRM-20", rounds = 6 },
 ]
 

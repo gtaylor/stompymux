@@ -4,14 +4,13 @@ movement = "fly"
 tons = 50
 walk_mp = 8
 heat_sinks = 0
-computer = 5
 fuel = 6000
 
 [sections.nose]
 armor = 10
 internals = 5
 slots = [
-    { at = 1, item = "IS.AC/20", brand = 5 },
+    { at = 1, item = "IS.AC/20" },
 ]
 
 [sections.left_wing]

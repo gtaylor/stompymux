@@ -413,7 +413,6 @@ async fn vehicle_shots_observe_existing_angel_fields_without_copying_field_rules
                         equipment: "AngelEcm".into(),
                         data: "-".into(),
                         modes: vec![],
-                        brand: None,
                     },
                 );
         }
@@ -1933,7 +1932,6 @@ fn install_mech_launcher(
                 equipment: weapon.name().into(),
                 data: "-".into(),
                 modes: vec![],
-                brand: None,
             },
         );
     }
@@ -1947,7 +1945,6 @@ fn install_mech_launcher(
             } else {
                 vec![]
             },
-            brand: None,
         },
     );
     let rebuilt = BattleUnit::from_template(definition.clone()).unwrap();

@@ -10,9 +10,9 @@ use sqlx::{Connection, SqliteConnection};
 use stompymux_rs::Scripts;
 use support::isolated_scripts;
 
-/// Register two raw units and load the branded PARITY template onto the first
+/// Register two raw units and load the PARITY template onto the first
 /// through the native loader, mirroring the pinned C construction oracle.
-async fn branded_scripts() -> (
+async fn parity_scripts() -> (
     tempfile::TempDir,
     stompymux_rs::Config,
     Scripts,
@@ -53,7 +53,7 @@ async fn branded_scripts() -> (
 
 #[tokio::test(flavor = "current_thread")]
 async fn supported_unit_admin_setters_match_zero_return_validation_and_effects() {
-    let (_d, config, s, unit) = branded_scripts().await;
+    let (_d, config, s, unit) = parity_scripts().await;
     s.eval_callback::<()>(r#"
       local u=mux.world.object(unit_id);local unit=btech.unit
       local function zero(name,f,...)
@@ -147,7 +147,7 @@ async fn supported_unit_admin_setters_match_zero_return_validation_and_effects()
 
 #[tokio::test(flavor = "current_thread")]
 async fn unit_admin_argument_edges_match_native_messages() {
-    let (_d, _config, s, _deferred) = branded_scripts().await;
+    let (_d, _config, s, _deferred) = parity_scripts().await;
     s.eval_callback::<()>(r#"
       local u=mux.world.object(unit_id);local unit=btech.unit
       local function fails(name,number,callable,detail,code,argument)
@@ -278,7 +278,7 @@ async fn unit_admin_argument_edges_match_native_messages() {
 #[tokio::test(flavor = "current_thread")]
 async fn unit_admin_rejects_checking_mode_and_rolls_back_with_transaction() {
     use std::{cell::RefCell, rc::Rc};
-    let (_d, config, s, unit) = branded_scripts().await;
+    let (_d, config, s, unit) = parity_scripts().await;
     // A failing callback rolls the whole transaction back, including admin writes.
     let failed = s.eval_callback::<()>(
         r#"
@@ -413,7 +413,7 @@ async fn registered_default_admin_materializes_only_after_validated_update_and_p
 #[tokio::test(flavor = "current_thread")]
 async fn unit_unregister_extension_matches_native_teardown_contract() {
     use std::{cell::RefCell, rc::Rc};
-    let (_d, config, s, unit) = branded_scripts().await;
+    let (_d, config, s, unit) = parity_scripts().await;
     // Argument validation rejects wrong-kind and garbage targets before any mutation.
     s.eval_callback::<()>(r#"
       local unit=btech.unit

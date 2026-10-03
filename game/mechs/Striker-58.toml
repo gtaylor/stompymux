@@ -8,13 +8,13 @@ specials = ["SearchLight"]
 [sections.left_side]
 armor = 23
 slots = [
-    { at = "6-12", item = "FerroFibrous", brand = 3 },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.right_side]
 armor = 23
 slots = [
-    { at = "6-12", item = "FerroFibrous", brand = 3 },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.front_side]
@@ -26,9 +26,9 @@ armor = 24
 [sections.turret]
 armor = 26
 slots = [
-    { at = 1, item = "IS.LRM-15", brand = 3 },
-    { at = 2, item = "ArtemisIV", brand = 3 },
-    { at = "3-4", item = "IS.StreakSRM-2", brand = 3 },
+    { at = 1, item = "IS.LRM-15" },
+    { at = 2, item = "ArtemisIV" },
+    { at = "3-4", item = "IS.StreakSRM-2" },
     { at = 5, item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
     { at = 6, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
 ]

@@ -4,20 +4,19 @@ movement = "biped"
 tons = 85
 walk_mp = 6
 heat_sinks = 18
-computer = 4
 radio = 4
 specials = ["SearchLight"]
 
 [sections.left_arm]
 armor = 24
 slots = [
-    { at = "5-6", item = "IS.MachineGun", brand = 2 },
+    { at = "5-6", item = "IS.MachineGun" },
 ]
 
 [sections.right_arm]
 armor = 24
 slots = [
-    { at = "5-7", item = "IS.PPC", brand = 4 },
+    { at = "5-7", item = "IS.PPC" },
 ]
 
 [sections.left_torso]
@@ -26,7 +25,7 @@ rear = 8
 slots = [
     { at = "1-2", item = "IS.MediumLaser" },
     { at = 3, item = "IS.MediumLaser", modes = ["RearMount"] },
-    { at = "4-5", item = "IS.SRM-6", brand = 4 },
+    { at = "4-5", item = "IS.SRM-6" },
     { at = 6, item = "Ammo_IS.MachineGun", rounds = 200 },
     { at = "7-8", item = "Ammo_IS.SRM-6", rounds = 15 },
 ]

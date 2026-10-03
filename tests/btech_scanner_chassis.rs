@@ -75,7 +75,6 @@ fn equipment(source: &str) -> BattleUnitTemplate {
                 equipment: name.into(),
                 data: "-".into(),
                 modes: vec![],
-                brand: None,
             },
         );
     }
@@ -522,7 +521,6 @@ fn install_gatling(world: &mut World, id: ObjectId, supply: u16) -> usize {
             equipment: "IS.MachineGun".into(),
             data: "-".into(),
             modes: vec!["Gattling".into()],
-            brand: None,
         },
     );
     section.criticals.insert(
@@ -531,7 +529,6 @@ fn install_gatling(world: &mut World, id: ObjectId, supply: u16) -> usize {
             equipment: "Ammo_IS.MachineGun".into(),
             data: supply.to_string(),
             modes: vec![],
-            brand: None,
         },
     );
     let (definition, ammunition, index) = match template {

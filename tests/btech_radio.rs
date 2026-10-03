@@ -59,7 +59,6 @@ fn radio_hardware_quality_and_chassis_defaults() {
                                 equipment: "HeatSink".into(),
                                 data: "-".into(),
                                 modes: vec![],
-                                brand: None,
                             },
                         );
                 }
@@ -259,7 +258,6 @@ async fn relay_fixture() -> (tempfile::TempDir, Config, World, ObjectId, Vec<Obj
                         equipment: "Ecm".into(),
                         data: "-".into(),
                         modes: vec![],
-                        brand: None,
                     },
                 );
         }

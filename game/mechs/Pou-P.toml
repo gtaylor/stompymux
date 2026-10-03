@@ -5,7 +5,6 @@ tons = 40
 walk_mp = 9
 jump_mp = 5
 heat_sinks = 24
-computer = 4
 
 [construction]
 tech_base = "clan"

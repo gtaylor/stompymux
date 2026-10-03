@@ -57,13 +57,8 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     let shared = world.clone();
     let criticals = lua.create_function(move |lua, (id, section): (i64, String)| {
         crate::lua::transactions::require(lua)?;
-        let report = crate::battle_critical_report(
-            &shared.borrow(),
-            ObjectId(id),
-            &section,
-            crate::lua::configuration(lua).battletech.parts != 0,
-        )
-        .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")))?;
+        let report = crate::battle_critical_report(&shared.borrow(), ObjectId(id), &section)
+            .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")))?;
         detached(lua, &report)
     })?;
     native.set(

@@ -5,7 +5,7 @@ linkTitle: "resolve"
 manualLinkTitle: "resolve"
 ---
 
-Resolve one registered part by packed ID, case-insensitive name or {id, brand} record.
+Resolve one registered part by ID, case-insensitive name or {id} record.
 
 ## Signature
 

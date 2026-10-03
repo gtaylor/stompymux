@@ -5,7 +5,6 @@ tons = 45
 walk_mp = 6
 jump_mp = 4
 heat_sinks = 11
-computer = 4
 specials = ["AntiAircraft"]
 
 [sections.left_arm]

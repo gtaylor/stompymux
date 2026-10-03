@@ -12,20 +12,20 @@ max_suits = 0
 [sections.left_side]
 armor = 30
 slots = [
-    { at = "6-12", item = "FerroFibrous", brand = 3 },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.right_side]
 armor = 30
 slots = [
-    { at = "6-12", item = "FerroFibrous", brand = 3 },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.front_side]
 armor = 43
 slots = [
-    { at = "1-2", item = "IS.MachineGun", brand = 3 },
-    { at = 3, item = "IS.MRM-20", brand = 3 },
+    { at = "1-2", item = "IS.MachineGun" },
+    { at = 3, item = "IS.MRM-20" },
     { at = 4, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload", "Halfton"] },
     { at = "5-6", item = "Ammo_IS.MRM-20", rounds = 12 },
 ]
@@ -36,9 +36,9 @@ armor = 30
 [sections.turret]
 armor = 46
 slots = [
-    { at = 1, item = "IS.UltraAC/20", brand = 3 },
-    { at = 2, item = "IS.SRM-6", brand = 3 },
-    { at = "3-4", item = "IS.MediumLaser", brand = 3 },
+    { at = 1, item = "IS.UltraAC/20" },
+    { at = 2, item = "IS.SRM-6" },
+    { at = "3-4", item = "IS.MediumLaser" },
     { at = "5-9", item = "Ammo_IS.UltraAC/20", rounds = 5 },
     { at = 10, item = "Ammo_IS.SRM-6", rounds = 15 },
 ]

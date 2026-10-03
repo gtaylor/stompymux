@@ -7,36 +7,35 @@ heat_sinks = 28
 cargo_space = 0
 
 [construction]
-brand = 3
 
 [sections.left_arm]
 armor = 26
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "IS.LargeLaser", brand = 2 },
-    { at = 6, item = "HeatSink", brand = 3 },
+    { at = "4-5", item = "IS.LargeLaser" },
+    { at = 6, item = "HeatSink" },
 ]
 
 [sections.right_arm]
 armor = 26
 slots = [
-    { at = "5-6", item = "IS.LargeLaser", brand = 2 },
+    { at = "5-6", item = "IS.LargeLaser" },
 ]
 
 [sections.left_torso]
 armor = 24
 rear = 10
 slots = [
-    { at = "1-2", item = "IS.LargeLaser", brand = 2 },
-    { at = "3-9", item = "HeatSink", brand = 3 },
+    { at = "1-2", item = "IS.LargeLaser" },
+    { at = "3-9", item = "HeatSink" },
 ]
 
 [sections.right_torso]
 armor = 24
 rear = 10
 slots = [
-    { at = "1-2", item = "IS.LargeLaser", brand = 2 },
-    { at = "3-9", item = "HeatSink", brand = 3 },
+    { at = "1-2", item = "IS.LargeLaser" },
+    { at = "3-9", item = "HeatSink" },
 ]
 
 [sections.center_torso]
@@ -46,17 +45,17 @@ rear = 10
 [sections.left_leg]
 armor = 34
 slots = [
-    { at = "5-6", item = "HeatSink", brand = 3 },
+    { at = "5-6", item = "HeatSink" },
 ]
 
 [sections.right_leg]
 armor = 34
 slots = [
-    { at = "5-6", item = "HeatSink", brand = 3 },
+    { at = "5-6", item = "HeatSink" },
 ]
 
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "IS.MediumLaser", brand = 3 },
+    { at = 4, item = "IS.MediumLaser" },
 ]

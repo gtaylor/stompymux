@@ -39,7 +39,6 @@ async fn field_with_classic(
                         equipment: "C3i".into(),
                         data: "-".into(),
                         modes: vec![],
-                        brand: None,
                     },
                 );
         }
@@ -55,7 +54,6 @@ async fn field_with_classic(
                         equipment: "C3Slave".into(),
                         data: "-".into(),
                         modes: vec![],
-                        brand: None,
                     },
                 );
         }
@@ -75,7 +73,6 @@ async fn field_with_classic(
                             equipment: "C3Master".into(),
                             data: "-".into(),
                             modes: vec![],
-                            brand: None,
                         },
                     );
             }
@@ -92,7 +89,6 @@ async fn field_with_classic(
                         equipment: "Ecm".into(),
                         data: "-".into(),
                         modes: vec![],
-                        brand: None,
                     },
                 );
         }
@@ -113,7 +109,6 @@ async fn field_with_classic(
                     equipment: "C3i".into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
             parts.insert(
@@ -122,7 +117,6 @@ async fn field_with_classic(
                     equipment: "Ecm".into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
             if slaves {
@@ -132,7 +126,6 @@ async fn field_with_classic(
                         equipment: "C3Slave".into(),
                         data: "-".into(),
                         modes: vec![],
-                        brand: None,
                     },
                 );
             }
@@ -143,7 +136,6 @@ async fn field_with_classic(
                         equipment: "C3Master".into(),
                         data: "-".into(),
                         modes: vec![],
-                        brand: None,
                     },
                 );
             }

@@ -4,7 +4,6 @@ movement = "biped"
 tons = 40
 walk_mp = 11
 heat_sinks = 26
-computer = 4
 radio = 4
 cargo_space = 0
 
@@ -12,67 +11,66 @@ cargo_space = 0
 engine = "xl"
 structure = "endo_steel"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 9
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "IS.ERLargeLaser", brand = 3 },
-    { at = "6-9", item = "EndoSteel", brand = 3 },
-    { at = "11-12", item = "StealthArmor", brand = 0 },
+    { at = "4-5", item = "IS.ERLargeLaser" },
+    { at = "6-9", item = "EndoSteel" },
+    { at = "11-12", item = "StealthArmor" },
 ]
 
 [sections.right_arm]
 armor = 9
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "IS.ERLargeLaser", brand = 3 },
-    { at = "6-9", item = "EndoSteel", brand = 3 },
-    { at = "11-12", item = "StealthArmor", brand = 0 },
+    { at = "4-5", item = "IS.ERLargeLaser" },
+    { at = "6-9", item = "EndoSteel" },
+    { at = "11-12", item = "StealthArmor" },
 ]
 
 [sections.left_torso]
 armor = 13
 rear = 5
 slots = [
-    { at = "4-6", item = "HeatSink", brand = 3 },
-    { at = 7, item = "IS.ERMediumLaser", brand = 3 },
-    { at = "8-10", item = "EndoSteel", brand = 3 },
-    { at = "11-12", item = "StealthArmor", brand = 0 },
+    { at = "4-6", item = "HeatSink" },
+    { at = 7, item = "IS.ERMediumLaser" },
+    { at = "8-10", item = "EndoSteel" },
+    { at = "11-12", item = "StealthArmor" },
 ]
 
 [sections.right_torso]
 armor = 13
 rear = 5
 slots = [
-    { at = "4-6", item = "HeatSink", brand = 3 },
-    { at = 7, item = "IS.ERMediumLaser", brand = 3 },
-    { at = "8-10", item = "EndoSteel", brand = 3 },
-    { at = "11-12", item = "StealthArmor", brand = 0 },
+    { at = "4-6", item = "HeatSink" },
+    { at = 7, item = "IS.ERMediumLaser" },
+    { at = "8-10", item = "EndoSteel" },
+    { at = "11-12", item = "StealthArmor" },
 ]
 
 [sections.center_torso]
 armor = 14
 rear = 5
 slots = [
-    { at = "11-12", item = "Ecm", brand = 3 },
+    { at = "11-12", item = "Ecm" },
 ]
 
 [sections.left_leg]
 armor = 11
 slots = [
-    { at = "5-6", item = "StealthArmor", brand = 0 },
+    { at = "5-6", item = "StealthArmor" },
 ]
 
 [sections.right_leg]
 armor = 11
 slots = [
-    { at = "5-6", item = "StealthArmor", brand = 0 },
+    { at = "5-6", item = "StealthArmor" },
 ]
 
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "TAG", brand = 3 },
+    { at = 4, item = "TAG" },
 ]

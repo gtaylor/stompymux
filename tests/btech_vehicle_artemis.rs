@@ -33,7 +33,6 @@ fn definition(source: &str, section: BattleVehicleSection, link: &str) -> Battle
             equipment: "IS.LRM-5".into(),
             data: "-".into(),
             modes: vec![],
-            brand: None,
         },
     );
     template
@@ -50,7 +49,6 @@ fn definition(source: &str, section: BattleVehicleSection, link: &str) -> Battle
                 equipment: "ArtemisIV".into(),
                 data: link.into(),
                 modes: vec![],
-                brand: None,
             },
         );
     for (slot, modes) in [(2, vec![]), (3, vec!["Artemis/Mine".into()])] {
@@ -65,7 +63,6 @@ fn definition(source: &str, section: BattleVehicleSection, link: &str) -> Battle
                     equipment: "Ammo_IS.LRM-5".into(),
                     data: "24".into(),
                     modes,
-                    brand: None,
                 },
             );
     }

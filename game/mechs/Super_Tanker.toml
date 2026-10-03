@@ -3,7 +3,6 @@ class = "naval"
 movement = "hull"
 tons = 200
 walk_mp = 3
-computer = 3
 cargo_space = 0
 max_suits = 0
 

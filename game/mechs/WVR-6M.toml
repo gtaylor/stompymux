@@ -10,7 +10,7 @@ radio = 4
 [sections.left_arm]
 armor = 18
 slots = [
-    { at = 5, item = "IS.MediumLaser", brand = 4 },
+    { at = 5, item = "IS.MediumLaser" },
 ]
 
 [sections.right_arm]
@@ -58,5 +58,5 @@ slots = [
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "IS.MediumLaser", brand = 4 },
+    { at = 4, item = "IS.MediumLaser" },
 ]

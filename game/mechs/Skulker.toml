@@ -4,7 +4,6 @@ movement = "wheel"
 tons = 20
 walk_mp = 11
 heat_sinks = 3
-computer = 4
 radio = 3
 
 [construction]

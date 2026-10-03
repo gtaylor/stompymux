@@ -4,49 +4,47 @@ movement = "biped"
 tons = 70
 walk_mp = 6
 heat_sinks = 36
-computer = 4
 radio = 4
 specials = ["SearchLight"]
 
 [construction]
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 20
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "IS.ERPPC", brand = 3 },
-    { at = "7-9", item = "HeatSink", brand = 3 },
+    { at = "4-6", item = "IS.ERPPC" },
+    { at = "7-9", item = "HeatSink" },
 ]
 
 [sections.right_arm]
 armor = 20
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "IS.ERPPC", brand = 3 },
-    { at = "7-9", item = "HeatSink", brand = 3 },
+    { at = "4-6", item = "IS.ERPPC" },
+    { at = "7-9", item = "HeatSink" },
 ]
 
 [sections.left_torso]
 armor = 17
 rear = 8
 slots = [
-    { at = 1, item = "IS.MediumLaser", brand = 3 },
-    { at = 2, item = "IS.Anti-MissileSystem", brand = 3 },
-    { at = "3-11", item = "HeatSink", brand = 3 },
+    { at = 1, item = "IS.MediumLaser" },
+    { at = 2, item = "IS.Anti-MissileSystem" },
+    { at = "3-11", item = "HeatSink" },
 ]
 
 [sections.right_torso]
 armor = 17
 rear = 8
 slots = [
-    { at = "1-2", item = "IS.SRM-6", brand = 3 },
+    { at = "1-2", item = "IS.SRM-6" },
     { at = 3, item = "Ammo_IS.SRM-6", rounds = 15 },
-    { at = 4, item = "IS.MediumLaser", brand = 3 },
+    { at = 4, item = "IS.MediumLaser" },
     { at = 5, item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
-    { at = 6, item = "IS.MachineGun", brand = 3 },
-    { at = "7-12", item = "HeatSink", brand = 3 },
+    { at = 6, item = "IS.MachineGun" },
+    { at = "7-12", item = "HeatSink" },
 ]
 
 [sections.center_torso]

@@ -10,26 +10,26 @@ max_suits = 4
 armor = 5
 internals = 1
 slots = [
-    { at = 1, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = 1, item = "IS.MediumPulseLaser" },
 ]
 
 [sections.suit_2]
 armor = 5
 internals = 1
 slots = [
-    { at = 1, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = 1, item = "IS.MediumPulseLaser" },
 ]
 
 [sections.suit_3]
 armor = 5
 internals = 1
 slots = [
-    { at = 1, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = 1, item = "IS.MediumPulseLaser" },
 ]
 
 [sections.suit_4]
 armor = 5
 internals = 1
 slots = [
-    { at = 1, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = 1, item = "IS.MediumPulseLaser" },
 ]

@@ -3,7 +3,6 @@ class = "vtol"
 movement = "vtol"
 tons = 21
 walk_mp = 15
-computer = 4
 specials = ["SearchLight"]
 
 [sections.left_side]

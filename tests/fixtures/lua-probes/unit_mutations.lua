@@ -138,7 +138,6 @@ local function critical_row(unit_value, section, slot)
   local row = {
     kind = item.kind,
     part_id = item.part and item.part.id or nil,
-    part_brand = item.part and item.part.brand or nil,
     operational = item.operational,
     temporary_failure = item.temporary_failure,
     auxiliary_data = item.auxiliary_data,
@@ -198,7 +197,7 @@ end
 
 local function page_equipment()
   local request = {
-    part = 'Agra.IS.PPC',
+    part = 'IS.PPC',
     section = sections.LEFT_TORSO,
     slots = { 2, 3, 4 },
   }
@@ -206,63 +205,63 @@ local function page_equipment()
     weapons_loaded = weapon_rows(unit()),
     install = capture(btech.unit.install_weapon, unit(), request),
     weapons_installed = weapon_rows(unit()),
-    installed_brand_zero = critical_row(unit(), sections.LEFT_TORSO, 2),
+    installed_part = critical_row(unit(), sections.LEFT_TORSO, 2),
     install_errors = {
       duplicate_slots = capture(btech.unit.install_weapon, unit(), {
-        part = 'Agra.IS.PPC', section = sections.LEFT_TORSO, slots = { 2, 2, 3 },
+        part = 'IS.PPC', section = sections.LEFT_TORSO, slots = { 2, 2, 3 },
       }),
       short_slots = capture(btech.unit.install_weapon, unit(), {
-        part = 'Agra.IS.PPC', section = sections.LEFT_TORSO, slots = { 2 },
+        part = 'IS.PPC', section = sections.LEFT_TORSO, slots = { 2 },
       }),
       empty_slots = capture(btech.unit.install_weapon, unit(), {
-        part = 'Agra.IS.PPC', section = sections.LEFT_TORSO, slots = {},
+        part = 'IS.PPC', section = sections.LEFT_TORSO, slots = {},
       }),
       long_slots = capture(btech.unit.install_weapon, unit(), {
-        part = 'Agra.IS.PPC', section = sections.LEFT_TORSO,
+        part = 'IS.PPC', section = sections.LEFT_TORSO,
         slots = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 },
       }),
       slot_zero = capture(btech.unit.install_weapon, unit(), {
-        part = 'Agra.IS.PPC', section = sections.LEFT_TORSO, slots = { 0, 3, 4 },
+        part = 'IS.PPC', section = sections.LEFT_TORSO, slots = { 0, 3, 4 },
       }),
       slot_fraction = capture(btech.unit.install_weapon, unit(), {
-        part = 'Agra.IS.PPC', section = sections.LEFT_TORSO, slots = { 1.5, 3, 4 },
+        part = 'IS.PPC', section = sections.LEFT_TORSO, slots = { 1.5, 3, 4 },
       }),
       slot_string = capture(btech.unit.install_weapon, unit(), {
-        part = 'Agra.IS.PPC', section = sections.LEFT_TORSO, slots = { '2', 3, 4 },
+        part = 'IS.PPC', section = sections.LEFT_TORSO, slots = { '2', 3, 4 },
       }),
       slots_omitted = capture(btech.unit.install_weapon, unit(), {
-        part = 'Agra.IS.PPC', section = sections.LEFT_TORSO,
+        part = 'IS.PPC', section = sections.LEFT_TORSO,
       }),
       part_boolean = capture(btech.unit.install_weapon, unit(), {
         part = true, section = sections.LEFT_TORSO, slots = { 5, 6, 7 },
       }),
-      part_unregistered_packed = capture(btech.unit.install_weapon, unit(), {
+      part_unregistered_id = capture(btech.unit.install_weapon, unit(), {
         part = 115, section = sections.LEFT_TORSO, slots = { 5, 6, 7 },
       }),
       part_unregistered_record = capture(btech.unit.install_weapon, unit(), {
-        part = { id = 406, brand = 0 }, section = sections.LEFT_TORSO, slots = { 5, 6, 7 },
+        part = { id = 406 }, section = sections.LEFT_TORSO, slots = { 5, 6, 7 },
       }),
       section_wrong_catalog = capture(btech.unit.install_weapon, unit(), {
-        part = 'Agra.IS.PPC', section = btech.unit.types.MECH, slots = { 5, 6, 7 },
+        part = 'IS.PPC', section = btech.unit.types.MECH, slots = { 5, 6, 7 },
       }),
       section_wrong_unit = capture(btech.unit.install_weapon, unit(), {
-        part = 'Agra.IS.PPC', section = sections.TURRET, slots = { 1 },
+        part = 'IS.PPC', section = sections.TURRET, slots = { 1 },
       }),
       section_omitted = capture(btech.unit.install_weapon, unit(), {
-        part = 'Agra.IS.PPC', slots = { 5, 6, 7 },
+        part = 'IS.PPC', slots = { 5, 6, 7 },
       }),
       request_not_table = capture(btech.unit.install_weapon, unit(), false),
       request_omitted = capture(btech.unit.install_weapon, unit()),
       unknown_field = capture(btech.unit.install_weapon, unit(), {
-        part = 'Agra.IS.PPC', section = sections.LEFT_TORSO, slots = { 5, 6, 7 }, extra = 1,
+        part = 'IS.PPC', section = sections.LEFT_TORSO, slots = { 5, 6, 7 }, extra = 1,
       }),
       rear_facing_string = capture(btech.unit.install_weapon, unit(), {
-        part = 'Agra.IS.PPC', section = sections.LEFT_TORSO, slots = { 5, 6, 7 },
+        part = 'IS.PPC', section = sections.LEFT_TORSO, slots = { 5, 6, 7 },
         rear_facing = 'yes',
       }),
     },
     configure = capture(btech.unit.configure_ammunition, unit(), {
-      weapon = 'Telos.IS.SRM-4', section = sections.RIGHT_TORSO, slot = 1,
+      weapon = 'IS.SRM-4', section = sections.RIGHT_TORSO, slot = 1,
       half_ton = true, ammunition_modes = { btech.unit.ammunition_modes.INFERNO },
     }),
     configured_slot = critical_row(unit(), sections.RIGHT_TORSO, 1),
@@ -270,27 +269,27 @@ local function page_equipment()
     restocked_slot = critical_row(unit(), sections.RIGHT_TORSO, 1),
     ammunition_errors = {
       weapon_not_ammunition = capture(btech.unit.configure_ammunition, unit(), {
-        weapon = 'Agra.IS.PPC', section = sections.RIGHT_TORSO, slot = 2,
+        weapon = 'IS.PPC', section = sections.RIGHT_TORSO, slot = 2,
       }),
       weapon_unregistered = capture(btech.unit.configure_ammunition, unit(), {
         weapon = 'Not.A.Part', section = sections.RIGHT_TORSO, slot = 2,
       }),
       slot_zero = capture(btech.unit.configure_ammunition, unit(), {
-        weapon = 'Telos.IS.SRM-4', section = sections.RIGHT_TORSO, slot = 0,
+        weapon = 'IS.SRM-4', section = sections.RIGHT_TORSO, slot = 0,
       }),
       slot_fraction = capture(btech.unit.configure_ammunition, unit(), {
-        weapon = 'Telos.IS.SRM-4', section = sections.RIGHT_TORSO, slot = 1.5,
+        weapon = 'IS.SRM-4', section = sections.RIGHT_TORSO, slot = 1.5,
       }),
       modes_not_table = capture(btech.unit.configure_ammunition, unit(), {
-        weapon = 'Telos.IS.SRM-4', section = sections.RIGHT_TORSO, slot = 2,
+        weapon = 'IS.SRM-4', section = sections.RIGHT_TORSO, slot = 2,
         ammunition_modes = 'Inferno',
       }),
       modes_string_entry = capture(btech.unit.configure_ammunition, unit(), {
-        weapon = 'Telos.IS.SRM-4', section = sections.RIGHT_TORSO, slot = 2,
+        weapon = 'IS.SRM-4', section = sections.RIGHT_TORSO, slot = 2,
         ammunition_modes = { 'Inferno' },
       }),
       half_ton_string = capture(btech.unit.configure_ammunition, unit(), {
-        weapon = 'Telos.IS.SRM-4', section = sections.RIGHT_TORSO, slot = 2,
+        weapon = 'IS.SRM-4', section = sections.RIGHT_TORSO, slot = 2,
         half_ton = 'yes',
       }),
       restock_weapon_slot = capture(btech.unit.restock_ammunition, unit(),
@@ -332,13 +331,13 @@ local function page_equipment()
     }),
     special_errors = {
       weapon_part = capture(btech.unit.install_special, unit(), {
-        part = 'Agra.IS.PPC', section = sections.HEAD, slot = 6,
+        part = 'IS.PPC', section = sections.HEAD, slot = 6,
       }),
       unregistered_part = capture(btech.unit.install_special, unit(), {
-        part = { id = 406, brand = 0 }, section = sections.HEAD, slot = 6,
+        part = { id = 406 }, section = sections.HEAD, slot = 6,
       }),
       named_part = capture(btech.unit.install_special, unit(), {
-        part = 'Agra.IS.FerroFibrous', section = sections.HEAD, slot = 6,
+        part = 'IS.FerroFibrous', section = sections.HEAD, slot = 6,
       }),
       part_string = capture(btech.unit.install_special, unit(), {
         part = 'nope', section = sections.HEAD, slot = 6,

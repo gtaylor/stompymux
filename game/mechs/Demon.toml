@@ -3,36 +3,35 @@ class = "vehicle"
 movement = "wheel"
 tons = 60
 walk_mp = 6
-computer = 3
 
 [sections.left_side]
 armor = 30
 slots = [
-    { at = 1, item = "IS.MediumLaser", brand = 3 },
+    { at = 1, item = "IS.MediumLaser" },
 ]
 
 [sections.right_side]
 armor = 30
 slots = [
-    { at = 1, item = "IS.MediumLaser", brand = 3 },
+    { at = 1, item = "IS.MediumLaser" },
 ]
 
 [sections.front_side]
 armor = 50
 slots = [
-    { at = 1, item = "IS.SRM-6", brand = 3 },
+    { at = 1, item = "IS.SRM-6" },
 ]
 
 [sections.aft_side]
 armor = 20
 slots = [
-    { at = 1, item = "Case", brand = 3 },
+    { at = 1, item = "Case" },
 ]
 
 [sections.turret]
 armor = 30
 slots = [
-    { at = 1, item = "IS.GaussRifle", brand = 3 },
+    { at = 1, item = "IS.GaussRifle" },
     { at = "2-3", item = "Ammo_IS.GaussRifle", rounds = 8 },
     { at = "4-5", item = "Ammo_IS.SRM-6", rounds = 15 },
 ]

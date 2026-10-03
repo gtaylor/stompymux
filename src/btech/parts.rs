@@ -13,7 +13,7 @@ pub const WEAPON_PART_IDS: RangeInclusive<i32> = 1..=384;
 /// bomb, component and commodity identity.
 pub const AMMUNITION_PART_OFFSET: i32 = 1024;
 
-/// Every part identity is below this bound, so a brand and identity pack into one number.
+/// Every part identity is below this bound.
 pub const PART_ID_LIMIT: i32 = 2048;
 
 impl BattleWeapon {
@@ -88,7 +88,7 @@ impl BattlePart {
         (1..PART_ID_LIMIT).filter_map(Self::from_id)
     }
 
-    /// Resolve an exact, ASCII case-insensitive stock name; manufacturer selection is separate.
+    /// Resolve an exact, ASCII case-insensitive stock name.
     pub fn parse(name: &str) -> Result<Self> {
         let mut matches = Self::all().filter(|part| part.name.eq_ignore_ascii_case(name));
         let part = matches
@@ -139,9 +139,8 @@ pub fn set_inventory_named(
     actor: ObjectId,
     object: ObjectId,
     name: &str,
-    brand: u8,
     quantity: i32,
 ) -> Result<()> {
     let part = BattlePart::parse(name)?;
-    super::set_inventory_quantity(world, actor, object, part.part_id, brand, quantity)
+    super::set_inventory_quantity(world, actor, object, part.part_id, quantity)
 }

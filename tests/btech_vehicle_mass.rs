@@ -155,7 +155,6 @@ fn vehicle_systems_use_whole_installation_mass_without_duplicate_sink_weight() {
                     equipment: equipment.into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
         let report = template.mass().unwrap();

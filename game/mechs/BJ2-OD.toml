@@ -5,7 +5,6 @@ tons = 50
 walk_mp = 6
 jump_mp = 4
 heat_sinks = 26
-computer = 4
 radio = 4
 cargo_space = 0
 
@@ -13,64 +12,63 @@ cargo_space = 0
 engine = "xl"
 structure = "endo_steel"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 14
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-8", item = "HeatSink", brand = 3 },
-    { at = "9-11", item = "IS.PPC", brand = 3 },
-    { at = 12, item = "IS.MediumPulseLaser", brand = 3 },
+    { at = "3-8", item = "HeatSink" },
+    { at = "9-11", item = "IS.PPC" },
+    { at = 12, item = "IS.MediumPulseLaser" },
 ]
 
 [sections.right_arm]
 armor = 14
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-8", item = "HeatSink", brand = 3 },
-    { at = "9-12", item = "IS.LargeLaser", brand = 3 },
+    { at = "3-8", item = "HeatSink" },
+    { at = "9-12", item = "IS.LargeLaser" },
 ]
 
 [sections.left_torso]
 armor = 18
 rear = 6
 slots = [
-    { at = "4-5", item = "IS.MediumLaser", brand = 3 },
-    { at = 6, item = "IS.MediumPulseLaser", brand = 3 },
-    { at = "7-12", item = "EndoSteel", brand = 3 },
+    { at = "4-5", item = "IS.MediumLaser" },
+    { at = 6, item = "IS.MediumPulseLaser" },
+    { at = "7-12", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 18
 rear = 6
 slots = [
-    { at = "4-6", item = "HeatSink", brand = 3 },
-    { at = "7-12", item = "EndoSteel", brand = 3 },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-12", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 22
 rear = 9
 slots = [
-    { at = 11, item = "IS.SmallLaser", brand = 3 },
-    { at = 12, item = "EndoSteel", brand = 3 },
+    { at = 11, item = "IS.SmallLaser" },
+    { at = 12, item = "EndoSteel" },
 ]
 
 [sections.left_leg]
 armor = 18
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 18
 slots = [
-    { at = "5-6", item = "JumpJet", brand = 3 },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "EndoSteel", brand = 3 },
+    { at = 4, item = "EndoSteel" },
 ]

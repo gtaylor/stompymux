@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "track"
 tons = 60
 walk_mp = 5
-computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0
@@ -17,7 +16,7 @@ armor = 30
 [sections.front_side]
 armor = 42
 slots = [
-    { at = 1, item = "IS.SmallLaser", brand = 3 },
+    { at = 1, item = "IS.SmallLaser" },
 ]
 
 [sections.aft_side]
@@ -29,5 +28,5 @@ slots = [
 [sections.turret]
 armor = 40
 slots = [
-    { at = "1-3", item = "IS.RotaryAC/2", brand = 3 },
+    { at = "1-3", item = "IS.RotaryAC/2" },
 ]

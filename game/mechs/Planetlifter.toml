@@ -4,7 +4,6 @@ movement = "fly"
 tons = 50
 walk_mp = 6
 heat_sinks = 0
-computer = 3
 fuel = 2500
 specials = ["CargoTech"]
 

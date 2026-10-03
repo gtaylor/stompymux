@@ -10,7 +10,7 @@ max_suits = 4
 armor = 5
 internals = 1
 slots = [
-    { at = "1-3", item = "IS.MachineGun", brand = 3 },
+    { at = "1-3", item = "IS.MachineGun" },
     { at = 4, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
 ]
 
@@ -18,7 +18,7 @@ slots = [
 armor = 5
 internals = 1
 slots = [
-    { at = "1-3", item = "IS.MachineGun", brand = 3 },
+    { at = "1-3", item = "IS.MachineGun" },
     { at = 4, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
 ]
 
@@ -26,7 +26,7 @@ slots = [
 armor = 5
 internals = 1
 slots = [
-    { at = "1-3", item = "IS.MachineGun", brand = 3 },
+    { at = "1-3", item = "IS.MachineGun" },
     { at = 4, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
 ]
 
@@ -34,6 +34,6 @@ slots = [
 armor = 5
 internals = 1
 slots = [
-    { at = "1-3", item = "IS.MachineGun", brand = 3 },
+    { at = "1-3", item = "IS.MachineGun" },
     { at = 4, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
 ]

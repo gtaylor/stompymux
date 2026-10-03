@@ -17,7 +17,7 @@ armor = 66
 [sections.front_side]
 armor = 66
 slots = [
-    { at = 1, item = "IS.LRM-20", brand = 3 },
+    { at = 1, item = "IS.LRM-20" },
     { at = 2, item = "Ammo_IS.LRM-20", rounds = 6 },
 ]
 
@@ -27,8 +27,8 @@ armor = 48
 [sections.turret]
 armor = 66
 slots = [
-    { at = 1, item = "IS.LRM-20", brand = 3 },
+    { at = 1, item = "IS.LRM-20" },
     { at = "2-3", item = "Ammo_IS.LRM-20", rounds = 6 },
-    { at = "4-5", item = "IS.MachineGun", brand = 3 },
+    { at = "4-5", item = "IS.MachineGun" },
     { at = 7, item = "Ammo_IS.MachineGun", rounds = 200 },
 ]

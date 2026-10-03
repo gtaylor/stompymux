@@ -9,14 +9,14 @@ heat_sinks = 15
 [sections.left_arm]
 armor = 10
 slots = [
-    { at = 5, item = "IS.MediumLaser", brand = 4 },
+    { at = 5, item = "IS.MediumLaser" },
 ]
 
 [sections.right_arm]
 armor = 10
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "IS.MediumLaser", brand = 4 },
+    { at = "4-5", item = "IS.MediumLaser" },
 ]
 
 [sections.left_torso]

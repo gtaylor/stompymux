@@ -4,7 +4,6 @@ movement = "vtol"
 tons = 30
 walk_mp = 12
 heat_sinks = 13
-computer = 5
 radio = 5
 cargo_space = 700
 specials = ["CargoTech"]
@@ -15,26 +14,26 @@ tech_base = "clan"
 [sections.left_side]
 armor = 14
 slots = [
-    { at = "6-12", item = "FerroFibrous", brand = 5 },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.right_side]
 armor = 14
 slots = [
-    { at = "6-12", item = "FerroFibrous", brand = 5 },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.front_side]
 armor = 16
 slots = [
-    { at = 1, item = "CL.ERMediumLaser", brand = 5 },
-    { at = 2, item = "CL.MediumPulseLaser", brand = 5 },
+    { at = 1, item = "CL.ERMediumLaser" },
+    { at = 2, item = "CL.MediumPulseLaser" },
 ]
 
 [sections.aft_side]
 armor = 9
 slots = [
-    { at = 1, item = "CL.MediumPulseLaser", brand = 5 },
+    { at = 1, item = "CL.MediumPulseLaser" },
 ]
 
 [sections.rotor]

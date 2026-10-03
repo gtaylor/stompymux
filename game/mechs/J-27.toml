@@ -24,6 +24,6 @@ armor = 6
 [sections.turret]
 armor = 2
 slots = [
-    { at = 1, item = "IS.MachineGun", brand = 3 },
+    { at = 1, item = "IS.MachineGun" },
     { at = 2, item = "Ammo_IS.MachineGun", rounds = 200 },
 ]

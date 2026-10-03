@@ -4,62 +4,60 @@ movement = "biped"
 tons = 80
 walk_mp = 6
 heat_sinks = 22
-computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
 structure = "endo_steel"
-brand = 3
 
 [sections.left_arm]
 armor = 26
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "IS.PPC", brand = 3 },
+    { at = "4-6", item = "IS.PPC" },
 ]
 
 [sections.right_arm]
 armor = 26
 slots = [
-    { at = "5-7", item = "IS.PPC", brand = 3 },
+    { at = "5-7", item = "IS.PPC" },
 ]
 
 [sections.left_torso]
 armor = 25
 rear = 9
 slots = [
-    { at = "1-3", item = "HeatSink", brand = 3 },
-    { at = "4-10", item = "EndoSteel", brand = 3 },
+    { at = "1-3", item = "HeatSink" },
+    { at = "4-10", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 25
 rear = 9
 slots = [
-    { at = 1, item = "HeatSink", brand = 3 },
-    { at = "2-3", item = "IS.ERLargeLaser", brand = 3 },
-    { at = "4-10", item = "EndoSteel", brand = 3 },
+    { at = 1, item = "HeatSink" },
+    { at = "2-3", item = "IS.ERLargeLaser" },
+    { at = "4-10", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 34
 rear = 16
 slots = [
-    { at = "11-12", item = "HeatSink", brand = 3 },
+    { at = "11-12", item = "HeatSink" },
 ]
 
 [sections.left_leg]
 armor = 34
 slots = [
-    { at = "5-6", item = "HeatSink", brand = 3 },
+    { at = "5-6", item = "HeatSink" },
 ]
 
 [sections.right_leg]
 armor = 34
 slots = [
-    { at = "5-6", item = "HeatSink", brand = 3 },
+    { at = "5-6", item = "HeatSink" },
 ]
 
 [sections.head]

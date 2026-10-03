@@ -5,56 +5,54 @@ tons = 45
 walk_mp = 9
 jump_mp = 6
 heat_sinks = 20
-computer = 4
 radio = 4
 
 [construction]
 engine = "xl"
 armor = "ferro_fibrous"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 14
 slots = [
-    { at = 5, item = "IS.MediumLaser", brand = 3 },
-    { at = "6-7", item = "IS.MachineGun", brand = 3 },
-    { at = "8-11", item = "FerroFibrous", brand = 3 },
+    { at = 5, item = "IS.MediumLaser" },
+    { at = "6-7", item = "IS.MachineGun" },
+    { at = "8-11", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 14
 slots = [
-    { at = "5-6", item = "IS.LargePulseLaser", brand = 3 },
-    { at = 7, item = "IS.MediumLaser", brand = 3 },
-    { at = 8, item = "IS.Anti-MissileSystem", brand = 3 },
-    { at = "9-10", item = "FerroFibrous", brand = 3 },
+    { at = "5-6", item = "IS.LargePulseLaser" },
+    { at = 7, item = "IS.MediumLaser" },
+    { at = 8, item = "IS.Anti-MissileSystem" },
+    { at = "9-10", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 17
 rear = 4
 slots = [
-    { at = "4-6", item = "JumpJet", brand = 3 },
+    { at = "4-6", item = "JumpJet" },
     { at = "7-8", item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
     { at = 9, item = "Ammo_IS.MachineGun", rounds = 200 },
-    { at = 10, item = "Case", brand = 3 },
-    { at = "11-12", item = "FerroFibrous", brand = 3 },
+    { at = 10, item = "Case" },
+    { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 17
 rear = 4
 slots = [
-    { at = "4-6", item = "JumpJet", brand = 3 },
-    { at = "7-12", item = "FerroFibrous", brand = 3 },
+    { at = "4-6", item = "JumpJet" },
+    { at = "7-12", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 21
 rear = 5
 slots = [
-    { at = "11-12", item = "Masc", brand = 3 },
+    { at = "11-12", item = "Masc" },
 ]
 
 [sections.left_leg]

@@ -4,7 +4,6 @@ movement = "biped"
 tons = 60
 walk_mp = 6
 heat_sinks = 15
-computer = 5
 radio = 4
 specials = ["AntiAircraft", "SearchLight"]
 
@@ -12,7 +11,7 @@ specials = ["AntiAircraft", "SearchLight"]
 armor = 15
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "IS.LargeLaser", brand = 4 },
+    { at = "3-4", item = "IS.LargeLaser" },
     { at = "5-7", item = "IS.PPC" },
 ]
 
@@ -20,7 +19,7 @@ slots = [
 armor = 15
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "IS.LargeLaser", brand = 4 },
+    { at = "3-4", item = "IS.LargeLaser" },
     { at = "5-7", item = "IS.PPC" },
 ]
 

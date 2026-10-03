@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "wheel"
 tons = 40
 walk_mp = 6
-computer = 3
 
 [construction]
 engine = "ice"
@@ -17,7 +16,7 @@ armor = 22
 [sections.front_side]
 armor = 30
 slots = [
-    { at = 1, item = "IS.AC/20", brand = 3 },
+    { at = 1, item = "IS.AC/20" },
     { at = "2-5", item = "Ammo_IS.AC/20", rounds = 5 },
 ]
 

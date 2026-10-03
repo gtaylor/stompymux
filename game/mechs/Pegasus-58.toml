@@ -14,10 +14,10 @@ armor = 14
 [sections.front_side]
 armor = 18
 slots = [
-    { at = 1, item = "IS.MediumPulseLaser", brand = 3 },
-    { at = 2, item = "BeagleProbe", brand = 3 },
-    { at = 3, item = "Ecm", brand = 3 },
-    { at = 4, item = "TAG", brand = 3 },
+    { at = 1, item = "IS.MediumPulseLaser" },
+    { at = 2, item = "BeagleProbe" },
+    { at = 3, item = "Ecm" },
+    { at = 4, item = "TAG" },
 ]
 
 [sections.aft_side]
@@ -26,6 +26,6 @@ armor = 19
 [sections.turret]
 armor = 16
 slots = [
-    { at = "1-2", item = "IS.SRM-6", brand = 3 },
+    { at = "1-2", item = "IS.SRM-6" },
     { at = 3, item = "Ammo_IS.SRM-6", rounds = 15 },
 ]

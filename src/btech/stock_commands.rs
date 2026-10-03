@@ -70,7 +70,6 @@ pub fn change_inventory_action(
                     quantity,
                     name,
                     part_id: entry.part_id,
-                    brand_id: entry.brand_id,
                 });
             }
         }

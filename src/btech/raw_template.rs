@@ -516,7 +516,6 @@ pub fn raw_default_mech_criticals() -> BTreeMap<RawSectionCode, SectionDefinitio
                     equipment: equipment.into(),
                     data: "-".into(),
                     modes: Vec::new(),
-                    brand: None,
                 },
             );
         }

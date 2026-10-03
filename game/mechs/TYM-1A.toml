@@ -4,7 +4,6 @@ movement = "biped"
 tons = 75
 walk_mp = 6
 heat_sinks = 28
-computer = 4
 radio = 4
 cargo_space = 0
 max_suits = 0
@@ -13,40 +12,39 @@ max_suits = 0
 engine = "xl"
 structure = "endo_steel"
 heat_sinks = "double"
-brand = 3
 
 [sections.left_arm]
 armor = 20
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-8", item = "IS.LB10-XAC", brand = 3 },
+    { at = "3-8", item = "IS.LB10-XAC" },
     { at = 9, item = "Ammo_IS.LB10-XAC", rounds = 10 },
     { at = 10, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
-    { at = "11-12", item = "EndoSteel", brand = 3 },
+    { at = "11-12", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 20
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-6", item = "IS.ERLargeLaser", brand = 3 },
-    { at = "7-12", item = "EndoSteel", brand = 3 },
+    { at = "3-6", item = "IS.ERLargeLaser" },
+    { at = "7-12", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
 armor = 20
 rear = 7
 slots = [
-    { at = "4-9", item = "HeatSink", brand = 3 },
-    { at = "10-12", item = "IS.MediumLaser", brand = 3 },
+    { at = "4-9", item = "HeatSink" },
+    { at = "10-12", item = "IS.MediumLaser" },
 ]
 
 [sections.right_torso]
 armor = 20
 rear = 7
 slots = [
-    { at = "4-8", item = "IS.LRM-20", brand = 3 },
-    { at = "9-10", item = "Ecm", brand = 3 },
+    { at = "4-8", item = "IS.LRM-20" },
+    { at = "9-10", item = "Ecm" },
     { at = "11-12", item = "Ammo_IS.LRM-20", rounds = 6 },
 ]
 
@@ -54,19 +52,19 @@ slots = [
 armor = 30
 rear = 9
 slots = [
-    { at = "11-12", item = "EndoSteel", brand = 3 },
+    { at = "11-12", item = "EndoSteel" },
 ]
 
 [sections.left_leg]
 armor = 25
 slots = [
-    { at = "5-6", item = "EndoSteel", brand = 3 },
+    { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.right_leg]
 armor = 25
 slots = [
-    { at = "5-6", item = "EndoSteel", brand = 3 },
+    { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.head]

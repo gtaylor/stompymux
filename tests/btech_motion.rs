@@ -9990,7 +9990,6 @@ async fn artemis_v_guidance_improves_aim() {
                     equipment: "ArtemisIV".into(),
                     data: "11".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
         template
@@ -10051,7 +10050,6 @@ async fn artemis_native_lua_ammunition_fire_and_restart() {
                 equipment: "ArtemisIV".into(),
                 data: "11".into(),
                 modes: vec![],
-                brand: None,
             },
         );
     template
@@ -11641,7 +11639,9 @@ async fn rotary_burst_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
     for weapon in weapons.iter().copied() {
         for (rounds, mode, flag, jam_limit) in [
             (2_u8, BattleFireMode::Rotary2, "Rotary_TwoShot", 2_u8),
+            (3, BattleFireMode::Rotary3, "Rotary_ThreeShot", 2),
             (4, BattleFireMode::Rotary4, "Rotary_FourShot", 3),
+            (5, BattleFireMode::Rotary5, "Rotary_FiveShot", 3),
             (6, BattleFireMode::Rotary6, "Rotary_SixShot", 4),
         ] {
             for (supply, attack, skill) in [
@@ -17597,7 +17597,6 @@ fn install_test_myomer(world: &mut stompymux_rs::World, id: ObjectId) {
                     equipment: "TripleStrengthMyomer".into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
     }
@@ -17881,7 +17880,6 @@ fn install_test_handweapons(
                         equipment: name.into(),
                         data: "-".into(),
                         modes: vec![],
-                        brand: None,
                     },
                 );
         }
@@ -17908,7 +17906,6 @@ fn install_test_handweapons(
                     equipment: "Dual_Saw".into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
         }
@@ -18405,7 +18402,6 @@ fn install_right_arm_weapon(
                 equipment: name.into(),
                 data: "-".into(),
                 modes: vec![],
-                brand: None,
             },
         );
     }
@@ -27670,7 +27666,6 @@ fn install_test_narc(
                 equipment: weapon.name().into(),
                 data: "-".into(),
                 modes: vec![],
-                brand: None,
             },
         );
     }
@@ -27681,7 +27676,6 @@ fn install_test_narc(
                 equipment: format!("Ammo_{}", weapon.name()),
                 data: "6".into(),
                 modes,
-                brand: None,
             },
         );
     }
@@ -28057,7 +28051,6 @@ fn install_test_electronics(
                     equipment: name.into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
     }
@@ -28314,7 +28307,6 @@ async fn electronics_suppress_narc_and_artemis_guidance() {
                             equipment: "ArtemisIV".into(),
                             data: "11".into(),
                             modes: vec![],
-                            brand: None,
                         },
                     );
                 definition
@@ -28480,7 +28472,6 @@ async fn electronics_angel_disables_streak_homing() {
                                 equipment: weapon.name().into(),
                                 data: "-".into(),
                                 modes: vec![],
-                                brand: None,
                             },
                         );
                 }
@@ -28761,7 +28752,6 @@ fn install_test_inarc(world: &mut stompymux_rs::World, id: ObjectId) -> usize {
                 equipment: "IS.iNarcBeacon".into(),
                 data: "-".into(),
                 modes: vec![],
-                brand: None,
             },
         );
     }
@@ -28778,7 +28768,6 @@ fn install_test_inarc(world: &mut stompymux_rs::World, id: ObjectId) -> usize {
                 equipment: "Ammo_IS.iNarcBeacon".into(),
                 data: "4".into(),
                 modes: flag.map(|flag| vec![flag.into()]).unwrap_or_default(),
-                brand: None,
             },
         );
     }
@@ -29131,7 +29120,6 @@ fn prepare_test_pod_removal(
                     equipment: equipment.into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
         }
@@ -29445,7 +29433,6 @@ fn install_test_stealth(world: &mut stompymux_rs::World, id: ObjectId) {
                         equipment: "StealthArmor".into(),
                         data: "-".into(),
                         modes: vec![],
-                        brand: None,
                     },
                 );
         }
@@ -29462,7 +29449,6 @@ fn install_test_stealth(world: &mut stompymux_rs::World, id: ObjectId) {
                     equipment: "Ecm".into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
     }
@@ -29729,7 +29715,6 @@ fn install_test_nss(world: &mut stompymux_rs::World, id: ObjectId) {
                     equipment: "NullSig_Device".into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
     }
@@ -29853,8 +29838,7 @@ async fn nss_concealment_coexists_and_allows_unlocked_fire() {
         state["constructed"][target.0.to_string()]["definition"]["sections"][section]["criticals"]
             ["5"]["equipment"] = "StealthArmor".into();
         state["constructed"][target.0.to_string()]["definition"]["sections"][section]["criticals"]
-            ["3"] =
-            serde_json::json!({"equipment":"NullSig_Device","data":"-","modes":[],"brand":null});
+            ["3"] = serde_json::json!({"equipment":"NullSig_Device","data":"-","modes":[]});
     }
     state["constructed"][target.0.to_string()]["power"] = serde_json::json!({"state":"running"});
     state["constructed"][target.0.to_string()]["null_signature"] =
@@ -30281,7 +30265,6 @@ fn install_test_probe(
                     equipment: name.into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
     }
@@ -30607,7 +30590,6 @@ fn install_test_tag(world: &mut stompymux_rs::World, id: ObjectId, target: Objec
                 equipment: "TAG".into(),
                 data: "-".into(),
                 modes: vec![],
-                brand: None,
             },
         );
     BattleUnit::from_template(definition.clone()).unwrap();
@@ -34007,7 +33989,6 @@ async fn apod_live_fire_and_restart() {
                     equipment: weapon.name().into(),
                     data: "-".into(),
                     modes: vec![],
-                    brand: None,
                 },
             );
         let (_dir, config, mut world, id) = fixture_assets(&source, template.clone()).await;
