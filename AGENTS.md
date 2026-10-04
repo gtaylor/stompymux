@@ -61,4 +61,5 @@ stompymux-rs is a Rust rewrite of stompymux, a C-based MUD server that includes 
 
 - Integration tests must not interact with the production `game/` directory. Copy fixtures to tests/fixtures/game and tests/fixtures instead.
 - Avoid hardcoded sleeps where possible. Prefer watches and other techniques to keep our test suite time low.
+- Put Mechs and vehicles into exact states with `BtechState::edit_unit` or its single-field setters (`set_unit_dice`, `set_unit_power`, and so on), which check field names at compile time and validate the result for either chassis. Read state both chassis share through `BtechState::unit`. Edit serialized records with `rewrite_unit_record` only when a test needs a deliberately invalid unit.
 - `tests` directory structure doesn't have to exactly match the source structure, but keep test suites grouped into topical subdirectories.

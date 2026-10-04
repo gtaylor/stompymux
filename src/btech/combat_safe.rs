@@ -4,15 +4,8 @@ use anyhow::{Context, Result, ensure};
 
 /// Read the operator-imposed immunity independently of construction and cockpit power.
 pub fn battle_combat_safe(world: &World, id: ObjectId) -> Result<bool> {
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        return Ok(unit.combat_safe);
-    }
-    Ok(world
-        .btech
-        .constructed_units()
-        .get(&id)
-        .context("Unit is not constructed")?
-        .combat_safe)
+    let unit = world.btech.unit(id).context("Unit is not constructed")?;
+    Ok(unit.combat_safe())
 }
 
 /// Trusted scenario edit; the caller owns administrative authority and transaction publication.
@@ -24,17 +17,16 @@ pub fn set_battle_combat_safe(world: &mut World, id: ObjectId, enabled: bool) ->
             .is_some_and(|o| o.kind == Kind::Thing && !o.flags.contains(Flag::Going)),
         "Unit must be a live thing"
     );
-    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
-        unit.combat_safe = enabled;
-        return Ok(());
-    }
-    world
-        .btech
-        .constructed
-        .get_mut(&id)
-        .context("Unit is not constructed")?
-        .combat_safe = enabled;
-    Ok(())
+    super::with_unit_mut!(
+        world
+            .btech
+            .unit_mut(id)
+            .context("Unit is not constructed")?,
+        |unit| {
+            unit.combat_safe = enabled;
+            Ok(())
+        }
+    )
 }
 
 /// Damage uses the source map; unattributed environmental entries originate at the target.

@@ -328,11 +328,7 @@ async fn rocket_and_one_shot_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                     .criticals
                     .insert(slot, part.clone());
             }
-            base.btech
-                .rewrite_unit_record(id, |record| {
-                    record["definition"] = serde_json::to_value(definition).unwrap();
-                })
-                .unwrap();
+            base.btech.set_unit_definition(id, definition).unwrap();
             base.validate(&config).unwrap();
             let index = base.btech.constructed_units()[&id]
                 .loadout()
@@ -632,9 +628,7 @@ async fn targeting_computer_aim_native_lua_damage_and_restart() {
                 .insert(slot, part.clone());
         }
         base.btech
-            .rewrite_unit_record(id, |record| {
-                record["definition"] = serde_json::to_value(&template).unwrap();
-            })
+            .set_unit_definition(id, template.clone())
             .unwrap();
         base.validate(&config).unwrap();
         let assisted =
@@ -666,9 +660,12 @@ async fn targeting_computer_aim_native_lua_damage_and_restart() {
                     slot: 5,
                 })
                 .unwrap();
-                let mut state = serde_json::to_value(&world.btech).unwrap();
-                state["constructed"][id.0.to_string()] = serde_json::to_value(unit).unwrap();
-                world.btech = serde_json::from_value(state).unwrap();
+                world
+                    .btech
+                    .rewrite_unit_record(id, |record| {
+                        *record = serde_json::to_value(unit).unwrap();
+                    })
+                    .unwrap();
             }
             restore_database(&config, &pristine_db);
             persistence::save(&config.database(), &world).await.unwrap();
@@ -733,11 +730,7 @@ async fn targeting_computer_combat_critical_notice_and_section_loss() {
             .criticals
             .insert(slot, part.clone());
     }
-    base.btech
-        .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(template).unwrap();
-        })
-        .unwrap();
+    base.btech.set_unit_definition(id, template).unwrap();
     let hit = BattleHit {
         section: BattleSection::RightTorso,
         rear_armor: false,
@@ -845,11 +838,7 @@ async fn targeting_computer_environment_failure_feedback_replays() {
                 .criticals
                 .insert(4, part.clone());
         }
-        base.btech
-            .rewrite_unit_record(id, |record| {
-                record["definition"] = serde_json::to_value(template).unwrap();
-            })
-            .unwrap();
+        base.btech.set_unit_definition(id, template).unwrap();
         let seed = (0..=255)
             .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() < 8)
             .unwrap();
@@ -1102,11 +1091,10 @@ async fn half_ton_native_lua_fire_capacity_and_restart() {
         }
         base.validate(&config).unwrap();
         let mut invalid = base.clone();
+        // Overfill the bin through the raw record, which skips validation.
         invalid
             .btech
-            .rewrite_unit_record(id, |record| {
-                record["ammunition"][0] = (capacity + 1).into();
-            })
+            .rewrite_unit_record(id, |record| record["ammunition"][0] = (capacity + 1).into())
             .unwrap();
         assert!(invalid.validate(&config).is_err());
         let native = Scripts::new(
@@ -1231,12 +1219,7 @@ async fn hardened_armor_slows_running_and_hampers_piloting() {
     let mut definition = world.btech.constructed_units()[&id].definition().clone();
     let value = definition.attributes.entry("specials".into()).or_default();
     value.push_str(" HardenedArmor_Tech");
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
-        })
-        .unwrap();
+    world.btech.set_unit_definition(id, definition).unwrap();
     let hardened = world.btech.constructed_units()[&id]
         .mobility()
         .maximum_speed;
@@ -1293,12 +1276,7 @@ async fn artemis_v_guidance_improves_aim() {
             value.push(' ');
             value.push_str(flag);
         }
-        world
-            .btech
-            .rewrite_unit_record(id, |record| {
-                record["definition"] = serde_json::to_value(template).unwrap();
-            })
-            .unwrap();
+        world.btech.set_unit_definition(id, template).unwrap();
         let srm = world.btech.constructed_units()[&id]
             .loadout()
             .unwrap()
@@ -1350,11 +1328,7 @@ async fn artemis_native_lua_ammunition_fire_and_restart() {
         .get_mut(&0)
         .unwrap()
         .modes = vec!["Artemis/Mine".into()];
-    base.btech
-        .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(template).unwrap();
-        })
-        .unwrap();
+    base.btech.set_unit_definition(id, template).unwrap();
     shot_skill(&mut base, 30);
     set_battle_character_value(
         &mut base,
@@ -1476,9 +1450,12 @@ async fn weapon_feed_jam_readiness_controls_and_persistence() {
     assert!(readiness.intact && readiness.jammed && !readiness.ready);
     assert_eq!(unit.ammunition(), original.ammunition());
     assert_eq!(unit.mass().unwrap(), original.mass().unwrap());
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()] = serde_json::to_value(&unit).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            *record = serde_json::to_value(&unit).unwrap();
+        })
+        .unwrap();
     world.validate(&config).unwrap();
     let before = world.btech.clone();
     assert!(spend_battle_weapon(&mut world, id, ObjectId(1), index).is_err());
@@ -1544,9 +1521,11 @@ async fn unjam_native_lua_countdown_outcomes_and_restart() {
             .position(|m| m.weapon == BattleWeapon::Srm4)
             .unwrap();
         unit.jam_weapon(index).unwrap();
-        let mut state = serde_json::to_value(&base.btech).unwrap();
-        state["constructed"][id.0.to_string()] = serde_json::to_value(unit).unwrap();
-        base.btech = serde_json::from_value(state).unwrap();
+        base.btech
+            .rewrite_unit_record(id, |record| {
+                *record = serde_json::to_value(unit).unwrap();
+            })
+            .unwrap();
         let seed = (0..=255)
             .find(|seed| {
                 let roll = BattleDice::seeded([*seed; 32]).two_d6();
@@ -1612,12 +1591,7 @@ async fn unjam_native_lua_countdown_outcomes_and_restart() {
             );
         }
         if outcome == "empty" {
-            world
-                .btech
-                .rewrite_unit_record(id, |record| {
-                    record["ammunition"][0] = 0.into();
-                })
-                .unwrap();
+            world.btech.set_unit_ammunition_bin(id, 0, 0).unwrap();
         }
         if outcome == "shutdown" {
             stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
@@ -2778,9 +2752,11 @@ async fn rotary_unjam_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
             .position(|mount| mount.weapon == weapon)
             .unwrap();
         unit.jam_weapon(index).unwrap();
-        let mut state = serde_json::to_value(&base.btech).unwrap();
-        state["constructed"][id.0.to_string()] = serde_json::to_value(unit).unwrap();
-        base.btech = serde_json::from_value(state).unwrap();
+        base.btech
+            .rewrite_unit_record(id, |record| {
+                *record = serde_json::to_value(unit).unwrap();
+            })
+            .unwrap();
         base.validate(&config).unwrap();
         for extended in [false, true] {
             for connected in [false, true] {
@@ -4425,12 +4401,7 @@ fn check_incendiary_impact(
         refresh_battle_contacts(&mut world, &[observer]).unwrap();
     }
     assert!(!battle_observer_messages(&world, id, "test").is_empty());
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(seed).unwrap();
-        })
-        .unwrap();
+    world.btech.set_unit_dice(id, seed).unwrap();
     let rules = shot_rules();
     let report = resolve_battle_tactical_impact(
         &mut world,
@@ -4651,9 +4622,12 @@ async fn unjam_feedback_separates_pilot_cockpit_and_observers() {
             .position(|mount| mount.weapon == BattleWeapon::Srm4)
             .unwrap();
         unit.jam_weapon(index).unwrap();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][subject.0.to_string()] = serde_json::to_value(unit).unwrap();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(subject, |record| {
+                *record = serde_json::to_value(unit).unwrap();
+            })
+            .unwrap();
         begin_battle_unjam(&mut world, subject, ObjectId(1), index).unwrap();
         let seed = (0..=255)
             .find(|seed| (BattleDice::seeded([*seed; 32]).two_d6() >= 6) == (outcome != "failure"))
@@ -6836,10 +6810,7 @@ async fn equipment_loss_feedback_and_saved_replay() {
                         .expect("one selected critical with a destructive weapon result");
                     world
                         .btech
-                        .rewrite_unit_record(subject, |record| {
-                            record["dice"] =
-                                serde_json::to_value(BattleDice::seeded(seed)).unwrap();
-                        })
+                        .set_unit_dice(subject, BattleDice::seeded(seed))
                         .unwrap();
                 } else {
                     shot_seed(
@@ -7803,12 +7774,7 @@ async fn compact_status_export_ammunition_damage_and_option_precedence() {
         support::run_text(&scripts, &config, ObjectId(1), 1, "status NW").contains(full.trim_end())
     );
     assert_eq!(scripts.world().btech, before);
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["ammunition"][0] = 0.into();
-        })
-        .unwrap();
+    world.btech.set_unit_ammunition_bin(id, 0, 0).unwrap();
     assert!(
         !battle_unit_status(&world, id, "NW")
             .unwrap()
@@ -8045,9 +8011,7 @@ async fn kick_roll_matrix(target_seeds: std::ops::Range<u8>) {
     let (_dir, config, mut base, id, target) = kick_fixture().await;
     // A standing running target has no immobility discount: the fixed base target is three.
     base.btech
-        .rewrite_unit_record(target, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-        })
+        .set_unit_power(target, BattlePower::Running)
         .unwrap();
     base.validate(&config).unwrap();
     let mut saw_critical_fall = false;
@@ -8638,9 +8602,7 @@ async fn trip_rolls_balance_and_glancing_have_no_direct_impact() {
     use stompymux_rs::*;
     let (_dir, config, mut base, id, target) = kick_fixture().await;
     base.btech
-        .rewrite_unit_record(target, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-        })
+        .set_unit_power(target, BattlePower::Running)
         .unwrap();
     for (roll, mode, hit, glancing, target_roll) in [
         (2, BattleGlancingMode::Disabled, false, false, 12),

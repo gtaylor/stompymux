@@ -48,13 +48,14 @@ pub use btech::{
     BattleStaggerReport, BattleStaggerRules, BattleStandAttempt, BattleStandMode, BattleStandTimer,
     BattleSurface, BattleSurfaceBreak, BattleSystem, BattleTacticalImpact, BattleTargetLock,
     BattleTemplate, BattleTemplateCheck, BattleTerrainLos, BattleTorso, BattleUnit,
-    BattleUnitConfiguration, BattleUnitSignature, BattleUnjam, BattleVehicleHit,
-    BattleVehicleHitRules, BattleVehicleMotiveHit, BattleWaterRanges, BattleWeapon,
-    BattleWeaponDamage, BattleWeaponDamageEffects, BattleWeaponDamageKind, BattleWeaponRange,
-    BattleWeaponReadiness, BattleWeaponUse, BtechState, CriticalDefinition, CriticalLocation, Hex,
-    HexCoordinate, MapAsset, MapPointOfInterest, Point, RawMovement, RawSectionCode, RawTemplate,
-    RawUnitClass, SectionDefinition, StoredBattleUnit, StoredMap, SystemCritical, Terrain,
-    WeaponMount, WeaponProfile, advance_heat as advance_battle_heat,
+    BattleUnitConfiguration, BattleUnitDefinition, BattleUnitEdit, BattleUnitMut, BattleUnitRef,
+    BattleUnitSignature, BattleUnjam, BattleVehicleHit, BattleVehicleHitRules,
+    BattleVehicleMotiveHit, BattleWaterRanges, BattleWeapon, BattleWeaponDamage,
+    BattleWeaponDamageEffects, BattleWeaponDamageKind, BattleWeaponRange, BattleWeaponReadiness,
+    BattleWeaponUse, BtechState, CriticalDefinition, CriticalLocation, Hex, HexCoordinate,
+    MapAsset, MapPointOfInterest, Point, RawMovement, RawSectionCode, RawTemplate, RawUnitClass,
+    ResolvedLoadout, SalvoReport, SectionDefinition, ShotReport, StoredBattleUnit, StoredMap,
+    SystemCritical, Terrain, WeaponMount, WeaponProfile, advance_heat as advance_battle_heat,
     advance_jumps as advance_battle_jumps, advance_motion as advance_battle_motion,
     advance_overheat as advance_battle_overheat, advance_recovery as advance_battle_recovery,
     advance_recycle as advance_battle_recycle, advance_stagger as advance_battle_stagger,
@@ -824,8 +825,15 @@ pub use btech::{
 
 pub use btech::advance_vtol_environment as advance_battle_vtol_environment;
 pub use btech::resolve_vtol_crash as resolve_battle_vtol_crash;
+pub use btech::{
+    BattleFallFeedback, BattleVehicleFallFeedback, BattleVehicleFallReport, FallReport,
+    resolve_vehicle_fall as resolve_battle_vehicle_fall,
+};
+pub use btech::{
+    BattleUnitFallReport, BattleUnitShotReport, ByChassis, fire_unit_shot as fire_battle_unit_shot,
+    resolve_unit_fall as resolve_battle_unit_fall,
+};
 pub use btech::{BattleVehicleDescentEvent, advance_vtol_fall as advance_battle_vtol_fall};
-pub use btech::{BattleVehicleFallReport, resolve_vehicle_fall as resolve_battle_vehicle_fall};
 pub use btech::{
     begin_vtol_takeoff as begin_battle_vtol_takeoff,
     set_vtol_vertical_speed as set_battle_vtol_vertical_speed,

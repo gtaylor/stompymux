@@ -43,11 +43,7 @@ pub(super) fn check(
     extended: bool,
     character: bool,
 ) -> Result<TerrainControl> {
-    let pilot = if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        vehicle.pilot()
-    } else {
-        world.btech.constructed_units()[&id].pilot()
-    };
+    let pilot = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| { unit.pilot() });
     if pilot.is_none() {
         return Ok(TerrainControl::automatic(true));
     }

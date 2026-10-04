@@ -116,9 +116,12 @@ async fn shallow_ice_changes_terrain_without_falls_or_flooding() {
 #[tokio::test]
 async fn bridge_collapse_drops_deck_vehicles_and_clears_under_span_state() {
     let (_dir, config, mut world, map, ids) = fixture(Terrain::Bridge, 3).await;
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][ids[2].0.to_string()]["under_bridge"] = true.into();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(ids[2], |record| {
+            record["under_bridge"] = true.into();
+        })
+        .unwrap();
     let report = break_battle_bridge(
         &mut world,
         map,
@@ -179,9 +182,7 @@ async fn vehicle_fall_fractures_ice_before_outer_damage_and_replays_nested_falls
         .unwrap();
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded([seed; 32]))
         .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
@@ -197,7 +198,7 @@ async fn vehicle_fall_fractures_ice_before_outer_damage_and_replays_nested_falls
     assert_eq!(fracture.vehicle_falls[0].1.damage, 12);
     assert_eq!(fall.damage, 4);
     assert!(world.btech.vehicles()[&id].flooded());
-    assert!(!fall.impacts.is_empty());
+    assert!(!fall.groups.is_empty());
     world.validate(&config).unwrap();
 }
 

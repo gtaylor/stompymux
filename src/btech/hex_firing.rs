@@ -12,17 +12,13 @@ pub(super) fn resolve_in_action(
     index: usize,
     coordinate: HexCoordinate,
 ) -> Result<super::firing::BattleFiringAction> {
-    let weapon = if let Some(unit) = world.btech.vehicles().get(&shooter) {
-        unit.weapon_readiness(index)?.weapon
-    } else {
+    let weapon = crate::btech::with_unit!(
         world
             .btech
-            .constructed_units()
-            .get(&shooter)
-            .context("Shooter is not constructed")?
-            .weapon_readiness(index)?
-            .weapon
-    };
+            .unit(shooter)
+            .context("Shooter is not constructed")?,
+        |unit| { unit.weapon_readiness(index)?.weapon }
+    );
     let observers = super::broadcast::hex_fire_messages(world, shooter, coordinate, weapon);
     let explosions =
         super::observer_messages(world, shooter, "shudders from an internal explosion!");

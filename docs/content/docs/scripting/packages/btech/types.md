@@ -909,6 +909,7 @@ Alias: `"narc"|"homing"|"haywire"|"ecm"`
 - `propellant_roll`: `integer|nil` — Second caseless roll; eight or more ignites propellant.
 - `misload`: `BattleTacticalImpact|nil` — Applied misload or propellant ignition damage.
 - `launched`: `boolean` — False for failed Streak lock: no heat/ammo expenditure, but weapon recycles.
+- `hit`: `boolean` — Launch classification; missile near misses may have no target effects.
 - `expenditure`: `BattleWeaponUse`
 - `salvo`: `{kind: 'mech'|'vehicle'|'swarm', report: table}|nil` — Target-specific damage; nil on a miss or a heat-mode hit.
 - `heat_transfer`: `integer` — Heat already added to the target, zero unless a heat-mode shot hits.
@@ -925,7 +926,19 @@ Alias: `"narc"|"homing"|"haywire"|"ecm"`
 - `weapon_index`: `integer` — Zero-based stable weapon number.
 - `aim`: `BattleAimModifiers`
 - `streak_confused`: `boolean`
-- `launch`: `BattleVehicleLaunch`
+- `ammunition_warning`: `string|nil` — Pre-expenditure warning staged with the shot.
+- `launch_notices`: `BattleNotice[]` — Cocoon opening feedback before target consequences.
+- `target_number`: `integer|nil` — Ordinary aim subtotal; nil beyond physical range.
+- `roll`: `integer`
+- `launched`: `boolean` — False for failed Streak lock: no heat/ammo expenditure, but weapon recycles.
+- `hit`: `boolean` — Launch classification; missile near misses may have no target effects.
+- `glancing`: `boolean` — Tactical missile shots use the base target-number boundary.
+- `recoil`: `BattleRecoilReport|nil` — Always nil: vehicles make no recoil control check.
+- `jammed`: `boolean` — Recoverable ammunition-feed failure without expenditure.
+- `loader_destroyed`: `boolean` — Permanent mount loss from loader failure or propellant ignition.
+- `propellant_roll`: `integer|nil` — Second caseless roll; eight or more ignites propellant.
+- `misload`: `table|nil` — Shooter internal damage and critical consequences.
+- `expenditure`: `BattleVehicleWeaponUse`
 - `ams`: `BattleAmsReport|nil`
 - `narc`: `BattleNarcReport|nil` — Beacon attachment or interception; vehicle sections use their own names.
 - `cooling`: `number|nil` — Coolant removed from target stored heat.
@@ -955,18 +968,15 @@ Alias: `"narc"|"homing"|"haywire"|"ecm"`
 - `groups`: `table[]` — Located conventional damage packets.
 - `inferno`: `BattleVehicleInfernoHit|nil` — Dedicated vehicle inferno outcome.
 
-## BattleVehicleLaunch
+## BattleVehicleWeaponUse
 
-- `ammunition_warning`: `string|nil` — Pre-expenditure warning staged with the shot.
-- `launch_notices`: `BattleNotice[]` — Cocoon opening feedback before target consequences.
-- `roll`: `integer`
-- `hit`: `boolean` — Launch classification; missile near misses may have no target effects.
-- `glancing`: `boolean` — Tactical missile shots use the base target-number boundary.
-- `loader_destroyed`: `boolean`
-- `jammed`: `boolean`
-- `propellant_roll`: `integer|nil`
-- `misload`: `table|nil` — Shooter internal damage and critical consequences.
-- `expenditure`: `table` — Weapon, ammunition, fire mode, spent rounds, recycle and launched status.
+- `weapon`: `string`
+- `ammunition`: `BattleAmmunitionDraw[]` — Actual live-bin expenditure.
+- `ammunition_mode`: `BattleAmmunitionMode`
+- `fire_mode`: `BattleFireMode` — Effective mode after supply fallback.
+- `gatling_damage`: `integer|nil` — Supply-limited gatling damage before glancing.
+- `launched`: `boolean` — False for a failed Streak lock; also reported on the shot.
+- `heat`: `integer` — Already applied; do not add this heat again.
 
 ## BattleArtilleryLaunchReport
 

@@ -4,27 +4,16 @@ use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
-/// A completed vehicle fall, before any caller-specific drowning or crash consequence.
+/// What a vehicle's fall reports beyond its damage groups.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[must_use = "Publish fall consequences with the enclosing environmental transaction"]
-pub struct BattleVehicleFallReport {
-    /// Ice fracture may cause nested falls before this fall applies its own damage.
-    pub ice_break: Option<Box<BattleSurfaceBreak>>,
-    pub avoidance: Option<BattlePilotingCheck>,
-    /// Accepted protection-check XP diagnostics, published by the host action.
-    pub experience_messages: Vec<BattleChannelMessage>,
-    pub pilot_injury: Option<BattlePilotInjury>,
-    /// Personal injury to an assigned character pilot, independent of tactical crew health.
-    pub character_injury: Option<BattleCharacterPilotInjury>,
-    pub direction_roll: u8,
-    pub arc: BattleHitArc,
-    pub damage: u32,
-    pub impacts: Vec<BattleVehicleImpact>,
-    pub mines: BattleMineEventReport,
+pub struct BattleVehicleFallFeedback {
     /// Private protection and neighboring fall checks ordered among notices.
     pub pilot_notices: Vec<BattlePilotNotice>,
     pub notices: Vec<BattleNotice>,
 }
+
+/// A completed vehicle fall, before any caller-specific drowning or crash consequence.
+pub type BattleVehicleFallReport = FallReport<BattleVehicleImpact, BattleVehicleFallFeedback>;
 
 /// Resolve a tactical vehicle fall atomically; the environmental caller owns immersion eligibility.
 /// Zero severity still checks personal injury, changes heading and activates fall-sensitive mines.
@@ -275,10 +264,13 @@ pub(super) fn resolve_material_signed_with_tonnage(
             direction_roll,
             arc,
             damage,
-            impacts,
+            groups: impacts,
+            pilot,
             mines,
-            pilot_notices,
-            notices,
+            feedback: BattleVehicleFallFeedback {
+                pilot_notices,
+                notices,
+            },
         })
     })
 }

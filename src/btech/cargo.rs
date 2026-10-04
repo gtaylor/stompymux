@@ -48,20 +48,12 @@ fn admit(
         .filter(|o| !o.flags.contains(Flag::Going))
         .context("Unit is unavailable")?;
     let unit = super::scanner::scanner_unit(world, id).context("Enter a constructed unit first")?;
-    let (pilot, recovery, cargo) = if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        (
-            vehicle.pilot(),
-            vehicle.crew_recovery().remaining,
-            vehicle.definition().has_special("CargoTech"),
-        )
-    } else {
-        let mech = &world.btech.constructed_units()[&id];
-        (
-            mech.pilot(),
-            mech.crew_recovery().remaining,
-            mech.definition().has_special("CargoTech"),
-        )
-    };
+    let (pilot, recovery, cargo) =
+        super::with_unit!(world.btech.unit(id).expect("scanned unit"), |unit| (
+            unit.pilot(),
+            unit.crew_recovery().remaining,
+            unit.definition().has_special("CargoTech"),
+        ));
     let running = unit.power == BattlePower::Running;
     if operation != BattleCargoOperation::Unload {
         ensure!(!unit.destroyed, "You are destroyed!");

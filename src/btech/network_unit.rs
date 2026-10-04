@@ -11,14 +11,9 @@ pub(super) struct NetworkUnit<'a> {
     scanner: super::scanner::ScannerUnit<'a>,
     pilot: Option<ObjectId>,
     motion: Option<BattleMotion>,
-    computer: ComputerSource<'a>,
+    /// Borrowed so equipment is scanned only when a network rule needs hardware.
+    computer: BattleUnitRef<'a>,
     pub protection: (u32, u32, u32, u32),
-}
-
-/// Borrow equipment only when a network rule needs hardware, avoiding eager inventory scans.
-enum ComputerSource<'a> {
-    Mech(&'a BattleUnit),
-    Vehicle(&'a BattleVehicle),
 }
 
 impl NetworkUnit<'_> {
@@ -44,17 +39,11 @@ impl NetworkUnit<'_> {
     }
     /// Physical and working computer counts.
     pub fn c3_hardware(&self) -> Result<BattleC3Hardware> {
-        match self.computer {
-            ComputerSource::Mech(unit) => unit.c3_hardware(),
-            ComputerSource::Vehicle(unit) => unit.c3_hardware(),
-        }
+        self.computer.c3_hardware()
     }
     /// Classic computer eligibility before power and interference checks.
     pub fn c3_operational(&self) -> Result<bool> {
-        match self.computer {
-            ComputerSource::Mech(unit) => unit.c3_operational(),
-            ComputerSource::Vehicle(unit) => unit.c3_operational(),
-        }
+        self.computer.c3_operational()
     }
     /// Tactical label independent of the construction store.
     pub fn battlefield_id(&self) -> Option<String> {
@@ -70,34 +59,20 @@ impl NetworkUnit<'_> {
 pub(super) fn unit(world: &World, id: ObjectId) -> Result<NetworkUnit<'_>> {
     let scanner = super::scanner::scanner_unit(world, id).context("Unit not found")?;
     let (c3_network, c3i_network, automation, pilot, motion, computer, protection) =
-        if let Some(unit) = world.btech.vehicles().get(&id) {
+        crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
             (
                 unit.c3_network,
                 unit.c3i_network,
                 unit.network_automation,
                 unit.pilot(),
                 unit.motion(),
-                ComputerSource::Vehicle(unit),
+                BattleUnitRef::from(unit),
                 totals(
                     unit.sections().values(),
                     unit.definition().sections.values(),
                 ),
             )
-        } else {
-            let unit = &world.btech.constructed_units()[&id];
-            (
-                unit.c3_network,
-                unit.c3i_network,
-                unit.network_automation,
-                unit.pilot(),
-                unit.motion(),
-                ComputerSource::Mech(unit),
-                totals(
-                    unit.sections().values(),
-                    unit.definition().sections.values(),
-                ),
-            )
-        };
+        });
     Ok(NetworkUnit {
         c3_network,
         c3i_network,
@@ -130,13 +105,10 @@ pub(super) fn set_link(
     kind: BattleCommandNetwork,
     value: Option<u64>,
 ) {
-    let (classic, improved) = if world.btech.vehicles().contains_key(&id) {
-        let unit = world.btech.vehicles.get_mut(&id).unwrap();
-        (&mut unit.c3_network, &mut unit.c3i_network)
-    } else {
-        let unit = world.btech.constructed.get_mut(&id).unwrap();
-        (&mut unit.c3_network, &mut unit.c3i_network)
-    };
+    let (classic, improved) =
+        crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
+            (&mut unit.c3_network, &mut unit.c3i_network)
+        });
     *match kind {
         BattleCommandNetwork::C3 => classic,
         BattleCommandNetwork::C3i => improved,
@@ -150,21 +122,9 @@ pub(super) fn set_automation(
     kind: BattleCommandNetwork,
     enabled: bool,
 ) {
-    let automation = if world.btech.vehicles().contains_key(&id) {
-        &mut world
-            .btech
-            .vehicles
-            .get_mut(&id)
-            .unwrap()
-            .network_automation
-    } else {
-        &mut world
-            .btech
-            .constructed
-            .get_mut(&id)
-            .unwrap()
-            .network_automation
-    };
+    let automation = crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
+        &mut unit.network_automation
+    });
     *match kind {
         BattleCommandNetwork::C3 => &mut automation.c3,
         BattleCommandNetwork::C3i => &mut automation.c3i,

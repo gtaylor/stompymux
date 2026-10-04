@@ -122,11 +122,9 @@ pub(super) fn observer_aim(
     spotter: ObjectId,
     fasa_turning: bool,
 ) -> Result<BattleIndirectAim> {
-    let movement = if let Some(unit) = world.btech.vehicles().get(&spotter) {
+    let movement = crate::btech::with_unit!(world.btech.unit(spotter).unwrap(), |unit| {
         unit.attacker_movement_modifier(fasa_turning)
-    } else {
-        world.btech.constructed_units()[&spotter].attacker_movement_modifier(fasa_turning)
-    };
+    });
     Ok(BattleIndirectAim {
         spotter,
         spotting: super::skills::unit_spotting_target(world, spotter)?,
@@ -148,11 +146,7 @@ pub fn select_spotter(
     pilot: ObjectId,
     selected: Option<ObjectId>,
 ) -> Result<Vec<BattleNotice>> {
-    if world.btech.vehicles().contains_key(&id) {
-        super::vehicle_power::controlled(world, id, pilot)?;
-    } else {
-        power::controlled_unit(world, id, pilot)?;
-    }
+    power::controlled(world, id, pilot)?;
     let unit = super::scanner::scanner_unit(world, id).context("Unit is unavailable")?;
     ensure!(unit.power == BattlePower::Running, "Start the unit first");
     let text = match selected {
@@ -217,11 +211,9 @@ pub fn select_spotter(
         }
     };
     super::artillery_adjustment::spotter_change(world, id, selected);
-    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
+    crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
         unit.spotter = selected;
-    } else {
-        world.btech.constructed.get_mut(&id).unwrap().spotter = selected;
-    }
+    });
     Ok(vec![BattleNotice { unit: id, text }])
 }
 
@@ -443,17 +435,7 @@ pub(super) fn installation(
     id: ObjectId,
     index: usize,
 ) -> Result<(BattleWeapon, BattleAmmunitionMode)> {
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        return Ok((
-            unit.weapon_readiness(index)?.weapon,
-            unit.ammunition_mode(index)?,
-        ));
-    }
-    let unit = world
-        .btech
-        .constructed_units()
-        .get(&id)
-        .context("Unit is not constructed")?;
+    let unit = world.btech.unit(id).context("Unit is not constructed")?;
     Ok((
         unit.weapon_readiness(index)?.weapon,
         unit.ammunition_mode(index)?,

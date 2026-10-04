@@ -5,29 +5,18 @@ use anyhow::Result;
 
 /// Project installation and physical availability without maintaining display-only state.
 pub(super) fn device(world: &World, id: ObjectId, system: BattleSystem) -> Result<(bool, bool)> {
-    if let Some(u) = world.btech.constructed_units().get(&id) {
+    crate::btech::with_unit!(world.btech.unit(id).expect("unit record"), |u| {
         let parts = u
             .loadout()?
             .systems
             .into_iter()
             .filter(|p| p.system == system)
             .collect::<Vec<_>>();
-        return Ok((
+        Ok((
             !parts.is_empty(),
             !parts.is_empty() && parts.iter().all(|p| !u.critical_unavailable(p.location)),
-        ));
-    }
-    let u = &world.btech.vehicles()[&id];
-    let parts = u
-        .loadout()?
-        .systems
-        .into_iter()
-        .filter(|p| p.system == system)
-        .collect::<Vec<_>>();
-    Ok((
-        !parts.is_empty(),
-        !parts.is_empty() && parts.iter().all(|p| !u.critical_unavailable(p.location)),
-    ))
+        ))
+    })
 }
 
 /// Build the advanced-technology row using common suite states and chassis-owned boosters.

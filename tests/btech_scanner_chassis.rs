@@ -656,7 +656,7 @@ async fn gatling_attack_order_replays_across_chassis() {
             let restored = persistence::load(&config.database()).await.unwrap();
             let native =
                 Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(restored))).unwrap();
-            let result: (u8, u8, i16, bool) = scripts.eval_callback(&format!("local r={command}; local launch=r.launch or r; return launch.roll,launch.expenditure.gatling_damage,r.aim.perception.modifier,r.missed_terrain ~= nil")).unwrap();
+            let result: (u8, u8, i16, bool) = scripts.eval_callback(&format!("local r={command}; return r.roll,r.expenditure.gatling_damage,r.aim.perception.modifier,r.missed_terrain ~= nil")).unwrap();
             assert_eq!(
                 (result.0, result.1, result.2),
                 (roll, damage, perception.aim_modifier)

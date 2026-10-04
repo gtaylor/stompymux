@@ -319,9 +319,7 @@ async fn live_modes_control_reservations_and_hotloaded_critical_eligibility() {
         assert_eq!(cycle.ammunition[0].rounds, 1);
         world
             .btech
-            .rewrite_unit_record(id, |record| {
-                record["dice"] = serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
-            })
+            .set_unit_dice(id, BattleDice::seeded([value; 32]))
             .unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         world = persistence::load(&config.database()).await.unwrap();

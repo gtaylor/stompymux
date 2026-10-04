@@ -36,12 +36,9 @@ pub(super) fn avoids(
     speed: f64,
     rules: super::BattleMovementRules,
 ) -> anyhow::Result<super::terrain_control::TerrainControl> {
-    let (pilot, auto_fall) = if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        (vehicle.pilot(), vehicle.auto_fall())
-    } else {
-        let unit = &world.btech.constructed_units()[&id];
+    let (pilot, auto_fall) = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
         (unit.pilot(), unit.auto_fall())
-    };
+    });
     if pilot.is_some() && change < 0 && auto_fall {
         return Ok(super::terrain_control::TerrainControl::automatic(false));
     }

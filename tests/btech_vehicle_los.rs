@@ -45,16 +45,12 @@ async fn fixture(
 
 /// Mark units running through their saved state so contact updates may run without crews.
 fn running(world: &mut World, ids: &[ObjectId]) {
-    let mut state = serde_json::to_value(&world.btech).unwrap();
     for id in ids {
-        let key = if world.btech.vehicles().contains_key(id) {
-            "vehicles"
-        } else {
-            "constructed"
-        };
-        state[key][id.0.to_string()]["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+        world
+            .btech
+            .set_unit_power(*id, BattlePower::Running)
+            .unwrap();
     }
-    world.btech = serde_json::from_value(state).unwrap();
 }
 
 /// Low vehicles lose sight over a one-level ridge that Mechs and tall installations see across.
@@ -152,9 +148,12 @@ async fn mech_searchlights_illuminate_vehicle_targets_and_replay_perception() {
         include_str!("../game/mechs/Demolisher.toml"),
     )
     .await;
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["light"] = 0.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            record["light"] = 0.into();
+        })
+        .unwrap();
     // Without the all-conditions band, only sight reaches the target four hexes away.
     set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
     let before = world.btech.clone();
@@ -329,9 +328,7 @@ async fn vehicle_acquisition_rolls_only_for_hidden_hostiles_beyond_automatic_ran
     running(&mut world, &[vehicle_a]);
     world
         .btech
-        .rewrite_unit_record(vehicle_a, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([77; 32])).unwrap();
-        })
+        .set_unit_dice(vehicle_a, BattleDice::seeded([77; 32]))
         .unwrap();
     let before = world.btech.clone();
     for (hostile, hidden) in [(false, false), (true, false), (false, true)] {

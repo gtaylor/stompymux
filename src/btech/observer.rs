@@ -28,17 +28,16 @@ pub fn set_observer(world: &mut World, id: ObjectId, enabled: bool) -> Result<()
             .is_some_and(|o| o.kind == Kind::Thing && !o.flags.contains(Flag::Going)),
         "Unit must be a live thing"
     );
-    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
-        unit.observer = enabled;
-        return Ok(());
-    }
-    let unit = world
-        .btech
-        .constructed
-        .get_mut(&id)
-        .context("Unit is not constructed")?;
-    unit.observer = enabled;
-    Ok(())
+    super::with_unit_mut!(
+        world
+            .btech
+            .unit_mut(id)
+            .context("Unit is not constructed")?,
+        |unit| {
+            unit.observer = enabled;
+            Ok(())
+        }
+    )
 }
 
 /// Observer radio text identifies affiliation and sender, preserving the clear original payload.

@@ -237,10 +237,13 @@ async fn gravity_stress_obeys_global_boundary_and_hits_each_chassis_leg_in_order
         for gravity in [50, 100, 150] {
             for tick in [0, 1, 28, 29] {
                 let mut world = base.clone();
-                let mut saved = serde_json::to_value(&world.btech).unwrap();
-                saved["maps"][map.0.to_string()]["flags"] = 2.into();
-                saved["maps"][map.0.to_string()]["gravity"] = gravity.into();
-                world.btech = serde_json::from_value(saved).unwrap();
+                world
+                    .btech
+                    .rewrite_map_record(map, |record| {
+                        record["flags"] = 2.into();
+                        record["gravity"] = gravity.into();
+                    })
+                    .unwrap();
                 phase(&mut world, tick);
                 let before = world.btech.clone();
                 let reports = advance_battle_periodic_piloting(&mut world, &config).unwrap();
@@ -455,10 +458,13 @@ async fn gravity_success_and_disabled_special_rules_preserve_material() {
             .maximum_speed;
         for special in [false, true] {
             let mut world = base.clone();
-            let mut saved = serde_json::to_value(&world.btech).unwrap();
-            saved["maps"][map.0.to_string()]["flags"] = if special { 2 } else { 0 }.into();
-            saved["maps"][map.0.to_string()]["gravity"] = 50.into();
-            world.btech = serde_json::from_value(saved).unwrap();
+            world
+                .btech
+                .rewrite_map_record(map, |record| {
+                    record["flags"] = if special { 2 } else { 0 }.into();
+                    record["gravity"] = 50.into();
+                })
+                .unwrap();
             phase(&mut world, 29);
             firing::edit(&mut world, unit, |s| {
                 s["motion"]["speed"] = (maximum + 1.0).into();

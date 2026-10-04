@@ -25,10 +25,9 @@ pub(super) fn validate(
 
 /// Mutable storage adapter; all recovery decisions remain in the shared component.
 fn recovery_mut(world: &mut World, id: ObjectId) -> &mut BattleRecovery {
-    if world.btech.vehicles().contains_key(&id) {
-        return &mut world.btech.vehicles.get_mut(&id).unwrap().crew_recovery;
-    }
-    &mut world.btech.constructed.get_mut(&id).unwrap().crew_recovery
+    crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
+        &mut unit.crew_recovery
+    })
 }
 
 /// Resolve a tactical injury without assigning a fictitious player or starting a new random stream.

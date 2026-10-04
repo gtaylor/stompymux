@@ -19,10 +19,12 @@ fn configured(dir: &tempfile::TempDir, enabled: bool, glancing: bool) -> Config 
 /// Place authored woods beneath the target and force the requested conventional attack roll.
 fn prepare(world: &mut World, shooter: ObjectId, target: ObjectId, terrain: Terrain, roll: u8) {
     let map = world.btech.units()[&target].map.unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["terrain"][10] =
-        serde_json::to_value(Hex::new(terrain, 0)).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            record["terrain"][10] = serde_json::to_value(Hex::new(terrain, 0)).unwrap();
+        })
+        .unwrap();
     let seed = (0..=255)
         .find(|&value| BattleDice::seeded([value; 32]).two_d6() == roll)
         .unwrap();
@@ -42,10 +44,12 @@ fn prepare_seeded(
     seed: [u8; 32],
 ) {
     let map = world.btech.units()[&target].map.unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["terrain"][10] =
-        serde_json::to_value(Hex::new(terrain, 0)).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            record["terrain"][10] = serde_json::to_value(Hex::new(terrain, 0)).unwrap();
+        })
+        .unwrap();
     firing::edit(world, shooter, |state| {
         state["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap()
     });

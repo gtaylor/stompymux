@@ -53,17 +53,13 @@ pub(super) fn require_reverse_allowed(world: &World, id: ObjectId, speed: f64) -
         return Ok(());
     }
     if world.btech.tows().contains_key(&id) {
-        let salvage = if let Some(unit) = world.btech.vehicles().get(&id) {
-            unit.definition().has_special("SalvageTech")
-        } else {
+        let salvage = crate::btech::with_unit!(
             world
                 .btech
-                .constructed_units()
-                .get(&id)
-                .context("Unit construction is unavailable")?
-                .definition()
-                .has_special("SalvageTech")
-        };
+                .unit(id)
+                .context("Unit construction is unavailable")?,
+            |unit| { unit.definition().has_special("SalvageTech") }
+        );
         ensure!(salvage, "You can not backup while towing!");
     }
     Ok(())

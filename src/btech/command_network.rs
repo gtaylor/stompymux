@@ -413,11 +413,7 @@ pub(super) fn ready_for(
     pilot: ObjectId,
     kind: BattleCommandNetwork,
 ) -> Result<()> {
-    if world.btech.vehicles().contains_key(&id) {
-        super::vehicle_power::controlled(world, id, pilot)?;
-    } else {
-        super::power::controlled_unit(world, id, pilot)?;
-    }
+    super::power::controlled(world, id, pilot)?;
     let unit = network_unit(world, id)?;
     ensure!(unit.power() == BattlePower::Running, "Start the unit first");
     ensure!(

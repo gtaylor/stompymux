@@ -53,32 +53,22 @@ pub(super) fn set(
 ) -> Result<()> {
     use anyhow::Context;
 
-    if let Some(unit) = world.btech.constructed.get_mut(&id) {
-        unit.set_identity(field, value)?;
-    } else {
-        let unit = world
-            .btech
-            .vehicles
-            .get_mut(&id)
-            .context("Unit is unavailable")?;
-        unit.set_identity(field, value)?;
-    };
+    super::with_unit_mut!(
+        world.btech.unit_mut(id).context("Unit is unavailable")?,
+        |unit| {
+            unit.set_identity(field, value)?;
+        }
+    );
     refresh(world, id)
 }
 
 /// Refresh the shared world identity index after an owned definition changes.
 pub(super) fn refresh(world: &mut crate::World, id: crate::ObjectId) -> Result<()> {
     use anyhow::Context;
-    let identity = if let Some(unit) = world.btech.constructed_units().get(&id) {
-        unit.identity()
-    } else {
-        world
-            .btech
-            .vehicles()
-            .get(&id)
-            .context("Unit is unavailable")?
-            .identity()
-    };
+    let identity = crate::btech::with_unit!(
+        world.btech.unit(id).context("Unit is unavailable")?,
+        |unit| { unit.identity() }
+    );
     world.btech.units.insert(id, identity);
     Ok(())
 }

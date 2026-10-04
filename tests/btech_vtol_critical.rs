@@ -631,10 +631,7 @@ async fn engine_emergency_landings_use_shared_checks_and_commit_failed_attempts_
                 );
                 world
                     .btech
-                    .rewrite_unit_record(id, |record| {
-                        record["dice"] =
-                            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-                    })
+                    .set_unit_dice(id, BattleDice::seeded([seed; 32]))
                     .unwrap();
                 let cursor = world.btech.vehicles()[&id].vtol_flight().unwrap().fall;
                 let repeated = resolve_battle_vehicle_critical(

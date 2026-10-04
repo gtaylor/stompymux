@@ -123,9 +123,12 @@ async fn water_destruction_clears_controls_and_survives_sqlite_and_lua() {
     assert_eq!(unit.extinguishing(), None);
     assert_eq!(unit.sections(), before.sections());
     assert_eq!(unit.ammunition(), before.ammunition());
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][id.0.to_string()] = serde_json::to_value(&unit).unwrap();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            *record = serde_json::to_value(&unit).unwrap();
+        })
+        .unwrap();
     world.validate(&config).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let loaded = persistence::load(&config.database()).await.unwrap();

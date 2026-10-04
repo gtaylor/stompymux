@@ -316,22 +316,22 @@ pub struct BattleSalvoGroup {
 }
 
 /// Rolled cluster size and applied groups; resolution stops when the target is destroyed.
+/// `G` is the chassis's group result and `I` its inferno result. [`BattleSalvoReport`]
+/// and [`super::BattleVehicleSalvoReport`] name it for each chassis.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleSalvoReport {
-    /// Nominal LBX damage terrain check, before pellet counting and cover absorption.
+pub struct SalvoReport<G, I> {
     pub initial_woods: Option<super::BattleWoodsAbsorption>,
     pub woods: Option<super::BattleWoodsAbsorption>,
-    /// Cluster hits before automatic defenses, absent for non-missile weapons.
     pub missiles_before_defense: Option<u8>,
     pub cluster_roll: Option<u8>,
-    /// Inferno exposure replaces armor packets after automatic missile defense.
-    pub inferno: Option<super::BattleInfernoHit>,
-    pub groups: Vec<BattleSalvoGroup>,
-    /// Pre-damage XP attempt for each group, in matching order; absent for ineligible groups.
+    pub inferno: Option<I>,
+    pub groups: Vec<G>,
     pub experience: Vec<Option<super::BattleShotExperienceAward>>,
-    /// Diagnostic messages captured in damage-group order; the host owns channel delivery.
     pub experience_messages: Vec<super::BattleChannelMessage>,
 }
+
+/// A salvo's effects on a BattleMech.
+pub type BattleSalvoReport = SalvoReport<BattleSalvoGroup, super::BattleInfernoHit>;
 
 /// Effects that the enclosing action can apply and publish between weapon groups.
 #[derive(Clone, Copy)]

@@ -31,24 +31,19 @@ pub fn injure_character_pilot(
         object.flags.contains(Flag::InCharacter) && !object.flags.contains(Flag::Going),
         "Character injury requires a live in-character unit"
     );
-    let (destroyed, pilot, status) = if let Some(vehicle) = world.btech.vehicles().get(&unit) {
-        (
-            vehicle.is_destroyed(),
-            vehicle.pilot(),
-            vehicle.character_pilot_status(),
-        )
-    } else {
-        let state = world
+    let (destroyed, pilot, status) = super::with_unit!(
+        world
             .btech
-            .constructed_units()
-            .get(&unit)
-            .context("Unit construction state is unavailable")?;
-        (
-            state.is_destroyed(),
-            state.pilot(),
-            state.character_pilot_status(),
-        )
-    };
+            .unit(unit)
+            .context("Unit construction state is unavailable")?,
+        |unit| {
+            (
+                unit.is_destroyed(),
+                unit.pilot(),
+                unit.character_pilot_status(),
+            )
+        }
+    );
     ensure!(!destroyed, "Unit is already destroyed");
     let pilot = pilot.context("Unit has no assigned pilot")?;
     ensure!(

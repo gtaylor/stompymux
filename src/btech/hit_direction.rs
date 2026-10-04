@@ -93,25 +93,10 @@ mod tests {
                     (180.0, BattleHitArc::Front),
                     (270.0, BattleHitArc::Left),
                 ] {
-                    let motion = if world.btech.vehicles().contains_key(&target) {
-                        world
-                            .btech
-                            .vehicles
-                            .get_mut(&target)
-                            .unwrap()
-                            .motion
-                            .as_mut()
-                            .unwrap()
-                    } else {
-                        world
-                            .btech
-                            .constructed
-                            .get_mut(&target)
-                            .unwrap()
-                            .motion
-                            .as_mut()
-                            .unwrap()
-                    };
+                    let motion = crate::btech::with_unit_mut!(
+                        world.btech.unit_mut(target).unwrap(),
+                        |unit| { unit.motion.as_mut().unwrap() }
+                    );
                     motion.heading = heading;
                     motion.desired_heading = heading;
                     assert_eq!(direction.current(&world, target).unwrap(), expected);

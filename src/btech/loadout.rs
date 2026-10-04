@@ -4,10 +4,11 @@ use anyhow::{Context, Result, bail, ensure};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
-/// A zero-based slot in a named BattleMech section.
+/// A zero-based slot in a named section: a BattleMech section unless another
+/// section type is given, as [`super::VehicleCriticalLocation`] does for vehicles.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct CriticalLocation {
-    pub section: BattleSection,
+pub struct CriticalLocation<S = BattleSection> {
+    pub section: S,
     pub slot: u8,
 }
 
@@ -380,13 +381,18 @@ impl<L> AmmunitionBin<L> {
     }
 }
 
-/// Catalog-resolved loadout; this describes equipment, not a running combat unit.
+/// Catalog-resolved equipment at locations of type `L`; this describes equipment, not
+/// a running combat unit. [`BattleLoadout`] and [`super::BattleVehicleLoadout`] name it
+/// for each chassis, and code written against this type serves both.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleLoadout {
-    pub weapons: Vec<WeaponMount>,
-    pub ammunition: Vec<AmmunitionBin>,
-    pub systems: Vec<SystemCritical>,
+pub struct ResolvedLoadout<L> {
+    pub weapons: Vec<WeaponMount<L>>,
+    pub ammunition: Vec<AmmunitionBin<L>>,
+    pub systems: Vec<SystemCritical<L>>,
 }
+
+/// A BattleMech's resolved equipment.
+pub type BattleLoadout = ResolvedLoadout<CriticalLocation>;
 
 impl BattleLoadout {
     /// Group complete contiguous sink installations using the chassis slot count.

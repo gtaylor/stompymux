@@ -336,10 +336,12 @@ async fn moving_load_is_rejected_and_loading_clamps_pending_throttle() {
             continue;
         }
         let mech = world.btech.constructed_units().contains_key(&unit);
-        let registry = if mech { "constructed" } else { "vehicles" };
-        let mut encoded = serde_json::to_value(&world.btech).unwrap();
-        encoded[registry][unit.0.to_string()]["motion"]["speed"] = 1.0.into();
-        world.btech = serde_json::from_value(encoded).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(unit, |record| {
+                record["motion"]["speed"] = 1.0.into();
+            })
+            .unwrap();
         let before = world.btech.clone();
         let error = transfer_battle_cargo(&mut world, &config, ObjectId(1), true, "Gold", 1)
             .unwrap_err()
@@ -349,10 +351,13 @@ async fn moving_load_is_rejected_and_loading_clamps_pending_throttle() {
         set_battle_inventory_named(&mut world, ObjectId(1), unit, "Gold", 1).unwrap();
         transfer_battle_cargo(&mut world, &config, ObjectId(1), false, "Gold", 1).unwrap();
         set_battle_inventory_named(&mut world, ObjectId(1), map, "Gold", 50_000).unwrap();
-        let mut encoded = serde_json::to_value(&world.btech).unwrap();
-        encoded[registry][unit.0.to_string()]["motion"]["speed"] = 0.0.into();
-        encoded[registry][unit.0.to_string()]["motion"]["desired_speed"] = maximum.into();
-        world.btech = serde_json::from_value(encoded).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(unit, |record| {
+                record["motion"]["speed"] = 0.0.into();
+                record["motion"]["desired_speed"] = maximum.into();
+            })
+            .unwrap();
         transfer_battle_cargo(&mut world, &config, ObjectId(1), true, "Gold", 50_000).unwrap();
         let motion = if mech {
             world.btech.constructed_units()[&unit].motion().unwrap()
@@ -692,9 +697,9 @@ async fn wizard_stock_actions_share_audits_and_immediate_load_limits() {
         };
         world
             .btech
-            .rewrite_unit_record(unit, |record| {
-                record["motion"]["speed"] = maximum.into();
-                record["motion"]["desired_speed"] = maximum.into();
+            .edit_unit_motion(unit, |motion| {
+                motion.speed = maximum;
+                motion.desired_speed = maximum;
             })
             .unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

@@ -110,10 +110,10 @@ pub(super) fn resolve(
     )?;
     super::piloting::append_feedback(
         &mut pilot_notices,
-        fall.pilot_notices.iter().cloned(),
+        fall.feedback.pilot_notices.iter().cloned(),
         notices.len(),
     );
-    notices.extend(fall.notices.iter().cloned());
+    notices.extend(fall.feedback.notices.iter().cloned());
     Ok(super::movement_report::MovementReport {
         notices,
         pilot_notices,

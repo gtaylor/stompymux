@@ -301,10 +301,12 @@ async fn idle_map_fire_burnout_retries_random_state_save_failure() {
         let coordinate = HexCoordinate { x: 0, y: 0 };
         set_map_decoration(&mut world, map, coordinate, Some(BattleDecoration::new(DecorationKind::Fire, 60, None))).unwrap();
         // Resume the final burnout phase of an already spreading fire.
-        let mut encoded = serde_json::to_value(&world.btech).unwrap();
-        encoded["maps"][map.0.to_string()]["decorations"]["0"]["remaining"] = 1.into();
-        encoded["maps"][map.0.to_string()]["decorations"]["0"]["next_spread"] = serde_json::Value::Null;
-        world.btech = serde_json::from_value(encoded).unwrap();
+        world.btech
+            .rewrite_map_record(map, |record| {
+        record["decorations"]["0"]["remaining"] = 1.into();
+        record["decorations"]["0"]["next_spread"] = serde_json::Value::Null;
+        })
+            .unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let expected = world.btech.clone();
         let mut sql = SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database()).foreign_keys(false)).await.unwrap();
@@ -330,9 +332,11 @@ async fn idle_building_repair_retries_failed_world_save() {
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         set_building_state(&mut world, map, BattleBuildingState { integrity: 9, maximum_integrity: 10, flags: 0, regeneration: 1 }).unwrap();
         // Resume one committed second before the final repair of an otherwise idle map.
-        let mut encoded = serde_json::to_value(&world.btech).unwrap();
-        encoded["maps"][map.0.to_string()]["building_repair"] = 1.into();
-        world.btech = serde_json::from_value(encoded).unwrap();
+        world.btech
+            .rewrite_map_record(map, |record| {
+        record["building_repair"] = 1.into();
+        })
+            .unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let expected = world.btech.clone();
         let mut sql = SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();

@@ -573,7 +573,7 @@ impl BtechState {
 
     /// Drop the runtime-only state a serialization round trip never carries. Keep this
     /// in step with this type's `#[serde(skip)]` fields.
-    fn clear_runtime_state(&mut self) {
+    pub(super) fn clear_runtime_state(&mut self) {
         self.template_registry = Default::default();
         self.retire_sanctions = Default::default();
         self.autopilot_plans = Default::default();
@@ -683,211 +683,28 @@ impl BtechState {
             recovery.target(world, *id)?;
         }
         let contact_positions = super::validation_contacts::Positions::prepare(self);
-        let mut pilots = BTreeSet::new();
-        let mut map_slots = BTreeSet::new();
+        let mut roster = super::unit_validation::UnitRoster::default();
         for (id, vehicle) in self.vehicles.iter() {
-            let local_validation = super::autopilot::diagnostics::combat("validation_unit");
-            vehicle.hardware.validate()?;
-            vehicle.validate_flight_state()?;
-            vehicle.validate_orbital_drop()?;
-            vehicle.validate_dig()?;
-            super::radio::validate_channels(&vehicle.radio)?;
-            super::radio::validate_attributes(&vehicle.definition().attributes)?;
-            ensure!(
-                vehicle.radio_experience_remaining <= 61,
-                "Invalid radio experience countdown"
-            );
-            drop(local_validation);
-            if !tow_targets.contains(id)
-                && let Some(motion) = vehicle.motion()
-            {
-                motion.validate(
-                    super::speed_bonus::saved_limit(vehicle.maximum_speed(), false, false, false)
-                        + 10.75,
-                )?;
-                ensure!(
-                    vehicle.power() == super::BattlePower::Running
-                        || !motion.active()
-                        || vehicle.idle_flight_controls(),
-                    "Inactive untowed vehicle retains motion"
-                );
-                ensure!(
-                    (vehicle.maximum_speed() > 0.0 && !vehicle.rotor_destroyed())
-                        || !motion.active(),
-                    "Immobile untowed vehicle retains motion"
-                );
-            }
-            self.validate_contacts(
+            self.validate_unit(
+                world,
                 *id,
-                vehicle.position(),
-                vehicle.contacts(),
+                super::BattleUnitRef::Vehicle(vehicle),
+                tow_targets.contains(id),
+                &mut roster,
                 contact_positions.as_ref(),
             )?;
-            if let Some(lock) = vehicle.target_lock() {
-                self.validate_target_lock(*id, vehicle.position(), lock)?;
-            }
-            if let Some(lock) = vehicle.hex_lock() {
-                let position = vehicle
-                    .position()
-                    .context("Hex lock requires a battlefield")?;
-                self.maps
-                    .get(&position.map)
-                    .context("Map not found")?
-                    .hex(i64::from(lock.hex.x), i64::from(lock.hex.y))?;
-            }
-            if let Some(pilot) = vehicle.pilot() {
-                ensure!(pilots.insert(pilot), "Player pilots multiple units");
-                ensure!(
-                    world.objects.get(&pilot).is_some_and(
-                        |object| object.kind == Kind::Player && object.location == Some(*id)
-                    ),
-                    "Pilot must be inside its unit"
-                );
-            }
-            if let Some(position) = vehicle.position() {
-                let map = self
-                    .maps
-                    .get(&position.map)
-                    .context("Vehicle references missing map")?;
-                let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
-                ensure!(
-                    !vehicle.under_bridge() || tile.deck_clearance().is_some_and(|deck| deck >= 2),
-                    "Vehicle under-bridge state requires a clear bridge span"
-                );
-                ensure!(
-                    map_slots.insert((
-                        position.map,
-                        vehicle
-                            .map_slot()
-                            .context("Placed vehicle lacks a map slot")?
-                    )),
-                    "Duplicate battlefield slot"
-                );
-                ensure!(
-                    world
-                        .objects
-                        .get(id)
-                        .is_some_and(|object| object.location == Some(position.map)),
-                    "Placed vehicle location differs from battlefield"
-                );
-            }
-            ensure!(
-                !self.constructed.contains_key(id) && !self.maps.contains_key(id),
-                "Conflicting vehicle records"
-            );
-            ensure!(
-                self.units.get(id) == Some(&vehicle.identity()),
-                "Vehicle identity mismatch"
-            );
-            ensure!(
-                self.registrations
-                    .get(id)
-                    .is_some_and(|kind| kind == "MECH"),
-                "Vehicle lacks MECH registration"
-            );
-            ensure!(
-                world
-                    .objects
-                    .get(id)
-                    .is_some_and(|object| object.kind == Kind::Thing),
-                "Vehicle requires a thing object"
-            );
         }
         super::tag::validate(self)?;
         super::spotter_events::validate(self)?;
         for (id, unit) in self.constructed.iter() {
-            if let Some(pilot) = unit.pilot() {
-                ensure!(pilots.insert(pilot), "Player pilots multiple units");
-                ensure!(
-                    world.objects.get(&pilot).is_some_and(
-                        |object| object.kind == Kind::Player && object.location == Some(*id)
-                    ),
-                    "Pilot must be inside its unit"
-                );
-            }
-            super::validation_context::unit(*id, unit)?;
-            if !tow_targets.contains(id)
-                && let Some(motion) = unit.motion()
-            {
-                ensure!(
-                    unit.power() == super::BattlePower::Running
-                        || (motion.speed == 0.0 && motion.desired_speed == 0.0),
-                    "Unpowered untowed unit cannot move"
-                );
-                motion.validate(unit.motion_speed_limit(unit.definition().max_speed))?;
-                motion.validate(unit.motion_speed_limit(unit.mobility().maximum_speed))?;
-            }
-            ensure!(
-                tow_targets.contains(id)
-                    || unit
-                        .ground_elevation
-                        .is_none_or(
-                            |height| (f64::from(i16::MIN)..=f64::from(i16::MAX)).contains(&height)
-                        ),
-                "Untowed unit retains an altitude outside scenario limits"
-            );
-            if let Some(position) = unit.position() {
-                ensure!(
-                    map_slots.insert((position.map, unit.map_slot().unwrap())),
-                    "Duplicate battlefield slot"
-                );
-            }
-            if let Some(lock) = unit.target_lock() {
-                self.validate_target_lock(*id, unit.position(), lock)?;
-            }
-            if let Some(lock) = unit.hex_lock() {
-                let position = unit.position().context("Hex lock requires a battlefield")?;
-                self.maps[&position.map].hex(i64::from(lock.hex.x), i64::from(lock.hex.y))?;
-            }
-            self.validate_contacts(
+            self.validate_unit(
+                world,
                 *id,
-                unit.position(),
-                unit.contacts(),
+                super::BattleUnitRef::Mech(unit),
+                tow_targets.contains(id),
+                &mut roster,
                 contact_positions.as_ref(),
             )?;
-
-            if let Some(position) = unit.position() {
-                let map = self
-                    .maps
-                    .get(&position.map)
-                    .context("Unit references missing map")?;
-                map.hex(i64::from(position.x), i64::from(position.y))?;
-                if let Some(flight) = unit.flight() {
-                    ensure!(
-                        !flight.arrived(),
-                        "Unresolved jump landing cannot be committed"
-                    );
-                    ensure!(
-                        flight.dfa_target() != Some(*id),
-                        "DFA flight cannot target itself"
-                    );
-                    flight.validate_on_map(map)?;
-                }
-                ensure!(
-                    world
-                        .objects
-                        .get(id)
-                        .is_some_and(|object| object.location == Some(position.map)),
-                    "Placed unit location differs from battlefield; remove it from the map before moving it"
-                );
-            }
-            ensure!(
-                self.units.get(id) == Some(&unit.identity()),
-                "Unit identity mismatch"
-            );
-            ensure!(
-                self.registrations
-                    .get(id)
-                    .is_some_and(|kind| kind == "MECH"),
-                "Unit lacks MECH registration"
-            );
-            ensure!(
-                world
-                    .objects
-                    .get(id)
-                    .is_some_and(|object| object.kind == Kind::Thing),
-                "Unit requires a thing object"
-            );
         }
         for (id, map) in self.maps.iter().filter(|(_, map)| map.terrain_ready()) {
             super::validation_context::map(*id, map).with_context(|| format!("Map #{}", id.0))?;
@@ -958,7 +775,7 @@ impl BtechState {
     }
 
     /// A saved unit selection must address another placed unit on the same battlefield.
-    fn validate_target_lock(
+    pub(super) fn validate_target_lock(
         &self,
         id: ObjectId,
         position: Option<super::BattlePosition>,
@@ -982,7 +799,7 @@ impl BtechState {
     }
 
     /// Observations must connect distinct, placed construction records on the same map.
-    fn validate_contacts(
+    pub(super) fn validate_contacts(
         &self,
         observer: ObjectId,
         position: Option<super::BattlePosition>,

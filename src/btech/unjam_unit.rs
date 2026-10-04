@@ -59,12 +59,10 @@ pub(super) fn state(world: &World, id: ObjectId, index: usize) -> Result<FeedSta
 
 /// Borrow the owned countdown under the enclosing world transaction.
 pub(super) fn pending(world: &mut World, id: ObjectId) -> Result<&mut Option<BattleUnjam>> {
-    if world.btech.vehicles().contains_key(&id) {
-        return Ok(&mut world.btech.vehicles.get_mut(&id).unwrap().unjam);
-    }
-    let unit = world.btech.constructed.get_mut(&id).unwrap();
-    unit.validate()?;
-    Ok(&mut unit.unjam)
+    super::with_unit_mut!(world.btech.unit_mut(id).expect("admitted unit"), |unit| {
+        unit.validate()?;
+        Ok(&mut unit.unjam)
+    })
 }
 
 /// Store successful recovery and, when present, consume the selected surviving shell.

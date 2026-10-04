@@ -81,9 +81,12 @@ async fn fixture_with_mml(
         ids.push(id);
     }
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["constructed"][ids[2].0.to_string()]["signature"]["team"] = 99.into();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(ids[2], |record| {
+            record["signature"]["team"] = 99.into();
+        })
+        .unwrap();
     for _ in 0..10 {
         refresh_battle_contacts(&mut world, &[ids[0], ids[1]]).unwrap();
     }
@@ -314,10 +317,12 @@ async fn vehicle_spotter_guards_and_callback_rollback_preserve_state() {
     assert!(scripts.drain_outbox().is_empty());
     let mut recycling = scripts.world().clone();
     select_battle_spotter(&mut recycling, ids[0], ObjectId(1), None).unwrap();
-    let mut encoded = serde_json::to_value(&recycling.btech).unwrap();
-    encoded["vehicles"][ids[0].0.to_string()]["weapon_recycle"] =
-        serde_json::json!({index.to_string(): 10});
-    recycling.btech = serde_json::from_value(encoded).unwrap();
+    recycling
+        .btech
+        .rewrite_unit_record(ids[0], |record| {
+            record["weapon_recycle"] = serde_json::json!({index.to_string(): 10});
+        })
+        .unwrap();
     let checkpoint = recycling.btech.clone();
     assert!(select_battle_spotter(&mut recycling, ids[0], ObjectId(1), Some(ids[0])).is_err());
     assert_eq!(recycling.btech, checkpoint);
@@ -343,17 +348,14 @@ async fn occupied_spotter_hexes_share_mixed_firing_without_sensor_aim_dice() {
             BattleHexTargetMode::Hex,
         )
         .unwrap();
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        let shooter_class = if vehicle_shooter {
-            "vehicles"
-        } else {
-            "constructed"
-        };
-        saved[shooter_class][shooter.0.to_string()]["contacts"] = serde_json::json!({});
-        saved[shooter_class][shooter.0.to_string()]["motion"]["heading"] = serde_json::json!(180.0);
-        saved[shooter_class][shooter.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([42; 32])).unwrap();
-        world.btech = serde_json::from_value(saved).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(shooter, |record| {
+                record["contacts"] = serde_json::json!({});
+                record["motion"]["heading"] = serde_json::json!(180.0);
+                record["dice"] = serde_json::to_value(BattleDice::seeded([42; 32])).unwrap();
+            })
+            .unwrap();
         let before = world.btech.clone();
         assert_eq!(
             battle_spotter_target(&world, shooter).unwrap().target,
@@ -393,7 +395,7 @@ async fn occupied_spotter_hexes_share_mixed_firing_without_sensor_aim_dice() {
         assert_eq!(scripts.world().btech, world.btech);
         assert!(scripts.drain_outbox().is_empty());
         let code = format!(
-            "local r={call}; return r.target,r.aim.perception.modifier,r.aim.indirect.spotter,r.roll or r.launch.roll"
+            "local r={call}; return r.target,r.aim.perception.modifier,r.aim.indirect.spotter,r.roll or r.roll"
         );
         let report: (i64, i16, i64, u8) = scripts.eval_callback(&code).unwrap();
         assert_eq!(
@@ -431,22 +433,21 @@ async fn empty_spotter_hexes_fire_through_blocked_firer_sightlines() {
             .unwrap()
             .map;
         place_battle_unit(&mut world, target, map, 0, 0).unwrap();
-        let observer_class = if vehicle_observer {
-            "vehicles"
-        } else {
-            "constructed"
-        };
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        saved[observer_class][observer.0.to_string()]["power"] =
-            serde_json::to_value(BattlePower::Off).unwrap();
-        world.btech = serde_json::from_value(saved).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(observer, |record| {
+                record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+            })
+            .unwrap();
         place_battle_unit(&mut world, observer, map, 2, 0).unwrap();
         assign_battle_pilot(&mut world, observer, ObjectId(2)).unwrap();
         support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        saved[observer_class][observer.0.to_string()]["power"] =
-            serde_json::to_value(BattlePower::Running).unwrap();
-        world.btech = serde_json::from_value(saved).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(observer, |record| {
+                record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+            })
+            .unwrap();
         for _ in 0..10 {
             refresh_battle_contacts(&mut world, &[shooter, observer]).unwrap();
         }
@@ -613,18 +614,15 @@ async fn mixed_indirect_experience_shares_eligibility_levels_and_rollback() {
             .unwrap()
             .flags
             .remove(Flag::Wizard);
-        let class = if vehicle_shooter {
-            "vehicles"
-        } else {
-            "constructed"
-        };
         let seed = (0..=255)
             .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
             .unwrap();
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        saved[class][shooter.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        world.btech = serde_json::from_value(saved).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(shooter, |record| {
+                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            })
+            .unwrap();
         for case in [
             "ordinary",
             "level",

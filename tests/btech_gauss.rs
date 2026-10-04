@@ -186,10 +186,7 @@ async fn gauss_explosion_cascades_case_and_restart() {
             let mut found = false;
             for seed in 0..=255 {
                 base.btech
-                    .rewrite_unit_record(id, |record| {
-                        record["dice"] =
-                            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-                    })
+                    .set_unit_dice(id, BattleDice::seeded([seed; 32]))
                     .unwrap();
                 let mut fired = base.clone();
                 let report = resolve_battle_impact(&mut fired, id, hit, 1).unwrap();

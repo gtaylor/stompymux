@@ -21,10 +21,12 @@ fn rules(enabled: bool) -> BattleAimRules {
 /// Set source terrain without imposing movement admission on the independent accuracy fixture.
 fn terrain(world: &mut World, target: ObjectId, terrain: Terrain) {
     let map = world.btech.units()[&target].map.unwrap();
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["maps"][map.0.to_string()]["terrain"][10] =
-        serde_json::to_value(Hex::new(terrain, 0)).unwrap();
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            record["terrain"][10] = serde_json::to_value(Hex::new(terrain, 0)).unwrap();
+        })
+        .unwrap();
 }
 
 /// Mechs, quads and every vehicle pair use the same signed contribution and read-only subtotal.

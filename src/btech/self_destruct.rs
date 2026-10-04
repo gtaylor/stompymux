@@ -90,17 +90,13 @@ pub fn set_battle_self_destruct_safe(world: &mut World, id: ObjectId, safe: bool
             .is_some_and(|o| !o.flags.contains(crate::Flag::Going)),
         "Unit is unavailable"
     );
-    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
-        unit.self_destruct_safe = safe;
-        return Ok(());
-    }
-    world
-        .btech
-        .constructed
-        .get_mut(&id)
-        .context("Unit is unavailable")?
-        .self_destruct_safe = safe;
-    Ok(())
+    super::with_unit_mut!(
+        world.btech.unit_mut(id).context("Unit is unavailable")?,
+        |unit| {
+            unit.self_destruct_safe = safe;
+            Ok(())
+        }
+    )
 }
 
 /// Active sequences retain command order even when their unit identifiers differ.
@@ -135,35 +131,18 @@ pub(super) fn validate(state: &BtechState) -> Result<()> {
 
 /// Mutable anatomy adapter; no countdown or detonation decisions are duplicated here.
 fn timer_mut(world: &mut World, id: ObjectId) -> &mut Option<BattleSelfDestruct> {
-    if world.btech.vehicles().contains_key(&id) {
-        return &mut world.btech.vehicles.get_mut(&id).unwrap().self_destruct;
-    }
-    &mut world.btech.constructed.get_mut(&id).unwrap().self_destruct
+    crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
+        &mut unit.self_destruct
+    })
 }
 
 /// Largest destructive live bin, retaining canonical order for equal hazards.
 fn ammunition(world: &World, id: ObjectId) -> Result<Option<usize>> {
-    if let Some(unit) = world.btech.constructed_units().get(&id) {
-        return Ok(unit.ammunition_hazard_maximum()?.map(|hazard| hazard.index));
-    }
-    let unit = world
+    world
         .btech
-        .vehicles()
-        .get(&id)
-        .context("Vehicle is unavailable")?;
-    let loadout = unit.loadout()?;
-    let mut largest = None;
-    let mut maximum = 0;
-    for (index, bin) in loadout.ammunition.iter().enumerate() {
-        let damage = bin
-            .weapon
-            .ammunition_explosion_damage_for_mode(unit.ammunition()[index], bin.mode);
-        if damage > maximum && !unit.critical_unavailable(bin.location) {
-            largest = Some(index);
-            maximum = damage;
-        }
-    }
-    Ok(largest)
+        .unit(id)
+        .context("Unit is unavailable")?
+        .largest_ammunition_hazard_bin()
 }
 
 /// Ordered cockpit/observer feedback and diagnostic-channel records from admission.

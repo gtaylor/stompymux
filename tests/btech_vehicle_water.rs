@@ -47,10 +47,14 @@ async fn cross_surface(row: &str) {
         advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
     }
     set_battle_speed(&mut world, id, ObjectId(1), 107.5).unwrap();
-    let mut smoke = serde_json::to_value(&world.btech).unwrap();
-    smoke["maps"][map.0.to_string()]["decorations"]["25"] =
-        serde_json::to_value(BattleDecoration::new(DecorationKind::Smoke, 120, None)).unwrap();
-    world.btech = serde_json::from_value(smoke).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            record["decorations"]["25"] =
+                serde_json::to_value(BattleDecoration::new(DecorationKind::Smoke, 120, None))
+                    .unwrap();
+        })
+        .unwrap();
     let mech = world.create(&config, "Submerged Jenner".into(), Kind::Thing);
     world.objects.get_mut(&mech).unwrap().home = Some(ObjectId(config.home()));
     create_battle_unit(

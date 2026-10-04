@@ -63,23 +63,18 @@ pub fn edit_battle_tic(
         BattleTicEdit::Remove(indices) => next.0[group].retain(|i| !indices.contains(i)),
         BattleTicEdit::Clear => next.0[group].clear(),
     }
-    if world.btech.vehicles().contains_key(&id) {
-        world.btech.vehicles.get_mut(&id).unwrap().tics = next;
-    } else {
-        world.btech.constructed.get_mut(&id).unwrap().tics = next;
-    }
+    crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
+        unit.tics = next;
+    });
     Ok(())
 }
 
 /// Adapt owned state and cockpit authority; selection and ordering remain chassis-independent.
 fn controlled(world: &World, id: ObjectId, pilot: ObjectId) -> Result<(&BattleTics, usize)> {
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        super::vehicle_power::controlled(world, id, pilot)?;
-        return Ok((&unit.tics, unit.loadout()?.weapons.len()));
-    }
-    super::power::controlled_unit(world, id, pilot)?;
-    let unit = &world.btech.constructed_units()[&id];
-    Ok((&unit.tics, unit.loadout()?.weapons.len()))
+    crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
+        super::power::controlled(world, id, pilot)?;
+        Ok((&unit.tics, unit.loadout()?.weapons.len()))
+    })
 }
 
 /// Parse bounded comma-separated numbers and inclusive ranges before making any changes.

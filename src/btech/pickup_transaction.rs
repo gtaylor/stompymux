@@ -155,15 +155,10 @@ pub(super) fn pickup(
         None
     };
     let maximum = super::throttle_maximum(&candidate, carrier, tsm_tow_bonus)?;
-    let motion = if let Some(unit) = candidate.btech.vehicles.get_mut(&carrier) {
-        unit.motion.as_mut()
-    } else {
-        candidate
-            .btech
-            .constructed
-            .get_mut(&carrier)
-            .and_then(|unit| unit.motion.as_mut())
-    };
+    let motion = candidate
+        .btech
+        .unit_mut(carrier)
+        .and_then(|unit| super::with_unit_mut!(unit, |unit| unit.motion.as_mut()));
     if let Some(motion) = motion {
         motion.limit_load(maximum, maximum);
     }

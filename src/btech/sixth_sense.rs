@@ -62,36 +62,23 @@ pub(super) fn startup(world: &World, pilot: Option<ObjectId>) -> bool {
 
 /// Read the shared warning state through either supported anatomical representation.
 fn state(world: &World, id: ObjectId) -> Result<&SixthSense> {
-    if let Some(unit) = world.btech.constructed_units().get(&id) {
-        return Ok(&unit.sixth_sense);
-    }
-    Ok(&world
-        .btech
-        .vehicles()
-        .get(&id)
-        .context("Unit is unavailable")?
-        .sixth_sense)
+    super::with_unit!(
+        world.btech.unit(id).context("Unit is unavailable")?,
+        |unit| { Ok(&unit.sixth_sense) }
+    )
 }
 
 /// Mutate an already validated unit without maintaining a separate event registry.
 fn state_mut(world: &mut World, id: ObjectId) -> &mut SixthSense {
-    if world.btech.vehicles().contains_key(&id) {
-        return &mut world.btech.vehicles.get_mut(&id).unwrap().sixth_sense;
-    }
-    &mut world.btech.constructed.get_mut(&id).unwrap().sixth_sense
+    crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
+        &mut unit.sixth_sense
+    })
 }
 
 /// Current material mass includes the same cargo and damage adjustments as movement.
 fn mass(world: &World, id: ObjectId) -> Result<u32> {
-    if let Some(unit) = world.btech.constructed_units().get(&id) {
-        return unit.effective_mass();
-    }
-    world
-        .btech
-        .vehicles()
-        .get(&id)
-        .context("Unit is unavailable")?
-        .effective_mass()
+    let unit = world.btech.unit(id).context("Unit is unavailable")?;
+    unit.effective_mass()
 }
 
 /// Range and current material tonnage select one of nine reference warning strengths.

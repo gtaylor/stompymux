@@ -9,19 +9,15 @@ pub fn set_auto_fall(
     pilot: ObjectId,
     enabled: bool,
 ) -> Result<()> {
-    if world.btech.vehicles().contains_key(&id) {
-        super::vehicle_power::controlled(world, id, pilot)?;
-        world.btech.vehicles.get_mut(&id).unwrap().auto_fall = enabled;
-        return Ok(());
-    }
     preference_access(world, id, pilot)?;
-    world.btech.constructed.get_mut(&id).unwrap().auto_fall = enabled;
+    let unit = world.btech.unit_mut(id).expect("controlled unit");
+    super::with_unit_mut!(unit, |unit| unit.auto_fall = enabled);
     Ok(())
 }
 
 /// Query and mutation use the same cockpit checks.
 pub(crate) fn preference_access(world: &World, id: ObjectId, pilot: ObjectId) -> Result<()> {
-    super::power::controlled_unit(world, id, pilot)
+    super::power::controlled(world, id, pilot)
 }
 
 /// Enable or disable external searchlight transition warnings for this cockpit.
@@ -31,7 +27,7 @@ pub fn set_searchlight_warning(
     pilot: ObjectId,
     enabled: bool,
 ) -> Result<()> {
-    notice_preference_access(world, id, pilot)?;
+    preference_access(world, id, pilot)?;
     *notice_preferences(world, id).0 = enabled;
     Ok(())
 }
@@ -53,7 +49,7 @@ pub fn set_armor_warning(
     pilot: ObjectId,
     enabled: bool,
 ) -> Result<()> {
-    notice_preference_access(world, id, pilot)?;
+    preference_access(world, id, pilot)?;
     *combat_preferences(world, id).0 = !enabled;
     Ok(())
 }
@@ -64,7 +60,7 @@ pub fn set_ammunition_warning(
     pilot: ObjectId,
     enabled: bool,
 ) -> Result<()> {
-    notice_preference_access(world, id, pilot)?;
+    preference_access(world, id, pilot)?;
     *combat_preferences(world, id).1 = !enabled;
     Ok(())
 }
@@ -109,23 +105,9 @@ pub fn set_friendly_fire_safety(
     pilot: ObjectId,
     enabled: bool,
 ) -> Result<()> {
-    if world.btech.vehicles().contains_key(&id) {
-        super::vehicle_power::controlled(world, id, pilot)?;
-        world
-            .btech
-            .vehicles
-            .get_mut(&id)
-            .unwrap()
-            .friendly_fire_safety = enabled;
-        return Ok(());
-    }
     preference_access(world, id, pilot)?;
-    world
-        .btech
-        .constructed
-        .get_mut(&id)
-        .unwrap()
-        .friendly_fire_safety = enabled;
+    let unit = world.btech.unit_mut(id).expect("controlled unit");
+    super::with_unit_mut!(unit, |unit| unit.friendly_fire_safety = enabled);
     Ok(())
 }
 
@@ -165,7 +147,7 @@ pub fn set_autocon_shutdown(
     pilot: ObjectId,
     enabled: bool,
 ) -> Result<()> {
-    notice_preference_access(world, id, pilot)?;
+    preference_access(world, id, pilot)?;
     *notice_preferences(world, id).1 = enabled;
     Ok(())
 }
@@ -192,11 +174,10 @@ fn friendly_fire_preference(enabled: bool) -> Preference {
 
 /// Select the shared mutable notice preferences after cockpit admission.
 fn notice_preferences(world: &mut World, id: ObjectId) -> (&mut bool, &mut bool) {
-    if let Some(unit) = world.btech.constructed.get_mut(&id) {
-        return (&mut unit.searchlight_warning, &mut unit.autocon_shutdown);
-    }
-    let unit = world.btech.vehicles.get_mut(&id).expect("admitted vehicle");
-    (&mut unit.searchlight_warning, &mut unit.autocon_shutdown)
+    super::with_unit_mut!(
+        world.btech.unit_mut(id).expect("admitted vehicle"),
+        |unit| { (&mut unit.searchlight_warning, &mut unit.autocon_shutdown) }
+    )
 }
 
 impl super::BattleVehicle {
@@ -231,21 +212,12 @@ fn autocon_preference(enabled: bool) -> Preference {
     }
 }
 
-/// Admit notice settings on either chassis without widening anatomy-specific preference setters.
-fn notice_preference_access(world: &World, id: ObjectId, pilot: ObjectId) -> Result<()> {
-    if world.btech.vehicles().contains_key(&id) {
-        return super::vehicle_power::controlled(world, id, pilot);
-    }
-    preference_access(world, id, pilot)
-}
-
 /// Borrow combat-warning preferences after shared cockpit admission.
 fn combat_preferences(world: &mut World, id: ObjectId) -> (&mut bool, &mut bool) {
-    if let Some(unit) = world.btech.constructed.get_mut(&id) {
-        return (&mut unit.no_armor_warning, &mut unit.no_ammunition_warning);
-    }
-    let unit = world.btech.vehicles.get_mut(&id).expect("admitted vehicle");
-    (&mut unit.no_armor_warning, &mut unit.no_ammunition_warning)
+    super::with_unit_mut!(
+        world.btech.unit_mut(id).expect("admitted vehicle"),
+        |unit| { (&mut unit.no_armor_warning, &mut unit.no_ammunition_warning) }
+    )
 }
 
 impl super::BattleVehicle {

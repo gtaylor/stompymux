@@ -1246,11 +1246,10 @@ pub(crate) fn preferences_command(
             .get(&ctx.player)
             .and_then(|player| player.location)
             .context("Enter a unit first")?;
+        super::preferences::preference_access(&world, unit, ctx.player)?;
         let preferences = if let Some(vehicle) = world.btech.vehicles().get(&unit) {
-            super::vehicle_power::controlled(&world, unit, ctx.player)?;
             super::preferences::vehicle_catalog(vehicle)
         } else {
-            super::preferences::preference_access(&world, unit, ctx.player)?;
             super::preferences::catalog(&world.btech.constructed_units()[&unit]).into()
         };
         let args: Vec<_> = input.args.split_whitespace().collect();

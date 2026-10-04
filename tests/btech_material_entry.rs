@@ -73,9 +73,7 @@ async fn biped_and_quad_material_entries_consume_exact_dice_and_replay() {
                 .unwrap();
             before
                 .btech
-                .rewrite_unit_record(id, |record| {
-                    record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-                })
+                .set_unit_dice(id, BattleDice::seeded([seed; 32]))
                 .unwrap();
             before.validate(&config).unwrap();
             persistence::save(&config.database(), &before)

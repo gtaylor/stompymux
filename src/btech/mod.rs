@@ -182,12 +182,22 @@ pub use readiness::{BattleWeaponReadiness, BattleWeaponUse, advance_recycle, spe
 mod salvo;
 mod state;
 mod stun;
-pub use salvo::{BattleSalvoGroup, BattleSalvoReport, resolve_salvo, resolve_tactical_salvo};
+pub use salvo::{
+    BattleSalvoGroup, BattleSalvoReport, SalvoReport, resolve_salvo, resolve_tactical_salvo,
+};
 pub use stun::{advance_stun, stun_unit};
+mod chassis_actions;
 mod template;
 mod template_construction;
 mod template_document;
 mod unit;
+pub use chassis_actions::{
+    BattleUnitFallReport, BattleUnitShotReport, ByChassis, fire_unit_shot, resolve_unit_fall,
+};
+mod unit_access;
+pub(crate) use unit_access::{with_unit, with_unit_mut};
+mod unit_validation;
+pub use unit_access::{BattleUnitDefinition, BattleUnitEdit, BattleUnitMut, BattleUnitRef};
 
 pub use assets::{read_map, read_template, read_unit_template, read_vehicle_template};
 mod unit_template;
@@ -218,7 +228,9 @@ pub use vehicle_loadout::{BattleVehicleLoadout, VehicleCriticalLocation};
 pub use vehicle_template::{BattleVehicleMovement, BattleVehicleSection, BattleVehicleTemplate};
 
 pub use equipment::{BattleSystem, BattleWaterRanges, BattleWeapon, WeaponProfile};
-pub use loadout::{AmmunitionBin, BattleLoadout, CriticalLocation, SystemCritical, WeaponMount};
+pub use loadout::{
+    AmmunitionBin, BattleLoadout, CriticalLocation, ResolvedLoadout, SystemCritical, WeaponMount,
+};
 
 pub use placement::{place_unit, remove_unit};
 pub use unit::{BattlePosition, BattleSectionState, BattleUnit};
@@ -338,7 +350,8 @@ mod shot_transaction;
 mod validation_contacts;
 mod validation_context;
 pub use shot::{
-    BattleGlancingMode, BattleRecoilReport, BattleShotReport, BattleShotRules, resolve_shot,
+    BattleGlancingMode, BattleRecoilReport, BattleShotReport, BattleShotRules, ShotReport,
+    resolve_shot,
 };
 
 mod piloting;
@@ -362,7 +375,9 @@ pub use vehicle_hit::{BattleVehicleHit, BattleVehicleHitRules, BattleVehicleMoti
 pub use vehicle_turret::{lock_vehicle_turret, set_turret, turret_readout};
 
 mod fall;
-pub use fall::{BattleFallReport, BattleFallRules, BattlePosture, resolve_fall};
+pub use fall::{
+    BattleFallFeedback, BattleFallReport, BattleFallRules, BattlePosture, FallReport, resolve_fall,
+};
 
 pub(crate) mod stand;
 pub use stand::{
@@ -1018,7 +1033,7 @@ pub use vehicle_burning::{
 mod fall_profile;
 mod vehicle_fall;
 pub use evacuation::vehicle_fall_action;
-pub use vehicle_fall::{BattleVehicleFallReport, resolve_vehicle_fall};
+pub use vehicle_fall::{BattleVehicleFallFeedback, BattleVehicleFallReport, resolve_vehicle_fall};
 
 mod reverse_slope;
 

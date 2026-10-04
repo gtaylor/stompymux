@@ -12,30 +12,19 @@ pub(super) struct Defense {
 
 /// Inspect the saved whole-unit switch without requiring a specific construction class.
 pub(super) fn enabled(world: &World, id: ObjectId) -> Result<bool> {
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        return Ok(unit.ams_enabled());
-    }
-    Ok(world
-        .btech
-        .constructed_units()
-        .get(&id)
-        .context("Unit is unavailable")?
-        .ams_enabled())
+    let unit = world.btech.unit(id).context("Unit is unavailable")?;
+    Ok(unit.ams_enabled())
 }
 
 /// Store a switch after the caller has checked cockpit authority and installation.
 pub(super) fn set_enabled(world: &mut World, id: ObjectId, enabled: bool) -> Result<()> {
-    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
-        unit.ams_enabled = enabled;
-        return Ok(());
-    }
-    world
-        .btech
-        .constructed
-        .get_mut(&id)
-        .context("Unit is unavailable")?
-        .ams_enabled = enabled;
-    Ok(())
+    super::with_unit_mut!(
+        world.btech.unit_mut(id).context("Unit is unavailable")?,
+        |unit| {
+            unit.ams_enabled = enabled;
+            Ok(())
+        }
+    )
 }
 
 /// Critical loss of any installed AMS disables the whole capability for either construction class.
@@ -73,43 +62,29 @@ fn installed<L: Copy>(weapons: &[WeaponMount<L>], destroyed: impl Fn(L) -> bool)
 
 /// Project temporary failure and bin state into the common mount-order selection.
 pub(super) fn select(world: &World, id: ObjectId) -> Result<Option<Defense>> {
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        let loadout = unit.loadout()?;
-        return Ok(first_defense(
-            &loadout.weapons,
-            &loadout.ammunition,
-            |index, mount| {
-                mount
-                    .criticals
-                    .iter()
-                    .all(|location| !unit.critical_unavailable(*location))
-                    && !unit.weapon_failures.contains_key(&index)
-                    && !unit.jammed_weapons.contains(&index)
-                    && !unit.weapon_recycle.contains_key(&index)
-            },
-            |index, bin| unit.ammunition()[index] > 0 && !unit.critical_unavailable(bin.location),
-            |left, right| left.section == right.section,
-        ));
-    }
-    let unit = world
-        .btech
-        .constructed_units()
-        .get(&id)
-        .context("Unit is unavailable")?;
-    let loadout = unit.loadout()?;
-    Ok(first_defense(
-        &loadout.weapons,
-        &loadout.ammunition,
-        |index, mount| {
-            mount
-                .criticals
-                .iter()
-                .all(|location| !unit.critical_unavailable(*location))
-                && !unit.weapon_recycle().contains_key(&index)
-        },
-        |index, bin| unit.ammunition()[index] > 0 && !unit.critical_unavailable(bin.location),
-        |left, right| left.section == right.section,
-    ))
+    super::with_unit!(
+        world.btech.unit(id).context("Unit is unavailable")?,
+        |unit| {
+            let loadout = unit.loadout()?;
+            Ok(first_defense(
+                &loadout.weapons,
+                &loadout.ammunition,
+                |index, mount| {
+                    mount
+                        .criticals
+                        .iter()
+                        .all(|location| !unit.critical_unavailable(*location))
+                        && !unit.weapon_failures.contains_key(&index)
+                        && !unit.jammed_weapons.contains(&index)
+                        && !unit.weapon_recycle.contains_key(&index)
+                },
+                |index, bin| {
+                    unit.ammunition()[index] > 0 && !unit.critical_unavailable(bin.location)
+                },
+                |left, right| left.section == right.section,
+            ))
+        }
+    )
 }
 
 /// Select the first ready mount, then a matching bin with local-section preference. Laser AMS

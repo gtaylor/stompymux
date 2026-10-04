@@ -351,15 +351,17 @@ async fn two_clients_acquire_lock_fire_destroy_and_restart() {
             // A surviving pilot can still be recovering from the final hit after restart.
             let player = ObjectId(loser as i64 + 1);
             await_recovery(&config, &mut heartbeats, player).await;
-            // An explicit new cockpit claim must not make a wreck operational again.
-            let output = command(&mut client, &mut sequence, "pilot").await;
-            assert!(output.contains("take the cockpit"), "{output}");
-            await_recovery(&config, &mut heartbeats, player).await;
+            // A wreck's cockpit cannot be claimed, so it can never become operational again.
             let claimed = persistence::load(&config.database()).await.unwrap();
-            let output = command(&mut client, &mut sequence, "startup").await;
-            assert!(output.contains("Destroyed unit cannot start"), "{output}");
-            let output = command(&mut client, &mut sequence, &fire).await;
+            let output = command(&mut client, &mut sequence, "pilot").await;
             assert!(output.contains("Unit is destroyed"), "{output}");
+            for attempt in ["startup", fire.as_str()] {
+                let output = command(&mut client, &mut sequence, attempt).await;
+                assert!(
+                    output.contains("Take the cockpit with pilot first"),
+                    "{attempt}: {output}"
+                );
+            }
             let rejected = persistence::load(&config.database()).await.unwrap();
             assert_wreck_unchanged(
                 &rejected.btech.constructed_units()[&units[loser]],

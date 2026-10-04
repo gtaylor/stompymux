@@ -89,9 +89,7 @@ async fn salvo_locations_replay_and_restart_preserves_every_group_and_roll() {
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([0; 32])).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded([0; 32]))
         .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let before = world.clone();
@@ -203,9 +201,7 @@ fn seeded_target(world: &stompymux_rs::World, id: ObjectId, seed: u8) -> stompym
     let mut trial = world.clone();
     trial
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded([seed; 32]))
         .unwrap();
     trial
 }

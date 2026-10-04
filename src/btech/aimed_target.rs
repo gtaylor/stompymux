@@ -61,15 +61,11 @@ impl BattleAimSelection {
 
 /// Read the saved selection without requiring a current lock or a running unit.
 pub fn aimed_section(world: &World, id: ObjectId) -> Result<Option<BattleAimSelection>> {
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        return Ok(unit.aimed_section);
-    }
-    Ok(world
+    let unit = world
         .btech
-        .constructed_units()
-        .get(&id)
-        .context("Unit construction state is unavailable")?
-        .aimed_section)
+        .unit(id)
+        .context("Unit construction state is unavailable")?;
+    Ok(unit.aimed_section())
 }
 
 /// Select using the locked target's anatomy; clearing needs no current target.
@@ -118,16 +114,15 @@ pub fn set_aimed_section(
     } else {
         (None, "Targetting disabled.".into())
     };
-    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
-        unit.aimed_section = selection;
-    } else {
+    crate::btech::with_unit_mut!(
         world
             .btech
-            .constructed
-            .get_mut(&id)
-            .context("Unit construction state is unavailable")?
-            .aimed_section = selection;
-    }
+            .unit_mut(id)
+            .context("Unit construction state is unavailable")?,
+        |unit| {
+            unit.aimed_section = selection;
+        }
+    );
     Ok(BattleNotice { unit: id, text })
 }
 

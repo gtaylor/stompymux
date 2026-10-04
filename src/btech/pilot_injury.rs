@@ -60,24 +60,16 @@ pub(super) fn injure_terminal_crew(
     id: ObjectId,
     hits: u8,
 ) -> Result<BattlePilotInjury> {
-    let (pilot, destroyed, previous) = if let Some(unit) = world.btech.vehicles().get(&id) {
-        (
-            unit.pilot(),
-            unit.is_destroyed(),
-            unit.character_pilot_status(),
-        )
-    } else {
-        let unit = world
-            .btech
-            .constructed_units()
-            .get(&id)
-            .context("Unit is unavailable")?;
-        (
-            unit.pilot(),
-            unit.is_destroyed(),
-            unit.character_pilot_status(),
-        )
-    };
+    let (pilot, destroyed, previous) = super::with_unit!(
+        world.btech.unit(id).context("Unit is unavailable")?,
+        |unit| {
+            (
+                unit.pilot(),
+                unit.is_destroyed(),
+                unit.character_pilot_status(),
+            )
+        }
+    );
     ensure!(
         destroyed && pilot.is_none(),
         "Terminal crew injury requires an unassigned wreck"
@@ -110,20 +102,13 @@ fn injure_tactical_crew(
     let object = world.objects.get(&id).context("Unit is unavailable")?;
     ensure!(!object.flags.contains(Flag::Going), "Unit is unavailable");
     let character = object.flags.contains(Flag::InCharacter);
-    let (pilot, old_injuries, destroyed) = if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        (
-            vehicle.pilot(),
-            vehicle.pilot_injuries(),
-            vehicle.is_destroyed(),
-        )
-    } else {
-        let unit = world
+    let (pilot, old_injuries, destroyed) = crate::btech::with_unit!(
+        world
             .btech
-            .constructed_units()
-            .get(&id)
-            .context("Unit construction state is unavailable")?;
-        (unit.pilot(), unit.pilot_injuries(), unit.is_destroyed())
-    };
+            .unit(id)
+            .context("Unit construction state is unavailable")?,
+        |unit| { (unit.pilot(), unit.pilot_injuries(), unit.is_destroyed()) }
+    );
     ensure!(
         !character || pilot.is_none(),
         "In-character pilot injury requires character casualty handling"
@@ -309,12 +294,9 @@ pub(super) fn set_administrative_injuries(
         return Ok(report.notice(id));
     }
     super::pilot_health::set_count(world, id, injuries);
-    let recovery = if let Some(unit) = world.btech.constructed.get_mut(&id) {
+    let recovery = super::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
         &mut unit.crew_recovery
-    } else {
-        let unit = world.btech.vehicles.get_mut(&id).unwrap();
-        &mut unit.crew_recovery
-    };
+    });
     recovery.edit_tactical_injuries(injuries);
     if let Some(pilot) = pilot
         && let Some(recovery) = world.btech.recoveries.get_mut(&pilot)

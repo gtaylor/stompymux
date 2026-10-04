@@ -176,9 +176,7 @@ async fn fatal_vehicle_character_injury_evacuates_atomically_and_preserves_mater
 fn seed_vehicle(world: &mut World, id: ObjectId, seed: u8) {
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded([seed; 32]))
         .unwrap();
 }
 
@@ -449,9 +447,7 @@ async fn nested_crew_death_finishes_weapon_damage_before_single_evacuation() {
         .unwrap();
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded(seed))
         .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let rules = BattleVehicleCriticalRules {
@@ -851,9 +847,9 @@ async fn character_mine_heat_evacuates_after_packets_and_rolls_back_the_field() 
     .unwrap();
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["motion"]["heading"] = 180.0.into();
-            record["motion"]["desired_heading"] = 180.0.into();
+        .edit_unit_motion(id, |motion| {
+            motion.heading = 180.0;
+            motion.desired_heading = 180.0;
         })
         .unwrap();
     let seed = (0..=255)
@@ -979,9 +975,7 @@ async fn character_vehicle_falls_share_personal_injury_and_atomic_evacuation() {
             .unwrap();
         world
             .btech
-            .rewrite_unit_record(id, |record| {
-                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-            })
+            .set_unit_dice(id, BattleDice::seeded([seed; 32]))
             .unwrap();
         let rules = BattleMovementRules::STANDARD.fall;
         let before = world.btech.clone();
@@ -1003,7 +997,7 @@ async fn character_vehicle_falls_share_personal_injury_and_atomic_evacuation() {
             initial == 9
         );
         assert_eq!(report.damage, 0);
-        assert!(report.impacts.is_empty());
+        assert!(report.groups.is_empty());
         let result = scripts.world().clone();
         assert_eq!(
             result.btech.vehicles()[&id].pilot_injuries(),
@@ -1076,7 +1070,7 @@ async fn character_vehicle_fall_protection_reuses_control_experience() {
     assert_eq!(report.experience_messages.len(), 1);
     assert!(report.character_injury.is_none());
     assert!(report.damage > 0);
-    assert!(!report.impacts.is_empty());
+    assert!(!report.groups.is_empty());
 }
 
 #[tokio::test]
@@ -1244,14 +1238,12 @@ async fn transport_loss_shares_nested_chassis_destruction_and_transactional_dise
                     parent = id;
                 }
                 if wreck_first {
-                    let mut saved = serde_json::to_value(&world.btech).unwrap();
-                    let collection = if vehicle_first {
-                        "vehicles"
-                    } else {
-                        "constructed"
-                    };
-                    saved[collection][cargo[0].0.to_string()]["transport_destroyed"] = true.into();
-                    world.btech = serde_json::from_value(saved).unwrap();
+                    world
+                        .btech
+                        .rewrite_unit_record(cargo[0], |record| {
+                            record["transport_destroyed"] = true.into();
+                        })
+                        .unwrap();
                 }
                 world.validate(&config).unwrap();
                 let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();

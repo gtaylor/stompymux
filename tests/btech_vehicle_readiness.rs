@@ -574,9 +574,7 @@ async fn vehicle_weapon_critical_selection_excludes_losses_and_replays() {
         fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([31; 32])).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded([31; 32]))
         .unwrap();
     let section = BattleVehicleSection::Turret;
     let before = world.btech.clone();

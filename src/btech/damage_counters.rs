@@ -12,15 +12,8 @@ pub(super) struct DamageCounters {
 
 /// Read statistics without changing material, contacts or randomness.
 pub(super) fn read(world: &World, id: ObjectId) -> Result<DamageCounters> {
-    if let Some(unit) = world.btech.constructed_units().get(&id) {
-        return Ok(unit.damage_counters);
-    }
-    Ok(world
-        .btech
-        .vehicles()
-        .get(&id)
-        .context("Unit is unavailable")?
-        .damage_counters)
+    let unit = world.btech.unit(id).context("Unit is unavailable")?;
+    Ok(unit.damage_counters())
 }
 
 /// Select only the owning construction store for a validated update.

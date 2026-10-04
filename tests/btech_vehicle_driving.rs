@@ -248,9 +248,7 @@ fn terrain_seed(world: &mut World, id: ObjectId, fire: u8, motive: u8) -> Battle
         .unwrap();
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded(seed))
         .unwrap();
     BattleDice::seeded(seed)
 }
@@ -381,9 +379,12 @@ async fn fire_exposure_requires_entry_and_hull_loss_preserves_occupants() {
 #[tokio::test]
 async fn every_crossed_fire_hex_checks_once_without_adding_stationary_exposure() {
     let (_dir, config, mut world, id, map) = burning_corridor().await;
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["maps"][map.0.to_string()]["movement_modifier"] = 2000.into();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            record["movement_modifier"] = 2000.into();
+        })
+        .unwrap();
     let start = world.btech.vehicles()[&id].motion().unwrap().point;
     let mut ordinary = world.clone();
     advance_battle_motion(&mut ordinary, BattleMovementRules::STANDARD).unwrap();
@@ -400,9 +401,7 @@ async fn every_crossed_fire_hex_checks_once_without_adding_stationary_exposure()
         .unwrap();
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded(seed))
         .unwrap();
     let rules = BattleMovementRules {
         fall: BattleFallRules {
@@ -472,12 +471,7 @@ fn seed_corridor_mines(
                 .then_some(initial)
         })
         .unwrap();
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(&seed).unwrap();
-        })
-        .unwrap();
+    world.btech.set_unit_dice(id, seed.clone()).unwrap();
     for (index, &coordinate) in entries.iter().enumerate() {
         for (offset, kind, strength) in [
             (0, BattleMineKind::Trigger, 0),
@@ -715,12 +709,7 @@ async fn disabling_mine_heat_precedes_terrain_fire_and_stops_at_entry() {
             (dice.two_d6() == 6 && dice.two_d6() == 10 && dice.two_d6() <= 5).then_some(initial)
         })
         .unwrap();
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(&dice).unwrap();
-        })
-        .unwrap();
+    world.btech.set_unit_dice(id, dice.clone()).unwrap();
     let before = world.clone();
     let mut rules = mine_movement_rules();
     rules.fall.vehicle_impact.advanced_fire = true;

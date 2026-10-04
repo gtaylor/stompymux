@@ -61,12 +61,10 @@ impl BlastCell {
         }) {
             return Ok(None);
         }
-        let (elevation, motion, pilot) = if let Some(unit) = world.btech.vehicles().get(&id) {
-            (unit.elevation_level(self.tile), unit.motion(), unit.pilot())
-        } else {
-            let unit = &world.btech.constructed_units()[&id];
-            (unit.elevation_level(self.tile), unit.motion(), unit.pilot())
-        };
+        let (elevation, motion, pilot) =
+            crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
+                (unit.elevation_level(self.tile), unit.motion(), unit.pilot())
+            });
         if elevation <= self.lower || elevation >= self.upper {
             return Ok(None);
         }

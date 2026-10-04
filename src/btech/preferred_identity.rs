@@ -43,15 +43,8 @@ pub fn preferred_id(world: &World, id: ObjectId) -> Result<Option<&str>> {
     {
         return Ok(Some(value));
     }
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        return Ok(unit.preferred_id.as_ref().map(AsRef::as_ref));
-    }
-    let unit = world
-        .btech
-        .constructed_units()
-        .get(&id)
-        .context("Unit is not constructed")?;
-    Ok(unit.preferred_id.as_ref().map(AsRef::as_ref))
+    let unit = world.btech.unit(id).context("Unit is not constructed")?;
+    Ok(unit.preferred_id().map(AsRef::as_ref))
 }
 
 /// Trusted configuration edit; empty or absent values clear the preference.
@@ -69,16 +62,15 @@ pub fn set_preferred_id(
         .transpose()?;
     let result = value.as_ref().map(|value| value.as_ref().to_owned());
     let configured = result.clone();
-    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
-        unit.preferred_id = value;
-    } else {
-        let unit = world
+    super::with_unit_mut!(
+        world
             .btech
-            .constructed
-            .get_mut(&id)
-            .context("Unit is not constructed")?;
-        unit.preferred_id = value;
-    }
+            .unit_mut(id)
+            .context("Unit is not constructed")?,
+        |unit| {
+            unit.preferred_id = value;
+        }
+    );
     super::set_unit_identity_configuration(world, id, "preferred_id", configured);
     Ok(result)
 }

@@ -54,9 +54,12 @@ async fn native_and_lua_map_activation_agree_and_inherit_unnamed_flags() {
             let (_dir, config, mut world, map) = fixture(operation == "create").await;
             let inherited = if operation == "create" { 0 } else { 49 };
             if operation != "create" {
-                let mut state = serde_json::to_value(&world.btech).unwrap();
-                state["maps"][map.0.to_string()]["flags"] = inherited.into();
-                world.btech = serde_json::from_value(state).unwrap();
+                world
+                    .btech
+                    .rewrite_map_record(map, |record| {
+                        record["flags"] = inherited.into();
+                    })
+                    .unwrap();
             }
             let root = config.path(&config.database.map_database);
             let text = std::fs::read_to_string(root.join("field.map.toml")).unwrap();

@@ -272,6 +272,67 @@ async fn atm_modes_firing_and_restart_across_chassis_atm12() {
     atm_modes_matrix(BattleWeapon::ClanAtm12).await;
 }
 
+/// A failed or feed-jammed AMS mount defends nothing, on a Mech as on a vehicle.
+#[tokio::test]
+async fn failed_or_jammed_ams_does_not_intercept() {
+    let source = &firing::templates()[0];
+    for target_source in defense::templates() {
+        for field in ["weapon_failures", "jammed_weapons"] {
+            let (_dir, config, mut world, shooter, target, index) = firing::fixture_with_supply(
+                source,
+                Some(BattleWeapon::ClanAtm12),
+                &target_source,
+                false,
+                Some(""),
+            )
+            .await;
+            let defender = world.btech.unit(target).unwrap();
+            let mount = (0..)
+                .map_while(|mount| defender.weapon_readiness(mount).ok())
+                .position(|readiness| readiness.weapon.is_ams())
+                .expect("defender mounts an AMS");
+            world
+                .btech
+                .rewrite_unit_record(target, |record| {
+                    record["ams_enabled"] = true.into();
+                    if field == "weapon_failures" {
+                        record[field][mount.to_string()] = serde_json::json!("disabled");
+                    } else {
+                        record[field] = serde_json::json!([mount]);
+                    }
+                })
+                .unwrap();
+            let seed = (0..=255)
+                .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+                .unwrap();
+            world
+                .btech
+                .set_unit_dice(shooter, BattleDice::seeded([seed; 32]))
+                .unwrap();
+            let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+            let report: mlua::Table = scripts
+                .eval_callback(&format!(
+                    "return btech.unit.fire({},1,{index},{})",
+                    shooter.0, target.0
+                ))
+                .unwrap();
+            assert!(
+                report.get::<mlua::Value>("ams").unwrap().is_nil(),
+                "{field} on {}",
+                world_name(&target_source)
+            );
+        }
+    }
+}
+
+/// The template's display name, for assertion messages.
+fn world_name(source: &str) -> &str {
+    source
+        .lines()
+        .find_map(|line| line.strip_prefix("name = "))
+        .unwrap_or("unnamed")
+}
+
 /// Every supported defender can intercept ATM salvos through the existing AMS path.
 #[tokio::test]
 async fn atm_ams_and_missing_supply() {

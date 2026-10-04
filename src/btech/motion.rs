@@ -40,6 +40,12 @@ impl BattleMotion {
         self.speed != 0.0 || self.desired_speed != 0.0 || self.heading != self.desired_heading
     }
 
+    /// Whether the unit is travelling or has been ordered to. A pending turn alone is
+    /// not travel: a unit without power keeps its heading order until it restarts.
+    pub fn translating(self) -> bool {
+        self.speed != 0.0 || self.desired_speed != 0.0
+    }
+
     /// Stop horizontal travel without cancelling an independent heading command.
     pub(super) fn stop_translation(&mut self) {
         self.speed = 0.0;
@@ -459,22 +465,14 @@ fn advance_fall_headings(
             continue;
         }
         let (fall, power, destroyed, motion) =
-            if let Some(unit) = world.btech.constructed_units().get(&id) {
+            crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
                 (
                     unit.free_fall(),
                     unit.power(),
                     unit.is_destroyed(),
                     unit.motion(),
                 )
-            } else {
-                let unit = &world.btech.vehicles()[&id];
-                (
-                    unit.free_fall(),
-                    unit.power(),
-                    unit.is_destroyed(),
-                    unit.motion(),
-                )
-            };
+            });
         if fall.is_none() || power != BattlePower::Running || destroyed {
             continue;
         }
@@ -511,11 +509,7 @@ fn advance_fall_headings(
                 continue;
             }
         }
-        let maximum = if let Some(unit) = world.btech.constructed_units().get(&id) {
-            unit.mobility().maximum_speed
-        } else {
-            world.btech.vehicles()[&id].maximum_speed()
-        };
+        let maximum = world.btech.unit(id).expect("moving unit").maximum_speed();
         let maximum = super::load::movement_maximum(world, id, maximum, rules.tsm_tow_bonus)?;
         let maximum = if let Some(unit) = world.btech.constructed_units().get(&id) {
             let effective = super::speed_bonus::on_map(
@@ -533,11 +527,9 @@ fn advance_fall_headings(
             .get(&id)
             .map_or(1.0, |unit| unit.chassis().turn_multiplier());
         motion.turn_toward(maximum, rules.fasa_turning, multiplier);
-        if let Some(unit) = world.btech.constructed.get_mut(&id) {
+        crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
             unit.motion = Some(motion);
-        } else {
-            world.btech.vehicles.get_mut(&id).unwrap().motion = Some(motion);
-        }
+        })
     }
     Ok(notices)
 }

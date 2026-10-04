@@ -64,7 +64,7 @@ async fn crashes_share_packets_water_reduction_and_saved_replay() {
                 rules.vehicle_impact.criticals.enabled = false;
                 let report = resolve_battle_vtol_crash(&mut world, id, levels, rules).unwrap();
                 assert_eq!(report.damage, levels * (u32::from(tons) + 5) / divisor);
-                assert_eq!(report.impacts.len(), (report.damage as usize).div_ceil(5));
+                assert_eq!(report.groups.len(), (report.damage as usize).div_ceil(5));
                 assert_eq!(
                     report.avoidance.as_ref().unwrap().situational,
                     levels as i32
@@ -120,7 +120,7 @@ async fn safe_crash_stops_descent_without_damage_and_invalid_crashes_are_atomic(
     rules.vehicle_impact.criticals.combat_safe = true;
     let report = resolve_battle_vtol_crash(&mut world, id, 3, rules).unwrap();
     assert!(report.avoidance.is_none());
-    assert!(report.impacts.is_empty());
+    assert!(report.groups.is_empty());
     let unit = &world.btech.vehicles()[&id];
     assert!(!unit.immobilized());
     assert_eq!(unit.sections(), original.vehicles()[&id].sections());
@@ -335,7 +335,7 @@ async fn movement_dispatch_advances_falls_and_powered_flight_exactly_once() {
                     .iter()
                     .any(|notice| notice.unit == falling && notice.text == "You hit the ground!")
             );
-            for notice in fall.notices {
+            for notice in fall.feedback.notices {
                 assert!(notices.contains(&notice));
             }
         } else {
@@ -469,7 +469,7 @@ async fn world_contacts_commit_clear_flight_landing_crash_and_water_with_replay(
                     BattleVtolSurfaceContact::Ground { fall_levels: 13 }
                 );
                 assert_eq!(fall.avoidance.unwrap().situational, 13);
-                assert!(!fall.impacts.is_empty());
+                assert!(!fall.groups.is_empty());
                 assert_eq!(unit.vtol_flight().unwrap().altitude, 1.0);
                 assert!(unit.immobilized());
             }
@@ -1027,7 +1027,7 @@ async fn destroyed_aircraft_descend_and_settle_with_replay_and_no_second_pilot_l
             assert_eq!(world.btech, replay.btech);
             assert_eq!(world.btech, dispatched.btech);
             if let BattleVehicleDescentEvent::Impact { fall, .. } = event {
-                assert!(!fall.impacts.is_empty());
+                assert!(!fall.groups.is_empty());
                 assert!(fall.pilot_injury.is_none());
                 assert!(fall.character_injury.is_none());
                 let avoidance = fall.avoidance.unwrap();

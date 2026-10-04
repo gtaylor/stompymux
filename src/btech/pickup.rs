@@ -8,31 +8,26 @@ use anyhow::{Context, Result, ensure};
 
 /// Read the explicit scenario permission for towing an out-of-character target.
 pub fn unit_towable(world: &World, id: ObjectId) -> Result<bool> {
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        return Ok(unit.towable);
-    }
-    Ok(world
+    let unit = world
         .btech
-        .constructed_units()
-        .get(&id)
-        .context("Unit construction is unavailable")?
-        .towable)
+        .unit(id)
+        .context("Unit construction is unavailable")?;
+    Ok(unit.towable())
 }
 
 /// Trusted scenario edit; the caller owns administrative authority and persistence.
 pub fn set_towable(world: &mut World, id: ObjectId, enabled: bool) -> Result<()> {
     live(world, id)?;
-    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
-        unit.towable = enabled;
-        return Ok(());
-    }
-    world
-        .btech
-        .constructed
-        .get_mut(&id)
-        .context("Unit construction is unavailable")?
-        .towable = enabled;
-    Ok(())
+    super::with_unit_mut!(
+        world
+            .btech
+            .unit_mut(id)
+            .context("Unit construction is unavailable")?,
+        |unit| {
+            unit.towable = enabled;
+            Ok(())
+        }
+    )
 }
 
 /// Pickup accepts only live object identities; destroyed material remains a tow candidate.

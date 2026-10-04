@@ -37,12 +37,9 @@ fn facts(world: &World, id: ObjectId) -> Option<(Option<u16>, bool, bool)> {
 
 /// Mutable timer and signature fields are the only chassis-specific hiding state.
 fn state_mut(world: &mut World, id: ObjectId) -> (&mut Option<u16>, &mut bool) {
-    if world.btech.vehicles().contains_key(&id) {
-        let unit = world.btech.vehicles.get_mut(&id).unwrap();
-        return (&mut unit.hide_elapsed, &mut unit.signature.hidden);
-    }
-    let unit = world.btech.constructed.get_mut(&id).unwrap();
-    (&mut unit.hide_elapsed, &mut unit.signature.hidden)
+    crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
+        (&mut unit.hide_elapsed, &mut unit.signature.hidden)
+    })
 }
 
 /// Begin hiding with wizard authority or installed camouflage, without acquiring any contacts.
@@ -118,11 +115,9 @@ fn exposed(world: &World, id: ObjectId) -> Result<bool> {
     let position = unit.position.context("Unit is not on a map")?;
     let tile =
         world.btech.maps()[&position.map].base_hex(i64::from(position.x), i64::from(position.y))?;
-    let elevation = if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        vehicle.elevation_level(tile)
-    } else {
-        world.btech.constructed_units()[&id].elevation_level(tile)
-    };
+    let elevation = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
+        unit.elevation_level(tile)
+    });
     if elevation != i32::from(super::fall_profile::surface(tile, elevation)) {
         return Ok(true);
     }

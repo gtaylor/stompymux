@@ -173,33 +173,17 @@ pub fn roll_unit_dice(world: &mut World, id: ObjectId, count: u8) -> Result<Vec<
         (1..=20).contains(&count),
         "Dice count must be between 1 and 20"
     );
-    if world.btech.vehicles().contains_key(&id) {
-        let vehicle = world.btech.vehicles.get_mut(&id).expect("checked vehicle");
-        return Ok((0..count).map(|_| vehicle.dice.d6()).collect());
-    }
-    ensure!(
-        world.btech.constructed_units().contains_key(&id),
-        "Unit construction state is unavailable"
-    );
-    let unit = world
-        .btech
-        .constructed
-        .get_mut(&id)
-        .context("Unit construction state is unavailable")?;
-    Ok((0..count).map(|_| unit.dice.d6()).collect())
+    let dice = unit_dice_mut(world, id)?;
+    Ok((0..count).map(|_| dice.d6()).collect())
 }
 
 /// Borrow the owning unit's stream inside an already validated candidate transaction.
 pub(super) fn unit_dice_mut(world: &mut World, id: ObjectId) -> Result<&mut BattleDice> {
-    if world.btech.vehicles().contains_key(&id) {
-        return Ok(&mut world.btech.vehicles.get_mut(&id).unwrap().dice);
-    }
-    Ok(&mut world
+    let unit = world
         .btech
-        .constructed
-        .get_mut(&id)
-        .context("Unit construction state is unavailable")?
-        .dice)
+        .unit_mut(id)
+        .context("Unit construction state is unavailable")?;
+    Ok(super::with_unit_mut!(unit, |unit| &mut unit.dice))
 }
 
 #[cfg(test)]

@@ -108,55 +108,62 @@ impl super::BattleVehicle {
 
     /// Reconcile equipment-dependent controls after damage or shutdown.
     pub(super) fn reconcile_electronics(&mut self) {
+        self.settle_command_networks();
+        self.electronics = self.settled_electronics();
+    }
+
+    /// Leave command networks whose computers no longer work.
+    pub(super) fn settle_command_networks(&mut self) {
         if !self.c3_operational().unwrap_or(false) {
             self.c3_network = None;
         }
         if !self.c3_hardware().is_ok_and(|h| h.c3i_operational) {
             self.c3i_network = None;
         }
+    }
+
+    /// Emission controls after power or equipment loss switches off what cannot run.
+    fn settled_electronics(&self) -> BattleElectronics {
         let guardian = self
             .electronic_suite_available(BattleElectronicSuite::Guardian)
             .unwrap_or(false);
         let angel = self
             .electronic_suite_available(BattleElectronicSuite::Angel)
             .unwrap_or(false);
-        self.electronics
-            .reconcile(self.power == BattlePower::Running, guardian, angel);
+        let mut electronics = self.electronics;
+        electronics.reconcile(self.power == BattlePower::Running, guardian, angel);
+        electronics
+    }
+
+    /// Whether the emission controls already agree with power and surviving equipment.
+    pub(super) fn electronics_settled(&self) -> bool {
+        self.settled_electronics() == self.electronics
     }
 }
 
 /// Borrow the common electronic state from either construction store.
 fn state(world: &World, id: ObjectId) -> Result<BattleElectronics> {
-    if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        return Ok(vehicle.electronics());
-    }
-    Ok(world
+    let unit = world
         .btech
-        .constructed_units()
-        .get(&id)
-        .context("Unit construction state is unavailable")?
-        .electronics())
+        .unit(id)
+        .context("Unit construction state is unavailable")?;
+    Ok(unit.electronics())
 }
 
 /// Borrow common controls while keeping construction-specific storage private.
 fn state_mut(world: &mut World, id: ObjectId) -> &mut BattleElectronics {
-    if world.btech.vehicles().contains_key(&id) {
-        return &mut world.btech.vehicles.get_mut(&id).unwrap().electronics;
-    }
-    &mut world.btech.constructed.get_mut(&id).unwrap().electronics
+    crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
+        &mut unit.electronics
+    })
 }
 
 /// Query construction-specific equipment availability for a common suite.
 fn available(world: &World, id: ObjectId, suite: BattleElectronicSuite) -> Result<bool> {
-    if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        return vehicle.electronic_suite_available(suite);
-    }
-    world
+    let unit = world
         .btech
-        .constructed_units()
-        .get(&id)
-        .context("Unit construction state is unavailable")?
-        .electronic_suite_available(suite)
+        .unit(id)
+        .context("Unit construction state is unavailable")?;
+    unit.electronic_suite_available(suite)
 }
 
 /// Visit both stores in a stable order for field snapshots.
@@ -177,11 +184,7 @@ pub fn toggle_electronics(
     suite: BattleElectronicSuite,
     requested: Mode,
 ) -> Result<Mode> {
-    if world.btech.vehicles().contains_key(&id) {
-        super::vehicle_power::controlled(world, id, pilot)?;
-    } else {
-        super::power::controlled_unit(world, id, pilot)?;
-    }
+    super::power::controlled(world, id, pilot)?;
     let unit = super::scanner::scanner_unit(world, id)
         .context("Unit construction state is unavailable")?;
     ensure!(unit.power == BattlePower::Running, "Start the unit first");

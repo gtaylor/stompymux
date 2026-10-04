@@ -67,11 +67,9 @@ fn events(world: &World, id: ObjectId) -> &BattleSpotterEvents {
 
 /// Edit the queue on the caller's unpublished world candidate.
 fn events_mut(world: &mut World, id: ObjectId) -> &mut BattleSpotterEvents {
-    if world.btech.vehicles().contains_key(&id) {
-        &mut world.btech.vehicles.get_mut(&id).unwrap().spotter_events
-    } else {
-        &mut world.btech.constructed.get_mut(&id).unwrap().spotter_events
-    }
+    crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
+        &mut unit.spotter_events
+    })
 }
 
 /// Global active-event order resumes across restart without a redundant sequence counter.
@@ -167,11 +165,9 @@ fn identity(world: &World, viewer: ObjectId, subject: ObjectId) -> String {
 
 /// Selected observer is the existing authority; periodic events retain their own inspected target.
 fn select(world: &mut World, id: ObjectId, target: Option<ObjectId>) {
-    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
+    crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
         unit.spotter = target;
-    } else {
-        world.btech.constructed.get_mut(&id).unwrap().spotter = target;
-    }
+    })
 }
 
 /// Advance one committed second and publish due events in original request order.

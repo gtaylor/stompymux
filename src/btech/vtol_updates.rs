@@ -216,10 +216,10 @@ pub(super) fn advance_all(
                 report.notices.extend(observers);
                 super::piloting::append_feedback(
                     &mut report.pilot_notices,
-                    fall.pilot_notices.iter().cloned(),
+                    fall.feedback.pilot_notices.iter().cloned(),
                     report.notices.len(),
                 );
-                report.notices.extend(fall.notices.iter().cloned());
+                report.notices.extend(fall.feedback.notices.iter().cloned());
                 report.vehicle_falls.push(*fall);
             }
             BattleVtolEnvironment::CrashRequired { .. }

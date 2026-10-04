@@ -2,7 +2,6 @@
 use super::*;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
-use serde::Serialize;
 
 /// Host policies for a tactical vehicle shot and each side's anatomy-specific consequences.
 #[derive(Debug, Clone, Copy)]
@@ -11,30 +10,10 @@ pub struct BattleVehicleShotRules {
     pub shooter_criticals: BattleVehicleCriticalRules,
 }
 
-/// A complete tactical state transition; the host must still publish feedback in its transaction.
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[must_use = "Publish firing and damage feedback with the enclosing host transaction"]
-pub struct BattleVehicleShotReport {
-    pub shooter: ObjectId,
-    pub target: ObjectId,
-    pub weapon_index: usize,
-    pub aim: BattleAimModifiers,
-    /// Selected occupied hex, when the host directs fire through a coordinate lock.
-    pub coordinate: Option<HexCoordinate>,
-    pub launch: BattleVehicleLaunch,
-    pub streak_confused: bool,
-    pub ams: Option<BattleAmsReport>,
-    pub narc: Option<BattleNarcReport<BattleUnitSection>>,
-    pub cooling: Option<f64>,
-    pub heat_transfer: u8,
-    /// Woods feedback and terrain effects preceding an unchanged thermal transfer.
-    pub thermal_woods: Option<super::BattleWoodsAbsorption>,
-    /// Incidental terrain check from a launched non-missile miss.
-    pub missed_terrain: Option<super::BattleWoodlandImpact>,
-    pub salvo: Option<BattleTargetSalvo>,
-    /// Accepted observer/artillery awards, published even when the shot misses.
-    pub experience_messages: Vec<BattleChannelMessage>,
-}
+/// A shot fired by a vehicle: a complete tactical state transition whose feedback the
+/// host must still publish in its transaction.
+pub type BattleVehicleShotReport =
+    super::ShotReport<super::BattleVehicleWeaponUse, super::BattleVehicleInternalDamage>;
 
 /// Resolve an admitted tactical shot against a Mech or vehicle without publishing partial state.
 /// Shared aim dice precede launch and AMS dice; target-owned cluster and impact dice follow.
@@ -379,13 +358,37 @@ fn fire_shot(
     let _publication = super::autopilot::diagnostics::combat("publication");
     attempt.succeed();
     candidate.commit(world);
+    let BattleVehicleLaunch {
+        ammunition_warning,
+        launch_notices,
+        roll,
+        loader_destroyed,
+        jammed,
+        propellant_roll,
+        misload,
+        hit,
+        glancing,
+        expenditure,
+    } = launch;
     Ok(BattleVehicleShotReport {
         shooter,
         target,
         weapon_index,
+        target_number: aim.subtotal(),
         aim,
         coordinate,
-        launch,
+        roll,
+        launched: expenditure.launched,
+        hit,
+        jammed,
+        loader_destroyed,
+        propellant_roll,
+        misload,
+        glancing,
+        expenditure,
+        ammunition_warning,
+        launch_notices,
+        recoil: None,
         streak_confused: weapon.is_streak() && angel_blocked,
         ams,
         narc,
@@ -409,20 +412,20 @@ impl BattleVehicleShotReport {
         &self,
         private: &mut Vec<super::BattlePilotNotice>,
     ) -> Vec<BattleNotice> {
-        if let Some(misload) = &self.launch.misload {
+        if let Some(misload) = &self.misload {
             super::piloting::append_feedback(private, misload.pilot_notices.iter().cloned(), 0);
             return misload.notices.clone();
         }
-        if self.launch.jammed || self.launch.loader_destroyed {
+        if self.jammed || self.loader_destroyed {
             return Vec::new();
         }
-        if !self.launch.expenditure.launched {
-            let mut notices = self.launch.launch_notices.clone();
+        if !self.expenditure.launched {
+            let mut notices = self.launch_notices.clone();
             notices.extend(super::launch_feedback::streak_failure(self.shooter));
             return notices;
         }
-        let mut notices = self.launch.launch_notices.clone();
-        if let Some(text) = &self.launch.ammunition_warning {
+        let mut notices = self.launch_notices.clone();
+        if let Some(text) = &self.ammunition_warning {
             notices.push(BattleNotice {
                 unit: self.shooter,
                 text: text.clone(),
@@ -436,8 +439,8 @@ impl BattleVehicleShotReport {
         }
         notices.extend(super::fire_feedback::glancing_notices(
             self.target,
-            self.launch.expenditure.weapon,
-            self.launch.glancing,
+            self.expenditure.weapon,
+            self.glancing,
         ));
         notices.extend(super::direct_effects::thermal_notices(
             self.shooter,

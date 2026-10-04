@@ -154,9 +154,12 @@ async fn preferred_sections_controls_feed_and_restart() {
         assert!(set_battle_ammunition_section(&mut saved, id, ObjectId(2), weapon, None).is_err());
         assert!(set_battle_ammunition_section(&mut saved, id, ObjectId(1), 95, None).is_err());
         let collection = if vehicle { "vehicles" } else { "constructed" };
-        let mut state = serde_json::to_value(&saved.btech).unwrap();
-        state[collection][id.0.to_string()]["ammunition"][preferred_bin] = 1.into();
-        saved.btech = serde_json::from_value(state).unwrap();
+        saved
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["ammunition"][preferred_bin] = 1.into();
+            })
+            .unwrap();
         let feed = |world: &World, rounds| {
             if vehicle {
                 world.btech.vehicles()[&id]
@@ -186,10 +189,12 @@ async fn preferred_sections_controls_feed_and_restart() {
         let restored = persistence::load(&config.database()).await.unwrap();
         assert_eq!(restored.btech, saved.btech);
         let mut firing = restored.clone();
-        let mut powered = serde_json::to_value(&firing.btech).unwrap();
-        powered[collection][id.0.to_string()]["power"] =
-            serde_json::to_value(BattlePower::Running).unwrap();
-        firing.btech = serde_json::from_value(powered).unwrap();
+        firing
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+            })
+            .unwrap();
         let spent = if vehicle {
             reserve_battle_vehicle_weapon(&mut firing, id, ObjectId(1), weapon, true)
                 .unwrap()

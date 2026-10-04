@@ -14,20 +14,14 @@ pub(super) fn set_tonnage(
         .parse::<u16>()
         .context("Invalid unit tonnage")?;
     ensure!(tons > 0, "Unit tonnage must be positive");
-    if let Some(unit) = world.btech.constructed.get_mut(&id) {
-        unit.set_nominal_tonnage(tons);
-        unit.validate()?;
-        unit.mass()?;
-    } else {
-        let unit = world
-            .btech
-            .vehicles
-            .get_mut(&id)
-            .context("Unit is unavailable")?;
-        unit.set_nominal_tonnage(tons);
-        unit.definition().validate_anatomy()?;
-        unit.mass()?;
-    }
+    super::with_unit_mut!(
+        world.btech.unit_mut(id).context("Unit is unavailable")?,
+        |unit| {
+            unit.set_nominal_tonnage(tons);
+            unit.validate()?;
+            unit.mass()?;
+        }
+    );
     reconcile(world, id, tsm_bonus)
 }
 
@@ -51,7 +45,7 @@ pub(super) fn set_movement(
             .get_mut(&id)
             .context("Unit is unavailable")?;
         unit.set_movement(movement);
-        unit.definition().validate_anatomy()?;
+        unit.validate()?;
         unit.mass()?;
     }
     reconcile(world, id, tsm_bonus)

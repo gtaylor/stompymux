@@ -341,15 +341,13 @@ pub(crate) fn configured(
     policy: super::SpeedPolicy,
 ) -> Result<BattleValue> {
     let maximum = super::effective_speed::configured(world, id, policy)?;
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        return unit.battle_value_at_speed(maximum, world.btech.weapon_settings());
-    }
-    world
+    let unit = world
         .btech
-        .constructed_units()
-        .get(&id)
-        .ok_or_else(|| anyhow::anyhow!("Unit construction is unavailable"))?
-        .battle_value_at_speed(maximum, world.btech.weapon_settings())
+        .unit(id)
+        .ok_or_else(|| anyhow::anyhow!("Unit construction is unavailable"))?;
+    super::with_unit!(unit, |unit| {
+        unit.battle_value_at_speed(maximum, world.btech.weapon_settings())
+    })
 }
 
 #[cfg(test)]

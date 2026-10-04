@@ -32,11 +32,7 @@ pub fn begin_unjam(
     pilot: ObjectId,
     index: usize,
 ) -> Result<String> {
-    if world.btech.vehicles().contains_key(&id) {
-        super::vehicle_power::controlled(world, id, pilot)?;
-    } else {
-        super::power::controlled_unit(world, id, pilot)?;
-    }
+    super::power::controlled(world, id, pilot)?;
     let state = super::unjam_unit::state(world, id, index)?;
     ensure!(
         state.power == BattlePower::Running && !state.destroyed,

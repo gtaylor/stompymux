@@ -105,9 +105,9 @@ async fn vehicle_control_damage_stacks_without_changing_skills_or_construction()
     assert_eq!(values, (4, 2));
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["motion"]["speed"] = 53.75.into();
-            record["motion"]["desired_speed"] = 53.75.into();
+        .edit_unit_motion(id, |motion| {
+            motion.speed = 53.75;
+            motion.desired_speed = 53.75;
         })
         .unwrap();
     assert_eq!(

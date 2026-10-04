@@ -33,16 +33,10 @@ pub fn unit_markings(world: &World, unit: ObjectId) -> Result<&str> {
     {
         return Ok(value);
     }
-    if let Some(unit) = world.btech.constructed_units().get(&unit) {
-        return Ok(&unit.markings.0);
-    }
-    Ok(&world
-        .btech
-        .vehicles()
-        .get(&unit)
-        .context("Unit is unavailable")?
-        .markings
-        .0)
+    super::with_unit!(
+        world.btech.unit(unit).context("Unit is unavailable")?,
+        |unit| { Ok(&unit.markings.0) }
+    )
 }
 
 /// Configure literal markings after administrative authority and validation, before mutation.
@@ -65,16 +59,12 @@ pub fn set_unit_markings(
     );
     let value = Markings::try_from(value.to_owned())?;
     let configured = (!value.0.is_empty()).then(|| value.0.clone());
-    if let Some(unit) = world.btech.constructed.get_mut(&unit) {
-        unit.markings = value;
-    } else {
-        world
-            .btech
-            .vehicles
-            .get_mut(&unit)
-            .context("Unit is unavailable")?
-            .markings = value;
-    }
+    crate::btech::with_unit_mut!(
+        world.btech.unit_mut(unit).context("Unit is unavailable")?,
+        |unit| {
+            unit.markings = value;
+        }
+    );
     super::set_unit_identity_configuration(world, unit, "markings", configured);
     Ok(())
 }

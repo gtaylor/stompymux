@@ -45,16 +45,9 @@ async fn fixture(
 
 /// Assign scenario power without introducing crew actions into sensor tests.
 fn power(world: &mut World, ids: &[ObjectId], value: BattlePower) {
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
     for id in ids {
-        let class = if world.btech.vehicles().contains_key(id) {
-            "vehicles"
-        } else {
-            "constructed"
-        };
-        saved[class][id.0.to_string()]["power"] = serde_json::to_value(value).unwrap();
+        world.btech.set_unit_power(*id, value).unwrap();
     }
-    world.btech = serde_json::from_value(saved).unwrap();
 }
 
 /// Ordinary conventional aim without range extensions or arc overrides.
@@ -189,9 +182,7 @@ fn fire_rules() -> BattleVehicleShotRules {
 fn seed(world: &mut World, id: ObjectId, value: u8) {
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded([value; 32]))
         .unwrap();
 }
 
@@ -229,12 +220,11 @@ async fn vehicle_shots_commit_hits_misses_and_restart_replay_for_both_target_cla
             );
             assert_eq!(world.btech, replay.btech);
             assert_eq!(report.aim, preview);
-            assert_eq!(report.launch.hit, hit);
-            assert!(report.launch.expenditure.launched);
+            assert_eq!(report.hit, hit);
+            assert!(report.expenditure.launched);
             assert_eq!(report.salvo.is_some(), hit);
             assert_eq!(
                 report
-                    .launch
                     .expenditure
                     .ammunition
                     .iter()
@@ -311,8 +301,8 @@ async fn vehicle_missiles_use_shooter_dice_for_mech_ams_only_on_admitted_hits() 
         let report =
             fire_battle_vehicle_shot(&mut world, shooter, ObjectId(1), target, 0, fire_rules())
                 .unwrap();
-        assert_eq!(report.launch.roll, attack);
-        assert_eq!(report.launch.hit, hit);
+        assert_eq!(report.roll, attack);
+        assert_eq!(report.hit, hit);
         if !hit {
             assert!(report.ams.is_none());
             assert_eq!(
@@ -358,7 +348,7 @@ async fn vehicle_shot_failures_and_failed_streak_locks_preserve_target_state() {
     rules.shot.aim.override_weapon_arcs = true;
     let report =
         fire_battle_vehicle_shot(&mut base, shooter, ObjectId(1), target, index, rules).unwrap();
-    assert!(!report.launch.expenditure.launched);
+    assert!(!report.expenditure.launched);
     assert!(report.salvo.is_none());
     assert_eq!(base.btech.vehicles()[&shooter].ammunition(), before_ammo);
     assert_eq!(base.btech.vehicles()[&target], before_target);
@@ -457,12 +447,11 @@ async fn vehicle_shots_observe_existing_angel_fields_without_copying_field_rules
             let report =
                 fire_battle_vehicle_shot(&mut world, shooter, ObjectId(1), target, 0, fire_rules())
                     .unwrap();
-            assert_eq!(report.launch.expenditure.launched, active);
-            assert!(!report.launch.hit);
+            assert_eq!(report.expenditure.launched, active);
+            assert!(!report.hit);
             assert!(report.salvo.is_none());
             assert_eq!(
                 report
-                    .launch
                     .expenditure
                     .ammunition
                     .iter()
@@ -519,7 +508,7 @@ async fn vehicle_native_and_lua_fire_share_state_feedback_and_callback_rollback(
                 "{output}"
             );
             let actual = lua
-                .eval_callback::<bool>(&format!("return {call}.launch.hit"))
+                .eval_callback::<bool>(&format!("return {call}.hit"))
                 .unwrap();
             assert_eq!(actual, hit);
             assert_eq!(lua.world().btech, native.world().btech);
@@ -1037,7 +1026,7 @@ async fn vehicle_coolant_and_flamer_heat_share_target_effects_and_host_rollback(
             let report =
                 fire_battle_vehicle_shot(&mut world, shooter, ObjectId(1), target, 0, fire_rules())
                     .unwrap();
-            assert_eq!(report.launch.hit, hit);
+            assert_eq!(report.hit, hit);
             assert!(report.salvo.is_none() && report.narc.is_none());
             let amount = f64::from(weapon.profile().damage);
             let expected = if !hit {
@@ -1107,7 +1096,7 @@ async fn vehicle_coolant_and_flamer_heat_share_target_effects_and_host_rollback(
                 fire_rules(),
             )
             .unwrap();
-            assert_eq!(vehicle_report.launch.hit, hit);
+            assert_eq!(vehicle_report.hit, hit);
             assert_eq!(
                 initial.btech.vehicles()[&vehicle].weapon_heat(),
                 vehicle_before.weapon_heat() + expected
@@ -1118,7 +1107,7 @@ async fn vehicle_coolant_and_flamer_heat_share_target_effects_and_host_rollback(
             );
             assert_eq!(
                 world.btech.vehicles()[&shooter].weapon_heat(),
-                f64::from(report.launch.expenditure.heat)
+                f64::from(report.expenditure.heat)
             );
             world.validate(&config).unwrap();
         }
@@ -1261,7 +1250,7 @@ async fn clan_plasma_vehicle_shots_use_ordinary_damage_packets() {
             fire_rules(),
         )
         .unwrap();
-        assert!(report.launch.hit);
+        assert!(report.hit);
         assert_eq!(report.heat_transfer, 0);
         assert!(report.narc.is_none() && report.cooling.is_none());
         match report.salvo.unwrap() {
@@ -1848,9 +1837,7 @@ async fn mech_vehicle_fire_locks_damage_and_restart_share_existing_resolvers() {
             .unwrap();
         world
             .btech
-            .rewrite_unit_record(shooter, |record| {
-                record["dice"] = serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
-            })
+            .set_unit_dice(shooter, BattleDice::seeded([value; 32]))
             .unwrap();
         select_battle_target(&mut world, shooter, ObjectId(1), Some(target)).unwrap();
         for _ in 0..3 {
@@ -2183,9 +2170,7 @@ async fn mech_vehicle_admission_hex_selection_and_lock_cleanup() {
         .unwrap();
     world
         .btech
-        .rewrite_unit_record(shooter, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
-        })
+        .set_unit_dice(shooter, BattleDice::seeded([value; 32]))
         .unwrap();
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let (recipient, x, y): (i64, i32, i32) = scripts
@@ -2222,14 +2207,8 @@ fn tactical_shot(
     index: usize,
     rules: BattleVehicleShotRules,
 ) -> serde_json::Value {
-    if world.btech.vehicles().contains_key(&shooter) {
-        return serde_json::to_value(
-            fire_battle_vehicle_shot(world, shooter, ObjectId(1), target, index, rules).unwrap(),
-        )
-        .unwrap();
-    }
     serde_json::to_value(
-        resolve_battle_shot(world, shooter, ObjectId(1), target, index, rules.shot).unwrap(),
+        fire_battle_unit_shot(world, shooter, ObjectId(1), target, index, rules).unwrap(),
     )
     .unwrap()
 }
@@ -2611,22 +2590,24 @@ async fn inferno_shots_share_vehicle_burning_defenses_and_host_rollback() {
             std::fs::write(path, toml::to_string(&settings).unwrap()).unwrap();
             let config = Config::load(dir.path()).unwrap();
             let class = if carrier { "vehicles" } else { "constructed" };
-            let mut saved = serde_json::to_value(&base.btech).unwrap();
-            for section in saved[class][shooter.0.to_string()]["definition"]["sections"]
-                .as_object_mut()
-                .unwrap()
-                .values_mut()
-            {
-                for critical in section["criticals"].as_object_mut().unwrap().values_mut() {
-                    if critical["equipment"]
-                        .as_str()
-                        .is_some_and(|name| name == "Ammo_IS.SRM-6")
+            base.btech
+                .rewrite_unit_record(shooter, |record| {
+                    for section in record["definition"]["sections"]
+                        .as_object_mut()
+                        .unwrap()
+                        .values_mut()
                     {
-                        critical["modes"] = serde_json::json!(["Inferno"]);
+                        for critical in section["criticals"].as_object_mut().unwrap().values_mut() {
+                            if critical["equipment"]
+                                .as_str()
+                                .is_some_and(|name| name == "Ammo_IS.SRM-6")
+                            {
+                                critical["modes"] = serde_json::json!(["Inferno"]);
+                            }
+                        }
                     }
-                }
-            }
-            base.btech = serde_json::from_value(saved).unwrap();
+                })
+                .unwrap();
             let native_mode = Scripts::new(
                 &config,
                 std::rc::Rc::new(std::cell::RefCell::new(base.clone())),
@@ -2861,11 +2842,7 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                             let mut probe = world.clone();
                             probe
                                 .btech
-                                .rewrite_unit_record(target, |record| {
-                                    record["dice"] =
-                                        serde_json::to_value(BattleDice::seeded([*seed; 32]))
-                                            .unwrap();
-                                })
+                                .set_unit_dice(target, BattleDice::seeded([*seed; 32]))
                                 .unwrap();
                             let _ = resolve_battle_vehicle_impact(
                                 &mut probe,
@@ -2883,10 +2860,7 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                         .unwrap();
                     world
                         .btech
-                        .rewrite_unit_record(target, |record| {
-                            record["dice"] =
-                                serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-                        })
+                        .set_unit_dice(target, BattleDice::seeded([seed; 32]))
                         .unwrap();
                 }
                 refresh_battle_contacts(&mut world, &[shooter]).unwrap();
@@ -3081,7 +3055,7 @@ async fn vehicle_missile_packets_award_experience_inside_the_firing_transaction(
             .is_err()
     );
     assert_eq!(scripts.world().btech, world.btech);
-    let (groups, awards, complete): (usize, usize, bool) = scripts.eval_callback(&(call + " if not r.salvo then local fields={}; for k,v in pairs(r.aim) do fields[#fields+1]=k..'='..tostring(v) end; error(table.concat(fields,',')..' roll='..tostring(r.launch.roll)) end; local s=r.salvo.report; local complete=true; for _,a in ipairs(s.experience) do complete=complete and a.formula=='battle_value' and a.award.accepted end; return #s.groups,#s.experience,complete")).unwrap();
+    let (groups, awards, complete): (usize, usize, bool) = scripts.eval_callback(&(call + " if not r.salvo then local fields={}; for k,v in pairs(r.aim) do fields[#fields+1]=k..'='..tostring(v) end; error(table.concat(fields,',')..' roll='..tostring(r.roll)) end; local s=r.salvo.report; local complete=true; for _,a in ipairs(s.experience) do complete=complete and a.formula=='battle_value' and a.award.accepted end; return #s.groups,#s.experience,complete")).unwrap();
     assert!(groups >= 2);
     assert_eq!(awards, groups);
     assert!(complete);
@@ -3126,7 +3100,7 @@ async fn weapons_hold_vehicle_shooters_warn_on_mech_damage_without_blocking_it()
         let report =
             fire_battle_vehicle_shot(&mut base, shooter, ObjectId(1), target, 0, fire_rules())
                 .unwrap();
-        assert!(report.launch.hit);
+        assert!(report.hit);
         let notices = report.notices();
         assert!(
             notices
@@ -3176,15 +3150,12 @@ async fn weapons_hold_vehicle_targets_preserve_damage_safety_and_restart() {
                 let high = (0..=255)
                     .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
                     .unwrap();
-                let mut saved = serde_json::to_value(&base.btech).unwrap();
-                let collection = if vehicle_shooter {
-                    "vehicles"
-                } else {
-                    "constructed"
-                };
-                saved[collection][shooter.0.to_string()]["dice"] =
-                    serde_json::to_value(BattleDice::seeded([high; 32])).unwrap();
-                base.btech = serde_json::from_value(saved).unwrap();
+                base.btech
+                    .rewrite_unit_record(shooter, |record| {
+                        record["dice"] =
+                            serde_json::to_value(BattleDice::seeded([high; 32])).unwrap();
+                    })
+                    .unwrap();
                 let mut rules = fire_rules();
                 rules.shot.vehicle_impact.criticals.combat_safe = safe;
                 let fire = |world: &mut World| {
@@ -3192,7 +3163,7 @@ async fn weapons_hold_vehicle_targets_preserve_damage_safety_and_restart() {
                         let report =
                             fire_battle_vehicle_shot(world, shooter, ObjectId(1), target, 0, rules)
                                 .unwrap();
-                        assert!(report.launch.hit);
+                        assert!(report.hit);
                         (report.notices(), serde_json::to_value(report).unwrap())
                     } else {
                         let report =
@@ -3350,10 +3321,7 @@ async fn configured_energy_range_damage_is_shared_by_all_unit_pairings() {
                 refresh_battle_contacts(&mut world, &[shooter]).unwrap();
                 world
                     .btech
-                    .rewrite_unit_record(shooter, |record| {
-                        record["dice"] =
-                            serde_json::to_value(BattleDice::seeded([attack_seed; 32])).unwrap();
-                    })
+                    .set_unit_dice(shooter, BattleDice::seeded([attack_seed; 32]))
                     .unwrap();
                 let native = Scripts::new(
                     &config,

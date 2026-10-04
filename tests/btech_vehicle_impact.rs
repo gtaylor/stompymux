@@ -48,9 +48,7 @@ fn matching_seed(predicate: impl Fn(&mut BattleDice) -> bool) -> [u8; 32] {
 fn set_seed(world: &mut World, id: ObjectId, seed: [u8; 32]) {
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded(seed))
         .unwrap();
 }
 
@@ -384,9 +382,9 @@ async fn advanced_motive_impacts_commit_steering_speed_and_penetration_together(
     set_seed(&mut world, id, stream);
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["motion"]["speed"] = 10.into();
-            record["motion"]["desired_speed"] = 10.into();
+        .edit_unit_motion(id, |motion| {
+            motion.speed = 10.0;
+            motion.desired_speed = 10.0;
         })
         .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();

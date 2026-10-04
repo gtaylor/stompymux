@@ -19,6 +19,37 @@ impl BattleVehicle {
                 .is_none_or(|section| section.internal == 0)
     }
 
+    /// The bin a self-destruct detonates: the most destructive loaded and available one,
+    /// first on a tie.
+    pub fn largest_ammunition_hazard_bin(&self) -> Result<Option<usize>> {
+        let loadout = self.loadout()?;
+        let mut largest = None;
+        let mut maximum = 0;
+        for (index, bin) in loadout.ammunition.iter().enumerate() {
+            let damage = bin
+                .weapon
+                .ammunition_explosion_damage_for_mode(self.ammunition()[index], bin.mode);
+            if damage > maximum && !self.critical_unavailable(bin.location) {
+                largest = Some(index);
+                maximum = damage;
+            }
+        }
+        Ok(largest)
+    }
+
+    /// A weapon requires every mounting slot to remain operational; ammo and recycle are separate.
+    pub fn weapon_intact(&self, index: usize) -> Result<bool> {
+        let loadout = self.loadout()?;
+        let weapon = loadout
+            .weapons
+            .get(index)
+            .context("Weapon index out of bounds")?;
+        Ok(weapon
+            .criticals
+            .iter()
+            .all(|location| !self.critical_unavailable(*location)))
+    }
+
     /// Vacuum disables equipment without destroying the slot or expending its ammunition.
     pub fn critical_unavailable(&self, location: VehicleCriticalLocation) -> bool {
         self.critical_destroyed(location) || self.breached_sections.contains(&location.section)

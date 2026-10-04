@@ -1598,9 +1598,7 @@ async fn long_range_elevation_rows_preserve_zero_space_and_water_depth() {
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world
         .btech
-        .rewrite_unit_record(source, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
-        })
+        .set_unit_power(source, BattlePower::Off)
         .unwrap();
     place_battle_unit(&mut world, source, map, 1, 1).unwrap();
     start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
@@ -2061,9 +2059,12 @@ async fn tactical_maps_mask_unseen_hexes_and_reuse_display_admission() {
         )
         .is_err()
     );
-    let mut value = serde_json::to_value(&world.btech).unwrap();
-    value["maps"][map.0.to_string()]["flags"] = serde_json::json!(32);
-    world.btech = serde_json::from_value(value).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            record["flags"] = serde_json::json!(32);
+        })
+        .unwrap();
     assert_eq!(
         battle_tactical_map(
             &world,
@@ -2103,9 +2104,7 @@ async fn tactical_clipping_preserves_global_hex_parity_and_elevation() {
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world
         .btech
-        .rewrite_unit_record(source, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
-        })
+        .set_unit_power(source, BattlePower::Off)
         .unwrap();
     place_battle_unit(&mut world, source, map, 5, 1).unwrap();
     place_battle_unit(&mut world, target, map, 6, 1).unwrap();
@@ -2172,9 +2171,7 @@ async fn tactical_cliffs_use_signed_depth_thresholds_and_share_native_lua_output
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world
         .btech
-        .rewrite_unit_record(source, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
-        })
+        .set_unit_power(source, BattlePower::Off)
         .unwrap();
     place_battle_unit(&mut world, source, map, 1, 1).unwrap();
     place_battle_unit(&mut world, target, map, 2, 1).unwrap();
@@ -2286,9 +2283,12 @@ async fn tactical_cliffs_use_signed_depth_thresholds_and_share_native_lua_output
         &text::plain(&colored.text).lines().nth(6).unwrap()[8..11],
         "__/"
     );
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["flags"] = 32.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            record["flags"] = 32.into();
+        })
+        .unwrap();
     for flag in ["C", "T"] {
         let error = battle_tactical_map(
             &world,
@@ -2436,9 +2436,12 @@ async fn landing_overlays_honor_saved_team_exclusions_and_terrain() {
     persistence::save(&config.database(), &world).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
     assert!(restored.btech.maps()[&map].landing_exclusions().is_empty());
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["flags"] = 32.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            record["flags"] = 32.into();
+        })
+        .unwrap();
     assert!(
         battle_tactical_map(
             &world,
@@ -2601,9 +2604,12 @@ async fn tactical_mines_filter_trigger_fields_and_visibility_without_recognition
     )
     .unwrap();
     assert!(!text::plain(&hidden.text).contains("<>"));
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["flags"] = 32.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            record["flags"] = 32.into();
+        })
+        .unwrap();
     let dark = battle_tactical_map(
         &world,
         source,
@@ -2675,9 +2681,7 @@ async fn findcenter_measures_continuous_position_without_sensor_hardware() {
     assert!(find_battle_hex_center(&world, source, ObjectId(3)).is_err());
     world
         .btech
-        .rewrite_unit_record(source, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
-        })
+        .set_unit_power(source, BattlePower::Off)
         .unwrap();
     assert!(find_battle_hex_center(&world, source, ObjectId(1)).is_err());
 }
@@ -2783,9 +2787,7 @@ async fn navigation_keeps_even_center_on_single_hex_maps_with_off_map_surroundin
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world
         .btech
-        .rewrite_unit_record(source, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
-        })
+        .set_unit_power(source, BattlePower::Off)
         .unwrap();
     place_battle_unit(&mut world, source, map, 0, 0).unwrap();
     start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
@@ -4777,8 +4779,12 @@ async fn lateral_changes_delay_cancel_persist_and_move_without_turning_weapons()
     .unwrap();
     stopped
         .btech
-        .rewrite_unit_record(source, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+        .edit_unit(source, |unit| {
+            unit.set_power(BattlePower::Off);
+            unit.edit_motion(|motion| {
+                motion.speed = 0.0;
+                motion.desired_speed = 0.0;
+            });
         })
         .unwrap();
     for _ in 0..5 {
@@ -4803,9 +4809,12 @@ async fn lateral_changes_delay_cancel_persist_and_move_without_turning_weapons()
     let mut corrupt = serde_json::to_value(&unit).unwrap();
     corrupt["lateral"]["remaining"] = serde_json::json!(7);
     let mut invalid = scripts.world().clone();
-    let mut encoded = serde_json::to_value(&invalid.btech).unwrap();
-    encoded["constructed"][source.0.to_string()] = corrupt;
-    invalid.btech = serde_json::from_value(encoded).unwrap();
+    invalid
+        .btech
+        .rewrite_unit_record(source, |record| {
+            *record = corrupt;
+        })
+        .unwrap();
     assert!(
         persistence::save(&config.database(), &invalid)
             .await

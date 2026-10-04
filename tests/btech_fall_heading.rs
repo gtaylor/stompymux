@@ -131,10 +131,13 @@ async fn falling_units_turn_without_translation_and_replay_shared_chassis_rates(
                     .find(|seed| BattleDice::seeded([*seed; 32]).die(2).unwrap() == 2)
                     .unwrap();
                 let mut recovered = world.clone();
-                let mut state = serde_json::to_value(&recovered.btech).unwrap();
-                state[key][id.0.to_string()]["vtol_flight"]["fall"]["remaining"] = 1.into();
-                state[key][id.0.to_string()]["vtol_flight"]["fall"]["speed"] = 0.into();
-                recovered.btech = serde_json::from_value(state).unwrap();
+                recovered
+                    .btech
+                    .rewrite_unit_record(id, |record| {
+                        record["vtol_flight"]["fall"]["remaining"] = 1.into();
+                        record["vtol_flight"]["fall"]["speed"] = 0.into();
+                    })
+                    .unwrap();
                 advance_battle_motion(&mut recovered, rules).unwrap();
                 assert_eq!(
                     recovered.btech.vehicles()[&id].vtol_flight().unwrap().phase,
@@ -148,11 +151,14 @@ async fn falling_units_turn_without_translation_and_replay_shared_chassis_rates(
                 );
                 for remaining in [0, -1] {
                     let mut empty = world.clone();
-                    let mut state = serde_json::to_value(&empty.btech).unwrap();
-                    state[key][id.0.to_string()]["vtol_fuel"]["remaining"] = remaining.into();
-                    state[key][id.0.to_string()]["dice"] =
-                        serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-                    empty.btech = serde_json::from_value(state).unwrap();
+                    empty
+                        .btech
+                        .rewrite_unit_record(id, |record| {
+                            record["vtol_fuel"]["remaining"] = remaining.into();
+                            record["dice"] =
+                                serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                        })
+                        .unwrap();
                     let before = empty.clone();
                     let notices = advance_battle_motion(&mut empty, rules).unwrap();
                     assert_eq!(empty.btech.vehicles()[&id].motion().unwrap().heading, 350.0);

@@ -244,10 +244,7 @@ async fn failed_streak_lock_still_opens_the_cocoon() {
             ))
             .unwrap();
         let report = serde_json::to_value(report).unwrap();
-        let launched = report
-            .get("launched")
-            .unwrap_or(&report["launch"]["expenditure"]["launched"]);
-        assert_eq!(*launched, false);
+        assert_eq!(report["launched"], false);
         let after = state(&scripts.world(), id);
         assert_ne!(after["orbital_drop"], before["orbital_drop"]);
         assert_eq!(after["ammunition"], before["ammunition"]);

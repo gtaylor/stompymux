@@ -170,18 +170,12 @@ pub(super) fn synchronize_pair(
         .get(&position.map)
         .context("Tow battlefield is unavailable")?
         .hex(i64::from(position.x), i64::from(position.y))?;
-    let (motion, height) = if let Some(unit) = world.btech.vehicles().get(&carrier) {
+    let (motion, height) = crate::btech::with_unit!(world.btech.unit(carrier).unwrap(), |unit| {
         (
             unit.motion().context("Carrier motion is unavailable")?,
             unit.altitude(tile),
         )
-    } else {
-        let unit = &world.btech.constructed_units()[&carrier];
-        (
-            unit.motion().context("Carrier motion is unavailable")?,
-            unit.altitude(tile),
-        )
-    };
+    });
     let carried = super::BattleMotion {
         point: motion.point,
         heading: motion.heading,
@@ -217,15 +211,10 @@ pub(super) fn synchronize_pair(
 /// Remove ownership and external translation on an unpublished release candidate.
 pub(super) fn detach(world: &mut World, carrier: ObjectId) -> Option<ObjectId> {
     let target = Arc::make_mut(&mut world.btech.tows).remove(&carrier)?;
-    let motion = if let Some(unit) = world.btech.vehicles.get_mut(&target) {
-        unit.motion.as_mut()
-    } else {
-        world
-            .btech
-            .constructed
-            .get_mut(&target)
-            .and_then(|unit| unit.motion.as_mut())
-    };
+    let motion = world
+        .btech
+        .unit_mut(target)
+        .and_then(|unit| super::with_unit_mut!(unit, |unit| unit.motion.as_mut()));
     if let Some(motion) = motion {
         motion.stop_translation();
         motion.desired_heading = motion.heading;
@@ -237,14 +226,8 @@ pub(super) fn detach(world: &mut World, carrier: ObjectId) -> Option<ObjectId> {
 fn require_uncovered_target(world: &World, id: ObjectId) -> Result<()> {
     let uncovered = world
         .btech
-        .constructed_units()
-        .get(&id)
-        .is_none_or(|unit| unit.hull_down() == super::BattleHullDownState::default())
-        && world
-            .btech
-            .vehicles()
-            .get(&id)
-            .is_none_or(|unit| unit.dig_state().exposed());
+        .unit(id)
+        .is_none_or(|unit| super::with_unit!(unit, |unit| unit.clear_of_stationary_cover()));
     ensure!(
         uncovered,
         "Prepare the target for pickup before attaching tow cables"

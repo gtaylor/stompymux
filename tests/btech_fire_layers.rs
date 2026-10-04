@@ -29,9 +29,12 @@ async fn field(
 
 /// Set the wind blowing over a map through its saved state.
 fn wind(world: &mut World, map: ObjectId, speed: i64) {
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["wind_speed"] = speed.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            record["wind_speed"] = speed.into();
+        })
+        .unwrap();
 }
 
 /// Light a fire with `seconds` of fuel at a hex.

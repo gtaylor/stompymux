@@ -191,7 +191,8 @@ impl BattleRadioMode {
 
 /// Check cockpit ownership and the active zero-based channel before changing settings.
 fn access(world: &World, unit: ObjectId, pilot: ObjectId, channel: u8) -> Result<()> {
-    controlled(world, unit, pilot)?;
+    // Channel controls remain available while shut down, under the common cockpit rules.
+    super::power::controlled(world, unit, pilot)?;
     ensure!(
         channel < self::unit(world, unit)?.radio_capabilities().channels,
         "Invalid channel-letter!"
@@ -300,7 +301,7 @@ pub(crate) fn command(
             .get(&ctx.player)
             .and_then(|player| player.location)
             .context("Enter a unit first")?;
-        controlled(&world, unit, ctx.player)?;
+        super::power::controlled(&world, unit, ctx.player)?;
         if matches!(input.name.as_str(), "listfreqs" | "listchannels") {
             let mut lines = vec!["# -- Mode -- Frequency -- Comtitle".to_string()];
             for (i, ch) in self::unit(&world, unit)?
@@ -518,14 +519,6 @@ pub(super) fn storage(world: &mut World, id: ObjectId) -> Result<RadioStorage<'_
         remaining: &mut unit.radio_experience_remaining,
         pilot,
     })
-}
-
-/// Channel controls remain available while shut down, using common cockpit ownership rules.
-pub(super) fn controlled(world: &World, id: ObjectId, pilot: ObjectId) -> Result<()> {
-    if world.btech.vehicles().contains_key(&id) {
-        return super::vehicle_power::controlled(world, id, pilot);
-    }
-    super::power::controlled_unit(world, id, pilot)
 }
 
 /// Common template radio capabilities for native and scripting controls.

@@ -407,12 +407,10 @@ fn targeting(
         )),
         None => {}
     }
-    let safety = if let Some(u) = world.btech.constructed_units().get(&source.unit) {
-        u.mw_safety()
-    } else {
-        let u = &world.btech.vehicles()[&source.unit];
-        u.mw_safety()
-    };
+    let safety = world
+        .btech
+        .unit(source.unit)
+        .is_none_or(|unit| unit.mw_safety());
     if !safety {
         lines.push("Weapon Safeties are [fg=red bold]OFF[reset].".into());
     }
@@ -631,11 +629,9 @@ fn condition_lines(
     for (label, color) in flags {
         lines.push(format!("[fg={color}]{label}[reset]"));
     }
-    let self_destruct = if let Some(unit) = world.btech.constructed_units().get(&id) {
+    let self_destruct = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
         unit.self_destruct()
-    } else {
-        world.btech.vehicles()[&id].self_destruct()
-    };
+    });
     if owned && let Some(countdown) = self_destruct {
         lines.push(format!(
             "[fg=red bold]Self-destruction: {}s remaining[reset]",

@@ -37,6 +37,11 @@ impl BattleUnit {
         self.hull_down
     }
 
+    /// Whether the Mech stands clear of hull-down cover, with no posture change under way.
+    pub(super) fn clear_of_stationary_cover(&self) -> bool {
+        self.hull_down == BattleHullDownState::default()
+    }
+
     /// Validate saved stance independently of timers for other actions.
     pub(super) fn validate_hull_down(&self) -> Result<()> {
         let state = self.hull_down;

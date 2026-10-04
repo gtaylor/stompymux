@@ -279,10 +279,12 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
                         })
                         .unwrap();
                     }
-                    let mut state = serde_json::to_value(&candidate.btech).unwrap();
-                    state["constructed"][observer.0.to_string()] =
-                        serde_json::to_value(unit).unwrap();
-                    candidate.btech = serde_json::from_value(state).unwrap();
+                    candidate
+                        .btech
+                        .rewrite_unit_record(observer, |record| {
+                            *record = serde_json::to_value(unit).unwrap();
+                        })
+                        .unwrap();
                     ("bogus", "inoperational")
                 }
                 "center" => ("90 nope", "Invalid bearing or range"),

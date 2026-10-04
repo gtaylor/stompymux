@@ -15,17 +15,12 @@ pub fn assign_pilot(world: &mut World, unit: ObjectId, pilot: ObjectId) -> Resul
         "Enter the unit before taking the cockpit"
     );
     ensure!(world.objects.get(&unit).is_some_and(|object| object.kind == Kind::Thing && !object.flags.contains(Flag::Going)), "Unit must be a live thing");
-    let assigned = if let Some(vehicle) = world.btech.vehicles().get(&unit) {
-        ensure!(!vehicle.is_destroyed(), "Vehicle is destroyed");
-        vehicle.pilot()
-    } else {
-        world
-            .btech
-            .constructed_units()
-            .get(&unit)
-            .context("Unit construction state is unavailable")?
-            .pilot()
-    };
+    let record = world
+        .btech
+        .unit(unit)
+        .context("Unit construction state is unavailable")?;
+    ensure!(!record.is_destroyed(), "Unit is destroyed");
+    let assigned = record.pilot();
     ensure!(
         assigned.is_none() || assigned == Some(pilot),
         "Cockpit is occupied"
@@ -48,34 +43,24 @@ pub fn assign_pilot(world: &mut World, unit: ObjectId, pilot: ObjectId) -> Resul
     );
     super::prepare_recovery(world, pilot)?;
     super::crew_recovery::assign(world, unit, pilot);
-    if let Some(vehicle) = world.btech.vehicles.get_mut(&unit) {
-        vehicle.pilot = Some(pilot);
-    } else {
-        world.btech.constructed.get_mut(&unit).unwrap().pilot = Some(pilot);
-    }
+    crate::btech::with_unit_mut!(world.btech.unit_mut(unit).unwrap(), |unit| {
+        unit.pilot = Some(pilot);
+    });
     Ok(())
 }
 
 /// Release only the requested player's cockpit assignment.
 pub fn release_pilot(world: &mut World, unit: ObjectId, pilot: ObjectId) -> Result<()> {
-    if let Some(vehicle) = world.btech.vehicles().get(&unit) {
-        ensure!(
-            vehicle.pilot() == Some(pilot),
-            "You are not piloting this unit"
-        );
-        world.btech.vehicles.get_mut(&unit).unwrap().pilot = None;
-        return Ok(());
-    }
     let record = world
         .btech
-        .constructed_units()
-        .get(&unit)
+        .unit(unit)
         .context("Unit construction state is unavailable")?;
     ensure!(
-        record.pilot == Some(pilot),
+        record.pilot() == Some(pilot),
         "You are not piloting this unit"
     );
-    world.btech.constructed.get_mut(&unit).unwrap().pilot = None;
+    let record = world.btech.unit_mut(unit).expect("checked unit");
+    super::with_unit_mut!(record, |record| record.pilot = None);
     Ok(())
 }
 
@@ -103,12 +88,9 @@ pub(crate) fn player_moved(world: &mut World, player: ObjectId) {
 
 /// Consciousness includes empty cockpit crew recovery as well as an assigned character.
 pub(super) fn unit_unconscious(world: &World, id: ObjectId) -> bool {
-    let (pilot, remaining) = if let Some(unit) = world.btech.vehicles().get(&id) {
+    let (pilot, remaining) = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
         (unit.pilot(), unit.crew_recovery().remaining)
-    } else {
-        let unit = &world.btech.constructed_units()[&id];
-        (unit.pilot(), unit.crew_recovery().remaining)
-    };
+    });
     remaining > 0 || pilot.is_some_and(|pilot| world.btech.unconscious(pilot))
 }
 
@@ -119,16 +101,10 @@ pub(super) fn set_administrative_pilot(
     unit: ObjectId,
     pilot: Option<ObjectId>,
 ) -> Result<()> {
-    let current = if let Some(vehicle) = world.btech.vehicles().get(&unit) {
-        vehicle.pilot()
-    } else {
-        world
-            .btech
-            .constructed_units()
-            .get(&unit)
-            .context("Unit is unavailable")?
-            .pilot()
-    };
+    let current = crate::btech::with_unit!(
+        world.btech.unit(unit).context("Unit is unavailable")?,
+        |unit| { unit.pilot() }
+    );
     if current == pilot {
         return Ok(());
     }

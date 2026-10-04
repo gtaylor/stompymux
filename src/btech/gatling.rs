@@ -67,7 +67,11 @@ pub(super) fn prepare(
     index: usize,
     dice: &mut super::BattleDice,
 ) -> Result<GatlingPreparation> {
-    let (mode, rounds) = if let Some(unit) = world.btech.vehicles().get(&shooter) {
+    let unit = world
+        .btech
+        .unit(shooter)
+        .ok_or_else(|| anyhow::anyhow!("Shooter is unavailable"))?;
+    let (mode, rounds) = super::with_unit!(unit, |unit| {
         let mode = unit.fire_mode(index)?;
         let rounds = if mode == BattleFireMode::Gatling {
             unit.ammunition_feed(index, 18)?
@@ -78,23 +82,7 @@ pub(super) fn prepare(
             0
         };
         (mode, rounds)
-    } else {
-        let unit = world
-            .btech
-            .constructed_units()
-            .get(&shooter)
-            .ok_or_else(|| anyhow::anyhow!("Shooter is unavailable"))?;
-        let mode = unit.fire_mode(index)?;
-        let rounds = if mode == BattleFireMode::Gatling {
-            unit.ammunition_feed(index, 18)?
-                .iter()
-                .map(|draw| draw.rounds)
-                .sum()
-        } else {
-            0
-        };
-        (mode, rounds)
-    };
+    });
     let damage = if mode == BattleFireMode::Gatling {
         Some(roll_damage(rounds, dice)?)
     } else {

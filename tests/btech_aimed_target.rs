@@ -854,12 +854,7 @@ async fn missile_base_boundary_controls_ams_swarm_and_cluster_glancing() {
                         .eval_callback(&format!("return btech.unit.fire({},1,{index})", shooter.0))
                         .unwrap();
                     let value = serde_json::to_value(value).unwrap();
-                    let glancing = if world.btech.vehicles().contains_key(&shooter) {
-                        value["launch"]["glancing"].clone()
-                    } else {
-                        value["glancing"].clone()
-                    };
-                    assert_eq!(glancing, serde_json::json!(roll == threshold));
+                    assert_eq!(value["glancing"], serde_json::json!(roll == threshold));
                     assert_eq!(value["salvo"].is_object(), roll >= threshold, "{value}");
                     assert_eq!(
                         value["ams"].is_object(),

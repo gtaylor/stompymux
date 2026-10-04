@@ -561,16 +561,9 @@ pub fn set_unit_field_action(
             "templatesp" => {
                 let speed = super::template_speed::parse(value)?;
                 let mut world = scripts.world_mut();
-                if let Some(unit) = world.btech.constructed.get_mut(&id) {
+                crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
                     unit.set_template_speed(speed);
-                } else {
-                    world
-                        .btech
-                        .vehicles
-                        .get_mut(&id)
-                        .unwrap()
-                        .set_template_speed(speed);
-                }
+                })
             }
             "fx" | "fy" | "fz" => super::scenario_position::set_precise_field_action(
                 scripts,
@@ -614,11 +607,9 @@ pub fn set_unit_field_action(
                     .parse::<i64>()
                     .context("Expected a signed Unix timestamp")?;
                 let mut world = scripts.world_mut();
-                if let Some(unit) = world.btech.constructed.get_mut(&id) {
+                crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
                     unit.last_startup = timestamp;
-                } else {
-                    world.btech.vehicles.get_mut(&id).unwrap().last_startup = timestamp;
-                }
+                })
             }
             "units_killed" => {
                 super::kill_counters::set(&mut scripts.world_mut(), id, value)?;
@@ -650,16 +641,9 @@ pub fn set_unit_field_action(
             "hsengoverride" => {
                 let value = super::engine_sink_override::parse(value)?;
                 let mut world = scripts.world_mut();
-                if let Some(unit) = world.btech.constructed.get_mut(&id) {
+                crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
                     unit.set_engine_sink_override(value);
-                } else {
-                    world
-                        .btech
-                        .vehicles
-                        .get_mut(&id)
-                        .unwrap()
-                        .set_engine_sink_override(value);
-                }
+                })
             }
             "pilotnum" | "target" => {
                 let reference = value
@@ -695,11 +679,10 @@ pub fn set_unit_field_action(
                     .get(&id)
                     .map_or(0, |unit| unit.system_hits(BattleSystem::Sensors));
                 let mut world = scripts.world_mut();
-                let hardware = if let Some(unit) = world.btech.constructed.get_mut(&id) {
-                    &mut unit.hardware
-                } else {
-                    &mut world.btech.vehicles.get_mut(&id).unwrap().hardware
-                };
+                let hardware =
+                    crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
+                        &mut unit.hardware
+                    });
                 hardware.set(&field.to_ascii_lowercase(), value, sensor_hits)?;
             }
             "heat" | "dissheat" | "overheat" => {

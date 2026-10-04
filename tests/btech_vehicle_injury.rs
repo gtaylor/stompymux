@@ -103,9 +103,7 @@ async fn vehicle_injury_guards_and_critical_casualties_are_atomic() {
         let mut world = base.clone();
         world
             .btech
-            .rewrite_unit_record(id, |record| {
-                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-            })
+            .set_unit_dice(id, BattleDice::seeded([seed; 32]))
             .unwrap();
         if absent {
             release_battle_pilot(&mut world, id, ObjectId(1)).unwrap();

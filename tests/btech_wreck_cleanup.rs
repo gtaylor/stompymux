@@ -83,9 +83,12 @@ async fn fixture(
         }
         let mut encoded = serde_json::to_value(&vehicle).unwrap();
         encoded["sections"]["rear"]["armor"] = 0.into();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["vehicles"][id.0.to_string()] = encoded;
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                *record = encoded;
+            })
+            .unwrap();
         unit(&mut world, &config, map, "biped")
     } else {
         id

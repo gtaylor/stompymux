@@ -131,7 +131,7 @@ fn fire(
             },
         )
         .unwrap();
-        assert!(report.launch.hit, "{report:?}");
+        assert!(report.hit, "{report:?}");
         return (report.notices(), serde_json::to_value(report).unwrap());
     }
     let report = resolve_battle_shot(world, shooter, ObjectId(1), target, 0, shot_rules()).unwrap();
@@ -302,13 +302,9 @@ async fn immunity_protects_self_damage_and_fall_crew() {
             set_building_state(&mut world, position.map, building).unwrap();
             let before = state(&world, id);
             let rules = BattleFallRules::configured(&config);
-            let report = if world.btech.vehicles().contains_key(&id) {
-                serde_json::to_value(resolve_battle_vehicle_fall(&mut world, id, 2, rules).unwrap())
-                    .unwrap()
-            } else {
-                serde_json::to_value(resolve_battle_fall(&mut world, id, 2, rules).unwrap())
-                    .unwrap()
-            };
+            let report =
+                serde_json::to_value(resolve_battle_unit_fall(&mut world, id, 2, rules).unwrap())
+                    .unwrap();
             assert_eq!(report["avoidance"].is_null(), unit_safe);
             assert_eq!(state(&world, id)["sections"], before["sections"]);
             if unit_safe {

@@ -48,9 +48,7 @@ async fn mech_fixture(
 
     world
         .btech
-        .rewrite_unit_record(unit, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-        })
+        .set_unit_power(unit, BattlePower::Running)
         .unwrap();
     world.validate(&config).unwrap();
     (directory, config, world, map, unit)
@@ -59,12 +57,7 @@ async fn mech_fixture(
 #[tokio::test(flavor = "current_thread")]
 async fn observation_is_safe_before_startup_and_expires_future_or_old_memory() {
     let (_directory, config, mut world, map, unit) = mech_fixture("1 2\n.0\n.0\n", (0, 1)).await;
-    world
-        .btech
-        .rewrite_unit_record(unit, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
-        })
-        .unwrap();
+    world.btech.set_unit_power(unit, BattlePower::Off).unwrap();
     world.validate(&config).unwrap();
 
     let sightings = BTreeMap::from([
@@ -248,9 +241,7 @@ async fn competing_routes_make_progress_without_permanent_congestion_block() {
     place_battle_unit(&mut world, second, map, 5, 6).unwrap();
     world
         .btech
-        .rewrite_unit_record(second, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-        })
+        .set_unit_power(second, BattlePower::Running)
         .unwrap();
     world.validate(&config).unwrap();
 

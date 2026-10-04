@@ -141,11 +141,9 @@ pub fn brief(
         settings.validate()?;
         {
             let mut world = scripts.world.borrow_mut();
-            if let Some(vehicle) = world.btech.vehicles.get_mut(&unit) {
-                vehicle.brief = settings;
-            } else {
-                world.btech.constructed.get_mut(&unit).unwrap().brief = settings;
-            }
+            crate::btech::with_unit_mut!(world.btech.unit_mut(unit).unwrap(), |unit| {
+                unit.brief = settings;
+            })
         }
         super::notify_unit_text(scripts, unit, &text)?;
         Ok(BattleBriefReport {

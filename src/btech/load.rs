@@ -189,16 +189,12 @@ pub(super) fn set_cargo_capacity(
         .parse::<i32>()
         .context("Expected a nonnegative 32-bit cargo capacity")?;
     ensure!(capacity >= 0, "Cargo capacity cannot be negative");
-    if let Some(unit) = world.btech.constructed.get_mut(&id) {
-        unit.set_cargo_space(capacity as u32);
-    } else {
-        world
-            .btech
-            .vehicles
-            .get_mut(&id)
-            .context("Unit is unavailable")?
-            .set_cargo_space(capacity as u32);
-    }
+    crate::btech::with_unit_mut!(
+        world.btech.unit_mut(id).context("Unit is unavailable")?,
+        |unit| {
+            unit.set_cargo_space(capacity as u32);
+        }
+    );
     // Evaluate construction even when zero capacity bypasses ordinary load penalties.
     unit_load(world, id, tsm_bonus)?;
     reconcile(world, id, tsm_bonus)

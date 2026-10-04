@@ -155,12 +155,12 @@ pub(super) fn stop_admitted(
             rules,
             effects.is_some(),
         )?;
-        notices.extend(fall.notices.iter().cloned());
+        notices.extend(fall.feedback.notices.iter().cloned());
         if let Some(effects) = effects {
             super::piloting::append_feedback(
                 &mut effects.pilot_notices,
-                fall.pilot_notices.iter().cloned(),
-                notices.len() - fall.notices.len(),
+                fall.feedback.pilot_notices.iter().cloned(),
+                notices.len() - fall.feedback.notices.len(),
             );
             effects.vehicle_falls.push(fall);
         }

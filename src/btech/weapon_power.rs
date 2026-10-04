@@ -27,21 +27,9 @@ pub fn disable_gauss_weapon(
     index: usize,
 ) -> Result<BattleNotice> {
     super::power::controlled_running_unit(world, id, pilot)?;
-    let (ready, intact) = if let Some(unit) = world.btech.vehicles().get(&id) {
-        (
-            unit.weapon_readiness(index)?,
-            !unit.critical_unavailable(
-                unit.loadout()?
-                    .weapons
-                    .get(index)
-                    .ok_or_else(|| anyhow::anyhow!("Weapon index out of bounds"))?
-                    .criticals[0],
-            ),
-        )
-    } else {
-        let unit = &world.btech.constructed_units()[&id];
+    let (ready, intact) = super::with_unit!(world.btech.unit(id).expect("admitted unit"), |unit| {
         (unit.weapon_readiness(index)?, unit.weapon_intact(index)?)
-    };
+    });
     ensure!(intact, "That weapon has been destroyed!");
     ensure!(
         ready.weapon.weapon_explosion_damage() > 0,
@@ -51,23 +39,9 @@ pub fn disable_gauss_weapon(
         ready.recycle_remaining == 0,
         "That weapon is still recharging!"
     );
-    if world.btech.vehicles().contains_key(&id) {
-        world
-            .btech
-            .vehicles
-            .get_mut(&id)
-            .unwrap()
-            .powered_down_weapons
-            .insert(index);
-    } else {
-        world
-            .btech
-            .constructed
-            .get_mut(&id)
-            .unwrap()
-            .powered_down_weapons
-            .insert(index);
-    }
+    crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
+        unit.powered_down_weapons.insert(index);
+    });
     Ok(BattleNotice {
         unit: id,
         text: format!("You power down weapon {index}."),

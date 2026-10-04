@@ -757,9 +757,7 @@ async fn artillery_hotload_launch_and_jam() {
             .unwrap();
         world
             .btech
-            .rewrite_unit_record(shooter, |record| {
-                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-            })
+            .set_unit_dice(shooter, BattleDice::seeded([seed; 32]))
             .unwrap();
         let lua = Scripts::new(
             &config,

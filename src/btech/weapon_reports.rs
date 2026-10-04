@@ -184,24 +184,19 @@ pub fn weapon_specifications(
     extended: bool,
 ) -> Result<Vec<BattleWeaponSpecification>> {
     let mut seen = BTreeSet::new();
-    let weapons: Vec<_> = if let Some(unit) = world.btech.vehicles().get(&id) {
-        unit.loadout()?
-            .weapons
-            .iter()
-            .map(|mount| mount.weapon)
-            .collect()
-    } else {
+    let weapons: Vec<_> = crate::btech::with_unit!(
         world
             .btech
-            .constructed_units()
-            .get(&id)
-            .context("Unit construction state is unavailable")?
-            .loadout()?
-            .weapons
-            .iter()
-            .map(|mount| mount.weapon)
-            .collect()
-    };
+            .unit(id)
+            .context("Unit construction state is unavailable")?,
+        |unit| {
+            unit.loadout()?
+                .weapons
+                .iter()
+                .map(|mount| mount.weapon)
+                .collect()
+        }
+    );
     Ok(weapons
         .into_iter()
         .filter(|weapon| seen.insert(weapon.name()))
@@ -311,12 +306,14 @@ pub fn weapon_specification_text(world: &World, id: ObjectId, extended: bool) ->
     if rows.is_empty() {
         return Ok("You have no weapons!".into());
     }
-    let (name, reference) = if let Some(unit) = world.btech.vehicles().get(&id) {
-        (&unit.definition().name, &unit.definition().reference)
-    } else {
-        let definition = world.btech.constructed_units()[&id].definition();
-        (&definition.name, &definition.reference)
-    };
+    let unit = world
+        .btech
+        .unit(id)
+        .context("Unit construction state is unavailable")?;
+    let (name, reference) = super::with_unit!(unit, |unit| (
+        &unit.definition().name,
+        &unit.definition().reference,
+    ));
     let title = if name == reference {
         name.to_owned()
     } else {
@@ -389,7 +386,7 @@ pub(super) fn cockpit(
         "Unit construction state is unavailable"
     );
     if require_pilot {
-        super::radio::controlled(&world, id, ctx.player)?;
+        super::power::controlled(&world, id, ctx.player)?;
     }
     Ok(id)
 }

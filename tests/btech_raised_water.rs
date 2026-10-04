@@ -512,9 +512,7 @@ async fn barrage(asset: MapAsset, target_row: i64) -> (tempfile::TempDir, World,
     let seen = (0..=255).any(|seed| {
         world
             .btech
-            .rewrite_unit_record(spotter, |record| {
-                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-            })
+            .set_unit_dice(spotter, BattleDice::seeded([seed; 32]))
             .unwrap();
         refresh_battle_contacts(&mut world, &[spotter, shooter]).unwrap();
         visible_battle_contact(&world, spotter, target)

@@ -150,22 +150,14 @@ fn resolve(
     let operator = super::combat_operator::admit_running(world, shooter, pilot)?;
     super::spotter::check_firing_role(world, shooter)?;
     let (mechanics, disabled, mode, mut dice) =
-        if let Some(unit) = world.btech.vehicles().get(&shooter) {
+        super::with_unit!(world.btech.unit(shooter).expect("admitted unit"), |unit| {
             (
                 unit.weapon_mechanics(index)?,
-                unit.weapon_failures().get(&index) == Some(&BattleEquipmentFailure::Disabled),
+                unit.weapon_failures.get(&index) == Some(&BattleEquipmentFailure::Disabled),
                 unit.fire_mode(index)?,
                 unit.dice.clone(),
             )
-        } else {
-            let unit = &world.btech.constructed_units()[&shooter];
-            (
-                unit.weapon_mechanics(index)?,
-                false,
-                unit.fire_mode(index)?,
-                unit.dice.clone(),
-            )
-        };
+        });
     let weapon = mechanics.check_sight(disabled)?;
     let requested = request.resolve_for_source(world, operator.source, index)?;
     let target = if weapon.is_artillery() {
@@ -262,11 +254,9 @@ fn resolve(
         }
     };
     let roll = weapon.attack_roll(distance, &mut dice);
-    if let Some(unit) = world.btech.vehicles.get_mut(&shooter) {
+    crate::btech::with_unit_mut!(world.btech.unit_mut(shooter).unwrap(), |unit| {
         unit.dice = dice;
-    } else {
-        world.btech.constructed.get_mut(&shooter).unwrap().dice = dice;
-    }
+    });
     Ok(BattleSightReport {
         shooter,
         weapon_index: index,
@@ -350,11 +340,9 @@ fn check_unit_target(
     let coolant = weapon == BattleWeapon::CoolantGun;
     ensure!(shooter != target || coolant, "A unit cannot fire on itself");
     super::fire_target::check_target_safety_for_source(world, targeting, target, weapon)?;
-    let ammunition = if let Some(unit) = world.btech.vehicles().get(&shooter) {
+    let ammunition = crate::btech::with_unit!(world.btech.unit(shooter).unwrap(), |unit| {
         unit.ammunition_mode(index)?
-    } else {
-        world.btech.constructed_units()[&shooter].ammunition_mode(index)?
-    };
+    });
     if ammunition.munition() == BattleAmmunitionMode::Stinger {
         ensure!(
             super::stinger::target_airborne(world, target),

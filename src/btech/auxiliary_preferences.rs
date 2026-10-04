@@ -17,28 +17,16 @@ pub(super) const MASK: u32 = 1 | 32 | 512;
 
 /// Read configuration without borrowing mutable unit state or consuming random numbers.
 fn read(world: &World, id: ObjectId) -> Result<AuxiliaryPreferences> {
-    if let Some(unit) = world.btech.constructed_units().get(&id) {
-        return Ok(unit.auxiliary_preferences);
-    }
-    Ok(world
-        .btech
-        .vehicles()
-        .get(&id)
-        .context("Unit is unavailable")?
-        .auxiliary_preferences)
+    let unit = world.btech.unit(id).context("Unit is unavailable")?;
+    Ok(unit.auxiliary_preferences())
 }
 
 /// Select the existing unit-owned preference storage after caller admission.
 fn storage(world: &mut World, id: ObjectId) -> Result<&mut AuxiliaryPreferences> {
-    if let Some(unit) = world.btech.constructed.get_mut(&id) {
-        return Ok(&mut unit.auxiliary_preferences);
-    }
-    Ok(&mut world
-        .btech
-        .vehicles
-        .get_mut(&id)
-        .context("Unit is unavailable")?
-        .auxiliary_preferences)
+    super::with_unit_mut!(
+        world.btech.unit_mut(id).context("Unit is unavailable")?,
+        |unit| { Ok(&mut unit.auxiliary_preferences) }
+    )
 }
 
 /// Project the field mask from the saved booleans.
@@ -66,7 +54,7 @@ pub fn set_bth_debug(
     pilot: ObjectId,
     enabled: bool,
 ) -> Result<()> {
-    super::radio::controlled(world, id, pilot)?;
+    super::power::controlled(world, id, pilot)?;
     storage(world, id)?.bth_debug = enabled;
     Ok(())
 }
@@ -97,7 +85,7 @@ pub fn set_mw_safety(
     pilot: ObjectId,
     enabled: bool,
 ) -> Result<()> {
-    super::radio::controlled(world, id, pilot)?;
+    super::power::controlled(world, id, pilot)?;
     storage(world, id)?.player_killer = !enabled;
     Ok(())
 }

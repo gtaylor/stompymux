@@ -22,16 +22,10 @@ pub(super) fn set(world: &mut World, id: ObjectId, field: &str, value: &str) -> 
         ensure!(speed.is_finite(), "Expected a finite speed");
         f64::from(speed)
     };
-    let motion = if let Some(unit) = world.btech.constructed.get_mut(&id) {
-        &mut unit.motion
-    } else {
-        &mut world
-            .btech
-            .vehicles
-            .get_mut(&id)
-            .context("Unit is unavailable")?
-            .motion
-    };
+    let motion = crate::btech::with_unit_mut!(
+        world.btech.unit_mut(id).context("Unit is unavailable")?,
+        |unit| { &mut unit.motion }
+    );
     let motion = motion
         .as_mut()
         .context("Motion edits require a placed unit")?;

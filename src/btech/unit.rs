@@ -468,6 +468,35 @@ super::saved_parts::saved_parts!(BattleUnit {
 });
 
 impl BattleUnit {
+    /// The name this unit's anatomy gives a section; a quad's limbs are all legs.
+    pub fn section_name(&self, section: BattleSection) -> &'static str {
+        self.chassis().section_name(section)
+    }
+
+    /// World-level rules for a Mech nothing is towing: without power it is at rest, and
+    /// its speed and height stay within what it can reach on its own.
+    pub(super) fn validate_untowed(&self) -> Result<()> {
+        if let Some(motion) = self.motion() {
+            ensure!(
+                self.power() == super::BattlePower::Running || !motion.translating(),
+                "Unpowered untowed unit cannot move"
+            );
+            motion.validate(self.motion_speed_limit(self.definition().max_speed))?;
+            motion.validate(self.motion_speed_limit(self.mobility().maximum_speed))?;
+        }
+        ensure!(
+            self.ground_elevation
+                .is_none_or(|height| (f64::from(i16::MIN)..=f64::from(i16::MAX)).contains(&height)),
+            "Untowed unit retains an altitude outside scenario limits"
+        );
+        Ok(())
+    }
+
+    /// Replace the construction template in place, for fixtures that edit it.
+    pub(super) fn set_fixture_definition(&mut self, definition: BattleTemplate) {
+        self.definition = definition;
+    }
+
     pub(crate) fn administrative_raw(&self) -> Option<&super::AdministrativeRawUnit> {
         self.administrative_raw.as_ref()
     }
@@ -1341,7 +1370,7 @@ impl BattleUnit {
             );
             ensure!(
                 self.power == super::BattlePower::Running
-                    || (motion.propelled(self.power)?.speed == 0.0 && motion.desired_speed == 0.0),
+                    || !motion.propelled(self.power)?.translating(),
                 "Unpowered unit cannot propel itself"
             );
         }

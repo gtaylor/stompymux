@@ -33,13 +33,9 @@ pub(super) fn controlled(world: &World, unit: ObjectId, actor: ObjectId) -> Resu
 
 fn controlled_by(world: &World, unit: ObjectId, actor: ControlActor) -> Result<CombatOperator> {
     if let ControlActor::Player(actor_id) = actor {
-        super::radio::controlled(world, unit, actor_id)?;
+        super::power::controlled(world, unit, actor_id)?;
     } else {
-        if world.btech.vehicles().contains_key(&unit) {
-            super::power::autopilot_controlled_vehicle(world, unit)?;
-        } else {
-            super::power::autopilot_controlled_unit(world, unit)?;
-        }
+        super::power::autopilot_controlled(world, unit)?;
     }
     Ok(CombatOperator {
         source: unit.into(),

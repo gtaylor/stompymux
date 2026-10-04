@@ -11,25 +11,14 @@ pub(super) fn ready_weapon(
     pilot: ObjectId,
     index: usize,
 ) -> Result<BattleWeaponReadiness> {
-    let (ready, feed_jammed) = if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        super::vehicle_power::controlled(world, id, pilot)?;
-        ensure!(
-            vehicle.power() == BattlePower::Running,
-            "Start the unit first"
-        );
-        (
-            vehicle.weapon_readiness(index)?,
-            vehicle.jammed_weapons.contains(&index),
-        )
-    } else {
-        super::power::controlled_unit(world, id, pilot)?;
-        let unit = &world.btech.constructed_units()[&id];
+    let (ready, feed_jammed) = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
+        super::power::controlled(world, id, pilot)?;
         ensure!(unit.power() == BattlePower::Running, "Start the unit first");
         (
             unit.weapon_readiness(index)?,
             unit.jammed_weapons.contains(&index),
         )
-    };
+    });
     ensure!(ready.intact, "That weapon has been destroyed");
     ensure!(
         ready.recycle_remaining == 0,
@@ -39,11 +28,9 @@ pub(super) fn ready_weapon(
         !feed_jammed,
         "The ammo feed mechanism for that weapon is jammed! Unable to change modes!"
     );
-    let one_shot = if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        vehicle.loadout()?.weapons[index].one_shot
-    } else {
-        world.btech.constructed_units()[&id].loadout()?.weapons[index].one_shot
-    };
+    let one_shot = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
+        unit.loadout()?.weapons[index].one_shot
+    });
     ensure!(!one_shot, "One-shot weapons' mode cannot be altered!");
     if let Some(unit) = world.btech.constructed_units().get(&id) {
         ensure!(
@@ -142,30 +129,21 @@ pub(super) fn selectable_munition(
     if !weapon.is_mml() {
         return munition.supports(weapon);
     }
-    let current = if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        vehicle.ammunition_mode(index)
-    } else {
-        world.btech.constructed_units()[&id].ammunition_mode(index)
-    };
+    let current = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
+        unit.ammunition_mode(index)
+    });
     current.is_ok_and(|current| munition.with_mml_family(current.is_mml_lrm()).is_some())
 }
 
 /// The mounted weapon at `index` for either unit class.
 fn weapon(world: &World, id: ObjectId, index: usize) -> Option<super::BattleWeapon> {
-    if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        return vehicle
-            .loadout()
+    super::with_unit!(world.btech.unit(id)?, |unit| {
+        unit.loadout()
             .ok()?
             .weapons
             .get(index)
-            .map(|mount| mount.weapon);
-    }
-    let unit = world.btech.constructed_units().get(&id)?;
-    unit.loadout()
-        .ok()?
-        .weapons
-        .get(index)
-        .map(|mount| mount.weapon)
+            .map(|mount| mount.weapon)
+    })
 }
 
 /// Select the owning class's firing-mode storage after authorization.

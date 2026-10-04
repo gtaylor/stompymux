@@ -151,14 +151,13 @@ fn shared_damage_cancels_launch_or_starts_one_fall_without_fabricating_crew_dama
             assert!(!unit.crew_killed());
             assert_eq!(restored(&unit), unit);
             if airborne {
-                let mut saved = serde_json::to_value(&unit).unwrap();
-                saved["vtol_flight"]["vertical_speed"] = (-20.0).into();
-                unit = serde_json::from_value(saved).unwrap();
+                // A further rotor hit leaves the fall already in progress untouched.
+                let falling = unit.vtol_flight();
                 let report = unit
                     .apply_rotor_hit(BattleRotorHit::Destroy, false)
                     .unwrap();
                 assert_eq!(report.effect, BattleRotorHit::Destroy);
-                assert_eq!(unit.vtol_flight().unwrap().vertical_speed, -20.0);
+                assert_eq!(unit.vtol_flight(), falling);
             }
         }
     }

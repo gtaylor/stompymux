@@ -482,11 +482,9 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             materialize(&shared, id)?;
             let reference = {
                 let world = shared.borrow();
-                if let Some(unit) = world.btech.constructed_units().get(&id) {
+                crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
                     unit.definition().reference.clone()
-                } else {
-                    world.btech.vehicles()[&id].definition().reference.clone()
-                }
+                })
             };
             let config = crate::lua::configuration(lua);
             let root = config.path(&config.database.mech_database);
@@ -553,11 +551,9 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             let root = config.path(&config.database.mech_database);
             let source = {
                 let world = shared.borrow();
-                if let Some(unit) = world.btech.constructed_units().get(&id) {
+                crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
                     unit.definition().to_document()
-                } else {
-                    world.btech.vehicles()[&id].definition().to_document()
-                }
+                })
             };
             source
                 .and_then(|source| {

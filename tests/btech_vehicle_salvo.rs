@@ -48,9 +48,7 @@ fn matching_seed(predicate: impl Fn(&mut BattleDice) -> bool) -> [u8; 32] {
 fn set_seed(world: &mut World, id: ObjectId, seed: [u8; 32]) {
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded(seed))
         .unwrap();
 }
 
@@ -168,12 +166,7 @@ async fn vehicle_salvos_share_packet_rules_and_order_every_impact() {
         if report.cluster_roll.is_some() {
             dice.two_d6();
         }
-        replay
-            .btech
-            .rewrite_unit_record(id, |record| {
-                record["dice"] = serde_json::to_value(dice).unwrap();
-            })
-            .unwrap();
+        replay.btech.set_unit_dice(id, dice).unwrap();
         for (group, amount) in report.groups.iter().zip(expected) {
             let expected = resolve_battle_vehicle_impact(
                 &mut replay,

@@ -19,11 +19,14 @@ async fn export_terrain_effects_and_metadata_match_asset_contract() {
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     for flags in [0, 1, 2, 4, 5, 6] {
         let mut candidate = world.clone();
-        let mut state = serde_json::to_value(&candidate.btech).unwrap();
-        state["maps"][map.0.to_string()]["flags"] = flags.into();
-        state["maps"][map.0.to_string()]["gravity"] = 50.into();
-        state["maps"][map.0.to_string()]["temperature"] = (-40).into();
-        candidate.btech = serde_json::from_value(state).unwrap();
+        candidate
+            .btech
+            .rewrite_map_record(map, |record| {
+                record["flags"] = flags.into();
+                record["gravity"] = 50.into();
+                record["temperature"] = (-40).into();
+            })
+            .unwrap();
         for (x, kind, remaining) in [
             (0, DecorationKind::Fire, 30),
             (1, DecorationKind::Smoke, 30),

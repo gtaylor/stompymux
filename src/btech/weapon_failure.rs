@@ -109,33 +109,20 @@ pub fn set_weapon_failure(
     index: usize,
     failure: Option<BattleEquipmentFailure>,
 ) -> Result<()> {
-    let failures = if let Some(unit) = world.btech.constructed.get_mut(&id) {
-        ensure!(
-            index < unit.loadout()?.weapons.len(),
-            "Weapon index out of bounds"
-        );
-        ensure!(
-            failure.is_none() || unit.weapon_intact(index)?,
-            "That weapon has been destroyed"
-        );
-        &mut unit.weapon_failures
-    } else {
-        let unit = world
-            .btech
-            .vehicles
-            .get_mut(&id)
-            .context("Unit is unavailable")?;
-        ensure!(
-            index < unit.loadout()?.weapons.len(),
-            "Weapon index out of bounds"
-        );
-        ensure!(
-            failure.is_none()
-                || !unit.critical_unavailable(unit.loadout()?.weapons[index].criticals[0]),
-            "That weapon has been destroyed"
-        );
-        &mut unit.weapon_failures
-    };
+    let failures = super::with_unit_mut!(
+        world.btech.unit_mut(id).context("Unit is unavailable")?,
+        |unit| {
+            ensure!(
+                index < unit.loadout()?.weapons.len(),
+                "Weapon index out of bounds"
+            );
+            ensure!(
+                failure.is_none() || unit.weapon_intact(index)?,
+                "That weapon has been destroyed"
+            );
+            &mut unit.weapon_failures
+        }
+    );
     if let Some(failure) = failure {
         failures.insert(index, failure);
     } else {

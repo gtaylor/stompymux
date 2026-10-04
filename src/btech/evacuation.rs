@@ -557,7 +557,7 @@ pub(super) fn publish_fall_consequences(
             publish_section_exposure_consequences(scripts, config, flood)?;
         }
     }
-    for flood in &report.flooding {
+    for flood in &report.feedback.flooding {
         publish_section_exposure_consequences(scripts, config, flood)?;
     }
     if let Some(surface) = &report.ice_break {
@@ -1363,7 +1363,7 @@ pub(super) fn attempt_configured_firing_action(
                 if let Some(salvo) = &report.salvo {
                     publish_target_salvo(scripts, config, salvo)?;
                 }
-                if let Some(misload) = &report.launch.misload {
+                if let Some(misload) = &report.misload {
                     publish_vehicle_internal_injuries(scripts, misload)?;
                 }
             }
@@ -1615,7 +1615,11 @@ fn vehicle_fall_action_inner_with_tonnage(
             character,
             tons,
         )?;
-        super::piloting::publish_ordered_notices(scripts, &report.notices, &report.pilot_notices)?;
+        super::piloting::publish_ordered_notices(
+            scripts,
+            &report.feedback.notices,
+            &report.feedback.pilot_notices,
+        )?;
         publish_vehicle_fall_consequences(scripts, config, &report)?;
         publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
@@ -1637,7 +1641,7 @@ pub(super) fn publish_vehicle_fall_consequences(
         publish_surface_consequences(scripts, config, surface)?;
     }
     let mut injuries = Vec::new();
-    for impact in &report.impacts {
+    for impact in &report.groups {
         if let Some(damage) = &impact.damage {
             super::vehicle_injuries::collect_armor(damage, &mut injuries);
         }

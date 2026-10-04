@@ -358,12 +358,7 @@ async fn towing_load_shares_equipment_discounts_and_live_mass_across_chassis() {
                 assert_eq!(load.carried_mass, u64::from(mass) * 2 / divisor);
                 assert_eq!(world.btech, before);
                 assert!(load.maximum_speed(100.0).unwrap() <= 100.0);
-                world
-                    .btech
-                    .rewrite_unit_record(b, |record| {
-                        record["ammunition"][0] = 0.into();
-                    })
-                    .unwrap();
+                world.btech.set_unit_ammunition_bin(b, 0, 0).unwrap();
                 let lighter = battle_unit_load(&world, a, false).unwrap();
                 assert!(lighter.carried_mass < load.carried_mass);
                 assert!(
@@ -539,27 +534,25 @@ async fn loaded_acceleration_and_reverse_motion_use_the_same_ceiling_for_all_cha
             } else {
                 world.btech.constructed_units()[&a].mobility().maximum_speed
             };
-            let mut encoded = serde_json::to_value(&world.btech).unwrap();
-            let key = if index == 0 {
-                "constructed"
-            } else {
-                "vehicles"
-            };
-            let unit = &mut encoded[key][a.0.to_string()];
-            let heading = if reverse { 270.0 } else { 90.0 };
-            unit["motion"]["heading"] = heading.into();
-            unit["motion"]["desired_heading"] = heading.into();
-            unit["motion"]["desired_speed"] = (if reverse {
-                -unloaded * 2.0 / 3.0
-            } else {
-                unloaded
-            })
-            .into();
-            if index == 2 {
-                unit["vtol_flight"]["phase"] = serde_json::json!({"kind":"airborne"});
-                unit["vtol_flight"]["altitude"] = 5.0.into();
-            }
-            world.btech = serde_json::from_value(encoded).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(a, |record| {
+                    let unit = record;
+                    let heading = if reverse { 270.0 } else { 90.0 };
+                    unit["motion"]["heading"] = heading.into();
+                    unit["motion"]["desired_heading"] = heading.into();
+                    unit["motion"]["desired_speed"] = (if reverse {
+                        -unloaded * 2.0 / 3.0
+                    } else {
+                        unloaded
+                    })
+                    .into();
+                    if index == 2 {
+                        unit["vtol_flight"]["phase"] = serde_json::json!({"kind":"airborne"});
+                        unit["vtol_flight"]["altitude"] = 5.0.into();
+                    }
+                })
+                .unwrap();
             set_battle_tow(&mut world, a, Some(b)).unwrap();
             let maximum = battle_unit_load(&world, a, true)
                 .unwrap()
@@ -594,18 +587,16 @@ async fn native_and_lua_tow_speed_limits_and_reports_agree() {
             fixture(&[source, include_str!("../game/mechs/Savannah_Master.toml")]).await;
         let [a, b] = ids[..] else { unreachable!() };
         // This throttle-envelope test includes reverse, which requires towing equipment.
-        let mut encoded = serde_json::to_value(&world.btech).unwrap();
-        let key = if index == 0 {
-            "constructed"
-        } else {
-            "vehicles"
-        };
-        let old = encoded[key][a.0.to_string()]["definition"]["attributes"]["specials"]
-            .as_str()
-            .unwrap_or("");
-        encoded[key][a.0.to_string()]["definition"]["attributes"]["specials"] =
-            format!("{} SalvageTech", old.trim_matches('-')).into();
-        world.btech = serde_json::from_value(encoded).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(a, |record| {
+                let old = record["definition"]["attributes"]["specials"]
+                    .as_str()
+                    .unwrap_or("");
+                record["definition"]["attributes"]["specials"] =
+                    format!("{} SalvageTech", old.trim_matches('-')).into();
+            })
+            .unwrap();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(a);
         assign_battle_pilot(&mut world, a, ObjectId(1)).unwrap();
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
@@ -721,11 +712,6 @@ async fn reverse_towing_guard_is_shared_by_native_lua_and_direct_controls() {
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);
         }
-        let key = if world.btech.vehicles().contains_key(&carrier) {
-            "vehicles"
-        } else {
-            "constructed"
-        };
         if world
             .btech
             .vehicles()
@@ -750,14 +736,16 @@ async fn reverse_towing_guard_is_shared_by_native_lua_and_direct_controls() {
             set_battle_tow(&mut detached, carrier, None).unwrap();
             set_battle_speed(&mut detached, carrier, ObjectId(1), -1.0).unwrap();
             if salvage {
-                let mut encoded = serde_json::to_value(&world.btech).unwrap();
-                let old =
-                    encoded[key][carrier.0.to_string()]["definition"]["attributes"]["specials"]
-                        .as_str()
-                        .unwrap_or("");
-                encoded[key][carrier.0.to_string()]["definition"]["attributes"]["specials"] =
-                    format!("{} SalvageTech", old.trim_matches('-')).into();
-                world.btech = serde_json::from_value(encoded).unwrap();
+                world
+                    .btech
+                    .rewrite_unit_record(carrier, |record| {
+                        let old = record["definition"]["attributes"]["specials"]
+                            .as_str()
+                            .unwrap_or("");
+                        record["definition"]["attributes"]["specials"] =
+                            format!("{} SalvageTech", old.trim_matches('-')).into();
+                    })
+                    .unwrap();
             }
             persistence::save(&config.database(), &world).await.unwrap();
             let restored = persistence::load(&config.database()).await.unwrap();

@@ -5,35 +5,22 @@ use anyhow::{Context, Result};
 
 /// Inspect only public scan condition: first slot, section survival and the current recycle clock.
 pub(super) fn render(world: &World, id: ObjectId) -> Result<String> {
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        return Ok(rows(&unit.loadout()?.weapons, |index, slot| {
-            (unit.sections()[&slot.section].internal > 0).then(|| {
-                (
-                    slot.section.name(),
-                    unit.critical_unavailable(slot)
-                        || unit.weapon_failures().get(&index)
-                            == Some(&BattleEquipmentFailure::Disabled),
-                    unit.weapon_recycle().get(&index).copied().unwrap_or(0),
-                )
-            })
-        }));
-    }
-    let unit = world
-        .btech
-        .constructed_units()
-        .get(&id)
-        .context("Unit is unavailable")?;
-    Ok(rows(&unit.loadout()?.weapons, |index, slot| {
-        (unit.sections()[&slot.section].internal > 0).then(|| {
-            (
-                unit.chassis().section_name(slot.section),
-                unit.critical_unavailable(slot)
-                    || unit.weapon_failures().get(&index)
-                        == Some(&BattleEquipmentFailure::Disabled),
-                unit.weapon_recycle().get(&index).copied().unwrap_or(0),
-            )
-        })
-    }))
+    crate::btech::with_unit!(
+        world.btech.unit(id).context("Unit is unavailable")?,
+        |unit| {
+            Ok(rows(&unit.loadout()?.weapons, |index, slot| {
+                (unit.sections()[&slot.section].internal > 0).then(|| {
+                    (
+                        unit.section_name(slot.section),
+                        unit.critical_unavailable(slot)
+                            || unit.weapon_failures().get(&index)
+                                == Some(&BattleEquipmentFailure::Disabled),
+                        unit.weapon_recycle().get(&index).copied().unwrap_or(0),
+                    )
+                })
+            }))
+        }
+    )
 }
 
 /// Scan numbering counts only displayed installations, while state lookup keeps the real mount index.

@@ -78,9 +78,12 @@ async fn entry_delay_replays_and_rechecks_live_routes_for_every_chassis() {
         // Forward and reverse motion use the same strict threshold.
         for speed in [maximum / 3.0, -maximum / 3.0] {
             let mut speeding = world.clone();
-            let mut saved = serde_json::to_value(&speeding.btech).unwrap();
-            saved[key][id.0.to_string()]["motion"]["speed"] = speed.into();
-            speeding.btech = serde_json::from_value(saved).unwrap();
+            speeding
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    record["motion"]["speed"] = speed.into();
+                })
+                .unwrap();
             let before = speeding.btech.clone();
             assert!(
                 begin_battle_building_entry(&mut speeding, id, ObjectId(1), None, true).is_err()

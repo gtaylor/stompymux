@@ -4,15 +4,8 @@ use anyhow::{Context, Result, ensure};
 
 /// Read the operator-imposed firing restriction independently of mechanical readiness.
 pub fn battle_weapons_hold(world: &World, id: ObjectId) -> Result<bool> {
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        return Ok(unit.weapons_hold);
-    }
-    Ok(world
-        .btech
-        .constructed_units()
-        .get(&id)
-        .context("Unit is not constructed")?
-        .weapons_hold)
+    let unit = world.btech.unit(id).context("Unit is not constructed")?;
+    Ok(unit.weapons_hold())
 }
 
 /// Trusted scenario edit; the caller owns administrative authority and transaction publication.
@@ -24,17 +17,16 @@ pub fn set_battle_weapons_hold(world: &mut World, id: ObjectId, enabled: bool) -
             .is_some_and(|o| o.kind == Kind::Thing && !o.flags.contains(Flag::Going)),
         "Unit must be a live thing"
     );
-    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
-        unit.weapons_hold = enabled;
-        return Ok(());
-    }
-    world
-        .btech
-        .constructed
-        .get_mut(&id)
-        .context("Unit is not constructed")?
-        .weapons_hold = enabled;
-    Ok(())
+    super::with_unit_mut!(
+        world
+            .btech
+            .unit_mut(id)
+            .context("Unit is not constructed")?,
+        |unit| {
+            unit.weapons_hold = enabled;
+            Ok(())
+        }
+    )
 }
 
 /// Running cockpit authority precedes hold; hold precedes argument decoding and cover loss.

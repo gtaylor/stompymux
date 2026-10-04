@@ -322,12 +322,7 @@ async fn powered_off_turret_repair_retries_failed_server_ticks() {
 #[tokio::test]
 async fn automatic_turret_controls_tracking_gates_and_restart() {
     let (_dir, config, mut world, id) = fixture().await;
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
-        })
-        .unwrap();
+    world.btech.set_unit_power(id, BattlePower::Off).unwrap();
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let before = scripts.world().btech.clone();
     assert!(
@@ -346,9 +341,7 @@ async fn automatic_turret_controls_tracking_gates_and_restart() {
     let mut world = scripts.world().clone();
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-        })
+        .set_unit_power(id, BattlePower::Running)
         .unwrap();
     select_battle_hex_target(
         &mut world,
@@ -412,8 +405,8 @@ async fn automatic_turret_controls_tracking_gates_and_restart() {
     assert_eq!(stunned.btech.vehicles()[&id].turret_heading(), Some(180.0));
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["motion"]["heading"] = 120.5.into();
+        .edit_unit_motion(id, |motion| {
+            motion.heading = 120.5;
         })
         .unwrap();
     advance_battle_automatic_turrets(&mut world);

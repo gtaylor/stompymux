@@ -199,24 +199,19 @@ fn fire_with_rules(
     target: ObjectId,
     rules: BattleShotRules,
 ) -> Option<BattleSwarmReport> {
-    let (salvo, ams) = if world.btech.vehicles().contains_key(&shooter) {
-        let r = fire_battle_vehicle_shot(
-            world,
-            shooter,
-            ObjectId(1),
-            target,
-            0,
-            BattleVehicleShotRules {
-                shot: rules,
-                shooter_criticals: BattleVehicleImpactRules::STANDARD.criticals,
-            },
-        )
-        .unwrap();
-        (r.salvo, r.ams)
-    } else {
-        let r = resolve_battle_shot(world, shooter, ObjectId(1), target, 0, rules).unwrap();
-        (r.salvo, r.ams)
-    };
+    let report = fire_battle_unit_shot(
+        world,
+        shooter,
+        ObjectId(1),
+        target,
+        0,
+        BattleVehicleShotRules {
+            shot: rules,
+            shooter_criticals: BattleVehicleImpactRules::STANDARD.criticals,
+        },
+    )
+    .unwrap();
+    let (salvo, ams) = stompymux_rs::by_chassis!(report, |report| (report.salvo, report.ams));
     assert!(ams.is_none());
     salvo.map(|salvo| {
         let BattleTargetSalvo::Swarm(report) = salvo else {
@@ -235,10 +230,13 @@ async fn swarm_woods_absorption_preserves_pre_cover_flight_accounting() {
                 fixture(&source, &recipient, false).await;
             let next = candidate(&mut world, &config, target, &templates()[2], 0);
             let map = world.btech.units()[&target].map.unwrap();
-            let mut encoded = serde_json::to_value(&world.btech).unwrap();
-            encoded["maps"][map.0.to_string()]["terrain"][0] =
-                serde_json::to_value(Hex::new(Terrain::HeavyForest, 0)).unwrap();
-            world.btech = serde_json::from_value(encoded).unwrap();
+            world
+                .btech
+                .rewrite_map_record(map, |record| {
+                    record["terrain"][0] =
+                        serde_json::to_value(Hex::new(Terrain::HeavyForest, 0)).unwrap();
+                })
+                .unwrap();
             acquire(&mut world, shooter, target);
             set_battle_visibility(
                 &mut world,

@@ -22,16 +22,11 @@ fn fixture(source: &str, recipient: &str, seed: u8) -> (Config, World, ObjectId,
             .create(&mut world, id)
             .unwrap();
         crate::place_battle_unit(&mut world, id, map, 0, y).unwrap();
-        if let Some(unit) = world.btech.constructed.get_mut(&id) {
+        crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
             unit.power = BattlePower::Running;
             unit.dice = BattleDice::seeded([seed; 32]);
             unit.signature.team = team;
-        } else {
-            let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
-            vehicle.power = BattlePower::Running;
-            vehicle.dice = BattleDice::seeded([seed; 32]);
-            vehicle.signature.team = team;
-        }
+        })
     }
     world
         .btech
@@ -40,26 +35,13 @@ fn fixture(source: &str, recipient: &str, seed: u8) -> (Config, World, ObjectId,
     crate::refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     crate::btech::targeting::select_target_autopilot(&mut world, shooter, Some(target)).unwrap();
     if matches!(seed, 17 | 42) {
-        if let Some(unit) = world.btech.constructed.get_mut(&target) {
+        crate::btech::with_unit_mut!(world.btech.unit_mut(target).unwrap(), |unit| {
             for section in unit.sections.values_mut() {
                 section.armor = 0;
                 section.rear = 0;
                 section.internal = 1;
             }
-        } else {
-            for section in world
-                .btech
-                .vehicles
-                .get_mut(&target)
-                .unwrap()
-                .sections
-                .values_mut()
-            {
-                section.armor = 0;
-                section.rear = 0;
-                section.internal = 1;
-            }
-        }
+        })
     }
     if seed == 88 {
         let pilot = world.create(&config, "Pilot".into(), Kind::Player);
@@ -151,15 +133,10 @@ fn shot_transactions_match_reference_across_chassis_and_rejections() {
                 let mut reference = initial;
                 let _equipment = crate::btech::equipment_context::Scope::begin(&optimized.btech);
                 let _cache = crate::btech::validation_context::Scope::begin(&optimized.btech);
-                let mounts = if let Some(unit) = optimized.btech.constructed_units().get(&shooter) {
-                    unit.loadout().unwrap().weapons.len()
-                } else {
-                    optimized.btech.vehicles()[&shooter]
-                        .loadout()
-                        .unwrap()
-                        .weapons
-                        .len()
-                };
+                let mounts =
+                    crate::btech::with_unit!(optimized.btech.unit(shooter).unwrap(), |unit| {
+                        unit.loadout().unwrap().weapons.len()
+                    });
                 for index in (0..mounts).chain([0, usize::MAX]) {
                     let a = fire(&config, &mut optimized, shooter, target, index);
                     let b = {
@@ -345,22 +322,14 @@ fn special_shot_effects_match_reference_validation() {
     for (source, weapon) in cases {
         for target_template in [mech, vehicle] {
             let (config, mut initial, shooter, target) = fixture(&source, target_template, 3);
-            let index = if let Some(unit) = initial.btech.constructed_units().get(&shooter) {
+            let index = crate::btech::with_unit!(initial.btech.unit(shooter).unwrap(), |unit| {
                 unit.loadout()
                     .unwrap()
                     .weapons
                     .iter()
                     .position(|mount| mount.weapon == weapon)
                     .unwrap()
-            } else {
-                initial.btech.vehicles()[&shooter]
-                    .loadout()
-                    .unwrap()
-                    .weapons
-                    .iter()
-                    .position(|mount| mount.weapon == weapon)
-                    .unwrap()
-            };
+            });
             if weapon == crate::BattleWeapon::Srm4 {
                 initial
                     .btech
@@ -487,17 +456,13 @@ fn missile_defenses_match_reference_for_both_chassis() {
                 .map(|seed| BattleDice::seeded([seed; 32]))
                 .find(|dice| dice.clone().two_d6() == 12)
                 .unwrap();
-            if let Some(unit) = initial.btech.constructed.get_mut(&shooter) {
+            crate::btech::with_unit_mut!(initial.btech.unit_mut(shooter).unwrap(), |unit| {
                 unit.dice = dice;
-            } else {
-                initial.btech.vehicles.get_mut(&shooter).unwrap().dice = dice;
-            }
+            });
 
-            if let Some(unit) = initial.btech.constructed.get_mut(&target) {
+            crate::btech::with_unit_mut!(initial.btech.unit_mut(target).unwrap(), |unit| {
                 unit.ams_enabled = true;
-            } else {
-                initial.btech.vehicles.get_mut(&target).unwrap().ams_enabled = true;
-            }
+            });
             let index = if let Some(unit) = initial.btech.constructed_units().get(&shooter) {
                 unit.loadout()
                     .unwrap()

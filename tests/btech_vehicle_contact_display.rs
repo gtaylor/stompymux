@@ -45,16 +45,9 @@ async fn fixture(
 
 /// Assign scenario power without introducing crew actions into sensor tests.
 fn power(world: &mut World, ids: &[ObjectId], value: BattlePower) {
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
     for id in ids {
-        let class = if world.btech.vehicles().contains_key(id) {
-            "vehicles"
-        } else {
-            "constructed"
-        };
-        saved[class][id.0.to_string()]["power"] = serde_json::to_value(value).unwrap();
+        world.btech.set_unit_power(*id, value).unwrap();
     }
-    world.btech = serde_json::from_value(saved).unwrap();
 }
 
 #[tokio::test]

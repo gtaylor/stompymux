@@ -63,39 +63,27 @@ fn computer_assists(
     index: usize,
     ammunition: BattleAmmunitionMode,
 ) -> Result<bool> {
-    if let Some(unit) = world.btech.vehicles().get(&shooter) {
-        let loadout = unit.loadout()?;
-        let mount = loadout
-            .weapons
-            .get(index)
-            .context("Weapon index out of bounds")?;
-        return Ok(mount.computer_assists(
-            ammunition,
-            loadout
-                .systems
-                .iter()
-                .filter(|part| part.system == BattleSystem::TargetingComputer)
-                .map(|part| !unit.critical_unavailable(part.location)),
-        ));
-    }
-    let unit = world
-        .btech
-        .constructed_units()
-        .get(&shooter)
-        .context("Unit construction state is unavailable")?;
-    let loadout = unit.loadout()?;
-    let mount = loadout
-        .weapons
-        .get(index)
-        .context("Weapon index out of bounds")?;
-    Ok(mount.computer_assists(
-        ammunition,
-        loadout
-            .systems
-            .iter()
-            .filter(|part| part.system == BattleSystem::TargetingComputer)
-            .map(|part| !unit.critical_unavailable(part.location)),
-    ))
+    super::with_unit!(
+        world
+            .btech
+            .unit(shooter)
+            .context("Unit construction state is unavailable")?,
+        |unit| {
+            let loadout = unit.loadout()?;
+            let mount = loadout
+                .weapons
+                .get(index)
+                .context("Weapon index out of bounds")?;
+            Ok(mount.computer_assists(
+                ammunition,
+                loadout
+                    .systems
+                    .iter()
+                    .filter(|part| part.system == BattleSystem::TargetingComputer)
+                    .map(|part| !unit.critical_unavailable(part.location)),
+            ))
+        }
+    )
 }
 
 impl AimedShot {

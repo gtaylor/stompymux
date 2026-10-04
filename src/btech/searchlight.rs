@@ -102,41 +102,23 @@ impl super::BattleVehicle {
 
 /// Read live lamp state without resolving static equipment flags.
 fn lamp_state(world: &World, id: ObjectId) -> Option<BattleSearchlight> {
-    world
-        .btech
-        .constructed_units()
-        .get(&id)
-        .map(|unit| unit.searchlight)
-        .or_else(|| world.btech.vehicles().get(&id).map(|unit| unit.searchlight))
+    world.btech.unit(id).map(|unit| unit.searchlight())
 }
 
 /// Read installed hardware independently of anatomy and cockpit admission.
 fn hardware(world: &World, id: ObjectId) -> Option<(BattleSearchlight, bool)> {
-    if let Some(unit) = world.btech.constructed_units().get(&id) {
-        return Some((
-            unit.searchlight,
-            unit.definition().has_special("Searchlight"),
-        ));
-    }
-    world.btech.vehicles().get(&id).map(|unit| {
-        (
-            unit.searchlight,
-            unit.definition().has_special("Searchlight"),
-        )
-    })
+    let unit = world.btech.unit(id)?;
+    Some(super::with_unit!(unit, |unit| (
+        unit.searchlight,
+        unit.definition().has_special("Searchlight"),
+    )))
 }
 
 /// Borrow admitted hardware without duplicating switch or damage rules.
 fn hardware_mut(world: &mut World, id: ObjectId) -> &mut BattleSearchlight {
-    if let Some(unit) = world.btech.constructed.get_mut(&id) {
-        return &mut unit.searchlight;
-    }
-    &mut world
-        .btech
-        .vehicles
-        .get_mut(&id)
-        .expect("admitted lamp")
-        .searchlight
+    super::with_unit_mut!(world.btech.unit_mut(id).expect("admitted lamp"), |unit| {
+        &mut unit.searchlight
+    })
 }
 
 /// Constructed emitter identities in stable order across anatomy stores.
@@ -197,7 +179,7 @@ pub fn toggle_searchlight(
     id: ObjectId,
     pilot: ObjectId,
 ) -> Result<BattleNotice> {
-    super::radio::controlled(world, id, pilot)?;
+    super::power::controlled(world, id, pilot)?;
     super::power::require_running_unit(world, id)?;
     let (lamp, installed) = hardware(world, id).context("Unit is unavailable")?;
     ensure!(installed, "Your 'mech isn't equipped with searchlight!");
@@ -242,7 +224,7 @@ pub fn set_searchlight_mode(
     pilot: ObjectId,
     mode: BattleSearchlightMode,
 ) -> Result<BattleNotice> {
-    super::radio::controlled(world, id, pilot)?;
+    super::power::controlled(world, id, pilot)?;
     let (lamp, installed) = hardware(world, id).context("Unit is unavailable")?;
     ensure!(installed, "Your 'mech isn't equipped with searchlight!");
     ensure!(
@@ -562,14 +544,13 @@ pub fn refresh_illumination(world: &mut World) -> Vec<BattleNotice> {
         .collect();
     let mut notices = Vec::new();
     for (id, lit) in changes {
-        let warning = if let Some(unit) = world.btech.constructed.get_mut(&id) {
-            unit.illumination_observed = lit;
-            unit.searchlight_warning
-        } else {
-            let unit = world.btech.vehicles.get_mut(&id).expect("observed vehicle");
-            unit.illumination_observed = lit;
-            unit.searchlight_warning
-        };
+        let warning = super::with_unit_mut!(
+            world.btech.unit_mut(id).expect("observed vehicle"),
+            |unit| {
+                unit.illumination_observed = lit;
+                unit.searchlight_warning
+            }
+        );
         if warning
             && world
                 .objects
@@ -600,11 +581,7 @@ pub(super) fn strike(
     if !installed || lamp.destroyed {
         return None;
     }
-    let dice = if let Some(unit) = world.btech.constructed.get_mut(&id) {
-        &mut unit.dice
-    } else {
-        &mut world.btech.vehicles.get_mut(&id)?.dice
-    };
+    let dice = crate::btech::with_unit_mut!(world.btech.unit_mut(id)?, |unit| { &mut unit.dice });
     if dice.generic_roll() <= 6 || (!lamp.on && dice.generic_roll() <= 5) {
         return None;
     }

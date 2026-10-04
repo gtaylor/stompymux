@@ -145,6 +145,8 @@ async fn lane(rows: &[&str], observer: Observer<'_>) -> Lane {
 }
 
 /// Switch a unit on or off without startup countdowns by editing its saved power state.
+/// This edits the raw record because some lane targets deliberately carry an active null
+/// signature without its equipment, so perception is tested apart from that equipment.
 fn set_power(world: &mut World, id: ObjectId, power: BattlePower) {
     world
         .btech

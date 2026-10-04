@@ -307,34 +307,22 @@ async fn missile_special_rounds_use_shared_launch_damage_and_ams_policy() {
                 dice(&mut world, shooter, 12);
                 dice(&mut world, target, 2);
                 let before = world.clone();
-                let (defense, salvo) = if world.btech.vehicles().contains_key(&shooter) {
-                    let report = fire_battle_vehicle_shot(
-                        &mut world,
-                        shooter,
-                        ObjectId(1),
-                        target,
-                        0,
-                        BattleVehicleShotRules {
-                            shot: shot_rules(),
-                            shooter_criticals: BattleVehicleImpactRules::STANDARD.criticals,
-                        },
-                    )
-                    .unwrap();
-                    assert_eq!(report.launch.expenditure.ammunition_mode, mode);
-                    (report.ams, report.salvo)
-                } else {
-                    let report = resolve_battle_shot(
-                        &mut world,
-                        shooter,
-                        ObjectId(1),
-                        target,
-                        0,
-                        shot_rules(),
-                    )
-                    .unwrap();
+                let report = fire_battle_unit_shot(
+                    &mut world,
+                    shooter,
+                    ObjectId(1),
+                    target,
+                    0,
+                    BattleVehicleShotRules {
+                        shot: shot_rules(),
+                        shooter_criticals: BattleVehicleImpactRules::STANDARD.criticals,
+                    },
+                )
+                .unwrap();
+                let (defense, salvo) = stompymux_rs::by_chassis!(report, |report| {
                     assert_eq!(report.expenditure.ammunition_mode, mode);
                     (report.ams, report.salvo)
-                };
+                });
                 assert_eq!(defense.is_some(), mode == BattleAmmunitionMode::Smoke);
                 assert!(salvo.is_some());
                 if mode == BattleAmmunitionMode::Mine {

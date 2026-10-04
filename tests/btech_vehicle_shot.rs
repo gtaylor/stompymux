@@ -45,16 +45,9 @@ async fn fixture(
 
 /// Assign scenario power without introducing crew actions into sensor tests.
 fn power(world: &mut World, ids: &[ObjectId], value: BattlePower) {
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
     for id in ids {
-        let class = if world.btech.vehicles().contains_key(id) {
-            "vehicles"
-        } else {
-            "constructed"
-        };
-        saved[class][id.0.to_string()]["power"] = serde_json::to_value(value).unwrap();
+        world.btech.set_unit_power(*id, value).unwrap();
     }
-    world.btech = serde_json::from_value(saved).unwrap();
 }
 
 /// Ordinary conventional aim without range extensions or arc overrides.
@@ -231,10 +224,12 @@ async fn vehicle_friendly_fire_preferences_native_lua_and_map_policy_survive_res
                     },
                 )
                 .unwrap();
-                let mut saved = serde_json::to_value(&world.btech).unwrap();
-                saved["maps"][map.0.to_string()]["flags"] =
-                    serde_json::json!(if map_safety { 256 } else { 0 });
-                world.btech = serde_json::from_value(saved).unwrap();
+                world
+                    .btech
+                    .rewrite_map_record(map, |record| {
+                        record["flags"] = serde_json::json!(if map_safety { 256 } else { 0 });
+                    })
+                    .unwrap();
                 let before = world.btech.clone();
                 assert_eq!(
                     check_battle_vehicle_shot(

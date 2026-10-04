@@ -164,19 +164,11 @@ pub(super) fn selected_command(
         };
         let weapons = {
             let world = ctx.scripts.world.borrow();
-            if let Some(vehicle) = world.btech.vehicles().get(&id) {
-                super::vehicle_power::controlled(&world, id, ctx.player)?;
-                ensure!(
-                    vehicle.power() == BattlePower::Running,
-                    "Start the unit first"
-                );
-                vehicle.loadout()?.weapons.len()
-            } else {
-                super::power::controlled_unit(&world, id, ctx.player)?;
-                let unit = &world.btech.constructed_units()[&id];
+            crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
+                super::power::controlled(&world, id, ctx.player)?;
                 ensure!(unit.power() == BattlePower::Running, "Start the unit first");
                 unit.loadout()?.weapons.len()
-            }
+            })
         };
         let notify_error = |message: String| {
             crate::notification::direct(
