@@ -1510,6 +1510,7 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field propellant_roll integer|nil Second caseless roll; eight or more ignites propellant.
 ---@field misload BattleTacticalImpact|nil Applied misload or propellant ignition damage.
 ---@field launched boolean False for failed Streak lock: no heat/ammo expenditure, but weapon recycles.
+---@field hit boolean Launch classification; missile near misses may have no target effects.
 ---@field expenditure BattleWeaponUse
 ---@field salvo {kind: 'mech'|'vehicle'|'swarm', report: table}|nil Target-specific damage; nil on a miss or a heat-mode hit.
 ---@field heat_transfer integer Heat already added to the target, zero unless a heat-mode shot hits.
@@ -1525,7 +1526,19 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field weapon_index integer Zero-based stable weapon number.
 ---@field aim BattleAimModifiers
 ---@field streak_confused boolean
----@field launch BattleVehicleLaunch
+---@field ammunition_warning string|nil Pre-expenditure warning staged with the shot.
+---@field launch_notices BattleNotice[] Cocoon opening feedback before target consequences.
+---@field target_number integer|nil Ordinary aim subtotal; nil beyond physical range.
+---@field roll integer
+---@field launched boolean False for failed Streak lock: no heat/ammo expenditure, but weapon recycles.
+---@field hit boolean Launch classification; missile near misses may have no target effects.
+---@field glancing boolean Tactical missile shots use the base target-number boundary.
+---@field recoil BattleRecoilReport|nil Always nil: vehicles make no recoil control check.
+---@field jammed boolean Recoverable ammunition-feed failure without expenditure.
+---@field loader_destroyed boolean Permanent mount loss from loader failure or propellant ignition.
+---@field propellant_roll integer|nil Second caseless roll; eight or more ignites propellant.
+---@field misload table|nil Shooter internal damage and critical consequences.
+---@field expenditure BattleVehicleWeaponUse
 ---@field ams BattleAmsReport|nil
 ---@field narc BattleNarcReport|nil Beacon attachment or interception; vehicle sections use their own names.
 ---@field cooling number|nil Coolant removed from target stored heat.
@@ -1553,17 +1566,14 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field groups table[] Located conventional damage packets.
 ---@field inferno BattleVehicleInfernoHit|nil Dedicated vehicle inferno outcome.
 
----@class BattleVehicleLaunch
----@field ammunition_warning string|nil Pre-expenditure warning staged with the shot.
----@field launch_notices BattleNotice[] Cocoon opening feedback before target consequences.
----@field roll integer
----@field hit boolean Launch classification; missile near misses may have no target effects.
----@field glancing boolean Tactical missile shots use the base target-number boundary.
----@field loader_destroyed boolean
----@field jammed boolean
----@field propellant_roll integer|nil
----@field misload table|nil Shooter internal damage and critical consequences.
----@field expenditure table Weapon, ammunition, fire mode, spent rounds, recycle and launched status.
+---@class BattleVehicleWeaponUse
+---@field weapon string
+---@field ammunition BattleAmmunitionDraw[] Actual live-bin expenditure.
+---@field ammunition_mode BattleAmmunitionMode
+---@field fire_mode BattleFireMode Effective mode after supply fallback.
+---@field gatling_damage integer|nil Supply-limited gatling damage before glancing.
+---@field launched boolean False for a failed Streak lock; also reported on the shot.
+---@field heat integer Already applied; do not add this heat again.
 
 ---@class BattleArtilleryLaunchReport
 ---@field launch_notices BattleNotice[] Cocoon opening feedback before target consequences.

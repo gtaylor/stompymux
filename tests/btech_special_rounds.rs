@@ -320,7 +320,7 @@ async fn missile_special_rounds_use_shared_launch_damage_and_ams_policy() {
                         },
                     )
                     .unwrap();
-                    assert_eq!(report.launch.expenditure.ammunition_mode, mode);
+                    assert_eq!(report.expenditure.ammunition_mode, mode);
                     (report.ams, report.salvo)
                 } else {
                     let report = resolve_battle_shot(

@@ -1363,7 +1363,7 @@ pub(super) fn attempt_configured_firing_action(
                 if let Some(salvo) = &report.salvo {
                     publish_target_salvo(scripts, config, salvo)?;
                 }
-                if let Some(misload) = &report.launch.misload {
+                if let Some(misload) = &report.misload {
                     publish_vehicle_internal_injuries(scripts, misload)?;
                 }
             }

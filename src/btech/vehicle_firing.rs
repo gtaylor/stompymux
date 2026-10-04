@@ -68,7 +68,7 @@ pub(super) fn resolve_in_action(
         &config.battletech.xp,
     )?;
     report.coordinate = coordinate;
-    if let Some(misload) = &report.launch.misload {
+    if let Some(misload) = &report.misload {
         for notice in &misload.broadcasts {
             observers.extend(observer_messages(&before, notice.unit, &notice.text));
         }
@@ -92,15 +92,15 @@ pub(super) fn resolve_in_action(
                 &before,
                 shooter,
                 report.target,
-                report.launch.expenditure.weapon,
+                report.expenditure.weapon,
             )?,
             shooter,
             target,
-            weapon: report.launch.expenditure.weapon,
-            roll: report.launch.roll,
+            weapon: report.expenditure.weapon,
+            roll: report.roll,
             target_number: report.aim.subtotal(),
-            glancing: report.launch.glancing,
-            hit: report.launch.hit,
+            glancing: report.glancing,
+            hit: report.hit,
             observer_hit: report.salvo.is_some()
                 || report.cooling.is_some()
                 || report.heat_transfer > 0,

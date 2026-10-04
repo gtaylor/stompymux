@@ -62,9 +62,13 @@ pub struct BattleRecoilReport {
 
 /// One resolved shot; ammunition, heat, dice and damage are already in the candidate world.
 /// Falls are applied; publishing the report notices remains caller-owned.
+///
+/// Both chassis report the same fields. `U` is the shooter's weapon expenditure and `M`
+/// the damage a misload did to it; [`BattleShotReport`] and
+/// [`super::BattleVehicleShotReport`] name the report for each shooter.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[must_use = "Apply pending salvo effects and publish notices before committing the enclosing action"]
-pub struct BattleShotReport {
+pub struct ShotReport<U, M> {
     /// Accepted observer and artillery skill award diagnostics, including missed shots.
     pub experience_messages: Vec<super::BattleChannelMessage>,
     pub shooter: ObjectId,
@@ -79,6 +83,8 @@ pub struct BattleShotReport {
     pub roll: u8,
     /// False for a failed Streak lock or loader failure; loader failures consume only shooter dice.
     pub launched: bool,
+    /// Launch classification; a missile near miss can still be rejected by target resolution.
+    pub hit: bool,
     /// Recoverable ammunition feed failure; no expenditure or recycle.
     pub jammed: bool,
     /// Permanent mount loss from loader failure or propellant ignition.
@@ -86,10 +92,10 @@ pub struct BattleShotReport {
     /// Second shooter roll on a caseless feed failure; eight or more ignites the propellant.
     pub propellant_roll: Option<u8>,
     /// Internal damage and immediate consequences from misload or propellant ignition.
-    pub misload: Option<super::BattleTacticalImpact>,
+    pub misload: Option<M>,
     /// A successful boundary hit with reduced damage or missile count.
     pub glancing: bool,
-    pub expenditure: BattleWeaponUse,
+    pub expenditure: U,
     /// Optional pre-expenditure ammunition threshold warning.
     pub ammunition_warning: Option<String>,
     /// Cocoon opening feedback from the shared launch stage.
@@ -113,6 +119,9 @@ pub struct BattleShotReport {
     /// Normal Narc beacon outcome; explosive rounds use ordinary damage groups.
     pub narc: Option<super::BattleNarcReport<super::BattleUnitSection>>,
 }
+
+/// A shot fired by a BattleMech.
+pub type BattleShotReport = ShotReport<BattleWeaponUse, super::BattleTacticalImpact>;
 
 impl BattleShotReport {
     /// Glancing feedback precedes damage consequences; a lethal salvo concludes both cockpits' feedback.
@@ -682,6 +691,7 @@ fn resolve_shot_inner(
         target_number,
         roll,
         launched,
+        hit,
         jammed,
         loader_destroyed,
         propellant_roll,

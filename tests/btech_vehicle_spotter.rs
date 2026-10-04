@@ -393,7 +393,7 @@ async fn occupied_spotter_hexes_share_mixed_firing_without_sensor_aim_dice() {
         assert_eq!(scripts.world().btech, world.btech);
         assert!(scripts.drain_outbox().is_empty());
         let code = format!(
-            "local r={call}; return r.target,r.aim.perception.modifier,r.aim.indirect.spotter,r.roll or r.launch.roll"
+            "local r={call}; return r.target,r.aim.perception.modifier,r.aim.indirect.spotter,r.roll or r.roll"
         );
         let report: (i64, i16, i64, u8) = scripts.eval_callback(&code).unwrap();
         assert_eq!(

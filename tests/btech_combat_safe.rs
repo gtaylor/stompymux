@@ -131,7 +131,7 @@ fn fire(
             },
         )
         .unwrap();
-        assert!(report.launch.hit, "{report:?}");
+        assert!(report.hit, "{report:?}");
         return (report.notices(), serde_json::to_value(report).unwrap());
     }
     let report = resolve_battle_shot(world, shooter, ObjectId(1), target, 0, shot_rules()).unwrap();

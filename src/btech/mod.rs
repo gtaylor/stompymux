@@ -345,7 +345,8 @@ mod shot_transaction;
 mod validation_contacts;
 mod validation_context;
 pub use shot::{
-    BattleGlancingMode, BattleRecoilReport, BattleShotReport, BattleShotRules, resolve_shot,
+    BattleGlancingMode, BattleRecoilReport, BattleShotReport, BattleShotRules, ShotReport,
+    resolve_shot,
 };
 
 mod piloting;

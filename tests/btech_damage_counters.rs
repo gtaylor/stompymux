@@ -40,7 +40,9 @@ async fn direct_damage_attribution_replays_and_rolls_back_for_mixed_chassis() {
         );
         assert!(serde_json::to_value(&scripts.world().btech).unwrap() == before);
         assert!(scripts.drain_outbox().is_empty());
-        let glancing: bool = scripts.eval_callback(&format!("local r={command}; if r.launch then return r.launch.glancing end; return r.glancing")).unwrap();
+        let glancing: bool = scripts
+            .eval_callback(&format!("local r={command}; return r.glancing"))
+            .unwrap();
         let damage = if glancing { 3 } else { 5 };
         assert_eq!(
             counters(&scripts.world(), id),

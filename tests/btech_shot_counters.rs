@@ -197,7 +197,12 @@ async fn failed_streak_locks_do_not_count_as_misses() {
             unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
         });
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        let launched: bool = scripts.eval_callback(&format!("local r=btech.unit.fire({},1,{index},{}); if r.launch then return r.launch.expenditure.launched end; return r.launched", id.0, target.0)).unwrap();
+        let launched: bool = scripts
+            .eval_callback(&format!(
+                "local r=btech.unit.fire({},1,{index},{}); return r.launched",
+                id.0, target.0
+            ))
+            .unwrap();
         assert!(!launched);
         assert_eq!(
             counters(&scripts.world(), id),
@@ -223,7 +228,12 @@ async fn out_of_range_direct_attempts_count_once() {
         });
         world.validate(&config).unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        let launched: bool = scripts.eval_callback(&format!("local r=btech.unit.fire({},1,{index},{}); if r.launch then return r.launch.expenditure.launched end; return r.launched", id.0, target.0)).unwrap();
+        let launched: bool = scripts
+            .eval_callback(&format!(
+                "local r=btech.unit.fire({},1,{index},{}); return r.launched",
+                id.0, target.0
+            ))
+            .unwrap();
         assert!(launched);
         assert_eq!(
             counters(&scripts.world(), id),

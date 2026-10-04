@@ -220,12 +220,11 @@ async fn vehicle_shots_commit_hits_misses_and_restart_replay_for_both_target_cla
             );
             assert_eq!(world.btech, replay.btech);
             assert_eq!(report.aim, preview);
-            assert_eq!(report.launch.hit, hit);
-            assert!(report.launch.expenditure.launched);
+            assert_eq!(report.hit, hit);
+            assert!(report.expenditure.launched);
             assert_eq!(report.salvo.is_some(), hit);
             assert_eq!(
                 report
-                    .launch
                     .expenditure
                     .ammunition
                     .iter()
@@ -302,8 +301,8 @@ async fn vehicle_missiles_use_shooter_dice_for_mech_ams_only_on_admitted_hits() 
         let report =
             fire_battle_vehicle_shot(&mut world, shooter, ObjectId(1), target, 0, fire_rules())
                 .unwrap();
-        assert_eq!(report.launch.roll, attack);
-        assert_eq!(report.launch.hit, hit);
+        assert_eq!(report.roll, attack);
+        assert_eq!(report.hit, hit);
         if !hit {
             assert!(report.ams.is_none());
             assert_eq!(
@@ -349,7 +348,7 @@ async fn vehicle_shot_failures_and_failed_streak_locks_preserve_target_state() {
     rules.shot.aim.override_weapon_arcs = true;
     let report =
         fire_battle_vehicle_shot(&mut base, shooter, ObjectId(1), target, index, rules).unwrap();
-    assert!(!report.launch.expenditure.launched);
+    assert!(!report.expenditure.launched);
     assert!(report.salvo.is_none());
     assert_eq!(base.btech.vehicles()[&shooter].ammunition(), before_ammo);
     assert_eq!(base.btech.vehicles()[&target], before_target);
@@ -448,12 +447,11 @@ async fn vehicle_shots_observe_existing_angel_fields_without_copying_field_rules
             let report =
                 fire_battle_vehicle_shot(&mut world, shooter, ObjectId(1), target, 0, fire_rules())
                     .unwrap();
-            assert_eq!(report.launch.expenditure.launched, active);
-            assert!(!report.launch.hit);
+            assert_eq!(report.expenditure.launched, active);
+            assert!(!report.hit);
             assert!(report.salvo.is_none());
             assert_eq!(
                 report
-                    .launch
                     .expenditure
                     .ammunition
                     .iter()
@@ -510,7 +508,7 @@ async fn vehicle_native_and_lua_fire_share_state_feedback_and_callback_rollback(
                 "{output}"
             );
             let actual = lua
-                .eval_callback::<bool>(&format!("return {call}.launch.hit"))
+                .eval_callback::<bool>(&format!("return {call}.hit"))
                 .unwrap();
             assert_eq!(actual, hit);
             assert_eq!(lua.world().btech, native.world().btech);
@@ -1028,7 +1026,7 @@ async fn vehicle_coolant_and_flamer_heat_share_target_effects_and_host_rollback(
             let report =
                 fire_battle_vehicle_shot(&mut world, shooter, ObjectId(1), target, 0, fire_rules())
                     .unwrap();
-            assert_eq!(report.launch.hit, hit);
+            assert_eq!(report.hit, hit);
             assert!(report.salvo.is_none() && report.narc.is_none());
             let amount = f64::from(weapon.profile().damage);
             let expected = if !hit {
@@ -1098,7 +1096,7 @@ async fn vehicle_coolant_and_flamer_heat_share_target_effects_and_host_rollback(
                 fire_rules(),
             )
             .unwrap();
-            assert_eq!(vehicle_report.launch.hit, hit);
+            assert_eq!(vehicle_report.hit, hit);
             assert_eq!(
                 initial.btech.vehicles()[&vehicle].weapon_heat(),
                 vehicle_before.weapon_heat() + expected
@@ -1109,7 +1107,7 @@ async fn vehicle_coolant_and_flamer_heat_share_target_effects_and_host_rollback(
             );
             assert_eq!(
                 world.btech.vehicles()[&shooter].weapon_heat(),
-                f64::from(report.launch.expenditure.heat)
+                f64::from(report.expenditure.heat)
             );
             world.validate(&config).unwrap();
         }
@@ -1252,7 +1250,7 @@ async fn clan_plasma_vehicle_shots_use_ordinary_damage_packets() {
             fire_rules(),
         )
         .unwrap();
-        assert!(report.launch.hit);
+        assert!(report.hit);
         assert_eq!(report.heat_transfer, 0);
         assert!(report.narc.is_none() && report.cooling.is_none());
         match report.salvo.unwrap() {
@@ -3061,7 +3059,7 @@ async fn vehicle_missile_packets_award_experience_inside_the_firing_transaction(
             .is_err()
     );
     assert_eq!(scripts.world().btech, world.btech);
-    let (groups, awards, complete): (usize, usize, bool) = scripts.eval_callback(&(call + " if not r.salvo then local fields={}; for k,v in pairs(r.aim) do fields[#fields+1]=k..'='..tostring(v) end; error(table.concat(fields,',')..' roll='..tostring(r.launch.roll)) end; local s=r.salvo.report; local complete=true; for _,a in ipairs(s.experience) do complete=complete and a.formula=='battle_value' and a.award.accepted end; return #s.groups,#s.experience,complete")).unwrap();
+    let (groups, awards, complete): (usize, usize, bool) = scripts.eval_callback(&(call + " if not r.salvo then local fields={}; for k,v in pairs(r.aim) do fields[#fields+1]=k..'='..tostring(v) end; error(table.concat(fields,',')..' roll='..tostring(r.roll)) end; local s=r.salvo.report; local complete=true; for _,a in ipairs(s.experience) do complete=complete and a.formula=='battle_value' and a.award.accepted end; return #s.groups,#s.experience,complete")).unwrap();
     assert!(groups >= 2);
     assert_eq!(awards, groups);
     assert!(complete);
@@ -3106,7 +3104,7 @@ async fn weapons_hold_vehicle_shooters_warn_on_mech_damage_without_blocking_it()
         let report =
             fire_battle_vehicle_shot(&mut base, shooter, ObjectId(1), target, 0, fire_rules())
                 .unwrap();
-        assert!(report.launch.hit);
+        assert!(report.hit);
         let notices = report.notices();
         assert!(
             notices
@@ -3172,7 +3170,7 @@ async fn weapons_hold_vehicle_targets_preserve_damage_safety_and_restart() {
                         let report =
                             fire_battle_vehicle_shot(world, shooter, ObjectId(1), target, 0, rules)
                                 .unwrap();
-                        assert!(report.launch.hit);
+                        assert!(report.hit);
                         (report.notices(), serde_json::to_value(report).unwrap())
                     } else {
                         let report =
